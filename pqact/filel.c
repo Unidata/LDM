@@ -653,6 +653,7 @@ typedef struct {
     void       (*action)(fl_entry*, int);
     const int    flag;
 } Option;
+static Option OPT_STRIPWMO    = {"removewmo", entry_setFlag,   FL_STRIPWMO};
 static Option OPT_CLOSE       = {"close",     entry_setFlag,   FL_CLOSE};
 static Option OPT_EDEX        = {"edex",      entry_setFlag,   FL_EDEX};
 static Option OPT_FLUSH       = {"flush",     entry_setFlag,   FL_FLUSH};
@@ -698,6 +699,247 @@ decodeOptions(
     return ac - argc;
 }
 
+/* -----------------------------------------------------------------------------
+ * Function Name
+ * 	getWmoOffset
+ *
+ * Format
+ * 	int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen)
+ *
+ * Arguments
+ * 	Type			Name		I/O		Description
+ * 	char *			buf		I		buffer to parse for WMO
+ * 	size_t			buflen		I		length of data in buffer
+ * 	size_t *		p_wmolen	O		length of wmo header
+ *
+ * Description
+ * 	Parse the wmo heading from buffer and load the appropriate prod
+ * 	info fields.  The following regular expressions will satisfy this
+ * 	parser.  Note this parser is not case sensitive.
+ * 	The WMO format is supposed to be...
+ * 		TTAAii CCCC DDHHMM[ BBB]\r\r\n
+ * 		[NNNXXX\r\r\n]
+ *
+ * 	This parser is generous with the ii portion of the WMO and all spaces
+ * 	are optional.  The TTAAII, CCCC, and DDHHMM portions of the WMO are
+ * 	required followed by at least 1 <cr> or <lf> with no other unparsed
+ * 	intervening characters. The following quasi-grammar describe what
+ * 	is matched.
+ *
+ * 	WMO = "TTAAII CCCC DDHHMM [BBB] CRCRLF [NNNXXX CRCRLF]"
+ *
+ * 	TTAAII = "[A-Z]{4}[0-9]{0,1,2}" | "[A-Z]{4} [0-9]" | "[A-Z]{3}[0-9]{3} "
+ * 	CCCC = "[A-Z]{4}"
+ * 	DDHHMM = "[ 0-9][0-9]{3,5}"
+ * 	BBB = "[A-Z0-9]{0-3}"
+ * 	CRCRLF = "[\r\n]+"
+ * 	NNNXXX = "[A-Z0-9]{0,4-6}"
+ *
+ * 	Most of the WMO's that fail to be parsed seem to be missing the ii
+ * 	altogether or missing part or all of the timestamp (DDHHMM)
+ *
+ * Returns
+ * 	offset to WMO from buf[0]
+ * 	-1: otherwise
+ *
+ * -------------------------------------------------------------------------- */
+
+#define WMO_TTAAII_LEN		6
+#define WMO_CCCC_LEN		4
+#define WMO_DDHHMM_LEN		6
+#define WMO_DDHH_LEN		4
+#define WMO_BBB_LEN		3
+
+#define WMO_T1	0
+#define WMO_T2	1
+#define WMO_A1	2
+#define WMO_A2	3
+#define WMO_I1	4
+#define WMO_I2	5
+
+int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
+	char *p_wmo;
+	int i_bbb;
+	int spaces;
+	int	ttaaii_found = 0;
+	int	ddhhmm_found = 0;
+	int	crcrlf_found = 0;
+	int	bbb_found = 0;
+	int wmo_offset = -1;
+
+	*p_wmolen = 0;
+
+	for (p_wmo = buf; p_wmo + WMO_I2 + 1 < buf + buflen; p_wmo++) {
+		if (isalpha(p_wmo[WMO_T1]) && isalpha(p_wmo[WMO_T2]) &&
+		    isalpha(p_wmo[WMO_A1]) && isalpha(p_wmo[WMO_A2])) {
+			/* 'TTAAII ' */
+			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2]) &&
+			   (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
+				ttaaii_found = 1;
+				wmo_offset = p_wmo - buf;
+				p_wmo += WMO_I2 + 1;
+				break;
+			}
+		} else if (!strncmp(p_wmo, "\r\r\n", 3)) {
+			/* got to EOH with no TTAAII found, check TTAA case below */
+			break;
+		}
+	}
+
+	/* skip spaces if present */
+	while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+		p_wmo++;
+	}
+
+	if (p_wmo + WMO_CCCC_LEN > buf + buflen) {
+		return -1;
+	} else if (isalpha(*p_wmo) && isalnum(*(p_wmo+1)) &&
+		   isalpha(*(p_wmo+2)) && isalnum(*(p_wmo+3))) {
+		p_wmo += WMO_CCCC_LEN;
+	} else {
+		return -1;
+	}
+
+	/* skip spaces if present */
+	spaces = 0;
+	while (isspace(*p_wmo) && p_wmo < buf + buflen) {
+		p_wmo++;
+		spaces++;
+	}
+
+	/* case1: check for 6 digit date-time group */
+	if (p_wmo + 6 <= buf + buflen) {
+		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1)) &&
+		    isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3)) &&
+		    isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
+			ddhhmm_found = 1;
+			p_wmo += 6;
+		}
+	}
+
+	/* Everything past this point is gravy, we'll return the current
+	   length if we don't get the expected [bbb] crcrlf
+ 	 */
+
+	/* check if we have a <cr> and/or <lf>, parse bbb if present */
+	while (p_wmo < buf + buflen) {
+		if ((*p_wmo == '\r') || (*p_wmo == '\n')) {
+			crcrlf_found++;
+			p_wmo++;
+			if (crcrlf_found == 3) {
+				/* assume this is our complete cr-cr-lf */
+				break;
+			}
+		} else if (crcrlf_found) {
+			/* pre-mature end of crcrlf */
+			p_wmo--;
+			break;
+		} else if (isalpha(*p_wmo)) {
+			if (bbb_found) {
+				/* already have a bbb, give up here */
+				return wmo_offset;
+			}
+			for (i_bbb = 1;	p_wmo + i_bbb < buf + buflen && i_bbb < WMO_BBB_LEN; i_bbb++) {
+				if (!isalpha(p_wmo[i_bbb])) {
+					break; /* out of bbb parse loop */
+				}
+			}
+			if (p_wmo + i_bbb < buf + buflen && isspace(p_wmo[i_bbb])) {
+				bbb_found = 1;
+				p_wmo += i_bbb;
+			} else {
+				/* bbb is too long or maybe not a bbb at all, give up */
+				return wmo_offset;
+			}
+		} else if (isspace(*p_wmo)) {
+			p_wmo++;
+		} else {
+			/* give up */
+			return wmo_offset;
+		}
+	}
+
+	/* Advance past NNNXXX, if found */
+	if (p_wmo + 9 <= buf + buflen) {
+		if (isalnum(p_wmo[0]) && isalnum(p_wmo[1]) && isalnum(p_wmo[2]) &&
+		    isalnum(p_wmo[3]) && isalnum(p_wmo[4]) && isalnum(p_wmo[5]) &&
+		    (p_wmo[6] == '\r') && (p_wmo[7] == '\r') && (p_wmo[8] == '\n')) {
+			p_wmo += 9;
+		}
+	}
+
+	/* update length to include bbb and crcrlf */
+	*p_wmolen = p_wmo - buf - wmo_offset;
+
+	return wmo_offset;
+}
+
+
+/* -----------------------------------------------------------------------------
+ * Function Name
+ * 	stripHeaders
+ *
+ * Format
+ * 	static void *stripHeaders (const void *data, size_t *sz)
+ *
+ * Arguments
+ * 	Type			Name		I/O		Description
+ * 	const void *		data		I		pointer to product in memory
+ * 	size_t			sz		I/O		product size in bytes - will
+ * 								be updated if headers are found
+ *
+ * Description
+ * 	Finds LDM and WMO headers in a product if either exists within the first 100 bytes.
+ * 	Adjusts the product size 'sz' to account for any headers found.  Returns a pointer
+ * 	to the beginning of the product data.  This function calls getWmoOffset() to find a
+ * 	WMO header, its offset, and length.
+ *
+ * Returns
+ * 	Pointer to start of actual product data past any headers found.
+ *
+ * -------------------------------------------------------------------------- */
+
+#define SIZE_SBN_HDR		11	/* noaaportIngester adds a header and trailer to products - header is 11 bytes */
+#define SIZE_SBN_TLR		4	/* trailer is 4 bytes - if there is a header, there will also be a trailer */
+#define CHECK_DEPTH		100	/* This is how far into each product to look for a WMO header */
+#define MIN_PRODUCT_SIZE	21	/* Ignore any files smaller than this since they are too small to contain a WMO header */
+
+static void *stripHeaders (const void *data, size_t *sz) {
+	size_t		wmo_len;
+	int		wmo_offset;
+	char		*dptr		= (char *) data;
+	size_t		isz		= *sz;
+	size_t		slen		= isz < CHECK_DEPTH ? isz : CHECK_DEPTH;
+
+	if (*sz < MIN_PRODUCT_SIZE) {	/* Don't check for a header in a product that's smaller than the minimum header size */
+		return dptr;
+	}
+
+	if (slen < *sz) {	/* Don't check beyond the end of the product */
+		slen = *sz;
+	}
+
+	if ((!memcmp (dptr, "\001\015\015\012", 4) &&
+	    isdigit(dptr[4]) && isdigit(dptr[5]) && isdigit(dptr[6]) &&
+	    !memcmp (&dptr[7], "\040\015\015\012", 4))) {
+		dptr += SIZE_SBN_HDR;
+		*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
+		log_debug("Stripping LDM header/trailer");
+	}
+
+	if ((wmo_offset = getWmoOffset (dptr, slen, &wmo_len)) >= 0) {
+		dptr += (wmo_offset + wmo_len);
+		*sz -= (wmo_offset + wmo_len);
+
+		log_debug("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
+			wmo_offset, wmo_len, isz, *sz);
+	} else {
+		log_debug("WMO header not found in product with length %d", *sz);
+	}
+
+	return (void *) dptr;
+}
+
 /* Begin UNIXIO */
 static int str_cmp(
         fl_entry*             entry,
@@ -739,7 +981,7 @@ static int unio_open(
     log_assert(*av[ac -1] != 0);
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
-            &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_METADATA, &OPT_LOG, &OPT_EDEX, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     ac -= nopt;
     av += nopt;
 
@@ -842,7 +1084,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        log_debug("%d", entry->handle.fd);
+        log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -1036,8 +1278,9 @@ int unio_prodput(
         const void*                   ignored,
         const size_t                  also_ignored)
 {
-    int status = -1; /* failure */
-    fl_entry* entry = fl_getEntry(UNIXIO, argc, argv, NULL);
+    int		status = -1; /* failure */
+    fl_entry	*entry = fl_getEntry(UNIXIO, argc, argv, NULL);
+    char	must_free_data = 0;
 
     log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
     prodp->info.ident);
@@ -1067,10 +1310,14 @@ int unio_prodput(
         }
 
         size_t sz = prodp->info.sz;
-        void*  data;
+        void*  data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = stripHeaders (prodp->data, &sz);
+        }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
-            data = dupstrip(prodp->data, sz, &sz);
+            data = dupstrip(data, sz, &sz);
             if (data == NULL) {
                 log_add("Couldn't strip control-characters out of product "
                         "\"%s\"", prodp->info.ident);
@@ -1078,10 +1325,10 @@ int unio_prodput(
             }
             else {
                 status = 0;
+                must_free_data = 1;
             }
         }
         else {
-            data = prodp->data;
             status = 0;
         }
 
@@ -1122,7 +1369,7 @@ int unio_prodput(
                 }
             } /* data written */
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         } /* data != NULL */
 
@@ -1164,7 +1411,7 @@ static int stdio_open(
     entry->handle.stream = NULL;
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_OVERWRITE, &OPT_STRIP,
-            &OPT_LOG, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_LOG, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     ac -= nopt;
     av += nopt;
 
@@ -1302,17 +1549,32 @@ int stdio_prodput(
         const void* const restrict    ignored,
         const size_t                  also_ignored)
 {
-    int status = -1; /* failure */
-    fl_entry* entry = fl_getEntry(STDIO, argc, argv, NULL);
+    int		status = -1; /* failure */
+    fl_entry*	entry = fl_getEntry(STDIO, argc, argv, NULL);
+    char	must_free_data = 0;
 
     log_debug("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
-        size_t sz = prodp->info.sz;
-        void* data =
-                (entry_isFlagSet(entry, FL_STRIP)) ?
-                        dupstrip(prodp->data, prodp->info.sz, &sz) : prodp->data;
+        size_t	sz = prodp->info.sz;
+        void	*data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = stripHeaders (data, &sz);
+        }
+
+        if (entry_isFlagSet(entry, FL_STRIP)) {
+            data = dupstrip(data, sz, &sz);
+            if (data == NULL) {
+        	log_add("Couldn't strip control-characters out of product "
+                        "\"%s\"", prodp->info.ident);
+                status = -1;
+            } else {
+                status = 0;
+                must_free_data = 1;
+            }
+        }
 
         if (data != NULL ) {
             if (entry_isFlagSet(entry, FL_OVERWRITE)) {
@@ -1339,7 +1601,7 @@ int stdio_prodput(
                                     log_is_enabled_debug));
             } /* data written */
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         } /* data != NULL */
 
@@ -1457,7 +1719,7 @@ static int pipe_open(
     entry_setFlag(entry, FL_NOTRANSIENT);
 
     unsigned nopt = decodeOptions(entry, ac, av, &OPT_TRANSIENT, &OPT_STRIP,
-            &OPT_METADATA, &OPT_NODATA, &OPT_FLUSH, &OPT_CLOSE, NULL);
+            &OPT_METADATA, &OPT_NODATA, &OPT_STRIPWMO, &OPT_FLUSH, &OPT_CLOSE, NULL);
     // ac -= nopt; // not used
     av += nopt;
 
@@ -1879,10 +2141,11 @@ int pipe_prodput(
         const void* const restrict    ignored,
         const size_t                  also_ignored)
 {
-    int       status;
-    size_t    sz = prodp->info.sz;
-    bool      isNew;
-    fl_entry* entry = fl_getEntry(PIPE, argc, argv, &isNew);
+    int		status = 0;
+    size_t	sz = prodp->info.sz;
+    bool	isNew;
+    fl_entry*	entry = fl_getEntry(PIPE, argc, argv, &isNew);
+    char	must_free_data = 0;
 
     if (entry == NULL ) {
         log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
@@ -1893,22 +2156,22 @@ int pipe_prodput(
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
-        void *data;
+        void	*data = prodp->data;
+
+        if (entry_isFlagSet (entry, FL_STRIPWMO)) {
+            data = stripHeaders (data, &sz);
+        }
 
         if (entry_isFlagSet(entry, FL_STRIP)) {
-            data = dupstrip(prodp->data, prodp->info.sz, &sz);
+            data = dupstrip(data, sz, &sz);
             if (data == NULL) {
                 log_add("Couldn't strip control-characters out of product "
                         "\"%s\"", prodp->info.ident);
                 status = -1;
-            }
-            else {
+            } else {
                 status = 0;
+                must_free_data = 1;
             }
-        }
-        else {
-            data = prodp->data;
-            status = 0;
         }
 
         if (0 == status) {
@@ -1946,7 +2209,7 @@ int pipe_prodput(
                             entry->path);
             }
 
-            if (data != prodp->data)
+            if (must_free_data)
                 free(data);
         }       // `data` possibly allocated
 

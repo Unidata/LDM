@@ -3,7 +3,6 @@
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 #include <config.h>
-
 #include "fifo.h"
 #include "goes.h"
 #include "ldm.h"
@@ -56,6 +55,8 @@ extern void       process_prod(
     LdmProductQueue* const      lpq,
     psh_struct*                 psh,
     sbn_struct*                 sbn);
+static int	  inflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
+static int	  deflateData (const char *inBuf, unsigned long inLen, const char *outBuf, unsigned long *outLen, unsigned int blk);
 static int        prod_get_WMO_nnnxxx_offset (char *wmo_buff, int max_search, int *p_len);
 static int        prod_get_WMO_offset (char *buf, size_t buflen, size_t *p_wmolen);
 static int        getIndex (char *arr, int pos, int sz);
@@ -303,10 +304,6 @@ int    nnnxxx_offset;
          buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
          if(init_buff_hdr(buff_hdr) < 0){
             log_error("Unable to initialize buffer header \n");
-            if (acq_tbl) {
-                        free(acq_tbl);
-            }
-
             if (p_prod_retrans_table) {
                   free(p_prod_retrans_table);
             }
@@ -456,8 +453,7 @@ int    nnnxxx_offset;
         log_info("SBN datastream %d command %d", sbn->datastream, sbn->command);
         log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
 
-        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) ||
-                (sbn->version != 1)) {
+        if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) || (sbn->version != 1)) {
             log_error("Unknown sbn command/version %d PUNT", sbn->command);
             continue;
         }
@@ -526,10 +522,8 @@ int    nnnxxx_offset;
         }
 
         log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
-        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
-                pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
-                pdh->dbno, pdh->dbsize);
+        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record, pdh->records_per_block);
+        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
@@ -545,15 +539,14 @@ int    nnnxxx_offset;
 #endif
         if (pdh->pshlen != 0) {
             if (fifo_getBytes(fifo, buf + sbn->len + pdh->len, pdh->pshlen) != 0) {
-                        log_error("problem reading psh");
+                log_error("problem reading psh");
                 continue;
             }
             log_debug("read psh %d", pdh->pshlen);
 
             /* Timing block */
             if (sbn->command == SBN_CMD_TIME) {
-                log_debug("Timing block recieved %ld %ld\0", psh->olen,
-                        pdh->len);
+                log_debug("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
                  * progress.
@@ -574,8 +567,7 @@ int    nnnxxx_offset;
             log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
-                    psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
@@ -783,8 +775,7 @@ int    nnnxxx_offset;
                     PNGINIT = 0;
                 }
 
-                log_error("Product definition header version %d pdhlen %d", pdh->version,
-                        pdh->len);
+                log_error("Product definition header version %d pdhlen %d", pdh->version, pdh->len);
                 log_error("PDH transfer type %u", pdh->transtype);
 
                 if ((pdh->transtype & 8) > 0)
@@ -840,8 +831,7 @@ int    nnnxxx_offset;
             MD5Init(md5ctxp);
 
             if (GOES == 1) {
-                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb,
-                        PROD_COMPRESSED, pdh->dbsize) == -1) {
+                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
                     log_error ("Error reading pdb, punt");
                     continue;
                 }
@@ -943,8 +933,7 @@ int    nnnxxx_offset;
 
         if (GOES == 1) {
             if (pfrag->fragnum > 0) {
-                if (prod.tail && ((pfrag->fragnum != prod.tail->fragnum + 1) ||
-                        (pfrag->seqno != prod.seqno))) {
+                if (((prod.tail != NULL) && (pfrag->fragnum != prod.tail->fragnum + 1)) || (pfrag->seqno != prod.seqno)) {
                     log_error("Missing GOES fragment in sequence, "
                             "last %d/%d this %d/%d\0", prod.tail->fragnum,
                             prod.seqno, pfrag->fragnum, pfrag->seqno);
@@ -1228,6 +1217,7 @@ int    nnnxxx_offset;
                             pfrag->fragnum, pfrag->seqno);
 
 #ifdef RETRANS_SUPPORT
+
                                       if(retrans_xmit_enable == OPTION_ENABLE){
                                          acq_tbl->proc_acqtab_prodseq_errs++;
                         log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
@@ -1858,15 +1848,7 @@ static int deflateData(
 
 /*******************************************************************************
 FUNCTION NAME
-        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
-
-FUNCTION DESCRIPTION
-        Parse the wmo heading from buffer and load the appropriate prod
-        info fields.  The following regular expressions will satisfy this
-        parser.  Note this parser is not case sensative.
-/*******************************************************************************
-FUNCTION NAME
-        int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
+        int prod_get_WMO_offset(char *buf, int buflen, int *p_wmolen)
 
 FUNCTION DESCRIPTION
         Parse the wmo heading from buffer and load the appropriate prod
@@ -1905,25 +1887,23 @@ RETURNS
         -1: otherwise
 *******************************************************************************/
 
+#define WMO_TTAAII_LEN		6
+#define WMO_CCCC_LEN		4
+#define WMO_DDHHMM_LEN		6
+#define WMO_DDHH_LEN		4
+#define WMO_BBB_LEN		3
 
+#define WMO_T1			0
+#define WMO_T2			1
+#define WMO_A1			2
+#define WMO_A2			3
+#define WMO_I1			4
+#define WMO_I2			5
 
-#define WMO_TTAAII_LEN          6
-#define WMO_CCCC_LEN            4
-#define WMO_DDHHMM_LEN          6
-#define WMO_DDHH_LEN            4
-#define WMO_BBB_LEN                     3
-
-#define WMO_T1  0
-#define WMO_T2  1
-#define WMO_A1  2
-#define WMO_A2  3
-#define WMO_I1  4
-#define WMO_I2  5
-
-#define NNN_LEN                 3
-#define XXX_LEN                 3
-#define AWIPSID_LEN             WMO_CCCC_LEN + NNN_LEN + XXX_LEN
-#define MAX_SECLINE_LEN         40
+#define NNN_LEN			3
+#define XXX_LEN			3
+#define AWIPSID_LEN		WMO_CCCC_LEN + NNN_LEN + XXX_LEN
+#define MAX_SECLINE_LEN		40
 
 
 static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:element name="productactivity_report">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="report_gen_time" type="xs:dateTime"/>
+				<xs:element name="start_coverage_time" type="xs:dateTime"/>
+				<xs:element name="end_coverage_time" type="xs:dateTime"/>
+				<xs:element name="num_tile-files_sent" type="xs:int"/>
+				<xs:element ref="senttile-file" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="senttile-file">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="tile-filename" type="xs:string"/>
+				<xs:element name="tile-filesize" type="xs:long"/>
+				<xs:element name="checksum">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="value" type="xs:hexBinary"/>
+							<xs:element name="type" type="xs:string"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
