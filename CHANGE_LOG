@@ -6,6 +6,10 @@
     pqact(1):
         Corrected handling of blank but non-empty lines in configuration-file.
         Before, they would terminate parsing of the configuration-file.
+        
+    fileIngester(1):
+        Added this utility created by Raytheon in support of NOAAPort. Don't ask
+        me what it does.
 
 6.13.4	2016-08-05T10:39:58-0600
     Logging:
