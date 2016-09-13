@@ -1,3 +1,6 @@
 [submodule "FMTP"]
 	path = mcast_lib/FMTP
 	url = git://github.com/Unidata/FMTP.git
+[submodule "mcast_lib/FMTP-LDM7"]
+	path = mcast_lib/FMTP-LDM7
+	url = https://github.com/UVA-High-Speed-Networks/FMTP-LDM7.git
