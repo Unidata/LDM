@@ -24,6 +24,7 @@
 
 #include <zlib.h> /* Required for compress/uncompress */
 #include <errno.h>
+#include <libgen.h>
 #include <limits.h>
 #include <pthread.h>
 #include <sched.h>
