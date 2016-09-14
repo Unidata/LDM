@@ -78,24 +78,4 @@ SUPPORT:
 
 RULES FOR CONTRIBUTING:
 
-    1. Clone the repository:
-           git clone https://github.com/Unidata/LDM.git src
-    2. Change to the source-directory:
-           cd src
-    4. Create the autotools(1) infrastructure:
-           autoreconf -f -i
-    5. Create the build infrastructure:
-           ./configure --enable-debug --disable-root-actions ... >&configure.log
-    6. Merge any changes in the upstream branch:
-           git pull
-    7. Edit the package to add your feature. Start by adding a test of the
-       feature to "make check".
-    8. Build the package:
-           make >&all.log
-    9. Test the package:
-           make check >&check.log && echo Checked &&
-           make distcheck >&distcheck.log && echo Distchecked
-   10. Repeat steps 6 through 9 until 9 succeeds
-   11. Commit your changes:
-           git commit -a
-   12. Make a pull request
+    See the file CONTRIBUTING.md in the top-level source-directory.
