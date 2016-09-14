@@ -1278,10 +1278,12 @@ static uldb_Status sm_create(
     /*
      * Create the shared-memory segment
      */
-    shmId = shmget(key, nbytes, IPC_CREAT | IPC_EXCL | read_write);
+    int flags = IPC_CREAT | IPC_EXCL | read_write;
+    shmId = shmget(key, nbytes, flags);
 
     if (-1 == shmId) {
-        log_add_syserr("Couldn't create %u-byte shared-memory segment", nbytes);
+        log_add_syserr("shmget() failure: key=%#lx, nbytes=%zu, flags=%#o",
+                (unsigned long)key, nbytes, flags);
 
         if (EEXIST != errno) {
             status = ULDB_SYSTEM;
