@@ -27,7 +27,7 @@
 #include <unistd.h> /* access, lseek */
 #include <signal.h>
 
-#if !defined(_DARWIN_C_SOURCE)
+#if !defined(_DARWIN_C_SOURCE) && !defined(__BSD_VISIBLE)
 union semun {
     int              val;    /* Value for SETVAL */
     struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */

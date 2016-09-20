@@ -5,6 +5,8 @@
     noaaportIngester(1):
         Added missing basename(1) declaration.
 
+    Ported to FreeBSD (thanks Eric).
+
 6.13.5.2	2016-09-13T17:18:42-0600
     Added FMTP-LDM7 as a submodule.
 
@@ -12,11 +14,11 @@
     ldmd(1):   
         Added logging of received signals. In particular, SIGINT and SIGTERM
         are logged at the notice level.
-        
+
     pqact(1):
         Corrected handling of blank but non-empty lines in configuration-file.
         Before, they would terminate parsing of the configuration-file.
-        
+
     fileIngester(1):
         Added this utility created by Raytheon in support of NOAAPort. Don't ask
         me what it does.

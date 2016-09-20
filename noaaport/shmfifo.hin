@@ -46,7 +46,7 @@ struct shmbh /* shmem block header */
    unsigned canary;
 };
 
-#if ! ( _NO_XOPEN4 && _NO_XOPEN5 ) && !defined(_DARWIN_C_SOURCE)
+#if ! ( _NO_XOPEN4 && _NO_XOPEN5 ) && !defined(_DARWIN_C_SOURCE) && !defined(__BSD_VISIBLE)
 union semun {
     int                 val;
     struct semid_ds*    buf;
