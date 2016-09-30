@@ -1,4 +1,4 @@
-6.13.5	2016-09-30T15:03:15-0600
+6.13.5	2016-09-30T15:14:03-0600
     ldmd(1):   
         Added logging of received signals. In particular, SIGINT and SIGTERM
         are logged at the notice level.
