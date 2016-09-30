@@ -342,6 +342,9 @@
 /* Level of X/OPEN compliance */
 #undef _XOPEN_SOURCE
 
+/* Needed on FreeBSD systems */
+#undef __BSD_VISIBLE
+
 /* Needed for "struct ip_mreq" on SunOS 5 */
 #undef __EXTENSIONS__
 
