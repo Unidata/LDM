@@ -1,4 +1,16 @@
-6.13.5.3
+6.13.5
+    ldmd(1):   
+        Added logging of received signals. In particular, SIGINT and SIGTERM
+        are logged at the notice level.
+
+    pqact(1):
+        Corrected handling of blank but non-empty lines in configuration-file.
+        Before, they would terminate parsing of the configuration-file.
+
+    fileIngester(1):
+        Added this utility created by Raytheon in support of NOAAPort. Don't ask
+        me what it does.
+
     LDM library:
         Improved log message for when shmget() fails.
 
@@ -17,21 +29,8 @@
 
         Improved LDM tips.
 
-6.13.5.2	2016-09-13T17:18:42-0600
-    Added FMTP-LDM7 as a submodule.
-
-6.13.5.1	2016-09-13T17:02:51-0600
-    ldmd(1):   
-        Added logging of received signals. In particular, SIGINT and SIGTERM
-        are logged at the notice level.
-
-    pqact(1):
-        Corrected handling of blank but non-empty lines in configuration-file.
-        Before, they would terminate parsing of the configuration-file.
-
-    fileIngester(1):
-        Added this utility created by Raytheon in support of NOAAPort. Don't ask
-        me what it does.
+    Multicast (not ready yet):
+        Added FMTP-LDM7 as a submodule.
 
 6.13.4	2016-08-05T10:39:58-0600
     Logging:
