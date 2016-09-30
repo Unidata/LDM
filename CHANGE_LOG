@@ -7,6 +7,16 @@
 
     Ported to FreeBSD (thanks Eric).
 
+    HTML Documentation:
+        Added activity diagrams for ldmd(1), upstream LDM, downstream LDM, and
+        pqact(1).
+
+        Added product-queue graphic.
+
+        Added troubleshooting page.
+
+        Improved LDM tips.
+
 6.13.5.2	2016-09-13T17:18:42-0600
     Added FMTP-LDM7 as a submodule.
 

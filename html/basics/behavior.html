@@ -21,13 +21,20 @@ This page describes the behavior of the
 
 <ul>
     <li><a href="#ldmd">Top-level <tt>ldmd</tt> behavior</a>
-    <li><a href="#upstream">Upstream LDM 6 behavior</a>
     <li><a href="#downstream">Downstream LDM 6 behavior </a>
+    <li><a href="#upstream">Upstream LDM 6 behavior</a>
+    <li><a href="#pqact">Pqact behavior </a>
 </ul>
 
 <hr>
 
 <h2><a name="ldmd">Top-level <tt>ldmd</tt> behavior</a></h2>
+
+<p>
+<center>
+<img src="ldmd_activity.svg" alt="LDM Server Activity Diagram">
+</center>
+
 
 <p>
 When executed, the <a href="glindex.html#ldmd"><tt>ldmd</tt></a> 
@@ -121,97 +128,14 @@ program does the following:
 		</ol>
 	</ul>
 </ol>
-
-<hr>
-
-<h2><a name="upstream">Upstream LDM 6.6 behavior</a></h2>
-
-<p>
-An <a href="glindex.html#upstream LDM">upstream LDM</a> does the 
-following:
-<ol>
-    <li><p>Reduces the
-	<a href="glindex.html#criteria">data-product selection-criteria</a>
-	contained in the <a href="glindex.html#FEEDME">FEEDME</a> or
-	<a href="glindex.html#NOTIFYME">NOTIFYME</a> request by the
-	criteria specified in the first relevant 
-	<a href="glindex.html#ALLOW entry">ALLOW entry</a>.
-    
-    <li><p>If the subsequent request is a
-	<a href="glindex.html#FEEDME">FEEDME</a>
-        request <em>and</em> the <a href="glindex.html#anti-DOS">anti-DOS
-        feature</a> is enabled, then
-        
-        <ul>
-        <li><p>If the request duplicates or is a superset of a previous
-            <a href="glindex.html#FEEDME">FEEDME</a>
-            request from the same downstream site that is currently
-            being handled by another
-            <a href="glindex.html#upstream LDM">upstream LDM</a>
-            process, then that other process is sent a termination
-            signal
-            (a request is a superset of another if its
-            <a href="glindex.html#identifier">data-product
-            identifier</a>-matching <a href="glindex.html#ERE">ERE</a>
-            pattern is syntactically
-            identical to the other and its
-            <a href="glindex.html#feedtype">feedtype</a> specification
-            is a superset of the other); otherwise,
-            
-        <li><p>The request is further reduced by existing 
-            <a href="glindex.html#FEEDME">FEEDME</a>
-            requests from the same downstream host.
-        </ul>
-
-    <li><p>If the subsequent request is
-	not equal to the original request, then the process informs
-	the <a href="glindex.html#downstream LDM">downstream LDM</a> about
-	the reduced request via a
-	<a href="glindex.html#RECLASS">RECLASS</a>
-	message.
-        
-    <li><p>If the subsequent request is not equal to the original
-        request, then the process continues to listen; otherwise,
-    
-    <li><p>The process acknowledges the request and begins sending matching
-	<a href="glindex.html#data-product">data-product</a>s from the
-	<a href="glindex.html#product-queue">product-queue</a> to the
-	<a href="glindex.html#downstream LDM">downstream LDM</a> using
-	the <em>primary</em> or <em>alternate</em>
-	<a href="glindex.html#transfer-mode">transfer-mode</a>
-	(for 
-	<a href="glindex.html#FEEDME">FEEDME</a>
-	requests) or
-	<a href="glindex.html#NOTIFICATION">NOTIFICATION</a>
-	messages (for
-	<a href="glindex.html#NOTIFYME">NOTIFYME</a>
-	requests).
-
-    <li><p>If the process reaches the end of the
-	<a href="glindex.html#product-queue">product-queue</a>,
-	then it sends a
-	<a href="glindex.html#NULLPROC">NULLPROC</a> message
-        to the
-	<a href="glindex.html#downstream LDM">downstream LDM</a>)
-        to reduce
-	<a href="glindex.html#data-product latency">data-product latency</a>
-        by flushing the connection
-	and then suspends itself for 30 seconds or until reception of a
-	<a href="glindex.html#SIGCONT"><tt>SIGCONT</tt></a>
-	signal (from an
-        <a href="glindex.html#ingester">ingester</a> or
-	<a href="glindex.html#downstream LDM">downstream LDM</a>
-	running on the local host) whichever occurs first.
-
-    <li><p>If nothing has been sent to the 
-	<a href="glindex.html#downstream LDM">downstream LDM</a> in
-	30 seconds, then the process sends a 
-	<a href="glindex.html#NULLPROC">NULLPROC</a> message.
-</ol>
-
 <hr>
 
 <h2><a name="downstream">Downstream LDM 6 behavior</a></h2>
+
+<p>
+<center>
+<img src="downstream_ldm6_activity.svg" alt="Downstream LDM6 Activity Diagram">
+</center>
 
 <p>
 A <a href="glindex.html#downstream LDM">downstream LDM</a> does the 
@@ -334,6 +258,139 @@ following:
 </ol>
 
 <hr>
+
+<h2><a name="upstream">Upstream LDM 6 behavior</a></h2>
+
+<p>
+<center>
+<img src="upstream_ldm6_activity.svg" alt="Upstream LDM6 Activity Diagram">
+</center>
+
+<p>
+An <a href="glindex.html#upstream LDM">upstream LDM</a> does the 
+following:
+<ol>
+    <li><p>Reduces the
+	<a href="glindex.html#criteria">data-product selection-criteria</a>
+	contained in the <a href="glindex.html#FEEDME">FEEDME</a> or
+	<a href="glindex.html#NOTIFYME">NOTIFYME</a> request by the
+	criteria specified in the first relevant 
+	<a href="glindex.html#ALLOW entry">ALLOW entry</a>.
+    
+    <li><p>If the subsequent request is a
+	<a href="glindex.html#FEEDME">FEEDME</a>
+        request <em>and</em> the <a href="glindex.html#anti-DOS">anti-DOS
+        feature</a> is enabled, then
+        
+        <ul>
+        <li><p>If the request duplicates or is a superset of a previous
+            <a href="glindex.html#FEEDME">FEEDME</a>
+            request from the same downstream site that is currently
+            being handled by another
+            <a href="glindex.html#upstream LDM">upstream LDM</a>
+            process, then that other process is sent a termination
+            signal
+            (a request is a superset of another if its
+            <a href="glindex.html#identifier">data-product
+            identifier</a>-matching <a href="glindex.html#ERE">ERE</a>
+            pattern is syntactically
+            identical to the other and its
+            <a href="glindex.html#feedtype">feedtype</a> specification
+            is a superset of the other); otherwise,
+            
+        <li><p>The request is further reduced by existing 
+            <a href="glindex.html#FEEDME">FEEDME</a>
+            requests from the same downstream host.
+        </ul>
+
+    <li><p>If the subsequent request is
+	not equal to the original request, then the process informs
+	the <a href="glindex.html#downstream LDM">downstream LDM</a> about
+	the reduced request via a
+	<a href="glindex.html#RECLASS">RECLASS</a>
+	message.
+        
+    <li><p>If the subsequent request is not equal to the original
+        request, then the process continues to listen; otherwise,
+    
+    <li><p>The process acknowledges the request and begins sending matching
+	<a href="glindex.html#data-product">data-product</a>s from the
+	<a href="glindex.html#product-queue">product-queue</a> to the
+	<a href="glindex.html#downstream LDM">downstream LDM</a> using
+	the <em>primary</em> or <em>alternate</em>
+	<a href="glindex.html#transfer-mode">transfer-mode</a>
+	(for 
+	<a href="glindex.html#FEEDME">FEEDME</a>
+	requests) or
+	<a href="glindex.html#NOTIFICATION">NOTIFICATION</a>
+	messages (for
+	<a href="glindex.html#NOTIFYME">NOTIFYME</a>
+	requests).
+
+    <li><p>If the process reaches the end of the
+	<a href="glindex.html#product-queue">product-queue</a>,
+	then it sends a
+	<a href="glindex.html#NULLPROC">NULLPROC</a> message
+        to the
+	<a href="glindex.html#downstream LDM">downstream LDM</a>)
+        to reduce
+	<a href="glindex.html#data-product latency">data-product latency</a>
+        by flushing the connection
+	and then suspends itself for 30 seconds or until reception of a
+	<a href="glindex.html#SIGCONT"><tt>SIGCONT</tt></a>
+	signal (from an
+        <a href="glindex.html#ingester">ingester</a> or
+	<a href="glindex.html#downstream LDM">downstream LDM</a>
+	running on the local host) whichever occurs first.
+
+    <li><p>If nothing has been sent to the 
+	<a href="glindex.html#downstream LDM">downstream LDM</a> in
+	30 seconds, then the process sends a 
+	<a href="glindex.html#NULLPROC">NULLPROC</a> message.
+</ol>
+
+
+<hr>
+
+<h2><a name="pqact">Pqact(1) behavior</a></h2>
+
+<p>
+<center>
+<img src="pqact_activity.svg" alt="Pqact Activity Diagram">
+</center>
+
+<p>
+A <a href="glindex.html#pqact">pqact</a> process does the 
+following:
+<ol>
+    <li><p>Gets the position in the product-queue of the last
+    successfuly-processed data-product from the previous session if it's
+    available.
+
+    <li><p>Tries to get the next data-product in the product-queue.
+    
+    <li><p>If a product exists, then the process goes into a loop in which
+    it executes the actions of all matching entries from the configuration-file.
+    
+    <li><p>Otherwise if no next product exists, then the process waits until one
+    of three things happens:
+    <ul>
+            <li>A SIGCONT is received.
+            <li>A SIGTERM is received.
+            <li>30 seconds elapses.
+        </ul>
+        
+    <li><p>If a SIGCONT is received or 30 seconds elapses, then the process
+    returns to step 2.
+    
+    <li><p>If a SIGTERM is received, then the the process terminates after 
+    saving the position in the queue of the last successfully-processed 
+    product.
+
+</ol>
+
+<hr>
+
 
 <script language="JavaScript" type="text/JavaScript">
 document.write(date_modified);

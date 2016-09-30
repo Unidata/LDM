@@ -17,35 +17,57 @@
 
 <ul>
 <li>
-Have a product-queue sufficiently large that the age of the oldest 
-product is greater than the "from" time of any FEEDME request.
-
+Size the product-queue (
+<a href="LDM registry">LDM registry</a> parameters "<code>/queue/size</code>"
+and "<code>/queue/slots</code>") sufficiently
+large so that the age of the oldest product in the queue is greater than the
+maximum <a href="glindex.html#data-product latency">latency</a>
+parameter ("<code>/server/max-latency</code>"). Once you get close
+enough, set the "<code>/reconciliation-mode</code>" parameter to "<code>increase
+queue</code>". Use the "<code>ldmadmin plotmetrics</code>" command to help you
+determine when you're close.
+<p>
 <li>
 Have sufficient physical memory on the LDM computer to allow the
 product-queue to be completely contained in memory.
-
+<p>
 <li>
-Try to do your local processing of data-products by <tt>pqact</tt> on a
-computer that's not relaying data.
-
+When practicable, have two
+<a href="glindex.html#REQUEST entry"><code>REQUEST</code></a>
+entries for the same data to two, different,
+upstream LDM-s.
+<p>
 <li>
-Consider splitting a large-volume REQUEST entry in the LDM 
-configuration-file,
-<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>,
+Execute data-product ingesters via
+<a href="glindex.html#EXEC entry"><code>EXEC</code></a>
+entries in the LDM
+configuration-file so that the LDM process-group will be
+signaled when a new product is inserted.
+<p>
+<li>
+Consider splitting a large-volume
+<a href="glindex.html#REQUEST entry"><code>REQUEST</code></a>
+entry in the LDM configuration-file,
+<a href="glindex.html#ldmd.conf"><code>ldmd.conf</code></a>,
 into multiple, smaller, disjoint entries.
 <a href="tradeoffs.html">More information</a>.
-
+<p>
+<li>
+Favor doing your local processing of data-products by
+<a href="glindex.html#pqact"><tt>pqact</tt></a>
+on a computer that's not relaying data.
+<p>
 <li>
 If you process a lot of data-products locally on the computer via
-<tt>pqact</tt>, then you should consider having multiple <tt>EXEC pqact...</tt>
-entries in your
-<a href="glindex.html#ldmd.conf"><tt>LDM configuration-file</tt></a> -- each
+<code>pqact</code>, then you should consider having multiple <code>EXEC
+pqact...</code> entries in your
+<a href="glindex.html#ldmd.conf"><code>LDM configuration-file</code></a> -- each
 using a different, feedtype-specific
-<a href="#pqact.conf"><tt>pqact configuration-file</tt></a> and having a
-different <tt>-f <em>feedtype</em></tt> option. This will reduce the size of
-each <tt>pqact</tt>'s configuration-file and, consequently, the time spent
+<a href="glindex.html#pqact.conf"><code>pqact configuration-file</code></a> and
+having a different <code>-f <em>feedtype</em></code> option. This will reduce
+the size of
+each <code>pqact</code>'s configuration-file and, consequently, the time spent
 attempting to find a matching entry.
-
 </ul>
 
 </BODY>

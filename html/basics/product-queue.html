@@ -13,6 +13,11 @@
 
 <h1 align="center">The LDM Product-Queue</h1>
 
+<p>
+<center>
+<img src="product-queue.svg" alt="LDM Product-Queue">
+</center>
+
 <p>The product-queue is a memory-mapped file that temporarily
 stores <a href="glindex.html#data-product">data-product</a>s.
 Access to the product-queue is via the <tt>pq</tt> module, which
@@ -24,11 +29,18 @@ to ensure that the product-queue isn't corrupted.
     <li>The number of <a
 	href="glindex.html#data-product">data-product</a>s 
 	that the queue can contain is fixed when the queue is created.
-	This is the maximum number of
+	This is the number of
 	<a href="glindex.html#data-product">data-product</a> <em>slots</em>.
+    <li>The amount of data 
+	that the queue can contain is fixed when the queue is created.
+	This is the <em>size of the queue</em>.
     <li>A <a href="glindex.html#data-product">data-product</a> is
 	inserted into the product-queue in contiguous space and indexed 
-	by to the time of insertion according to the system clock.
+	by the time of insertion according to the system clock.
+    <li>A <a href="glindex.html#data-product">data-product</a> will <em>not</em>
+	be inserted into the product-queue if its
+	<a href="glindex.html#signature">signature</a> (i.e., MD5 checksum) 
+	equals that of a product already in the queue.
     <li>Reading a <a href="glindex.html#data-product">data-product</a>
 	from the queue creates a read-lock on that product.
 	Read-locks can be shared by reading processes.
@@ -63,7 +75,7 @@ to ensure that the product-queue isn't corrupted.
 
 <p>
 The canonical pathname of the LDM product-queue, relative to the LDM
-home-directory, is <tt>data/ldm.pq</tt>
+home-directory, is <tt>var/data/ldm.pq</tt>
 
 <p>A paper on the implementation-details is
 <blockquote>

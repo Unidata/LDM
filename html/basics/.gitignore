@@ -6,3 +6,8 @@ configuring.html
 Makefile.in
 index.html
 rpm-install-steps.html
+/downstream_ldm6_activity.svg
+/ldmd_activity.svg
+/pqact_activity.svg
+/product-queue.svg
+/upstream_ldm6_activity.svg

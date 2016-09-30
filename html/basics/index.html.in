@@ -120,7 +120,9 @@ tutorial.
 		</P>
 	</UL>
 	<LI><P STYLE="margin-bottom: 0in"><A HREF="monitoring.html">Monitoring
-	the LDM System<!-- <li>Monitoring, Tuning, and Troubleshooting the LDM System
+	the LDM System</A>
+<!-- 
+	<li>Monitoring, Tuning, and Troubleshooting the LDM System
 	<ul>
 	    <li>Product Arrival
 	    <li>Product Latency
@@ -136,10 +138,13 @@ tutorial.
 	    <li>Status of a Remote LDM
 	    <li>General Network Status
 	</ul>
---></A>
-		</P>
+-->
+        </P>
 
 	<LI><P><A HREF="tips.html">LDM Tips</A> 
+	</P>
+
+	<LI><P><A HREF="troubleshooting.html">LDM Troubleshooting</A> 
 	</P>
 
         <LI><P><A HREF="noaaport.html">NOAAPORT ingestion</A>

@@ -6,12 +6,14 @@ EXTRA_DIST	= \
     cluster.html \
     configuring.html.in \
     data-product.html \
+    downstream_ldm6_activity.svg \
     ERE.html \
     failures.html \
     generic-LDM.html \
     glindex.html \
     index.html \
     ldmd.conf.html \
+    ldmd_activity.svg \
     LDM-user.html \
     logging-format.html \
     logging-format-ulog.html \
@@ -58,7 +60,8 @@ EXTRA_DIST	= \
     feedtypes/nogaps_coamps.html \
     feedtypes/ntext.html \
     feedtypes/public_bulletins.html \
-    feedtypes/wsi.html
+    feedtypes/wsi.html \
+    upstream_ldm6_activity.svg
 html_DATA	= \
     activating.html \
     become_ldm.html \
@@ -66,12 +69,14 @@ html_DATA	= \
     cluster.html \
     configuring.html \
     data-product.html \
+    downstream_ldm6_activity.svg \
     ERE.html \
     failures.html \
     generic-LDM.html \
     glindex.html \
     index.html \
     ldmd.conf.html \
+    ldmd_activity.svg \
     LDM-registry.html \
     LDM-user.html \
     logging-format.html \
@@ -104,7 +109,8 @@ html_DATA	= \
     generic-LDM.gif \
     Upstream_6.4_Alternate.gif \
     Upstream_6.4_Primary.gif \
-    upstream6.gif
+    upstream6.gif \
+    upstream_ldm6_activity.svg
 nobase_html_DATA	= \
     feedtypes/conduit.html \
     feedtypes/fnexrad.html \
