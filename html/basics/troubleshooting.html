@@ -219,7 +219,7 @@ It turns out, that's exactly what happened. Only, it wasn't the superuser
 The smoking gun is an entry in the system log file from the out-of-memory
 manager about terminating the LDM process around the time that it disappears.
 <p>
-The current workaround is to tell the out-of-memory manager that the LDM
+The current workaround is to tell the out-of-memory (OOM) manager that the LDM
 processes are important by assigning the LDM process-group a particular "score".
 LDM user Daryl Herzmann explains:
 <blockquote>
@@ -239,8 +239,16 @@ and the top of the next hour whereby the score would not be set. There are
 likely more robust solutions here I am blissfully ignorant of.
 </blockquote>
 <p>
-In this case, however, ignorance is not bliss. If you know of a better solution,
-please contact <code>support-ldm@unidata.ucar.edu</code>.
+The OOM killer can be completely disabled with the following command. This is
+not recommended for production environments, because if an out-of-memory
+condition does present itself, there could be unexpected behavior depending on
+the available system resources and configuration. This unexpected behavior could
+be anything from a kernel panic to a hang depending on the resources available
+to the kernel at the time of the OOM condition.
+<blockquote><code>
+<pre>sysctl vm.overcommit_memory=2
+echo "vm.overcommit_memory=2" >> /etc/sysctl.conf</pre>
+</code></blockquote>
 
 <hr>
 
