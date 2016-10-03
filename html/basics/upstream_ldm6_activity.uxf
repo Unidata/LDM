@@ -5,7 +5,7 @@
     <id>UMLSpecialState</id>
     <coordinates>
       <x>410</x>
-      <y>40</y>
+      <y>10</y>
       <w>20</w>
       <h>20</h>
     </coordinates>
@@ -16,7 +16,7 @@
     <id>UMLState</id>
     <coordinates>
       <x>450</x>
-      <y>130</y>
+      <y>100</y>
       <w>200</w>
       <h>40</h>
     </coordinates>
@@ -28,7 +28,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>420</x>
-      <y>40</y>
+      <y>10</y>
       <w>90</w>
       <h>30</h>
     </coordinates>
@@ -39,7 +39,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>540</x>
-      <y>230</y>
+      <y>200</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -50,7 +50,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>160</y>
+      <y>130</y>
       <w>30</w>
       <h>90</h>
     </coordinates>
@@ -61,7 +61,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>310</x>
-      <y>230</y>
+      <y>200</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -72,7 +72,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>340</x>
-      <y>230</y>
+      <y>200</y>
       <w>220</w>
       <h>40</h>
     </coordinates>
@@ -84,7 +84,7 @@ Based on Matching ALLOW</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>40</x>
-      <y>220</y>
+      <y>190</y>
       <w>100</w>
       <h>60</h>
     </coordinates>
@@ -97,7 +97,7 @@ Process</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>130</x>
-      <y>230</y>
+      <y>200</y>
       <w>200</w>
       <h>40</h>
     </coordinates>
@@ -109,7 +109,7 @@ Process</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>260</x>
-      <y>340</y>
+      <y>310</y>
       <w>150</w>
       <h>60</h>
     </coordinates>
@@ -122,7 +122,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>320</x>
-      <y>260</y>
+      <y>230</y>
       <w>190</w>
       <h>100</h>
     </coordinates>
@@ -134,7 +134,7 @@ Same Host</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>540</x>
-      <y>350</y>
+      <y>320</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -145,7 +145,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>80</x>
-      <y>270</y>
+      <y>240</y>
       <w>420</w>
       <h>180</h>
     </coordinates>
@@ -156,7 +156,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>400</x>
-      <y>360</y>
+      <y>330</y>
       <w>160</w>
       <h>30</h>
     </coordinates>
@@ -167,7 +167,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>260</y>
+      <y>230</y>
       <w>240</w>
       <h>110</h>
     </coordinates>
@@ -179,7 +179,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>570</x>
-      <y>350</y>
+      <y>320</y>
       <w>240</w>
       <h>40</h>
     </coordinates>
@@ -191,7 +191,7 @@ Same Host</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>790</x>
-      <y>350</y>
+      <y>320</y>
       <w>120</w>
       <h>40</h>
     </coordinates>
@@ -202,7 +202,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>610</x>
-      <y>40</y>
+      <y>10</y>
       <w>260</w>
       <h>330</h>
     </coordinates>
@@ -213,7 +213,7 @@ Same Host</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>490</x>
-      <y>30</y>
+      <y>0</y>
       <w>130</w>
       <h>40</h>
     </coordinates>
@@ -224,7 +224,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>60</y>
+      <y>30</y>
       <w>30</w>
       <h>90</h>
     </coordinates>
@@ -235,7 +235,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>380</y>
+      <y>350</y>
       <w>210</w>
       <h>90</h>
     </coordinates>
@@ -247,7 +247,7 @@ Same Host</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>540</x>
-      <y>540</y>
+      <y>510</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -258,7 +258,7 @@ Same Host</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>570</x>
-      <y>540</y>
+      <y>510</y>
       <w>150</w>
       <h>50</h>
     </coordinates>
@@ -271,7 +271,7 @@ product]</panel_attributes>
     <id>UMLSyncBarHorizontal</id>
     <coordinates>
       <x>470</x>
-      <y>750</y>
+      <y>720</y>
       <w>110</w>
       <h>20</h>
     </coordinates>
@@ -283,7 +283,7 @@ product]</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>570</y>
+      <y>540</y>
       <w>120</w>
       <h>210</h>
     </coordinates>
@@ -296,7 +296,7 @@ product]</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>210</x>
-      <y>510</y>
+      <y>480</y>
       <w>100</w>
       <h>40</h>
     </coordinates>
@@ -308,7 +308,7 @@ type=receiver</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>290</x>
-      <y>580</y>
+      <y>550</y>
       <w>100</w>
       <h>40</h>
     </coordinates>
@@ -320,7 +320,7 @@ type=receiver</panel_attributes>
     <id>UMLTimer</id>
     <coordinates>
       <x>330</x>
-      <y>650</y>
+      <y>620</y>
       <w>100</w>
       <h>80</h>
     </coordinates>
@@ -331,7 +331,7 @@ type=receiver</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>370</x>
-      <y>660</y>
+      <y>630</y>
       <w>140</w>
       <h>120</h>
     </coordinates>
@@ -342,7 +342,7 @@ type=receiver</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>380</x>
-      <y>590</y>
+      <y>560</y>
       <w>150</w>
       <h>190</h>
     </coordinates>
@@ -353,7 +353,7 @@ type=receiver</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>370</x>
-      <y>510</y>
+      <y>480</y>
       <w>100</w>
       <h>40</h>
     </coordinates>
@@ -365,7 +365,7 @@ Set "done"</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>300</x>
-      <y>520</y>
+      <y>490</y>
       <w>90</w>
       <h>30</h>
     </coordinates>
@@ -376,7 +376,7 @@ Set "done"</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>460</x>
-      <y>520</y>
+      <y>490</y>
       <w>90</w>
       <h>260</h>
     </coordinates>
@@ -387,7 +387,7 @@ Set "done"</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>510</x>
-      <y>830</y>
+      <y>800</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -398,7 +398,7 @@ Set "done"</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>520</x>
-      <y>750</y>
+      <y>720</y>
       <w>30</w>
       <h>100</h>
     </coordinates>
@@ -409,7 +409,7 @@ Set "done"</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>870</x>
-      <y>740</y>
+      <y>710</y>
       <w>20</w>
       <h>20</h>
     </coordinates>
@@ -420,7 +420,7 @@ Set "done"</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>540</x>
-      <y>760</y>
+      <y>730</y>
       <w>290</w>
       <h>110</h>
     </coordinates>
@@ -432,7 +432,7 @@ Set "done"</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>700</x>
-      <y>540</y>
+      <y>510</y>
       <w>120</w>
       <h>40</h>
     </coordinates>
@@ -444,7 +444,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>590</x>
-      <y>460</y>
+      <y>430</y>
       <w>350</w>
       <h>210</h>
     </coordinates>
@@ -456,7 +456,7 @@ style=autoresize</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>740</x>
-      <y>630</y>
+      <y>600</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -467,7 +467,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>750</x>
-      <y>570</y>
+      <y>540</y>
       <w>30</w>
       <h>80</h>
     </coordinates>
@@ -478,7 +478,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>250</x>
-      <y>830</y>
+      <y>800</y>
       <w>280</w>
       <h>40</h>
     </coordinates>
@@ -490,7 +490,7 @@ style=autoresize</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>690</x>
-      <y>730</y>
+      <y>700</y>
       <w>140</w>
       <h>40</h>
     </coordinates>
@@ -502,7 +502,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>750</x>
-      <y>660</y>
+      <y>630</y>
       <w>80</w>
       <h>90</h>
     </coordinates>
@@ -514,7 +514,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>820</x>
-      <y>740</y>
+      <y>710</y>
       <w>70</w>
       <h>30</h>
     </coordinates>
@@ -525,7 +525,7 @@ style=autoresize</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>520</x>
-      <y>450</y>
+      <y>420</y>
       <w>80</w>
       <h>40</h>
     </coordinates>
@@ -537,7 +537,7 @@ style=autoresize</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>550</x>
-      <y>480</y>
+      <y>450</y>
       <w>30</w>
       <h>80</h>
     </coordinates>
@@ -548,7 +548,7 @@ style=autoresize</panel_attributes>
     <id>UMLSpecialState</id>
     <coordinates>
       <x>220</x>
-      <y>830</y>
+      <y>800</y>
       <w>40</w>
       <h>40</h>
     </coordinates>
@@ -559,7 +559,7 @@ style=autoresize</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>170</x>
-      <y>740</y>
+      <y>710</y>
       <w>140</w>
       <h>40</h>
     </coordinates>
@@ -571,7 +571,7 @@ Send NULLPROC</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>230</x>
-      <y>770</y>
+      <y>740</y>
       <w>180</w>
       <h>80</h>
     </coordinates>
@@ -583,7 +583,7 @@ Timer &gt;= 30 seconds</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>90</x>
-      <y>460</y>
+      <y>430</y>
       <w>450</w>
       <h>410</h>
     </coordinates>
@@ -595,7 +595,7 @@ Timer &lt; 30 seconds</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>90</x>
-      <y>690</y>
+      <y>660</y>
       <w>170</w>
       <h>70</h>
     </coordinates>

@@ -295,7 +295,7 @@ type=receiver</panel_attributes>
   <element>
     <id>UMLState</id>
     <coordinates>
-      <x>650</x>
+      <x>660</x>
       <y>900</y>
       <w>120</w>
       <h>40</h>
@@ -318,20 +318,20 @@ Upstream LDM</panel_attributes>
   <element>
     <id>UMLState</id>
     <coordinates>
-      <x>620</x>
+      <x>640</x>
       <y>720</y>
-      <w>160</w>
+      <w>140</w>
       <h>50</h>
     </coordinates>
     <panel_attributes>style=autoresize
-Reap Termminated
-Child Porcess</panel_attributes>
+Reap Terminated
+Child Process</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>700</x>
+      <x>710</x>
       <y>760</y>
       <w>30</w>
       <h>160</h>
@@ -344,23 +344,24 @@ Child Porcess</panel_attributes>
     <coordinates>
       <x>520</x>
       <y>900</y>
-      <w>150</w>
-      <h>40</h>
+      <w>160</w>
+      <h>50</h>
     </coordinates>
     <panel_attributes>lt=&lt;-
-[not "done"]</panel_attributes>
-    <additional_attributes>130.0;20.0;10.0;20.0</additional_attributes>
+[not "done"
+&amp; not request]</panel_attributes>
+    <additional_attributes>140.0;20.0;10.0;20.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
       <x>530</x>
       <y>730</y>
-      <w>110</w>
+      <w>130</w>
       <h>30</h>
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>10.0;10.0;90.0;10.0</additional_attributes>
+    <additional_attributes>10.0;10.0;110.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -535,5 +536,17 @@ root privileges
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
     <additional_attributes>10.0;50.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>500</x>
+      <y>730</y>
+      <w>410</w>
+      <h>270</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+[request]</panel_attributes>
+    <additional_attributes>280.0;10.0;330.0;10.0;330.0;250.0;10.0;250.0;10.0;210.0</additional_attributes>
   </element>
 </diagram>
