@@ -228,7 +228,7 @@ killer about how it should prioritizing the killing.  For RHEL/centos 6+7, this
 can be done by `echo -1000 > /proc/$PID/oom_score_adj`.  For some other Linux
 flavours, the score should be -17 and the proc file is oom_adj.  Google is your
 friend!
-
+<p>
 A simple <code>crontab(1)</code> entry like so will set this value for ldmd
 automatically each hour.
 <blockquote><code>
