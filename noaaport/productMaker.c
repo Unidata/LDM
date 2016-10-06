@@ -303,12 +303,11 @@ int    nnnxxx_offset;
          buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
          if(init_buff_hdr(buff_hdr) < 0){
             log_error("Unable to initialize buffer header \n");
-            if (p_prod_retrans_table) {
-                  free(p_prod_retrans_table);
-            }
+            free(acq_tbl); // NULL safe
+            free(p_prod_retrans_table); // NULL safe
 
-                status = -1;
-                return NULL;    
+            status = -1;
+            return NULL;
          }
 
          acq_tbl->pid = getpid();
@@ -939,8 +938,8 @@ int    nnnxxx_offset;
 
         if (GOES == 1) {
             if (pfrag->fragnum > 0) {
-                if ((prod.tail && (pfrag->fragnum != prod.tail->fragnum + 1)) ||
-                        (pfrag->seqno != prod.seqno)) {
+                if (prod.tail && ((pfrag->fragnum != prod.tail->fragnum + 1) ||
+                        (pfrag->seqno != prod.seqno))) {
                     log_error("Missing GOES fragment in sequence, "
                             "last %d/%d this %d/%d\0", prod.tail->fragnum,
                             prod.seqno, pfrag->fragnum, pfrag->seqno);
