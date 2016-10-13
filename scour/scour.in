@@ -157,8 +157,6 @@ while read dir age pattern; do
 			# set DELETED to max(0, BEFORE - AFTER)
 			DELETED=`echo $BEFORE $AFTER|\
 			awk '{diff=$1-$2; print (diff < 0) ? 0 : diff;}'`
-			sed 's/\([0-9]*\) \([0-9]*\).*/b=\1;a=\2;d=0;if(a<b)d=b-a;d/'|\
-			 bc`
 			$LOGGER "$DELETED blocks from $edir/$pattern (>" \
 			    "$age days old)"
 		    fi
