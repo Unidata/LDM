@@ -166,7 +166,7 @@ Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
 0 * * * * bin/ldmadmin scour >/dev/null
 0 0 * * * bin/ldmadmin newlog
 * * * * * bin/ldmadmin addmetrics
-* * * * 0 bin/ldmadmin newmetrics
+* * 0 0 0 bin/ldmadmin newmetrics
 0,15,30,45 * * * * bin/ldmadmin check >/dev/null
 </blockquote></pre>
 
