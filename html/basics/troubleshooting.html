@@ -21,7 +21,7 @@
     <li><a href="#not_receiving">The LDM isn't receiving data</a>
     <li><a href="#LDM suddenly disappears">
     The LDM suddenly disappears on an RHEL/CentOS system</a>
-    <li><a href="#ldmadmin scour takes too long">
+    <li><a href="#ldmadmin scour takes too long on an XFS file-system">
     "<code>ldmadmin scour</code>" takes too long</a>
 </ul>
 
@@ -99,6 +99,10 @@ chmod u+w ~/var/logs/ldmd.log</pre>
         If any of the above are false, then execute the command &mdash; as root
         &mdash; "<code>make root-actions</code>" in the top-level LDM
         source-directory.
+        <p>
+        <li>
+        Restart the system logging daemon and then retry the
+        <code>ulogger</code> command above.
         <p>
         <li>
         If on a system that has SELINUX, verify that it is disabled or in
@@ -252,7 +256,7 @@ echo "vm.overcommit_memory=2" >> /etc/sysctl.conf</pre>
 
 <hr>
 
-<h2><a name="ldmadmin scour takes too long">
+<h2><a name="ldmadmin scour takes too long on an XFS file-system">
 "<code>ldmadmin scour</code>" takes too long</h2>
 Daryl Herzmann encountered this problem on his system, which uses the XFS
 filesystem. As he explained it
