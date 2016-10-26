@@ -345,11 +345,10 @@ Child Process</panel_attributes>
       <x>520</x>
       <y>900</y>
       <w>160</w>
-      <h>50</h>
+      <h>40</h>
     </coordinates>
     <panel_attributes>lt=&lt;-
-[not "done"
-&amp; not request]</panel_attributes>
+[request]</panel_attributes>
     <additional_attributes>140.0;20.0;10.0;20.0</additional_attributes>
   </element>
   <element>
@@ -542,11 +541,11 @@ root privileges
     <coordinates>
       <x>500</x>
       <y>730</y>
-      <w>410</w>
+      <w>440</w>
       <h>270</h>
     </coordinates>
     <panel_attributes>lt=&lt;-
-[request]</panel_attributes>
+[60 seconds]</panel_attributes>
     <additional_attributes>280.0;10.0;330.0;10.0;330.0;250.0;10.0;250.0;10.0;210.0</additional_attributes>
   </element>
 </diagram>
