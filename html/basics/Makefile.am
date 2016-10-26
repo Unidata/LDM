@@ -24,6 +24,7 @@ EXTRA_DIST	= \
     newlog.html \
     platform.html \
     pqact.conf.html \
+    pqact_activity.svg \
     preinstallation.html \
     product-queue.html \
     programs.html \
@@ -88,6 +89,7 @@ html_DATA	= \
     newlog.html \
     platform.html \
     pqact.conf.html \
+    pqact_activity.svg \
     preinstallation.html \
     product-queue.html \
     programs.html \
