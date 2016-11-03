@@ -1,3 +1,7 @@
+6.13.6
+    Slightly improved HTML Documentation based on latest workshop and added
+    some missing webpages.
+
 6.13.5	2016-10-06T13:53:22-0600
     ldmd(1):   
         Added logging of received signals. In particular, SIGINT and SIGTERM
