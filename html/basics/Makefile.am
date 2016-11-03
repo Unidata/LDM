@@ -39,6 +39,7 @@ EXTRA_DIST	= \
     support.html \
     tips.html \
     tradeoffs.html \
+    troubleshooting.html \
     versionId.html \
     what-gets-installed.html.in \
     Downstream_6.4_Alternate.gif \
@@ -103,6 +104,7 @@ html_DATA	= \
     support.html \
     tips.html \
     tradeoffs.html \
+    troubleshooting.html \
     versionId.html \
     what-gets-installed.html \
     Downstream_6.4_Alternate.gif \
