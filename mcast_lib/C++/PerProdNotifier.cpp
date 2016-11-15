@@ -144,7 +144,6 @@ void PerProdNotifier::notify_of_bop(
 
 /**
  * @param[in] prodIndex        The FMTP index of the product.
- * @throws std::out_of_range   There's no entry for `prodIndex`
  * @throws std::runtime_error  Receiving application error.
  */
 void PerProdNotifier::notify_of_eop(
@@ -162,8 +161,7 @@ void PerProdNotifier::notify_of_eop(
         (void)prodInfos.erase(prodIndex);
     }
     catch (const std::out_of_range& e) {
-        throw std::out_of_range(std::string("PerProdNotifier::notify_of_eop(): "
-                "Unknown product-index: ") + std::to_string(prodIndex));
+        log_warning("Unknown product-index: %lu", (unsigned long)prodIndex);
     }
 
     log_free(); // to prevent memory leak by FMTP thread

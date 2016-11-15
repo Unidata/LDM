@@ -60,7 +60,6 @@ public:
             metadata, unsigned metaSize, void** data);
     /**
      * @param[in] prodIndex        The FMTP index of the product.
-     * @throws std::out_of_range   There's no entry for `prodIndex`
      * @throws std::runtime_error  Receiving application error.
      */
     void notify_of_eop(FmtpProdIndex prodIndex);
