@@ -17,6 +17,8 @@
 
 <ul>
     <li><a href="#can't start LDM">Can't start the LDM</a>
+    <li><a href="#config-file">The LDM server terminates after executing its
+            configuration-file</a>
     <li><a href="#LDM not logging">The LDM isn't logging</a>
     <li><a href="#not_receiving">The LDM isn't receiving data</a>
     <li><a href="#LDM suddenly disappears">
@@ -40,6 +42,18 @@ Execute the command
 </code></blockquote>
 This will prevent the LDM from daemonizing itself and it will log directly to
 the terminal. The running LDM can be stopped by typing <code>^C</code> (control-C).
+
+<hr>
+
+<h2><a name="config-file">The LDM server terminates after executing its
+configuration-file</h2>
+
+This could be caused by
+<ul>
+    <li>An effectively empty configuration-file
+    <li>A commented-out <code>ALLOW</code> entry for <code>localhost</code> and
+        <code>127.0.0.1</code>
+</ul>
 
 <hr>
 
