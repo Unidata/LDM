@@ -2,13 +2,17 @@
     Slightly improved HTML Documentation based on latest workshop and added
     some missing webpages.
     
+    NOAAPort:
+        Added hupsyslog(1) invocation to nplog_rotate(1) to accommodate old,
+        unmodified noaaportIngester(1) EXEC-entries that use the "-u" option.
+
     Multicast (not yet ready):
-        Replaced exception-throwing by `PerProdNotifier` when the product-index
-        is unknown with logging a warning message because the FMTP
-        retransmission handler might be notifying the LDM of the end of a
-        product when the last data-block is received and, consequently, no entry
-        is found in the product-index-to-pq-info map when the end-of-product
-        message arrives.
+        Modified `PerProdNotifier::notify_of_eop()`. Before, it would throw an
+        exception if the product-index was unknown. Now, it will log a warning
+        message. This was done because the FMTP retransmission handler might be
+        calling that method when the last data-block is received and,
+        consequently, no entry is found in the product-index-to-pq-info map when
+        the end-of-product message arrives.
 
 6.13.5	2016-10-06T13:53:22-0600
     ldmd(1):   

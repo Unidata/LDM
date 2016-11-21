@@ -3,7 +3,7 @@
 # This is the log directory defined in syslog.conf
 cd /data/tmp
 
-set LOGS=("nwstg.log" "goes.log" "nwstg2.log" "oconus.log")
+set LOGS=("nwstg.log" "goes.log" "nwstg2.log" "oconus.log" "nother.log")
 
 if ( $#argv > 0 ) then
   set KEEP_LOG=$1
@@ -16,4 +16,7 @@ foreach LOG ($LOGS)
    ~ldm/bin/newlog ./$LOG $KEEP_LOG
 end
 
-~ldm/bin/refresh_logging
+sh ~ldm/bin/refresh_logging
+# The following can't hurt and will accommodate old, unmodified 
+# noaaportIngester(1) EXEC-entries that use the "-u" option.
+~/ldm/bin/hupsyslog
