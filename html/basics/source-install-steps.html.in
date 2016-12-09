@@ -25,24 +25,24 @@ First, enable a 64-bit environment if possible.
 Then, do the following:
 
 <pre>
-    $ su - ldm
-    $ wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
-    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
-    $ rm @PACKAGE@-@VERSION@.tar.gz # optional
-    $ cd @PACKAGE@-@VERSION@/src
-    $ export PATH=... # if necessary
-    $ ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [--with-gribinsert] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+    su - ldm
+    wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
+    gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
+    rm @PACKAGE@-@VERSION@.tar.gz # optional
+    cd @PACKAGE@-@VERSION@/src
+    export PATH=... # if necessary
+    ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [--with-gribinsert] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
     Password: ...
-    $ make install &gt;make.log 2&gt;&1
-    $ make clean # optional
+    make install &gt;make.log 2&gt;&1
+    make clean # optional
 </pre>
 
 <p>
-<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then use this
-command, instead:
+<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then replace
+the <tt>gunzip(1)</tt> command-line with the following:
 
 <pre>
-    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+    gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
     cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
 </pre>
 
@@ -103,17 +103,15 @@ utilities.
 For example:
 <blockquote><pre>
 cd                                                  # go to the LDM user's home-directory
-mkdir @PACKAGE@-@VERSION@                                   # make a version-specific subdirectory
-cd @PACKAGE@-@VERSION@                                      # go to the version-specific subdirectory
-gunzip -c $HOME/@PACKAGE@-@VERSION@.tar.gz | pax -r         # unpack the distribution
+gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
 mv @PACKAGE@-@VERSION@ src                                  # rename the source directory
 </pre></blockquote>
 
-<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then use this
-command, instead:
+<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then replace the
+<tt>gunzip(1)</tt> command-line with the following:
 
 <pre>
-    $ gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+    gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
     cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
 </pre>
 
@@ -304,6 +302,8 @@ For example:
     </tr>
 </table>
 </blockquote>
+Where "<code>...</code>" represents installation-specific arguments and should
+not be entered literally.
 
 <p>Because certain aspects of the LDM require root privileges
 (<i>e.g.</i>, listening on port 388, using the system logging daemon), the
