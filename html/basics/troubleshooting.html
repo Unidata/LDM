@@ -197,8 +197,25 @@ the LDM user &mdash; this command on the downstream system:
         <li>
         <b>The upstream LDM won't honor the request</b>, then the upstream LDM
         doesn't have a relevant
-        <code>ALLOW</code> entry for the downstream LDM in its configuration-file.
-        You'll need to contact the upstream LDM user.
+        <code>ALLOW</code> entry for the downstream LDM in its
+        configuration-file. This could be because the upstream LDM allows the
+        downstream LDM <em>by name</em> but that name 
+        can't be determined by the upstream LDM by performing a
+        reverse-DNS lookup on the downstream host's IP address. A reverse-DNS
+        lookup can be verified via the command
+        <blockquote><code>
+<pre>dig -x <i>IP_address</i></pre>
+        </code></blockquote>
+        or
+        <blockquote><code>
+<pre>nslookup <i>IP_address</i></pre>
+        </code></blockquote>
+        where <i>IP_address</i> is the IP address of the downstream LDM's host.
+        If the reverse-DNS lookup fails and the upstream LDM allows by
+        name, then you should contact your network administrator and show them
+        the result of the above command. If the reverse-DNS lookup succeeds,
+        then the upstream LDM likely doesn't have an <code>ALLOW</code> entry
+        for the downstream LDM and you should contact the upstream LDM user.
         <p>
         <li>
         <b>The upstream LDM is, indeed, receiving the data-products</b>, then
