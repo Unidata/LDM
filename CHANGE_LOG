@@ -3,8 +3,12 @@
     some missing webpages.
     
     NOAAPort:
-        Added hupsyslog(1) invocation to nplog_rotate(1) to accommodate old,
-        unmodified noaaportIngester(1) EXEC-entries that use the "-u" option.
+        nplog_rotate(1):
+            Added hupsyslog(1) invocation to accommodate old, unmodified
+            noaaportIngester(1) EXEC-entries that use the "-u" option.
+
+        noaaportIngester(1):
+            Fixed handling of SIGUSR1 to enable log file rotation.
 
     Multicast (not yet ready):
         Modified `PerProdNotifier::notify_of_eop()`. Before, it would throw an

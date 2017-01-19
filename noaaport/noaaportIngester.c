@@ -321,7 +321,7 @@ static void usage(
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
 "\n"
-"SIGUSR1 refreshes logging and unconditionally logs statistics at level NOTE.\n"
+"SIGUSR1 unconditionally logs statistics at level NOTE and refreshes logging.\n"
 "SIGUSR2 rotates the logging level.\n",
         progName, PACKAGE_VERSION, copyright, progName, (unsigned long)npages,
         log_get_default_destination(), lpqGetQueuePath(),
@@ -342,7 +342,7 @@ tryLockingProcessInMemory(void)
 }
 
 /**
- * Handles SIGUSR1 by reporting statistics.
+ * Handles SIGUSR1 by reporting statistics and refreshing logging.
  *
  * @param[in] sig  The signal. Should be SIGUSR1.
  * @pre            {The input reader has been created.}
@@ -352,18 +352,19 @@ sigusr1_handler(
         const int sig)
 {
     if (SIGUSR1 == sig) {
+        log_notice("SIGUSR1 received");
         (void)pthread_mutex_lock(&mutex);
         reportStatistics = true;
         (void)pthread_cond_signal(&cond);
         (void)pthread_mutex_unlock(&mutex);
+        log_refresh();
     }
 }
 
 /**
  * Handles a signal.
  *
- * @param[in] sig  The signal to be handled. Should be SIGUSR1, SIGTERM, or
- *                 SIGUSR2.
+ * @param[in] sig  The signal to be handled. Should be SIGTERM or SIGUSR2.
  */
 static void signal_handler(
         const int       sig)
@@ -383,10 +384,6 @@ static void signal_handler(
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
-        case SIGUSR1:
-            log_notice("SIGUSR1 received");
-            log_refresh();
-            break;
         case SIGUSR2:
             log_notice("SIGUSR2 received");
             (void)log_roll_level();
@@ -401,17 +398,17 @@ static void signal_handler(
 /**
  * Registers the SIGUSR1 handler.
  *
- * @param[in] ignore  Whether or not to ignore or handle SIGUSR1.
+ * @param[in] enable  Whether or not to enable SIGUSR1 handling.
  */
 static void
-set_sigusr1Action(
-        const bool ignore)
+enableSigUsr1(
+        const bool enable)
 {
     struct sigaction sigact;
 
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
-    sigact.sa_handler = ignore ? SIG_IGN : sigusr1_handler;
+    sigact.sa_handler = enable ? sigusr1_handler : SIG_IGN;
 
 #ifdef SA_RESTART   /* SVR4, 4.3+ BSD */
     /* Restart system calls for these */
@@ -453,7 +450,6 @@ static void set_sigactions(void)
     /* Restart system calls for these */
     sigact.sa_flags |= SA_RESTART;
 #endif
-    (void)sigaction(SIGUSR1,  &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
 
     sigset_t sigset;
@@ -462,7 +458,6 @@ static void set_sigactions(void)
     (void)sigaddset(&sigset, SIGCHLD);
     (void)sigaddset(&sigset, SIGCONT);
     (void)sigaddset(&sigset, SIGTERM);
-    (void)sigaddset(&sigset, SIGUSR1);
     (void)sigaddset(&sigset, SIGUSR2);
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
@@ -792,8 +787,7 @@ static void* startReporter(void* arg)
         while (!reportStatistics)
             (void)pthread_cond_wait(&cond, &mutex);
 
-        reportStats(ss.productMaker, &ss.startTime, &ss.reportTime,
-                ss.reader);
+        reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
         reportStatistics = false;
     } while (!done);
 
@@ -1096,7 +1090,7 @@ runInner(
             (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
             reporterRunning = true;
 
-            set_sigusr1Action(false);  // enable stats reporting; requires reader
+            enableSigUsr1(true);  // enable stats reporting; requires reader
             status = waitOnReader(readerThread);
         } // `attr` initialized
     } // input-reader started
@@ -1283,7 +1277,7 @@ int main(
     (void)log_init(progname);
     (void)log_set_level(LOG_LEVEL_ERROR);
 
-    set_sigusr1Action(true);  // ignore SIGUSR1 initially
+    enableSigUsr1(false);  // ignore SIGUSR1 initially
 
     size_t            npages = 5000;
     char*             prodQueuePath = NULL;
