@@ -133,8 +133,8 @@ configure_socket(
     addr.sin_port = htons(groupPort);
     /*
      * Using `htonl(INADDR_ANY)` in the following will also work but the socket
-     * will accept every packet destined to the port number regardless of IP
-     * address.
+     * will accept every packet destined to the port number regardless of
+     * destination IP address.
      */
     addr.sin_addr.s_addr = inet_addr(groupAddr);
 
