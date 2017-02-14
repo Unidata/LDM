@@ -751,7 +751,7 @@ AC_CONFIG_FILES([
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/FMTP])
+AC_CONFIG_SUBDIRS([mcast_lib/FMTP-LDM7/UnidataFMTP])
 
 export CC
 

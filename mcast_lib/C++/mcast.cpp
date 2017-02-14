@@ -290,9 +290,9 @@ mcastSender_init(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const FmtpProdIndex   iProd,
+    const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd))
 {
     int status;
 
@@ -386,9 +386,9 @@ mcastSender_new(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const FmtpProdIndex   iProd,
+    const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd))
 {
     McastSender* const send = (McastSender*)log_malloc(sizeof(McastSender),
             "multicast sender");
@@ -558,9 +558,9 @@ mcastSender_spawn(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const FmtpProdIndex   iProd,
+    const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd))
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,

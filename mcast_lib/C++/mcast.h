@@ -98,9 +98,9 @@ mcastSender_spawn(
     const unsigned short   groupPort,
     const char* const      ifaceAddr,
     const unsigned         ttl,
-    const FmtpProdIndex   iProd,
+    const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                  (*doneWithProd)(FmtpProdIndex iProd));
+    void                 (*doneWithProd)(FmtpProdIndex iProd));
 
 /**
  * Returns the product-index of the next product to be sent.
