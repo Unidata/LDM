@@ -66,9 +66,9 @@ else
 fi
 AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__],, [Needed for "struct ip_mreq" on SunOS 5]);;
-    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE],, [Needed for "struct ip_mreq on Darwin"]);;
-    FreeBSD*)    AC_DEFINE([__BSD_VISIBLE],, [Needed on FreeBSD systems]);;
+    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
+    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
+    FreeBSD*)    AC_DEFINE([__BSD_VISIBLE], [1], [Needed on FreeBSD systems]);;
 esac
 
 YEAR=`date +%Y`
