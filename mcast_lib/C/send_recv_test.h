@@ -12,6 +12,10 @@
 #ifndef SEND_RECV_TEST_H_
 #define SEND_RECV_TEST_H_
 
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 //#define HELLO_PORT  12345
 #define HELLO_PORT  38800
 //#define HELLO_PORT  1 // Requires superuser privileges
@@ -23,6 +27,10 @@
     extern "C" {
 #endif
 
+const char* sockAddrIn_format(
+        const struct sockaddr_in* const sockAddr,
+        char* const restrict            buf,
+        const size_t                    buflen);
 
 #ifdef __cplusplus
     }

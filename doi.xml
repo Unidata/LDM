@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resource xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://datacite.org/schema/kernel-4" xsi:schemaLocation="http://datacite.org/schema/kernel-4 http://schema.datacite.org/meta/kernel-4/metadata.xsd">
+  <identifier identifierType="DOI">10.5072/example-full</identifier>
+  <creators>
+    <creator>
+      <creatorName>Emmerson, Steven</creatorName>
+      <givenName>Steven</givenName>
+      <familyName>Emmerson</familyName>
+      <affiliation>University Corporation for Atmospheric Research (UCAR)</affiliation>
+    </creator>
+    <creator>
+      <creatorName>Davis, Glenn</creatorName>
+      <givenName>Glenn</givenName>
+      <familyName>Davis</familyName>
+      <affiliation>University Corporation for Atmospheric Research</affiliation>
+    </creator>
+    <creator>
+      <creatorName>Rew, Russ</creatorName>
+      <givenName>Russ</givenName>
+      <familyName>Rew</familyName>
+      <affiliation>University Corporation for Atmospheric Research</affiliation>
+    </creator>
+  </creators>
+  <titles>
+    <title xml:lang="en-us">Unidata Local Data Manager</title>
+    <title xml:lang="en-us" titleType="Subtitle">LDM</title>
+  </titles>
+  <publisher>University Corporation for Atmospheric Research (UCAR)</publisher>
+  <publicationYear>1994</publicationYear>
+  <subjects>
+    <subject xml:lang="en-us">computer networks</subject>
+    <subject xml:lang="en-us">data distribution</subject>
+    <subject xml:lang="en-us">data processing</subject>
+  </subjects>
+  <contributors>
+    <contributor contributorType="ProjectLeader">
+      <contributorName>Emmerson, Steven</contributorName>
+      <givenName>Steven</givenName>
+      <familyName>Emmerson</familyName>
+      <affiliation>University Corporation for Atmospheric Research (UCAR)</affiliation>
+    </contributor>
+    <contributor contributorType="ProjectMember">
+      <contributorName>Davis, Glenn</contributorName>
+      <givenName>Glenn</givenName>
+      <familyName>Davis</familyName>
+      <affiliation>University Corporation for Atmospheric Research (UCAR)</affiliation>
+    </contributor>
+    <contributor contributorType="ProjectMember">
+      <contributorName>Rew, Russ</contributorName>
+      <givenName>Russ</givenName>
+      <familyName>Rew</familyName>
+      <affiliation>University Corporation for Atmospheric Research (UCAR)</affiliation>
+    </contributor>
+    <contributor contributorType="ContactPerson">
+      <contributorName>support-ldm@unidata.ucar.edu</contributorName>
+    </contributor>
+    <contributor contributorType="Distributor">
+      <contributorName>Unidata Program Center, UCAR</contributorName>
+    </contributor>
+    <contributor contributorType="HostingInstitution">
+      <contributorName>University Corporation for Atmospheric Research (UCAR)</contributorName>
+    </contributor>
+    <contributor contributorType="RightsHolder">
+      <contributorName>University Corporation for Atmospheric Research (UCAR)</contributorName>
+    </contributor>
+    <contributor contributorType="Sponsor">
+      <contributorName>National Science Foundation (NSF)</contributorName>
+    </contributor>
+  </contributors>
+  <dates>
+    <date dateType="Created">1994</date>
+  </dates>
+  <language>en-us</language>
+  <resourceType resourceTypeGeneral="Software">Internet application for distributing and processing near real-time data-products</resourceType>
+  <alternateIdentifiers>
+    <alternateIdentifier alternateIdentifierType="URL">http://schema.datacite.org/schema/meta/kernel-3.1/example/datacite-example-full-v3.1.xml</alternateIdentifier>
+  </alternateIdentifiers>
+  <relatedIdentifiers>
+    <relatedIdentifier relatedIdentifierType="URL" relationType="HasMetadata" relatedMetadataScheme="citeproc+json" schemeURI="https://github.com/citation-style-language/schema/raw/master/csl-data.json">http://data.datacite.org/application/citeproc+json/10.5072/example-full</relatedIdentifier>
+    <relatedIdentifier relatedIdentifierType="arXiv" relationType="IsReviewedBy">arXiv:0706.0001</relatedIdentifier>
+  </relatedIdentifiers>
+  <sizes>
+    <size>3KB</size>
+  </sizes>
+  <formats>
+    <format>application/xml</format>
+  </formats>
+  <version>3.1</version>
+  <rightsList>
+    <rights rightsURI="http://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0 Universal</rights>
+  </rightsList>
+  <descriptions>
+    <description xml:lang="en-us" descriptionType="Abstract">
+      XML example of all DataCite Metadata Schema v4.0 properties.
+    </description>
+  </descriptions>
+  <geoLocations>
+    <geoLocation>
+      <geoLocationPlace>Atlantic Ocean</geoLocationPlace>
+      <geoLocationPoint>
+        <pointLongitude>-67.302</pointLongitude>
+        <pointLatitude>31.233</pointLatitude>
+      </geoLocationPoint>
+      <geoLocationBox>
+        <westBoundLongitude>-71.032</westBoundLongitude>
+        <eastBoundLongitude>-68.211</eastBoundLongitude>
+        <southBoundLatitude>41.090</southBoundLatitude>
+        <northBoundLatitude>42.893</northBoundLatitude>
+      </geoLocationBox>
+    </geoLocation>
+  </geoLocations>
+</resource>
