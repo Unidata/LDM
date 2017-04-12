@@ -427,6 +427,7 @@ AC_MSG_CHECKING([the installation prefix]);
 test -z "$prefix" -o "$prefix" = NONE && prefix=`(cd .. && pwd)`
 #AM_COND_IF([MAINTAINER], [UD_PREFIX(..)], [UD_PREFIX(.)])
 AC_MSG_RESULT([$prefix])
+AC_SUBST([EXEC_PREFIX], [$prefix/bin])
 
 AC_MSG_CHECKING([the name of the host])
 HOSTNAME=`uname -n`

@@ -23,6 +23,10 @@ CLEANFILES		= callgrind.out *.log
 $(srcdir)/html \
 $(srcdir)/$(dist_man3_MANS) \
 $(srcdir)/html/index.html:	$(MAIN_PAGE) Doxyfile $(lib_la_sources)
+	if test -z "$(DOXYGEN)"; then \
+		echo "No doxygen(1) utility"; \
+		exit 1; \
+	fi
 	cd $(srcdir) && $(DOXYGEN) Doxyfile
 
 install-data-local:	$(srcdir)/html/index.html $(DESTDIR)$(docdir)

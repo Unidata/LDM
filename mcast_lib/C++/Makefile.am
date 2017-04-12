@@ -17,9 +17,9 @@ AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/registry -I$(top_srcdir)/registry \
                           -I$(top_builddir)/log -I$(top_srcdir)/log \
                           -I../C \
-                          -I$(srcdir)/../FMTP/FMTPv3 \
-                          -I$(srcdir)/../FMTP/FMTPv3/receiver \
-                          -I$(srcdir)/../FMTP/FMTPv3/sender \
+                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3 \
+                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/receiver \
+                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
 

@@ -2,6 +2,11 @@
     Build:
         Added explicit defines of some C macro values to "1" to avoid problems
         with configure(1) on BSD systems.
+        
+    ldmadmin(1):
+    	Changed how the PATH environment variable is modified to favor version-
+    	specific utilties to accomodate non-standard installations that don't
+    	have a version-specific subdirectory.
 
     Misc:
         Migrated FMTP repository and codebase from Unidata to UVA.
