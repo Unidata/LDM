@@ -7,6 +7,15 @@
     	Changed how the PATH environment variable is modified to favor version-
     	specific utilties to accomodate non-standard installations that don't
     	have a version-specific subdirectory.
+    	
+    Documentation:
+        Additions to pqact(1) configuration-file documentation:
+            - The string "(seq)" in the argument of a pqact(1) FILE or PIPE
+              action is replaced with the sequence-number of the data-product.
+
+            - Replacements based on data-product creation-time are based on
+              `strftime()`, which might have additional replacement strings
+              (e.g., "%N" for nanoseconds).
 
     Misc:
         Migrated FMTP repository and codebase from Unidata to UVA.

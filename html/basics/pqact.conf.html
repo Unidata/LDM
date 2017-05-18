@@ -136,8 +136,9 @@ special meaning.  These sequences serve as templates for replacement strings
 derived from either the
 combination of the
 <a href="#prodIdPat"><i>prodIdPat</i></a> and the
-<a href="glindex.html#identifier">data-product identifier</a>, or from the
-<a href="glindex.html#creation-time">data-product creation-time</a>.
+<a href="glindex.html#identifier">data-product identifier</a>, from the
+<a href="glindex.html#creation-time">data-product creation-time</a>, or from
+the <a href="glindex.html#sequence number">sequence number</a>.
 
 <h3>Replacment-Strings Derived from the
 <a href="#prodIdPat"><i>prodIdPat</i></a> and the
@@ -232,7 +233,11 @@ as indicated or implied by the
 The following characters sequences in the argument field
 are replaced with the indicated strings
 based on the
-<a href="glindex.html#creation-time">data-product creation-time</a>:
+<a href="glindex.html#creation-time">data-product creation-time</a>.
+The replacement is done using the <code>strftime()</code> function,
+which might have more possibilities than just the following on your
+system (e.g., <code>"%N"</code> obtains nanoseconds on GNU/Linux 
+systems).
 <blockquote>
 <dl>
     <dt>%a
@@ -316,6 +321,15 @@ based on the
     <dd>is replaced by %. 
 </dl>
 </blockquote>
+
+<h3>Replacment-String Derived from the
+<a href="glindex.html#sequence number">sequence number</a></h3>
+
+The string "<code>(seq)</code>" (without the quotes) in the argument field will
+be replaced by the <a href="glindex.html#sequence number">sequence number</a> of
+the <a href="glindex.html#data-product">data-product</a>. This might be useful
+to differentiate two different products that, nevertheless, have the same
+identifiers.
 
 <hr>
 
