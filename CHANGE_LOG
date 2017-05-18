@@ -14,7 +14,7 @@
               action is replaced with the sequence-number of the data-product.
 
             - Replacements based on data-product creation-time are based on
-              `strftime()`, which might have additional replacement strings
+              `strftime()`, which *might* have additional replacement strings
               (e.g., "%N" for nanoseconds).
 
     Misc:

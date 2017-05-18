@@ -234,10 +234,9 @@ The following characters sequences in the argument field
 are replaced with the indicated strings
 based on the
 <a href="glindex.html#creation-time">data-product creation-time</a>.
-The replacement is done using the <code>strftime()</code> function,
-which might have more possibilities than just the following on your
-system (e.g., <code>"%N"</code> obtains nanoseconds on GNU/Linux 
-systems).
+The replacement is done using the function <code>strftime()</code>,
+which <em>might</em> have more possibilities than just the following on your
+system (e.g., <code>"%N"</code> might obtain nanoseconds on some systems).
 <blockquote>
 <dl>
     <dt>%a
@@ -260,6 +259,8 @@ systems).
     <dt>%e
     <dd>is replaced by the day of the month as a decimal number [1,31]; 
 	a single digit is preceded by a space. 
+    <dt>%F
+    <dd>is equivalent to %Y-%m-%d (the ISO 8601:2000 standard date format).
     <dt>%h
     <dd>same as %b. 
     <dt>%H
