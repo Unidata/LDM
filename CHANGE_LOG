@@ -8,6 +8,9 @@
     	specific utilties to accomodate non-standard installations that don't
     	have a version-specific subdirectory.
     	
+    	Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
+    	`pool.ntp.org`.
+    	
     Documentation:
         Additions to pqact(1) configuration-file documentation:
             - The string "(seq)" in the argument of a pqact(1) FILE or PIPE
