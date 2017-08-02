@@ -1,0 +1,32 @@
+sudo: required
+services:
+- docker
+before_install:
+- docker build -t compiler docker
+install:
+- mkdir -p m4
+- |
+  docker run -i --rm -v $(pwd):/root/LDM -w /root/LDM compiler bash -ec '
+    autoreconf -f -i
+    ./configure --disable-root-actions  --disable-static --with-noaaport --with-gribinsert |& tee configure.log
+    make rpm
+  '
+- ls *.rpm
+
+script:
+- docker run -i --rm -v $(pwd):/root/LDM -w /root/LDM compiler bash -ec 'make'
+- docker run -i --rm -v $(pwd):/root/LDM -w /root/LDM compiler bash -ec 'make check'
+- docker run -i --rm -v $(pwd):/root/LDM -w /root/LDM compiler bash -ec 'make distcheck'
+- ls *.rpm *.tar.gz
+
+#deploy:
+#  provider: releases
+#  api_key:
+#    secure: <ENTER SECURE TOKEN HERE>
+#  file_glob: true
+#  file:
+#  - ldm-*.rpm
+#  - ldm-*.tar.gz
+#  skip_cleanup: true
+#  on:
+#    tags: true
