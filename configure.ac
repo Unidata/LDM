@@ -38,7 +38,7 @@ AC_ARG_ENABLE([debug],
         AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
     ])
 
-ccList='c99 gcc'
+ccList='gcc'
 test `uname` = Darwin && ccList=gcc
 AC_PROG_CC([$ccList])
 AC_PROG_CC_C99
