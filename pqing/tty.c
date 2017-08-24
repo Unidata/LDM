@@ -1,5 +1,5 @@
 /*
- *   Copyright 2015, University Corporation for Atmospheric Research
+ *   Copyright 2017, University Corporation for Atmospheric Research
  *   See the file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -16,6 +16,7 @@
 #ifndef ENOERR
 #define ENOERR 0
 #endif
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "log.h"
@@ -66,6 +67,7 @@ rtty_open(const char *const path,
 	const rtty_csize_t csize,
 	const rtty_parity_t parity,
 	const rtty_cstopb_t cstopb,
+	const bool enableFlowControl,
 	int *const fdp,
 	struct termios *const savep)
 {
@@ -120,6 +122,8 @@ rtty_open(const char *const path,
 	tbuf.c_iflag &= ~(BRKINT | ICRNL
 		| IGNCR | IGNPAR | INLCR
 		| ISTRIP | IXOFF | IXON | PARMRK );
+	if (enableFlowControl)
+		tbuf.c_iflag |= IXOFF;
 	tbuf.c_iflag  |= IGNBRK;
 
 	if(parity != RTTY_P_NONE)
@@ -329,6 +333,7 @@ tty_open(const char *feedfname, int *const fdp)
 #ifndef MCIDAS_ONLY
 	extern char *parity;
 #endif /* MCIDAS_ONLY */
+	extern bool enableFlowControl;
 
 	/* set speed from command line argument */
 	const speed_t speed = tty_speed(baud);
@@ -346,7 +351,7 @@ tty_open(const char *feedfname, int *const fdp)
 	}
 
 	status = rtty_open(feedfname,
-			speed, csize, pty, RTTY_CSTOPB1,
+			speed, csize, pty, RTTY_CSTOPB1, enableFlowControl,
 			fdp, &sav);
 	if(status != ENOERR)
 	{

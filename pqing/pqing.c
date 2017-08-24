@@ -1,11 +1,12 @@
 /*
- *   Copyright 2012, University Corporation for Atmospheric Research
+ *   Copyright 2017, University Corporation for Atmospheric Research
  *   All Rights Reserved.
  *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
 
 #include <config.h>
 #include <libgen.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -53,6 +54,7 @@
 char *baud = NULL;
 char *rawfname = NULL;
 char *parity = NULL;
+bool enableFlowControl = false;
 enum { CHK_UNSET, CHK_CHECK, CHK_DONT} chkflag = CHK_UNSET;
 static feedtypet feedtype = NONE; /* deduce from av[0]  */
 static const char *progname = NULL;
@@ -219,6 +221,7 @@ usage(
     log_add("                  checksum");
     log_add("    -b baud       Set baudrate for tty input to <baud>");
     log_add("    -c            Enable checksum or parity check on non-tty input");
+    log_add("    -F            Enable XON/XOFF flow control for TTY input");
     log_add("    -f type       Assign feedtype <type> to products. One of");
     log_add("                  \"HDS\", \"DDPLUS\", etc.");
     log_add("    -i            Do not include a PIL-like \"/p\" identifier in");
@@ -482,7 +485,7 @@ main(int ac, char *av[])
             usePil = 1;
             useNex = 1;
 
-            while ((ch = getopt(ac, av, ":vxcni5Nl:b:p:P:T:q:r:f:s:")) != EOF)
+            while ((ch = getopt(ac, av, ":vxcFni5Nl:b:p:P:T:q:r:f:s:")) != EOF)
                     switch (ch) {
                     case 'v':
                             if (!log_is_enabled_info)
@@ -494,6 +497,9 @@ main(int ac, char *av[])
                     case 'c':
                             chkflag = CHK_CHECK;
                             break;
+                    case 'F':
+                    		enableFlowControl = true;
+                    		break;
                     case 'n':
                             chkflag = CHK_DONT;
                             break;

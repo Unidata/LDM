@@ -6,17 +6,14 @@ pqing, dds, pps, ddplus, ids, hds, afos \- product queue ingester for Unidata LD
 .ft B
 pqing
 .nh
-\%[-5]
-\%[-c]
+\%[-5cFnvx]
 \%[-b\ \fIbaud\fR]
 \%[-f\ \fIfeedtype\fR]
 \%[-l\ \fIlogdest\fR] 
-\%[-n]
 \%[-q\ \fIq_path\fP]
 \%[-p\ \fIparity\fR]
 \%[-r\ \fIrawfile\fR]
 \%[-s\ \fIsize\fR]
-\%[-v]
 \fIfeedname\fR
 .hy
 .ft
@@ -49,8 +46,9 @@ asynchronous text feed such as the Alden's International Data Service.
 .LP
 As a convenience, the program changes its default baud rate based on
 its name (argv[0]). For example, if the program is invoked as \fBids \fR,
-the baud rate set to 9600. For afos, the default baud rate is 4800.  The program name also effects a ``feedtype''
-field in the product data structure, which helps to uniquely identify a
+the baud rate set to 9600. For afos, the default baud rate is 4800.  The program
+name also effects a ``feedtype'' field in the product data structure, which
+helps to uniquely identify a
 data product. Conventionally, \fB ddplus, ids,\fR 
 \fBhds \fR and \fBafos \fR are links to \fBpqing \fR.
 .SH OPTIONS 
@@ -59,6 +57,9 @@ data product. Conventionally, \fB ddplus, ids,\fR
 Verbose flag.  If present, the log will contain a line for 
 each product that was ingested, giving the time read, header, and 
 size of the product. 
+.TP
+.B \-x
+Debug flag. Way too much output.
 .TP
 .BI \-r " rawfile"
 The path name of a file 
@@ -112,6 +113,10 @@ invalid, the product is not enqueued.
 For other FOS feeds (DDS, IDS, DDPLUS), check for the tty parity
 errors. If one occurs, the product is not enqueued.
 This option is assumed if the data is being read from a \fBtty\fP.
+.TP
+.B "\-F"
+Enable XON/XOFF software flow control for input from a \fBtty\fP. The default is
+to disable software flow control.
 .TP
 .B "\-n"
 Disable the checksum or parity check on data being read from a
