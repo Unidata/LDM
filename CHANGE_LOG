@@ -17,6 +17,8 @@
 
         Changed behavior of system-calls on receipt of SIGTERM from restart to
         interrupt in order to ensure proper response to an "ldmadmin stop".
+        
+        Added O_TTY_INIT to open of a TTY to ensure conforming TTY behavior.
     	
     Documentation:
         Additions to pqact(1) configuration-file documentation:

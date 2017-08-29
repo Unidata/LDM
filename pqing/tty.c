@@ -10,7 +10,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include <fcntl.h>  // Should define O_TTY_INIT but CentOS 7 doesn't
+#ifndef O_TTY_INIT // Set terminal parameters for conforming behavior
+    #define O_TTY_INIT 0
+#endif
 #include <termios.h>
 #include <errno.h>
 #ifndef ENOERR
@@ -75,7 +78,7 @@ rtty_open(const char *const path,
 	int fd;
 	struct termios tbuf, sav; 
 
-	fd = open(path, O_RDONLY | O_EXCL | O_NOCTTY);
+	fd = open(path, O_RDONLY | O_EXCL | O_NOCTTY | O_TTY_INIT);
 	if(fd < 0)
 		return errno;
 
