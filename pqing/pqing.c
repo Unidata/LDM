@@ -181,19 +181,19 @@ set_sigactions(void)
 
         /* Handle these */
 #ifdef SA_RESTART       /* SVR4, 4.3+ BSD */
-        /* usually, restart system calls */
+        /* restart system calls for non-termination signals */
         sigact.sa_flags |= SA_RESTART;
 #endif
         sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGUSR1, &sigact, NULL);
         (void) sigaction(SIGUSR2, &sigact, NULL);
 
-        /* Don't restart after interrupt */
+        /* Don't restart after termination or input interrupt */
         sigact.sa_flags = 0;
 #ifdef SA_INTERRUPT     /* SunOS 4.x */
         sigact.sa_flags |= SA_INTERRUPT;
 #endif
+        (void) sigaction(SIGTERM, &sigact, NULL);
         (void) sigaction(SIGINT, &sigact, NULL);
         (void) sigaction(SIGPIPE, &sigact, NULL);
 
@@ -498,8 +498,8 @@ main(int ac, char *av[])
                             chkflag = CHK_CHECK;
                             break;
                     case 'F':
-                    		enableFlowControl = true;
-                    		break;
+			    enableFlowControl = true;
+			    break;
                     case 'n':
                             chkflag = CHK_DONT;
                             break;
@@ -672,7 +672,7 @@ main(int ac, char *av[])
         { 
                 /* this is the combined NOAAPORT fos-alike. We know these have the
                    4 byte start and end sequences. Using the binary scanner
-                   ensures that we don't stop on an arbitray embedded CTRL-C */
+                   ensures that we don't stop on an arbitrary embedded CTRL-C */
                 log_notice("Note: Using the wmo_binary scanner for SDI ingest\0");
                 setTheScanner (scan_wmo_binary); 
         }

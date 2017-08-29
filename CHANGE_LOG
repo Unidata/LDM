@@ -14,6 +14,9 @@
     pqing(1):
         Added "-F" option to enable XON/XOFF software flow control for TTY
         input.
+
+        Changed behavior of system-calls on receipt of SIGTERM from restart to
+        interrupt in order to ensure proper response to an "ldmadmin stop".
     	
     Documentation:
         Additions to pqact(1) configuration-file documentation:
