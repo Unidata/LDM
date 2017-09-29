@@ -30,6 +30,7 @@ srand;	# called once at start
 # Some parameters used by this script:
 $progname = "ldmadmin";
 $feedset = "ANY";
+$pattern = ".*";
 chop($os = `uname -s`);
 chop($release = `uname -r`);
 $begin = 19700101;
@@ -261,6 +262,7 @@ elsif ($command eq "watch") {	# monitor incoming products
     while ($_ = $ARGV[0]) {
         shift;
         /^-f/ && ($feedset = shift);
+        /^-p/ && ($pattern = shift);
     }
     if (!isRunning($pid_file, $ip_addr)) {
 	errmsg("There is no LDM server running");
