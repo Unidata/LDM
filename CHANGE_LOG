@@ -10,7 +10,7 @@
     	
     	Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
     	`pool.ntp.org`.
-    	
+
     pqing(1):
         Added "-F" option to enable XON/XOFF software flow control for TTY
         input.
