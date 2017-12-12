@@ -6,13 +6,12 @@
  *  Created on: Dec 11, 2017
  *      Author: Steven R. Emmerson
  */
-#include "AuthServer.h"
-
 #include "config.h"
 
-#include "arpa/inet.h"
+#include "AuthServer.h"
 #include "log.h"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <mqueue.h>
 #include <pthread.h>
@@ -138,8 +137,16 @@ void* authSrvr_new(
         void*       authorizer,
         const char* name)
 {
-    return new AuthServer(*static_cast<Authorizer*>(authorizer),
-            std::string{name});
+    AuthServer* authSrvr;
+    try {
+        authSrvr = new AuthServer(*static_cast<Authorizer*>(authorizer),
+                std::string{name});
+    }
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        authSrvr = nullptr;
+    }
+    return authSrvr;
 }
 
 void authSrvr_free(void* authServer)

@@ -34,7 +34,7 @@ public:
             Authorizer&        authorizer,
             const std::string& name);
 };
-#endif __cplusplus
+#endif
 
 #ifdef __cplusplus
 extern "C" {

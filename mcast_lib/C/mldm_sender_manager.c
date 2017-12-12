@@ -205,7 +205,7 @@ execMldmSender(
     const char* const restrict      pqPathname,
     const int const                 pipe)
 {
-    char* args[22]; // Keep sufficiently capacious (search for `i\+\+`)
+    char* args[23]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
     args[i++] = "mldm_sender";
@@ -232,8 +232,8 @@ execMldmSender(
 
     char serverPortOptArg[6];
     if (info->server.port != 0) {
-        ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg), "%hu",
-                info->server.port);
+        ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg),
+                "%hu", info->server.port);
         if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
             log_add("Couldn't create server-port option-argument \"%hu\"",
                     info->server.port);
