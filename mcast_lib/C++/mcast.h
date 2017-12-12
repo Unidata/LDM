@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2017 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -83,6 +83,7 @@ void mcastReceiver_stop(
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
+ * @param[in]     AuthDb        Authorization database.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
  * @retval        1             Invalid argument. `log_add()` called.
@@ -100,7 +101,8 @@ mcastSender_spawn(
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                 (*doneWithProd)(FmtpProdIndex iProd));
+    void                 (*doneWithProd)(FmtpProdIndex iProd),
+    void*                  authDb);
 
 /**
  * Returns the product-index of the next product to be sent.

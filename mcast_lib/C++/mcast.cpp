@@ -276,6 +276,7 @@ struct mcast_sender {
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
+ * @param[in]     authDb        Authorization database.
  * @retval        0             Success. `*sender` is set.
  * @retval        1             Invalid argument. `log_add()` called.
  * @retval        2             Non-system runtime error. `log_add()` called.
@@ -292,13 +293,15 @@ mcastSender_init(
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                 (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd),
+    void*                  authDb)
 {
     int status;
 
     try {
         PerProdSendingNotifier* notifier =
-                new PerProdSendingNotifier(doneWithProd);
+                new PerProdSendingNotifier(doneWithProd,
+                        *static_cast<Authorizer*>(authDb));
 
         try {
             fmtpSendv3* fmtpSender = timeoutFactor < 0
@@ -372,6 +375,7 @@ mcastSender_init(
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
+ * @param[in]     authDb        Authorization database.
  * @retval        0             Success. `*sender` is set.
  * @retval        1             Invalid argument. `log_add()` called.
  * @retval        2             Non-system runtime error. `log_add()` called.
@@ -388,7 +392,8 @@ mcastSender_new(
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                 (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd),
+    void*                  authDb)
 {
     McastSender* const send = (McastSender*)log_malloc(sizeof(McastSender),
             "multicast sender");
@@ -399,7 +404,8 @@ mcastSender_new(
     }
     else {
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd);
+                groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd,
+                authDb);
 
         if (status) {
             log_add("Couldn't initialize multicast sender");
@@ -543,6 +549,7 @@ mcastSender_free(
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
+ * @param[in]     authDb        Authorization database.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
  * @retval        1             Invalid argument. `log_add()` called.
@@ -560,12 +567,13 @@ mcastSender_spawn(
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
-    void                 (*doneWithProd)(FmtpProdIndex iProd))
+    void                 (*doneWithProd)(FmtpProdIndex iProd),
+    void*                  authDb)
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
             groupAddr, groupPort, ifaceAddr, ttl, iProd, timeoutFactor,
-            doneWithProd);
+            doneWithProd, authDb);
 
     if (status) {
         log_add("Couldn't create new multicast sender");

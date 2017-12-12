@@ -133,3 +133,16 @@ AuthServer::AuthServer(
         const std::string& name)
     : pImpl{new Impl(authorizer, name)}
 {}
+
+void* authSrvr_new(
+        void*       authorizer,
+        const char* name)
+{
+    return new AuthServer(*static_cast<Authorizer*>(authorizer),
+            std::string{name});
+}
+
+void authSrvr_free(void* authServer)
+{
+    delete static_cast<AuthServer*>(authServer);
+}

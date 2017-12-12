@@ -18,11 +18,13 @@
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
+#include <sys/socket.h>
 
 PerProdSendingNotifier::PerProdSendingNotifier(
-    void (*eop_func)(FmtpProdIndex iProd))
-:
-    eop_func(eop_func)
+        void (*eop_func)(FmtpProdIndex iProd),
+        Authorizer& authDb)
+    : eop_func(eop_func)
+    , authDb{authDb}
 {
     if (!eop_func)
         throw std::invalid_argument("Null argument: eop_func");
@@ -47,5 +49,19 @@ void PerProdSendingNotifier::notify_of_eop(
  */
 bool PerProdSendingNotifier::verify_new_recv(int newsock)
 {
-    return true;
+    struct sockaddr sockaddr;
+    socklen_t       len = sizeof(sockaddr);
+    if (::getsockname(newsock, &sockaddr, &len)) {
+        log_warning("Couldn't get address of new FMTP socket");
+        return false;
+    }
+    if (sockaddr.sa_family != AF_INET) {
+        log_warning(std::string{"Address family of new FMTP socket is " +
+                std::to_string(sockaddr.sa_family) + " and not " +
+                std::to_string(AF_INET) + " (AF_INET)"}.c_str());
+        return false;
+    }
+    const struct in_addr* addr =
+            reinterpret_cast<struct in_addr*>(sockaddr.sa_data);
+    return authDb.isAuthorized(*addr);
 }

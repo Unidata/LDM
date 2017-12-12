@@ -14,12 +14,19 @@
 #ifndef PER_PROD_SENDING_NOTIFIER_H_
 #define PER_PROD_SENDING_NOTIFIER_H_
 
+#include "Authorizer.h"
 #include "mcast.h"
 #include "SendProxy.h"
 
 #include <sys/types.h>
 
 class PerProdSendingNotifier: public SendProxy {
+    /// Function to call when the FMTP layer is done with a product.
+    void     (*eop_func)(FmtpProdIndex prodIndex);
+
+    /// Authorization database
+    Authorizer authDb;
+
 public:
     /**
      * Constructs from the notification functions.
@@ -29,7 +36,8 @@ public:
      * @throws    std::invalid_argument if `eop_func == NULL`.
      */
     PerProdSendingNotifier(
-            void (*eop_func)(FmtpProdIndex prodIndex));
+            void      (*eop_func)(FmtpProdIndex prodIndex),
+            Authorizer& authDb);
 
     ~PerProdSendingNotifier() {}
     void notify_of_eop(FmtpProdIndex prodIndex);
@@ -41,12 +49,6 @@ public:
      * @return    true: receiver accepted; false: receiver rejected.
      */
     bool verify_new_recv(int newsock);
-
-private:
-    /**
-     * Function to call when the FMTP layer is done with a product.
-     */
-    void   (*eop_func)(FmtpProdIndex prodIndex);
 };
 
 #endif /* PER_PROD_SENDING_NOTIFIER_H_ */

@@ -12,6 +12,7 @@
 
 #include "Authorizer.h"
 
+#ifdef __cplusplus
 #include <memory>
 
 class AuthServer
@@ -21,7 +22,8 @@ class AuthServer
 
 public:
     /**
-     * Starts executing immediately on a separate thread.
+     * Constructs. Creates the authorization message-queue if it doesn't already
+     * exist. Starts executing immediately on a separate thread.
      * @param[in] authorizer     Authorization database
      * @param[in] name           Name of communications channel for receiving
      *                           authorizations
@@ -32,5 +34,20 @@ public:
             Authorizer&        authorizer,
             const std::string& name);
 };
+#endif __cplusplus
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void* authSrvr_new(
+        void*       authorizer,
+        const char* name);
+
+void authSrvr_free(void* authServer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MLDM_SENDER_AUTHSERVER_H_ */
