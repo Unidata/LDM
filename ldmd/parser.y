@@ -354,7 +354,7 @@ decodeRequestEntry(
 
 #if WANT_MULTICAST
 /**
- * Decodes a SEND entry.
+ * Decodes a MULTICAST entry.
  *
  * @param[in] feedtypeSpec    Specification of the feedtype.
  * @param[in] mcastGroupSpec  Specification of the multicast group.
@@ -369,7 +369,7 @@ decodeRequestEntry(
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
  */
 static int
-decodeSendEntry(
+decodeMulticastEntry(
     const char* const   feedtypeSpec,
     const char* const   mcastGroupSpec,
     const char* const   ttlSpec,
@@ -493,7 +493,7 @@ decodeReceiveEntry(
 %token INCLUDE_K
 %token RECEIVE_K
 %token REQUEST_K
-%token SEND_K
+%token MULTICAST_K
 
 %token <string> STRING
 
@@ -668,25 +668,25 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-send_entry:        SEND_K STRING STRING STRING
+send_entry:        MULTICAST_K STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeSendEntry($2, $3, $4, NULL);
+                    int errCode = decodeMulticastEntry($2, $3, $4, NULL);
 
                     if (errCode) {
-                        log_add("Couldn't decode multicast entry "
+                        log_add("Couldn't decode MULTICAST entry "
                                 "\"MULTICAST %s %s %s\"", $2, $3, $4);
                         return errCode;
                     }
                 #endif
                 }
-                | SEND_K STRING STRING STRING STRING
+                | MULTICAST_K STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeSendEntry($2, $3, $4, $5);
+                    int errCode = decodeMulticastEntry($2, $3, $4, $5);
 
                     if (errCode) {
-                        log_add("Couldn't decode multicast entry "
+                        log_add("Couldn't decode MULTICAST entry "
                                 "\"MULTICAST %s %s %s %s\"", $2, $3, $4, $5);
                         return errCode;
                     }

@@ -73,7 +73,7 @@ qstring		([^"]|{escquote})*
     if(yydebug)
 	udebug("SEND");
 #endif
-    return (SEND_K);
+    return (MULTICAST_K);
 }
 
 

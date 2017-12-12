@@ -66,7 +66,7 @@ parser.c:	parser.y
 # NOTE: flex(1) is used instead of lex(1) in order to generate a scanner that
 # can process "include" statements.
 #
-scanner.c:	scanner.l
+scanner.c:	scanner.l parser.c
 	flex scanner.l
 	mv lex.yy.c scanner.c
 
