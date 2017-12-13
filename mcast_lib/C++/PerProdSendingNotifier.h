@@ -14,11 +14,12 @@
 #ifndef PER_PROD_SENDING_NOTIFIER_H_
 #define PER_PROD_SENDING_NOTIFIER_H_
 
-#include "Authorizer.h"
 #include "mcast.h"
 #include "SendProxy.h"
 
 #include <sys/types.h>
+
+#include "Authorizer.h"
 
 class PerProdSendingNotifier: public SendProxy {
     /// Function to call when the FMTP layer is done with a product.

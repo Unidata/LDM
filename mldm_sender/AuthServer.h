@@ -10,7 +10,7 @@
 #ifndef MLDM_SENDER_AUTHSERVER_H_
 #define MLDM_SENDER_AUTHSERVER_H_
 
-#include "Authorizer.h"
+#include "../mcast_lib/C++/Authorizer.h"
 
 #ifdef __cplusplus
 #include <memory>

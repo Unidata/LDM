@@ -23,6 +23,7 @@
 
 #include "config.h"
 
+#include "AuthClient.h"
 #include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
@@ -197,6 +198,26 @@ up7_setMcastInfo(
     return status;
 }
 
+static Ldm7Status authorize(
+        const feedtypet feed,
+        const struct in_addr* addr)
+{
+    Ldm7Status status = authClnt_init(feed);
+    if (status) {
+        log_add("Couldn't initialize LDM7 authorization module");
+    }
+    else {
+        status = authClnt_authorize(addr);
+        if (status) {
+            char buf[INET_ADDRSTRLEN];
+            log_add("Couldn't authorize remote LDM7 %s", inet_ntop(AF_INET,
+                    (const char*)addr, buf, sizeof(buf)));
+        }
+        authClnt_fini();
+    }
+    return status;
+}
+
 /**
  * Sets the subscription of the associated downstream LDM-7. Ensures that the
  * multicast LDM sender process that's associated with the given feedtype is
@@ -225,32 +246,31 @@ up7_subscribe(
     if (status) {
         if (LDM7_NOENT == status) {
             log_flush_notice();
-            reply->status = LDM7_INVAL; // non-existent feed
-            status = 0;
+            status = LDM7_INVAL; // non-existent feed
         }
     }
     else {
-        /* TODO: Add authorization */
-        /* TODO: Reduce subscription */
-
-        status = up7_openProdIndexMap(feed);
+        status = authorize(feed, &xprt->xp_raddr.sin_addr);
         if (status == 0) {
-            if (atexit(up7_closeProdIndexMap)) {
-                log_syserr("Couldn't register function to close product-index map");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                status = up7_setMcastInfo(&reply->SubscriptionReply_u.mgi,
-                        mcastInfo);
-                if (status == 0) {
-                    feedtype = feed;
-                    reply->status = LDM7_OK;
-                } // have reply
-            } // product-index map closing function registered
-        } // product-index map open
+            /* TODO: Reduce subscription */
+
+            status = up7_openProdIndexMap(feed);
+            if (status == 0) {
+                if (atexit(up7_closeProdIndexMap)) {
+                    log_syserr("Couldn't register function to close product-index map");
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    status = up7_setMcastInfo(&reply->SubscriptionReply_u.mgi,
+                            mcastInfo);
+                    if (status == 0)
+                        feedtype = feed;
+                } // product-index map closing function registered
+            } // product-index map open
+        } // Client FMTP layer authorized
     } // multicast sender is running
 
-    return status;
+    return reply->status = status;
 }
 
 /**

@@ -11,12 +11,28 @@
 #include "AuthClient.h"
 #include "log.h"
 
-#include <arpa/inet.h>
-#include <fcntl.h>
 #include <mqueue.h>
-#include <sys/stat.h>
 #include <system_error>
-#include <unistd.h>
+
+std::string authMsgQName(const feedtypet feed)
+{
+    char buf[2+sizeof(feed)*2 + 1];
+    (void)snprintf(buf, sizeof(buf), "%#X", feed);
+    return std::string{"/AuthMsgQ_feed_"} + buf;
+}
+
+char* authMsgQ_name(
+        char* const     buf,
+        const size_t    size,
+        const feedtypet feed)
+{
+    ::strncpy(buf, authMsgQName(feed).c_str(), size);
+    buf[size-1] = 0;
+}
+
+/******************************************************************************
+ * Private Implementation:
+ ******************************************************************************/
 
 class AuthClient::Impl final
 {
@@ -26,11 +42,11 @@ class AuthClient::Impl final
 public:
     /**
      * Constructs.
-     * @param[in] authMsgQName   Name of authorization message-queue
+     * @param[in] feed           Data-product feed
      * @throw std::system_error  Couldn't open message-queue
      */
-    Impl(const std::string& name)
-        : name{name}
+    Impl(const feedtypet feed)
+        : name{authMsgQName(feed)}
         /*
          * Assume that only the user needs access and that the default
          * attributes are adequate.
@@ -51,7 +67,8 @@ public:
     void authorize(const struct in_addr& addr)
     {
         // Priority argument is irrelevant
-        if (::mq_send(mqId, reinterpret_cast<const char*>(&addr), sizeof(addr), 0)) {
+        if (::mq_send(mqId, reinterpret_cast<const char*>(&addr), sizeof(addr),
+                0)) {
             char dottedQuad[INET_ADDRSTRLEN];
             throw std::system_error(errno, std::system_category(),
                     std::string{"mq_send() failure: Couldn't send "
@@ -62,35 +79,38 @@ public:
     }
 };
 
-AuthClient::AuthClient(const std::string& name)
-    : pImpl{new Impl(name)}
-{}
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
 
-void AuthClient::authorize(const struct in_addr& addr) const
+std::shared_ptr<AuthClient::Impl> AuthClient::pImpl;
+
+void AuthClient::init(const feedtypet feed)
+{
+    if (pImpl)
+        throw std::logic_error("Authorization client is already initialized");
+    pImpl = std::shared_ptr<Impl>{new Impl(feed)};
+}
+
+void AuthClient::authorize(const struct in_addr& addr)
 {
     pImpl->authorize(addr);
 }
 
-void* authClnt_new(const char* name)
+void AuthClient::fini()
 {
-    AuthClient* authClnt;
-    try {
-        authClnt = new AuthClient(std::string{name});
-    }
-    catch (const std::exception& ex) {
-        log_add(ex.what());
-        authClnt = nullptr;
-    }
-    return authClnt;
+    pImpl.reset();
 }
 
-Ldm7Status authClnt_authorize(
-        const void*           authClnt,
-        const struct in_addr* addr)
+/******************************************************************************
+ * C Functions:
+ ******************************************************************************/
+
+Ldm7Status authClnt_init(const feedtypet feed)
 {
     Ldm7Status status;
     try {
-        static_cast<const AuthClient*>(authClnt)->authorize(*addr);
+        AuthClient::init(feed);
         status = LDM7_OK;
     }
     catch (const std::exception& ex) {
@@ -100,7 +120,21 @@ Ldm7Status authClnt_authorize(
     return status;
 }
 
-void authClnt_free(void* authClnt)
+Ldm7Status authClnt_authorize(const struct in_addr* addr)
 {
-    delete static_cast<AuthClient*>(authClnt);
+    Ldm7Status status;
+    try {
+        AuthClient::authorize(*addr);
+        status = LDM7_OK;
+    }
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        status = LDM7_SYSTEM;
+    }
+    return status;
+}
+
+void authClnt_fini()
+{
+    AuthClient::fini();
 }

@@ -15,24 +15,40 @@
 #ifdef __cplusplus
 #include <memory>
 
+/**
+ * Returns the name of the authorization message-queue that's associated with a
+ * particular data-product feed.
+ * @param[in] feed        Data-product feed
+ * @return                Name of authorization message-queue associated with
+ *                        `feed`
+ * @throw std::bad_alloc  Necessary space can't be allocated
+ */
+std::string authMsgQName(const feedtypet feed);
+
 class AuthClient
 {
-    class                 Impl;
-    std::shared_ptr<Impl> pImpl;
+    class                        Impl;
+    static std::shared_ptr<Impl> pImpl;
 
 public:
     /**
-     * Constructs.
-     * @param[in] authMsgQName   Name of authorization message-queue
+     * Initializes.
+     * @param[in] feed           Data-product feed
+     * @throw std::logic_error   Already initialized
      * @throw std::system_error  Couldn't open message-queue
      */
-    AuthClient(const std::string& authMsgQName);
+    static void init(const feedtypet feed);
 
     /**
      * Authorizes a remote FMTP client to connect to the local FMTP server.
      * @param[in] addr  Address of remote FMTP client
      */
-    void authorize(const struct in_addr& addr) const;
+    static void authorize(const struct in_addr& addr);
+
+    /**
+     * Releases allocated resources.
+     */
+    static void fini();
 };
 #endif
 
@@ -40,13 +56,16 @@ public:
 extern "C" {
 #endif
 
-void* authClnt_new(const char* authMsgQName);
+char* authMsgQ_name(
+        char* const     buf,
+        const size_t    size,
+        const feedtypet feed);
 
-Ldm7Status authClnt_authorize(
-        const void*           authClnt,
-        const struct in_addr* addr);
+Ldm7Status authClnt_init(const feedtypet feed);
 
-void authClnt_free(void* authClient);
+Ldm7Status authClnt_authorize(const struct in_addr* addr);
+
+void authClnt_fini();
 
 #ifdef __cplusplus
 }
