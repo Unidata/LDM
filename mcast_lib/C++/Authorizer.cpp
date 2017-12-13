@@ -21,39 +21,41 @@ class Authorizer::Impl
     struct Compare
     {
         bool operator()(
-                const struct in_addr& addr1,
-                const struct in_addr& addr2) const
+                const struct sockaddr_in& addr1,
+                const struct sockaddr_in& addr2) const
         {
-            return addr1.s_addr < addr2.s_addr;
+            return (addr1.sin_addr.s_addr < addr2.sin_addr.s_addr) ||
+                   ((addr1.sin_addr.s_addr == addr2.sin_addr.s_addr) &&
+                    (addr1.sin_port < addr2.sin_port)) ;
         }
     };
 
     mutable Mutex                     mutex;
-    std::set<struct in_addr, Compare> inetAddrs;
+    std::set<struct sockaddr_in, Compare> inetAddrs;
 
 public:
     /**
      * Authorizes a client.
-     * @param[in] clntInetAddr  Address of the client
-     * @exceptionsafety         Strong guarantee
-     * @threadsafety            Compatible but not safe
+     * @param[in] clntAddr  Address of the client
+     * @exceptionsafety     Strong guarantee
+     * @threadsafety        Compatible but not safe
      */
-    void authorize(const struct in_addr& clntInetAddr)
+    void authorize(const struct sockaddr_in& clntAddr)
     {
         LockGuard lock{mutex};
-        inetAddrs.insert(clntInetAddr);
+        inetAddrs.insert(clntAddr);
     }
 
-    bool isAuthorized(const struct in_addr& clntInetAddr) const
+    bool isAuthorized(const struct sockaddr_in& clntAddr) const
     {
         LockGuard lock{mutex};
-        return inetAddrs.find(clntInetAddr) != inetAddrs.end();
+        return inetAddrs.find(clntAddr) != inetAddrs.end();
     }
 
-    void unauthorize(const struct in_addr& clntInetAddr)
+    void unauthorize(const struct sockaddr_in& clntAddr)
     {
         LockGuard lock{mutex};
-        inetAddrs.erase(clntInetAddr);
+        inetAddrs.erase(clntAddr);
     }
 };
 
@@ -61,19 +63,19 @@ Authorizer::Authorizer()
     : pImpl{new Impl()}
 {}
 
-void Authorizer::authorize(const struct in_addr& clntInetAddr) const
+void Authorizer::authorize(const struct sockaddr_in& clntAddr) const
 {
-    pImpl->authorize(clntInetAddr);
+    pImpl->authorize(clntAddr);
 }
 
-bool Authorizer::isAuthorized(const struct in_addr& clntInetAddr) const noexcept
+bool Authorizer::isAuthorized(const struct sockaddr_in& clntAddr) const noexcept
 {
-    return pImpl->isAuthorized(clntInetAddr);
+    return pImpl->isAuthorized(clntAddr);
 }
 
-void Authorizer::unauthorize(const struct in_addr& clntInetAddr) const noexcept
+void Authorizer::unauthorize(const struct sockaddr_in& clntAddr) const noexcept
 {
-    pImpl->unauthorize(clntInetAddr);
+    pImpl->unauthorize(clntAddr);
 }
 
 void* auth_new()
@@ -82,8 +84,8 @@ void* auth_new()
 }
 
 void auth_unauthorize(
-        void* const                 authorizer,
-        const struct in_addr* const addr)
+        void* const                     authorizer,
+        const struct sockaddr_in* const addr)
 {
     static_cast<Authorizer*>(authorizer)->unauthorize(*addr);
 }

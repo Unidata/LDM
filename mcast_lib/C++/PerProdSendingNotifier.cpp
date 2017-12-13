@@ -61,7 +61,7 @@ bool PerProdSendingNotifier::verify_new_recv(int newsock)
                 std::to_string(AF_INET) + " (AF_INET)"}.c_str());
         return false;
     }
-    const struct in_addr* addr =
-            reinterpret_cast<struct in_addr*>(sockaddr.sa_data);
+    const struct sockaddr_in* addr =
+            reinterpret_cast<struct sockaddr_in*>(&sockaddr);
     return authDb.isAuthorized(*addr);
 }

@@ -28,29 +28,29 @@ public:
 
     /**
      * Authorizes a client to connect to the server FMTP layer.
-     * @param[in] clntInetAddr  Address of the client
+     * @param[in] clntAddr      Address of client
      * @exceptionsafety         Strong guarantee
      * @threadsafety            Safe
      */
-    void authorize(const struct in_addr& clntInetAddr) const;
+    void authorize(const struct sockaddr_in& clntAddr) const;
 
     /**
      * Indicates if a client is authorized to connect to the server FMTP layer.
-     * @param[in] clntInetAddr  Address of the client
-     * @retval `true`           Client is authorized
-     * @retval `false`          Client is not authorized
-     * @exceptionsafety         NoThrow
-     * @threadsafety            Safe
+     * @param[in] clntAddr  Address of client
+     * @retval `true`       Client is authorized
+     * @retval `false`      Client is not authorized
+     * @exceptionsafety     NoThrow
+     * @threadsafety        Safe
      */
-    bool isAuthorized(const struct in_addr& clntInetAddr) const noexcept;
+    bool isAuthorized(const struct sockaddr_in& clntAddr) const noexcept;
 
     /**
      * Unauthorizes a client to connect to the server FMTP layer.
-     * @param[in] clntInetAddr  Address of the client
-     * @exceptionsafety         NoThrow
-     * @threadsafety            Safe
+     * @param[in] clntAddr  Address of client
+     * @exceptionsafety     NoThrow
+     * @threadsafety        Safe
      */
-    void unauthorize(const struct in_addr& clntInetAddr) const noexcept;
+    void unauthorize(const struct sockaddr_in& clntAddr) const noexcept;
 };
 
 #endif

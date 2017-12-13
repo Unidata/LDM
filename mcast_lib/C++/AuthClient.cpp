@@ -65,17 +65,19 @@ public:
         ::mq_close(mqId); // Can't fail
     }
 
-    void authorize(const struct in_addr& addr)
+    void authorize(const struct sockaddr_in& addr)
     {
         // Priority argument is irrelevant
         if (::mq_send(mqId, reinterpret_cast<const char*>(&addr), sizeof(addr),
                 0)) {
-            char dottedQuad[INET_ADDRSTRLEN];
+            char     dottedQuad[INET_ADDRSTRLEN];
+            unsigned port = ntohs(addr.sin_port);
             throw std::system_error(errno, std::system_category(),
                     std::string{"mq_send() failure: Couldn't send "
                         "authorization for client "} +
-                    ::inet_ntop(AF_INET, &addr.s_addr, dottedQuad,
-                    sizeof(dottedQuad)) + " to message-queue " + name);
+                    ::inet_ntop(AF_INET, &addr.sin_addr, dottedQuad,
+                    sizeof(dottedQuad)) + ":" + std::to_string(port) +
+                    " to message-queue " + name);
         }
     }
 };
@@ -93,7 +95,7 @@ void AuthClient::init(const feedtypet feed)
     pImpl = std::shared_ptr<Impl>{new Impl(feed)};
 }
 
-void AuthClient::authorize(const struct in_addr& addr)
+void AuthClient::authorize(const struct sockaddr_in& addr)
 {
     pImpl->authorize(addr);
 }
@@ -121,7 +123,7 @@ Ldm7Status authClnt_init(const feedtypet feed)
     return status;
 }
 
-Ldm7Status authClnt_authorize(const struct in_addr* addr)
+Ldm7Status authClnt_authorize(const struct sockaddr_in* addr)
 {
     Ldm7Status status;
     try {

@@ -27,7 +27,7 @@ class AuthServer::Impl final
     mqd_t       mqId;       /// Message-queue handle
     std::thread thread;     /// Server thread
 
-    void getAddr(struct in_addr& addr)
+    void getAddr(struct sockaddr_in& addr)
     {
         auto nbytes = ::mq_receive(mqId, reinterpret_cast<char*>(&addr),
                 sizeof(addr), nullptr); // Priority argument is irrelevant
@@ -44,7 +44,7 @@ class AuthServer::Impl final
     void runServer()
     {
         for (;;) {
-            struct in_addr addr;
+            struct sockaddr_in addr;
             try {
                 getAddr(addr);
             }
@@ -60,12 +60,13 @@ class AuthServer::Impl final
             catch (const std::exception& ex) {
                 log_add(ex.what());
                 char dottedQuad[INET_ADDRSTRLEN];
-                log_add("Couldn't add authorization for client %s",
-                        ::inet_ntop(AF_INET, &addr.s_addr, dottedQuad,
-                        sizeof(dottedQuad)));
+                unsigned port = ntohs(addr.sin_port);
+                log_add("Couldn't add authorization for client %s:%d",
+                        ::inet_ntop(AF_INET, &addr.sin_addr.s_addr, dottedQuad,
+                        sizeof(dottedQuad)), port);
                 break;
             }
-        }
+        } // Loop
         // Log now because end-of-thread
         log_error("Authorization-server failure for message-queue %s",
                 name.c_str());
