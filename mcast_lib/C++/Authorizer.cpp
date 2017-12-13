@@ -9,14 +9,18 @@
 #include "config.h"
 
 #include "Authorizer.h"
+#include "FixedDelayQueue.h"
+#include "log.h"
 
 #include <mutex>
 #include <set>
+#include <thread>
 
 class Authorizer::Impl
 {
     typedef std::mutex             Mutex;
     typedef std::lock_guard<Mutex> LockGuard;
+    typedef std::chrono::seconds   Duration;
 
     struct Compare
     {
@@ -30,10 +34,42 @@ class Authorizer::Impl
         }
     };
 
-    mutable Mutex                     mutex;
-    std::set<struct sockaddr_in, Compare> inetAddrs;
+    mutable Mutex                                 mutex;
+    std::set<struct sockaddr_in, Compare>         inetAddrs;
+    FixedDelayQueue<struct sockaddr_in, Duration> delayQ;
+    std::thread                                   thread;
+
+    /**
+     * De-authorizes remote LDM7-s after a delay. Intended to run on its own
+     * thread.
+     */
+    void deauthorize()
+    {
+        for (;;) {
+            auto addr = delayQ.pop();
+            unauthorize(addr);
+        }
+    }
 
 public:
+    /**
+     * Constructs.
+     */
+    Impl()
+        : mutex{}
+        , inetAddrs{}
+        , delayQ{Duration{30}}
+        , thread{[this]{deauthorize();}}
+    {}
+
+    ~Impl() noexcept
+    {
+        auto status = ::pthread_cancel(thread.native_handle());
+        if (status)
+            log_errno(status, "Couldn't cancel de-authorization thread");
+        thread.join(); // Can't fail. Might hang, though.
+    }
+
     /**
      * Authorizes a client.
      * @param[in] clntAddr  Address of the client
@@ -44,6 +80,7 @@ public:
     {
         LockGuard lock{mutex};
         inetAddrs.insert(clntAddr);
+        delayQ.push(clntAddr);
     }
 
     bool isAuthorized(const struct sockaddr_in& clntAddr) const
@@ -52,6 +89,12 @@ public:
         return inetAddrs.find(clntAddr) != inetAddrs.end();
     }
 
+    /**
+     * Unauthorizes a remote LDM7 client.
+     * @param[in] clntAddr  Address of client
+     * @exceptionsafety     NoThrow
+     * @threadsafety        Safe
+     */
     void unauthorize(const struct sockaddr_in& clntAddr)
     {
         LockGuard lock{mutex};

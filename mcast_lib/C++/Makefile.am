@@ -11,6 +11,7 @@ lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
 			  AuthClient.cpp AuthClient.h \
+			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h
 AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
