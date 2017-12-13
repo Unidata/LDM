@@ -28,6 +28,7 @@ char* authMsgQ_name(
 {
     ::strncpy(buf, authMsgQName(feed).c_str(), size);
     buf[size-1] = 0;
+    return buf;
 }
 
 /******************************************************************************
