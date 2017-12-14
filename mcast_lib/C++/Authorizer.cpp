@@ -28,9 +28,14 @@ class Authorizer::Impl
                 const struct sockaddr_in& addr1,
                 const struct sockaddr_in& addr2) const
         {
-            return (addr1.sin_addr.s_addr < addr2.sin_addr.s_addr) ||
-                   ((addr1.sin_addr.s_addr == addr2.sin_addr.s_addr) &&
-                    (addr1.sin_port < addr2.sin_port)) ;
+            return
+#if 1
+                    addr1.sin_addr.s_addr < addr2.sin_addr.s_addr;
+#else
+                    (addr1.sin_addr.s_addr < addr2.sin_addr.s_addr) ||
+                    ((addr1.sin_addr.s_addr == addr2.sin_addr.s_addr) &&
+                     (addr1.sin_port < addr2.sin_port));
+#endif
         }
     };
 
