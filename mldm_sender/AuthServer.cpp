@@ -36,7 +36,7 @@ class AuthServer::Impl final
                     "mq_receive() failure");
         if (nbytes != sizeof(addr)) {
             throw std::runtime_error(std::to_string(nbytes) + "-byte "
-                    "authorization-message is too short; should have been " +
+                    "authorization-message is wrong length; should have been " +
                     std::to_string(sizeof(addr)) + " bytes");
         }
     }
