@@ -254,8 +254,8 @@ execMldmSender(
         args[i++] = info->server.inetId;
     }
 
+    char ttlOptArg[4];
     if (ttl != 1) {
-        char ttlOptArg[4];
         ssize_t nbytes = snprintf(ttlOptArg, sizeof(ttlOptArg), "%hu", ttl);
         if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
             log_add("Couldn't create time-to-live option-argument \"%hu\"",
