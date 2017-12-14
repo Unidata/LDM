@@ -232,6 +232,7 @@ static Ldm7Status authorize(
  * @retval     0            Success. `*reply` is set. `feedtype` is set iff
  *                          a corresponding multicast sender exists.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_INVAL   Feed `feed` doesn't exist
  */
 static Ldm7Status
 up7_subscribe(
@@ -688,34 +689,36 @@ subscribe_7_svc(
             hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
-    if (up7_subscribe(*feedtype, xprt, &result) ||
-            !up7_ensureProductQueueOpen()) {
-        log_error("Couldn't subscribe %s to feedtype %s",
-                hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
-        svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
-        svc_destroy(xprt);
-        /*
-         * The reply is set to NULL in order to cause the RPC dispatch routine
-         * to not reply because `svcerr_systemerr()` has been called and the
-         * server-side transport destroyed.
-         */
-        reply = NULL;
-    }
-    else {
-        if (!up7_createClientTransport(xprt)) {
-            log_flush_error();
+    int status = up7_subscribe(*feedtype, xprt, &result);
+    if (status == 0) {
+        if (!up7_ensureProductQueueOpen()) {
+            log_error("Couldn't subscribe %s to feedtype %s",
+                    hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
             svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
             svc_destroy(xprt);
             /*
-             * The reply is set to NULL in order to cause the RPC dispatch
-             * routine to not reply because `svcerr_systemerr()` has been called
-             * and the server-side transport destroyed.
+             * The reply is set to NULL in order to cause the RPC dispatch routine
+             * to not reply because `svcerr_systemerr()` has been called and the
+             * server-side transport destroyed.
              */
             reply = NULL;
         }
         else {
-            // `clnt` set
-            reply = &result; // reply synchronously
+            if (!up7_createClientTransport(xprt)) {
+                log_flush_error();
+                svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
+                svc_destroy(xprt);
+                /*
+                 * The reply is set to NULL in order to cause the RPC dispatch
+                 * routine to not reply because `svcerr_systemerr()` has been called
+                 * and the server-side transport destroyed.
+                 */
+                reply = NULL;
+            }
+            else {
+                // `clnt` set
+                reply = &result; // reply synchronously
+            }
         }
     }
 
