@@ -17,6 +17,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define restrict
 #endif
 
 /**
@@ -49,8 +50,8 @@ ldm_vformat(
  */
 char*
 ldm_format(
-    const size_t               initSize,
-    const char* const restrict fmt,
+    const size_t      initSize,
+    const char* const fmt,
     ...);
 
 extern int

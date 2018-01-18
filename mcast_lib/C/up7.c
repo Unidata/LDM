@@ -28,6 +28,7 @@
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
+#include "ldm_config_file.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mldm_sender_manager.h"
@@ -198,8 +199,33 @@ up7_setMcastInfo(
     return status;
 }
 
+
+static feedtypet reduceToAllowed(
+        feedtypet                      feed,
+        struct SVCXPRT* const restrict xprt)
+{
+    char hostname[HOST_NAME_MAX+1];
+    if (getnameinfo((struct sockaddr*)&xprt->xp_raddr, sizeof(xprt->xp_raddr),
+            hostname, sizeof(hostname), NULL, 0, 0)) {
+        log_add_syserr("Couldn't resolve IP address %s to a hostname",
+                inet_ntop(AF_INET, &xprt->xp_raddr.sin_addr, hostname,
+                        sizeof(hostname)));
+        log_flush_notice();
+    }
+    // `hostname` is fully-qualified domain-name or IPv4 dotted-quad
+    static const size_t maxFeeds = 128;
+    feedtypet           allowedFeeds[maxFeeds];
+    size_t              numFeeds = lcf_getAllowedFeeds(hostname,
+            &xprt->xp_raddr.sin_addr, maxFeeds, allowedFeeds);
+    if (numFeeds > maxFeeds) {
+        log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
+        numFeeds = maxFeeds;
+    }
+    return lcf_reduceByFeeds(feed, allowedFeeds, numFeeds);
+}
+
 static Ldm7Status authorize(
-        const feedtypet feed,
+        const feedtypet       feed,
         const struct in_addr* addr)
 {
     Ldm7Status status = authClnt_init(feed);
@@ -236,40 +262,45 @@ static Ldm7Status authorize(
  */
 static Ldm7Status
 up7_subscribe(
-        const feedtypet                   feed,
+        feedtypet                         feed,
         struct SVCXPRT* const restrict    xprt,
         SubscriptionReply* const restrict reply)
 {
-    const McastInfo* mcastInfo;
-    pid_t            pid;
-    int              status = mlsm_ensureRunning(feed, &mcastInfo, &pid);
-
-    if (status) {
-        if (LDM7_NOENT == status) {
-            log_flush_notice();
-            status = LDM7_INVAL; // non-existent feed
-        }
+    Ldm7Status status;
+    feed = reduceToAllowed(feed, xprt);
+    if (feed == NONE) {
+        log_flush_notice();
+        status = LDM7_UNAUTH;
     }
     else {
-        status = authorize(feed, &xprt->xp_raddr.sin_addr);
-        if (status == 0) {
-            /* TODO: Reduce subscription */
+        const McastInfo* mcastInfo;
+        pid_t            pid;
 
-            status = up7_openProdIndexMap(feed);
+        status = mlsm_ensureRunning(feed, &mcastInfo, &pid);
+        if (status) {
+            if (LDM7_NOENT == status)
+                log_flush_notice();
+        }
+        else {
+            status = authorize(feed, &xprt->xp_raddr.sin_addr);
             if (status == 0) {
-                if (atexit(up7_closeProdIndexMap)) {
-                    log_syserr("Couldn't register function to close product-index map");
-                    status = LDM7_SYSTEM;
-                }
-                else {
-                    status = up7_setMcastInfo(&reply->SubscriptionReply_u.mgi,
-                            mcastInfo);
-                    if (status == 0)
-                        feedtype = feed;
-                } // product-index map closing function registered
-            } // product-index map open
-        } // Client FMTP layer authorized
-    } // multicast sender is running
+                status = up7_openProdIndexMap(feed);
+                if (status == 0) {
+                    if (atexit(up7_closeProdIndexMap)) {
+                        log_syserr("Couldn't register function to close "
+                                "product-index map");
+                        status = LDM7_SYSTEM;
+                    }
+                    else {
+                        status = up7_setMcastInfo(
+                                &reply->SubscriptionReply_u.mgi, mcastInfo);
+                        if (status == 0)
+                            feedtype = feed;
+                    } // product-index map closing function registered
+                } // product-index map open
+            } // Client FMTP layer authorized
+        } // multicast sender is running
+    } // All or part of subscription is allowed by configuration-file
 
     return reply->status = status;
 }
@@ -689,29 +720,33 @@ subscribe_7_svc(
             hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
-    int status = up7_subscribe(*feedtype, xprt, &result);
-    if (status == 0) {
+    if (up7_subscribe(*feedtype, xprt, &result)) {
+        reply = &result;
+    }
+    else {
         if (!up7_ensureProductQueueOpen()) {
             log_error("Couldn't subscribe %s to feedtype %s",
                     hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
-            svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
+            // in `rpc/svc.c`; only valid for synchronous RPC
+            svcerr_systemerr(xprt);
             svc_destroy(xprt);
             /*
-             * The reply is set to NULL in order to cause the RPC dispatch routine
-             * to not reply because `svcerr_systemerr()` has been called and the
-             * server-side transport destroyed.
+             * The reply is set to NULL in order to cause the RPC dispatch
+             * routine to not reply because `svcerr_systemerr()` has been called
+             * and the server-side transport destroyed.
              */
             reply = NULL;
         }
         else {
             if (!up7_createClientTransport(xprt)) {
                 log_flush_error();
-                svcerr_systemerr(xprt); // in `rpc/svc.c`; only valid for synchronous RPC
+                // in `rpc/svc.c`; only valid for synchronous RPC
+                svcerr_systemerr(xprt);
                 svc_destroy(xprt);
                 /*
                  * The reply is set to NULL in order to cause the RPC dispatch
-                 * routine to not reply because `svcerr_systemerr()` has been called
-                 * and the server-side transport destroyed.
+                 * routine to not reply because `svcerr_systemerr()` has been
+                 * called and the server-side transport destroyed.
                  */
                 reply = NULL;
             }

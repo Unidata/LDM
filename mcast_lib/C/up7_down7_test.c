@@ -12,10 +12,12 @@
 #include "config.h"
 
 #include "down7.h"
+#include "error.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldmprint.h"
 #include "log.h"
+#include "ldm_config_file.h"
 #include "mcast_info.h"
 #include "mldm_receiver_memory.h"
 #include "mldm_sender_manager.h"
@@ -1497,6 +1499,11 @@ test_up7_down7(
     int status = sender_start(ANY);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    host_set* hostSet = lcf_newHostSet(HS_DOTTED_QUAD, "127.0.0.1", NULL);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(hostSet);
+    ErrorObj* errObj = lcf_addAllow(ANY, hostSet, ".*", NULL);
+    CU_ASSERT_PTR_NULL_FATAL(errObj);
 
     /* Starts a receiver on a new thread */
     status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),

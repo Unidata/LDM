@@ -2541,13 +2541,14 @@ lcf_addRequest(
 /**
  * Returns a new specification of a set of hosts.
  *
- * @param cp    Pointer to host(s) specification.  Caller must not free on
- *              return if and only if call is successful and "type" is
- *              HS_REGEXP.
- * @param rgxp  Pointer to regular-expression structure.  Caller may free
- *              on return but must not call regfree() if and only if call is
- *              successful and "type" is HS_REGEXP.
- * @retval NULL Out of memory. No error-message logged or started.
+ * @param[in] type  Type of host-set
+ * @param[in] cp    Pointer to host(s) specification. Caller must not free on
+ *                  return if call is successful and "type" is `HS_REGEXP`.
+ * @param[in] rgxp  Pointer to regular-expression structure.  Ignored if `type`
+ *                  isn't `HS_REGEXP`. Caller may free on return but must not
+ *                  call regfree() if call is successful and "type" is
+ *                  `HS_REGEXP`.
+ * @retval NULL     Out of memory. No error-message logged or started.
  */
 host_set *
 lcf_newHostSet(enum host_set_type type, const char *cp, const regex_t *rgxp)
@@ -2570,7 +2571,7 @@ lcf_newHostSet(enum host_set_type type, const char *cp, const regex_t *rgxp)
                                 goto unwind_alloc;
                         break;
                 case HS_REGEXP:
-                        /* private copies already allocate in the lexer */
+                        /* private copies already allocated by scanner */
                         hsp->cp = cp;
                         hsp->rgx = *rgxp;
                         break;
@@ -2605,13 +2606,14 @@ lcf_freeHostSet(host_set *hsp)
 /**
  * Adds an ALLOW entry.
  *
- * @param ft            [in] The feedtype.
- * @param hostSet       [in] Pointer to allocated set of allowed downstream hosts.
+ * @param[in] ft        Feedtype.
+ * @param[in] hostSet   Pointer to allocated set of allowed downstream hosts.
  *                      Upon successful return, the client shall abandon
  *                      responsibility for calling "free_host_set(hostSet)".
- * @param okEre         [in] Pointer to the ERE that data-product identifiers
- *                      must match.  Caller may free upon return.
- * @param notEre        [in] Pointer to the ERE that data-product identifiers
+ * @param[in] okEre     Pointer to the ERE that data-product identifiers
+ *                      must match.  May not be `NULL`. Caller may free upon
+ *                      return.
+ * @param[in] notEre    Pointer to the ERE that data-product identifiers
  *                      must not match or NULL if such matching should be
  *                      disabled.  Caller may free upon return.
  * @retval NULL         Success.
@@ -2680,6 +2682,68 @@ lcf_addAllow(
     return errObj;
 }
 
+size_t
+lcf_getAllowedFeeds(
+        const char*           name,
+        const struct in_addr* addr,
+        const size_t          maxFeeds,
+        feedtypet             feeds[maxFeeds])
+{
+    AllowEntry*     entry;                  /// ACL entry
+    char            dotAddr[DOTTEDQUADLEN]; /// dotted-quad IP address
+    size_t          nhits = 0;              /// number of matching ACL entries
+
+    (void)strncpy(dotAddr, inet_ntoa(*addr), sizeof(dotAddr));
+    dotAddr[sizeof(dotAddr)-1] = 0;
+
+    for(entry = allowEntryHead; entry != NULL; entry = entry->next) {
+        if (contains(entry->hsp, name, dotAddr)) {
+            if (nhits < maxFeeds)
+                feeds[nhits] = entry->ft;
+            ++nhits;
+        }
+    }
+    return nhits;
+}
+
+feedtypet
+lcf_reduceByFeeds(
+        feedtypet    desiredFeed,
+        feedtypet*   allowedFeeds,
+        const size_t numFeeds)
+{
+    feedtypet ft;
+    char      s1[255], s2[255], s3[255];
+    sprint_feedtypet(s1, sizeof(s1), desiredFeed);
+    for (size_t i = 0; i < numFeeds; ++i) {
+        sprint_feedtypet(s2, sizeof(s2), allowedFeeds[i]);
+        ft = desiredFeed & allowedFeeds[i];
+        sprint_feedtypet(s3, sizeof(s3), ft);
+        if (ft) {
+            log_debug("hit %s = %s & %s", s3, s1, s2);
+            return ft; // First match determines outcome
+        }
+    }
+    log_debug("miss %s", s1);
+    return NONE;
+}
+
+feedtypet
+lcf_reduceByAllowedFeeds(
+        const char*           name,
+        const struct in_addr* addr,
+        const feedtypet       desiredFeed)
+{
+    static const size_t maxFeeds = 128;
+    feedtypet           allowedFeeds[maxFeeds];
+    size_t              numFeeds = lcf_getAllowedFeeds(name, addr, maxFeeds,
+            allowedFeeds);
+    if (numFeeds > maxFeeds) {
+        log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
+        numFeeds = maxFeeds;
+    }
+    return lcf_reduceByFeeds(desiredFeed, allowedFeeds, numFeeds);
+}
 
 /**
  * Returns the class of products that a host is allowed to receive based on the
@@ -2730,76 +2794,30 @@ lcf_reduceToAllowed(
         nhits = 0;
     }
     else {
-        AllowEntry*     entry;                  /* ACL entry */
-        char            dotAddr[DOTTEDQUADLEN]; /* dotted-quad IP address */
-
-        (void)strncpy(dotAddr, inet_ntoa(*addr), sizeof(dotAddr));
-        dotAddr[sizeof(dotAddr)-1] = 0;
-
-        for(entry = allowEntryHead; entry != NULL; entry = entry->next) {
-            if (contains(entry->hsp, name, dotAddr)) {
-                feedType[nhits++] = entry->ft;
-
-                if (nhits >= MAXHITS) {
-                    log_error("nhits (%u) >= MAXHITS (%d)", nhits, MAXHITS);
-                    break;
-                }
-            }
+        nhits = lcf_getAllowedFeeds(name, addr, MAXHITS, feedType);
+        if (nhits > MAXHITS) {
+            log_error("nhits (%u) > MAXHITS (%d)", nhits, MAXHITS);
+            nhits = MAXHITS;
         }
     }
 
-    /*
-     * Allocate a product-class for the intersection.
-     */
+    // Allocate a product-class for the intersection.
     inter = new_prod_class(nhits == 0 ? 0 : want->psa.psa_len);
-
-    if(inter == NULL) {
+    if (inter == NULL) {
         error = ENOMEM;
     }
-    else if (nhits != 0) {
-        error = cp_prod_class(inter, want, 0);
-
-        if (error == 0) {
-            /*
-             * Compute the intersection.
-             */
-            int       ii;
-
-            for (ii = 0; ii < inter->psa.psa_len; ii++) {
-                feedtypet ft;
-                size_t    jj;
-                char      s1[255], s2[255], s3[255];
-
-                sprint_feedtypet(s1, sizeof(s1),
-                    inter->psa.psa_val[ii].feedtype);
-
-                for (jj = 0; jj < nhits; jj++) {
-                    sprint_feedtypet(s2, sizeof(s2), feedType[jj]);
-
-                    ft = inter->psa.psa_val[ii].feedtype &
-                        feedType[jj];
-
-                    sprint_feedtypet(s3, sizeof(s3), ft);
-
-                    if (ft) {
-                        log_debug("hit %s = %s & %s", s3, s1, s2);
-
-                        inter->psa.psa_val[ii].feedtype = ft;
-
-                        break; /* first match priority */
-                    }
-                }
-
-                if (ft == NONE) {
-                    log_debug("miss %s", s1);
-
-                    inter->psa.psa_val[ii].feedtype = NONE;
-                }
+    else {
+        if (nhits != 0) {
+            error = cp_prod_class(inter, want, 0);
+            if (error == 0) {
+                // Compute the intersection.
+                int       ii;
+                for (ii = 0; ii < inter->psa.psa_len; ++ii)
+                    inter->psa.psa_val[ii].feedtype = lcf_reduceByFeeds(
+                            inter->psa.psa_val[ii].feedtype, feedType, nhits);
+                clss_scrunch(inter);
             }
-
-            clss_scrunch(inter);
         }
-
         if (error)
             (void)free_prod_class(inter);
     }
@@ -3026,9 +3044,9 @@ lcf_addMulticast(
  *
  * @param[in] feedtype     Feedtype to subscribe to.
  * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] mcastIface   IP address of interface to use for incoming packets.
- *                         Caller may free upon return. "0.0.0.0" obtains the
- *                         system's default multicast interface.
+ * @param[in] iface        IP address of FMTP interface. Caller may free upon
+ *                         return. "0.0.0.0" obtains the system's default
+ *                         interface.
  * @retval    0            Success.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
@@ -3036,9 +3054,9 @@ int
 lcf_addReceive(
         const feedtypet             feedtype,
         ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  mcastIface)
+        const char* const restrict  iface)
 {
-    int status = d7mgr_add(feedtype, ldmSvcAddr, mcastIface)
+    int status = d7mgr_add(feedtype, ldmSvcAddr, iface)
             ? ENOMEM
             : 0;
     if (0 == status)

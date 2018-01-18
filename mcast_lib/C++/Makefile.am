@@ -1,4 +1,4 @@
-# Copyright 2014 University Corporation for Atmospheric Research
+# Copyright 2018 University Corporation for Atmospheric Research
 #
 # This file is part of the Unidata LDM package.  See the file COPYRIGHT in
 # the top-level source-directory of the package for copying and redistribution
@@ -10,9 +10,11 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
+			  AuthMsgQ.cpp AuthMsgQ.h \
 			  AuthClient.cpp AuthClient.h \
 			  FixedDelayQueue.h \
-			  Authorizer.cpp Authorizer.h
+			  Authorizer.cpp Authorizer.h \
+			  InAddrMgr.cpp InAddrMgr.h
 AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -44,7 +46,13 @@ if HAVE_OPMOCK
 endif
 
 if HAVE_CUNIT
+cunit_check_progs	= InAddrMgr_test
+
+InAddrMgr_test_SOURCES	= InAddrMgr_test.c InAddrMgr.cpp
+InAddrMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+InAddrMgr_test_LDFLAGS	= $(top_builddir)/lib/libldm.la \
+                          @LIBS_CUNIT@
 endif
 
 check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)
-TESTS				= $(opmock_tests) $(cunit_tests)
+TESTS				= $(opmock_tests) $(cunit_check_progs)

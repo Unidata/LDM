@@ -34,7 +34,7 @@ int mcastReceiver_new(
     void*                 notifier,
     const char* const     mcastAddr,
     const unsigned short  mcastPort,
-    const char* const     mcastIface);
+    const char* const     iface);
 
 void mcastReceiver_free(
     McastReceiver*              receiver);

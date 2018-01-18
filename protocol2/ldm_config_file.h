@@ -95,13 +95,14 @@ lcf_addRequest(
 /**
  * Returns a new specification of a set of hosts.
  *
- * @param cp    Pointer to host(s) specification.  Caller must not free on
- *              return if and only if call is successful and "type" is
- *              HS_REGEXP.
- * @param rgxp  Pointer to regular-expression structure.  Caller may free
- *              on return but must not call regfree() if and only if call is
- *              successful and "type" is HS_REGEXP.
- * @retval NULL Out of memory. No error-message logged or started.
+ * @param[in] type  Type of host-set
+ * @param[in] cp    Pointer to host(s) specification. Caller must not free on
+ *                  return if call is successful and "type" is `HS_REGEXP`.
+ * @param[in] rgxp  Pointer to regular-expression structure.  Ignored if `type`
+ *                  isn't `HS_REGEXP`. Caller may free on return but must not
+ *                  call regfree() if call is successful and "type" is
+ *                  `HS_REGEXP`.
+ * @retval NULL     Out of memory. No error-message logged or started.
  */
 host_set *
 lcf_newHostSet(enum host_set_type type, const char *cp, const regex_t *rgxp);
@@ -135,6 +136,51 @@ lcf_addAllow(
     host_set* const             hostSet,
     const char* const           okEre,
     const char* const           notEre);
+
+/**
+ * Returns the feeds that a remote host is allowed to receive.
+ * @param[in]  name      Name of remote host
+ * @param[in]  addr      Address of remote host
+ * @param[out] feeds     Feeds that remote host is allowed to receive
+ * @param[in]  maxFeeds  Size of `feeds`
+ * @return               Number of feeds that remote host is allowed. May be
+ *                       greater than `maxFeeds`.
+ */
+size_t
+lcf_getAllowedFeeds(
+        const char*           name,
+        const struct in_addr* addr,
+        const size_t          maxFeeds,
+        feedtypet             feeds[maxFeeds]);
+
+/**
+ * Returns the intersection of a desired feed and allowed feeds.
+ * @param[in] desiredFeed   Desired feed
+ * @param[in] allowedFeeds  Allowed feeds
+ * @param[in] numFeeds      Number of allowed feeds
+ * @return                  Intersection of `desiredFeed` and elements of
+ *                          `feeds`
+ */
+feedtypet
+lcf_reduceByFeeds(
+        feedtypet    desiredFeed,
+        feedtypet*   allowedFeeds,
+        const size_t numFeeds);
+
+/**
+ * Returns the intersection of a desired feed and the feeds that a remote host
+ * is allowed to receive.
+ * @param[in] name         Name of remote host
+ * @param[in] addr         Address of remote host
+ * @param[in] desiredFeed  Feed desired by remote host
+ * @return                 Intersection of `desiredFeed` and feeds host is
+ *                         allowed to receive
+ */
+feedtypet
+lcf_reduceByAllowedFeeds(
+        const char*           name,
+        const struct in_addr* addr,
+        const feedtypet       desiredFeed);
 
 /**
  * Returns the class of products that a host is allowed to receive based on the
@@ -272,9 +318,9 @@ lcf_addMulticast(
  *
  * @param[in] feedtype     Feedtype to subscribe to.
  * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] mcastIface   IP address of interface to use for incoming packets.
- *                         Caller may free upon return. "0.0.0.0" obtains the
- *                         system's default multicast interface.
+ * @param[in] iface        IP address of FMTP interface. Caller may free upon
+ *                         return. "0.0.0.0" obtains the system's default
+ *                         interface.
  * @retval    0            Success.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
@@ -282,7 +328,7 @@ int
 lcf_addReceive(
         const feedtypet             feedtype,
         ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  mcastIface);
+        const char* const restrict  iface);
 
 #endif
 

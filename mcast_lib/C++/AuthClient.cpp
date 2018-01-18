@@ -9,27 +9,11 @@
 #include "config.h"
 
 #include "AuthClient.h"
+#include "AuthMsgQ.h"
 #include "log.h"
 
 #include <mqueue.h>
 #include <system_error>
-
-std::string authMsgQName(const feedtypet feed)
-{
-    char buf[2+sizeof(feed)*2 + 1];
-    (void)snprintf(buf, sizeof(buf), "%#X", feed);
-    return std::string{"/AuthMsgQ_feed_"} + buf;
-}
-
-char* authMsgQ_name(
-        char* const     buf,
-        const size_t    size,
-        const feedtypet feed)
-{
-    ::strncpy(buf, authMsgQName(feed).c_str(), size);
-    buf[size-1] = 0;
-    return buf;
-}
 
 /******************************************************************************
  * Private Implementation:
@@ -37,8 +21,7 @@ char* authMsgQ_name(
 
 class AuthClient::Impl final
 {
-    std::string name;       /// Name of message-queue
-    mqd_t       mqId;       /// Message-queue handle
+    AuthMsgQ    authMsgQ;
 
 public:
     /**
@@ -47,43 +30,17 @@ public:
      * @throw std::system_error  Couldn't open message-queue
      */
     Impl(const feedtypet feed)
-        : name{authMsgQName(feed)}
-        /*
-         * Assume that only the user needs access and that the default
-         * attributes are adequate.
-         */
-        , mqId{::mq_open(name.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR,
-                nullptr)}
-    {
-        if (mqId == static_cast<mqd_t>(-1))
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't open authorization message-queue " + name);
-    }
+        : authMsgQ{feed, false}
+    {}
 
-    ~Impl() noexcept
+    void authorize(const struct in_addr& addr)
     {
-        ::mq_close(mqId); // Can't fail
-    }
-
-    void authorize(const struct sockaddr_in& addr)
-    {
-        // Priority argument is irrelevant
-        if (::mq_send(mqId, reinterpret_cast<const char*>(&addr), sizeof(addr),
-                0)) {
-            char     dottedQuad[INET_ADDRSTRLEN];
-            unsigned port = ntohs(addr.sin_port);
-            throw std::system_error(errno, std::system_category(),
-                    std::string{"mq_send() failure: Couldn't send "
-                        "authorization for client "} +
-                    ::inet_ntop(AF_INET, &addr.sin_addr, dottedQuad,
-                    sizeof(dottedQuad)) + ":" + std::to_string(port) +
-                    " to message-queue " + name);
-        }
+        authMsgQ.send(addr);
     }
 };
 
 /******************************************************************************
- * Public API:
+ * Public C++ API:
  ******************************************************************************/
 
 std::shared_ptr<AuthClient::Impl> AuthClient::pImpl;
@@ -95,7 +52,7 @@ void AuthClient::init(const feedtypet feed)
     pImpl = std::shared_ptr<Impl>{new Impl(feed)};
 }
 
-void AuthClient::authorize(const struct sockaddr_in& addr)
+void AuthClient::authorize(const struct in_addr& addr)
 {
     pImpl->authorize(addr);
 }
@@ -106,7 +63,7 @@ void AuthClient::fini()
 }
 
 /******************************************************************************
- * C Functions:
+ * Public C API:
  ******************************************************************************/
 
 Ldm7Status authClnt_init(const feedtypet feed)
@@ -123,7 +80,7 @@ Ldm7Status authClnt_init(const feedtypet feed)
     return status;
 }
 
-Ldm7Status authClnt_authorize(const struct sockaddr_in* addr)
+Ldm7Status authClnt_authorize(const struct in_addr* addr)
 {
     Ldm7Status status;
     try {

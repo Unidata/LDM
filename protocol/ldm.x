@@ -15,6 +15,7 @@
 %#   define __USE_BSD    // to get `u_int`
 %#endif
 %
+%#include <netinet/in.h> /* struct in_addr */
 %#include <signal.h>     /* sig_atomic_t */
 %#include <stdlib.h>     /* at least malloc() */
 %#include <sys/time.h>   /* timeval */
@@ -950,6 +951,19 @@ enum Ldm7Status {
 %     return status;
 %}
 #endif // RPC_CLNT
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Multicast subscription request:
+% */
+#endif
+struct SubscriptionRequest {
+    /* Desired feed: */
+    feedtypet feed;
+    /* Address of FMTP client: */
+    uint32_t  fmtpClient; /* In network byte-order */
+};
 
 typedef u_int McastProdIndex;
 

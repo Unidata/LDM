@@ -333,8 +333,8 @@ missed_prod_func(
  *
  * @param[out] mlr            The multicast LDM receiver to initialize.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  mcastIface     IP address of interface to use for receiving
- *                            multicast packets.
+ * @param[in]  iface          IPv4 address of interface to use for receiving
+ *                            multicast and unicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
@@ -347,7 +347,7 @@ static int
 init(
         Mlr* const restrict             mlr,
         const McastInfo* const restrict mcastInfo,
-        const char* const restrict      mcastIface,
+        const char* const restrict      iface,
         Down7* const restrict           down7)
 {
     int            status;
@@ -386,7 +386,7 @@ init(
 
         status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
                 mcastInfo->server.port, notifier, mcastInfo->group.inetId,
-                mcastInfo->group.port, mcastIface);
+                mcastInfo->group.port, iface);
         if (status) {
             log_add("Couldn't create FMTP receiver");
             ppn_free(notifier);
@@ -410,8 +410,8 @@ init(
  * Returns a new multicast LDM receiver object.
  *
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
- * @param[in]  mcastIface     IP address of interface to use for receiving
- *                            multicast packets.
+ * @param[in]  iface          IP address of interface to use for receiving
+ *                            multicast and unicast packets.
  * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
  * @retval     NULL           Failure. `log_add()` called.
  * @return                    Pointer to a new multicast LDM receiver object.
@@ -421,13 +421,13 @@ init(
 Mlr*
 mlr_new(
         const McastInfo* const restrict mcastInfo,
-        const char* const restrict      mcastIface,
+        const char* const restrict      iface,
         Down7* const restrict           down7)
 {
     Mlr* mlr = log_malloc(sizeof(Mlr), "multicast LDM receiver object");
 
     if (mlr) {
-        if (init(mlr, mcastInfo, mcastIface, down7)) {
+        if (init(mlr, mcastInfo, iface, down7)) {
             log_add("Couldn't initialize multicast LDM receiver");
             free(mlr);
             mlr = NULL;

@@ -14,7 +14,6 @@
 
 #include "config.h"
 
-#include "AuthClient.h"
 #include "globals.h"
 #include "log.h"
 #include "ldmprint.h"
@@ -279,9 +278,6 @@ execMldmSender(
     }
 
     args[i++] = mcastGroupOperand;
-
-    char msgQName[80];
-    args[i++] = authMsgQ_name(msgQName, sizeof(msgQName), info->feed);
 
     args[i++] = NULL;
 

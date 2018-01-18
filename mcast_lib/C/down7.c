@@ -95,8 +95,11 @@ struct Down7 {
     pqueue*               pq;            ///< pointer to the product-queue
     ServiceAddr*          servAddr;      ///< socket address of remote LDM-7
     McastInfo*            mcastInfo;     ///< information on multicast group
-    /** IP address of interface to use for incoming multicast packets */
-    char*                 mcastIface;
+    /**
+     * IP address of interface to use for receiving multicast and unicast
+     * packets
+     */
+    char*                 iface;
     Mlr*                  mlr;           ///< multicast LDM receiver
     /** Persistent multicast receiver memory */
     McastReceiverMemory*   mrm;
@@ -1096,7 +1099,7 @@ startMcastRecvTask(
 {
     log_debug("Entered");
 
-    Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->mcastIface, down7);
+    Mlr* const   mlr = mlr_new(down7->mcastInfo, down7->iface, down7);
     int          status;
 
     if (mlr == NULL) {
@@ -1288,6 +1291,7 @@ freeClient(
  * @param[in] down7          Pointer to the downstream LDM-7.
  *            0              Success. `down7->up7proxy`, `down7->sock`, and
  *                           `down7->mcastInfo` are set.
+ * @retval    LDM7_NOENT     `log_flush_warning()` called.
  * @retval    LDM7_REFUSED   `log_flush_warning()` called.
  * @retval    LDM7_RPC       `log_flush_error()` called.
  * @retval    LDM7_SYSTEM    `log_flush_error()` called.
@@ -1312,7 +1316,7 @@ subscribe(
     // Because end-of-thread:
     if (status) {
         log_flush((status == LDM7_TIMEDOUT || status == LDM7_UNAUTH ||
-                status == LDM7_REFUSED)
+                status == LDM7_REFUSED || status == LDM7_NOENT)
                 ? LOG_LEVEL_WARNING
                 : LOG_LEVEL_ERROR);
     }
@@ -1338,7 +1342,7 @@ subscribe(
  * @retval    LDM7_TIMEDOUT  Timeout occurred. `log_add()` called.
  * @retval    LDM7_RPC       RPC failure (including interrupt). `log_add()`
  *                           called.
- * @retval    LDM7_INVAL     Invalid multicast group name.
+ * @retval    LDM7_NOENT     Invalid feed
  * @retval    LDM7_UNAUTH    Not authorized to receive multicast group.
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  * @post                     The downstream LDM-7 state is locked.
@@ -1388,7 +1392,7 @@ execSubscriptionTask(
  *
  * @pre                      The downstream LDM-7 state is locked.
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
- * @retval    LDM7_INVAL     Invalid multicast group name. `log_add()` called.
+ * @retval    LDM7_NOENT     No such feed. `log_add()` called.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
  *                           `log_add()` called.
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
@@ -1427,7 +1431,7 @@ subscribeAndReceive(
  *
  * @pre                      The downstream LDM-7 state is locked.
  * @param[in] down7          Pointer to the downstream LDM-7 to be executed.
- * @retval    LDM7_INVAL     Invalid multicast group name. `log_add()` called.
+ * @retval    LDM7_NOENT     No such feed. `log_add()` called.
  * @retval    LDM7_INVAL     Invalid port number or host identifier.
  *                           `log_add()` called.
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
@@ -1670,8 +1674,8 @@ down7_new(
     if ((down7->executor = exe_new()) == NULL)
         goto free_stateMutex;
 
-    down7->mcastIface = strdup(mcastIface);
-    if (down7->mcastIface == NULL) {
+    down7->iface = strdup(mcastIface);
+    if (down7->iface == NULL) {
         log_add("Couldn't clone multicast interface specification");
         goto free_executor;
     }
@@ -1705,7 +1709,7 @@ close_mcastReceiverMemory:
     if (!mrm_close(down7->mrm))
         log_add("Couldn't close multicast receiver memory");
 free_mcastIface:
-    free(down7->mcastIface);
+    free(down7->iface);
 free_executor:
     (void)exe_free(down7->executor);
 close_pq:
@@ -1927,7 +1931,7 @@ down7_free(
                 log_add("Couldn't destroy termination condition-variable");
                 status = -1;
             }
-            free(down7->mcastIface);
+            free(down7->iface);
             sa_free(down7->servAddr);
             free(down7);
         }

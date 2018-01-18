@@ -316,8 +316,6 @@ mls_decodeGroupAddr(
  * @param[in]  argv         Operands.
  * @param[out] groupAddr    Internet service address of the multicast group.
  *                          Caller should free when it's no longer needed.
- * @param[out] msgQName     Name of the message-queue for authorization
- *                          messages.
  * @retval     0            Success. `*groupAddr`, `*serverAddr`, `*feed`, and
  *                          `msgQName` are set.
  * @retval     1            Invalid operands. `log_add()` called.
@@ -327,8 +325,7 @@ static int
 mls_decodeOperands(
         int                          argc,
         char* const* restrict        argv,
-        ServiceAddr** const restrict groupAddr,
-        const char** const restrict  msgQName)
+        ServiceAddr** const restrict groupAddr)
 {
     int status;
 
@@ -338,16 +335,6 @@ mls_decodeOperands(
     }
     else {
         status = mls_decodeGroupAddr(*argv++, groupAddr);
-        if (status == 0) {
-            if (argc-- < 1) {
-                log_add("Name of authorization message-queue not specified");
-                status = 1;
-            }
-            else {
-                *msgQName = *argv++;
-                status = 0;
-            }
-        }
     }
 
     return status;
@@ -411,8 +398,6 @@ mls_setMcastGroupInfo(
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
- * @param[out] msgQName      Name of the message-queue for authorization
- *                           messages.
  * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
@@ -424,8 +409,7 @@ mls_decodeCommandLine(
         McastInfo** const restrict  mcastInfo,
         unsigned* const restrict    ttl,
         const char** const restrict ifaceAddr,
-        float* const                timeoutFactor,
-        const char** const restrict msgQName)
+        float* const                timeoutFactor)
 {
     feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
@@ -440,7 +424,7 @@ mls_decodeCommandLine(
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupAddr, msgQName);
+        status = mls_decodeOperands(argc, argv, &groupAddr);
 
         if (0 == status) {
             status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
@@ -675,8 +659,8 @@ mls_init(
     }
 
     /*
-     * Thread-safe because `mls_tryMulticast()` and `mls_doneWithProduct()`
-     * might be executed on different threads.
+     * Product-queue is opened thread-safe because `mls_tryMulticast()` and
+     * `mls_doneWithProduct()` might be executed on different threads.
      */
     if (pq_open(pqPathname, PQ_READONLY | PQ_THREADSAFE, &pq)) {
         log_add("Couldn't open product-queue \"%s\"", pqPathname);
@@ -967,7 +951,6 @@ mls_startMulticasting(void)
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
  * @param[in]  pqPathname    Pathname of the product-queue.
- * @param[in]  authMsgQName  Name of authorization message-queue.
  * @retval     0             Success. Termination was requested.
  * @retval     LDM7_INVAL.   Invalid argument. `log_add()` called.
  * @retval     LDM7_MCAST    Multicast sender failure. `log_add()` called.
@@ -980,8 +963,7 @@ mls_execute(
         const unsigned                  ttl,
         const char* const restrict      ifaceAddr,
         const float                     timeoutFactor,
-        const char* const restrict      pqPathname,
-        const char* const restrict      authMsgQName)
+        const char* const restrict      pqPathname)
 {
     int status;
 
@@ -1004,7 +986,7 @@ mls_execute(
         status = LDM7_SYSTEM;
     }
     else {
-        void* authSrvr = authSrvr_new(authDb, authMsgQName);
+        void* authSrvr = authSrvr_new(authDb, info->feed);
         if (authSrvr == NULL) {
             log_add_syserr("Couldn't allocate authorization server");
             status = LDM7_SYSTEM;
@@ -1035,8 +1017,7 @@ mls_execute(
                  */
                 char* miStr = mi_format(&mcastInfo);
                 log_notice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
-                        "pq=\"%s\", AuthMsgQ=%s", ifaceAddr, miStr, ttl,
-                        pqPathname, authMsgQName);
+                        "pq=\"%s\"", ifaceAddr, miStr, ttl, pqPathname);
                 free(miStr);
                 status = mls_startMulticasting();
 
@@ -1082,9 +1063,8 @@ main(
     const char* ifaceAddr;         // IP address of multicast interface
     // Ratio of product-hold duration to multicast duration
     float       timeoutFactor = -1; // Use default
-    const char* authMsgQName;
     int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &ifaceAddr, &timeoutFactor, &authMsgQName);
+            &ifaceAddr, &timeoutFactor);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -1096,7 +1076,7 @@ main(
         mls_setSignalHandling();
 
         status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
-                getQueuePath(), authMsgQName);
+                getQueuePath());
         if (status) {
             log_error("Couldn't execute multicast LDM sender");
             switch (status) {

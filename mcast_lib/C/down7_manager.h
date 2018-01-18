@@ -25,8 +25,8 @@
  *
  * @param[in] ft           Feedtype to subscribe to.
  * @param[in] ldm          Upstream LDM-7 to which to subscribe.
- * @param[in] mcastIface   IP address of interface to use for incoming packets.
- *                         Caller may free upon return.
+ * @param[in] iface        IP address of FMTP interface. Caller may free upon
+ *                         return.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
@@ -34,7 +34,7 @@ Ldm7Status
 d7mgr_add(
         const feedtypet             ft,
         ServiceAddr* const restrict ldm,
-        const char* const restrict  mcastIface);
+        const char* const restrict  iface);
 
 /**
  * Frees the downstream LDM-7 manager.

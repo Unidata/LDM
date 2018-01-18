@@ -10,7 +10,8 @@
 #ifndef MLDM_SENDER_AUTHSERVER_H_
 #define MLDM_SENDER_AUTHSERVER_H_
 
-#include "../mcast_lib/C++/Authorizer.h"
+#include "Authorizer.h"
+#include "ldm.h"
 
 #ifdef __cplusplus
 #include <memory>
@@ -31,8 +32,8 @@ public:
      * @throw std::system_error  Couldn't create server-thread
      */
     AuthServer(
-            Authorizer&        authorizer,
-            const std::string& name);
+            Authorizer&     authorizer,
+            const feedtypet feed);
 };
 #endif
 
@@ -41,8 +42,8 @@ extern "C" {
 #endif
 
 void* authSrvr_new(
-        void*       authorizer,
-        const char* name);
+        void*           authorizer,
+        const feedtypet feed);
 
 void authSrvr_free(void* authServer);
 

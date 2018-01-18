@@ -90,8 +90,7 @@ waitForTermSig(
  *                           products missed by the FMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
- * @param[in] mcastIface     IP address of interface to use for receiving
- *                           packets.
+ * @param[in] iface          IP address of FMTP interface
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
  * @retval    LDM7_SHUTDOWN  Process termination requested.
@@ -101,7 +100,7 @@ static int
 executeDown7(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
-    const char* const restrict        mcastIface,
+    const char* const restrict        iface,
     const char* const restrict        pqPathname)
 {
     pqueue* pq;
@@ -111,7 +110,7 @@ executeDown7(
         status = LDM7_SYSTEM;
     }
     else {
-        Down7* down7 = down7_new(servAddr, feedtype, mcastIface, pq);
+        Down7* down7 = down7_new(servAddr, feedtype, iface, pq);
 
         if (NULL == down7) {
             status = LDM7_SYSTEM;
@@ -141,7 +140,7 @@ executeDown7(
 typedef struct elt {
     struct elt*  next;
     ServiceAddr* ul7;
-    char*        mcastIface;
+    char*        iface;
     feedtypet    ft;
     pid_t        pid;
 } Elt;
@@ -156,8 +155,8 @@ static Elt* top;
  *
  * @param[in] ft          Feedtype to subscribe to.
  * @param[in] ul7         Upstream LDM-7 to which to subscribe.
- * @param[in] mcastIface  IP address of interface to use for incoming packets.
- *                        Caller may free upon return.
+ * @param[in] iface       IP address of FMTP interface. Caller may free upon
+ *                        return.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
  */
@@ -165,7 +164,7 @@ static Elt*
 elt_new(
         const feedtypet             ft,
         ServiceAddr* const restrict ul7,
-        const char* const restrict  mcastIface)
+        const char* const restrict  iface)
 {
     Elt* elt = log_malloc(sizeof(Elt), "downstream LDM-7 element");
 
@@ -177,8 +176,8 @@ elt_new(
             elt = NULL;
         }
         else {
-            elt->mcastIface = strdup(mcastIface);
-            if (elt->mcastIface == NULL) {
+            elt->iface = strdup(iface);
+            if (elt->iface == NULL) {
                 log_syserr("Couldn't duplicate interface specification");
                 sa_free(elt->ul7);
                 free(elt);
@@ -205,7 +204,7 @@ elt_free(
 {
     if (elt) {
         sa_free(elt->ul7);
-        free(elt->mcastIface);
+        free(elt->iface);
         free(elt);
     }
 }
@@ -232,7 +231,7 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = executeDown7(elt->ul7, elt->ft, elt->mcastIface, getQueuePath());
+        status = executeDown7(elt->ul7, elt->ft, elt->iface, getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
             log_flush_notice();
@@ -277,9 +276,9 @@ elt_stop(
  *
  * @param[in] ft           Feedtype to subscribe to.
  * @param[in] ul7          Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] mcastIface   IP address of interface to use for incoming packets.
- *                         Caller may free upon return. "0.0.0.0" obtains the
- *                         system's default multicast interface.
+ * @param[in] iface        IP address of FMTP interface. Caller may free upon
+ *                         return. "0.0.0.0" obtains the system's default
+ *                         interface.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
@@ -287,10 +286,10 @@ Ldm7Status
 d7mgr_add(
         const feedtypet             ft,
         ServiceAddr* const restrict ul7,
-        const char* const restrict  mcastIface)
+        const char* const restrict  iface)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7, mcastIface);
+    Elt* elt = elt_new(ft, ul7, iface);
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;

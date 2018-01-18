@@ -442,9 +442,8 @@ decodeMulticastEntry(
  *
  * @param[in] feedtypeSpec   Specification of the feedtype.
  * @param[in] LdmServerSpec  Specification of the remote LDM server.
- * @param[in] mcastIface     IP address of the interface to use for receiving
- *                           multicast packets. "0.0.0.0" obtains the system's
- *                           default multicast interface.
+ * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
+ *                           system's default multicast interface.
  * @retval    0              Success.
  * @retval    EINVAL         Invalid specification. `log_add()` called.
  * @retval    ENOMEM         Out-of-memory. `log_add()` called.
@@ -453,7 +452,7 @@ static int
 decodeReceiveEntry(
         const char* const restrict feedtypeSpec,
         const char* const restrict ldmServerSpec,
-        const char* const restrict mcastIface)
+        const char* const restrict iface)
 {
     feedtypet   feedtype;
     int         status = decodeFeedtype(&feedtype, feedtypeSpec);
@@ -465,7 +464,7 @@ decodeReceiveEntry(
                 ldmPort);       // Internet ID must exist; port is optional
 
         if (0 == status) {
-            status = lcf_addReceive(feedtype, ldmSvcAddr, mcastIface);
+            status = lcf_addReceive(feedtype, ldmSvcAddr, iface);
 
             sa_free(ldmSvcAddr);
         }       // `ldmSvcAddr` allocated

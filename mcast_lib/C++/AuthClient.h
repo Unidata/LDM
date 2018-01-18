@@ -43,7 +43,7 @@ public:
      * Authorizes a remote FMTP client to connect to the local FMTP server.
      * @param[in] addr  Address of remote FMTP client
      */
-    static void authorize(const struct sockaddr_in& addr);
+    static void authorize(const struct in_addr& addr);
 
     /**
      * Releases allocated resources.
@@ -56,14 +56,9 @@ public:
 extern "C" {
 #endif
 
-char* authMsgQ_name(
-        char* const     buf,
-        const size_t    size,
-        const feedtypet feed);
-
 Ldm7Status authClnt_init(const feedtypet feed);
 
-Ldm7Status authClnt_authorize(const struct sockaddr_in* addr);
+Ldm7Status authClnt_authorize(const struct in_addr* addr);
 
 void authClnt_fini();
 
