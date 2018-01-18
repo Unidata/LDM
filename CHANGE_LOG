@@ -25,7 +25,7 @@
         unknown parameters.
 
     Feedtypes:
-        Relabled the unused DIFAX feed to SATELLITE for satellite imagery.
+        Repurposed the unused DIFAX feed to SATELLITE for satellite imagery.
 
     Documentation:
         Additions to pqact(1) configuration-file documentation:

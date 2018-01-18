@@ -355,84 +355,80 @@ decodeRequestEntry(
 #if WANT_MULTICAST
 /**
  * Decodes a MULTICAST entry.
- *
- * @param[in] feedtypeSpec    Specification of the feedtype.
- * @param[in] mcastGroupSpec  Specification of the multicast group.
- * @param[in] ttlSpec         Specification of the time-to-live for multicast
+ * @param[in] feedSpec        Specification of feedtype.
+ * @param[in] mcastGroupSpec  Specification of multicast group.
+ * @param[in] ttlSpec         Specification of time-to-live for multicast
  *                            packets.
- * @param[in] mcastIface      IPv4 specification of the interface to use for
- *                            outgoing multicast packets. If NULL, then the
- *                            system's default multicast interface is used.
- *                            Specify "127.0.0.1" to use the loopback interface.
+ * @param[in] fmtpAddrSpec    Specification of IPv4 address of local FMTP server
+ * @param[in] vlanIdSpec      Specification of VLAN identifier
+ * @param[in] switchPortSpec  Specification of port on OSI layer-2 switch
+ * @param[in] clntAddrsSpec   Specification of IPv4 address-space for clients
  * @retval    0               Success.
  * @retval    EINVAL          Invalid specification. `log_add()` called.
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
  */
 static int
 decodeMulticastEntry(
-    const char* const   feedtypeSpec,
+    const char* const   feedSpec,
     const char* const   mcastGroupSpec,
     const char* const   ttlSpec,
-    const char* const   mcastIface)
+    const char* const   fmtpAddrSpec,
+    const char* const   vlanIdSpec,
+    const char* const   switchPortSpec,
+    const char* const   clntAddrsSpec)
 {
     int         status;
-    feedtypet   feedtype;
+    feedtypet   feed;
 
-    status = decodeFeedtype(&feedtype, feedtypeSpec);
+    status = decodeFeedtype(&feed, feedSpec);
     
     if (0 == status) {
         ServiceAddr* mcastGroupSa = NULL;
         
         if ((status = sa_parseWithDefaults(&mcastGroupSa, mcastGroupSpec, NULL,
-                ldmPort))) {
+                38800))) {
             log_add("Couldn't parse multicast group specification: \"%s\"", 
                     mcastGroupSpec);
         }
         else {
-            ServiceAddr* tcpServerSa = NULL;
-            /*
-             * Currently, the FMTP TCP server listens on the same interfaces as
-             * the LDM server and the operating-system chooses the port.
-             */
-            {
-                struct in_addr inAddr;
-                inAddr.s_addr = ldmIpAddr;
-                status = sa_new(&tcpServerSa, inet_ntoa(inAddr), 0);
-            }
+            unsigned short ttl;
+            int            nbytes;
 
-            if (status) {
-                log_add("Couldn't create FMTP TCP server specification");
+            if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
+                    ttlSpec[nbytes] != 0) {
+                log_add("Couldn't parse time-to-live specification: "
+                        "\"%s\"",  ttlSpec);
             }
             else {
-                McastInfo* mcastInfo;
-
-                status = mi_new(&mcastInfo, feedtype, mcastGroupSa,
-                        tcpServerSa);
-                            
-                if (0 == status) {
-                    unsigned short ttl;
-                    int            nbytes;
-
-                    if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
-                            ttlSpec[nbytes] != 0) {
-                        log_add("Couldn't parse time-to-live specification: "
-                                "\"%s\"",  ttlSpec);
+                ServiceAddr* fmtpServerSa;
+                if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) {
+                    log_add("Couldn't create service address for FMTP server");
+                }
+                else {
+                    unsigned short vlanId;
+                    if (sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
+                            vlanIdSpec[nbytes] != 0) {
+                        log_add("Couldn't parse VLAN ID specification \"%s\"",
+                                vlanIdSpec);
                     }
                     else {
-                        status = lcf_addMulticast(mcastInfo, ttl, mcastIface,
-                                getQueuePath());
-                    } // `ttl` parsed
+                        McastInfo* mcastInfo;
 
-                    mi_free(mcastInfo);
-                } // `mcastInfo` allocated
-
-                sa_free(tcpServerSa);
-            } // `tcpServerSa` allocated
-
+                        status = mi_new(&mcastInfo, feed, mcastGroupSa,
+                                fmtpServerSa);
+                                    
+                        if (0 == status) {
+                            status = lcf_addMulticast(mcastInfo, ttl, mcastIface,
+                                    getQueuePath());
+                            mi_free(mcastInfo);
+                        } // `mcastInfo` allocated
+                    } // `vlanId` set
+                    sa_free(fmtpServerSa);
+                } // `fmtpServerSa` allocated
+            } `ttl` set
             sa_free(mcastGroupSa);
         } // `mcastGroupSa` allocated
-
-    } // `feedtype` set
+    } // `feed` set
     
     return status;
 }
@@ -667,26 +663,18 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-send_entry:        MULTICAST_K STRING STRING STRING
+#if 0
+MULTICAST <feed> <groupAddr>[:<port>] <ttl> <FmtpAddr> <VlanId> <switchPort> <clntAddrs>
+#endif
+send_entry:        MULTICAST_K STRING STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeMulticastEntry($2, $3, $4, NULL);
+                    int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7, $8);
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
-                                "\"MULTICAST %s %s %s\"", $2, $3, $4);
-                        return errCode;
-                    }
-                #endif
-                }
-                | MULTICAST_K STRING STRING STRING STRING
-                {
-                #if WANT_MULTICAST
-                    int errCode = decodeMulticastEntry($2, $3, $4, $5);
-
-                    if (errCode) {
-                        log_add("Couldn't decode MULTICAST entry "
-                                "\"MULTICAST %s %s %s %s\"", $2, $3, $4, $5);
+                                "\"MULTICAST %s %s %s %s %s %s %s\"",
+                                 $2, $3, $4, $5, $6, $7, $8);
                         return errCode;
                     }
                 #endif
