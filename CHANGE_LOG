@@ -24,6 +24,9 @@
         Tom added entries to the GEMPAK Grib2 tables for some, otherwise,
         unknown parameters.
 
+    Feedtypes:
+        Relabled the unused DIFAX feed to SATELLITE for satellite imagery.
+
     Documentation:
         Additions to pqact(1) configuration-file documentation:
             - The string "(seq)" in the argument of a pqact(1) FILE or PIPE
