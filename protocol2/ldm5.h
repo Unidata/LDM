@@ -150,9 +150,10 @@ extern "C" {
 #define	WSI 32768
 #define	FT16 65536
 /*
- * DIFAX products
+ * SATELLITE products (was DIFAX)
  */
-#define	DIFAX 65536
+#define	DIFAX     65536
+#define	SATELLITE 65536
 #define	FT17 131072
 /*
  * FAA604 products
@@ -231,7 +232,8 @@ extern "C" {
 /*
  * NEXRAD Level 2
  */
-#define	NEXRD2 268435456
+#define	NEXRD2  268435456
+#define	NEXRAD2 268435456
 #define	FT29 536870912
 /*
  * NEXRAD gathering for archiving

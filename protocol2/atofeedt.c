@@ -20,6 +20,7 @@
  * include (e.g. DDPLUS, HDS, IDS). 
  */
 struct fal fassoc[] = {
+        // Name<->bit mappings. Name->bit aliases are later.
         {"none",     NONE},
         {"pps",      FT0},
         {"dds",      FT1},
@@ -42,7 +43,7 @@ struct fal fassoc[] = {
         {"nmc",      NMC},
         {"lightning",FT14},
         {"wsi",      FT15},
-        {"difax",    FT16},
+        {"satellite",FT16},
         {"faa604",   FT17},
         {"gps",      FT18},
         {"fnmoc",    FT19},
@@ -59,7 +60,7 @@ struct fal fassoc[] = {
         {"nxrdsrc",  FT29},
         {"exp",      FT30},
         {"any",      ANY},
-        /* aliases, these must be *after* the "ANY" entry  */
+        /* Name->bit aliases, these must be *after* the "ANY" entry  */
         {"ft0",      FT0},
         {"domestic", FT1},
         {"ft1",      FT1},
@@ -90,6 +91,7 @@ struct fal fassoc[] = {
         {"ft14",     FT14},
         {"nldn",     FT14},
         {"ft15",     FT15},
+        {"difax",    FT16},
         {"ft16",     FT16},
         {"faa",      FT17},
         {"604",      FT17},

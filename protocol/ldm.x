@@ -217,9 +217,10 @@ const FT15 = 32768;
 const WSI = 32768;
 const FT16 = 65536;
 %/*
-% * DIFAX products
+% * SATELLITE products (was DIFAX)
 % */
-const DIFAX = 65536;
+const DIFAX     = 65536;
+const SATELLITE = 65536;
 const FT17 = 131072;
 %/*
 % * FAA604 products
@@ -299,8 +300,9 @@ const FT28 = 268435456;
 %/*
 % * NEXRAD Level-II
 % */
-const CRAFT = 268435456;
-const NEXRD2 = 268435456;
+const CRAFT   = 268435456;
+const NEXRD2  = 268435456;
+const NEXRAD2 = 268435456;
 const FT29 = 536870912;
 %/*
 % * NEXRAD gathering for archiving

@@ -19,7 +19,11 @@
         interrupt in order to ensure proper response to an "ldmadmin stop".
         
         Added O_TTY_INIT to open of a TTY to ensure conforming TTY behavior.
-    	
+
+    NOAAPort Ingest:
+        Tom added entries to the GEMPAK Grib2 tables for some, otherwise,
+        unknown parameters.
+
     Documentation:
         Additions to pqact(1) configuration-file documentation:
             - The string "(seq)" in the argument of a pqact(1) FILE or PIPE
