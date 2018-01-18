@@ -108,8 +108,12 @@
 000 001 208 000 Snow temperature                 K                    SNOT             0  -9999.00
 000 001 209 000 Total column-int supercooled H2O kg m**-2             TCLSW            0  -9999.00
 000 001 210 000 Total column-int melting ice     kg m**-2             TCOLM            0  -9999.00
+000 001 220 000 Minimum specific humidity at 2m  kg kg-1              QMIN             0  -9999.00
 000 001 225 009 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
 000 001 225 010 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
+000 001 225 012 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
+000 001 242 005 Rel. Hum. wrt Precip. Water      %                    RHPW             0  -9999.00
+!00 001 243 008 ?????????????????????????????    ?                    ????             0  -9999.00
 !
 ! momentum
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -136,6 +140,8 @@
 !
 000 002 192 000 Vertical speed shear             s**-1                VWSH             0  -9999.00
 000 002 192 001 Vertical speed shear             s**-1                VWSH             0  -9999.00
+000 002 192 002 Vertical speed shear             s**-1                VWSH             0  -9999.00
+000 002 192 005 Vertical speed shear             s**-1                VWSH             0  -9999.00
 000 002 193 000 Momentum flux                    N m**-2              MFLX             0  -9999.00
 000 002 194 000 U-component of storm motion      m/s                  USTRM            0  -9999.00
 000 002 195 000 V-component of storm motion      m/s                  VSTRM            0  -9999.00
@@ -156,6 +162,7 @@
 000 002 204 000 Vertical Eddy Diff. Heat exch.   m**2 s**-1           VEDH             0  -9999.00
 000 002 204 009 Vertical Eddy Diff. Heat exch.   m**2 s**-1           VEDH             0  -9999.00
 000 002 220 000 Hrly Max up VV in lowest 400hPa  m s**-1              MAXUVV           0  -9999.00
+000 002 220 005 Hrly Max up VV in lowest 400hPa  m s**-1              MAXUVV           0  -9999.00
 000 002 220 008 Hrly Max up VV in lowest 400hPa  m s**-1              MAXUVV           0  -9999.00
 000 002 221 000 Hrly Max down VV in low. 400hPa  m s**-1              MAXDVV           0  -9999.00
 000 002 221 008 Hrly Max down VV in low. 400hPa  m s**-1              MAXDVV           0  -9999.00
@@ -288,8 +295,12 @@
 000 007 195 000 Convective Weather Detect, Indx  -                    CWDI             0  -9999.00
 000 007 196 000 Ultra Violet Index               -                    UVIX             0  -9999.00
 000 007 197 000 Updraft Helicity                 m**2 s**-2           UPHL             0  -9999.00
+000 007 197 002 Updraft Helicity                 m**2 s**-2           UPHL             0  -9999.00
+000 007 197 005 Updraft Helicity                 m**2 s**-2           UPHL             0  -9999.00
 000 007 198 000 Leaf Area Index                  -                    LFAI             0  -9999.00
 000 007 199 000 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
+000 007 199 002 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
+000 007 199 005 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
 000 007 199 008 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
 !
 ! Aerosols
@@ -331,9 +342,16 @@
 000 016 194 000 refl backscatter from convection mm6/m3               REFZC            0  -9999.00
 000 016 195 000 reflectivity                     dB                   REFD             0  -9999.00
 000 016 195 002 reflectivity                     dB                   REFD             0  -9999.00
+000 016 195 005 reflectivity                     dB                   REFD             0  -9999.00
 000 016 196 000 Maximum/Composite reflectivity   dB                   REFC             0  -9999.00
+000 016 196 002 Maximum/Composite reflectivity   dB                   REFC             0  -9999.00
+000 016 196 005 Maximum/Composite reflectivity   dB                   REFC             0  -9999.00
 000 016 197 000 Echo Top                         m                    RETOP            0  -9999.00
+000 016 197 002 Echo Top                         m                    RETOP            0  -9999.00
+000 016 197 005 Echo Top                         m                    RETOP            0  -9999.00
 000 016 198 000 Hrly Max Sim Refl at 1km AGL     dB                   MAXREF           0  -9999.00
+000 016 198 002 Hrly Max Sim Refl at 1km AGL     dB                   MAXREF           0  -9999.00
+000 016 198 005 Hrly Max Sim Refl at 1km AGL     dB                   MAXREF           0  -9999.00
 000 016 198 008 Hrly Max Sim Refl at 1km AGL     dB                   MAXREF           0  -9999.00
 
 ! Electrodynamics
@@ -375,6 +393,7 @@
 000 019 203 000 Cat. Thunderstorm (1-yes, 0-no)  categorical          CTSTM            0  -9999.00
 000 019 203 008 Cat. Thunderstorm (1-yes, 0-no)  categorical          CTSTM            0  -9999.00
 000 019 204 000 Num mixed layers next to surface integer              MIXLY            0  -9999.00
+000 019 205 000 Flight Category                  NA                   FLGHT            0  -9999.00
 !
 000 019 215 000 Total Prob of Severe Tstorms     %                    PRSVR            0  -9999.00
 000 019 215 009 Total Prob of Severe Tstorms     %                    PRSVR            0  -9999.00
@@ -388,6 +407,8 @@
 000 019 222 008 Convection Potential             NA                   CONVP            0  -9999.00
 000 019 233 000 Icing probability                non-dim              ICPRB            0  -9999.00
 000 019 234 000 Icing severity                   non-dim              ICSEV            0  -9999.00
+000 019 235 000 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
+000 019 235 005 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
 
 !
 000 019 242 000 Mislabeled RH wrt PW             %                    RHPW             0  -9999.00
@@ -478,6 +499,12 @@
 003 001 192 000 Scatterometer Estimated U wind   m/s                  USCT             0  -9999.00
 003 001 193 000 Scatterometer Estimated V wind   m/s                  VSCT             0  -9999.00
 !
+!03 192 001 000 ??????????????????????????????   ???                  ?????            0  -9999.00
+!03 192 002 000 ??????????????????????????????   ???                  ?????            0  -9999.00
+!03 192 007 000 ??????????????????????????????   ???                  ?????            0  -9999.00
+!03 192 008 000 ??????????????????????????????   ???                  ?????            0  -9999.00
+
+!
 ! Product Discipline 10 - Oceanographic Products
 ! CATEGORY 0 - Waves category
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -526,6 +553,7 @@
 010 003 000 000 Water Temperature                K                    WTMP             0  -9999.00
 !
 010 003 192 000 Storm Surge                      m                    SURGE            0  -9999.00
+010 003 192 010 Storm Surge                      m                    SURGE            0  -9999.00
 010 003 193 000 Extra Tropical Storm Surge       m                    ETSRG            0  -9999.00
 010 003 194 000 Ocean Sfc Elev Relative to Geoid m                    OELEV            0  -9999.00
 010 003 195 000 Extra Tropical Storm Surge       m                    SSHG             0  -9999.00
@@ -537,14 +565,22 @@
 010 003 201 000 Kinetic Energy                   J kg-1               KENG             0  -9999.00
 010 003 202 000 Salt Flux                        kg m-2 s-1           SLTFL            0  -9999.00
 010 003 242 000 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
+010 003 242 010 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 243 000 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
+010 003 243 010 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
 010 003 244 000 40% Trop Cyclone Surge Exceed    m                    TCSRG40          0  -9999.00
+010 003 244 010 40% Trop Cyclone Surge Exceed    m                    TCSRG40          0  -9999.00
 010 003 245 000 50% Trop Cyclone Surge Exceed    m                    TCSRG50          0  -9999.00
+010 003 245 010 50% Trop Cyclone Surge Exceed    m                    TCSRG50          0  -9999.00
 010 003 246 000 60% Trop Cyclone Surge Exceed    m                    TCSRG60          0  -9999.00
 010 003 247 000 70% Trop Cyclone Surge Exceed    m                    TCSRG70          0  -9999.00
 010 003 248 000 80% Trop Cyclone Surge Exceed    m                    TCSRG80          0  -9999.00
 010 003 249 000 90% Trop Cyclone Surge Exceed    m                    TCSRG90          0  -9999.00
+010 003 249 010 90% Trop Cyclone Surge Exceed    m                    TCSRG90          0  -9999.00
 010 003 250 000 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
+010 003 250 008 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
+010 003 250 009 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
+010 003 251 000 Tide                             m                    TIDE             0  -9999.00
 
 !
 ! Category 4 - Sub-Surface properties
