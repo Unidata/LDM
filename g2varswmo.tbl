@@ -57,6 +57,8 @@
 000 000 019 000 Turbulent Transfer Coefficient f Numeric              TTCHT            0  -9999.00
 000 000 020 000 Turbulent Diffusion Coefficient  m**2 s**-1           TDCHT            0  -9999.00
 000 000 021 000 Apparent Temperature             K                    APTMP            0  -9999.00
+000 000 027 000 Wet Bulb Temperature             K                    WETBT            0  -9999.00
+
 !000 000 102 000 Snow Phase Change Heat Flux      K                    SNOHF            0  -9999.00
 !
 ! mositure
@@ -111,6 +113,7 @@
 000 001 017 000 Snow Age                         d                    SNOAG            0  -9999.00
 000 001 018 000 Absolute Humidity                kg m**-3             ABSH             0  -9999.00
 000 001 019 000 Precipitation Type               code table           PTYPE            0  -9999.00
+000 001 019 005 Precipitation Type               code table           PTYPE            0  -9999.00
 000 001 020 000 Integrated Liquid Water          kg m**-2             ILIQW            0  -9999.00
 000 001 021 000 Condensate                       kg kg**-1            TCOND            0  -9999.00
 000 001 022 000 Cloud Mixing Ratio               kg kg**-1            CWTR             0  -9999.00
@@ -125,6 +128,7 @@
 000 001 029 008 Total Snowfall                   m                    SNOW             0  -9999.00
 000 001 029 009 Total Snowfall                   m                    SNOW             0  -9999.00
 000 001 029 010 Total Snowfall                   m                    SNOW             0  -9999.00
+000 001 029 012 Total Snowfall                   m                    SNOW             0  -9999.00
 000 001 030 000 Precipitable Water Category      code table           PWCAT            0  -9999.00
 000 001 031 000 Hail                             m                    HAIL             0  -9999.00
 000 001 032 000 Graupel (snow pellets)           kg kg**-1            GRMR             0  -9999.00
@@ -154,6 +158,7 @@
 000 001 052 011 Total Precipitation Rate         kg m**-2 s**-1       TPRATE           0  -9999.00
 000 001 053 000 Total Snowfall Rate Water Equiv  kg m**-2 s**-1       TSRWE            0  -9999.00
 000 001 053 001 Total Snowfall Rate Water Equiv  kg m**-2 s**-1       TSRWE            0  -9999.00
+000 001 053 009 Total Snowfall Rate Water Equiv  kg m**-2 s**-1       TSRWE            0  -9999.00
 000 001 053 011 Total Snowfall Rate Water Equiv  kg m**-2 s**-1       TSRWE            0  -9999.00
 000 001 054 000 Large Scale Precipitation Rate   kg m**-2 s**-1       LSPRATE          0  -9999.00
 000 001 055 000 Convective Snowfall Rate Water E kg m**-2 s**-1       CSRWE            0  -9999.00
@@ -213,6 +218,7 @@
 000 002 001 005 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 001 008 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 001 009 Wind Speed                       m s**-1              SPED             0  -9999.00
+000 002 001 010 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 002 000 u-component of wind              m s**-1              UREL             0  -9999.00
 000 002 002 001 u-component of wind              m s**-1              UREL             0  -9999.00
 000 002 002 002 u-component of wind              m s**-1              UREL             0  -9999.00
@@ -536,6 +542,7 @@
 000 019 001 011 Albedo                           %                    ALBDO            0  -9999.00
 000 019 002 000 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 002 008 Thunderstorm Probability         %                    TSTM             0  -9999.00
+000 019 002 009 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 003 000 Mixed Layer Depth                m                    MIXHT            0  -9999.00
 000 019 004 000 Volcanic Ash                     code table           VOLASH           0  -9999.00
 000 019 005 000 Icing Top                        m                    ICIT             0  -9999.00
