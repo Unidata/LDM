@@ -28,7 +28,7 @@ before_install:
 
 #install:
 
-script: if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then make distcheck; fi
+script: if [ ${COVERITY_SCAN_BRANCH:-0} != 1 ]; then make distcheck; fi
 
 after_failure:
   - cat config.log
