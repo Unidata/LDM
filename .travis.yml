@@ -28,9 +28,11 @@ before_install:
 
 #install:
 
-script: if [ ${COVERITY_SCAN_BRANCH:-0} != 1 ]; then make distcheck; fi
+script: if [ ${COVERITY_SCAN_BRANCH:-0} != 1 ]; then make distcheck >&distcheck.log; fi
 
 after_failure:
   - cat config.log
-  - cat distcheck.log
+  - echo '#####################################################################'
+  - echo '#####################################################################'
+  - tail -400 distcheck.log
   #- files=`find . -name test-suite.log`; cat ${files:-/dev/null}
