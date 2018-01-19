@@ -663,9 +663,6 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-#if 0
-MULTICAST <feed> <groupAddr>[:<port>] <ttl> <FmtpAddr> <VlanId> <switchPort> <clntAddrs>
-#endif
 send_entry:        MULTICAST_K STRING STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
