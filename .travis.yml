@@ -11,7 +11,7 @@ language: cpp
 
 before_install:
   #- echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
-  - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev
+  - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - mkdir m4
   - autoreconf -i
   - ./configure --disable-root-actions --with-noaaport --with-multicast CXXFLAGS=-g
