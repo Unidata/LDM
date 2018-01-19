@@ -1116,8 +1116,8 @@ char *stripTrailingChar (char *string, char theChar) {
  int reopenStdFile (int fd, char *path) {
 
 
-#define OPENPERMS		O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU
-#define OPENMODE		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+#define OPENPERMS		O_WRONLY | O_CREAT | O_TRUNC
+#define OPENMODE		S_IRWXU | S_IRGRP | S_IROTH
 
 	int	rstat;
 
