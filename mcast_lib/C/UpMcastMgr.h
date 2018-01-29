@@ -1,16 +1,16 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: mldm_sender.hin
+ *   @file: UpMcastMgr.h
  * @author: Steven R. Emmerson
  *
- * This file specifies the API for the multicast upstream LDM.
+ * This file declares the manager for multicasting from the upstream site.
  */
 
-#ifndef MLDM_SENDER_MANAGER_H
-#define MLDM_SENDER_MANAGER_H
+#ifndef UPMCASTMGR_H
+#define UPMCASTMGR_H
 
 #include "ldm.h"
 #include "pq.h"
@@ -40,10 +40,12 @@ extern "C" {
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] mcastIf      IP address of the interface from which multicast
- *                         packets should be sent or NULL to have them sent from
- *                         the system's default multicast interface. Caller may
- *                         free.
+ * @param[in] vlanId       VLAN identifier.
+ * @param[in] switchPort   Specification of AL2S entry switch and port. Caller
+ *                         may free.
+ * @param[in] netPrefix    Network prefix of client address-space in network
+ *                         byte-order.
+ * @param[in] prefixLen    Length of network prefix.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
@@ -52,30 +54,31 @@ extern "C" {
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
-mlsm_addPotentialSender(
+umm_addPotentialSender(
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
-    const char* const restrict        mcastIf,
+    const unsigned                    vlanId,
+    const char* const restrict        switchPort,
+    const struct in_addr              netPrefix,
+    const unsigned                    prefixLen,
     const char* const restrict        pqPathname);
 
 /**
- * Ensures that the multicast LDM sender process that's responsible for a
- * particular multicast group is running. Doesn't block.
+ * Returns the response to a multicast subscription request. Doesn't block.
  *
  * @param[in]  feedtype     Multicast group feed-type.
- * @param[out] mcastInfo    Information on corresponding multicast group.
- * @param[out] pid          Process ID of the multicast LDM sender.
+ * @param[out] reply        Reply to the subscription-request. Call should
+ *                          destroy when it's no longer needed.
  * @retval     0            Success. The group is being multicast and
- *                          `*mcastInfo` is set.
+ *                          `*reply` is set.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
  *                          `mlsm_addPotentialSender()`. `log_add() called`.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-mlsm_ensureRunning(
-        const feedtypet         feedtype,
-        const McastInfo** const mcastInfo,
-        pid_t* const            pid);
+umm_subscribe(
+        const feedtypet          feedtype,
+        SubscriptionReply* const reply);
 
 /**
  * Handles the termination of a multicast LDM sender process. This function
@@ -89,8 +92,19 @@ mlsm_ensureRunning(
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-mlsm_terminated(
-        const pid_t pid);
+umm_terminated(const pid_t pid);
+
+/**
+ * Releases the IP address reserved for the FMTP TCP connection in a downstream
+ * LDM7.
+ * @param[in] feed          LDM feed associated with `downFmtpAddr`
+ * @param[in] downFmtpAddr  Address of TCP connection in downstream FMTP layer
+ * @retval    LDM7_NOENT    No address pool corresponding to `feed`
+ * @retval    LDM7_NOENT    `downFmtpAddr` wasn't reserved
+ */
+Ldm7Status umm_unsubscribe(
+        const feedtypet feed,
+        const in_addr_t downFmtpAddr);
 
 /**
  * Clears all entries.
@@ -99,7 +113,7 @@ mlsm_terminated(
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-mlsm_clear(void);
+umm_clear(void);
 
 #ifdef __cplusplus
 }

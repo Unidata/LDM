@@ -190,11 +190,11 @@ static void cleanup(
 
     free_remote_clss();
 
-    /*
-     * Ensure release of COMINGSOON-reserved space in product-queue.
-     */
-    clr_pip_5();
+    clr_pip_5(); // Release COMINGSOON-reserved space in product-queue.
     down6_destroy();
+#if WANT_MULTICAST
+    up7_reset();
+#endif
 
     /*
      * Close product-queue.
@@ -724,11 +724,7 @@ static void handle_connection(
      */
     {
         const unsigned  TIMEOUT = 2*interval;
-
         status = one_svc_run(xp_sock, TIMEOUT);
-
-        (void) exitIfDone(exit_status);
-
         if (status == 0) {
             log_info("Done");
         }
@@ -746,7 +742,7 @@ static void handle_connection(
 
     unwind_sock: (void) close(xp_sock);
 
-    exit(status);
+    exit(status); // `cleanup()` will release acquired resources
 }
 
 static void sock_svc(

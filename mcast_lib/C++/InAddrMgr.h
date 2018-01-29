@@ -48,14 +48,14 @@ int inam_add(
  * Reserves an address from the pool created by the previous call to `add()`.
  * The address will be unique and not previously reserved. The reservation will
  * be visible to all child processes.
- * @param[in]  feed     LDM feed specification
- * @param[out] addr     Available address in network byte-order
- * @retval     0        Success. `*addr` is set.
- * @retval     ENOENT   No address pool corresponding to `feed`
- * @retval     EMFILE   All addresses have been reserved
- * @threadsafety        Compatible but not safe
+ * @param[in]  feed        LDM feed specification
+ * @param[out] addr        Available address in network byte-order
+ * @retval     0           Success. `*addr` is set.
+ * @retval     LDM7_NOENT  No address pool corresponding to `feed`
+ * @retval     LDM7_MCAST  All addresses have been reserved
+ * @threadsafety           Compatible but not safe
  */
-int inam_reserve(
+Ldm7Status inam_reserve(
         const feedtypet feed,
         struct in_addr* addr);
 
@@ -63,15 +63,15 @@ int inam_reserve(
  * Releases an address in the pool created by the previous call to `add()` so
  * that it can be subsequently re-used. The release will be visible to all child
  * processes.
- * @param[in] feed    LDM feed specification
- * @param[in] addr    Address in network byte order to be returned and made
- *                    available
- * @retval    0       Success
- * @retval    ENOENT  No address pool corresponding to `feed`
- * @retval    ENOENT  `addr` wasn't reserved
- * @threadsafety      Compatible but not safe
+ * @param[in] feed        LDM feed specification
+ * @param[in] addr        Address in network byte order to be returned and made
+ *                        available
+ * @retval    0           Success
+ * @retval    LDM7_NOENT  No address pool corresponding to `feed`
+ * @retval    LDM7_NOENT  `addr` wasn't reserved
+ * @threadsafety          Compatible but not safe
  */
-int inam_release(
+Ldm7Status inam_release(
         const feedtypet       feed,
         const struct in_addr* addr);
 

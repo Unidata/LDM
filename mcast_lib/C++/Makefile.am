@@ -10,7 +10,7 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
-			  AuthMsgQ.cpp AuthMsgQ.h \
+			  AuthConn.cpp AuthConn.h \
 			  AuthClient.cpp AuthClient.h \
 			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h \

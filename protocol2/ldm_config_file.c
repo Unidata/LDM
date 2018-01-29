@@ -45,7 +45,7 @@
 #include "ldmprint.h"
 #include "log.h"
 #if WANT_MULTICAST
-    #include "mldm_sender_manager.h"
+    #include "../mcast_lib/C/UpMcastMgr.h"
 #endif
 #include "pattern.h"
 #include "peer_info.h"
@@ -3007,10 +3007,12 @@ lcf_addAccept(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] mcastIface   IP address of the interface from which multicast
- *                         packets should be sent or NULL to have them sent from
- *                         the system's default multicast interface. Caller may
- *                         free.
+ * @param[in] vlanId       VLAN identifier.
+ * @param[in] switchPort   Specification of AL2S entry switch and port. Caller
+ *                         may free.
+ * @param[in] netPrefix    Network prefix of client address-space in network
+ *                         byte-order.
+ * @param[in] prefixLen    Length of network prefix.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    EINVAL       Invalid specification. `log_add()` called.
@@ -3020,11 +3022,14 @@ int
 lcf_addMulticast(
         const McastInfo* const restrict mcastInfo,
         const unsigned short            ttl,
-        const char* const restrict      mcastIface,
+        const unsigned                  vlanId,
+        const char* const restrict      switchPort,
+        const struct in_addr            netPrefix,
+        const unsigned                  prefixLen,
         const char* const restrict      pqPathname)
 {
-    int status = mlsm_addPotentialSender(mcastInfo, ttl, mcastIface,
-            getQueuePath());
+    int status = umm_addPotentialSender(mcastInfo, ttl, vlanId, switchPort,
+            netPrefix, prefixLen, pqPathname);
     if (0 == status) {
         serverNeeded = true;
         somethingToDo = true;
@@ -3332,7 +3337,7 @@ lcf_free(void)
     acceptEntries_free();
     execEntries_free();
     #if WANT_MULTICAST
-        if (mlsm_clear())
+        if (umm_clear())
             log_error("Couldn't clear multicast LDM sender manager");
         d7mgr_free();  // Clears multicast receiver manager
     #endif

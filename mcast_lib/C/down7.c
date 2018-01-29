@@ -317,7 +317,7 @@ up7proxy_subscribe(
                     status);
         }
         else {
-            McastInfo* const mi = &reply->SubscriptionReply_u.mgi;
+            McastInfo* const mi = &reply->SubscriptionReply_u.info.mcastInfo;
             char* miStr = mi_format(mi);
             log_debug("Subscription reply is %s", miStr);
             free(miStr);

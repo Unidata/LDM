@@ -19,7 +19,6 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
-#include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
 
@@ -36,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "UpMcastMgr.h"
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock
@@ -101,7 +101,7 @@ test_noPotentialSender()
 {
     const McastInfo* mcastInfo;
     pid_t            pid;
-    int              status = mlsm_ensureRunning(feedtype_1, &mcastInfo,
+    int              status = umm_subscribe(feedtype_1, &mcastInfo,
             &pid);
     OP_ASSERT_EQUAL_INT(LDM7_NOENT, status);
     log_clear();
@@ -112,11 +112,11 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = mlsm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
+    int status = umm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
+    status = umm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
-    status = mlsm_addPotentialSender(mcastInfo_2, 0, NULL, PQ_PATHNAME);
+    status = umm_addPotentialSender(mcastInfo_2, 0, NULL, PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();
     OP_VERIFY();
@@ -133,7 +133,7 @@ test_not_running()
     /* Start a multicast sender process */
     status = pim_delete(NULL, feedtype_1);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
+    status = umm_subscribe(feedtype_1, &mcastInfo, &pid);
     log_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
@@ -171,7 +171,7 @@ test_running()
     /* Start a multicast sender */
     status = pim_delete(NULL, feedtype_1);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid);
+    status = umm_subscribe(feedtype_1, &mcastInfo, &pid);
     log_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);
@@ -183,7 +183,7 @@ test_running()
 
     /* Try starting a duplicate multicast sender */
     pid_t      pid2;
-    status = mlsm_ensureRunning(feedtype_1, &mcastInfo, &pid2);
+    status = umm_subscribe(feedtype_1, &mcastInfo, &pid2);
     log_flush_error();
     OP_ASSERT_EQUAL_INT(0, status);
     OP_ASSERT_EQUAL_INT(feedtype_1, mcastInfo->feed);

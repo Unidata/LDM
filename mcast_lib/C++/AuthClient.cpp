@@ -6,10 +6,10 @@
  *  Created on: Dec 11, 2017
  *      Author: Steven R. Emmerson
  */
+#include <AuthConn.h>
 #include "config.h"
 
 #include "AuthClient.h"
-#include "AuthMsgQ.h"
 #include "log.h"
 
 #include <mqueue.h>
@@ -21,7 +21,7 @@
 
 class AuthClient::Impl final
 {
-    AuthMsgQ    authMsgQ;
+    AuthConn    authMsgQ;
 
 public:
     /**

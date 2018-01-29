@@ -40,7 +40,7 @@ if git branch | grep '^\* *master$' >/dev/null; then
     git commit -a -m "v$versionId"
 
     # Tag the current version.
-    git tag -f "v$versionId"
+    #git tag -f "v$versionId"
 fi
 
 # Push to the origin repository

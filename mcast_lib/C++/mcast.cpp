@@ -510,54 +510,8 @@ mcastSender_free(
     free(sender);
 }
 
-/**
- * Spawns an active multicast sender. Upon return, a multicast sender is
- * executing independently.
- *
- * @param[out]    sender        Pointer to returned sender. Caller should call
- *                              `mcastSender_terminate(*sender)` when it's no
- *                              longer needed.
- * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
- *                              which the TCP server will listen for connections
- *                              from receivers for retrieving missed
- *                              data-blocks.
- * @param[in,out] serverPort    Port number for TCP server or 0, in which case
- *                              one is chosen by the operating system.
- * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
- *                              multicast group.
- * @param[in]     groupPort     Port number of the multicast group.
- * @param[in]     ifaceAddr     IP address of the interface to use to send
- *                              multicast packets. "0.0.0.0" obtains the default
- *                              multicast interface. Caller may free.
- * @param[in]     ttl           Time-to-live of outgoing packets.
- *                                    0  Restricted to same host. Won't be
- *                                       output by any interface.
- *                                    1  Restricted to the same subnet. Won't be
- *                                       forwarded by a router (default).
- *                                  <32  Restricted to the same site,
- *                                       organization or department.
- *                                  <64  Restricted to the same region.
- *                                 <128  Restricted to the same continent.
- *                                 <255  Unrestricted in scope. Global.
- * @param[in]     iProd         Initial product-index. The first multicast data-
- *                              product will have this as its index.
- * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the FMTP layer before being released
- *                              after being multicast to the duration to
- *                              multicast the product. If negative, then the
- *                              default timeout factor is used.
- * @param[in]     doneWithProd  Function to call when the FMTP layer is done
- *                              with a data-product so that its resources may be
- *                              released.
- * @param[in]     authDb        Authorization database.
- * @retval        0             Success. `*sender` is set. `*serverPort` is set
- *                              if the initial port number was 0.
- * @retval        1             Invalid argument. `log_add()` called.
- * @retval        2             Non-system runtime error. `log_add()` called.
- * @retval        3             System error. `log_add()` called.
- */
 int
-mcastSender_spawn(
+mcastSender_create(
     McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,

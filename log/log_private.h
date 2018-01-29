@@ -301,7 +301,7 @@ void* logl_malloc(
 #define LOG_LOC_DECL(loc) const log_loc_t loc = {__FILE__, __func__, __LINE__}
 
 #define LOG_LOG(level, ...) do {\
-    if (level < log_level) {\
+    if ((level) < log_level) {\
         log_clear();\
     }\
     else {\

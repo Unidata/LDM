@@ -1,4 +1,4 @@
-6.13.7	2018-01-19T15:28:59-0700
+6.13.7	2018-01-29T14:01:13-0700
     Build:
         Added explicit defines of some C macro values to "1" to avoid problems
         with configure(1) on BSD systems.
@@ -38,6 +38,8 @@
 
     Misc:
         Migrated FMTP repository and codebase from Unidata to UVA.
+
+        Replaced use of obsolete gethostbyaddr(3) with getnameinfo(3).
 
 6.13.6	2017-01-19T16:37:43-0700
     Slightly improved HTML Documentation based on latest workshop and added

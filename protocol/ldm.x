@@ -867,6 +867,7 @@ struct ServiceAddr {
 #endif
 enum Ldm7Status {
     LDM7_OK = 0,   /* Success */
+    LDM7_LOGIC,    /* Logic error */
     LDM7_INTR,     /* Interrupted by signal */
     LDM7_TIMEDOUT, /* Timed out */
     LDM7_RPC,      /* Other RPC error */
@@ -1021,19 +1022,28 @@ struct BacklogSpec {
  * Information on a multicast group:
  */
 struct McastInfo {
-    /*
-     * Multicast group feedtype:
-     */
+    /** Multicast group feedtype */
     feedtypet     feed;
-    /*
-     * Address of associated multicast group.
-     */
+    /** Address of associated multicast group */
     ServiceAddr   group;
-    /*
-     * Address of associated TCP server for data-blocks missed by a multicast
-     * receiver.
-     */
+    /** Address of FMTP server for missed data-blocks */
     ServiceAddr   server;
+};
+
+/**
+ * Multicast subscription information:
+ */
+struct McastSubInfo {
+    /** Multicast group information */
+    struct McastInfo mcastInfo;
+    /** IPv4 address for downstream FMTP layer */
+    unsigned long    clntAddr;
+    /** Bit-length of `clntAddr` network-prefix */
+    unsigned short   prefixLen;
+    /** VLAN ID of multicast at AL2S entry */
+    unsigned short   vlanId;
+    /** Specification of entry AL2S switch-port */
+    string           switchPort<>;
 };
 #endif
 
@@ -1046,10 +1056,8 @@ struct McastInfo {
 #endif
 union SubscriptionReply switch (Ldm7Status status) {
     case LDM7_OK:
-        McastInfo mgi;
-    case LDM7_INVAL:
-        void;
-    case LDM7_UNAUTH:
+        McastSubInfo info;
+    default:
         void;
 };
 

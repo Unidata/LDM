@@ -653,7 +653,7 @@ mls_init(
 
     offMap = om_new();
     if (offMap == NULL) {
-        log_add("Couldn't create prodIndex-to-offset map");
+        log_add("Couldn't create prodIndex-to-prodQueueOffset map");
         status = LDM7_SYSTEM;
         goto return_status;
     }
@@ -680,11 +680,11 @@ mls_init(
         goto close_prod_index_map;
     }
 
-    if ((status = mcastSender_spawn(&mcastSender, serverInetAddr,
+    if ((status = mcastSender_create(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
             ifaceAddr, ttl, iProd, timeoutFactor, mls_doneWithProduct,
             authDb))) {
-        log_add("Couldn't spawn multicast sender");
+        log_add("Couldn't create multicast sender");
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)

@@ -250,8 +250,7 @@ msm_init(void)
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
-msm_lock(
-        const bool exclusive)
+msm_lock(const bool exclusive)
 {
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
@@ -328,9 +327,9 @@ msm_get(
     unsigned  ibit;
     feedtypet mask;
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
+    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ++ibit) {
         const ProcInfo* procInfo = procInfos + ibit;
-        const pid_t infoPid = procInfo->pid;
+        const pid_t     infoPid = procInfo->pid;
         if ((mask & feedtype) && infoPid) {
             *pid = infoPid;
             *port = procInfo->port;

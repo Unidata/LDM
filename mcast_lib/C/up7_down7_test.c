@@ -20,7 +20,6 @@
 #include "ldm_config_file.h"
 #include "mcast_info.h"
 #include "mldm_receiver_memory.h"
-#include "mldm_sender_manager.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
 #include "prod_index_map.h"
@@ -44,6 +43,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include "UpMcastMgr.h"
 
 #define USE_SIGWAIT 0
 #define CANCEL_SENDER 1
@@ -886,8 +886,8 @@ sender_start(
                 log_add("Couldn't set multicast information");
             }
             else {
-                status = mlsm_clear();
-                status = mlsm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                status = umm_clear();
+                status = umm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
                         UP7_PQ_PATHNAME);
                 if (status) {
                     log_add("mlsm_addPotentialSender() failure");
@@ -962,7 +962,7 @@ terminateMcastSender(void)
             CU_ASSERT_TRUE_FATAL(wpid > 0);
             CU_ASSERT_TRUE(WIFEXITED(status));
             CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-            status = mlsm_terminated(wpid);
+            status = umm_terminated(wpid);
             CU_ASSERT_EQUAL(status, 0);
         }
     }
@@ -1022,7 +1022,7 @@ sender_terminate(void)
     }
 
     log_debug("Clearing multicast LDM sender manager");
-    status = mlsm_clear();
+    status = umm_clear();
     if (status) {
         log_add("mlsm_clear() failure");
         retval = status;

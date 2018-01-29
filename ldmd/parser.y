@@ -18,7 +18,7 @@
 #if WANT_MULTICAST
     #include "down7_manager.h"
     #include "mcast_info.h"
-    #include "mldm_sender_manager.h"
+    #include "UpMcastMgr.h"
 #endif
 #include "ldm.h"
 #include "ldmprint.h"
@@ -353,6 +353,35 @@ decodeRequestEntry(
 
 
 #if WANT_MULTICAST
+static bool
+decodeSubnet(
+        const char* const restrict     addrsSpec,
+        struct in_addr* const restrict netPrefix,
+        unsigned* const restrict       prefixLen)
+{
+    struct in_addr addr;
+    addr.s_addr = inet_addr(addrsSpec);
+    if (addr.s_addr == (in_addr_t)(-1)) {
+        log_add("Couldn't decode network-prefix");
+        return false;
+    }
+    *netPrefix = addr;
+    const char* cp = strchr(addrsSpec, '/');
+    if (cp == NULL) {
+        log_add("Couldn't find network-prefix length");
+        return false;
+    }
+    if (scanf(cp+1, "%u", prefixLen) != 1) {
+        log_add("Couldn't decode network-prefix length");
+        return false;
+    }
+    if (*prefixLen > 32) {
+        log_add("Invalid network-prefix length");
+        return false;
+    }
+    return true;
+}
+
 /**
  * Decodes a MULTICAST entry.
  * @param[in] feedSpec        Specification of feedtype.
@@ -377,7 +406,7 @@ decodeMulticastEntry(
     const char* const   switchPortSpec,
     const char* const   clntAddrsSpec)
 {
-    int         status;
+    int         status = EINVAL;
     feedtypet   feed;
 
     status = decodeFeedtype(&feed, feedSpec);
@@ -401,31 +430,41 @@ decodeMulticastEntry(
             }
             else {
                 ServiceAddr* fmtpServerSa;
-                if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) {
+                if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) { // NB: port 0
                     log_add("Couldn't create service address for FMTP server");
                 }
                 else {
                     unsigned short vlanId;
-                    if (sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
+                    if ((sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
                             vlanIdSpec[nbytes] != 0) {
                         log_add("Couldn't parse VLAN ID specification \"%s\"",
                                 vlanIdSpec);
                     }
                     else {
-                        McastInfo* mcastInfo;
+                        struct in_addr netPrefix; // In network byte-order
+                        unsigned       prefixLen; // Number of bits
+                        if (!decodeSubnet(clntAddrsSpec, &netPrefix,
+                                &prefixLen)) {
+                            log_add("Couldn't parse client address space \"%s\"",
+                                    clntAddrsSpec);
+                        }
+                        else {
+                            McastInfo* mcastInfo;
 
-                        status = mi_new(&mcastInfo, feed, mcastGroupSa,
-                                fmtpServerSa);
-                                    
-                        if (0 == status) {
-                            status = lcf_addMulticast(mcastInfo, ttl, mcastIface,
-                                    getQueuePath());
-                            mi_free(mcastInfo);
-                        } // `mcastInfo` allocated
+                            status = mi_new(&mcastInfo, feed, mcastGroupSa,
+                                    fmtpServerSa);
+                                        
+                            if (0 == status) {
+                                status = lcf_addMulticast(mcastInfo, ttl,
+                                        vlanId, switchPortSpec, netPrefix,
+                                        prefixLen, getQueuePath());
+                                mi_free(mcastInfo);
+                            } // `mcastInfo` allocated
+                        } // `netPrefix` and `prefixLen` set
                     } // `vlanId` set
                     sa_free(fmtpServerSa);
                 } // `fmtpServerSa` allocated
-            } `ttl` set
+            } // `ttl` set
             sa_free(mcastGroupSa);
         } // `mcastGroupSa` allocated
     } // `feed` set

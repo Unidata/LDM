@@ -1,12 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
- * reserved. See the the file COPYRIGHT in the top-level source-directory for
- * licensing conditions.
- *
- *   @file: up7.c
- * @author: Steven R. Emmerson
- *
- * This file implements the upstream LDM-7, which
+ * This file implements the upstream LDM-7. The upstream LDM-7
  *     - Is a child-process of the top-level LDM server;
  *     - Ensures that a multicast LDM sender processes is running for its
  *       associated multicast group;
@@ -19,11 +12,17 @@
  * transports on both the upstream and downstream LDM-7s only works because,
  * after the initial subscription, all exchanges are asynchronous; consequently,
  * the servers don't interfere with the (non-existent) RPC replies.
+ *
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ *
+ *   @file: up7.c
+ * @author: Steven R. Emmerson
  */
 
 #include "config.h"
 
-#include "AuthClient.h"
 #include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
@@ -31,7 +30,6 @@
 #include "ldm_config_file.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mldm_sender_manager.h"
 #include "mcast_info.h"
 #include "pq.h"
 #include "prod_class.h"
@@ -53,6 +51,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "UpMcastMgr.h"
 
 #ifndef _XOPEN_PATH_MAX
 /* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
@@ -67,14 +66,34 @@ static CLIENT*   clnt;
  * The feedtype of the subscription.
  */
 static feedtypet feedtype;
+/**
+ * The IP address of the downstream FMTP layer's TCP connection.
+ */
+static in_addr_t downFmtpAddr = INADDR_ANY;
+/**
+ * Whether or not the product-index map is open.
+ */
+static bool pimIsOpen = false;
 
+/**
+ * Idempotent.
+ */
+static void
+releaseDownFmtpAddr()
+{
+    if (feedtype != NONE && downFmtpAddr != INADDR_ANY) {
+        umm_unsubscribe(feedtype, downFmtpAddr);
+        downFmtpAddr = INADDR_ANY;
+        feedtype = NONE;
+    }
+}
 
 /**
  * Opens the product-index map associated with a feedtype.
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                         associated file is unspecified.
@@ -85,34 +104,55 @@ up7_openProdIndexMap(
 {
     char pathname[_XOPEN_PATH_MAX];
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
-    return pim_openForReading(dirname(pathname), feed);
+    int status = pim_openForReading(dirname(pathname), feed);
+    if (status == 0)
+        pimIsOpen = true;
+    return status;
 }
 
 /**
- * Closes the open product-index map. Registered by `atexit()`.
+ * Closes the open product-index map. Registered by `atexit()`. Idempotent.
  */
 static void
 up7_closeProdIndexMap()
 {
-    if (pim_close()) {
-        char feedStr[256];
-        int  nbytes = ft_format(feedtype, feedStr, sizeof(feedStr));
-        if (nbytes == -1 || nbytes >= sizeof(feedStr)) {
-            log_error("Couldn't close product-index map for feed %#lx",
-                    (unsigned long)feedStr);
+    if (pimIsOpen) {
+        if (pim_close()) {
+            char feedStr[256];
+            int  nbytes = ft_format(feedtype, feedStr, sizeof(feedStr));
+            if (nbytes == -1 || nbytes >= sizeof(feedStr)) {
+                log_error("Couldn't close product-index map for feed %#lx",
+                        (unsigned long)feedStr);
+            }
+            else {
+                log_error("Couldn't close product-index map for feed %s", feedStr);
+            }
         }
         else {
-            log_error("Couldn't close product-index map for feed %s", feedStr);
+            pimIsOpen = false;
         }
     }
 }
 
+/**
+ * Idempotent.
+ */
 static void up7_destroyClient(void)
 {
     if (clnt) {
         clnt_destroy(clnt);
         clnt = NULL;
     }
+}
+
+/**
+ * Idempotent.
+ */
+void up7_reset(void)
+{
+    releaseDownFmtpAddr();
+    up7_destroyClient();
+    up7_closeProdIndexMap();
 }
 
 /**
@@ -159,47 +199,6 @@ up7_createClientTransport(
     return success;
 }
 
-/**
- * Sets information on a multicast group suitable for a subscribing client from
- * a server's perspective of the information. Specifically, if the server will
- * listen on all interfaces, then the Internet identifier of the server will be
- * set to the canonical name of the local host; otherwise, the Internet
- * identifier is used unmodified.
- *
- * @param[out] clientView   Client-side multicast information. Caller should
- *                          call `xdr_free(xdr_SubscriptionReply, clientView)`
- *                          when it's no longer needed.
- * @param[in]  serverView   Server-side multicast information. Caller may
- *                          modify or free.
- * @retval     0            Success. `*clientView` is set.
- * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
- */
-static Ldm7Status
-up7_setMcastInfo(
-        McastInfo* const restrict       clientView,
-        const McastInfo* const restrict serverView)
-{
-    int              status;
-    McastInfo* const info = mi_clone(serverView);
-
-    if (NULL == info) {
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = (strcmp(info->server.inetId, "0.0.0.0"))
-                ? 0
-                : mi_replaceServerId(info, ghostname());
-
-        if (0 == status)
-            status = mi_copy(clientView, info);
-
-        mi_free(info);
-    } // `info` allocated
-
-    return status;
-}
-
-
 static feedtypet reduceToAllowed(
         feedtypet                      feed,
         struct SVCXPRT* const restrict xprt)
@@ -224,24 +223,19 @@ static feedtypet reduceToAllowed(
     return lcf_reduceByFeeds(feed, allowedFeeds, numFeeds);
 }
 
-static Ldm7Status authorize(
-        const feedtypet       feed,
-        const struct in_addr* addr)
+/**
+ * Ensures that a reply to an RPC service routine has been freed.
+ *
+ * @param[in] xdrProc  Associated XDR function.
+ * @param[in] reply    RPC reply.
+ */
+static inline void
+up7_ensureFree(
+        xdrproc_t const      xdrProc,
+        void* const restrict reply)
 {
-    Ldm7Status status = authClnt_init(feed);
-    if (status) {
-        log_add("Couldn't initialize LDM7 authorization module");
-    }
-    else {
-        status = authClnt_authorize(addr);
-        if (status) {
-            char buf[INET_ADDRSTRLEN];
-            log_add("Couldn't authorize remote LDM7 %s", inet_ntop(AF_INET,
-                    (const char*)addr, buf, sizeof(buf)));
-        }
-        authClnt_fini();
-    }
-    return status;
+    if (reply)
+        xdr_free(xdrProc, (char*)reply);
 }
 
 /**
@@ -258,7 +252,11 @@ static Ldm7Status authorize(
  * @retval     0            Success. `*reply` is set. `feedtype` is set iff
  *                          a corresponding multicast sender exists.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
- * @retval     LDM7_INVAL   Feed `feed` doesn't exist
+ * @retval     LDM7_LOGIC   The product-index map is already open. `log_add()`
+ *                          called.
+ * @retval     LDM7_NOENT   No potential sender corresponding to `feed` was
+ *                          added via `mlsm_addPotentialSender()`. `log_add()
+ *                          called`.
  */
 static Ldm7Status
 up7_subscribe(
@@ -273,51 +271,27 @@ up7_subscribe(
         status = LDM7_UNAUTH;
     }
     else {
-        const McastInfo* mcastInfo;
-        pid_t            pid;
-
-        status = mlsm_ensureRunning(feed, &mcastInfo, &pid);
+        SubscriptionReply rep = {};
+        status = umm_subscribe(feed, &rep);
         if (status) {
             if (LDM7_NOENT == status)
                 log_flush_notice();
         }
         else {
-            status = authorize(feed, &xprt->xp_raddr.sin_addr);
-            if (status == 0) {
-                status = up7_openProdIndexMap(feed);
-                if (status == 0) {
-                    if (atexit(up7_closeProdIndexMap)) {
-                        log_syserr("Couldn't register function to close "
-                                "product-index map");
-                        status = LDM7_SYSTEM;
-                    }
-                    else {
-                        status = up7_setMcastInfo(
-                                &reply->SubscriptionReply_u.mgi, mcastInfo);
-                        if (status == 0)
-                            feedtype = feed;
-                    } // product-index map closing function registered
-                } // product-index map open
-            } // Client FMTP layer authorized
-        } // multicast sender is running
+            status = up7_openProdIndexMap(feed);
+            if (status) {
+                (void)umm_unsubscribe(feed,
+                        rep.SubscriptionReply_u.info.clntAddr);
+            }
+            else {
+                feedtype = feed;
+                downFmtpAddr = rep.SubscriptionReply_u.info.clntAddr;
+                *reply = rep; // Success
+            }
+        } // Have subscription reply
     } // All or part of subscription is allowed by configuration-file
-
-    return reply->status = status;
-}
-
-/**
- * Ensures that a reply to an RPC service routine has been freed.
- *
- * @param[in] xdrProc  Associated XDR function.
- * @param[in] reply    RPC reply.
- */
-static inline void
-up7_ensureFree(
-        xdrproc_t const      xdrProc,
-        void* const restrict reply)
-{
-    if (reply)
-        xdr_free(xdrProc, (char*)reply);
+    reply->status = status;
+    return status;
 }
 
 /**
@@ -724,38 +698,38 @@ subscribe_7_svc(
         reply = &result;
     }
     else {
+        bool failure = false;
+        downFmtpAddr = result.SubscriptionReply_u.info.clntAddr;
         if (!up7_ensureProductQueueOpen()) {
             log_error("Couldn't subscribe %s to feedtype %s",
                     hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
-            // in `rpc/svc.c`; only valid for synchronous RPC
-            svcerr_systemerr(xprt);
-            svc_destroy(xprt);
-            /*
-             * The reply is set to NULL in order to cause the RPC dispatch
-             * routine to not reply because `svcerr_systemerr()` has been called
-             * and the server-side transport destroyed.
-             */
-            reply = NULL;
+            failure = true;
         }
         else {
             if (!up7_createClientTransport(xprt)) {
-                log_flush_error();
-                // in `rpc/svc.c`; only valid for synchronous RPC
-                svcerr_systemerr(xprt);
-                svc_destroy(xprt);
-                /*
-                 * The reply is set to NULL in order to cause the RPC dispatch
-                 * routine to not reply because `svcerr_systemerr()` has been
-                 * called and the server-side transport destroyed.
-                 */
-                reply = NULL;
+                log_error("Couldn't create client-side RPC transport for "
+                        "downstream host %s",
+                        hostbyaddr(svc_getcaller(xprt)));
+                failure = true;
             }
             else {
                 // `clnt` set
                 reply = &result; // reply synchronously
             }
         }
-    }
+        if (failure) {
+            log_flush_error();
+            // in `rpc/svc.c`; only valid for synchronous RPC
+            svcerr_systemerr(xprt);
+            svc_destroy(xprt);
+            /*
+             * The reply is set to NULL in order to cause the RPC dispatch
+             * routine to not reply because `svcerr_systemerr()` has been
+             * called and the server-side transport destroyed.
+             */
+            reply = NULL;
+        }
+    } // Subscription was successful
 
     return reply;
 }

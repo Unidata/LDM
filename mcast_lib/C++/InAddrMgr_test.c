@@ -67,7 +67,7 @@ static void test_inam_reserve(void)
     const feedtypet feed = 1;
 
     CU_ASSERT_EQUAL(inam_add(feed, addr, 30), 0);
-    CU_ASSERT_EQUAL(inam_reserve(feed+1, &addr), ENOENT);
+    CU_ASSERT_EQUAL(inam_reserve(feed+1, &addr), LDM7_NOENT);
     struct in_addr addr2;
 
     CU_ASSERT_EQUAL(inam_reserve(feed, &addr2), 0);
@@ -78,7 +78,7 @@ static void test_inam_reserve(void)
     addr.s_addr = inet_addr("192.168.0xff.0xfe");
     CU_ASSERT_EQUAL(addr2.s_addr, addr.s_addr);
 
-    CU_ASSERT_EQUAL(inam_reserve(feed, &addr2), EMFILE);
+    CU_ASSERT_EQUAL(inam_reserve(feed, &addr2), LDM7_MCAST);
 
     inam_clear();
 }

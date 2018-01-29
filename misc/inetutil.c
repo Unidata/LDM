@@ -20,6 +20,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
@@ -163,56 +164,55 @@ const char*
 hostbyaddr(
     const struct sockaddr_in* const     paddr)
 {
-    in_addr_t           inAddr = paddr->sin_addr.s_addr;
-    const char*         identifier;
+    in_addr_t   inAddr = paddr->sin_addr.s_addr;
+    const char* identifier;
 
     if (ntohl(inAddr) == 0) {
         identifier = "localhost";
     }
     else {
-        struct hostent*     hp;
-        struct in_addr      addr;
-        timestampt          start;
-        timestampt          stop;
-        double              elapsed;
-        ErrorObj*           error;
+        timestampt start;
+        timestampt stop;
 
-        addr.s_addr = inAddr;
-
+        static char hostname[_POSIX_HOST_NAME_MAX+1];
         (void)set_timestamp(&start);
-        hp = gethostbyaddr((char *)&addr, sizeof (addr), AF_INET);
+        int status = getnameinfo((struct sockaddr*)paddr, sizeof(*paddr),
+                hostname, sizeof(hostname), NULL, 0, 0);
         (void)set_timestamp(&stop);
 
-        elapsed = d_diff_timestamp(&stop, &start);
+        const double elapsed = d_diff_timestamp(&stop, &start);
 
-        if(hp == NULL) {
+        if (status) {
             identifier = inet_ntoa(paddr->sin_addr);
-            error = ERR_NEW2(0, NULL,
-                "Couldn't resolve \"%s\" to a hostname in %g seconds",
-                identifier, elapsed);
+            const char* reason =
+                (status == EAI_NONAME)
+                    ? "address doesn't resolve to a name"
+                    : (status == EAI_AGAIN)
+                        ? "couldn't resolve name at this time"
+                        : (status == EAI_FAIL)
+                          ? "Unrecoverable error"
+                          : (status == EAI_FAMILY)
+                            ? "invalid address family"
+                            : (status == EAI_MEMORY)
+                              ? "out-of-memory"
+                              : (status == EAI_OVERFLOW)
+                                ? "hostname buffer is too small"
+                                : (status == EAI_SYSTEM)
+                                  ? strerror(errno)
+                                  : "unanticipated error";
+            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO,
+                    "Couldn't resolve \"%s\" to a hostname in %g seconds: %s",
+                    identifier, elapsed, reason);
         }
         else {
-            identifier = hp->h_name;
-
-            if (elapsed < RESOLVER_TIME_THRESHOLD &&
-                    !log_is_enabled_info) {
-                error = NULL;
-            }
-            else {
-                error = ERR_NEW3(0, NULL,
-                    "Resolving %s to %s took %g seconds",
-                    inet_ntoa(paddr->sin_addr), identifier, elapsed);
-            }
-        }
-
-        if (error) {
-            err_log_and_free(error,
-                elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO);
+            identifier = hostname;
+            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO,
+                    "Resolving %s to %s took %g seconds", identifier, elapsed);
         }
     }
 
     return identifier;
-}
+} // `hostbyaddr()`
 
 
 /*

@@ -1,12 +1,13 @@
 /**
  * This file implements the FMTP control-plane.
  *
- *        File: ControlPlaneModule.cpp
+ *        File: ControlPlane.cpp
  *  Created on: Jan 5, 2018
  *      Author: Steven R. Emmerson
  */
+#include "config.h"
 
-#include "../../../../C++/ControlPlane.h"
+#include "ControlPlane.h"
 
 #include <cerrno>
 #include <string>

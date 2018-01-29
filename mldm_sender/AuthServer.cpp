@@ -8,7 +8,6 @@
  */
 #include "config.h"
 
-#include "AuthMsgQ.h"
 #include "AuthServer.h"
 #include "log.h"
 
@@ -20,10 +19,11 @@
 #include <stdexcept>
 #include <thread>
 #include <unistd.h>
+#include "../mcast_lib/C++/AuthConn.h"
 
 class AuthServer::Impl final
 {
-    AuthMsgQ    authMsgQ;   /// Authorization message-queue
+    AuthConn    authMsgQ;   /// Authorization message-queue
     Authorizer  authorizer; /// Authorization database
     std::thread thread;     /// Server thread
 

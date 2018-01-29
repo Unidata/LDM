@@ -26,7 +26,7 @@ lib_la_SOURCES		= down7.c \
 			  mcast_info.c mcast_info.h \
 			  mldm_receiver.c \
 			  mldm_receiver_memory.c \
-			  mldm_sender_manager.c mldm_sender_manager.h \
+			  UpMcastMgr.c UpMcastMgr.h \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  prod_index_queue.c
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
@@ -42,7 +42,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
                           -I$(top_srcdir)/mcast_lib/C++
-# mldm_sender_manager_test(1) calls mldm_sender(1), which calls
+# UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
 CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim
@@ -98,15 +98,15 @@ $(down7_stubs):			down7.h
 
 opmock_tests				= mldm_receiver_memory_test \
                                           mldm_receiver_test \
-                                          mldm_sender_manager_test
+                                          UpMcastMgr_test
 opmock_check_progs			= $(opmock_tests)
 test_cppflags				= @OPMOCK_CPPFLAGS@
 
-mldm_sender_manager_test_SOURCES 	= mldm_sender_manager_test.c
-nodist_mldm_sender_manager_test_SOURCES = $(mcast_stubs)
-mldm_sender_manager_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
-mldm_sender_manager_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_sender_manager_test_LDADD		= $(top_builddir)/lib/libldm.la \
+UpMcastMgr_test_SOURCES 	= UpMcastMgr_test.c
+nodist_UpMcastMgr_test_SOURCES = $(mcast_stubs)
+UpMcastMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
+UpMcastMgr_test_LDFLAGS	= @OPMOCK_LDFLAGS@
+UpMcastMgr_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
 
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
@@ -124,8 +124,8 @@ mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
                                           
-check-mldm_sender_manager:	mldm_sender_manager_test
-	./mldm_sender_manager_test
+check-UpMcastMgr:	UpMcastMgr_test
+	./UpMcastMgr_test
 check-mldm_receiver:	mldm_receiver_test
 	./mldm_receiver_test
 endif

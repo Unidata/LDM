@@ -46,7 +46,7 @@ void mcastReceiver_stop(
     McastReceiver* const        receiver);
 
 /**
- * Spawns an active multicast sender.
+ * Creates an active multicast sender.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_terminate(*sender)` when it's no
@@ -91,7 +91,7 @@ void mcastReceiver_stop(
  * @retval        3             System error. `log_add()` called.
  */
 int
-mcastSender_spawn(
+mcastSender_create(
     McastSender** const    sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,

@@ -1,6 +1,9 @@
 /**
  * This file implements a manager of pools of IPv4 addresses. Each pool can be
- * shared by multiple processes and accessed concurrently.
+ * shared by multiple processes and accessed concurrently. Initial population of
+ * any pool (e.g., by UpMcastMgr) causes interprocess communication resources to
+ * be created. These resources are released when the process that created them
+ * terminates.
  *
  * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the file COPYRIGHT in the top-level source-directory for
@@ -202,7 +205,7 @@ public:
     }
 
     template<class U> struct rebind { typedef ShmAlloc other; };
-};
+}; // class ShmAlloc
 
 /******************************************************************************/
 
@@ -260,7 +263,7 @@ class InAddrPool final
         {
             ::sem_post(semPtr.get());
         }
-    };
+    }; // class Semaphore
 
     /**
      * RAII class for locking a `Semaphore`.
@@ -408,7 +411,7 @@ public:
             throw std::logic_error("IPv4 address not reserved");
         isReserved[i] = false;
     }
-};
+}; // class InAddrPool
 
 /******************************************************************************/
 
@@ -486,13 +489,13 @@ public:
     {
         addrPools.clear();
     }
-};
+}; // class InAddrMgr
 
 /******************************************************************************/
 
 static void registerInamClear()
 {
-    if (atexit(&inam_clear))
+    if (::atexit(&inam_clear))
         throw std::system_error(errno, std::system_category(),
                 "Couldn't register inam_clear()");
 }
@@ -530,7 +533,7 @@ int inam_add(
     return 0;
 }
 
-int inam_reserve(
+Ldm7Status inam_reserve(
         const feedtypet feed,
         struct in_addr* addr)
 {
@@ -539,16 +542,16 @@ int inam_reserve(
     }
     catch (const std::out_of_range& ex) {
         log_add(ex.what());
-        return ENOENT;
+        return LDM7_NOENT;
     }
     catch (const std::exception& ex) {
         log_add(ex.what());
-        return EMFILE;
+        return LDM7_MCAST;
     }
-    return 0;
+    return LDM7_OK;
 }
 
-int inam_release(
+Ldm7Status inam_release(
         const feedtypet       feed,
         const struct in_addr* addr)
 {
@@ -557,7 +560,7 @@ int inam_release(
     }
     catch (const std::exception& ex) {
         log_add(ex.what());
-        return ENOENT;
+        return LDM7_NOENT;
     }
     return 0;
 }
