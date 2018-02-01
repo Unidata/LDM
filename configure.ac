@@ -56,7 +56,7 @@ AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
-    AC_SUBST([AM_CXXFLAGS], [-std=c++0x])
+    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
     case `$CXX -dumpversion` in
         ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
         (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
@@ -420,6 +420,17 @@ AM_CONDITIONAL([HAVE_OPMOCK], [test "$OPMOCK_LDADD"])
 AM_COND_IF([HAVE_OPMOCK], 
     [AC_MSG_NOTICE([Opmock found. Enabling mocking-tests.])],
     [AC_MSG_NOTICE([Opmock not found. Disabling mocking-tests.])])
+
+# Check for the Google Test package
+AC_MSG_NOTICE([checking for the GTEST unit-testing package.])
+AC_CHECK_FILE(
+    [/usr/include/gtest/gtest.h], 
+    [GTEST_LDADD='-lgtest'
+        AC_SUBST([GTEST_LDADD])])
+AM_CONDITIONAL([HAVE_GTEST], [test "$GTEST_LDADD"])
+AM_COND_IF([HAVE_GTEST], 
+    [AC_MSG_NOTICE([GTEST found. Enabling tests.])],
+    [AC_MSG_NOTICE([GTEST not found. Disabling tests.])])
 
 AC_SUBST(PATH)
 

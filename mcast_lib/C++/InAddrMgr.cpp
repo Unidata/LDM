@@ -562,7 +562,7 @@ Ldm7Status inam_release(
         log_add(ex.what());
         return LDM7_NOENT;
     }
-    return 0;
+    return LDM7_OK;
 }
 
 void inam_clear()

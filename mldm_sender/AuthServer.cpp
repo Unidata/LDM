@@ -19,7 +19,8 @@
 #include <stdexcept>
 #include <thread>
 #include <unistd.h>
-#include "../mcast_lib/C++/AuthConn.h"
+
+#include "MldmAuth.h"
 
 class AuthServer::Impl final
 {

@@ -89,18 +89,18 @@ static Ldm7Status authorize(
         const feedtypet       feed,
         const struct in_addr* addr)
 {
-    Ldm7Status status = authClnt_init(feed);
+    Ldm7Status status = 0; // TODO: authClnt_init(feed);
     if (status) {
         log_add("Couldn't initialize LDM7 authorization module");
     }
     else {
-        status = authClnt_authorize(addr);
+        status = 0; // TODO: authClnt_authorize(addr);
         if (status) {
             char buf[INET_ADDRSTRLEN];
             log_add("Couldn't authorize remote LDM7 %s", inet_ntop(AF_INET,
                     (const char*)addr, buf, sizeof(buf)));
         }
-        authClnt_fini();
+        // TODO: authClnt_fini();
     }
     return status;
 }

@@ -986,7 +986,7 @@ mls_execute(
         status = LDM7_SYSTEM;
     }
     else {
-        void* authSrvr = authSrvr_new(authDb, info->feed);
+        void* authSrvr = NULL; // TODO: authSrvr_new(authDb, info->feed);
         if (authSrvr == NULL) {
             log_add_syserr("Couldn't allocate authorization server");
             status = LDM7_SYSTEM;
@@ -1025,7 +1025,7 @@ mls_execute(
                 if (status == 0)
                     status = msStatus;
             } // Multicast LDM sender initialized
-            authSrvr_free(authSrvr);
+            // TODO: authSrvr_free(authSrvr);
         } // `authSrvr` allocated
         auth_free(authDb);
     } // `authDb` allocated

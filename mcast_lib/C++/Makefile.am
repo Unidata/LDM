@@ -10,11 +10,12 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
-			  AuthConn.cpp AuthConn.h \
-			  AuthClient.cpp AuthClient.h \
 			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h \
-			  InAddrMgr.cpp InAddrMgr.h
+			  InAddrMgr.cpp InAddrMgr.h \
+			  TcpSock.cpp TcpSock.h
+#			  AuthClient.cpp AuthClient.h
+#			  MldmAuth.cpp MldmAuth.h
 AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -27,6 +28,8 @@ AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
+
+check_PROGRAMS			=
 
 if HAVE_OPMOCK
 
@@ -46,7 +49,7 @@ if HAVE_OPMOCK
 endif
 
 if HAVE_CUNIT
-cunit_check_progs	= InAddrMgr_test
+check_PROGRAMS		+= InAddrMgr_test
 
 InAddrMgr_test_SOURCES	= InAddrMgr_test.c InAddrMgr.cpp
 InAddrMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
@@ -54,5 +57,12 @@ InAddrMgr_test_LDFLAGS	= $(top_builddir)/lib/libldm.la \
                           @LIBS_CUNIT@
 endif
 
-check_PROGRAMS			= $(opmock_check_progs) $(cunit_check_progs)
-TESTS				= $(opmock_tests) $(cunit_check_progs)
+if HAVE_GTEST
+TcpSock_test_SOURCES	= TcpSock_test.cpp TcpSock.cpp
+TcpSock_test_CXXFLAGS	= $(AM_CXXFLAGS)
+TcpSock_test_LDADD	= -lgtest
+
+check_PROGRAMS		+= TcpSock_test
+endif
+
+TESTS				= $(check_PROGRAMS)

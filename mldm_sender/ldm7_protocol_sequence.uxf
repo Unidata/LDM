@@ -1047,13 +1047,13 @@ Disconnect</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>99</x>
+      <x>90</x>
       <y>27</y>
-      <w>90</w>
+      <w>99</w>
       <h>36</h>
     </coordinates>
     <panel_attributes>Downstream
-LDM7
+LDM7 Process
 bg=green</panel_attributes>
     <additional_attributes/>
   </element>
@@ -1065,7 +1065,7 @@ bg=green</panel_attributes>
       <w>90</w>
       <h>36</h>
     </coordinates>
-    <panel_attributes>Upstream
+    <panel_attributes>Top-Level
 LDM7 Server
 bg=green</panel_attributes>
     <additional_attributes/>

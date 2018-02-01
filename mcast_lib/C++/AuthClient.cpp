@@ -6,13 +6,13 @@
  *  Created on: Dec 11, 2017
  *      Author: Steven R. Emmerson
  */
-#include <AuthConn.h>
 #include "config.h"
 
 #include "AuthClient.h"
 #include "log.h"
 
 #include <mqueue.h>
+#include <MldmAuth.h>
 #include <system_error>
 
 /******************************************************************************
@@ -21,7 +21,7 @@
 
 class AuthClient::Impl final
 {
-    AuthConn    authMsgQ;
+    AuthMsgQ    authMsgQ;
 
 public:
     /**
