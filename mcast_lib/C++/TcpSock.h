@@ -61,13 +61,36 @@ public:
      */
     void connect(const struct sockaddr_in remoteAddr) const;
 
-    void send(
+    void write(
             const void*  buf,
             const size_t nbytes) const;
 
-    size_t recv(
+    /**
+     * Gather-writes to the remote address.
+     * @param[in] iov            I/O vector
+     * @param[in] iovlen         Number of elements in `iov`
+     * @throw std::system_error  I/O failure
+     */
+    void writev(
+            const struct iovec* iov,
+            const int           iovcnt) const;
+
+    size_t read(
             void*        buf,
             const size_t nbytes) const;
+
+    /**
+     * Scatter-reads from the remote address.
+     * @param[in] iov            I/O vector
+     * @param[in] nbytes         Number of elements in `iov`
+     * @retval 0                 Connection is closed
+     * @return                   Number of bytes read. Might be less than
+     *                           specified.
+     * @throw std::system_error  I/O failure
+     */
+    size_t readv(
+            const struct iovec* iov,
+            const int           iovcnt) const;
 
     /**
      * Returns a string representation of this instance's socket.

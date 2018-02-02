@@ -20,6 +20,16 @@
 
 class TcpSock::Impl
 {
+    size_t ioVecLen(
+            const struct iovec* iov,
+            int                 iovlen)
+    {
+        size_t nbytes = 0;
+        while (iovlen > 0)
+            nbytes += iov[--iovlen].iov_len;
+        return nbytes;
+    }
+
 protected:
     int sd;
 
@@ -146,11 +156,32 @@ public:
      * @param[in] buf     Data to send
      * @param[in] nbytes  Number of bytes to send
      */
-    void send(
+    void write(
             const void*  buf,
             const size_t nbytes)
     {
         auto status = ::send(sd, buf, nbytes, MSG_NOSIGNAL);
+        if (status != nbytes)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't send " + std::to_string(nbytes) + " to remote "
+                    "address " + remoteAddrStr());
+    }
+
+    /**
+     * Gather-writes to the remote address.
+     * @param[in] iov            I/O vector
+     * @param[in] iovlen         Number of elements in `iov`
+     * @throw std::system_error  I/O failure
+     */
+    void writev(
+            const struct iovec* iov,
+            const int           iovlen)
+    {
+        struct msghdr msghdr = {};
+        msghdr.msg_iov = const_cast<struct iovec*>(iov);
+        msghdr.msg_iovlen = iovlen;
+        auto status = ::sendmsg(sd, &msghdr, MSG_NOSIGNAL);
+        auto nbytes = ioVecLen(iov, iovlen);
         if (status != nbytes)
             throw std::system_error(errno, std::system_category(),
                     "Couldn't send " + std::to_string(nbytes) + " to remote "
@@ -164,7 +195,7 @@ public:
      * @retval 0          Connection is closed
      * @return            Number of bytes read. Might be less than `nbytes`.
      */
-    size_t recv(
+    size_t read(
             void*        buf,
             const size_t nbytes)
     {
@@ -173,6 +204,30 @@ public:
             throw std::system_error(errno, std::system_category(),
                     "Couldn't receive " + std::to_string(nbytes) +
                     " from remote address " + remoteAddrStr());
+        return status;
+    }
+
+    /**
+     * Scatter-reads from the remote address.
+     * @param[in] iov            I/O vector
+     * @param[in] nbytes         Number of elements in `iov`
+     * @retval 0                 Connection is closed
+     * @return                   Number of bytes read. Might be less than
+     *                           specified.
+     * @throw std::system_error  I/O failure
+     */
+    size_t readv(
+            const struct iovec* iov,
+            const int           iovlen)
+    {
+        struct msghdr msghdr = {};
+        msghdr.msg_iov = const_cast<struct iovec*>(iov);
+        msghdr.msg_iovlen = iovlen;
+        auto status = ::recvmsg(sd, &msghdr, MSG_WAITALL);
+        if (status < 0)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't send " + std::to_string(ioVecLen(iov, iovlen)) +
+                    " to remote address " + remoteAddrStr());
         return status;
     }
 
@@ -211,18 +266,32 @@ void TcpSock::connect(const struct sockaddr_in remoteAddr) const
     pImpl->connect(remoteAddr);
 }
 
-void TcpSock::send(
+void TcpSock::write(
         const void*  buf,
         const size_t nbytes) const
 {
-    return pImpl->send(buf, nbytes);
+    return pImpl->write(buf, nbytes);
 }
 
-size_t TcpSock::recv(
+void TcpSock::writev(
+        const struct iovec* iov,
+        const int           iovcnt) const
+{
+    pImpl->writev(iov, iovcnt);
+}
+
+size_t TcpSock::read(
         void*        buf,
         const size_t nbytes) const
 {
-    return pImpl->recv(buf, nbytes);
+    return pImpl->read(buf, nbytes);
+}
+
+size_t TcpSock::readv(
+        const struct iovec* iov,
+        const int           iovcnt) const
+{
+    return pImpl->readv(iov, iovcnt);
 }
 
 std::string TcpSock::to_string() const

@@ -73,8 +73,8 @@ TEST_F(TcpSockTest, BoundServerSocket)
     std::cout << "Server socket: " << srvrSock.to_string() << '\n';
 }
 
-// Tests connecting to server socket
-TEST_F(TcpSockTest, ConnectingToServerSocket)
+// Tests writing and reading
+TEST_F(TcpSockTest, WritingAndReading)
 {
     struct sockaddr_in srvrAddr = {};
     srvrAddr.sin_family = AF_INET;
@@ -88,16 +88,50 @@ TEST_F(TcpSockTest, ConnectingToServerSocket)
         TcpSock clntSock{};
         clntSock.connect(srvrAddr);
         std::cout << "Client socket: " << clntSock.to_string() << '\n';
-        clntSock.send(&srvrAddr, sizeof(srvrAddr));
+        clntSock.write(&srvrAddr, sizeof(srvrAddr));
     }};
     thread.detach();
 
     auto connSock = srvrSock.accept();
     std::cout << "Connection socket: " << connSock.to_string() << '\n';
     struct sockaddr_in msg = {};
-    EXPECT_EQ(sizeof(msg), connSock.recv(&msg, sizeof(msg)));
+    EXPECT_EQ(sizeof(msg), connSock.read(&msg, sizeof(msg)));
     EXPECT_EQ(0, std::memcmp(&srvrAddr, &msg, sizeof(msg)));
-    EXPECT_EQ(0, connSock.recv(&msg, sizeof(msg)));
+    EXPECT_EQ(0, connSock.read(&msg, sizeof(msg)));
+}
+
+// Tests vector writing and reading
+TEST_F(TcpSockTest, VectorWritingAndReading)
+{
+    struct sockaddr_in srvrAddr = {};
+    srvrAddr.sin_family = AF_INET;
+    srvrAddr.sin_port = 0;
+    srvrAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    SrvrTcpSock srvrSock{};
+    srvrAddr.sin_port = htons(srvrSock.getPort());
+
+    srvrAddr.sin_port = htons(srvrSock.getPort());
+    std::thread thread{[&srvrAddr] {
+        TcpSock clntSock{};
+        clntSock.connect(srvrAddr);
+        struct iovec iov[2];
+        iov[0].iov_base = &srvrAddr;
+        iov[0].iov_len = sizeof(srvrAddr);
+        iov[1] = iov[0];
+        clntSock.writev(iov, 2);
+    }};
+    thread.detach();
+
+    auto connSock = srvrSock.accept();
+    std::cout << "Connection socket: " << connSock.to_string() << '\n';
+    struct sockaddr_in msg = {};
+    struct iovec iov[2];
+    iov[0].iov_base = &msg;
+    iov[0].iov_len = sizeof(msg);
+    iov[1] = iov[0];
+    EXPECT_EQ(2*sizeof(msg), connSock.readv(iov, 2));
+    EXPECT_EQ(0, std::memcmp(&srvrAddr, &msg, sizeof(msg)));
+    EXPECT_EQ(0, connSock.read(&msg, sizeof(msg)));
 }
 
 }  // namespace
