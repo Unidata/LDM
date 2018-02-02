@@ -61,12 +61,18 @@ public:
      */
     void connect(const struct sockaddr_in remoteAddr) const;
 
+    /**
+     * Sends to the remote address.
+     * @param[in] buf            Data to send
+     * @param[in] nbytes         Number of bytes to send
+     * @throw std::system_error  I/O failure
+     */
     void write(
             const void*  buf,
             const size_t nbytes) const;
 
     /**
-     * Gather-writes to the remote address.
+     * Gather-sends to the remote address.
      * @param[in] iov            I/O vector
      * @param[in] iovlen         Number of elements in `iov`
      * @throw std::system_error  I/O failure
@@ -75,12 +81,21 @@ public:
             const struct iovec* iov,
             const int           iovcnt) const;
 
+    /**
+     * Receives from the remote address.
+     * @param[in] buf            Buffer into which to read data
+     * @param[in] nbytes         Number of bytes to read
+     * @retval 0                 Connection is closed
+     * @return                   Number of bytes read. Might be less than
+     *                           `nbytes`.
+     * @throw std::system_error  I/O failure
+     */
     size_t read(
             void*        buf,
             const size_t nbytes) const;
 
     /**
-     * Scatter-reads from the remote address.
+     * Scatter-receives from the remote address.
      * @param[in] iov            I/O vector
      * @param[in] nbytes         Number of elements in `iov`
      * @retval 0                 Connection is closed

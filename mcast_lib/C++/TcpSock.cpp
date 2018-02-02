@@ -153,8 +153,9 @@ public:
 
     /**
      * Sends to the remote address.
-     * @param[in] buf     Data to send
-     * @param[in] nbytes  Number of bytes to send
+     * @param[in] buf            Data to send
+     * @param[in] nbytes         Number of bytes to send
+     * @throw std::system_error  I/O failure
      */
     void write(
             const void*  buf,
@@ -190,10 +191,12 @@ public:
 
     /**
      * Receives from the remote address.
-     * @param[in] buf     Buffer into which to read data
-     * @param[in] nbytes  Number of bytes to read
-     * @retval 0          Connection is closed
-     * @return            Number of bytes read. Might be less than `nbytes`.
+     * @param[in] buf            Buffer into which to read data
+     * @param[in] nbytes         Number of bytes to read
+     * @retval 0                 Connection is closed
+     * @return                   Number of bytes read. Might be less than
+     *                           `nbytes`.
+     * @throw std::system_error  I/O failure
      */
     size_t read(
             void*        buf,
