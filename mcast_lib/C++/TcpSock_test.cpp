@@ -9,6 +9,7 @@
  * Created On: Jan 30, 2018
  *     Author: Steven R. Emmerson
  */
+
 #include "TcpSock.h"
 
 #include <arpa/inet.h>
@@ -22,53 +23,20 @@ namespace {
 /// The fixture for testing class `TcpSock`
 class TcpSockTest : public ::testing::Test
 {
-protected:
-    // You can remove any or all of the following functions if its body
-    // is empty.
-
-    TcpSockTest()
-    {
-        // You can do set-up work for each test here.
-    }
-
-    virtual ~TcpSockTest()
-    {
-        // You can do clean-up work that doesn't throw exceptions here.
-    }
-
-    // If the constructor and destructor are not enough for setting up
-    // and cleaning up each test, you can define the following methods:
-
-    virtual void SetUp()
-    {
-        // Code here will be called immediately after the constructor (right
-        // before each test).
-    }
-
-    virtual void TearDown()
-    {
-        // Code here will be called immediately after each test (right
-        // before the destructor).
-    }
-
-    // Objects declared here can be used by all tests in the test case for Error.
 };
 
 // Tests construction of default server socket
 TEST_F(TcpSockTest, ServerSocket)
 {
-    SrvrTcpSock srvrSock{};
+    SrvrTcpSock srvrSock{InetFamily::IPV4};
     EXPECT_LT(0, srvrSock.getPort());
 }
 
 // Tests construction of bound server socket
 TEST_F(TcpSockTest, BoundServerSocket)
 {
-    struct sockaddr_in localAddr = {};
-    localAddr.sin_family = AF_INET;
-    localAddr.sin_port = 0;
-    localAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    SrvrTcpSock srvrSock{};
+    InetSockAddr srvrSockAddr{InetAddr{"127.0.0.1"}};
+    SrvrTcpSock srvrSock{srvrSockAddr};
     EXPECT_LT(0, srvrSock.getPort());
     std::cout << "Server socket: " << srvrSock.to_string() << '\n';
 }
@@ -76,47 +44,37 @@ TEST_F(TcpSockTest, BoundServerSocket)
 // Tests writing and reading
 TEST_F(TcpSockTest, WritingAndReading)
 {
-    struct sockaddr_in srvrAddr = {};
-    srvrAddr.sin_family = AF_INET;
-    srvrAddr.sin_port = 0;
-    srvrAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    SrvrTcpSock srvrSock{};
-    srvrAddr.sin_port = htons(srvrSock.getPort());
+    SrvrTcpSock  srvrSock{InetAddr{"127.0.0.1"}};
+    auto         srvrSockAddr = srvrSock.getLocalSockAddr();
 
-    srvrAddr.sin_port = htons(srvrSock.getPort());
-    std::thread thread{[&srvrAddr] {
-        TcpSock clntSock{};
-        clntSock.connect(srvrAddr);
+    std::thread thread{[&srvrSockAddr] {
+        TcpSock clntSock{srvrSockAddr.getFamily()};
+        clntSock.connect(srvrSockAddr);
         std::cout << "Client socket: " << clntSock.to_string() << '\n';
-        clntSock.write(&srvrAddr, sizeof(srvrAddr));
+        clntSock.write(&srvrSockAddr, sizeof(srvrSockAddr));
     }};
     thread.detach();
 
     auto connSock = srvrSock.accept();
     std::cout << "Connection socket: " << connSock.to_string() << '\n';
-    struct sockaddr_in msg = {};
+    decltype(srvrSockAddr) msg{InetFamily::IPV4};
     EXPECT_EQ(sizeof(msg), connSock.read(&msg, sizeof(msg)));
-    EXPECT_EQ(0, std::memcmp(&srvrAddr, &msg, sizeof(msg)));
+    EXPECT_EQ(0, std::memcmp(&srvrSockAddr, &msg, sizeof(msg)));
     EXPECT_EQ(0, connSock.read(&msg, sizeof(msg)));
 }
 
 // Tests vector writing and reading
 TEST_F(TcpSockTest, VectorWritingAndReading)
 {
-    struct sockaddr_in srvrAddr = {};
-    srvrAddr.sin_family = AF_INET;
-    srvrAddr.sin_port = 0;
-    srvrAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    SrvrTcpSock srvrSock{};
-    srvrAddr.sin_port = htons(srvrSock.getPort());
+    SrvrTcpSock  srvrSock{InetAddr{"127.0.0.1"}};
+    auto         srvrSockAddr = srvrSock.getLocalSockAddr();
 
-    srvrAddr.sin_port = htons(srvrSock.getPort());
-    std::thread thread{[&srvrAddr] {
-        TcpSock clntSock{};
-        clntSock.connect(srvrAddr);
+    std::thread thread{[&srvrSockAddr] {
+        TcpSock clntSock{srvrSockAddr.getFamily()};
+        clntSock.connect(srvrSockAddr);
         struct iovec iov[2];
-        iov[0].iov_base = &srvrAddr;
-        iov[0].iov_len = sizeof(srvrAddr);
+        iov[0].iov_base = &srvrSockAddr;
+        iov[0].iov_len = sizeof(srvrSockAddr);
         iov[1] = iov[0];
         clntSock.writev(iov, 2);
     }};
@@ -124,13 +82,13 @@ TEST_F(TcpSockTest, VectorWritingAndReading)
 
     auto connSock = srvrSock.accept();
     std::cout << "Connection socket: " << connSock.to_string() << '\n';
-    struct sockaddr_in msg = {};
+    decltype(srvrSockAddr) msg{InetFamily::IPV4};
     struct iovec iov[2];
     iov[0].iov_base = &msg;
     iov[0].iov_len = sizeof(msg);
     iov[1] = iov[0];
     EXPECT_EQ(2*sizeof(msg), connSock.readv(iov, 2));
-    EXPECT_EQ(0, std::memcmp(&srvrAddr, &msg, sizeof(msg)));
+    EXPECT_EQ(0, std::memcmp(&srvrSockAddr, &msg, sizeof(msg)));
     EXPECT_EQ(0, connSock.read(&msg, sizeof(msg)));
 }
 

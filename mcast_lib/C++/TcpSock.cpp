@@ -10,6 +10,7 @@
 #include "TcpSock.h"
 
 #include <arpa/inet.h>
+#include <Internet.h>
 #include <cerrno>
 #include <system_error>
 #include <unistd.h>
@@ -60,25 +61,12 @@ protected:
     }
 
     /**
-     * Returns the string representation of an address.
-     * @return String representation of address
-     */
-    static std::string to_string(const struct sockaddr_in sockAddr)
-    {
-        char dottedQuad[INET_ADDRSTRLEN];
-        ::inet_ntop(AF_INET, &sockAddr.sin_addr, dottedQuad,
-                sizeof(dottedQuad));
-        return std::string{dottedQuad} + ":" +
-                std::to_string(ntohs(sockAddr.sin_port));
-    }
-
-    /**
      * Returns the string representation of the local address of the socket.
      * @return  String representation of local address of socket
      */
     std::string localAddrStr() const
     {
-        return to_string(localAddr());
+        return ::to_string(localAddr());
     }
 
     /**
@@ -87,7 +75,7 @@ protected:
      */
     std::string remoteAddrStr() const
     {
-        return to_string(remoteAddr());
+        return ::to_string(remoteAddr());
     }
 
 public:
@@ -100,11 +88,12 @@ public:
     {}
 
     /**
-     * Default constructs.
+     * Constructs from the desired address family.
+     * @param[in] family         Address family (e.g., IPV4)
      * @throw std::system_error  Couldn't create socket
      */
-    Impl()
-        : Impl{::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)}
+    Impl(const InetFamily family)
+        : Impl{::socket(family, SOCK_STREAM, IPPROTO_TCP)}
     {
         if (sd < 0)
             throw std::system_error(errno, std::system_category(),
@@ -112,43 +101,55 @@ public:
     }
 
     /**
+     * Constructs from the local endpoint address.
+     * @param[in] localAddr      Local address. If the port number if zero, then
+     *                           the operating system will choose an ephemeral
+     *                           port.
+     * @throw std::system_error  Couldn't bind socket
+     * @exceptionsafety          Strong guarantee
+     * @threadsafety             Compatible but not safe
+     */
+    Impl(const InetSockAddr localAddr)
+        : Impl{localAddr.getFamily()}
+    {
+        localAddr.bind(sd);
+    }
+
+    /**
      * Destroys.
      */
-    ~Impl() noexcept
+    virtual ~Impl() noexcept
     {
         ::close(sd);
     }
 
     /**
-     * Binds the local endpoint to an address.
-     * @param[in] localAddr      Local address
-     * @throw std::system_error  Couldn't bind socket
-     * @exceptionsafety          Strong guarantee
-     * @threadsafety             Compatible but not safe
-     */
-    void bind(const struct sockaddr_in localAddr)
-    {
-        if (::bind(sd, reinterpret_cast<const struct sockaddr*>(&localAddr),
-                sizeof(localAddr)))
-            throw std::system_error{errno, std::system_category(),
-                    std::string{"Couldn't bind TCP socket to local address "} +
-                    to_string(localAddr)};
-    }
-
-    /**
      * Connects to a remote endpoint.
-     * @param[in] remoteAddr     Address of remote endpoint
+     * @param[in] rmtSockAddr    Address of remote endpoint
      * @throw std::system_error  Couldn't connect socket
      * @exceptionsafety          Strong guarantee
      * @threadsafety             Compatible but not safe
      */
-    void connect(const struct sockaddr_in remoteAddr)
+    void connect(const struct InetSockAddr rmtSockAddr)
     {
-        if (::connect(sd, reinterpret_cast<const struct sockaddr*>(&remoteAddr),
-                sizeof(remoteAddr)))
-            throw std::system_error{errno, std::system_category(),
-                    std::string{"Couldn't connect socket to remote address "} +
-                    to_string(remoteAddr)};
+        try {
+            rmtSockAddr.connect(sd);
+        }
+        catch (const std::exception& ex) {
+            std::throw_with_nested(std::runtime_error(
+                    "Couldn't connect TCP socket " + toString()));
+        }
+    }
+
+    /**
+     * Returns the Internet socket address of the local endpoint.
+     * @return           Internet socket address of local endpoint
+     * @exceptionsafety  Strong guarantee
+     * @threadsafety     Safe
+     */
+    InetSockAddr getLocalSockAddr() const
+    {
+        return InetSockAddr{localAddr()};
     }
 
     /**
@@ -206,7 +207,7 @@ public:
         if (status < 0)
             throw std::system_error(errno, std::system_category(),
                     "Couldn't receive " + std::to_string(nbytes) +
-                    " from remote address " + remoteAddrStr());
+                    " bytes from remote address " + remoteAddrStr());
         return status;
     }
 
@@ -240,15 +241,15 @@ public:
      * @exceptionsafety  Strong guarantee
      * @threadsafety     Safe
      */
-    std::string to_string()
+    std::string toString()
     {
         return std::string{"{localAddr="} + localAddrStr() +
                 ", remoteAddr=" + remoteAddrStr() + "}";
     }
 };
 
-TcpSock::TcpSock()
-    : pImpl{new Impl()}
+TcpSock::TcpSock(const InetFamily family)
+    : pImpl{new Impl(family)}
 {}
 
 TcpSock::TcpSock(Impl* impl)
@@ -259,14 +260,18 @@ TcpSock::TcpSock(const int sd)
     : pImpl{new Impl(sd)}
 {}
 
-void TcpSock::bind(const struct sockaddr_in localAddr) const
+TcpSock::TcpSock(const InetSockAddr localAddr)
+    : pImpl{localAddr}
+{}
+
+void TcpSock::connect(const InetSockAddr rmtSockAddr) const
 {
-    pImpl->bind(localAddr);
+    pImpl->connect(rmtSockAddr);
 }
 
-void TcpSock::connect(const struct sockaddr_in remoteAddr) const
+InetSockAddr TcpSock::getLocalSockAddr() const
 {
-    pImpl->connect(remoteAddr);
+    return pImpl->getLocalSockAddr();
 }
 
 void TcpSock::write(
@@ -299,7 +304,7 @@ size_t TcpSock::readv(
 
 std::string TcpSock::to_string() const
 {
-    return pImpl->to_string();
+    return pImpl->toString();
 }
 
 /******************************************************************************
@@ -309,16 +314,18 @@ std::string TcpSock::to_string() const
 class SrvrTcpSock::Impl final : public TcpSock::Impl
 {
     /**
-     * Initializes.
+     * Initializes. Binds the socket to the local address and calls `::listen()`
+     * on it. A subsequent `getPort()` will not return `0`.
      * @param[in] localAddr        Local address of socket
      * @param[in] backlog          Size of `listen(2)` queue
      * @throws std::system_error  `listen(2)` failure
+     * @see getPort()
      */
     void init(
-            const struct sockaddr_in localAddr,
-            const int                backlog)
+            const struct InetSockAddr& localAddr,
+            const int                  backlog)
     {
-        bind(localAddr);
+        localAddr.bind(sd);
         if (::listen(sd, backlog))
             throw std::system_error{errno, std::system_category(),
                     std::string{"listen() failure on socket "} +
@@ -329,25 +336,46 @@ public:
     /**
      * Constructs. The socket will accept connections on all available
      * interfaces.
+     * @param[in] family          Internet address family
+     *                            (e.g., `InetFamily::IPv4`)
      * @param[in] backlog         Size of `listen(2)` queue
      * @throws std::system_error  `listen(2)` failure
      */
-    Impl(const int backlog)
-        : TcpSock::Impl{}
+    Impl(   const InetFamily family,
+            const int        backlog)
+        : TcpSock::Impl{family}
     {
-        struct sockaddr_in localAddr = {};
-        init(localAddr, backlog);
+        init(InetSockAddr{family}, backlog);
     }
 
     /**
-     * Constructs.
+     * Constructs. Binds the socket to the local address and readies it to
+     * accept incoming connections. A subsequent `getPort()` will not return
+     * `0`.
      * @param[in] localAddr       Local address of socket
      * @param[in] backlog         Size of `listen(2)` queue
      * @throws std::system_error  `listen(2)` failure
+     * @see getPort()
      */
-    Impl(   const struct sockaddr_in localAddr,
-            const int                backlog)
-        : TcpSock::Impl{}
+    Impl(   const InetAddr& localAddr,
+            const int       backlog)
+        : TcpSock::Impl{localAddr.getFamily()}
+    {
+        init(InetSockAddr{localAddr, 0}, backlog);
+    }
+
+    /**
+     * Constructs. Binds the socket to the local address and readies it to
+     * accept incoming connections. A subsequent `getPort()` will not return
+     * `0`.
+     * @param[in] localAddr       Local address of socket
+     * @param[in] backlog         Size of `listen(2)` queue
+     * @throws std::system_error  `listen(2)` failure
+     * @see getPort()
+     */
+    Impl(   const InetSockAddr& localAddr,
+            const int           backlog)
+        : TcpSock::Impl{localAddr.getFamily()}
     {
         init(localAddr, backlog);
     }
@@ -383,13 +411,21 @@ public:
 };
 
 SrvrTcpSock::SrvrTcpSock(
-        const struct sockaddr_in localAddr,
-        const int                backlog)
+        const InetAddr& localAddr,
+        const int       backlog)
     : TcpSock{new Impl(localAddr, backlog)}
 {}
 
-SrvrTcpSock::SrvrTcpSock(const int backlog)
-    : TcpSock{new Impl(backlog)}
+SrvrTcpSock::SrvrTcpSock(
+        const InetSockAddr& localAddr,
+        const int           backlog)
+    : TcpSock{new Impl(localAddr, backlog)}
+{}
+
+SrvrTcpSock::SrvrTcpSock(
+        const InetFamily family,
+        const int        backlog)
+    : TcpSock{new Impl(family, backlog)}
 {}
 
 in_port_t SrvrTcpSock::getPort() const noexcept

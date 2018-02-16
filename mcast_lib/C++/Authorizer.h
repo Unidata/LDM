@@ -23,8 +23,16 @@ class Authorizer
 public:
     /**
      * Constructs.
+     * @param[in] seconds  Delay until an authorized client is de-authorized
      */
-    Authorizer();
+    explicit Authorizer(const unsigned seconds);
+
+    /**
+     * Default constructs.
+     */
+    Authorizer()
+        : Authorizer{30}
+    {}
 
     /**
      * Authorizes a client to connect to the server FMTP layer.
@@ -50,7 +58,7 @@ public:
      * @exceptionsafety     NoThrow
      * @threadsafety        Safe
      */
-    void unauthorize(const struct in_addr& clntAddr) const noexcept;
+    void deauthorize(const struct in_addr& clntAddr) const noexcept;
 };
 
 #endif
@@ -61,11 +69,11 @@ extern "C" {
 
 void* auth_new();
 
-void auth_unauthorize(
+void auth_deauthorize(
         void* const                 authorizer,
         const struct in_addr* const addr);
 
-void auth_free(void* const authorizer);
+void auth_delete(void* const authorizer);
 
 #ifdef __cplusplus
 }

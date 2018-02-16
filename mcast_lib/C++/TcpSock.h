@@ -9,6 +9,8 @@
 #ifndef MCAST_LIB_C___TCPSOCK_H_
 #define MCAST_LIB_C___TCPSOCK_H_
 
+#include "Internet.h"
+
 #include <cstddef>
 #include <memory>
 #include <netinet/in.h>
@@ -32,10 +34,11 @@ protected:
 
 public:
     /**
-     * Default constructs.
+     * Constructs from the address family.
+     * @param[i]  family         Address family (e.g, `InetFamily::IPV4`)
      * @throw std::system_error  Couldn't create socket
      */
-    TcpSock();
+    TcpSock(const InetFamily family);
 
     /**
      * Constructs.
@@ -44,22 +47,30 @@ public:
     TcpSock(const int sd);
 
     /**
-     * Binds the local endpoint to an address.
+     * Constructs from the the local endpoint address.
      * @param[in] localAddr      Local address
      * @throw std::system_error  Couldn't bind socket
      * @exceptionsafety          Strong guarantee
      * @threadsafety             Compatible but not safe
      */
-    void bind(const struct sockaddr_in localAddr) const;
+    TcpSock(const InetSockAddr localAddr);
 
     /**
      * Connects to a remote endpoint.
-     * @param[in] srvrAddr       Address of remote endpoint
+     * @param[in] rmtSockAddr    Address of remote endpoint
      * @throw std::system_error  Couldn't connect socket
      * @exceptionsafety          Strong guarantee
      * @threadsafety             Compatible but not safe
      */
-    void connect(const struct sockaddr_in remoteAddr) const;
+    void connect(const InetSockAddr rmtSockAddr) const;
+
+    /**
+     * Returns the Internet socket address of the local endpoint.
+     * @return           Internet socket address of local endpoint
+     * @exceptionsafety  Strong Guarantee
+     * @threadsafety     Safe
+     */
+    InetSockAddr getLocalSockAddr() const;
 
     /**
      * Sends to the remote address.
@@ -133,14 +144,44 @@ public:
      */
     explicit SrvrTcpSock(
             const struct sockaddr_in localAddr,
-            const int                backlog = 0);
+            const int                backlog = 5);
+
+    /**
+     * Constructs. Binds the socket to the local address and an ephemeral port
+     * and readies it to accept incoming connections. A subsequent `getPort()`
+     * will not return `0`.
+     * @param[in] inetAddr  Local endpoint address on which to accept
+     *                      connections
+     * @param[in] backlog   Size of backlog queue
+     * @see getPort()
+     */
+    explicit SrvrTcpSock(
+            const InetAddr& localAddr,
+            const int       backlog = 5);
+
+    /**
+     * Constructs. Binds the socket to the local address. If the specified port
+     * number is zero, then an ephemeral port is chosen; otherwise, the socket
+     * is bound to the specified port. The socket is readied to accept incoming
+     * connections. A subsequent `getPort()` will not return `0`.
+     * @param[in] sockAddr  Local endpoint address on which to accept
+     *                      connections
+     * @param[in] backlog   Size of backlog queue
+     * @see getPort()
+     */
+    explicit SrvrTcpSock(
+            const InetSockAddr& localAddr,
+            const int           backlog = 5);
 
     /**
      * Constructs. The socket will accept connections on all available
      * interfaces.
+     * @param[in] family    Internet address family (e.g., `InetFamily::IPv4`)
      * @param[in] backlog   Size of backlog queue
      */
-    explicit SrvrTcpSock(const int backlog = 0);
+    explicit SrvrTcpSock(
+            const InetFamily family,
+            const int        backlog = 5);
 
     /**
      * Returns the port number of the local socket address.

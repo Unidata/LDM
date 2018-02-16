@@ -45,7 +45,7 @@ class Authorizer::Impl
     {
         for (;;) {
             auto addr = delayQ.pop();
-            unauthorize(addr);
+            deauthorize(addr);
         }
     }
 
@@ -53,10 +53,10 @@ public:
     /**
      * Constructs.
      */
-    Impl()
+    Impl(const unsigned seconds)
         : mutex{}
         , inetAddrs{}
-        , delayQ{Duration{30}}
+        , delayQ{Duration{seconds}}
         , thread{[this]{deauthorize();}}
     {}
 
@@ -93,15 +93,15 @@ public:
      * @exceptionsafety     NoThrow
      * @threadsafety        Safe
      */
-    void unauthorize(const struct in_addr& clntAddr)
+    void deauthorize(const struct in_addr& clntAddr)
     {
         LockGuard lock{mutex};
         inetAddrs.erase(clntAddr);
     }
 };
 
-Authorizer::Authorizer()
-    : pImpl{new Impl()}
+Authorizer::Authorizer(const unsigned seconds)
+    : pImpl{new Impl(seconds)}
 {}
 
 void Authorizer::authorize(const struct in_addr& clntAddr) const
@@ -114,24 +114,28 @@ bool Authorizer::isAuthorized(const struct in_addr& clntAddr) const noexcept
     return pImpl->isAuthorized(clntAddr);
 }
 
-void Authorizer::unauthorize(const struct in_addr& clntAddr) const noexcept
+void Authorizer::deauthorize(const struct in_addr& clntAddr) const noexcept
 {
-    pImpl->unauthorize(clntAddr);
+    pImpl->deauthorize(clntAddr);
 }
+
+/******************************************************************************
+ * C API:
+ ******************************************************************************/
 
 void* auth_new()
 {
     return new Authorizer();
 }
 
-void auth_unauthorize(
+void auth_deauthorize(
         void* const                 authorizer,
         const struct in_addr* const addr)
 {
-    static_cast<Authorizer*>(authorizer)->unauthorize(*addr);
+    static_cast<Authorizer*>(authorizer)->deauthorize(*addr);
 }
 
-void auth_free(void* const authorizer)
+void auth_delete(void* const authorizer)
 {
     delete static_cast<Authorizer*>(authorizer);
 }

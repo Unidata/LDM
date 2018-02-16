@@ -1,10 +1,10 @@
 /**
- * This file declares a message queue for authorizing connections from the FMTP
- * layer of remote LDM7-s to the FMTP server of the local LDM7. A TCP-based
+ * This file declares a mechanism for authorizing connections from the FMTP
+ * layer of a remote LDM7 to the FMTP server of the local LDM7. A TCP-based
  * client/server architecture is use because authorization of a downstream LDM7
- * must be synchronous (and message queues aren't) because the downstream LDM7
- * must be authorized before it tries to connect to the local, upstream, FMTP
- * server.
+ * must be synchronous (and UNIX message queues aren't) because the downstream
+ * LDM7 must be authorized before it tries to connect to the local, upstream,
+ * FMTP server.
  *
  * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
@@ -39,7 +39,7 @@ extern "C" {
  */
 Ldm7Status mldmAuth_authorize(
         const in_port_t port,
-        const in_addr_t addr);
+        in_addr_t       addr);
 
 /**
  * Returns a new multicast LDM authorization server.
@@ -48,6 +48,7 @@ Ldm7Status mldmAuth_authorize(
  * @return                Pointer to new multicast LDM authorization server.
  *                        Caller should call `mldmAuthSrvr_delete()` when it's
  *                        no longer needed.
+ * @see mldmAuthSrvr_delete()
  */
 void* mldmAuthSrvr_new(void* authorizer);
 
@@ -68,6 +69,7 @@ Ldm7Status mldmAuthSrvr_run(void* srvr);
 /**
  * Deletes a multicast LDM authorization server.
  * @param[in] srvr      Multicast LDM authorization server
+ * @see mldmAuthsrvr_new()
  */
 void mldmAuthSrvr_delete(void* srvr);
 
@@ -86,6 +88,11 @@ class MldmAuthSrvr final
     std::shared_ptr<Impl> pImpl;
 
 public:
+    /**
+     * Constructs. The server's socket is bound to a local address and
+     * configured for listening.
+     * @param[in] authorizer  Authorization database
+     */
     MldmAuthSrvr(Authorizer& authorizer);
 
     /**

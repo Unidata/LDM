@@ -1027,7 +1027,7 @@ mls_execute(
             } // Multicast LDM sender initialized
             // TODO: authSrvr_free(authSrvr);
         } // `authSrvr` allocated
-        auth_free(authDb);
+        auth_delete(authDb);
     } // `authDb` allocated
 
     return status;

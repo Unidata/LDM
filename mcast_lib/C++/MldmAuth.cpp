@@ -1,10 +1,11 @@
 /**
  * This file implements a mechanism for authorizing a connection by a downstream
  * FMTP layer of a remote LDM7 to the FMTP server of the local LDM7. A TCP-based
- * client/server architecture is use because authorization of a downstream LDM7
+ * client/server architecture is used because authorization of a downstream LDM7
  * must be synchronous (and message queues aren't) because the downstream LDM7
  * must be authorized before it tries to connect to the local, upstream, FMTP
- * server.
+ * server, and because a write on a UNIX socket never blocks -- so a
+ * retry/timeout mechanism would have to be implemented.
  *
  * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
@@ -21,6 +22,7 @@
 #include "Authorizer.h"
 #include "ldm.h"
 #include "log.h"
+#include "TcpSock.h"
 
 #include <chrono>
 #include <cstdio>
@@ -34,42 +36,12 @@
 #include <system_error>
 #include <unistd.h>
 
-static std::string getSecretPathname(const in_port_t port)
+static std::string getSecretFilePathname(const in_port_t port)
 {
-    return std::string{"/tmp/MldmAuth_"} + std::to_string(port);
-}
-
-/**
- * Creates the secret that's shared between the multicast LDM authorization
- * server and its client processes on the same system and belonging to the same
- * user.
- * @param port               Port number of authorization server in host
- *                           byte-order
- * @throw std::system_error  Couldn't open secret-file
- * @throw std::system_error  Couldn't write secret to secret-file
- */
-static void createSecret(
-        const in_port_t port)
-{
-    const std::string pathname = getSecretPathname(port);
-    auto fd = ::open(pathname.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
-    if (fd < 0)
-        throw std::system_error(errno, std::system_category(),
-                "Couldn't open multicast authorization secret-file " +
-                pathname + " for writing");
-    try {
-        auto seed = std::chrono::high_resolution_clock::now()
-            .time_since_epoch().count();
-        uint64_t secret = std::mt19937_64{seed}();
-        if (::write(fd, &secret, sizeof(secret)) != sizeof(secret))
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't write secret to secret-file " + pathname);
-        ::close(fd);
-    } // `fd` is open
-    catch (const std::exception& ex) {
-        ::close(fd);
-        throw;
-    }
+    const char* dir = ::getenv("HOME");
+    if (dir == nullptr)
+        dir = "/tmp";
+    return dir + std::string{"/MldmAuth_"} + std::to_string(port);
 }
 
 /**
@@ -84,7 +56,7 @@ static void createSecret(
 static uint64_t getSecret(const in_port_t port)
 {
     uint64_t secret;
-    const std::string pathname = getSecretPathname(port);
+    const std::string pathname = getSecretFilePathname(port);
     auto fd = ::open(pathname.c_str(), O_RDONLY);
     if (fd < 0)
         throw std::system_error(errno, std::system_category(),
@@ -105,63 +77,36 @@ static uint64_t getSecret(const in_port_t port)
 
 /**
  * C function to authorize a host to receive a multicast.
- * @param[in] port      Port number of the multicast authorization server
- * @param[in] addr      Address of the host to be authorized
+ * @param[in] port      Port number of multicast authorization server in host
+ *                      byte-order
+ * @param[in] addr      Address of the host to be authorized in network
+ *                      byte-order
  * @retval LDM7_OK      Success
- * @retval LDM&_SYSTEM  Failure. `log_add()` called.
+ * @retval LDM7_SYSTEM  Failure. `log_add()` called.
  */
 Ldm7Status mldmAuth_authorize(
         const in_port_t port,
-        const in_addr_t addr)
+        in_addr_t       addr)
 {
-    Ldm7Status ldm7Status = LDM7_SYSTEM;
-    int        sd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sd < 0) {
-        log_add("Couldn't create TCP socket");
+    Ldm7Status         ldm7Status = LDM7_SYSTEM;
+    const InetSockAddr srvrSockAddr{InetAddr{"127.0.0.1"}, port};
+    try {
+        TcpSock conn{srvrSockAddr.getFamily()};
+        conn.connect(srvrSockAddr);
+        uint64_t secret = getSecret(port);
+        struct iovec iov[2];
+        iov[0].iov_base = &secret;
+        iov[0].iov_len = sizeof(secret);
+        iov[1].iov_base = &addr;
+        iov[1].iov_len = sizeof(addr);
+        conn.writev(iov, 2);
+        conn.read(&ldm7Status, sizeof(ldm7Status));
     }
-    else {
-        struct sockaddr_in service = {};
-        service.sin_family = AF_INET;
-        service.sin_port = htons(port);
-        inet_pton(AF_INET, "127.0.0.1", &service.sin_addr);
-        ssize_t status = ::connect(sd,
-                reinterpret_cast<struct sockaddr*>(&service), sizeof(service));
-        if (status) {
-            log_add("Couldn't connect socket to loopback interface");
-        }
-        else try {
-            char dottedQuad[INET_ADDRSTRLEN];
-            uint64_t secret = getSecret(port);
-            status = ::send(sd, &secret, sizeof(secret), MSG_NOSIGNAL);
-            if (status < sizeof(secret)) {
-                ::inet_ntop(AF_INET, &addr, dottedQuad, sizeof(dottedQuad));
-                log_add("Couldn't authenticate with multicast authorization "
-                        "server for host %s", dottedQuad);
-            }
-            else {
-                status = ::send(sd, &addr, sizeof(addr), MSG_NOSIGNAL);
-                if (status < sizeof(addr)) {
-                    ::inet_ntop(AF_INET, &addr, dottedQuad, sizeof(dottedQuad));
-                    log_add("Couldn't send authorized host address %s to "
-                            "loopback interface", dottedQuad);
-                }
-                else {
-                    status = ::recv(sd, &ldm7Status, sizeof(ldm7Status),
-                            MSG_WAITALL);
-                    if (status < sizeof(ldm7Status)) {
-                        ::inet_ntop(AF_INET, &addr, dottedQuad,
-                                sizeof(dottedQuad));
-                        log_add("Couldn't receive authorization status for %s "
-                                "from loopback interface", dottedQuad);
-                    }
-                }
-            }
-        }
-        catch (const std::exception& ex) {
-            log_add(ex.what());
-        }
-        ::close(sd);
-    } // `srvrSock` is open
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        log_add("Couldn't authorize remote LDM7 host %s with multicast "
+                "authorization server %s", srvrSockAddr.to_string().c_str());
+    }
     return ldm7Status;
 }
 
@@ -171,43 +116,59 @@ Ldm7Status mldmAuth_authorize(
 
 class MldmAuthSrvr::Impl
 {
-    /// Socket descriptor of server
-    int                srvrSock;
-    struct sockaddr_in srvrAddr;
-    Authorizer         authorizer;
+    /// Server's listening socket
+    SrvrTcpSock  srvrSock;
+    uint64_t     secret;
+    Authorizer   authorizer;
+
+    /**
+     * Creates the secret that's shared between the multicast LDM authorization
+     * server and its client processes on the same system and belonging to the
+     * same user.
+     * @param port               Port number of authorization server in host
+     *                           byte-order
+     * @return                   Secret value
+     * @throw std::system_error  Couldn't open secret-file
+     * @throw std::system_error  Couldn't write secret to secret-file
+     */
+    static uint64_t initSecret(const in_port_t port)
+    {
+        const std::string pathname = getSecretFilePathname(port);
+        auto fd = ::open(pathname.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
+        if (fd < 0)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't open multicast authorization secret-file " +
+                    pathname + " for writing");
+        uint64_t secret;
+        try {
+            auto seed = std::chrono::high_resolution_clock::now()
+                .time_since_epoch().count();
+            secret = std::mt19937_64{seed}();
+            if (::write(fd, &secret, sizeof(secret)) != sizeof(secret))
+                throw std::system_error(errno, std::system_category(),
+                        "Couldn't write secret to secret-file " + pathname);
+            ::close(fd);
+        } // `fd` is open
+        catch (const std::exception& ex) {
+            ::close(fd);
+            throw;
+        }
+        return secret;
+    }
 
 public:
     Impl(Authorizer& authorizer)
-        : srvrSock{::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)}
-        , srvrAddr{}
+        : srvrSock{InetSockAddr{InetAddr{"127.0.0.1"}}, 32}
+        , secret{initSecret(srvrSock.getPort())}
         , authorizer{authorizer}
-    {
-        if (srvrSock < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't create socket for multicast LDM authorization "
-                    "server");
-        srvrAddr.sin_family = AF_INET;
-        srvrAddr.sin_port = 0;
-        srvrAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-        auto status = ::bind(srvrSock,
-                reinterpret_cast<struct sockaddr*>(&srvrAddr),
-                sizeof(srvrAddr));
-        if (status)
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't bind multicast LDM authorization socket to "
-                    "loopback interface");
-        status = listen(srvrSock, 32);
-        if (status)
-            throw std::system_error(errno, std::system_category(),
-                    "listen() failure on multicast LDM authorization socket");
-    }
+    {}
 
     /**
-     * Destroys.
+     * Destroys. Removes the secret-file.
      */
     ~Impl() noexcept
     {
-        ::close(srvrSock);
+        ::unlink(getSecretFilePathname(srvrSock.getPort()).c_str());
     }
 
     /**
@@ -218,41 +179,47 @@ public:
     void runServer()
     {
         for (;;) {
-            //struct sockaddr_in fmtpAddr;
-            auto sd = ::accept(srvrSock, nullptr, nullptr);
-            if (sd < 0)
-                throw std::system_error(errno, std::system_category(),
-                        "accept() failure on multicast LDM authorization "
-                        "socket");
+            auto      connSock = srvrSock.accept();
+            uint64_t  clntSecret;
+            in_addr_t fmtpAddr;
+            struct iovec iov[2];
+            iov[0].iov_base = &clntSecret;
+            iov[0].iov_len = sizeof(clntSecret);
+            iov[1].iov_base = &fmtpAddr;
+            iov[1].iov_len = sizeof(fmtpAddr);
             try {
-                in_addr_t fmtpAddr;
-                auto status = ::recv(sd, &fmtpAddr, sizeof(fmtpAddr),
-                        MSG_WAITALL);
-                char dottedQuad[INET_ADDRSTRLEN];
-                if (status == 0 || status != sizeof(fmtpAddr)) {
-                    ::inet_ntop(AF_INET, &fmtpAddr, dottedQuad,
-                         sizeof(dottedQuad));
-                    log_notice("Couldn't receive FMTP client address from %s",
-                            dottedQuad);
-                }
-                else {
-                    try {
-                        struct in_addr addr = {fmtpAddr};
-                        authorizer.authorize(addr);
-                    }
-                    catch (const std::exception& ex) {
-                        ::inet_ntop(AF_INET, &fmtpAddr, dottedQuad,
-                                sizeof(dottedQuad));
-                        std::throw_with_nested(std::runtime_error(
-                                std::string{"Couldn't authorize FMTP client "} +
-                                dottedQuad));
-                    }
-                }
-                ::close(sd);
+                connSock.readv(iov, 2);
             }
             catch (const std::exception& ex) {
-                ::close(sd);
-                throw;
+                log_add(ex.what());
+                log_notice("Couldn't read authorization request from "
+                        "socket %s. Ignoring request.");
+                continue;
+            }
+            if (clntSecret != secret) {
+                log_notice("Invalid secret read from socket %s. "
+                        "Ignoring authorization request.",
+                        connSock.to_string().c_str());
+            }
+            else {
+                try {
+                    struct in_addr addr = {fmtpAddr};
+                    authorizer.authorize(addr);
+                    Ldm7Status ldm7Status = LDM7_OK;
+                    try {
+                        connSock.write(&ldm7Status, sizeof(ldm7Status));
+                    }
+                    catch (const std::exception& ex) {
+                        log_notice(ex.what());
+                        log_notice("Couldn't reply to authorization request "
+                                " on socket %s", connSock.to_string().c_str());
+                    }
+                }
+                catch (const std::exception& ex) {
+                    std::throw_with_nested(std::runtime_error(
+                            std::string{"Couldn't authorize FMTP client "} +
+                            ::to_string(fmtpAddr)));
+                }
             }
         }
     }
@@ -263,7 +230,7 @@ public:
      */
     in_port_t getPort() const noexcept
     {
-        return ::ntohs(srvrAddr.sin_port);
+        return srvrSock.getPort();
     }
 };
 

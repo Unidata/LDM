@@ -13,9 +13,11 @@ lib_la_SOURCES		= mcast.cpp mcast.h \
 			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h \
 			  InAddrMgr.cpp InAddrMgr.h \
-			  TcpSock.cpp TcpSock.h
+			  TcpSock.cpp TcpSock.h \
+			  Internet.cpp Internet.h \
+			  MldmAuth.cpp MldmAuth.h \
+			  MldmRpc.cpp MldmRpc.h
 #			  AuthClient.cpp AuthClient.h
-#			  MldmAuth.cpp MldmAuth.h
 AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \
                           -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -28,6 +30,8 @@ AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
                           -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc
+
+LDADD			=  $(top_builddir)/lib/libldm.la
 
 check_PROGRAMS			=
 
@@ -48,21 +52,28 @@ if HAVE_OPMOCK
 #				  @OPMOCK_LDADD@
 endif
 
-if HAVE_CUNIT
-check_PROGRAMS		+= InAddrMgr_test
+if HAVE_GTEST
+TcpSock_test_SOURCES	= TcpSock_test.cpp
+TcpSock_test_LDADD	= $(LDADD) -lgtest
 
+Authorizer_test_SOURCES	= Authorizer_test.cpp
+Authorizer_test_LDADD	= $(LDADD) -lgtest
+
+MldmAuth_test_SOURCES	= MldmAuth_test.cpp
+MldmAuth_test_LDADD  	= $(LDADD) -lgtest
+
+check_PROGRAMS		+= TcpSock_test Authorizer_test MldmAuth_test
+endif
+
+if HAVE_CUNIT
 InAddrMgr_test_SOURCES	= InAddrMgr_test.c InAddrMgr.cpp
 InAddrMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-InAddrMgr_test_LDFLAGS	= $(top_builddir)/lib/libldm.la \
-                          @LIBS_CUNIT@
+InAddrMgr_test_LDADD	= $(LDADD) @LIBS_CUNIT@
+
+MldmRpc_test_SOURCES	= MldmRpc_test.c
+MldmRpc_test_LDADD	= $(LDADD) @LIBS_CUNIT@
+
+check_PROGRAMS		+= InAddrMgr_test MldmRpc_test
 endif
 
-if HAVE_GTEST
-TcpSock_test_SOURCES	= TcpSock_test.cpp TcpSock.cpp
-TcpSock_test_CXXFLAGS	= $(AM_CXXFLAGS)
-TcpSock_test_LDADD	= -lgtest
-
-check_PROGRAMS		+= TcpSock_test
-endif
-
-TESTS				= $(check_PROGRAMS)
+TESTS			= $(check_PROGRAMS)
