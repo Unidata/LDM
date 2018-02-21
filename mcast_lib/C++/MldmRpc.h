@@ -13,13 +13,13 @@
 
 #include <netinet/in.h>
 
-#ifdef __cplusplus
-    extern "C" {
-#endif
-
 /******************************************************************************
  * C API:
  ******************************************************************************/
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
 
 /**
  * Returns a new multicast LDM RPC client.
@@ -72,7 +72,8 @@ void* mldmSrvr_new(
 in_port_t mldmSrvr_getPort(void* mldmSrvr);
 
 /**
- * Starts the multicast LDM RPC server. Doesn't return unless an error occurs.
+ * Starts the multicast LDM RPC server. Doesn't return unless a fatal error
+ * occurs.
  * @param[in] mldmSrvr     Multicast LDM RPC server
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @threadsafety           Unsafe

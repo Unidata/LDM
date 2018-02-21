@@ -10,7 +10,6 @@
 
 #include "config.h"
 
-#include "Authorizer.h"
 #include "log.h"
 #include "MldmRpc.h"
 
@@ -35,15 +34,14 @@ static int teardown(void)
     return 0;
 }
 
-static void test_defaultConstruction(void)
+static void test_construction(void)
 {
-    void* authDb = auth_new();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(authDb);
-    void* mldmSrvr = mldmSrvr_new(authDb);
+    in_addr_t networkPrefix;
+    CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
+    void* mldmSrvr = mldmSrvr_new(networkPrefix, 16);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmSrvr);
     CU_ASSERT_TRUE(0 < mldmSrvr_getPort(mldmSrvr));
     mldmSrvr_delete(mldmSrvr);
-    auth_delete(authDb);
 }
 
 static void* runServer(void* mldmSrvr)
@@ -53,10 +51,11 @@ static void* runServer(void* mldmSrvr)
     return NULL;
 }
 
-static void test_reserving(void)
+static void test_reserveAndRelease(void)
 {
-    void* authDb = auth_new();
-    void* mldmSrvr = mldmSrvr_new(authDb);
+    in_addr_t networkPrefix;
+    CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
+    void* mldmSrvr = mldmSrvr_new(networkPrefix, 16);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
     pthread_t thread;
     pthread_create(&thread, NULL, runServer, mldmSrvr);
@@ -64,13 +63,13 @@ static void test_reserving(void)
 
     void* mldmClnt = mldmClnt_new(port);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmClnt);
-    struct in_addr fmtpAddr = {};
-    CU_ASSERT_TRUE(0 == mldmClnt_reserve(mldmClnt, &fmtpAddr));
-    CU_ASSERT_TRUE(0 != fmtpAddr.s_addr);
+    in_addr_t fmtpAddr = 0;
+    CU_ASSERT_EQUAL(mldmClnt_reserve(mldmClnt, &fmtpAddr), 0);
+    CU_ASSERT_NOT_EQUAL(fmtpAddr, 0);
+    CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), 0);
 
     mldmClnt_delete(mldmClnt);
     mldmSrvr_delete(mldmSrvr);
-    auth_delete(authDb);
 }
 
 int main(
@@ -88,7 +87,8 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (CU_ADD_TEST(testSuite, test_defaultConstruction)
+                if (CU_ADD_TEST(testSuite, test_construction)
+                    && CU_ADD_TEST(testSuite, test_reserveAndRelease)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
