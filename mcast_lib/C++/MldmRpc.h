@@ -36,21 +36,21 @@ void* mldmClnt_new(const in_port_t port);
  *
  * @param mldmClnt
  * @param fmtpAddr
- * @retval Ldm7_SYSTEM  System failure. `log_add()` called.
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status mldmClnt_reserve(
-        void*           mldmClnt,
-        struct in_addr* fmtpAddr);
+        void*      mldmClnt,
+        in_addr_t* fmtpAddr);
 
 /**
  *
  * @param mldmClnt
  * @param fmtpAddr
- * @retval Ldm7_SYSTEM  System failure. `log_add()` called.
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status mldmClnt_release(
-        void*                 mldmClnt,
-        const struct in_addr* fmtpAddr);
+        void*           mldmClnt,
+        const in_addr_t fmtpAddr);
 
 /**
  * Destroys an allocated multicast LDM RPC client and deallocates it.
@@ -59,7 +59,15 @@ Ldm7Status mldmClnt_release(
  */
 void mldmClnt_delete(void* mldmClnt);
 
-void* mldmSrvr_new(void* authorizer);
+/**
+ * Constructs. Creates a listening server-socket and a file that contains a
+ * secret.
+ * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
+ * @param[in] prefixLen      Number of bits in network prefix
+ */
+void* mldmSrvr_new(
+        const in_addr_t networkPrefix,
+        const unsigned  prefixLen);
 
 in_port_t mldmSrvr_getPort(void* mldmSrvr);
 
@@ -89,6 +97,12 @@ void mldmSrvr_delete(void* mldmSrvr);
 
 #include <memory>
 
+typedef enum MldmRpcAct
+{
+    RESERVE_ADDR,
+    RELEASE_ADDR
+} MldmRpcAct;
+
 /**
  * Multicast LDM RPC client.
  */
@@ -105,9 +119,9 @@ public:
      */
     MldmClnt(const in_port_t port);
 
-    struct in_addr reserve() const;
+    in_addr_t reserve() const;
 
-    void release(const struct in_addr& fmtpAddr) const;
+    void release(const in_addr_t fmtpAddr) const;
 };
 
 /**
@@ -119,7 +133,15 @@ class MldmSrvr final
     std::shared_ptr<Impl> pImpl;
 
 public:
-    MldmSrvr(Authorizer& authDb);
+    /**
+     * Constructs. Creates a listening server-socket and a file that contains a
+     * secret.
+     * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
+     * @param[in] prefixLen      Number of bits in network prefix
+     */
+    MldmSrvr(
+            const in_addr_t networkPrefix,
+            const unsigned  prefixLen);
 
     in_port_t getPort() const noexcept;
 

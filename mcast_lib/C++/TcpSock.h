@@ -34,6 +34,11 @@ protected:
 
 public:
     /**
+     * Default constructs.
+     */
+    TcpSock();
+
+    /**
      * Constructs from the address family.
      * @param[i]  family         Address family (e.g, `InetFamily::IPV4`)
      * @throw std::system_error  Couldn't create socket

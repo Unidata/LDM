@@ -248,6 +248,10 @@ public:
     }
 };
 
+TcpSock::TcpSock()
+    : pImpl{}
+{}
+
 TcpSock::TcpSock(const InetFamily family)
     : pImpl{new Impl(family)}
 {}
@@ -261,7 +265,7 @@ TcpSock::TcpSock(const int sd)
 {}
 
 TcpSock::TcpSock(const InetSockAddr localAddr)
-    : pImpl{localAddr}
+    : pImpl{new Impl(localAddr)}
 {}
 
 void TcpSock::connect(const InetSockAddr rmtSockAddr) const
