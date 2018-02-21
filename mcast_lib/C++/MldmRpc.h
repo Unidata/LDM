@@ -33,19 +33,22 @@
 void* mldmClnt_new(const in_port_t port);
 
 /**
- *
- * @param mldmClnt
- * @param fmtpAddr
- * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ * Reserves an IP address for a remote FMTP layer to use for its TCP endpoint
+ * for recovering missed data-blocks.
+ * @param[in]  mldmClnt  Multicast LDM RPC client
+ * @param[out] fmtpAddr  Reserved IP address
+ * @retval LDM7_OK       Success. `*fmtpAddr` is set.
+ * @retval LDM7_SYSTEM   System failure. `log_add()` called.
  */
 Ldm7Status mldmClnt_reserve(
         void*      mldmClnt,
         in_addr_t* fmtpAddr);
 
 /**
- *
- * @param mldmClnt
- * @param fmtpAddr
+ * Releases a resered IP address for subsequent reuse.
+ * @param[in] mldmClnt  Multicast LDM RPC client
+ * @param[in] fmtpAddr  IP address to release
+ * @retval LDM7_OK      Success
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status mldmClnt_release(
@@ -61,7 +64,7 @@ void mldmClnt_delete(void* mldmClnt);
 
 /**
  * Constructs. Creates a listening server-socket and a file that contains a
- * secret.
+ * secret that can be shared by other processes belonging to the same user.
  * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
  * @param[in] prefixLen      Number of bits in network prefix
  */
@@ -69,6 +72,12 @@ void* mldmSrvr_new(
         const in_addr_t networkPrefix,
         const unsigned  prefixLen);
 
+/**
+ * Returns the port number of the multicast LDM RPC server.
+ * @param[in] mldmSrvr  Multicast LDM RPC server
+ * @return              Port number on which the server is listening in host
+ *                      byte-order
+ */
 in_port_t mldmSrvr_getPort(void* mldmSrvr);
 
 /**
@@ -94,14 +103,13 @@ void mldmSrvr_delete(void* mldmSrvr);
  * C++ API:
  ******************************************************************************/
 
-#include "Authorizer.h"
-
 #include <memory>
 
+/// Multicast LDM RPC actions
 typedef enum MldmRpcAct
 {
-    RESERVE_ADDR,
-    RELEASE_ADDR
+    RESERVE_ADDR,//!< RESERVE_ADDR
+    RELEASE_ADDR //!< RELEASE_ADDR
 } MldmRpcAct;
 
 /**
@@ -120,8 +128,17 @@ public:
      */
     MldmClnt(const in_port_t port);
 
+    /**
+     * Reserves an IP address for a remote FMTP layer to use as its TCP endpoint
+     * for recovering missed data-blocks.
+     * @return  Reserved IP address
+     */
     in_addr_t reserve() const;
 
+    /**
+     * Releases a reserved IP address for subsequent reuse.
+     * @param[in] fmtpAddr  IP address to be released
+     */
     void release(const in_addr_t fmtpAddr) const;
 };
 
@@ -144,10 +161,14 @@ public:
             const in_addr_t networkPrefix,
             const unsigned  prefixLen);
 
+    /**
+     * Returns the port number of the multicast LDM RPC server.
+     * @return Port number of multicast LDM RPC server in host byte-order
+     */
     in_port_t getPort() const noexcept;
 
     /**
-     * Runs the server. Doesn't return unless an exception is thrown.
+     * Runs the server. Doesn't return unless a fatal exception is thrown.
      */
     void operator()() const;
 };

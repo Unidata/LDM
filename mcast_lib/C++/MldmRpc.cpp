@@ -490,4 +490,5 @@ Ldm7Status mldmSrvr_run(void* mldmSrvr)
 
 void mldmSrvr_delete(void* mldmSrvr)
 {
+    delete static_cast<MldmSrvr*>(mldmSrvr);
 }
