@@ -98,12 +98,11 @@ public:
             const int           iovcnt) const;
 
     /**
-     * Receives from the remote address.
+     * Reads from the TCP connection.
      * @param[in] buf            Buffer into which to read data
      * @param[in] nbytes         Number of bytes to read
      * @retval 0                 Connection is closed
-     * @return                   Number of bytes read. Might be less than
-     *                           `nbytes`.
+     * @retval `nbytes`          Success
      * @throw std::system_error  I/O failure
      */
     size_t read(
@@ -111,12 +110,11 @@ public:
             const size_t nbytes) const;
 
     /**
-     * Scatter-receives from the remote address.
+     * Scatter-reads from the TCP connection.
      * @param[in] iov            I/O vector
-     * @param[in] nbytes         Number of elements in `iov`
+     * @param[in] iovlen         Number of elements in `iov`
      * @retval 0                 Connection is closed
-     * @return                   Number of bytes read. Might be less than
-     *                           specified.
+     * @retval                   Number of bytes specified by `iov`
      * @throw std::system_error  I/O failure
      */
     size_t readv(

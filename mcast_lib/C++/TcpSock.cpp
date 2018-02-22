@@ -191,33 +191,31 @@ public:
     }
 
     /**
-     * Receives from the remote address.
+     * Reads from the TCP connection.
      * @param[in] buf            Buffer into which to read data
      * @param[in] nbytes         Number of bytes to read
      * @retval 0                 Connection is closed
-     * @return                   Number of bytes read. Might be less than
-     *                           `nbytes`.
+     * @retval `nbytes`          Success
      * @throw std::system_error  I/O failure
      */
     size_t read(
             void*        buf,
             const size_t nbytes)
     {
-        auto status = ::recv(sd, buf, nbytes, MSG_WAITALL);
-        if (status < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't receive " + std::to_string(nbytes) +
-                    " bytes from remote address " + remoteAddrStr());
-        return status;
+        const auto status = ::recv(sd, buf, nbytes, MSG_WAITALL);
+        if (status == 0 || status == nbytes)
+            return status;
+        throw std::system_error(errno, std::system_category(),
+                "Couldn't receive " + std::to_string(nbytes) + " bytes from "
+                " remote address " + remoteAddrStr());
     }
 
     /**
-     * Scatter-reads from the remote address.
+     * Scatter-reads from the TCP connection.
      * @param[in] iov            I/O vector
-     * @param[in] nbytes         Number of elements in `iov`
+     * @param[in] iovlen         Number of elements in `iov`
      * @retval 0                 Connection is closed
-     * @return                   Number of bytes read. Might be less than
-     *                           specified.
+     * @retval                   Number of bytes specified by `iov`
      * @throw std::system_error  I/O failure
      */
     size_t readv(
@@ -227,12 +225,13 @@ public:
         struct msghdr msghdr = {};
         msghdr.msg_iov = const_cast<struct iovec*>(iov);
         msghdr.msg_iovlen = iovlen;
-        auto status = ::recvmsg(sd, &msghdr, MSG_WAITALL);
-        if (status < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't send " + std::to_string(ioVecLen(iov, iovlen)) +
-                    " to remote address " + remoteAddrStr());
-        return status;
+        const auto status = ::recvmsg(sd, &msghdr, MSG_WAITALL);
+        const auto nbytes = ioVecLen(iov, iovlen);
+        if (status == 0 || status == nbytes)
+            return status;
+        throw std::system_error(errno, std::system_category(),
+                "Couldn't receive " + std::to_string(nbytes) + " bytes from "
+                " remote address " + remoteAddrStr());
     }
 
     /**
