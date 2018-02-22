@@ -49,6 +49,8 @@ Ldm7Status mldmClnt_reserve(
  * @param[in] mldmClnt  Multicast LDM RPC client
  * @param[in] fmtpAddr  IP address to release
  * @retval LDM7_OK      Success
+ * @retval LDM7_NOENT   `fmtpAddr` wasn't previously reserved. `log_add()`
+ *                      called.
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status mldmClnt_release(
@@ -108,8 +110,12 @@ void mldmSrvr_delete(void* mldmSrvr);
 /// Multicast LDM RPC actions
 typedef enum MldmRpcAct
 {
-    RESERVE_ADDR,//!< RESERVE_ADDR
-    RELEASE_ADDR //!< RELEASE_ADDR
+    /// Reserve an IP address
+    RESERVE_ADDR,
+    /// Release a previously-reserved IP address
+    RELEASE_ADDR,
+    /// Close the connection
+    CLOSE_CONNECTION
 } MldmRpcAct;
 
 /**

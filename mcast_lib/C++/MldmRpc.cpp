@@ -18,6 +18,7 @@
 #include <random>
 #include <system_error>
 #include <unistd.h>
+#include <unordered_set>
 
 /**
  * Returns the pathname of the file that contains the authorization secret.
@@ -107,6 +108,7 @@ public:
     /**
      * Releases an IP address for subsequent reuse.
      * @param[in] fmtpAddr       IP address to be release in network byte-order
+     * @throw std::logic_error   `fmtpAddr` wasn't previously reserved
      * @throw std::system_error  I/O failure
      * @see   reserve()
      */
@@ -119,7 +121,12 @@ public:
         };
         tcpSock.writev(iov, 2);
         Ldm7Status ldm7Status;
-        tcpSock.read(&ldm7Status, sizeof(ldm7Status));
+        if (tcpSock.read(&ldm7Status, sizeof(ldm7Status)) == 0)
+            throw std::system_error(errno, std::system_category(),
+                    "Socket was closed");
+        if (ldm7Status == LDM7_NOENT)
+            throw std::logic_error("IP address " + to_string(fmtpAddr) +
+                    " wasn't previously reserved");
     }
 };
 
@@ -163,6 +170,10 @@ Ldm7Status mldmClnt_release(
     try {
         static_cast<MldmClnt*>(mldmClnt)->release(fmtpAddr);
     }
+    catch (const std::logic_error& ex) {
+        log_add(ex.what());
+        return LDM7_NOENT;
+    }
     catch (const std::exception& ex) {
         log_add(ex.what());
         return LDM7_SYSTEM;
@@ -184,7 +195,9 @@ class MldmSrvr::Impl final
     class InAddrPool final
     {
         /// Available IP addresses
-        std::deque<in_addr_t> pool;
+        std::deque<in_addr_t>         available;
+        /// Allocated IP addresses
+        std::unordered_set<in_addr_t> allocated;
 
         /**
          * Returns the number of IPv4 addresses in a subnet -- excluding the
@@ -215,7 +228,8 @@ class MldmSrvr::Impl final
         InAddrPool(
                 const in_addr_t networkPrefix,
                 const unsigned  prefixLen)
-            : pool{getNumAddrs(prefixLen), networkPrefix}
+            : available{getNumAddrs(prefixLen), networkPrefix}
+            , allocated{}
         {
             if (ntohl(networkPrefix) & ((1ul<<(32-prefixLen))-1)) {
                 char dottedQuad[INET_ADDRSTRLEN];
@@ -225,9 +239,9 @@ class MldmSrvr::Impl final
                                 " is incompatible with prefix length " +
                                 std::to_string(prefixLen));
             }
-            auto size = pool.size();
+            auto size = available.size();
             for (in_addr_t i = 1; i <= size; ++i)
-                pool[i] |= htonl(i);
+                available[i] |= htonl(i);
         }
 
         /**
@@ -239,8 +253,9 @@ class MldmSrvr::Impl final
          */
         in_addr_t reserve()
         {
-            in_addr_t addr = {pool.at(0)};
-            pool.pop_front();
+            in_addr_t addr = {available.at(0)};
+            available.pop_front();
+            allocated.insert(addr);
             return addr;
         }
 
@@ -248,12 +263,18 @@ class MldmSrvr::Impl final
          * Releases an address so that it can be subsequently reserved.
          * @param[in] addr          Reserved address to be released in network
          *                          byte-order
+         * @throw std::logic_error  `addr` wasn't previously reserved
          * @threadsafety            Compatible but not safe
          * @exceptionsafety         Strong guarantee
          */
         void release(const in_addr_t addr)
         {
-            pool.push_back(addr);
+            auto iter = allocated.find(addr);
+            if (iter == allocated.end())
+                throw std::logic_error("IP address " + to_string(addr) +
+                        " wasn't previously reserved");
+            available.push_back(addr);
+            allocated.erase(iter);
         }
     }; // class InAddrPool
 
@@ -309,7 +330,8 @@ class MldmSrvr::Impl final
         auto     sock = srvrSock.accept();
         uint64_t clntSecret;
         try {
-            sock.read(&clntSecret, sizeof(clntSecret));
+            if (sock.read(&clntSecret, sizeof(clntSecret)) == 0)
+                throw std::runtime_error("Socket was prematurely closed");
         }
         catch (const std::exception& ex) {
             log_add(ex.what());
@@ -326,8 +348,9 @@ class MldmSrvr::Impl final
     MldmRpcAct getAction(TcpSock& connSock)
     {
         MldmRpcAct action;
-        connSock.read(&action, sizeof(action));
-        return action;
+        return (connSock.read(&action, sizeof(action)) == 0)
+                ? CLOSE_CONNECTION
+                : action;
     }
 
     /**
@@ -359,15 +382,22 @@ class MldmSrvr::Impl final
     {
         in_addr_t fmtpAddr;
         try {
-            connSock.read(&fmtpAddr, sizeof(fmtpAddr));
+            if (connSock.read(&fmtpAddr, sizeof(fmtpAddr)) == 0)
+                throw std::runtime_error("Socket was closed");
         }
         catch (const std::exception& ex) {
             log_add(ex.what());
             throw std::runtime_error("Couldn't read IP address to release");
         }
-        inAddrPool.release(fmtpAddr);
+        Ldm7Status ldm7Status;
         try {
-            Ldm7Status ldm7Status = LDM7_OK;
+            inAddrPool.release(fmtpAddr);
+            ldm7Status = LDM7_OK;
+        }
+        catch (const std::logic_error& ex) {
+            ldm7Status = LDM7_NOENT;
+        }
+        try {
             connSock.write(&ldm7Status, sizeof(ldm7Status));
         }
         catch (const std::exception& ex) {
@@ -409,14 +439,17 @@ public:
                 // Performs authentication/authorization
                 auto connSock = accept();
                 try {
-                    for (;;) {
-                        auto action = getAction(connSock);
+                    for (auto action = getAction(connSock);
+                            action != CLOSE_CONNECTION;
+                            action = getAction(connSock)) {
                         switch (action) {
                         case RESERVE_ADDR:
                             reserveAddr(connSock);
                             break;
                         case RELEASE_ADDR:
                             releaseAddr(connSock);
+                            break;
+                        case CLOSE_CONNECTION:
                             break;
                         default:
                             throw std::logic_error("Invalid RPC action: " +
