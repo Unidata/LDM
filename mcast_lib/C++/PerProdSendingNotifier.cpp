@@ -22,9 +22,9 @@
 
 PerProdSendingNotifier::PerProdSendingNotifier(
         void      (*eop_func)(FmtpProdIndex iProd),
-        Authorizer& authDb)
+        Authorizer& authorizer)
     : eop_func(eop_func)
-    , authDb{authDb}
+    , authorizer{authorizer}
 {
     if (!eop_func)
         throw std::invalid_argument("Null argument: eop_func");
@@ -63,5 +63,5 @@ bool PerProdSendingNotifier::verify_new_recv(int newsock)
     }
     const struct sockaddr_in* addr =
             reinterpret_cast<struct sockaddr_in*>(&sockaddr);
-    return authDb.isAuthorized(addr->sin_addr);
+    return authorizer.isAuthorized(addr->sin_addr);
 }

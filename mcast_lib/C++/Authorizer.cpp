@@ -18,121 +18,38 @@
 
 class Authorizer::Impl
 {
-    typedef std::mutex             Mutex;
-    typedef std::lock_guard<Mutex> LockGuard;
-    typedef std::chrono::seconds   Duration;
-
-    struct Compare
-    {
-        bool operator()(
-                const struct in_addr& addr1,
-                const struct in_addr& addr2) const
-        {
-            return addr1.s_addr < addr2.s_addr;
-        }
-    };
-
-    mutable Mutex                             mutex;
-    std::set<struct in_addr, Compare>         inetAddrs;
-    FixedDelayQueue<struct in_addr, Duration> delayQ;
-    std::thread                               thread;
-
-    /**
-     * De-authorizes remote LDM7-s after a delay. Intended to run on its own
-     * thread.
-     */
-    void deauthorize()
-    {
-        for (;;) {
-            auto addr = delayQ.pop();
-            deauthorize(addr);
-        }
-    }
+    InAddrPool inAddrPool;
 
 public:
     /**
      * Constructs.
      */
-    Impl(const unsigned seconds)
-        : mutex{}
-        , inetAddrs{}
-        , delayQ{Duration{seconds}}
-        , thread{[this]{deauthorize();}}
+    explicit Impl(InAddrPool& inAddrPool)
+        : inAddrPool{inAddrPool}
     {}
 
-    ~Impl() noexcept
+    inline bool isAuthorized(const struct in_addr& clntAddr) const noexcept
     {
-        auto status = ::pthread_cancel(thread.native_handle());
-        if (status)
-            log_errno(status, "Couldn't cancel de-authorization thread");
-        thread.join(); // Can't fail. Might hang, though.
-    }
-
-    /**
-     * Authorizes a client.
-     * @param[in] clntAddr  Address of the client
-     * @exceptionsafety     Strong guarantee
-     * @threadsafety        Compatible but not safe
-     */
-    void authorize(const struct in_addr& clntAddr)
-    {
-        LockGuard lock{mutex};
-        inetAddrs.insert(clntAddr);
-        delayQ.push(clntAddr);
-    }
-
-    bool isAuthorized(const struct in_addr& clntAddr) const
-    {
-        LockGuard lock{mutex};
-        return inetAddrs.find(clntAddr) != inetAddrs.end();
-    }
-
-    /**
-     * Frees resources associated with a remote LDM7 client.
-     * @param[in] clntAddr  Address of client
-     * @exceptionsafety     NoThrow
-     * @threadsafety        Safe
-     */
-    void deauthorize(const struct in_addr& clntAddr)
-    {
-        LockGuard lock{mutex};
-        inetAddrs.erase(clntAddr);
+        return inAddrPool.isReserved(clntAddr.s_addr);
     }
 };
 
-Authorizer::Authorizer(const unsigned seconds)
-    : pImpl{new Impl(seconds)}
+Authorizer::Authorizer(InAddrPool& inAddrPool)
+    : pImpl{new Impl(inAddrPool)}
 {}
-
-void Authorizer::authorize(const struct in_addr& clntAddr) const
-{
-    pImpl->authorize(clntAddr);
-}
 
 bool Authorizer::isAuthorized(const struct in_addr& clntAddr) const noexcept
 {
     return pImpl->isAuthorized(clntAddr);
 }
 
-void Authorizer::deauthorize(const struct in_addr& clntAddr) const noexcept
-{
-    pImpl->deauthorize(clntAddr);
-}
-
 /******************************************************************************
  * C API:
  ******************************************************************************/
 
-void* auth_new()
+void* auth_new(void* inAddrPool)
 {
-    return new Authorizer();
-}
-
-void auth_deauthorize(
-        void* const                 authorizer,
-        const struct in_addr* const addr)
-{
-    static_cast<Authorizer*>(authorizer)->deauthorize(*addr);
+    return new Authorizer(*static_cast<InAddrPool*>(inAddrPool));
 }
 
 void auth_delete(void* const authorizer)

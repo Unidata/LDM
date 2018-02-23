@@ -10,6 +10,8 @@
 #ifndef MCAST_LIB_C___AUTHORIZER_H_
 #define MCAST_LIB_C___AUTHORIZER_H_
 
+#include "MldmRpc.h"
+
 #include <arpa/inet.h>
 
 #ifdef __cplusplus
@@ -23,24 +25,9 @@ class Authorizer
 public:
     /**
      * Constructs.
-     * @param[in] seconds  Delay until an authorized client is de-authorized
+     * @param[in] inAddrPool  Pool of IP addresses
      */
-    explicit Authorizer(const unsigned seconds);
-
-    /**
-     * Default constructs.
-     */
-    Authorizer()
-        : Authorizer{30}
-    {}
-
-    /**
-     * Authorizes a client to connect to the server FMTP layer.
-     * @param[in] clntAddr      Address of client
-     * @exceptionsafety         Strong guarantee
-     * @threadsafety            Safe
-     */
-    void authorize(const struct in_addr& clntAddr) const;
+    explicit Authorizer(InAddrPool& inAddrPool);
 
     /**
      * Indicates if a client is authorized to connect to the server FMTP layer.
@@ -51,14 +38,6 @@ public:
      * @threadsafety        Safe
      */
     bool isAuthorized(const struct in_addr& clntAddr) const noexcept;
-
-    /**
-     * Frees resources associated with an authorized FMTP client.
-     * @param[in] clntAddr  Address of client
-     * @exceptionsafety     NoThrow
-     * @threadsafety        Safe
-     */
-    void deauthorize(const struct in_addr& clntAddr) const noexcept;
 };
 
 #endif
@@ -67,11 +46,7 @@ public:
 extern "C" {
 #endif
 
-void* auth_new();
-
-void auth_deauthorize(
-        void* const                 authorizer,
-        const struct in_addr* const addr);
+void* auth_new(void* inAddrPool);
 
 void auth_delete(void* const authorizer);
 

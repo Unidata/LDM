@@ -26,7 +26,7 @@ class PerProdSendingNotifier: public SendProxy {
     void     (*eop_func)(FmtpProdIndex prodIndex);
 
     /// Authorization database
-    Authorizer authDb;
+    Authorizer authorizer;
 
 public:
     /**

@@ -77,6 +77,10 @@ static OffMap*               offMap;
  */
 static void*                 inAddrPool;
 /**
+ * Authorizer of remote clients:
+ */
+static void*                 authorizer;
+/**
  * Multicast LDM RPC server:
  */
 static void*                 mldmSrvr;
@@ -693,7 +697,7 @@ mls_doneWithProduct(
  *                           default timeout factor is used.
  * @param[in] pqPathname     Pathname of product queue from which to obtain
  *                           data-products.
- * @param[in] authDb         Authorization database.
+ * @param[in] authorizer     Authorizer of remote clients
  * @retval    0              Success. `*sender` is set.
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
  *                           IPv4 address because it's invalid or unknown.
@@ -708,7 +712,7 @@ mls_init(
     const char*                     ifaceAddr,
     const float                     timeoutFactor,
     const char* const restrict      pqPathname,
-    void*                           authDb)
+    void*                           authorizer)
 {
     char serverInetAddr[INET_ADDRSTRLEN];
     int  status = mls_getIpv4Addr(info->server.inetId, "server",
@@ -754,7 +758,7 @@ mls_init(
     if ((status = mcastSender_create(&mcastSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
             ifaceAddr, ttl, iProd, timeoutFactor, mls_doneWithProduct,
-            authDb))) {
+            authorizer))) {
         log_add("Couldn't create multicast sender");
         status = (status == 1)
                 ? LDM7_INVAL
@@ -1007,7 +1011,7 @@ runMldmSrvr(void* mldmSrvr)
 }
 
 static Ldm7Status
-startMldmSrvr(
+initAuthorization(
         const in_addr_t networkPrefix,
         const unsigned  prefixLen)
 {
@@ -1018,24 +1022,34 @@ startMldmSrvr(
         status = LDM7_SYSTEM;
     }
     else {
-        mldmSrvr = mldmSrvr_new(inAddrPool);
-        if (mldmSrvr == NULL) {
-            log_add_syserr("Couldn't create multicast LDM RPC server");
-            status = LDM7_SYSTEM;
+        authorizer = auth_new(inAddrPool);
+        if (authorizer == NULL) {
+            log_add_syserr("Couldn't create authorizer of remote clients");
         }
         else {
-            status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr, mldmSrvr);
-            if (status) {
-                log_syserr("Couldn't create multicast LDM RPC server thread");
-                mldmSrvr_delete(mldmSrvr);
-                mldmSrvr = NULL;
+            mldmSrvr = mldmSrvr_new(inAddrPool);
+            if (mldmSrvr == NULL) {
+                log_add_syserr("Couldn't create multicast LDM RPC server");
                 status = LDM7_SYSTEM;
             }
             else {
-                mldmSrvrPort = mldmSrvr_getPort(mldmSrvr);
-                status = LDM7_OK;
-            }
-        } // `mldmSrvr` set
+                status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
+                        mldmSrvr);
+                if (status) {
+                    log_syserr("Couldn't create multicast LDM RPC server "
+                            "thread");
+                    mldmSrvr_delete(mldmSrvr);
+                    mldmSrvr = NULL;
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    mldmSrvrPort = mldmSrvr_getPort(mldmSrvr);
+                    status = LDM7_OK;
+                }
+            } // `mldmSrvr` set
+            if (status)
+                auth_delete(authorizer);
+        } // `authorizer` set
         if (status)
             inAddrPool_delete(inAddrPool);
     } // `inAddrPool` set
@@ -1043,7 +1057,7 @@ startMldmSrvr(
 }
 
 static void
-stopMldmSrvr()
+finiAuthorization()
 {
     int   status = pthread_cancel(mldmSrvrThread);
     if (status) {
@@ -1057,6 +1071,7 @@ stopMldmSrvr()
         }
         else {
             mldmSrvr_delete(mldmSrvr);
+            auth_delete(authorizer);
             inAddrPool_delete(inAddrPool);
         }
     }
@@ -1119,55 +1134,50 @@ mls_execute(
      */
     blockTermSigs();
 
-    void* authDb = auth_new();
-    if (authDb == NULL) {
-        log_add_syserr("Couldn't allocate authorization database");
-        status = LDM7_SYSTEM;
+    /*
+     * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
+     * `mldmSrvrPort`.
+     */
+    status = initAuthorization(networkPrefix, prefixLen);
+    if (status) {
+        log_add("Couldn't initialize authorization of remote clients");
     }
     else {
-        status = startMldmSrvr(networkPrefix, prefixLen);
+        status = mls_init(info, ttl, ifaceAddr, timeoutFactor, pqPathname,
+                authorizer);
+
+        unblockTermSigs(); // Done creating child threads
+
         if (status) {
-            log_add("Couldn't start multicast LDM RPC server");
+            log_add("Couldn't initialize multicast LDM sender");
         }
         else {
-            // `mldmSrvr`, `mldmSrvrThread`, and `mldmSrvrPort` set
-            status = mls_init(info, ttl, ifaceAddr, timeoutFactor, pqPathname,
-                    authDb);
+            // `mcastInfo` set
+            /*
+             * Print the port number of the TCP server to the standard
+             * output stream in case it wasn't specified by the user and
+             * was, instead, chosen by the operating system.
+             */
+            (void)printf("%hu\n", mcastInfo.server.port);
+            (void)fflush(stdout);
 
-            unblockTermSigs(); // Done creating child threads
+            /*
+             * Data-products are multicast on the current (main) thread so
+             * that the process will automatically terminate if something
+             * goes wrong.
+             */
+            char* miStr = mi_format(&mcastInfo);
+            log_notice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
+                    "pq=\"%s\"", ifaceAddr, miStr, ttl, pqPathname);
+            free(miStr);
+            status = mls_startMulticasting();
 
-            if (status) {
-                log_add("Couldn't initialize multicast LDM sender");
-            }
-            else {
-                // `mcastInfo` set
-                /*
-                 * Print the port number of the TCP server to the standard
-                 * output stream in case it wasn't specified by the user and
-                 * was, instead, chosen by the operating system.
-                 */
-                (void)printf("%hu\n", mcastInfo.server.port);
-                (void)fflush(stdout);
-
-                /*
-                 * Data-products are multicast on the current (main) thread so
-                 * that the process will automatically terminate if something
-                 * goes wrong.
-                 */
-                char* miStr = mi_format(&mcastInfo);
-                log_notice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
-                        "pq=\"%s\"", ifaceAddr, miStr, ttl, pqPathname);
-                free(miStr);
-                status = mls_startMulticasting();
-
-                int msStatus = mls_destroy();
-                if (status == 0)
-                    status = msStatus;
-            } // Multicast LDM sender initialized
-            stopMldmSrvr();
-        } // Multicast LDM RPC server started
-        auth_delete(authDb);
-    } // `authDb` allocated
+            int msStatus = mls_destroy();
+            if (status == 0)
+                status = msStatus;
+        } // Multicast LDM sender initialized
+        finiAuthorization();
+    } // Multicast LDM RPC server started
 
     return status;
 }

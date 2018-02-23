@@ -276,7 +276,7 @@ struct mcast_sender {
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
- * @param[in]     authDb        Authorization database.
+ * @param[in]     authorizer    Authorizer of remote clients
  * @retval        0             Success. `*sender` is set.
  * @retval        1             Invalid argument. `log_add()` called.
  * @retval        2             Non-system runtime error. `log_add()` called.
@@ -294,14 +294,14 @@ mcastSender_init(
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
-    void*                  authDb)
+    void*                  authorizer)
 {
     int status;
 
     try {
         PerProdSendingNotifier* notifier =
                 new PerProdSendingNotifier(doneWithProd,
-                        *static_cast<Authorizer*>(authDb));
+                        *static_cast<Authorizer*>(authorizer));
 
         try {
             fmtpSendv3* fmtpSender = timeoutFactor < 0
@@ -375,7 +375,7 @@ mcastSender_init(
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
- * @param[in]     authDb        Authorization database.
+ * @param[in]     authorizer    Authorizer of remote clients
  * @retval        0             Success. `*sender` is set.
  * @retval        1             Invalid argument. `log_add()` called.
  * @retval        2             Non-system runtime error. `log_add()` called.
@@ -393,7 +393,7 @@ mcastSender_new(
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
-    void*                  authDb)
+    void*                  authorizer)
 {
     McastSender* const send = (McastSender*)log_malloc(sizeof(McastSender),
             "multicast sender");
@@ -405,7 +405,7 @@ mcastSender_new(
     else {
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
                 groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd,
-                authDb);
+                authorizer);
 
         if (status) {
             log_add("Couldn't initialize multicast sender");
@@ -522,12 +522,12 @@ mcastSender_create(
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
-    void*                  authDb)
+    void*                  authorizer)
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
             groupAddr, groupPort, ifaceAddr, ttl, iProd, timeoutFactor,
-            doneWithProd, authDb);
+            doneWithProd, authorizer);
 
     if (status) {
         log_add("Couldn't create new multicast sender");

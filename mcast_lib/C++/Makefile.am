@@ -15,7 +15,6 @@ lib_la_SOURCES		= mcast.cpp mcast.h \
 			  InAddrMgr.cpp InAddrMgr.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
-			  MldmAuth.cpp MldmAuth.h \
 			  MldmRpc.cpp MldmRpc.h
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS	        = -I$(top_builddir) -I$(top_srcdir) \
@@ -59,10 +58,10 @@ TcpSock_test_LDADD	= $(LDADD) -lgtest
 Authorizer_test_SOURCES	= Authorizer_test.cpp
 Authorizer_test_LDADD	= $(LDADD) -lgtest
 
-MldmAuth_test_SOURCES	= MldmAuth_test.cpp
-MldmAuth_test_LDADD  	= $(LDADD) -lgtest
+#MldmAuth_test_SOURCES	= MldmAuth_test.cpp
+#MldmAuth_test_LDADD  	= $(LDADD) -lgtest
 
-check_PROGRAMS		+= TcpSock_test Authorizer_test MldmAuth_test
+check_PROGRAMS		+= TcpSock_test Authorizer_test
 endif
 
 if HAVE_CUNIT

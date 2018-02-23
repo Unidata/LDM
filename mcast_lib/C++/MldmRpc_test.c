@@ -58,7 +58,8 @@ static void test_reserveAndRelease(void)
 {
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
-    void* mldmSrvr = mldmSrvr_new(networkPrefix, 16);
+    void* inAddrPool = inAddrPool_new(networkPrefix, 16);
+    void* mldmSrvr = mldmSrvr_new(inAddrPool);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
     pthread_t thread;
     pthread_create(&thread, NULL, runServer, mldmSrvr);
@@ -69,17 +70,21 @@ static void test_reserveAndRelease(void)
     in_addr_t fmtpAddr = 0;
     CU_ASSERT_EQUAL(mldmClnt_reserve(mldmClnt, &fmtpAddr), 0);
     CU_ASSERT_NOT_EQUAL(fmtpAddr, 0);
+    CU_ASSERT_TRUE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), 0);
+    CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
 
     mldmClnt_delete(mldmClnt);
     mldmSrvr_delete(mldmSrvr);
+    inAddrPool_delete(inAddrPool);
 }
 
 static void test_releaseUnreserved(void)
 {
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
-    void* mldmSrvr = mldmSrvr_new(networkPrefix, 16);
+    void* inAddrPool = inAddrPool_new(networkPrefix, 16);
+    void* mldmSrvr = mldmSrvr_new(inAddrPool);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
     pthread_t thread;
     pthread_create(&thread, NULL, runServer, mldmSrvr);
@@ -87,6 +92,7 @@ static void test_releaseUnreserved(void)
     void* mldmClnt = mldmClnt_new(port);
     in_addr_t fmtpAddr;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.1", &fmtpAddr), 1);
+    CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), LDM7_NOENT);
     log_notice("");
 
@@ -96,6 +102,7 @@ static void test_releaseUnreserved(void)
 
     mldmClnt_delete(mldmClnt);
     mldmSrvr_delete(mldmSrvr);
+    inAddrPool_delete(inAddrPool);
 }
 
 int main(

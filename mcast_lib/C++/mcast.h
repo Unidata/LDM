@@ -83,7 +83,7 @@ void mcastReceiver_stop(
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
- * @param[in]     AuthDb        Authorization database.
+ * @param[in]     authorizer    Authorizer of remote clients.
  * @retval        0             Success. `*sender` is set. `*serverPort` is set
  *                              if the initial port number was 0.
  * @retval        1             Invalid argument. `log_add()` called.
@@ -102,7 +102,7 @@ mcastSender_create(
     const FmtpProdIndex    iProd,
     const float            timeoutFactor,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
-    void*                  authDb);
+    void*                  authorizer);
 
 /**
  * Returns the product-index of the next product to be sent.
