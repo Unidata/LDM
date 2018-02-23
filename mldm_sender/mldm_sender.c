@@ -23,17 +23,20 @@
 #include "log.h"
 #include "mcast.h"
 #include "mcast_info.h"
+#include "MldmRpc.h"
 #include "OffsetMap.h"
 #include "pq.h"
 #include "prod_class.h"
 #include "StrBuf.h"
 #include "timestamp.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <getopt.h>
 #include <libgen.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -69,6 +72,22 @@ static sigset_t              termSigSet;
  * FMTP product-index to product-queue offset map.
  */
 static OffMap*               offMap;
+/**
+ * Pool of available IP addresses:
+ */
+static void*                 inAddrPool;
+/**
+ * Multicast LDM RPC server:
+ */
+static void*                 mldmSrvr;
+/**
+ * Multicast LDM RPC server port in host byte-order:
+ */
+static in_port_t             mldmSrvrPort;
+/**
+ * Multicast LDM RPC server thread:
+ */
+static pthread_t             mldmSrvrThread;
 
 /**
  * Blocks termination signals for the current thread.
@@ -309,23 +328,58 @@ mls_decodeGroupAddr(
     return status;
 }
 
+static int
+mls_decodeFmtpNetwork(
+        char* const restrict       arg,
+        in_addr_t* const restrict  networkPrefix,
+        unsigned* const restrict   prefixLen)
+{
+    int   status = 1; // Invalid operand
+    char* cp = strchr(arg, '/');
+    if (cp == NULL) {
+        log_add("Invalid FMTP network specification: \"%s\"", arg);
+    }
+    else {
+        *cp = 0;
+        if (inet_pton(AF_INET, arg, networkPrefix) != 1) {
+            log_add("Invalid FMTP network prefix: \"%s\"", arg);
+        }
+        else {
+            ++cp;
+            if (sscanf(cp, "%u", prefixLen) != 1) {
+                log_add("Invalid FMTP network prefix length: \"%s\"", cp);
+            }
+            else {
+                status = 0;
+            }
+        }
+    }
+    return status;
+}
+
 /**
  * Decodes the operands of the command-line.
  *
- * @param[in]  argc         Number of operands.
- * @param[in]  argv         Operands.
- * @param[out] groupAddr    Internet service address of the multicast group.
- *                          Caller should free when it's no longer needed.
- * @retval     0            Success. `*groupAddr`, `*serverAddr`, `*feed`, and
- *                          `msgQName` are set.
- * @retval     1            Invalid operands. `log_add()` called.
- * @retval     2            System failure. `log_add()` called.
+ * @param[in]  argc          Number of operands.
+ * @param[in]  argv          Operands.
+ * @param[out] groupAddr     Internet service address of the multicast group.
+ *                           Caller should free when it's no longer needed.
+ * @param[out] networkPrefix Prefix of FMTP virtual-circuit network in network
+ *                           byte-order
+ * @param[out] prefixLen     Number of bits in FMTP virtual-circuit network
+ *                           prefix
+ * @retval     0             Success. `*groupAddr`, `*serverAddr`, `*feed`, and
+ *                           `msgQName` are set.
+ * @retval     1             Invalid operands. `log_add()` called.
+ * @retval     2             System failure. `log_add()` called.
  */
 static int
 mls_decodeOperands(
         int                          argc,
         char* const* restrict        argv,
-        ServiceAddr** const restrict groupAddr)
+        ServiceAddr** const restrict groupAddr,
+        in_addr_t*                   networkPrefix,
+        unsigned*                    prefixLen)
 {
     int status;
 
@@ -335,6 +389,16 @@ mls_decodeOperands(
     }
     else {
         status = mls_decodeGroupAddr(*argv++, groupAddr);
+        if (status == 0) {
+            if (argc-- < 1) {
+                log_add("FMTP network not specified");
+                status = 1;
+            }
+            else {
+                status = mls_decodeFmtpNetwork(*argv++, networkPrefix,
+                        prefixLen);
+            }
+        }
     }
 
     return status;
@@ -398,6 +462,10 @@ mls_setMcastGroupInfo(
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
+ * @param[out] networkPrefix Prefix of FMTP virtual-circuit network in network
+ *                           byte-order
+ * @param[out] prefixLen     Number of bits in FMTP virtual-circuit network
+ *                           prefix
  * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
@@ -409,7 +477,9 @@ mls_decodeCommandLine(
         McastInfo** const restrict  mcastInfo,
         unsigned* const restrict    ttl,
         const char** const restrict ifaceAddr,
-        float* const                timeoutFactor)
+        float* const                timeoutFactor,
+        in_addr_t*                  networkPrefix,
+        unsigned*                   prefixLen)
 {
     feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
@@ -424,7 +494,8 @@ mls_decodeCommandLine(
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupAddr);
+        status = mls_decodeOperands(argc, argv, &groupAddr, networkPrefix,
+                prefixLen);
 
         if (0 == status) {
             status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
@@ -927,6 +998,70 @@ mls_startMulticasting(void)
     return status;
 }
 
+static void*
+runMldmSrvr(void* mldmSrvr)
+{
+    if (mldmSrvr_run(mldmSrvr))
+        log_error("Multicast LDM RPC server returned");
+    return NULL;
+}
+
+static Ldm7Status
+startMldmSrvr(
+        const in_addr_t networkPrefix,
+        const unsigned  prefixLen)
+{
+    Ldm7Status status;
+    inAddrPool = inAddrPool_new(networkPrefix, prefixLen);
+    if (inAddrPool == NULL) {
+        log_add_syserr("Couldn't create pool of available IP addresses");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        mldmSrvr = mldmSrvr_new(inAddrPool);
+        if (mldmSrvr == NULL) {
+            log_add_syserr("Couldn't create multicast LDM RPC server");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr, mldmSrvr);
+            if (status) {
+                log_syserr("Couldn't create multicast LDM RPC server thread");
+                mldmSrvr_delete(mldmSrvr);
+                mldmSrvr = NULL;
+                status = LDM7_SYSTEM;
+            }
+            else {
+                mldmSrvrPort = mldmSrvr_getPort(mldmSrvr);
+                status = LDM7_OK;
+            }
+        } // `mldmSrvr` set
+        if (status)
+            inAddrPool_delete(inAddrPool);
+    } // `inAddrPool` set
+    return status;
+}
+
+static void
+stopMldmSrvr()
+{
+    int   status = pthread_cancel(mldmSrvrThread);
+    if (status) {
+        log_syserr("Couldn't cancel multicast LDM RPC server thread");
+    }
+    else {
+        void* result;
+        status = pthread_join(mldmSrvrThread, &result);
+        if (status) {
+            log_syserr("Couldn't join multicast LDM RPC server thread");
+        }
+        else {
+            mldmSrvr_delete(mldmSrvr);
+            inAddrPool_delete(inAddrPool);
+        }
+    }
+}
+
 /**
  * Executes a multicast upstream LDM. Blocks until termination is requested or
  * an error occurs.
@@ -951,6 +1086,8 @@ mls_startMulticasting(void)
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
  * @param[in]  pqPathname    Pathname of the product-queue.
+ * @param[in]  networkPrefix FMTP network prefix
+ * @param[in]  prefixLen     Number of bits in FMTP network prefix
  * @retval     0             Success. Termination was requested.
  * @retval     LDM7_INVAL.   Invalid argument. `log_add()` called.
  * @retval     LDM7_MCAST    Multicast sender failure. `log_add()` called.
@@ -963,7 +1100,9 @@ mls_execute(
         const unsigned                  ttl,
         const char* const restrict      ifaceAddr,
         const float                     timeoutFactor,
-        const char* const restrict      pqPathname)
+        const char* const restrict      pqPathname,
+        const in_addr_t                 networkPrefix,
+        const unsigned                  prefixLen)
 {
     int status;
 
@@ -986,13 +1125,12 @@ mls_execute(
         status = LDM7_SYSTEM;
     }
     else {
-        void* authSrvr = NULL; // TODO: authSrvr_new(authDb, info->feed);
-        if (authSrvr == NULL) {
-            log_add_syserr("Couldn't allocate authorization server");
-            status = LDM7_SYSTEM;
+        status = startMldmSrvr(networkPrefix, prefixLen);
+        if (status) {
+            log_add("Couldn't start multicast LDM RPC server");
         }
         else {
-            // Sets `mcastInfo`
+            // `mldmSrvr`, `mldmSrvrThread`, and `mldmSrvrPort` set
             status = mls_init(info, ttl, ifaceAddr, timeoutFactor, pqPathname,
                     authDb);
 
@@ -1002,6 +1140,7 @@ mls_execute(
                 log_add("Couldn't initialize multicast LDM sender");
             }
             else {
+                // `mcastInfo` set
                 /*
                  * Print the port number of the TCP server to the standard
                  * output stream in case it wasn't specified by the user and
@@ -1025,8 +1164,8 @@ mls_execute(
                 if (status == 0)
                     status = msStatus;
             } // Multicast LDM sender initialized
-            // TODO: authSrvr_free(authSrvr);
-        } // `authSrvr` allocated
+            stopMldmSrvr();
+        } // Multicast LDM RPC server started
         auth_delete(authDb);
     } // `authDb` allocated
 
@@ -1063,8 +1202,10 @@ main(
     const char* ifaceAddr;         // IP address of multicast interface
     // Ratio of product-hold duration to multicast duration
     float       timeoutFactor = -1; // Use default
+    in_addr_t   networkPrefix;     ///< VC network prefix in network byte-order
+    unsigned    prefixLen;         ///< Number of bits in `networkPrefix`
     int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &ifaceAddr, &timeoutFactor);
+            &ifaceAddr, &timeoutFactor, &networkPrefix, &prefixLen);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -1076,7 +1217,7 @@ main(
         mls_setSignalHandling();
 
         status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
-                getQueuePath());
+                getQueuePath(), networkPrefix, prefixLen);
         if (status) {
             log_error("Couldn't execute multicast LDM sender");
             switch (status) {

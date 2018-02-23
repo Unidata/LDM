@@ -65,14 +65,34 @@ Ldm7Status mldmClnt_release(
 void mldmClnt_delete(void* mldmClnt);
 
 /**
- * Constructs. Creates a listening server-socket and a file that contains a
- * secret that can be shared by other processes belonging to the same user.
- * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
- * @param[in] prefixLen      Number of bits in network prefix
+ * Creates.
+ * @param[in] networkPrefix      Network prefix in network byte-order
+ * @param[in] prefixLen          Number of bits in network prefix
+ * @retval NULL                  Failure. `log_add()` called.
  */
-void* mldmSrvr_new(
+void* inAddrPool_new(
         const in_addr_t networkPrefix,
         const unsigned  prefixLen);
+
+/**
+ * Indicates if an IP address has been previously reserved.
+ * @param[in]        IP address pool
+ * @param[in] addr   IP address to check
+ * @retval `true`    IP address has been previously reserved
+ * @retval `false`   IP address has not been previously reserved
+ */
+bool inAddrPool_isReserved(
+        void*           inAddrPool,
+        const in_addr_t addr);
+
+void inAddrPool_delete(void* inAddrPool);
+
+/**
+ * Constructs. Creates a listening server-socket and a file that contains a
+ * secret that can be shared by other processes belonging to the same user.
+ * @param[in] inAddrPool     Pool of available IP addresses
+ */
+void* mldmSrvr_new(void* inAddrPool);
 
 /**
  * Returns the port number of the multicast LDM RPC server.
@@ -149,6 +169,57 @@ public:
 };
 
 /**
+ * Thread-safe pool of available IP addresses.
+ */
+class InAddrPool final
+{
+    class                 Impl;
+    std::shared_ptr<Impl> pImpl;
+
+public:
+    /**
+     * Constructs.
+     * @param[in] networkPrefix      Network prefix in network byte-order
+     * @param[in] prefixLen          Number of bits in network prefix
+     * @throw std::invalid_argument  `prefixLen >= 31`
+     * @throw std::invalid_argument  `networkPrefix` and `prefixLen` are
+     *                               incompatible
+     */
+    InAddrPool(
+            const in_addr_t networkPrefix,
+            const unsigned  prefixLen);
+
+    /**
+     * Reserves an address.
+     * @return                    Reserved address in network byte-order
+     * @throw std::out_of_range   No address is available
+     * @threadsafety              Safe
+     * @exceptionsafety           Strong guarantee
+     */
+    in_addr_t reserve() const;
+
+    /**
+     * Indicates if an IP address has been previously reserved.
+     * @param[in] addr   IP address to check
+     * @retval `true`    IP address has been previously reserved
+     * @retval `false`   IP address has not been previously reserved
+     * @threadsafety     Safe
+     * @exceptionsafety  Nothrow
+     */
+    bool isReserved(const in_addr_t addr) const noexcept;
+
+    /**
+     * Releases an address so that it can be subsequently reserved.
+     * @param[in] addr          Reserved address to be released in network
+     *                          byte-order
+     * @throw std::logic_error  `addr` wasn't previously reserved
+     * @threadsafety            Safe
+     * @exceptionsafety         Strong guarantee
+     */
+    void release(const in_addr_t addr) const;
+}; // class InAddrPool
+
+/**
  * Multicast LDM RPC server.
  */
 class MldmSrvr final
@@ -160,12 +231,9 @@ public:
     /**
      * Constructs. Creates a listening server-socket and a file that contains a
      * secret.
-     * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
-     * @param[in] prefixLen      Number of bits in network prefix
+     * @param[in] inAddrPool     Pool of available IP addresses
      */
-    MldmSrvr(
-            const in_addr_t networkPrefix,
-            const unsigned  prefixLen);
+    MldmSrvr(InAddrPool& inAddrPool);
 
     /**
      * Returns the port number of the multicast LDM RPC server.

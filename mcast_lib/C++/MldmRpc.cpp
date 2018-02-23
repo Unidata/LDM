@@ -15,6 +15,7 @@
 #include <chrono>
 #include <deque>
 #include <fcntl.h>
+#include <mutex>
 #include <random>
 #include <system_error>
 #include <unistd.h>
@@ -187,96 +188,154 @@ void mldmClnt_delete(void* mldmClnt)
 }
 
 /******************************************************************************
+ * Pool of Available IP Addresses:
+ ******************************************************************************/
+class InAddrPool::Impl final
+{
+    /// Available IP addresses
+    std::deque<in_addr_t>           available;
+    /// Allocated IP addresses
+    std::unordered_set<in_addr_t>   allocated;
+    /// Concurrency support
+    typedef std::mutex              Mutex;
+    typedef std::lock_guard<Mutex>  LockGuard;
+    mutable Mutex                   mutex;
+
+    /**
+     * Returns the number of IPv4 addresses in a subnet -- excluding the
+     * network identifier address (all host bits off) and broadcast address
+     * (all host bits on).
+     * @param[in] prefixLen          Length of network prefix in bits
+     * @return                       Number of addresses
+     * @throw std::invalid_argument  `prefixLen >= 31`
+     * @threadsafety                 Safe
+     */
+    static in_addr_t getNumAddrs(const unsigned prefixLen)
+    {
+        if (prefixLen >= 31)
+            throw std::invalid_argument("Invalid network prefix length: " +
+                    std::to_string(prefixLen));
+        return (1 << (32 - prefixLen)) - 2;
+    }
+
+public:
+    /**
+     * Constructs.
+     * @param[in] networkPrefix      Network prefix in network byte-order
+     * @param[in] prefixLen          Number of bits in network prefix
+     * @throw std::invalid_argument  `prefixLen >= 31`
+     * @throw std::invalid_argument  `networkPrefix` and `prefixLen` are
+     *                               incompatible
+     */
+    Impl(   const in_addr_t networkPrefix,
+            const unsigned  prefixLen)
+        : available{getNumAddrs(prefixLen), networkPrefix}
+        , allocated{}
+        , mutex{}
+    {
+        if (ntohl(networkPrefix) & ((1ul<<(32-prefixLen))-1))
+            throw std::invalid_argument(std::string("Network prefix ") +
+                    to_string(networkPrefix) + " is incompatible with prefix "
+                    "length " + std::to_string(prefixLen));
+        auto size = available.size();
+        for (in_addr_t i = 1; i <= size; ++i)
+            available[i] |= htonl(i);
+    }
+
+    /**
+     * Reserves an address.
+     * @return                    Reserved address in network byte-order
+     * @throw std::out_of_range   No address is available
+     * @threadsafety              Safe
+     * @exceptionsafety           Strong guarantee
+     */
+    in_addr_t reserve()
+    {
+        LockGuard lock{mutex};
+        in_addr_t addr = {available.at(0)};
+        available.pop_front();
+        allocated.insert(addr);
+        return addr;
+    }
+
+    /**
+     * Indicates if an IP address has been previously reserved.
+     * @param[in] addr   IP address to check
+     * @retval `true`    IP address has been previously reserved
+     * @retval `false`   IP address has not been previously reserved
+     * @threadsafety     Safe
+     * @exceptionsafety  Nothrow
+     */
+    bool isReserved(const in_addr_t addr) const noexcept
+    {
+        LockGuard lock{mutex};
+        return allocated.find(addr) != allocated.end();
+    }
+
+    /**
+     * Releases an address so that it can be subsequently reserved.
+     * @param[in] addr          Reserved address to be released in network
+     *                          byte-order
+     * @throw std::logic_error  `addr` wasn't previously reserved
+     * @threadsafety            Compatible but not safe
+     * @exceptionsafety         Strong guarantee
+     */
+    void release(const in_addr_t addr)
+    {
+        LockGuard lock{mutex};
+        auto      iter = allocated.find(addr);
+        if (iter == allocated.end())
+            throw std::logic_error("IP address " + to_string(addr) +
+                    " wasn't previously reserved");
+        available.push_back(addr);
+        allocated.erase(iter);
+    }
+}; // class InAddrPool::Impl
+
+InAddrPool::InAddrPool(
+        const in_addr_t networkPrefix,
+        const unsigned  prefixLen)
+    : pImpl{new Impl(networkPrefix, prefixLen)}
+{}
+
+in_addr_t InAddrPool::reserve() const
+{
+    return pImpl->reserve();
+}
+
+bool InAddrPool::isReserved(const in_addr_t addr) const noexcept
+{
+    return pImpl->isReserved(addr);
+}
+
+void InAddrPool::release(const in_addr_t addr) const
+{
+    pImpl->release(addr);
+}
+
+void* inAddrPool_new(
+        const in_addr_t networkPrefix,
+        const unsigned  prefixLen)
+{
+    return new InAddrPool{networkPrefix, prefixLen};
+}
+
+bool inAddrPool_isReserved(void* inAddrPool, const in_addr_t addr)
+{
+    return static_cast<InAddrPool*>(inAddrPool)->isReserved(addr);
+}
+
+void inAddrPool_delete(void* inAddrPool)
+{
+    delete static_cast<InAddrPool*>(inAddrPool);
+}
+
+/******************************************************************************
  * Multicast LDM RPC Server:
  ******************************************************************************/
 
 class MldmSrvr::Impl final
 {
-    class InAddrPool final
-    {
-        /// Available IP addresses
-        std::deque<in_addr_t>         available;
-        /// Allocated IP addresses
-        std::unordered_set<in_addr_t> allocated;
-
-        /**
-         * Returns the number of IPv4 addresses in a subnet -- excluding the
-         * network identifier address (all host bits off) and broadcast address
-         * (all host bits on).
-         * @param[in] prefixLen          Length of network prefix in bits
-         * @return                       Number of addresses
-         * @throw std::invalid_argument  `prefixLen >= 31`
-         * @threadsafety                 Safe
-         */
-        static in_addr_t getNumAddrs(const unsigned prefixLen)
-        {
-            if (prefixLen >= 31)
-                throw std::invalid_argument("Invalid network prefix length: " +
-                        std::to_string(prefixLen));
-            return (1 << (32 - prefixLen)) - 2;
-        }
-
-    public:
-        /**
-         * Constructs.
-         * @param[in] networkPrefix      Network prefix in network byte-order
-         * @param[in] prefixLen          Number of bits in network prefix
-         * @throw std::invalid_argument  `prefixLen >= 31`
-         * @throw std::invalid_argument  `networkPrefix` and `prefixLen` are
-         *                               incompatible
-         */
-        InAddrPool(
-                const in_addr_t networkPrefix,
-                const unsigned  prefixLen)
-            : available{getNumAddrs(prefixLen), networkPrefix}
-            , allocated{}
-        {
-            if (ntohl(networkPrefix) & ((1ul<<(32-prefixLen))-1)) {
-                char dottedQuad[INET_ADDRSTRLEN];
-                throw std::invalid_argument(std::string("Network prefix ") +
-                        inet_ntop(AF_INET, &networkPrefix, dottedQuad,
-                                sizeof(dottedQuad)) +
-                                " is incompatible with prefix length " +
-                                std::to_string(prefixLen));
-            }
-            auto size = available.size();
-            for (in_addr_t i = 1; i <= size; ++i)
-                available[i] |= htonl(i);
-        }
-
-        /**
-         * Reserves an address.
-         * @return                    Reserved address in network byte-order
-         * @throw std::out_of_range   No address is available
-         * @threadsafety              Compatible but not safe
-         * @exceptionsafety           Strong guarantee
-         */
-        in_addr_t reserve()
-        {
-            in_addr_t addr = {available.at(0)};
-            available.pop_front();
-            allocated.insert(addr);
-            return addr;
-        }
-
-        /**
-         * Releases an address so that it can be subsequently reserved.
-         * @param[in] addr          Reserved address to be released in network
-         *                          byte-order
-         * @throw std::logic_error  `addr` wasn't previously reserved
-         * @threadsafety            Compatible but not safe
-         * @exceptionsafety         Strong guarantee
-         */
-        void release(const in_addr_t addr)
-        {
-            auto iter = allocated.find(addr);
-            if (iter == allocated.end())
-                throw std::logic_error("IP address " + to_string(addr) +
-                        " wasn't previously reserved");
-            available.push_back(addr);
-            allocated.erase(iter);
-        }
-    }; // class InAddrPool
 
     /// Pool of available IP addresses
     InAddrPool   inAddrPool;
@@ -410,12 +469,10 @@ public:
     /**
      * Constructs. Creates a listening server-socket and a file that contains a
      * secret.
-     * @param[in] networkPrefix  Prefix for IP addresses in network byte-order
-     * @param[in] prefixLen      Number of bits in network prefix
+     * @param[in] inAddrPool     Pool of available IP addresses
      */
-    Impl(   const in_addr_t networkPrefix,
-            const unsigned  prefixLen)
-        : inAddrPool{networkPrefix, prefixLen}
+    Impl(InAddrPool& inAddrPool)
+        : inAddrPool{inAddrPool}
         , srvrSock{InetSockAddr{InetAddr{"127.0.0.1"}}, 32}
         , secret{initSecret(srvrSock.getPort())}
     {}
@@ -483,9 +540,8 @@ public:
 };
 
 MldmSrvr::MldmSrvr(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen)
-    : pImpl{new Impl(networkPrefix, prefixLen)}
+        InAddrPool& inAddrPool)
+    : pImpl{new Impl(inAddrPool)}
 {}
 
 in_port_t MldmSrvr::getPort() const noexcept
@@ -498,11 +554,9 @@ void MldmSrvr::operator ()() const
     pImpl->operator()();
 }
 
-void* mldmSrvr_new(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen)
+void* mldmSrvr_new(void* inAddrPool)
 {
-    return new MldmSrvr(networkPrefix, prefixLen);
+    return new MldmSrvr(*static_cast<InAddrPool*>(inAddrPool));
 }
 
 in_port_t mldmSrvr_getPort(void* mldmSrvr)

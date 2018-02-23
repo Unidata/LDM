@@ -38,10 +38,13 @@ static void test_construction(void)
 {
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
-    void* mldmSrvr = mldmSrvr_new(networkPrefix, 16);
+    void* inAddrPool = inAddrPool_new(networkPrefix, 16);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(inAddrPool);
+    void* mldmSrvr = mldmSrvr_new(inAddrPool);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmSrvr);
     CU_ASSERT_TRUE(0 < mldmSrvr_getPort(mldmSrvr));
     mldmSrvr_delete(mldmSrvr);
+    inAddrPool_delete(inAddrPool);
 }
 
 static void* runServer(void* mldmSrvr)
