@@ -118,7 +118,7 @@ static void
 mls_usage(void)
 {
     log_add("\
-Usage: %s [options] groupId:groupPort\n\
+Usage: %s [options] groupId:groupPort FmtpNetPrefix/netPrefixLen\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
@@ -147,7 +147,10 @@ Options:\n\
 Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
-                      address and <groupPort> is port number.",
+                      address and <groupPort> is port number.\n\
+    FmtpNetPrefix/netPrefixLen\n\
+                      Prefix of FMTP network in CIDR format (e.g.\n\
+                      \"192.168.8.0/21\").\n",
             log_get_id(), log_get_default_destination(), getDefaultQueuePath());
 }
 
@@ -1011,7 +1014,7 @@ runMldmSrvr(void* mldmSrvr)
 }
 
 static Ldm7Status
-initAuthorization(
+startAuthorization(
         const in_addr_t networkPrefix,
         const unsigned  prefixLen)
 {
@@ -1057,7 +1060,7 @@ initAuthorization(
 }
 
 static void
-finiAuthorization()
+stopAuthorization()
 {
     int   status = pthread_cancel(mldmSrvrThread);
     if (status) {
@@ -1138,7 +1141,7 @@ mls_execute(
      * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
      * `mldmSrvrPort`.
      */
-    status = initAuthorization(networkPrefix, prefixLen);
+    status = startAuthorization(networkPrefix, prefixLen);
     if (status) {
         log_add("Couldn't initialize authorization of remote clients");
     }
@@ -1176,7 +1179,7 @@ mls_execute(
             if (status == 0)
                 status = msStatus;
         } // Multicast LDM sender initialized
-        finiAuthorization();
+        stopAuthorization();
     } // Multicast LDM RPC server started
 
     return status;
