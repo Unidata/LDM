@@ -49,7 +49,7 @@ int ppn_new(
         status = 0;
     }
     catch (...) {
-        log_syserr("Couldn't allocate per-product-notifier");
+        log_add_syserr("Couldn't allocate per-product-notifier");
         status = ENOMEM;
     }
     return status;

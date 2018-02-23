@@ -1036,7 +1036,7 @@ initAuthorization(
                 status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
                         mldmSrvr);
                 if (status) {
-                    log_syserr("Couldn't create multicast LDM RPC server "
+                    log_add_syserr("Couldn't create multicast LDM RPC server "
                             "thread");
                     mldmSrvr_delete(mldmSrvr);
                     mldmSrvr = NULL;
@@ -1061,13 +1061,13 @@ finiAuthorization()
 {
     int   status = pthread_cancel(mldmSrvrThread);
     if (status) {
-        log_syserr("Couldn't cancel multicast LDM RPC server thread");
+        log_add_syserr("Couldn't cancel multicast LDM RPC server thread");
     }
     else {
         void* result;
         status = pthread_join(mldmSrvrThread, &result);
         if (status) {
-            log_syserr("Couldn't join multicast LDM RPC server thread");
+            log_add_syserr("Couldn't join multicast LDM RPC server thread");
         }
         else {
             mldmSrvr_delete(mldmSrvr);

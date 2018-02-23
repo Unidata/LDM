@@ -187,7 +187,7 @@ up7_createClientTransport(
     }
     else {
         if (atexit(up7_destroyClient)) {
-            log_syserr("Couldn't register upstream LDM-7 cleanup function");
+            log_add_syserr("Couldn't register upstream LDM-7 cleanup function");
             up7_destroyClient();
             success = false;
         }
@@ -459,7 +459,7 @@ up7_ensureProductQueueOpen(void)
         }
         else {
             if (atexit(closePq)) {
-                log_syserr("Couldn't register product-queue closing function");
+                log_add_syserr("Couldn't register product-queue closing function");
                 success = false;
             }
             else {

@@ -178,7 +178,7 @@ elt_new(
         else {
             elt->iface = strdup(iface);
             if (elt->iface == NULL) {
-                log_syserr("Couldn't duplicate interface specification");
+                log_add_syserr("Couldn't duplicate interface specification");
                 sa_free(elt->ul7);
                 free(elt);
                 elt = NULL;

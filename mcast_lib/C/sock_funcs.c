@@ -121,7 +121,7 @@ int sf_set_loopback_reception(
     const int   loop)
 {
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop))) {
-        log_syserr("Couldn't %s loopback reception of multicast packets sent "
+        log_add_syserr("Couldn't %s loopback reception of multicast packets sent "
                 "on socket %d", loop ? "enable" : "disable", sock);
         return -1;
     }
@@ -154,7 +154,7 @@ int sf_set_time_to_live(
     const unsigned ttl)
 {
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl))) {
-        log_syserr("Couldn't set time-to-live for multicast packets on socket "
+        log_add_syserr("Couldn't set time-to-live for multicast packets on socket "
                 "%d to %u", sock, ttl);
         return -1;
     }
@@ -187,7 +187,7 @@ int sf_set_interface(
     if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr))) {
         char    buf[INET_ADDRSTRLEN];
 
-        log_syserr("Couldn't set outgoing IPv4 multicast interface "
+        log_add_syserr("Couldn't set outgoing IPv4 multicast interface "
                 "to %s for socket %d",
                 inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN), sock);
         return -1;
@@ -215,12 +215,12 @@ int sf_set_nonblocking(
     int flags = fcntl(sock, F_GETFL);
 
     if (flags == -1) {
-        log_syserr("Couldn't get status flags of socket %d", sock);
+        log_add_syserr("Couldn't get status flags of socket %d", sock);
         return -1;
     }
     if (fcntl(sock, F_SETFL,
             nonblock ? (flags | O_NONBLOCK) : (flags | ~O_NONBLOCK))) {
-        log_syserr("Couldn't set socket %d to %s", sock,
+        log_add_syserr("Couldn't set socket %d to %s", sock,
                 nonblock ? "non-blocking" : "blocking");
         return -1;
     }
@@ -248,7 +248,7 @@ int sf_set_address_reuse(
 {
     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuseAddr,
             sizeof(reuseAddr))) {
-        log_syserr("Couldn't %s reuse of multicast address on socket %d",
+        log_add_syserr("Couldn't %s reuse of multicast address on socket %d",
                 reuseAddr ? "enable" : "disable", sock);
         return -1;
     }
@@ -312,7 +312,7 @@ static int create_or_open_multicast(
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     if (sock == -1) {
-        log_syserr("Couldn't create UDP socket");
+        log_add_syserr("Couldn't create UDP socket");
     }
     else {
         struct sockaddr_in      addr;
@@ -327,7 +327,7 @@ static int create_or_open_multicast(
                 (struct sockaddr*) &addr, sizeof(addr)) == -1) {
             char* const mcastAddrString = sockaddr_format(&addr);
 
-            log_syserr("Couldn't %s socket %d to multicast group %s",
+            log_add_syserr("Couldn't %s socket %d to multicast group %s",
                     receive ? "bind" : "connect", sock, mcastAddrString);
             free(mcastAddrString);
             (void)close(sock);
@@ -488,7 +488,7 @@ static int add_or_drop_multicast_group(
 
         (void)ipaddr_print(mcastAddrString, sizeof(mcastAddrString), mIpAddr);
         (void)ipaddr_print(ifaceAddrString, sizeof(ifaceAddrString), ifaceAddr);
-        log_syserr("Couldn't %s IPv4 multicast group %s %s interface %s "
+        log_add_syserr("Couldn't %s IPv4 multicast group %s %s interface %s "
                 "for socket %d", add ? "add" : "drop", mcastAddrString,
                 add ? "to" : "from", ifaceAddrString, sock);
     }

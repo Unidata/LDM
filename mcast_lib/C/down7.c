@@ -138,7 +138,7 @@ static int up7proxy_init(
         status = pthread_mutex_init(&proxy->mutex, NULL);
 
         if (status) {
-            log_errno(status,
+            log_add_errno(status,
                     "Couldn't initialize mutex for upstream LDM-7 proxy");
             status = LDM7_SYSTEM;
         }
@@ -148,8 +148,8 @@ static int up7proxy_init(
                     0, 0);
 
             if (clnt == NULL) {
-                log_syserr("Couldn't create RPC client for host %s, port %hu: "
-                        "%s", inet_ntoa(sockAddr->sin_addr),
+                log_add_syserr("Couldn't create RPC client for host %s, port "
+                        "%hu: %s", inet_ntoa(sockAddr->sin_addr),
                         ntohs(sockAddr->sin_port), clnt_spcreateerror(""));
                 (void)pthread_mutex_destroy(&proxy->mutex);
                 status = LDM7_RPC;
@@ -539,15 +539,15 @@ getSock(
         const int         fd = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
 
         if (fd == -1) {
-            log_syserr("Couldn't create %s TCP socket", addrFamilyId);
+            log_add_syserr("Couldn't create %s TCP socket", addrFamilyId);
             status = (useIPv6 && errno == EAFNOSUPPORT)
                     ? LDM7_IPV6
                     : LDM7_SYSTEM;
         }
         else {
             if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
-                log_syserr("Couldn't connect %s TCP socket to \"%s\", port %hu",
-                        addrFamilyId, sa_getInetId(servAddr),
+                log_add_syserr("Couldn't connect %s TCP socket to \"%s\", port "
+                        "%hu", addrFamilyId, sa_getInetId(servAddr),
                         sa_getPort(servAddr));
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
@@ -719,7 +719,7 @@ run_svc(
             continue;
         }
         if (0 > status) {
-            log_syserr("poll() error on socket %d", sock);
+            log_add_syserr("poll() error on socket %d", sock);
             status = LDM7_SYSTEM;
             break;
         }
@@ -951,7 +951,7 @@ createUcastRecvXprt(
 
     status = getpeername(sock, &addr, &addrLen);
     if (status) {
-        log_syserr("Couldn't get Internet address of upstream LDM-7");
+        log_add_syserr("Couldn't get Internet address of upstream LDM-7");
         status = LDM7_SYSTEM;
     }
     else {

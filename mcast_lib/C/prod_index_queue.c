@@ -97,7 +97,7 @@ lock(
     int status = pthread_mutex_lock(&fiq->mutex);
 
     if (status)
-        log_syserr("Couldn't lock mutex");
+        log_add_syserr("Couldn't lock mutex");
 }
 
 static inline void
@@ -107,7 +107,7 @@ unlock(
     int status = pthread_mutex_unlock(&fiq->mutex);
 
     if (status)
-        log_syserr("Couldn't unlock mutex");
+        log_add_syserr("Couldn't unlock mutex");
 }
 
 /**
@@ -233,7 +233,7 @@ piq_initMutex(
             log_errno(status, "Couldn't set recursive mutex attribute");
         }
         else if ((status = pthread_mutex_init(mutex, &mutexAttr))) {
-            log_syserr("Couldn't initialize mutex");
+            log_add_syserr("Couldn't initialize mutex");
         }
 
         (void)pthread_mutexattr_destroy(&mutexAttr);

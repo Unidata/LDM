@@ -526,7 +526,7 @@ up7_run(
 
         if (0 > status) {
             if (errno != EINTR)
-                log_syserr("up7_run(): poll() failure");
+                log_add_syserr("up7_run(): poll() failure");
             status = errno;
             break;
         }

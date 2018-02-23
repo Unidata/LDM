@@ -306,7 +306,7 @@ initMissedFilesFromSequence(
         int           nbytes;
         if (sscanf(itemNode->data.scalar.value, "%80lu %n", &fileId, &nbytes)
                 != 1 || itemNode->data.scalar.value[nbytes] != 0) {
-            log_syserr("Couldn't decode missed-file identifier \"%s\"",
+            log_add_syserr("Couldn't decode missed-file identifier \"%s\"",
                     itemNode->data.scalar.value);
             return false;
         }
@@ -455,7 +455,7 @@ initFromYamlFile(
     yaml_parser_t parser;
 
     if (!yaml_parser_initialize(&parser)) {
-        log_syserr("Couldn't initialize YAML parser");
+        log_add_syserr("Couldn't initialize YAML parser");
         status = 1;
     }
     else {
@@ -500,7 +500,7 @@ initFromFile(
             status = 2;
         }
         else {
-            log_syserr("Couldn't open memory-file \"%s\"", path);
+            log_add_syserr("Couldn't open memory-file \"%s\"", path);
             status = 1;
         }
     }
@@ -673,7 +673,7 @@ openTempMemoryFile(
     FILE* file = fopen(mrm->tmpPath, "w");
 
     if (file == NULL)
-        log_syserr("Couldn't open temporary memory-file \"%s\"", mrm->tmpPath);
+        log_add_syserr("Couldn't open temporary memory-file \"%s\"", mrm->tmpPath);
 
     return file;
 }
@@ -1025,11 +1025,11 @@ closeAndRenameTempMemoryFile(
     const bool                 goodDump)
 {
     if (fclose(file)) {
-        log_syserr("Couldn't close temporary memory-file \"%s\"", mrm->tmpPath);
+        log_add_syserr("Couldn't close temporary memory-file \"%s\"", mrm->tmpPath);
         return false;
     }
     if (rename(mrm->tmpPath, mrm->path)) {
-        log_syserr("Couldn't rename file \"%s\" to \"%s\"", mrm->tmpPath,
+        log_add_syserr("Couldn't rename file \"%s\" to \"%s\"", mrm->tmpPath,
                 mrm->path);
         return false;
     }
@@ -1120,7 +1120,7 @@ mrm_delete(
                 success = true;
             }
             else {
-                log_syserr("Couldn't remove multicast-receiver memory-file \"%s\"",
+                log_add_syserr("Couldn't remove multicast-receiver memory-file \"%s\"",
                         path);
                 success = false;
             }

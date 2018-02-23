@@ -113,7 +113,7 @@ mldm_ensureCleanup(void)
 
     int status = atexit(mldm_killChild);
     if (status) {
-        log_syserr("Couldn't register cleanup routine");
+        log_add_syserr("Couldn't register cleanup routine");
         status = LDM7_SYSTEM;
     }
     else {
@@ -310,7 +310,7 @@ mldm_exec(
     (void)dup2(pipe, 1);
     execvp(args[0], args);
 
-    log_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
+    log_add_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));
     free(mcastGroupOperand);
 failure:
@@ -338,7 +338,7 @@ mldm_spawn(
     int   status = pipe(fds);
 
     if (status) {
-        log_syserr("Couldn't create pipe for multicast LDM sender process");
+        log_add_syserr("Couldn't create pipe for multicast LDM sender process");
         status = LDM7_SYSTEM;
     }
     else {
@@ -347,7 +347,7 @@ mldm_spawn(
         if (child == -1) {
             char* const id = mi_format(info);
 
-            log_syserr("Couldn't fork() multicast LDM sender for \"%s\"", id);
+            log_add_syserr("Couldn't fork() multicast LDM sender for \"%s\"", id);
             free(id);
             status = LDM7_SYSTEM;
         }
@@ -496,7 +496,7 @@ me_init(
         entry->pqPathname = strdup(pqPathname);
 
         if (NULL == entry->pqPathname) {
-            log_syserr("Couldn't copy pathname of product-queue");
+            log_add_syserr("Couldn't copy pathname of product-queue");
             status = LDM7_SYSTEM;
         }
         else {
@@ -504,7 +504,7 @@ me_init(
             entry->switchPort = strdup(switchPort);
 
             if (NULL == entry->switchPort) {
-                log_syserr("Couldn't copy AL2S switch-port specification");
+                log_add_syserr("Couldn't copy AL2S switch-port specification");
                 status = LDM7_SYSTEM;
             }
             else {
@@ -825,7 +825,7 @@ umm_addPotentialSender(
                 me_compareOrConflict);
 
         if (NULL == node) {
-            log_syserr("Couldn't add to multicast entries");
+            log_add_syserr("Couldn't add to multicast entries");
             status = LDM7_SYSTEM;
         }
         else if (*(McastEntry**)node != entry) {

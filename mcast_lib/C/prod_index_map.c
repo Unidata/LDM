@@ -220,7 +220,7 @@ lockMap(
     lock.l_type = exclusive ? F_WRLCK : F_RDLCK;
 
     if (-1 == fcntl(fd, F_SETLKW, &lock)) {
-        log_syserr("Couldn't lock %s (%s) for %s", MMO_DESC, pathname,
+        log_add_syserr("Couldn't lock %s (%s) for %s", MMO_DESC, pathname,
                 exclusive ? "writing" : "reading");
         return LDM7_SYSTEM;
     }
@@ -241,7 +241,7 @@ unlockMap(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fd, F_SETLKW, &lock)) {
-        log_syserr("Couldn't unlock %s (%s)", MMO_DESC, pathname);
+        log_add_syserr("Couldn't unlock %s (%s)", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -329,7 +329,7 @@ fileSizeFromFile(void)
     int          status = fstat(fd, &statBuf);
 
     if (status) {
-        log_syserr("Couldn't get size of %s (\"%s\")", MMO_DESC, pathname);
+        log_add_syserr("Couldn't get size of %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -352,7 +352,7 @@ mapMap(void)
             forWriting ? PROT_READ|PROT_WRITE : PROT_READ, MAP_SHARED, fd, 0);
 
     if (MAP_FAILED == ptr) {
-        log_syserr("Couldn't memory-map %s (\"%s\")", MMO_DESC, pathname);
+        log_add_syserr("Couldn't memory-map %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -373,7 +373,7 @@ static Ldm7Status
 unmapMap(void)
 {
     if (munmap(mmo, fileSize)) {
-        log_syserr("Couldn't un-memory-map %s (\"%s\")", MMO_DESC, pathname);
+        log_add_syserr("Couldn't un-memory-map %s (\"%s\")", MMO_DESC, pathname);
         return LDM7_SYSTEM;
     }
 
@@ -392,7 +392,7 @@ truncateMap(
         const size_t size)
 {
     if (ftruncate(fd, size)) {
-        log_syserr("Couldn't set size of %s (\"%s\") to %lu bytes",
+        log_add_syserr("Couldn't set size of %s (\"%s\") to %lu bytes",
                 MMO_DESC, pathname, (unsigned long)size);
         return LDM7_SYSTEM;
     }
@@ -658,13 +658,13 @@ openMap(
     else {
         fd = open(pathname, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
         if (-1 == fd) {
-            log_syserr("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
+            log_add_syserr("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
             status = LDM7_SYSTEM;
         }
         else {
             status = fcntl(fd, F_SETFD, FD_CLOEXEC);
             if (status == -1) {
-                log_syserr("Couldn't set FD_CLOEXEC flag on file \"%s\"",
+                log_add_syserr("Couldn't set FD_CLOEXEC flag on file \"%s\"",
                         pathname);
                 (void)close(fd);
                 status = LDM7_SYSTEM;
@@ -865,7 +865,7 @@ pim_close(void)
 
         if (0 == status) {
             if (close(fd)) {
-                log_syserr("Couldn't close file-descriptor of %s", MMO_DESC);
+                log_add_syserr("Couldn't close file-descriptor of %s", MMO_DESC);
                 status = LDM7_SYSTEM;
             }
             else {
@@ -902,7 +902,7 @@ pim_delete(
     else {
         status = unlink(pathname);
         if (status && errno != ENOENT) {
-            log_syserr("Couldn't unlink file \"%s\"", pathname);
+            log_add_syserr("Couldn't unlink file \"%s\"", pathname);
             status = LDM7_SYSTEM;
         }
         else {

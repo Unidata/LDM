@@ -88,7 +88,7 @@ smo_open(
             status = 0;
         }
         else {
-            log_syserr("Couldn't open shared memory object %s", pathname);
+            log_add_syserr("Couldn't open shared memory object %s", pathname);
             status = LDM7_SYSTEM;
         }
     }
@@ -131,7 +131,7 @@ smo_init(
     int          status = ftruncate(fd, size);
 
     if (status) {
-        log_syserr("Couldn't set size of shared memory object");
+        log_add_syserr("Couldn't set size of shared memory object");
         status = LDM7_SYSTEM;
     }
     else {
@@ -139,7 +139,7 @@ smo_init(
                 fd, 0);
 
         if (MAP_FAILED == addr) {
-            log_syserr("Couldn't memory-map shared memory object");
+            log_add_syserr("Couldn't memory-map shared memory object");
             status = LDM7_SYSTEM;
         }
         else {
@@ -172,7 +172,7 @@ msm_setSmoPathname(void)
     else {
         int nbytes = snprintf(NULL, 0, format, userName);
         if (nbytes < 0) {
-            log_syserr("Couldn't get size of pathname of shared-memory object");
+            log_add_syserr("Couldn't get size of pathname of shared-memory object");
             status = LDM7_SYSTEM;
         }
         else {
@@ -255,8 +255,8 @@ msm_lock(const bool exclusive)
     lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_syserr("Couldn't lock shared process-information array: fileDes=%d",
-                fileDes);
+        log_add_syserr("Couldn't lock shared process-information array: "
+                "fileDes=%d", fileDes);
         return LDM7_SYSTEM;
     }
 
@@ -352,7 +352,7 @@ msm_unlock(void)
     lock.l_type = F_UNLCK;
 
     if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_syserr("Couldn't unlock shared process-information array: "
+        log_add_syserr("Couldn't unlock shared process-information array: "
                 "fileDes=%d", fileDes);
         return LDM7_SYSTEM;
     }

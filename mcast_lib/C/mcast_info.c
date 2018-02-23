@@ -206,7 +206,7 @@ mi_replaceServerId(
     char* const dup = strdup(id);
 
     if (NULL == dup) {
-        log_syserr("Couldn't duplicate Internet identifier of TCP server");
+        log_add_syserr("Couldn't duplicate Internet identifier of TCP server");
         return LDM7_SYSTEM;
     }
 
