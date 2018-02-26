@@ -19,78 +19,29 @@ namespace {
 
 /// The fixture for testing class `Authorizer`
 class AuthorizerTest : public ::testing::Test
+{};
+
+// Tests construction
+TEST_F(AuthorizerTest, Construction)
 {
-protected:
-    // You can remove any or all of the following functions if its body
-    // is empty.
-
-    AuthorizerTest()
-    {
-        // You can do set-up work for each test here.
-    }
-
-    virtual ~AuthorizerTest()
-    {
-        // You can do clean-up work that doesn't throw exceptions here.
-    }
-
-    // If the constructor and destructor are not enough for setting up
-    // and cleaning up each test, you can define the following methods:
-
-    virtual void SetUp()
-    {
-        // Code here will be called immediately after the constructor (right
-        // before each test).
-    }
-
-    virtual void TearDown()
-    {
-        // Code here will be called immediately after each test (right
-        // before the destructor).
-    }
-
-    // Objects declared here can be used by all tests in the test case for Error.
-};
-
-// Tests default construction
-TEST_F(AuthorizerTest, DefaultConstruction)
-{
-    Authorizer auth();
+    in_addr_t addr;
+    inet_pton(AF_INET, "192.168.8.0", &addr);
+    InAddrPool inAddrPool{addr, 21};
+    Authorizer auth(inAddrPool);
 }
 
 // Tests authorization
 TEST_F(AuthorizerTest, Authorization)
 {
-    Authorizer auth{};
-    struct in_addr inAddr;
-    ::inet_pton(AF_INET, "127.0.0.1", &inAddr.s_addr);
-    EXPECT_FALSE(auth.isAuthorized(inAddr));
-    auth.authorize(inAddr);
-    EXPECT_TRUE(auth.isAuthorized(inAddr));
-}
-
-// Tests de-authorization
-TEST_F(AuthorizerTest, DeAuthorization)
-{
-    Authorizer auth{};
-    struct in_addr inAddr;
-    ::inet_pton(AF_INET, "127.0.0.1", &inAddr.s_addr);
-    auth.authorize(inAddr);
-    EXPECT_TRUE(auth.isAuthorized(inAddr));
-    auth.deauthorize(inAddr);
-    EXPECT_FALSE(auth.isAuthorized(inAddr));
-}
-
-// Tests timeout de-authorization
-TEST_F(AuthorizerTest, TimeoutDeAuthorization)
-{
-    Authorizer auth{1};
-    struct in_addr inAddr;
-    ::inet_pton(AF_INET, "127.0.0.1", &inAddr.s_addr);
-    auth.authorize(inAddr);
-    EXPECT_TRUE(auth.isAuthorized(inAddr));
-    ::usleep(1100000);
-    EXPECT_FALSE(auth.isAuthorized(inAddr));
+    struct in_addr addr;
+    inet_pton(AF_INET, "192.168.8.0", &addr);
+    InAddrPool inAddrPool{addr.s_addr, 21};
+    Authorizer auth(inAddrPool);
+    EXPECT_FALSE(auth.isAuthorized(addr));
+    addr.s_addr = inAddrPool.reserve();
+    EXPECT_TRUE(auth.isAuthorized(addr));
+    inAddrPool.release(addr.s_addr);
+    EXPECT_FALSE(auth.isAuthorized(addr));
 }
 
 }  // namespace

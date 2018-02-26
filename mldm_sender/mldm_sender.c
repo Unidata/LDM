@@ -118,7 +118,7 @@ static void
 mls_usage(void)
 {
     log_add("\
-Usage: %s [options] groupId:groupPort FmtpNetPrefix/netPrefixLen\n\
+Usage: %s [options] groupId:groupPort FmtpNetPrefix/prefixLen\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
@@ -148,7 +148,7 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.\n\
-    FmtpNetPrefix/netPrefixLen\n\
+    FmtpNetPrefix/prefixLen\n\
                       Prefix of FMTP network in CIDR format (e.g.\n\
                       \"192.168.8.0/21\").\n",
             log_get_id(), log_get_default_destination(), getDefaultQueuePath());
