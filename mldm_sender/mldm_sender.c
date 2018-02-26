@@ -1165,8 +1165,8 @@ mls_execute(
             /*
              * Print the port number of the multicast LDM RPC server to the
              * standard output stream so that upstream LDM processes can
-             * communicate with the server to reserve IP addresses for remote
-             * FMTP clients.
+             * communicate with the server to, for example, reserve IP addresses
+             * for remote FMTP clients.
              */
             (void)printf("%hu\n", mldmSrvr_getPort(mldmSrvr));
             (void)fflush(stdout);
