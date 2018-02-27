@@ -11,6 +11,7 @@
  * a file
  */
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -38,7 +39,8 @@ int main(int argc, char *argv[])
 
 	if(pidfile == NULL)
 	{
-		fprintf(stderr, "%s: couldn't open %s\n", argv[0], SYSLOG_PIDFILE) ;
+		fprintf(stderr, "%s: couldn't open %s: %s\n", argv[0],
+		        SYSLOG_PIDFILE, strerror(errno)) ;
 		exit(1) ;
 	}
 	
