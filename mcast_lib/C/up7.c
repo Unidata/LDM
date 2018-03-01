@@ -82,7 +82,8 @@ static void
 releaseDownFmtpAddr()
 {
     if (feedtype != NONE && downFmtpAddr != INADDR_ANY) {
-        umm_unsubscribe(feedtype, downFmtpAddr);
+        if (umm_unsubscribe(feedtype, downFmtpAddr))
+            log_flush_error();
         downFmtpAddr = INADDR_ANY;
         feedtype = NONE;
     }
