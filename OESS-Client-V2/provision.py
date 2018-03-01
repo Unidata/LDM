@@ -61,7 +61,7 @@ jsonData = json.loads(result)
 searchResults = jsonData['results']
 
 if (searchResults == None):
-    print 0
+    print 1
 else:
 	circuit_id = jsonData['results']['circuit_id']
 	print circuit_id
