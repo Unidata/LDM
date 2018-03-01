@@ -1,17 +1,3 @@
-/**
- * Copyright (C) 2018 University of Virginia. All rights reserved.
- *
- * @file      Document for OESS client
- * @author    Yuanlong Tan <yt4xb@virginia.edu>
- * @version   1.0
- * @date      Feb 2, 2018
- *
- * @brief     Explanation and instruction for OESS client.
- *
- *
- * @materials provision.py remove.py netInfo.py
- */
-
 provision.py wrkgrpName desc node1 interface1 vlanId1 node2 interface2 vlanId2 
 
 Adds a circuit on the network using the OESS API function `provision_circuit`. The circuit is created immediately and can be removed by `remove_circuit.py`.
