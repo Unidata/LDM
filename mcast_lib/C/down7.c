@@ -269,19 +269,19 @@ up7proxy_unlock(
  * Subscribes to an upstream LDM-7 server.
  *
  * @param[in]  proxy       Proxy for the upstream LDM-7.
- * @param[in]  feedtype    Feedtype specification.
+ * @param[in]  feed        Feed specification.
  * @param[out] mcastInfo   Information on the multicast group corresponding to
- *                         `feedtype`.
+ *                         `feed`.
  * @retval     0           If and only if success. `*mcastInfo` is set. The
  *                         caller should call `mi_free(*mcastInfo)` when it's no
  *                         longer needed.
- * @retval     LDM7_INVAL  The upstream LDM-7 doesn't multicast `feedtype`.
+ * @retval     LDM7_INVAL  The upstream LDM-7 doesn't multicast `feed`.
  *                         `log_add()` called.
  */
 static int
 up7proxy_subscribe(
         Up7Proxy* const restrict   proxy,
-        const feedtypet            feedtype,
+        feedtypet                  feed,
         McastInfo** const restrict mcastInfo)
 {
     int status;
@@ -289,14 +289,13 @@ up7proxy_subscribe(
     up7proxy_lock(proxy);
 
     CLIENT* const      clnt = proxy->clnt;
-    feedtypet          feed = feedtype;
     SubscriptionReply* reply = subscribe_7(&feed, clnt);
 
     if (reply == NULL) {
         char buf[256];
 
-        (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-        log_add("Couldn't subscribe to feedtype %s: %s",  buf,
+        (void)sprint_feedtypet(buf, sizeof(buf), feed);
+        log_add("Couldn't subscribe to feed %s: %s",  buf,
                 clnt_errmsg(clnt));
         status = clntStatusToLdm7Status(clnt);
         up7proxy_destroyClient(proxy);
@@ -306,21 +305,23 @@ up7proxy_subscribe(
         if (status == LDM7_INVAL) {
             char buf[256];
 
-            (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-            log_add("Upstream LDM-7 doesn't multicast feedtype %s", buf);
+            (void)sprint_feedtypet(buf, sizeof(buf), feed);
+            log_add("Upstream LDM-7 doesn't multicast feed %s", buf);
         }
         else if (status != 0) {
             char buf[256];
 
-            (void)sprint_feedtypet(buf, sizeof(buf), feedtype);
-            log_add("Couldn't subscribe to feedtype %s: status=%d",  buf,
+            (void)sprint_feedtypet(buf, sizeof(buf), feed);
+            log_add("Couldn't subscribe to feed %s: status=%d",  buf,
                     status);
         }
         else {
             McastInfo* const mi = &reply->SubscriptionReply_u.info.mcastInfo;
-            char* miStr = mi_format(mi);
-            log_debug("Subscription reply is %s", miStr);
-            free(miStr);
+            if (log_is_enabled_debug) {
+                char* miStr = mi_format(mi);
+                log_debug("Subscription reply is %s", miStr);
+                free(miStr);
+            }
             *mcastInfo = mi_clone(mi);
         }
         xdr_free(xdr_SubscriptionReply, (char*)reply);
@@ -1290,7 +1291,9 @@ freeClient(
  * @pre                      The current thread has deferred cancelability.
  * @param[in] down7          Pointer to the downstream LDM-7.
  *            0              Success. `down7->up7proxy`, `down7->sock`, and
- *                           `down7->mcastInfo` are set.
+ *                           `down7->mcastInfo` are set. The caller should call
+ *                           `mi_free(down7->mcastInfo)` when it's no longer
+ *                           needed.
  * @retval    LDM7_NOENT     `log_flush_warning()` called.
  * @retval    LDM7_REFUSED   `log_flush_warning()` called.
  * @retval    LDM7_RPC       `log_flush_error()` called.
@@ -1337,7 +1340,9 @@ subscribe(
  * @pre                      `exe_count(down7->executor) == 0`
  * @param[in] down7          Pointer to the downstream LDM-7.
  * @retval    0              Success. `down7->sock`, `down7->up7proxy`, and
- *                           `down7->mcastInfo` are set.
+ *                           `down7->mcastInfo` are set. The caller should call
+ *                           `mi_free(down7->mcastInfo)` when it's no longer
+ *                           needed.
  * @retval    LDM7_SHUTDOWN  LDM-7 was shut down.
  * @retval    LDM7_TIMEDOUT  Timeout occurred. `log_add()` called.
  * @retval    LDM7_RPC       RPC failure (including interrupt). `log_add()`
