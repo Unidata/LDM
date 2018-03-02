@@ -15,7 +15,7 @@ values1 = {'method' : 'get_workgroups'}
 data1 = urllib.urlencode(values1, doseq=True)
 req1 = urllib2.Request(gh_url, data1)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url, 'uva4api', 'AL2Ssenyd2011!')
+password_manager.add_password(None, gh_url, 'name', 'passwd')
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
 urllib2.install_opener(opener)
