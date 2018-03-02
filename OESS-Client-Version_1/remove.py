@@ -24,7 +24,7 @@ data = urllib.urlencode(values)
 req = urllib2.Request(gh_url, data)
 #print data
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url, 'uva4api', 'AL2Ssenyd2011!')
+password_manager.add_password(None, gh_url, 'name', 'passwd')
 
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
