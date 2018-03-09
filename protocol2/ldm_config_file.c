@@ -61,6 +61,7 @@
 #include "timestamp.h"
 #include "UpFilter.h"
 #include "md5.h"
+#include "VirtualCircuit.h"
 
 
 /******************************************************************************
@@ -3007,12 +3008,8 @@ lcf_addAccept(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vlanId       VLAN identifier.
- * @param[in] switchPort   Specification of AL2S entry switch and port. Caller
- *                         may free.
- * @param[in] netPrefix    Network prefix of client address-space in network
- *                         byte-order.
- * @param[in] prefixLen    Length of network prefix.
+ * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    EINVAL       Invalid specification. `log_add()` called.
@@ -3020,16 +3017,14 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
-        const McastInfo* const restrict mcastInfo,
-        const unsigned short            ttl,
-        const unsigned                  vlanId,
-        const char* const restrict      switchPort,
-        const struct in_addr            netPrefix,
-        const unsigned                  prefixLen,
-        const char* const restrict      pqPathname)
+        const McastInfo* const restrict  mcastInfo,
+        const unsigned short             ttl,
+        const VcEndPoint* const restrict vcEnd,
+        const CidrAddr* const restrict   fmtpSubnet,
+        const char* const restrict       pqPathname)
 {
-    int status = umm_addPotentialSender(mcastInfo, ttl, vlanId, switchPort,
-            netPrefix, prefixLen, pqPathname);
+    int status = umm_addPotentialSender(mcastInfo, ttl, vcEnd, fmtpSubnet,
+            pqPathname);
     if (0 == status) {
         serverNeeded = true;
         somethingToDo = true;
@@ -3052,6 +3047,9 @@ lcf_addMulticast(
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return. "0.0.0.0" obtains the system's default
  *                         interface.
+ * @param[in] switchId     Identifier of local OSI layer 2 switch
+ * @param[in] portId       Identifier of port on switch
+ * @param[in] vlanId       Receiver-side VLAN ID
  * @retval    0            Success.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
@@ -3059,13 +3057,28 @@ int
 lcf_addReceive(
         const feedtypet             feedtype,
         ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  iface)
+        const char* const restrict  iface,
+        const char* const restrict  switchId,
+        const char* const restrict  portId,
+        const unsigned short        vlanId)
 {
-    int status = d7mgr_add(feedtype, ldmSvcAddr, iface)
-            ? ENOMEM
-            : 0;
-    if (0 == status)
-        somethingToDo = true;
+    int        status;
+    VcEndPoint vcEnd;
+    if (!vcEndPoint_construct(&vcEnd, vlanId, switchId, portId)) {
+        log_add("Couldn't construct virtual-circuit endpoint");
+        status = ENOMEM;
+    }
+    else {
+        if (d7mgr_add(feedtype, ldmSvcAddr, iface, &vcEnd)) {
+            status = ENOMEM;
+        }
+        else {
+            somethingToDo = true;
+            status = 0;
+        }
+        vcEndPoint_destroy(&vcEnd);
+    } // `vcEnd` constructed
+    return status;
 }
 
 #endif

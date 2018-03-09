@@ -708,7 +708,7 @@ program LDMPROG {
             /*
              * Downstream to upstream RPC messages:
              */
-            SubscriptionReply SUBSCRIBE(feedtypet feedtype) = 1;
+            SubscriptionReply SUBSCRIBE(McastSubReq request) = 1;
             void              REQUEST_PRODUCT(McastProdIndex) = 2;
             void              REQUEST_BACKLOG(BacklogSpec) = 3;
             void              TEST_CONNECTION() = 4;
@@ -955,17 +955,56 @@ enum Ldm7Status {
 %}
 #endif // RPC_CLNT
 
+#ifdef RPC_XDR
+%
+%bool_t
+%xdr_in_addr_t(XDR *xdrs, in_addr_t *objp)
+%{
+%    return xdr_u_long(xdrs, (u_long*)objp);
+%}
+#endif /* RPC_XDR */
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * CIDR (Classless Inter-Domain Routing) address
+% */
+#endif
+typedef unsigned short SubnetLen;
+struct CidrAddr {
+    /* IPv4 address in network byte-order */
+    in_addr_t addr;
+    /* Number of bits in network prefix */
+    SubnetLen prefixLen;
+};
+
+#if defined(RPC_HDR) || defined(RPC_XDR)
+%
+%/*
+% * Virtual-circuit endpoint:
+% */
+#endif
+typedef unsigned short VlanId;
+struct VcEndPoint {
+    /* Identifier of OSI layer 2 switch */
+    string  switchId<>;
+    /* Identifier of port on OSI layer 2 switch */
+    string  portId<>;
+    /* Identifier of VLAN to/from OSI layer 2 switch */
+    VlanId  vlanId;
+};
+
 #if defined(RPC_HDR) || defined(RPC_XDR)
 %
 %/*
 % * Multicast subscription request:
 % */
 #endif
-struct SubscriptionRequest {
+struct McastSubReq {
     /* Desired feed: */
-    feedtypet feed;
-    /* Address of FMTP client: */
-    uint32_t  fmtpClient; /* In network byte-order */
+    feedtypet  feed;
+    /* Remote virtual-circuit endpoint */
+    VcEndPoint vcEnd;
 };
 
 typedef u_int McastProdIndex;
@@ -1024,9 +1063,9 @@ struct BacklogSpec {
 struct McastInfo {
     /** Multicast group feedtype */
     feedtypet     feed;
-    /** Address of associated multicast group */
+    /** Address of associated multicast group in network byte order */
     ServiceAddr   group;
-    /** Address of FMTP server for missed data-blocks */
+    /** Address of FMTP server for missed data-blocks in network byte order */
     ServiceAddr   server;
 };
 
@@ -1036,14 +1075,8 @@ struct McastInfo {
 struct McastSubInfo {
     /** Multicast group information */
     struct McastInfo mcastInfo;
-    /** IPv4 address for downstream FMTP layer */
-    unsigned long    clntAddr;
-    /** Bit-length of `clntAddr` network-prefix */
-    unsigned short   prefixLen;
-    /** VLAN ID of multicast at AL2S entry */
-    unsigned short   vlanId;
-    /** Specification of entry AL2S switch-port */
-    string           switchPort<>;
+    /** Network address for FMTP TCP interface */
+    CidrAddr         fmtpAddr;
 };
 #endif
 

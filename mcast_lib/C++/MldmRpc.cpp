@@ -8,6 +8,7 @@
 
 #include "config.h"
 
+#include "CidrAddr.h"
 #include "log.h"
 #include "MldmRpc.h"
 #include "TcpSock.h"
@@ -93,7 +94,7 @@ public:
     /**
      * Reserves an IP address for a downstream FMTP layer to use as the local
      * endpoint of the TCP connection for data-block recovery.
-     * @return                   IP address
+     * @return                   IP address in network byte order
      * @throw std::system_error  I/O failure
      * @see   release()
      */
@@ -201,42 +202,17 @@ class InAddrPool::Impl final
     typedef std::lock_guard<Mutex>  LockGuard;
     mutable Mutex                   mutex;
 
-    /**
-     * Returns the number of IPv4 addresses in a subnet -- excluding the
-     * network identifier address (all host bits off) and broadcast address
-     * (all host bits on).
-     * @param[in] prefixLen          Length of network prefix in bits
-     * @return                       Number of addresses
-     * @throw std::invalid_argument  `prefixLen >= 31`
-     * @threadsafety                 Safe
-     */
-    static in_addr_t getNumAddrs(const unsigned prefixLen)
-    {
-        if (prefixLen >= 31)
-            throw std::invalid_argument("Invalid network prefix length: " +
-                    std::to_string(prefixLen));
-        return (1 << (32 - prefixLen)) - 2;
-    }
-
 public:
     /**
      * Constructs.
-     * @param[in] networkPrefix      Network prefix in network byte-order
-     * @param[in] prefixLen          Number of bits in network prefix
-     * @throw std::invalid_argument  `prefixLen >= 31`
-     * @throw std::invalid_argument  `networkPrefix` and `prefixLen` are
-     *                               incompatible
+     * @param[in] subnet             Subnet specification
      */
-    Impl(   const in_addr_t networkPrefix,
-            const unsigned  prefixLen)
-        : available{getNumAddrs(prefixLen), networkPrefix}
+    Impl(const CidrAddr& subnet)
+        : available{cidrAddr_getNumHostAddrs(&subnet),
+                cidrAddr_getAddr(&subnet)}
         , allocated{}
         , mutex{}
     {
-        if (ntohl(networkPrefix) & ((1ul<<(32-prefixLen))-1))
-            throw std::invalid_argument(std::string("Network prefix ") +
-                    to_string(networkPrefix) + " is incompatible with prefix "
-                    "length " + std::to_string(prefixLen));
         auto size = available.size();
         for (in_addr_t i = 1; i <= size; ++i)
             available[i] |= htonl(i);
@@ -292,10 +268,8 @@ public:
     }
 }; // class InAddrPool::Impl
 
-InAddrPool::InAddrPool(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen)
-    : pImpl{new Impl(networkPrefix, prefixLen)}
+InAddrPool::InAddrPool(const CidrAddr& subnet)
+    : pImpl{new Impl(subnet)}
 {}
 
 in_addr_t InAddrPool::reserve() const
@@ -313,11 +287,9 @@ void InAddrPool::release(const in_addr_t addr) const
     pImpl->release(addr);
 }
 
-void* inAddrPool_new(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen)
+void* inAddrPool_new(const CidrAddr* subnet)
 {
-    return new InAddrPool{networkPrefix, prefixLen};
+    return new InAddrPool{*subnet};
 }
 
 bool inAddrPool_isReserved(void* inAddrPool, const in_addr_t addr)

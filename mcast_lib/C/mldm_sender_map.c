@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -45,8 +45,12 @@ static int          fileDes;
  * Multicast LDM process information structure.
  */
 typedef struct {
-    pid_t          pid;  ///< Process identifier
-    unsigned short port; ///< Port number of FMTP TCP server
+    /// Process identifier of multicast LDM sender
+    pid_t          pid;
+    /// Port number of multicast LDM sender's FMTP TCP server in host byte order
+    unsigned short port;
+    /// Port number of multicast LDM sender's RPC server in host byte order
+    unsigned short mldmSrvrPort;
 } ProcInfo;
 /**
  * Array of process information structures indexed by feed-type bit-index.
@@ -266,20 +270,24 @@ msm_lock(const bool exclusive)
 /**
  * Adds a mapping between a feed-type and a multicast LDM sender process.
  *
- * @param[in] feedtype     Feed-type.
- * @param[in] pid          Multicast LDM sender process-ID.
- * @param[in] port         Port number of the FMTP TCP server.
- * @retval    0            Success.
- * @retval    LDM7_DUP     Process identifier duplicates existing entry.
- *                         `log_add()` called.
- * @retval    LDM7_DUP     Feed-type overlaps with feed-type being sent by
- *                         another process. `log_add()` called.
+ * @param[in] feedtype      Feed-type.
+ * @param[in] pid           Multicast LDM sender process-ID.
+ * @param[in] port          Port number of sender's FMTP TCP server in host byte
+ *                          order
+ * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
+ *                          host byte order
+ * @retval    0             Success.
+ * @retval    LDM7_DUP      Process identifier duplicates existing entry.
+ *                          `log_add()` called.
+ * @retval    LDM7_DUP      Feed-type overlaps with feed-type being sent by
+ *                          another process. `log_add()` called.
  */
 Ldm7Status
 msm_put(
         const feedtypet      feedtype,
         const pid_t          pid,
-        const unsigned short port)
+        const unsigned short port,
+        const unsigned short mldmSrvrPort)
 {
     unsigned  ibit;
     feedtypet mask;
@@ -303,6 +311,7 @@ msm_put(
             ProcInfo* const procInfo = procInfos + ibit;
             procInfo->pid = pid;
             procInfo->port = port;
+            procInfo->mldmSrvrPort = mldmSrvrPort;
         }
     }
 
@@ -312,17 +321,21 @@ msm_put(
 /**
  * Returns process-information associated with a feed-type.
  *
- * @param[in]  feedtype     Feed-type.
- * @param[out] pid          Associated process-ID.
- * @param[out] port         Port number of the associated FMTP TCP server.
- * @retval     0            Success. `*pid` and `*port` are set.
- * @retval     LDM7_NOENT   No process associated with feed-type.
+ * @param[in]  feedtype      Feed-type.
+ * @param[out] pid           Associated process-ID.
+ * @param[out] port          Port number of multicast LDM sender's FMTP TCP
+ *                           server
+ * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
+ * @retval     0             Success. `*pid`, `*port`, and `mldmSrvrPort` are
+ *                           set
+ * @retval     LDM7_NOENT    No process associated with feed-type.
  */
 Ldm7Status
 msm_get(
         const feedtypet                feedtype,
         pid_t* const restrict          pid,
-        unsigned short* const restrict port)
+        unsigned short* const restrict port,
+        unsigned short* const restrict mldmSrvrPort)
 {
     unsigned  ibit;
     feedtypet mask;
@@ -333,6 +346,7 @@ msm_get(
         if ((mask & feedtype) && infoPid) {
             *pid = infoPid;
             *port = procInfo->port;
+            *mldmSrvrPort = procInfo->mldmSrvrPort;
             return 0;
         }
     }

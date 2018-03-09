@@ -15,6 +15,7 @@
 
 #include "atofeedt.h"
 #include "AuthServer.h"
+#include "CidrAddr.h"
 #include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
@@ -335,35 +336,6 @@ mls_decodeGroupAddr(
     return status;
 }
 
-static int
-mls_decodeFmtpNetwork(
-        char* const restrict       arg,
-        in_addr_t* const restrict  networkPrefix,
-        unsigned* const restrict   prefixLen)
-{
-    int   status = 1; // Invalid operand
-    char* cp = strchr(arg, '/');
-    if (cp == NULL) {
-        log_add("Invalid FMTP network specification: \"%s\"", arg);
-    }
-    else {
-        *cp = 0;
-        if (inet_pton(AF_INET, arg, networkPrefix) != 1) {
-            log_add("Invalid FMTP network prefix: \"%s\"", arg);
-        }
-        else {
-            ++cp;
-            if (sscanf(cp, "%u", prefixLen) != 1) {
-                log_add("Invalid FMTP network prefix length: \"%s\"", cp);
-            }
-            else {
-                status = 0;
-            }
-        }
-    }
-    return status;
-}
-
 /**
  * Decodes the operands of the command-line.
  *
@@ -371,10 +343,9 @@ mls_decodeFmtpNetwork(
  * @param[in]  argv          Operands.
  * @param[out] groupAddr     Internet service address of the multicast group.
  *                           Caller should free when it's no longer needed.
- * @param[out] networkPrefix Prefix of FMTP virtual-circuit network in network
- *                           byte-order
- * @param[out] prefixLen     Number of bits in FMTP virtual-circuit network
- *                           prefix
+ * @param[out] fmtpSubnet    Subnet for client FMTP TCP connections. Caller
+ *                           should call `cidrAddr_delete(*fmtpSubnet)` when
+ *                           it's no longer needed.
  * @retval     0             Success. `*groupAddr`, `*serverAddr`, `*feed`, and
  *                           `msgQName` are set.
  * @retval     1             Invalid operands. `log_add()` called.
@@ -385,8 +356,7 @@ mls_decodeOperands(
         int                          argc,
         char* const* restrict        argv,
         ServiceAddr** const restrict groupAddr,
-        in_addr_t*                   networkPrefix,
-        unsigned*                    prefixLen)
+        CidrAddr** const restrict    fmtpSubnet)
 {
     int status;
 
@@ -395,17 +365,29 @@ mls_decodeOperands(
         status = 1;
     }
     else {
-        status = mls_decodeGroupAddr(*argv++, groupAddr);
+        ServiceAddr* mcastAddr;
+        status = mls_decodeGroupAddr(*argv++, &mcastAddr);
         if (status == 0) {
             if (argc-- < 1) {
                 log_add("FMTP network not specified");
                 status = 1;
             }
             else {
-                status = mls_decodeFmtpNetwork(*argv++, networkPrefix,
-                        prefixLen);
+                CidrAddr* subnet = cidrAddr_parse(*argv++);
+                if (subnet == NULL) {
+                    log_add("Invalid FMTP subnet specification: \"%s\"",
+                            *--argv);
+                    status = 1;
+                }
+                else {
+                    *fmtpSubnet = subnet;
+                    *groupAddr = mcastAddr;
+                    status = 0;
+                }
             }
-        }
+            if (status)
+                sa_free(mcastAddr);
+        } // `mcastAddr` set
     }
 
     return status;
@@ -469,10 +451,7 @@ mls_setMcastGroupInfo(
  *                           after being multicast to the duration to
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
- * @param[out] networkPrefix Prefix of FMTP virtual-circuit network in network
- *                           byte-order
- * @param[out] prefixLen     Number of bits in FMTP virtual-circuit network
- *                           prefix
+ * @param[out] fmtpSubnet    Subnet for client FMTP TCP connections
  * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
@@ -485,8 +464,7 @@ mls_decodeCommandLine(
         unsigned* const restrict    ttl,
         const char** const restrict ifaceAddr,
         float* const                timeoutFactor,
-        in_addr_t*                  networkPrefix,
-        unsigned*                   prefixLen)
+        CidrAddr** const restrict   fmtpSubnet)
 {
     feedtypet      feed = EXP;
     const char*    serverIface = "0.0.0.0";     // default: all interfaces
@@ -501,8 +479,7 @@ mls_decodeCommandLine(
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupAddr, networkPrefix,
-                prefixLen);
+        status = mls_decodeOperands(argc, argv, &groupAddr, fmtpSubnet);
 
         if (0 == status) {
             status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
@@ -1014,12 +991,10 @@ runMldmSrvr(void* mldmSrvr)
 }
 
 static Ldm7Status
-startAuthorization(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen)
+startAuthorization(const CidrAddr* const fmtpSubnet)
 {
     Ldm7Status status;
-    inAddrPool = inAddrPool_new(networkPrefix, prefixLen);
+    inAddrPool = inAddrPool_new(fmtpSubnet);
     if (inAddrPool == NULL) {
         log_add_syserr("Couldn't create pool of available IP addresses");
         status = LDM7_SYSTEM;
@@ -1104,8 +1079,7 @@ stopAuthorization()
  *                           multicast the product. If negative, then the
  *                           default timeout factor is used.
  * @param[in]  pqPathname    Pathname of the product-queue.
- * @param[in]  networkPrefix FMTP network prefix
- * @param[in]  prefixLen     Number of bits in FMTP network prefix
+ * @param[in]  fmtpSubnet    Subnet for client FMTP TCP connections
  * @retval     0             Success. Termination was requested.
  * @retval     LDM7_INVAL.   Invalid argument. `log_add()` called.
  * @retval     LDM7_MCAST    Multicast sender failure. `log_add()` called.
@@ -1119,8 +1093,7 @@ mls_execute(
         const char* const restrict      ifaceAddr,
         const float                     timeoutFactor,
         const char* const restrict      pqPathname,
-        const in_addr_t                 networkPrefix,
-        const unsigned                  prefixLen)
+        const CidrAddr* const restrict  fmtpSubnet)
 {
     int status;
 
@@ -1141,7 +1114,7 @@ mls_execute(
      * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
      * `mldmSrvrPort`.
      */
-    status = startAuthorization(networkPrefix, prefixLen);
+    status = startAuthorization(fmtpSubnet);
     if (status) {
         log_add("Couldn't initialize authorization of remote clients");
     }
@@ -1222,10 +1195,9 @@ main(
     const char* ifaceAddr;         // IP address of multicast interface
     // Ratio of product-hold duration to multicast duration
     float       timeoutFactor = -1; // Use default
-    in_addr_t   networkPrefix;     ///< VC network prefix in network byte-order
-    unsigned    prefixLen;         ///< Number of bits in `networkPrefix`
+    CidrAddr*   fmtpSubnet;        ///< FMTP client subnet
     int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &ifaceAddr, &timeoutFactor, &networkPrefix, &prefixLen);
+            &ifaceAddr, &timeoutFactor, &fmtpSubnet);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -1237,7 +1209,7 @@ main(
         mls_setSignalHandling();
 
         status = mls_execute(groupInfo, ttl, ifaceAddr, timeoutFactor,
-                getQueuePath(), networkPrefix, prefixLen);
+                getQueuePath(), fmtpSubnet);
         if (status) {
             log_error("Couldn't execute multicast LDM sender");
             switch (status) {
@@ -1248,8 +1220,9 @@ main(
             }
         }
 
-        log_notice("Terminating");
+        cidrAddr_delete(fmtpSubnet);
         mi_free(groupInfo);
+        log_notice("Terminating");
     } // `groupInfo` allocated
 
     log_fini();

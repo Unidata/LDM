@@ -32,6 +32,7 @@
 #include "rpc/rpc.h"
 #include "rpcutil.h"
 #include "timestamp.h"
+#include "VirtualCircuit.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -111,6 +112,7 @@ struct Down7 {
     uint64_t              numProds;      ///< number of inserted products
     /** Synchronizes multiple-thread access to client-side RPC handle */
     feedtypet             feedtype;      ///< feed-expression of multicast group
+    VcEndPoint            vcEnd;         ///< Local virtual-circuit endpoint
     Down7State            state;         ///< Downstream LDM-7 state
     int                   sock;          ///< socket with remote LDM-7
     bool                  mcastWorking;  ///< product received via multicast?
@@ -270,6 +272,7 @@ up7proxy_unlock(
  *
  * @param[in]  proxy       Proxy for the upstream LDM-7.
  * @param[in]  feed        Feed specification.
+ * @param[in]  vcEnd       Local virtual-circuit endpoint
  * @param[out] mcastInfo   Information on the multicast group corresponding to
  *                         `feed`.
  * @retval     0           If and only if success. `*mcastInfo` is set. The
@@ -280,16 +283,21 @@ up7proxy_unlock(
  */
 static int
 up7proxy_subscribe(
-        Up7Proxy* const restrict   proxy,
-        feedtypet                  feed,
-        McastInfo** const restrict mcastInfo)
+        Up7Proxy* const restrict         proxy,
+        feedtypet                        feed,
+        const VcEndPoint* const restrict vcEnd,
+        McastInfo** const restrict       mcastInfo)
 {
     int status;
 
     up7proxy_lock(proxy);
 
-    CLIENT* const      clnt = proxy->clnt;
-    SubscriptionReply* reply = subscribe_7(&feed, clnt);
+    CLIENT* const clnt = proxy->clnt;
+    McastSubReq   request;
+    request.feed = feed;
+    request.vcEnd = *vcEnd;
+
+    SubscriptionReply* reply = subscribe_7(&request, clnt);
 
     if (reply == NULL) {
         char buf[256];
@@ -1311,7 +1319,7 @@ subscribe(
     if (status == 0) {
         pthread_cleanup_push(freeClient, down7);
         status = up7proxy_subscribe(down7->up7proxy, down7->feedtype,
-                &down7->mcastInfo);
+                &down7->vcEnd, &down7->mcastInfo);
         (void)setCancelState(false); // the rest should be quick
         pthread_cleanup_pop(status); // free client on error
     }
@@ -1612,6 +1620,7 @@ wakeUpNappingDown7(
  *                        packets. Caller may free upon return.
  * @param[in] down7Pq     The product-queue. Must be thread-safe (i.e.,
  *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
+ * @param[in] vcEnd       Local virtual-circuit endpoint
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to the new downstream LDM-7.
  */
@@ -1620,6 +1629,7 @@ down7_new(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
     const char* const restrict        mcastIface,
+    const VcEndPoint* const restrict  vcEnd,
     pqueue* const restrict            down7Pq)
 {
     Down7* const down7 = log_malloc(sizeof(Down7), "downstream LDM-7");
@@ -1685,11 +1695,16 @@ down7_new(
         goto free_executor;
     }
 
+    if (!vcEndPoint_copy(&down7->vcEnd, vcEnd)) {
+        log_add("Couldn't copy receiver-side virtual-circuit endpoint");
+        goto free_mcastIface;
+    }
+
     log_debug("Opening multicast session memory");
     down7->mrm = mrm_open(down7->servAddr, down7->feedtype);
     if (down7->mrm == NULL) {
         log_add("Couldn't open multicast session memory");
-        goto free_mcastIface;
+        goto free_vcEnd;
     }
 
     if ((status = pthread_once(&down7KeyControl, createDown7Key)) != 0)
@@ -1713,6 +1728,8 @@ down7_new(
 close_mcastReceiverMemory:
     if (!mrm_close(down7->mrm))
         log_add("Couldn't close multicast receiver memory");
+free_vcEnd:
+    vcEndPoint_destroy(&down7->vcEnd);
 free_mcastIface:
     free(down7->iface);
 free_executor:

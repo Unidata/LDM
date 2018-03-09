@@ -9,6 +9,7 @@
 
 #include "config.h"
 
+#include "CidrAddr.h"
 #include "ldm_config_file.h"
 #include "atofeedt.h"
 #include "error.h"
@@ -355,9 +356,9 @@ decodeRequestEntry(
 #if WANT_MULTICAST
 static bool
 decodeSubnet(
-        const char* const restrict     addrsSpec,
-        struct in_addr* const restrict netPrefix,
-        unsigned* const restrict       prefixLen)
+        const char* const restrict addrsSpec,
+        struct in_addr*            netPrefix,
+        unsigned*                  prefixLen)
 {
     struct in_addr addr;
     addr.s_addr = inet_addr(addrsSpec);
@@ -390,8 +391,9 @@ decodeSubnet(
  *                            packets.
  * @param[in] fmtpAddrSpec    Specification of IPv4 address of local FMTP server
  * @param[in] vlanIdSpec      Specification of VLAN identifier
+ * @param[in] switchSpec      Specification of layer-2 switch
  * @param[in] switchPortSpec  Specification of port on OSI layer-2 switch
- * @param[in] clntAddrsSpec   Specification of IPv4 address-space for clients
+ * @param[in] fmtpSubnetSpec  Specification of IPv4 address-space for clients
  * @retval    0               Success.
  * @retval    EINVAL          Invalid specification. `log_add()` called.
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
@@ -403,8 +405,9 @@ decodeMulticastEntry(
     const char* const   ttlSpec,
     const char* const   fmtpAddrSpec,
     const char* const   vlanIdSpec,
+    const char* const   switchSpec,
     const char* const   switchPortSpec,
-    const char* const   clntAddrsSpec)
+    const char* const   fmtpSubnetSpec)
 {
     int         status = EINVAL;
     feedtypet   feed;
@@ -441,26 +444,33 @@ decodeMulticastEntry(
                                 vlanIdSpec);
                     }
                     else {
-                        struct in_addr netPrefix; // In network byte-order
-                        unsigned       prefixLen; // Number of bits
-                        if (!decodeSubnet(clntAddrsSpec, &netPrefix,
-                                &prefixLen)) {
-                            log_add("Couldn't parse client address space \"%s\"",
-                                    clntAddrsSpec);
+                        CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetSpec);
+                        if (fmtpSubnet == NULL) {
+                            log_add("Couldn't parse FMTP subnet \"%s\"",
+                                    fmtpSubnetSpec);
+                            status = LDM7_INVAL;
                         }
                         else {
                             McastInfo* mcastInfo;
-
                             status = mi_new(&mcastInfo, feed, mcastGroupSa,
                                     fmtpServerSa);
-                                        
                             if (0 == status) {
-                                status = lcf_addMulticast(mcastInfo, ttl,
-                                        vlanId, switchPortSpec, netPrefix,
-                                        prefixLen, getQueuePath());
+                                VcEndPoint* vcEnd = vcEndPoint_new(vlanId,
+                                        switchSpec, switchPortSpec);
+                                if (vcEnd == NULL) {
+                                    log_add("Couldn't construct virtual-"
+                                            "circuit endpoint");
+                                    status = LDM7_SYSTEM;
+                                }
+                                else {
+                                    status = lcf_addMulticast(mcastInfo, ttl,
+                                            vcEnd, fmtpSubnet, getQueuePath());
+                                    vcEndPoint_delete(vcEnd);
+                                } // `vcEnd` allocated
                                 mi_free(mcastInfo);
                             } // `mcastInfo` allocated
-                        } // `netPrefix` and `prefixLen` set
+                            cidrAddr_delete(fmtpSubnet);
+                        } // `fmtpSubnet` set
                     } // `vlanId` set
                     sa_free(fmtpServerSa);
                 } // `fmtpServerSa` allocated
@@ -475,8 +485,11 @@ decodeMulticastEntry(
 /**
  * Decodes a RECEIVE entry.
  *
- * @param[in] feedtypeSpec   Specification of the feedtype.
- * @param[in] LdmServerSpec  Specification of the remote LDM server.
+ * @param[in] feedtypeSpec   Specification of feedtype.
+ * @param[in] LdmServerSpec  Specification of upstream LDM server.
+ * @param[in] switchId       Receiver-side OSI layer 2 switch ID
+ * @param[in] portId         Receiver-side OSI layer 2 switch port ID
+ * @param[in] vlanSpec       Receiver-side VLAN specification
  * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
  *                           system's default multicast interface.
  * @retval    0              Success.
@@ -487,6 +500,9 @@ static int
 decodeReceiveEntry(
         const char* const restrict feedtypeSpec,
         const char* const restrict ldmServerSpec,
+        const char* const restrict switchId,
+        const char* const restrict portId,
+        const char* const restrict vlanSpec,
         const char* const restrict iface)
 {
     feedtypet   feedtype;
@@ -499,11 +515,18 @@ decodeReceiveEntry(
                 ldmPort);       // Internet ID must exist; port is optional
 
         if (0 == status) {
-            status = lcf_addReceive(feedtype, ldmSvcAddr, iface);
-
+            unsigned short vlanId;
+            if (1 != sscanf(vlanSpec, "%uh", &vlanId)) {
+                log_add("Invalid VLAN ID: \"%s\"", vlanSpec);
+                status = EINVAL;
+            }
+            else {
+                status = lcf_addReceive(feedtype, ldmSvcAddr, iface, switchId,
+                        portId, vlanId);
+            } // `vlanId` set
             sa_free(ldmSvcAddr);
-        }       // `ldmSvcAddr` allocated
-    }           // `feedtype` set
+        } // `ldmSvcAddr` allocated
+    } // `feedtype` set
 
     return status;
 }
@@ -544,7 +567,7 @@ entry:            accept_entry
                 | include_stmt
                 | receive_entry
                 | request_entry
-                | send_entry
+                | multicast_entry
                 ;
 
 accept_entry:   ACCEPT_K STRING STRING STRING
@@ -660,26 +683,29 @@ include_stmt:   INCLUDE_K STRING
                         return -1;
                 }
 
-receive_entry:  RECEIVE_K STRING STRING
+receive_entry:  RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, "0.0.0.0");
+                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6,
+                            "0.0.0.0");
 
                     if (errCode) {
                         log_add("Couldn't decode receive entry "
-                                "\"RECEIVE %s %s\"", $2, $3);
+                                "\"RECEIVE %s %s %s %s %s\"", $2, $3, $4, $5,
+                                $6);
                         return errCode;
                     }
                 #endif
                 }
-                | RECEIVE_K STRING STRING STRING
+                | RECEIVE_K STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, $4);
+                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6, $7);
 
                     if (errCode) {
                         log_add("Couldn't decode receive entry "
-                                "\"RECEIVE %s %s %s\"", $2, $3, $4);
+                                "\"RECEIVE %s %s %s %s %s %s\"", $2, $3, $4, $5,
+                                $6, $7);
                         return errCode;
                     }
                 #endif
@@ -702,15 +728,16 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-send_entry:        MULTICAST_K STRING STRING STRING STRING STRING STRING STRING
+multicast_entry: MULTICAST_K STRING STRING STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7, $8);
+                    int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
+                            $8, $9);
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
                                 "\"MULTICAST %s %s %s %s %s %s %s\"",
-                                 $2, $3, $4, $5, $6, $7, $8);
+                                 $2, $3, $4, $5, $6, $7, $8, $9);
                         return errCode;
                     }
                 #endif

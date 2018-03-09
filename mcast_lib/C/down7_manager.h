@@ -27,14 +27,16 @@
  * @param[in] ldm          Upstream LDM-7 to which to subscribe.
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return.
+ * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 d7mgr_add(
-        const feedtypet             ft,
-        ServiceAddr* const restrict ldm,
-        const char* const restrict  iface);
+        const feedtypet                  ft,
+        ServiceAddr* const restrict      ldm,
+        const char* const restrict       iface,
+        const VcEndPoint* const restrict vcEnd);
 
 /**
  * Frees the downstream LDM-7 manager.

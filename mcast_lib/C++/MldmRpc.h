@@ -37,7 +37,7 @@ void* mldmClnt_new(const in_port_t port);
  * Reserves an IP address for a remote FMTP layer to use for its TCP endpoint
  * for recovering missed data-blocks.
  * @param[in]  mldmClnt  Multicast LDM RPC client
- * @param[out] fmtpAddr  Reserved IP address
+ * @param[out] fmtpAddr  Reserved IP address in network byte order
  * @retval LDM7_OK       Success. `*fmtpAddr` is set.
  * @retval LDM7_SYSTEM   System failure. `log_add()` called.
  */
@@ -46,9 +46,9 @@ Ldm7Status mldmClnt_reserve(
         in_addr_t* fmtpAddr);
 
 /**
- * Releases a resered IP address for subsequent reuse.
+ * Releases a reserved IP address for subsequent reuse.
  * @param[in] mldmClnt  Multicast LDM RPC client
- * @param[in] fmtpAddr  IP address to release
+ * @param[in] fmtpAddr  IP address in network byte order to be released
  * @retval LDM7_OK      Success
  * @retval LDM7_NOENT   `fmtpAddr` wasn't previously reserved. `log_add()`
  *                      called.
@@ -67,13 +67,10 @@ void mldmClnt_delete(void* mldmClnt);
 
 /**
  * Creates.
- * @param[in] networkPrefix      Network prefix in network byte-order
- * @param[in] prefixLen          Number of bits in network prefix
- * @retval NULL                  Failure. `log_add()` called.
+ * @param[in] subnet Subnet specification
+ * @retval NULL      Failure. `log_add()` called.
  */
-void* inAddrPool_new(
-        const in_addr_t networkPrefix,
-        const unsigned  prefixLen);
+void* inAddrPool_new(const CidrAddr* subnet);
 
 /**
  * Indicates if an IP address has been previously reserved.
@@ -158,13 +155,13 @@ public:
     /**
      * Reserves an IP address for a remote FMTP layer to use as its TCP endpoint
      * for recovering missed data-blocks.
-     * @return  Reserved IP address
+     * @return  Reserved IP address in network byte order
      */
     in_addr_t reserve() const;
 
     /**
      * Releases a reserved IP address for subsequent reuse.
-     * @param[in] fmtpAddr  IP address to be released
+     * @param[in] fmtpAddr  IP address in network byte order to be released
      */
     void release(const in_addr_t fmtpAddr) const;
 };
@@ -180,15 +177,9 @@ class InAddrPool final
 public:
     /**
      * Constructs.
-     * @param[in] networkPrefix      Network prefix in network byte-order
-     * @param[in] prefixLen          Number of bits in network prefix
-     * @throw std::invalid_argument  `prefixLen >= 31`
-     * @throw std::invalid_argument  `networkPrefix` and `prefixLen` are
-     *                               incompatible
+     * @param[in] subnet Subnet specification
      */
-    InAddrPool(
-            const in_addr_t networkPrefix,
-            const unsigned  prefixLen);
+    InAddrPool(const CidrAddr& subnet);
 
     /**
      * Reserves an address.

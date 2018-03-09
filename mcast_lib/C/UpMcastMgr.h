@@ -15,6 +15,7 @@
 #include "ldm.h"
 #include "pq.h"
 #include "mcast.h"
+#include "VirtualCircuit.h"
 
 #include <sys/types.h>
 
@@ -40,12 +41,8 @@ extern "C" {
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vlanId       VLAN identifier.
- * @param[in] switchPort   Specification of AL2S entry switch and port. Caller
- *                         may free.
- * @param[in] netPrefix    Network prefix of client address-space in network
- *                         byte-order.
- * @param[in] prefixLen    Length of network prefix.
+ * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
@@ -57,10 +54,8 @@ Ldm7Status
 umm_addPotentialSender(
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
-    const unsigned                    vlanId,
-    const char* const restrict        switchPort,
-    const struct in_addr              netPrefix,
-    const unsigned                    prefixLen,
+    const VcEndPoint* const restrict  vcEnd,
+    const CidrAddr* const restrict    fmtpSubnet,
     const char* const restrict        pqPathname);
 
 /**

@@ -18,6 +18,7 @@
 #include "ldmfork.h"
 #include "log.h"
 #include "pq.h"
+#include "VirtualCircuit.h"
 
 #include <pthread.h>
 #include <signal.h>
@@ -91,6 +92,7 @@ waitForTermSig(
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
  * @param[in] iface          IP address of FMTP interface
+ * @param[in] vcEnd          Local virtual-circuit endpoint
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
  * @retval    LDM7_SHUTDOWN  Process termination requested.
@@ -101,6 +103,7 @@ executeDown7(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
     const char* const restrict        iface,
+    const VcEndPoint* const restrict  vcEnd,
     const char* const restrict        pqPathname)
 {
     pqueue* pq;
@@ -110,7 +113,7 @@ executeDown7(
         status = LDM7_SYSTEM;
     }
     else {
-        Down7* down7 = down7_new(servAddr, feedtype, iface, pq);
+        Down7* down7 = down7_new(servAddr, feedtype, iface, vcEnd, pq);
 
         if (NULL == down7) {
             status = LDM7_SYSTEM;
@@ -138,11 +141,13 @@ executeDown7(
 }
 
 typedef struct elt {
-    struct elt*  next;
-    ServiceAddr* ul7;
-    char*        iface;
-    feedtypet    ft;
-    pid_t        pid;
+    struct elt*    next;
+    ServiceAddr*   ul7;
+    char*          iface;
+    /// Local virtual-circuit endpoint
+    VcEndPoint     vcEnd;
+    feedtypet      ft;
+    pid_t          pid;
 } Elt;
 
 /**
@@ -157,38 +162,47 @@ static Elt* top;
  * @param[in] ul7         Upstream LDM-7 to which to subscribe.
  * @param[in] iface       IP address of FMTP interface. Caller may free upon
  *                        return.
+ * @param[in] vcEnd       Local virtual-circuit endpoint. Caller may free.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
  */
 static Elt*
 elt_new(
-        const feedtypet             ft,
-        ServiceAddr* const restrict ul7,
-        const char* const restrict  iface)
+        const feedtypet                  ft,
+        ServiceAddr* const restrict      ul7,
+        const char* const restrict       iface,
+        const VcEndPoint* const restrict vcEnd)
 {
+    bool failure = true;
     Elt* elt = log_malloc(sizeof(Elt), "downstream LDM-7 element");
 
     if (elt) {
         elt->ul7 = sa_clone(ul7);
 
-        if (NULL == elt->ul7) {
-            free(elt);
-            elt = NULL;
-        }
-        else {
+        if (elt->ul7) {
             elt->iface = strdup(iface);
             if (elt->iface == NULL) {
                 log_add_syserr("Couldn't duplicate interface specification");
-                sa_free(elt->ul7);
-                free(elt);
-                elt = NULL;
             }
             else {
-                elt->ft = ft;
-                elt->pid = -1;
-            }
+                if (!vcEndPoint_copy(&elt->vcEnd, vcEnd)) {
+                    log_add_syserr("Couldn't copy virtual-circuit endpoint");
+                }
+                else {
+                    elt->ft = ft;
+                    elt->pid = -1;
+                } // `elt->vcEnd` initialized
+                if (failure)
+                    free(elt->iface);
+            } // `elt->iface` allocated
+            if (failure)
+                sa_free(elt->ul7);
+        } // `elt->ul7` allocated
+        if (failure) {
+            free(elt);
+            elt = NULL;
         }
-    }
+    } // `elt` allocated
 
     return elt;
 }
@@ -231,7 +245,8 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = executeDown7(elt->ul7, elt->ft, elt->iface, getQueuePath());
+        status = executeDown7(elt->ul7, elt->ft, elt->iface, &elt->vcEnd,
+                getQueuePath());
 
         if (status == LDM7_SHUTDOWN) {
             log_flush_notice();
@@ -279,17 +294,19 @@ elt_stop(
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return. "0.0.0.0" obtains the system's default
  *                         interface.
+ * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
 d7mgr_add(
-        const feedtypet             ft,
-        ServiceAddr* const restrict ul7,
-        const char* const restrict  iface)
+        const feedtypet                  ft,
+        ServiceAddr* const restrict      ul7,
+        const char* const restrict       iface,
+        const VcEndPoint* const restrict vcEnd)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7, iface);
+    Elt* elt = elt_new(ft, ul7, iface, vcEnd);
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;

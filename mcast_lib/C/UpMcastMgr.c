@@ -17,6 +17,7 @@
 #include "config.h"
 
 #include "AuthClient.h"
+#include "CidrAddr.h"
 #include "globals.h"
 #include "InAddrMgr.h"
 #include "log.h"
@@ -107,28 +108,32 @@ mldm_ensureCleanup(void)
 /**
  * Indicates if a particular multicast LDM sender is running.
  *
- * @pre                     Multicast LDM sender PID map is locked for writing.
- * @param[in]  feedtype     Feed-type of multicast group.
- * @param[out] port         Port number of the FMTP TCP server.
- * @retval     0            The multicast LDM sender associated with the given
- *                          multicast group is running. `*pid` and `*port` are
- *                          set.
- * @retval     LDM7_NOENT   No such process.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @pre                      Multicast LDM sender PID map is locked for writing.
+ * @param[in]  feedtype      Feed-type of multicast group.
+ * @param[out] port          Port number of the FMTP TCP server.
+ * @param[out] mldmSrvrPort  Port number of multicast LDM RPC server
+ * @retval     0             The multicast LDM sender associated with the given
+ *                           multicast group is running. `*pid` and `*port` are
+ *                           set.
+ * @retval     LDM7_NOENT    No such process.
+ * @retval     LDM7_SYSTEM   System error. `log_add()` called.
  */
 static Ldm7Status
 mldm_isRunning(
-        const feedtypet       feedtype,
-        unsigned short* const port)
+        const feedtypet                feedtype,
+        unsigned short* const restrict port,
+        unsigned short* const restrict mldmSrvrPort)
 {
     pid_t          msmPid;
     unsigned short msmPort;
-    int   status = msm_get(feedtype, &msmPid, &msmPort);
+    unsigned short msmMldmSrvrPort;
+    int   status = msm_get(feedtype, &msmPid, &msmPort, &msmMldmSrvrPort);
 
     if (status == 0) {
         if (kill(msmPid, 0) == 0) {
             /* Can signal the process */
             *port = msmPort;
+            *mldmSrvrPort = msmMldmSrvrPort;
         }
         else {
             /* Can't signal the process */
@@ -204,8 +209,7 @@ mldm_getServerPorts(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] fmtpNetPrefix  Prefix of FMTP (sub)network in network byte-order
- * @param[in] prefixLen      Number of bits in FMTP network prefix
+ * @param[in] fmtpSubnet     Subnet for client FMTP TCP connections
  * @param[in] pqPathname     Pathname of product-queue. Caller may free.
  * @param[in] pipe           Pipe for writing to parent process.
  */
@@ -213,8 +217,7 @@ static void
 mldm_exec(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
-    const in_addr_t                 fmtpNetPrefix,
-    const unsigned                  prefixLen,
+    const CidrAddr* const restrict  fmtpSubnet,
     const char* const restrict      pqPathname,
     const int const                 pipe)
 {
@@ -286,16 +289,12 @@ mldm_exec(
     }
     args[i++] = mcastGroupOperand;
 
-    char* fmtpNetOperand;
-    {
-        char dottedQuad[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &fmtpNetPrefix, dottedQuad, sizeof(dottedQuad));
-        fmtpNetOperand = ldm_format(128, "%s/%u", dottedQuad, prefixLen);
-        if (fmtpNetOperand == NULL) {
-            log_add("Couldn't create FMTP network operand");
-            goto fmtpNetFailure;
-        }
-        args[i++] = fmtpNetOperand;
+    char* fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
+    if (fmtpSubnetArg == NULL) {
+        goto fmtpNetFailure;
+    }
+    else {
+        args[i++] = fmtpSubnetArg;
     }
 
     args[i++] = NULL;
@@ -309,7 +308,7 @@ mldm_exec(
 
     log_add_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));
-    free(fmtpNetOperand);
+    free(fmtpSubnetArg);
 fmtpNetFailure:
     free(mcastGroupOperand);
 failure:
@@ -322,9 +321,7 @@ failure:
  * @param[in,out] info           Information on the multicast group.
  * @param[out]    mldmSrvrPort   Port number of the multicast LDM RPC server
  * @param[in]     ttl            Time-to-live of multicast packets.
- * @param[in]     fmtpNetPrefix  Prefix of FMTP (sub)network in network
- *                               byte-order
- * @param[in]     prefixLen      Number of bits in FMTP network prefix
+ * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
  * @param[in]     pqPathname     Pathname of product-queue. Caller may free.
  * @param[out]    pid            Process ID of the multicast LDM sender.
  * @retval        0              Success. `*pid` and `info->server.port` are
@@ -336,8 +333,7 @@ mldm_spawn(
     McastInfo* const restrict       info,
     unsigned short* restrict        mldmSrvrPort,
     const unsigned short            ttl,
-    const in_addr_t                 fmtpNetPrefix,
-    const unsigned                  prefixLen,
+    const CidrAddr* const restrict  fmtpSubnet,
     const char* const restrict      pqPathname,
     pid_t* const restrict           pid)
 {
@@ -363,7 +359,7 @@ mldm_spawn(
             (void)close(fds[0]); // read end of pipe unneeded
             allowSigs(); // so process will terminate and process products
             // The following statement shouldn't return
-            mldm_exec(info, ttl, fmtpNetPrefix, prefixLen, pqPathname, fds[1]);
+            mldm_exec(info, ttl, fmtpSubnet, pqPathname, fds[1]);
             log_flush_error();
             exit(1);
         }
@@ -391,15 +387,12 @@ mldm_spawn(
 /**
  * Executes the multicast LDM sender for a particular multicast group as a child
  * process. Doesn't block.
- *
  * @pre                          Multicast LDM sender PID map is locked.
  * @pre                          Relevant multicast LDM sender isn't running.
  * @param[in,out] info           Information on the multicast group.
  * @param[out]    mldmSrvrPort   Port number of the multicast LDM RPC server
  * @param[in]     ttl            Time-to-live of multicast packets.
- * @param[in]     fmtpNetPrefix  Prefix of FMTP (sub)network in network
- *                               byte-order
- * @param[in]     prefixLen      Number of bits in FMTP network prefix
+ * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
  * @param[in]     pqPathname     Pathname of product-queue. Caller may free.
  * @retval        0              Success. Multicast LDM sender spawned. `*pid`
  *                               and `info->server.port` are set.
@@ -410,8 +403,7 @@ mldm_execute(
     McastInfo* const restrict       info,
     unsigned short* const restrict  mldmSrvrPort,
     const unsigned short            ttl,
-    const in_addr_t                 fmtpNetPrefix,
-    const unsigned                  prefixLen,
+    const CidrAddr* const restrict  fmtpSubnet,
     const char* const restrict      pqPathname)
 {
     int status;
@@ -425,15 +417,16 @@ mldm_execute(
         pid_t           procId;
 
         // The following will set `info->server.port` and `mldmSrvrPort`
-        status = mldm_spawn(info, mldmSrvrPort, ttl, fmtpNetPrefix, prefixLen,
-                pqPathname, &procId);
+        status = mldm_spawn(info, mldmSrvrPort, ttl, fmtpSubnet, pqPathname,
+                &procId);
         if (0 == status) {
             status = mldm_ensureCleanup();
             if (status) {
                 (void)kill(procId, SIGTERM);
             }
             else {
-                status = msm_put(feedtype, procId, info->server.port);
+                status = msm_put(feedtype, procId, info->server.port,
+                        *mldmSrvrPort);
                 if (status) {
                     // preconditions => LDM7_DUP can't be returned
                     char* const id = mi_format(info);
@@ -459,11 +452,10 @@ mldm_execute(
 
 typedef struct {
     McastInfo      info;
-    char*          switchPort;
+    /// Local virtual-circuit endpoint
+    VcEndPoint*    vcEnd;
     char*          pqPathname;
-    struct in_addr netPrefix;
-    unsigned       vlanId;
-    unsigned       prefixLen;
+    CidrAddr       fmtpSubnet;
     unsigned short mldmSrvrPort;
     unsigned short ttl;
 } McastEntry;
@@ -474,13 +466,8 @@ typedef struct {
  * @param[out] entry       Entry to be initialized.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
- * @param[in]  vlanId      VLAN identifier.
- * @param[in]  switchPort  Specification of AL2S entry switch and port. Caller
- *                         may free.
- * @param[in]  netPrefix   Network prefix of FMTP client address-space in
- *                         network
- *                         byte-order.
- * @param[in]  prefixLen   Length of network prefix.
+ * @param[in]  vcEnd       Local virtual-circuit endpoint
+ * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
@@ -490,14 +477,12 @@ typedef struct {
  */
 static Ldm7Status
 me_init(
-        McastEntry* const restrict entry,
-        const McastInfo* const     info,
-        unsigned short             ttl,
-        const unsigned             vlanId,
-        const char* const restrict switchPort,
-        const struct in_addr       netPrefix,
-        const unsigned             prefixLen,
-        const char* const restrict pqPathname)
+        McastEntry* const restrict       entry,
+        const McastInfo* const           info,
+        unsigned short                   ttl,
+        const VcEndPoint* const restrict vcEnd,
+        const CidrAddr* const restrict   fmtpSubnet,
+        const char* const restrict       pqPathname)
 {
     int status;
 
@@ -517,19 +502,16 @@ me_init(
             status = LDM7_SYSTEM;
         }
         else {
-            entry->vlanId = vlanId;
-            entry->switchPort = strdup(switchPort);
+            entry->vcEnd = vcEndPoint_clone(vcEnd);
 
-            if (NULL == entry->switchPort) {
-                log_add_syserr("Couldn't copy AL2S switch-port specification");
+            if (NULL == entry->vcEnd) {
+                log_add_syserr("Couldn't clone virtual-circuit endpoint");
                 status = LDM7_SYSTEM;
             }
             else {
-                entry->netPrefix = netPrefix;
-                entry->prefixLen = prefixLen;
+                cidrAddr_copy(&entry->fmtpSubnet, fmtpSubnet);
                 status = 0;
-            }
-
+            } // `entry->vcEnd` allocated
             if (status)
                 free(entry->pqPathname);
         } // `entry->pqPathname` allocated
@@ -551,7 +533,7 @@ me_destroy(
         McastEntry* const entry)
 {
     mi_destroy(&entry->info);
-    free(entry->switchPort);
+    vcEndPoint_delete(entry->vcEnd);
     free(entry->pqPathname);
 }
 
@@ -561,12 +543,8 @@ me_destroy(
  * @param[out] entry       New, initialized entry.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
- * @param[in]  vlanId      VLAN identifier.
- * @param[in]  switchPort  Specification of AL2S entry switch and port. Caller
- *                         may free.
- * @param[in]  netPrefix   Network prefix of client address-space in network
- *                         byte-order.
- * @param[in]  prefixLen   Length of network prefix.
+ * @param[in]  vcEnd       Local virtual-circuit endpoint
+ * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
@@ -576,14 +554,12 @@ me_destroy(
  */
 static Ldm7Status
 me_new(
-        McastEntry** const restrict entry,
-        const McastInfo* const      info,
-        unsigned short              ttl,
-        const unsigned              vlanId,
-        const char* const restrict  switchPort,
-        const struct in_addr        netPrefix,
-        const unsigned              prefixLen,
-        const char* const restrict  pqPathname)
+        McastEntry** const restrict      entry,
+        const McastInfo* const           info,
+        unsigned short                   ttl,
+        const VcEndPoint* const restrict vcEnd,
+        const CidrAddr* const restrict   fmtpSubnet,
+        const char* const restrict       pqPathname)
 {
     int            status;
     unsigned short port = sa_getPort(&info->server);
@@ -601,8 +577,7 @@ me_new(
             status = LDM7_SYSTEM;
         }
         else {
-            status = me_init(ent, info, ttl, vlanId, switchPort, netPrefix,
-                    prefixLen, pqPathname);
+            status = me_init(ent, info, ttl, vcEnd, fmtpSubnet, pqPathname);
 
             if (status) {
                 free(ent);
@@ -734,15 +709,15 @@ me_startIfNecessary(McastEntry* const entry)
         log_add("Couldn't lock multicast sender map");
     }
     else {
-        // Accesses MSM
-        status = mldm_isRunning(entry->info.feed, &entry->info.server.port);
+        // Accesses multicast sender map
+        status = mldm_isRunning(entry->info.feed, &entry->info.server.port,
+                &entry->mldmSrvrPort);
         if (status == LDM7_NOENT) {
             // The relevant multicast LDM sender isn't running
             childPid = 0; // because multicast process isn't running
             // Accesses multicast sender map
             status = mldm_execute(&entry->info, &entry->mldmSrvrPort,
-                    entry->ttl, entry->netPrefix.s_addr,  entry->prefixLen,
-                    entry->pqPathname);
+                    entry->ttl, &entry->fmtpSubnet, entry->pqPathname);
         }
         (void)msm_unlock();
     } // Multicast sender map is locked
@@ -751,13 +726,17 @@ me_startIfNecessary(McastEntry* const entry)
 }
 
 /**
- * @retval LDM7_OK       Success. `*fmtpAddr` is set.
- * @retval LDM7_SYSTEM   System failure. `log_add()` called.
+ * Reserves an IP address for a downstream FMTP layer.
+ * @param[in]  entry         Multicast LDM entry
+ * @param[out] downFmtpAddr  IP address for downstream FMTP layer in network
+ *                           byte order
+ * @retval LDM7_OK           Success. `*downFmtpAddr` is set.
+ * @retval LDM7_SYSTEM       System failure. `log_add()` called.
  */
 static Ldm7Status
 me_reserve(
         const McastEntry* const restrict entry,
-        in_addr_t* const restrict        rmtFmtpAddr)
+        in_addr_t* const restrict        downFmtpAddr)
 {
     Ldm7Status  status;
     void* const mldmClnt = mldmClnt_new(entry->mldmSrvrPort);
@@ -766,7 +745,7 @@ me_reserve(
         status = LDM7_SYSTEM;
     }
     else {
-        status = mldmClnt_reserve(mldmClnt, rmtFmtpAddr);
+        status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
         if (status)
             log_add("Couldn't reserve IP address for remote FMTP layer");
         mldmClnt_delete(mldmClnt);
@@ -820,26 +799,13 @@ me_setSubscriptionReply(
     int               status = mi_copy(&rep.SubscriptionReply_u.info.mcastInfo,
             &entry->info);
     if (status == 0) {
-        in_addr_t rmtFmtpAddr;
-        status = me_reserve(entry, &rmtFmtpAddr);
+        in_addr_t downFmtpAddr;
+        status = me_reserve(entry, &downFmtpAddr);
         if (status == 0) {
-            rep.SubscriptionReply_u.info.clntAddr = rmtFmtpAddr;
-            rep.SubscriptionReply_u.info.prefixLen = entry->prefixLen;
-            rep.SubscriptionReply_u.info.switchPort =
-                    strdup(entry->switchPort);
-            if (rep.SubscriptionReply_u.info.switchPort == NULL) {
-                log_add("Couldn't duplicate switch-port string \"%s\"",
-                        entry->switchPort);
-                status = LDM7_SYSTEM;
-            }
-            else {
-                rep.SubscriptionReply_u.info.vlanId = entry->vlanId;
-                *reply = rep;
-                status = LDM7_OK;
-            } // `rep->SubscriptionReply_u.info.switchPort` allocated
-            if (status)
-                if (me_release(entry, rep.SubscriptionReply_u.info.clntAddr))
-                    log_flush_error();
+            cidrAddr_construct(&rep.SubscriptionReply_u.info.fmtpAddr,
+                    downFmtpAddr, cidrAddr_getPrefixLen(&entry->fmtpSubnet));
+            *reply = rep;
+            status = LDM7_OK;
         } // `rep->SubscriptionReply_u.info.clntAddr` set
         if (status)
             mi_destroy(&rep.SubscriptionReply_u.info.mcastInfo);
@@ -879,15 +845,13 @@ Ldm7Status
 umm_addPotentialSender(
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
-    const unsigned                    vlanId,
-    const char* const restrict        switchPort,
-    const struct in_addr              netPrefix,
-    const unsigned                    prefixLen,
+    const VcEndPoint* const restrict  vcEnd,
+    const CidrAddr* const restrict    fmtpSubnet,
     const char* const restrict        pqPathname)
 {
     McastEntry* entry;
-    int         status = me_new(&entry, info, ttl, vlanId, switchPort,
-            netPrefix, prefixLen, pqPathname);
+    int         status = me_new(&entry, info, ttl, vcEnd, fmtpSubnet,
+            pqPathname);
 
     if (0 == status) {
         const void* const node = tsearch(entry, &mcastEntries,
@@ -905,13 +869,6 @@ umm_addPotentialSender(
             free(mi1);
             free(mi2);
             status = LDM7_DUP;
-        }
-        else {
-           status = inam_add(info->feed, netPrefix, prefixLen);
-           if (status)
-               status = (status == EINVAL)
-                   ? LDM7_INVAL
-                   : LDM7_SYSTEM;
         }
         if (status)
             me_free(entry);
@@ -931,11 +888,11 @@ umm_subscribe(
         status = LDM7_NOENT;
     }
     else {
-        McastInfo* const info = &entry->info;
-        // Sets port numbers of FMTP & RPC servers of multicast LDM sender
-        status = me_startIfNecessary(entry);
-        if (0 == status)
-            status = me_setSubscriptionReply(entry, reply);
+            McastInfo* const info = &entry->info;
+            // Sets port numbers of FMTP & RPC servers of multicast LDM sender
+            status = me_startIfNecessary(entry);
+            if (0 == status)
+                status = me_setSubscriptionReply(entry, reply);
     } // Feed maps to possible multicast LDM sender
     return status;
 }

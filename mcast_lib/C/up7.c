@@ -23,6 +23,7 @@
 
 #include "config.h"
 
+#include "CidrAddr.h"
 #include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
@@ -71,6 +72,10 @@ static feedtypet feedtype;
  */
 static in_addr_t downFmtpAddr = INADDR_ANY;
 /**
+ * Identifier of OSI Level 2 multicast circuit
+ */
+static char*     circuitId = NULL;
+/**
  * Whether or not the product-index map is open.
  */
 static bool pimIsOpen = false;
@@ -87,6 +92,18 @@ releaseDownFmtpAddr()
         downFmtpAddr = INADDR_ANY;
         feedtype = NONE;
     }
+}
+
+static Ldm7Status
+up7_addToMcastCircuit()
+{
+    // TODO
+}
+
+static void
+up7_removeFromMcastCircuit()
+{
+    // TODO
 }
 
 /**
@@ -244,7 +261,7 @@ up7_ensureFree(
  * multicast LDM sender process that's associated with the given feedtype is
  * running.
  *
- * @param[in]  feed         Feedtype of multicast group.
+ * @param[in]  request      Subscription request
  * @param[in]  xprt         RPC transport.
  * @param[out] reply        Reply or NULL (which means no reply). If non-NULL,
  *                          then caller should call
@@ -261,35 +278,40 @@ up7_ensureFree(
  */
 static Ldm7Status
 up7_subscribe(
-        feedtypet                         feed,
+        McastSubReq* const restrict       request,
         struct SVCXPRT* const restrict    xprt,
         SubscriptionReply* const restrict reply)
 {
     Ldm7Status status;
-    feed = reduceToAllowed(feed, xprt);
-    if (feed == NONE) {
+    request->feed = reduceToAllowed(request->feed, xprt);
+    if (request->feed == NONE) {
         log_flush_notice();
         status = LDM7_UNAUTH;
     }
     else {
-        SubscriptionReply rep = {};
-        status = umm_subscribe(feed, &rep);
-        if (status) {
-            if (LDM7_NOENT == status)
-                log_flush_notice();
-        }
-        else {
-            status = up7_openProdIndexMap(feed);
+        status = up7_addToMcastCircuit();
+        if (status == LDM7_OK) {
+            SubscriptionReply rep = {};
+            status = umm_subscribe(request->feed, &rep);
             if (status) {
-                (void)umm_unsubscribe(feed,
-                        rep.SubscriptionReply_u.info.clntAddr);
+                if (LDM7_NOENT == status)
+                    log_flush_notice();
             }
             else {
-                feedtype = feed;
-                downFmtpAddr = rep.SubscriptionReply_u.info.clntAddr;
-                *reply = rep; // Success
-            }
-        } // Have subscription reply
+                in_addr_t addr = cidrAddr_getAddr(
+                        &rep.SubscriptionReply_u.info.fmtpAddr);
+                status = up7_openProdIndexMap(request->feed);
+                if (status == LDM7_OK) {
+                    feedtype = request->feed;
+                    downFmtpAddr = addr;
+                    *reply = rep; // Success
+                }
+                if (status)
+                    (void)umm_unsubscribe(request->feed, addr);
+            } // Downstream client subscribed to multicast
+            if (status)
+                up7_removeFromMcastCircuit();
+        } // Downstream client added to multicast virtual circuit
     } // All or part of subscription is allowed by configuration-file
     reply->status = status;
     return status;
@@ -671,7 +693,7 @@ up7_sendBacklog(
  *
  * This function is thread-compatible but not thread-safe.
  *
- * @param[in] feedtype    Feedtype of multicast group.
+ * @param[in] request     Subscription request
  * @param[in] rqstp       RPC service-request.
  * @retval    NULL        System error. `log_flush()` and `svcerr_systemerr()`
  *                        called. No reply should be sent to the downstream
@@ -680,8 +702,8 @@ up7_sendBacklog(
  */
 SubscriptionReply*
 subscribe_7_svc(
-        feedtypet* const restrict       feedtype,
-        struct svc_req* const restrict  rqstp)
+        McastSubReq* const restrict request,
+        struct svc_req* const restrict      rqstp)
 {
     log_debug("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
@@ -689,21 +711,21 @@ subscribe_7_svc(
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
     const char*               ipv4spec = inet_ntoa(xprt->xp_raddr.sin_addr);
     const char*               hostname = hostbyaddr(&xprt->xp_raddr);
-    const char*               feedspec = s_feedtypet(*feedtype);
+    const char*               feedspec = s_feedtypet(request->feed);
 
     log_notice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
-            hostname, ntohs(xprt->xp_raddr.sin_port), s_feedtypet(*feedtype));
+            hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
 
-    if (up7_subscribe(*feedtype, xprt, &result)) {
+    if (up7_subscribe(request, xprt, &result)) {
         reply = &result;
     }
     else {
         bool failure = false;
-        downFmtpAddr = result.SubscriptionReply_u.info.clntAddr;
+        downFmtpAddr = cidrAddr_getAddr(
+                &result.SubscriptionReply_u.info.fmtpAddr);
         if (!up7_ensureProductQueueOpen()) {
-            log_error("Couldn't subscribe %s to feedtype %s",
-                    hostbyaddr(svc_getcaller(xprt)), s_feedtypet(*feedtype));
+            log_error("Couldn't subscribe %s to feed %s", hostname, feedspec);
             failure = true;
         }
         else {

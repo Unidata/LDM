@@ -47,35 +47,41 @@ msm_lock(
 /**
  * Adds a mapping between a feed-type and a multicast LDM sender process.
  *
- * @param[in] feedtype     Feed-type.
- * @param[in] pid          Multicast LDM sender process-ID.
- * @param[in] port         Port number of the FMTP TCP server.
- * @retval    0            Success.
- * @retval    LDM7_DUP     Process identifier duplicates existing entry.
- *                         `log_add()` called.
- * @retval    LDM7_DUP     Feed-type overlaps with feed-type being sent by
- *                         another process. `log_add()` called.
+ * @param[in] feedtype      Feed-type.
+ * @param[in] pid           Multicast LDM sender process-ID.
+ * @param[in] port          Port number of the FMTP TCP server.
+ * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
+ *                          host byte order
+ * @retval    0             Success.
+ * @retval    LDM7_DUP      Process identifier duplicates existing entry.
+ *                          `log_add()` called.
+ * @retval    LDM7_DUP      Feed-type overlaps with feed-type being sent by
+ *                          another process. `log_add()` called.
  */
 Ldm7Status
 msm_put(
         const feedtypet      feedtype,
         const pid_t          pid,
-        const unsigned short port);
+        const unsigned short port,
+        const unsigned short mldmSrvrPort);
 
 /**
  * Returns process-information associated with a feed-type.
  *
- * @param[in]  feedtype     Feed-type.
- * @param[out] pid          Associated process-ID.
- * @param[out] port         Port number of the associated FMTP TCP server.
- * @retval     0            Success. `*pid` and `*port` are set.
- * @retval     LDM7_NOENT   No process associated with feed-type.
+ * @param[in]  feedtype      Feed-type.
+ * @param[out] pid           Associated process-ID.
+ * @param[out] port          Port number of the associated FMTP TCP server.
+ * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
+ * @retval     0             Success. `*pid`, `*port`, and `mldmSrvrPort` are
+ *                           set
+ * @retval     LDM7_NOENT    No process associated with feed-type.
  */
 Ldm7Status
 msm_get(
         const feedtypet                feedtype,
         pid_t* const restrict          pid,
-        unsigned short* const restrict port);
+        unsigned short* const restrict port,
+        unsigned short* const restrict mldmSrvrPort);
 
 /**
  * Unlocks the map.
