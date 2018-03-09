@@ -19,7 +19,6 @@
 #include "AuthClient.h"
 #include "CidrAddr.h"
 #include "globals.h"
-#include "InAddrMgr.h"
 #include "log.h"
 #include "ldmprint.h"
 #include "mcast.h"
