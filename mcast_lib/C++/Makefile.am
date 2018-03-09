@@ -12,7 +12,6 @@ lib_la_SOURCES		= mcast.cpp mcast.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
 			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h \
-			  InAddrMgr.cpp InAddrMgr.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
 			  MldmRpc.cpp MldmRpc.h
