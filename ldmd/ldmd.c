@@ -47,6 +47,7 @@
 #include "inetutil.h"
 #if WANT_MULTICAST
     #include "mldm_sender_map.h"
+    #include "up7.h"
 #endif
 #include "registry.h"
 #include "remote.h"
