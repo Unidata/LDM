@@ -44,9 +44,6 @@
 #include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
-#if WANT_MULTICAST
-    #include "../mcast_lib/C/UpMcastMgr.h"
-#endif
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
@@ -61,7 +58,10 @@
 #include "timestamp.h"
 #include "UpFilter.h"
 #include "md5.h"
-#include "VirtualCircuit.h"
+#if WANT_MULTICAST
+    #include "UpMcastMgr.h"
+    #include "VirtualCircuit.h"
+#endif
 
 
 /******************************************************************************

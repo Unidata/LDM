@@ -30,7 +30,7 @@ lib_la_SOURCES		= down7.c \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  prod_index_queue.c \
 			  VirtualCircuit.c VirtualCircuit.h \
-			  CidrAddr.h CidrAddr.cpp
+			  CidrAddr.c CidrAddr.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
                           -I$(top_builddir)/pq -I$(top_srcdir)/pq \

@@ -64,14 +64,10 @@ check_PROGRAMS		+= TcpSock_test Authorizer_test
 endif
 
 if HAVE_CUNIT
-InAddrMgr_test_SOURCES	= InAddrMgr_test.c InAddrMgr.cpp
-InAddrMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-InAddrMgr_test_LDADD	= $(LDADD) @LIBS_CUNIT@
-
 MldmRpc_test_SOURCES	= MldmRpc_test.c
 MldmRpc_test_LDADD	= $(LDADD) @LIBS_CUNIT@
 
-check_PROGRAMS		+= InAddrMgr_test MldmRpc_test
+check_PROGRAMS		+= MldmRpc_test
 endif
 
 TESTS			= $(check_PROGRAMS)

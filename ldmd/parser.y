@@ -9,24 +9,24 @@
 
 #include "config.h"
 
-#include "CidrAddr.h"
 #include "ldm_config_file.h"
 #include "atofeedt.h"
 #include "error.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "remote.h"
-#if WANT_MULTICAST
-    #include "down7_manager.h"
-    #include "mcast_info.h"
-    #include "UpMcastMgr.h"
-#endif
 #include "ldm.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
 #include "log.h"
 #include "stdbool.h"
 #include "wordexp.h"
+#if WANT_MULTICAST
+    #include "CidrAddr.h"
+    #include "down7_manager.h"
+    #include "mcast_info.h"
+    #include "UpMcastMgr.h"
+#endif
 
 #include <arpa/inet.h>
 #include <limits.h>
