@@ -225,7 +225,7 @@ request]</panel_attributes>
     <id>UMLState</id>
     <coordinates>
       <x>470</x>
-      <y>460</y>
+      <y>400</y>
       <w>100</w>
       <h>40</h>
     </coordinates>
@@ -236,13 +236,13 @@ VLAN info</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>560</x>
-      <y>580</y>
-      <w>80</w>
-      <h>30</h>
+      <x>510</x>
+      <y>510</y>
+      <w>30</w>
+      <h>80</h>
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>60.0;10.0;10.0;10.0</additional_attributes>
+    <additional_attributes>10.0;10.0;10.0;60.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -250,10 +250,10 @@ VLAN info</panel_attributes>
       <x>510</x>
       <y>360</y>
       <w>30</w>
-      <h>120</h>
+      <h>60</h>
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>10.0;10.0;10.0;100.0</additional_attributes>
+    <additional_attributes>10.0;10.0;10.0;40.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -270,8 +270,8 @@ m2=[disconnected]</panel_attributes>
   <element>
     <id>UMLState</id>
     <coordinates>
-      <x>620</x>
-      <y>570</y>
+      <x>470</x>
+      <y>480</y>
       <w>100</w>
       <h>40</h>
     </coordinates>
@@ -280,38 +280,15 @@ VLAN IP</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
-    <id>UMLState</id>
-    <coordinates>
-      <x>620</x>
-      <y>460</y>
-      <w>100</w>
-      <h>40</h>
-    </coordinates>
-    <panel_attributes>start
-timer</panel_attributes>
-    <additional_attributes/>
-  </element>
-  <element>
     <id>Relation</id>
     <coordinates>
-      <x>660</x>
-      <y>490</y>
+      <x>510</x>
+      <y>430</y>
       <w>30</w>
-      <h>100</h>
+      <h>70</h>
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>10.0;10.0;10.0;80.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>560</x>
-      <y>470</y>
-      <w>80</w>
-      <h>30</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>10.0;10.0;60.0;10.0</additional_attributes>
+    <additional_attributes>10.0;10.0;10.0;50.0</additional_attributes>
   </element>
   <element>
     <id>UMLSpecialState</id>
@@ -393,28 +370,6 @@ VLAN info</panel_attributes>
     </coordinates>
     <panel_attributes>lt=&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;210.0;10.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>660</x>
-      <y>360</y>
-      <w>30</w>
-      <h>70</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;-</panel_attributes>
-    <additional_attributes>10.0;10.0;10.0;50.0</additional_attributes>
-  </element>
-  <element>
-    <id>UMLTimer</id>
-    <coordinates>
-      <x>640</x>
-      <y>390</y>
-      <w>60</w>
-      <h>80</h>
-    </coordinates>
-    <panel_attributes>timer</panel_attributes>
-    <additional_attributes/>
   </element>
   <element>
     <id>Text</id>
