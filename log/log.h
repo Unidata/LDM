@@ -485,6 +485,20 @@ bool log_is_level_enabled(
         nbytes, msg)
 
 /**
+ * Re-allocates memory. Adds an error-message the current thread's list of
+ * error-messages if an error occurs.
+ *
+ * @param[in] buf       Previously-allocated buffer
+ * @param[in] nbytes    Number of bytes to allocate.
+ * @param[in] msg       Message to print on error. Should complete the sentence
+ *                      "Couldn't allocate <n> bytes for ...".
+ * @retval    NULL      Out of memory. Log message added.
+ * @return              Pointer to the allocated memory.
+ */
+#define log_realloc(buf, nbytes, msg) logl_realloc(__FILE__, __func__, __LINE__, \
+        buf, nbytes, msg)
+
+/**
  * Writes an error message and then aborts the current process.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the

@@ -745,12 +745,39 @@ void* logl_malloc(
         const char* const          msg)
 {
     void* obj = malloc(nbytes);
-
     if (obj == NULL) {
         log_loc_t loc = {file, func, line};
         logl_add(&loc, "Couldn't allocate %lu bytes for %s", nbytes, msg);
     }
+    return obj;
+}
 
+/**
+ * Re-allocates memory. Thread safe.
+ *
+ * @param[in] file      Pathname of the file.
+ * @param[in] func      Name of the function.
+ * @param[in] line      Line number in the file.
+ * @param[in] buf       Previously-allocated buffer
+ * @param[in  nbytes    Number of bytes to re-allocate.
+ * @param[in] msg       Message to print on error. Should complete the sentence
+ *                      "Couldn't allocate <n> bytes for ...".
+ * @retval    NULL      Out of memory. Log message added.
+ * @return              Pointer to the allocated memory.
+ */
+void* logl_realloc(
+        const char* const file,
+        const char* const func,
+        const int         line,
+        void*             buf,
+        const size_t      nbytes,
+        const char* const msg)
+{
+    void* obj = realloc(buf, nbytes);
+    if (obj == NULL) {
+        log_loc_t loc = {file, func, line};
+        logl_add(&loc, "Couldn't re-allocate %lu bytes for %s", nbytes, msg);
+    }
     return obj;
 }
 
