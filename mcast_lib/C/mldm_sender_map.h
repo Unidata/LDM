@@ -102,8 +102,7 @@ msm_unlock(void);
  *                         Database is unchanged.
  */
 Ldm7Status
-msm_remove(
-        const pid_t pid);
+msm_remove(const pid_t pid);
 
 /**
  * Clears all entries.
