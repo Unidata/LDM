@@ -37,7 +37,7 @@ gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
 
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url2, 'uva4api', 'AL2Ssenyd2011!')
+password_manager.add_password(None, gh_url2, 'name', 'passwd')
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
 urllib2.install_opener(opener)
