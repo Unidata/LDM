@@ -155,7 +155,7 @@ static void printUsage(const char* const av0)
             log_get_default_destination(), getDefaultQueuePath(),
             DEFAULT_TOTALTIMEOUT, DEFAULT_TIMEOUT);
     log_level_t level = log_get_level();
-    (void)log_set_level(LOG_NOTICE);
+    (void)log_set_level(LOG_LEVEL_NOTICE);
     log_flush_notice();
     log_set_level(level);
 }

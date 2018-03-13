@@ -699,7 +699,7 @@ beReset(
         /*
          * The backend database needs to be restored.
          */
-        LOG_NOTICE("Restoring from backup");
+        log_notice("Restoring from backup");
 
         if (0 == (status = removeEnvironment(path))) {
             status = copyDatabase(path, ".bck", "");

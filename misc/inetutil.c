@@ -181,9 +181,9 @@ hostbyaddr(
         (void)set_timestamp(&stop);
 
         const double elapsed = d_diff_timestamp(&stop, &start);
+        identifier = inet_ntoa(paddr->sin_addr);
 
         if (status) {
-            identifier = inet_ntoa(paddr->sin_addr);
             const char* reason =
                 (status == EAI_NONAME)
                     ? "address doesn't resolve to a name"
@@ -200,14 +200,17 @@ hostbyaddr(
                                 : (status == EAI_SYSTEM)
                                   ? strerror(errno)
                                   : "unanticipated error";
-            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO,
+            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ?
+                        LOG_LEVEL_WARNING : LOG_LEVEL_INFO,
                     "Couldn't resolve \"%s\" to a hostname in %g seconds: %s",
                     identifier, elapsed, reason);
         }
         else {
+            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ?
+                        LOG_LEVEL_WARNING : LOG_LEVEL_INFO,
+                    "Resolving %s to %s took %g seconds", identifier, hostname,
+                    elapsed);
             identifier = hostname;
-            LOG_LOG(elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO,
-                    "Resolving %s to %s took %g seconds", identifier, elapsed);
         }
     }
 
