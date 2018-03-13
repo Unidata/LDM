@@ -12,6 +12,7 @@
 #ifndef UPMCASTMGR_H
 #define UPMCASTMGR_H
 
+#include "CidrAddr.h"
 #include "ldm.h"
 #include "pq.h"
 #include "mcast.h"
