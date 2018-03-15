@@ -97,7 +97,7 @@ releaseDownFmtpAddr()
 static Ldm7Status
 up7_addToMcastCircuit()
 {
-    // TODO
+    return 0; // TODO
 }
 
 static void
@@ -217,23 +217,24 @@ up7_createClientTransport(
     return success;
 }
 
+/**
+ * Reduces the feed requested by a host according to what it is allowed to
+ * receive.
+ * @param[in] feed    Feed requested by host
+ * @param[in] hostId  Host identifier: either a hostname or an IP address in
+ *                    dotted-decimal form
+ * @param[in] inAddr  Address of the host
+ * @return            Reduced feed. Might be `NONE`.
+ */
 static feedtypet reduceToAllowed(
-        feedtypet                      feed,
-        struct SVCXPRT* const restrict xprt)
+        feedtypet                            feed,
+        const char* const restrict           hostId,
+        const struct in_addr* const restrict inAddr)
 {
-    char hostname[HOST_NAME_MAX+1];
-    if (getnameinfo((struct sockaddr*)&xprt->xp_raddr, sizeof(xprt->xp_raddr),
-            hostname, sizeof(hostname), NULL, 0, 0)) {
-        log_add_syserr("Couldn't resolve IP address %s to a hostname",
-                inet_ntop(AF_INET, &xprt->xp_raddr.sin_addr, hostname,
-                        sizeof(hostname)));
-        log_flush_notice();
-    }
-    // `hostname` is fully-qualified domain-name or IPv4 dotted-quad
     static const size_t maxFeeds = 128;
     feedtypet           allowedFeeds[maxFeeds];
-    size_t              numFeeds = lcf_getAllowedFeeds(hostname,
-            &xprt->xp_raddr.sin_addr, maxFeeds, allowedFeeds);
+    size_t              numFeeds = lcf_getAllowedFeeds(hostId, inAddr, maxFeeds,
+            allowedFeeds);
     if (numFeeds > maxFeeds) {
         log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
         numFeeds = maxFeeds;
@@ -261,60 +262,69 @@ up7_ensureFree(
  * multicast LDM sender process that's associated with the given feedtype is
  * running.
  *
- * @param[in]  request      Subscription request
- * @param[in]  xprt         RPC transport.
- * @param[out] reply        Reply or NULL (which means no reply). If non-NULL,
- *                          then caller should call
- *                          `xdr_free(xdr_SubscriptionReply, reply)` when it's
- *                          no longer needed.
- * @retval     0            Success. `*reply` is set. `feedtype` is set iff
- *                          a corresponding multicast sender exists.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
- * @retval     LDM7_LOGIC   The product-index map is already open. `log_add()`
- *                          called.
- * @retval     LDM7_NOENT   No potential sender corresponding to `feed` was
- *                          added via `mlsm_addPotentialSender()`. `log_add()
- *                          called`.
+ * @param[in]  request  Subscription request
+ * @param[in]  xprt     RPC transport
+ * @param[out] reply    Reply.
+ * @retval     `true`   Success. `*reply` is set. `feedtype` and
+ *                      `downFmtpAddr` are set iff a corresponding multicast
+ *                      sender exists.
+ * @retval     `false`  Failure. `log_add()` called. Caller should kill the
+ *                      connection.
  */
-static Ldm7Status
+static bool
 up7_subscribe(
-        McastSubReq* const restrict       request,
+        const McastSubReq* const restrict request,
         struct SVCXPRT* const restrict    xprt,
         SubscriptionReply* const restrict reply)
 {
-    Ldm7Status status;
-    request->feed = reduceToAllowed(request->feed, xprt);
-    if (request->feed == NONE) {
-        log_flush_notice();
-        status = LDM7_UNAUTH;
+    bool                replySet = false;
+    struct sockaddr_in* sockAddr = svc_getcaller(xprt);
+    struct in_addr*     inAddr = &sockAddr->sin_addr;
+    const char*         hostId = hostbyaddr(sockAddr);
+    feedtypet           reducedFeed = reduceToAllowed(request->feed, hostId,
+            inAddr);
+    if (reducedFeed == NONE) {
+        log_notice("Host %s isn't allowed to receive any part of feed %s",
+                hostId, s_feedtypet(request->feed));
+        reply->status = LDM7_UNAUTH;
+        replySet = true;
     }
     else {
-        status = up7_addToMcastCircuit();
-        if (status == LDM7_OK) {
+        Ldm7Status status = up7_addToMcastCircuit();
+        if (status != LDM7_OK) {
+            log_add("Couldn't add host %s to multicast circuit", hostId);
+        }
+        else {
             SubscriptionReply rep = {};
             status = umm_subscribe(request->feed, &rep);
             if (status) {
-                if (LDM7_NOENT == status)
+                if (LDM7_NOENT == status) {
                     log_flush_notice();
+                    reply->status = LDM7_NOENT;
+                    replySet = true;
+                }
             }
             else {
                 in_addr_t addr = cidrAddr_getAddr(
                         &rep.SubscriptionReply_u.info.fmtpAddr);
                 status = up7_openProdIndexMap(request->feed);
                 if (status == LDM7_OK) {
-                    feedtype = request->feed;
+                    feedtype = reducedFeed;
                     downFmtpAddr = addr;
-                    *reply = rep; // Success
+                    *reply = rep;
+                    reply->status = LDM7_OK;
+                    replySet = true;
                 }
-                if (status)
+                if (status) {
                     (void)umm_unsubscribe(request->feed, addr);
-            } // Downstream client subscribed to multicast
+                    up7_ensureFree(xdr_SubscriptionReply, &rep);
+                }
+            } // Successful `umm_subscribe()`. `rep` is set
             if (status)
                 up7_removeFromMcastCircuit();
         } // Downstream client added to multicast virtual circuit
     } // All or part of subscription is allowed by configuration-file
-    reply->status = status;
-    return status;
+    return replySet;
 }
 
 /**
@@ -476,7 +486,7 @@ up7_ensureProductQueueOpen(void)
                 log_add("The product-queue \"%s\" is corrupt", pqPath);
             }
             else {
-                log_error("Couldn't open product-queue \"%s\": %s", pqPath);
+                log_add("Couldn't open product-queue \"%s\": %s", pqPath);
             }
             success = false;
         }
@@ -716,45 +726,56 @@ subscribe_7_svc(
     log_notice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
             hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
+    reply = NULL;
 
-    if (up7_subscribe(request, xprt, &result)) {
-        reply = &result;
+    if (!up7_subscribe(request, xprt, &result)) {
+        log_error("Subscription failure");
     }
     else {
-        bool failure = false;
-        downFmtpAddr = cidrAddr_getAddr(
-                &result.SubscriptionReply_u.info.fmtpAddr);
-        if (!up7_ensureProductQueueOpen()) {
-            log_error("Couldn't subscribe %s to feed %s", hostname, feedspec);
-            failure = true;
+        if (result.status == LDM7_OK) {
+            reply = &result;
+        }
+        else if (!up7_ensureProductQueueOpen()) {
+            log_flush_error();
         }
         else {
             if (!up7_createClientTransport(xprt)) {
-                log_error("Couldn't create client-side RPC transport for "
-                        "downstream host %s",
-                        hostbyaddr(svc_getcaller(xprt)));
-                failure = true;
+                log_error("Couldn't create client-side RPC transport to "
+                        " downstream host %s", hostname);
             }
             else {
                 // `clnt` set
-                reply = &result; // reply synchronously
+                reply = &result; // Reply
             }
-        }
-        if (failure) {
-            log_flush_error();
-            // in `rpc/svc.c`; only valid for synchronous RPC
-            svcerr_systemerr(xprt);
-            svc_destroy(xprt);
-            /*
-             * The reply is set to NULL in order to cause the RPC dispatch
-             * routine to not reply because `svcerr_systemerr()` has been
-             * called and the server-side transport destroyed.
-             */
-            reply = NULL;
-        }
-    } // Subscription was successful
+        } // `result->status == LDM7_OK`
+        if (reply == NULL)
+            up7_ensureFree(xdr_SubscriptionReply, &result);
+    } // `up7_subscribe()` was successful. `result` is set.
+    if (reply == NULL) {
+        /*
+         * A NULL reply will cause the RPC dispatch routine to not reply. This
+         * is good because `svcerr_systemerr()` will be called and the
+         * server-side transport destroyed.
+         */
+        log_flush_error();
+        // in `rpc/svc.c`; only valid for synchronous RPC
+        svcerr_systemerr(xprt);
+        svc_destroy(xprt);
+    }
 
     return reply;
+}
+
+/**
+ * Returns the process identifier of the associated multicast LDM sender.
+ * @retval 0      Multicast LDM sender doesn't exist
+ * @return        PID of multicast LDM sender
+ * @threadsafety  Safe
+ */
+pid_t
+getMldmSenderPid(void)
+{
+    return umm_getMldmSenderPid();
 }
 
 /**

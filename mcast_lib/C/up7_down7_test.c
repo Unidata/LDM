@@ -58,7 +58,7 @@ typedef struct {
 } Up7;
 
 typedef struct {
-    pthread_t             thread;
+    pthread_t             thread; ///< Sender TCP server thread
     int                   sock;
 } Sender;
 
@@ -236,7 +236,7 @@ setup(void)
     }
 
     if (status)
-        log_flush_error();
+        log_error("setup() failure");
     return status;
 }
 
@@ -543,10 +543,8 @@ up7_run(
             svc_getreqsock(sock); // calls `ldmprog_7()`
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
-           /*
-            * The connection to the receiver was closed by the RPC layer =>
-            * `svc_destroy(up7->xprt)` was called.
-            */
+            log_notice("Connection closed by RPC layer");
+            // `svc_destroy(up7->xprt)` was called by RPC layer.
             up7->xprt = NULL; // so others don't try to destroy it
             status = 0;
             break;
@@ -887,7 +885,13 @@ sender_start(
             }
             else {
                 status = umm_clear();
-                status = umm_addPotentialSender(mcastInfo, 2, LOCAL_HOST,
+                VcEndPoint* vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
+                CU_ASSERT_PTR_NOT_NULL(vcEnd);
+                in_addr_t subnet;
+                CU_ASSERT_EQUAL(inet_pton(AF_INET, LOCAL_HOST, &subnet), 1);
+                CidrAddr*   fmtpSubnet = cidrAddr_new(subnet, 24);
+                CU_ASSERT_PTR_NOT_NULL(fmtpSubnet);
+                status = umm_addPotentialSender(mcastInfo, 2, vcEnd, fmtpSubnet,
                         UP7_PQ_PATHNAME);
                 if (status) {
                     log_add("mlsm_addPotentialSender() failure");
@@ -902,6 +906,8 @@ sender_start(
                         done = 0;
                     }
                 }
+                cidrAddr_delete(fmtpSubnet);
+                vcEndPoint_delete(vcEnd);
                 mi_free(mcastInfo);
             } // `mcastInfo` allocated
 
@@ -925,9 +931,11 @@ terminateMcastSender(void)
 {
     int status;
 
+#if 0
     /*
      * Terminate the multicast sender process by sending a SIGTERM to the
-     * process group.
+     * process group. If this program is executed stand-alone or within Eclipse,
+     * then the resulting process will be a process group leader.
      */
     {
         struct sigaction oldSigact;
@@ -949,6 +957,16 @@ terminateMcastSender(void)
         status = sigaction(SIGTERM, &oldSigact, NULL);
         CU_ASSERT_EQUAL(status, 0);
     }
+#else
+    {
+        pid_t pid = umm_getMldmSenderPid();
+        if (pid) {
+            log_debug("Sending SIGTERM to multicast LDM sender process");
+            status = kill(pid, SIGTERM);
+            CU_ASSERT_EQUAL_FATAL(status, 0);
+        }
+    }
+#endif
 
     /* Reap the terminated multicast sender. */
     {
@@ -980,7 +998,7 @@ sender_terminate(void)
     int status;
 
     #if CANCEL_SENDER
-        log_debug("Canceling sender thread");
+        log_debug("Canceling sender TCP server thread");
         status = pthread_cancel(sender.thread);
         if (status) {
             log_errno(status, "Couldn't cancel sender thread");
@@ -997,7 +1015,7 @@ sender_terminate(void)
 
     void* statusPtr;
 
-    log_debug("Joining sender thread");
+    log_debug("Joining sender TCP server thread");
     status = pthread_join(sender.thread, &statusPtr);
     if (status) {
         log_errno(status, "Couldn't join sender thread");
@@ -1014,7 +1032,7 @@ sender_terminate(void)
 
    (void)close(sender.sock);
 
-    log_debug("Terminating multicast sender");
+    log_debug("Terminating multicast LDM sender");
     status = terminateMcastSender();
     if (status) {
         log_add("Couldn't terminate multicast sender process");
@@ -1262,7 +1280,7 @@ receiver_start(
 }
 
 /**
- * Initializes the receiver.
+ * Initializes the receiver. Doesn't execute it.
  *
  * @param[in]     addr      Address of sender: either hostname or IPv4 address.
  * @param[in]     port      Port number of sender in host byte-order.
@@ -1294,8 +1312,12 @@ receiver_init(
 
         numDeletedProds = 0;
 
-        receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST, receiverPq);
+        VcEndPoint* vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
+        CU_ASSERT_PTR_NOT_NULL(vcEnd);
+        receiver.down7 = down7_new(servAddr, feedtype, LOCAL_HOST, vcEnd,
+                receiverPq);
         CU_ASSERT_PTR_NOT_NULL_FATAL(receiver.down7);
+        vcEndPoint_delete(vcEnd);
         sa_free(servAddr);
 
         status = requester_init();
@@ -1470,10 +1492,11 @@ static void
 test_bad_subscription(
         void)
 {
-    int      status = sender_start(ANY);
+    int      status = sender_start(NEXRAD2);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
+#if 0
     status = receiver_init(sender_getAddr(&sender), sender_getPort(&sender),
             NGRID);
     log_flush_error();
@@ -1482,6 +1505,13 @@ test_bad_subscription(
     CU_ASSERT_EQUAL(status, LDM7_INVAL);
 
     receiver_destroy();
+#else
+    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
+            NGRID);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    sleep(1);
+    receiver_terminate();
+#endif
 
     log_debug("Terminating sender");
     status = sender_terminate();

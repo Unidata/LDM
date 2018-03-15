@@ -75,8 +75,8 @@ allowSigs(void)
  * Multicast LDM process:
  ******************************************************************************/
 
-static pid_t         childPid;
-static volatile bool cleanupRegistered;
+static volatile pid_t childPid;
+static feedtypet      feed;
 
 static void
 mldm_killChild(void)
@@ -84,13 +84,14 @@ mldm_killChild(void)
     if (childPid) {
         (void)kill(childPid, SIGTERM);
         childPid = 0;
+        feed = NONE;
     }
 }
 
 static int
-mldm_ensureCleanup(void)
+mldm_ensureCleanup(const pid_t pid)
 {
-    if (cleanupRegistered)
+    if (childPid)
         return 0;
 
     int status = atexit(mldm_killChild);
@@ -99,7 +100,7 @@ mldm_ensureCleanup(void)
         status = LDM7_SYSTEM;
     }
     else {
-        cleanupRegistered = true;
+        childPid = pid;
     }
     return status;
 }
@@ -299,7 +300,7 @@ mldm_exec(
     args[i++] = NULL;
 
     StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    log_notice("Executing multicast sender: %s", sbString(command));
+    log_notice("Executing multicast LDM sender: %s", sbString(command));
     sbFree(command);
 
     (void)dup2(pipe, 1);
@@ -396,6 +397,7 @@ mldm_spawn(
  * @retval        0              Success. Multicast LDM sender spawned. `*pid`
  *                               and `info->server.port` are set.
  * @retval        LDM7_SYSTEM    System error. `log_add()` called.
+ * @threadsafety                 Hostile
  */
 static Ldm7Status
 mldm_execute(
@@ -419,7 +421,7 @@ mldm_execute(
         status = mldm_spawn(info, mldmSrvrPort, ttl, fmtpSubnet, pqPathname,
                 &procId);
         if (0 == status) {
-            status = mldm_ensureCleanup();
+            status = mldm_ensureCleanup(procId);
             if (status) {
                 (void)kill(procId, SIGTERM);
             }
@@ -437,6 +439,7 @@ mldm_execute(
                 }
                 else {
                     childPid = procId;
+                    feed = feedtype;
                 }
             }
         }
@@ -911,6 +914,12 @@ umm_terminated(
         (void)msm_unlock();
     }
     return status;
+}
+
+pid_t
+umm_getMldmSenderPid(void)
+{
+    return childPid;
 }
 
 Ldm7Status

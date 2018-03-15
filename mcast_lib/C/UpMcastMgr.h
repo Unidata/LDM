@@ -91,6 +91,15 @@ Ldm7Status
 umm_terminated(const pid_t pid);
 
 /**
+ * Returns the process identifier of the associated multicast LDM sender.
+ * @retval 0      Multicast LDM sender doesn't exist
+ * @return        PID of multicast LDM sender
+ * @threadsafety  Safe
+ */
+pid_t
+umm_getMldmSenderPid(void);
+
+/**
  * Releases the IP address reserved for the FMTP TCP connection in a downstream
  * LDM7.
  * @param[in] feed          LDM feed associated with `downFmtpAddr`
