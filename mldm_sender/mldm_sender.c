@@ -516,13 +516,13 @@ mls_setDoneFlag(
         const int sig)
 {
     if (sig == SIGTERM) {
-        log_debug("SIGTERM");
+        log_notice("SIGTERM");
     }
     else if (sig == SIGINT) {
-        log_debug("SIGINT");
+        log_notice("SIGINT");
     }
     else {
-        log_debug("Signal %d", sig);
+        log_notice("Signal %d", sig);
     }
     done = 1;
 }
