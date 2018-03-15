@@ -75,7 +75,7 @@ cidrAddr_copy(
     return lhs;
 }
 
-size_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr)
+uint32_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr)
 {
     return (1 << (32 - cidrAddr->prefixLen)) - 2;
 }

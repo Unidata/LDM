@@ -82,7 +82,7 @@ cidrAddr_copy(
  * @param[in] cidrAddr  Subnet specification
  * @return              Number of addresses
  */
-size_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr);
+uint32_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr);
 
 /**
  * Parses a CIDR address.
