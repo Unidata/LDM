@@ -1090,6 +1090,10 @@ struct McastSubInfo {
 union SubscriptionReply switch (Ldm7Status status) {
     case LDM7_OK:
         McastSubInfo info;
+    case LDM7_UNAUTH:
+        void;
+    case LDM7_NOENT:
+        void;
     default:
         void;
 };
