@@ -151,6 +151,18 @@ ghostname(void)
     return hostname;
 }
 
+void sockAddrIn_getHostId(
+        const struct sockaddr_in* const restrict sockAddr,
+        char* const restrict                     id,
+        const size_t                             size)
+{
+    if (getnameinfo((struct sockaddr*)sockAddr, sizeof(*sockAddr), id, size,
+            NULL, 0, 0)) {
+        log_add_syserr("Couldn't resolve IP address %s to a hostname",
+                inet_ntop(AF_INET, &sockAddr->sin_addr, id, size));
+        log_flush_notice();
+    }
+}
 
 /**
  * Returns a string identifying the Internet host referred to by an IPv4 socket

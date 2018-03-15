@@ -166,6 +166,20 @@ mcastRecvSock_init(
         const struct sockaddr_in* const restrict mcastSockAddr,
         const struct in_addr* const restrict     ifaceAddr);
 
+/**
+ * Returns an identifier of the host referenced by a socket address.
+ * @param[in]  sockAddr  Socket address to be examined
+ * @param[out] id        Host identifier: either a hostname or IP address in
+ *                       dotted-decimal form
+ * @param[in]  size      Size of `id` in bytes. Should be at least
+ *                       `_POSIX_HOST_NAME_MAX+1`.
+ * @threadsafety         Safe
+ */
+void sockAddrIn_getHostId(
+        const struct sockaddr_in* const restrict sockAddr,
+        char* const restrict                     id,
+        const size_t                             size);
+
 #if WANT_MULTICAST
 /**
  * Returns a new service address.
