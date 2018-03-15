@@ -280,6 +280,7 @@ up7proxy_unlock(
  *                         longer needed.
  * @retval     LDM7_INVAL  The upstream LDM-7 doesn't multicast `feed`.
  *                         `log_add()` called.
+ * @threadsafety           Compatible but not safe
  */
 static int
 up7proxy_subscribe(
@@ -310,18 +311,17 @@ up7proxy_subscribe(
     }
     else {
         status = reply->status;
-        if (status == LDM7_INVAL) {
-            char buf[256];
-
-            (void)sprint_feedtypet(buf, sizeof(buf), feed);
-            log_add("Upstream LDM-7 doesn't multicast feed %s", buf);
+        if (status == LDM7_UNAUTH) {
+            log_add("This host isn't authorized to receive feed %s",
+                    s_feedtypet(feed));
+        }
+        else if (status == LDM7_NOENT) {
+            log_add("Upstream LDM-7 doesn't multicast any part of feed %s",
+                    s_feedtypet(feed));
         }
         else if (status != 0) {
-            char buf[256];
-
-            (void)sprint_feedtypet(buf, sizeof(buf), feed);
-            log_add("Couldn't subscribe to feed %s: status=%d",  buf,
-                    status);
+            log_add("Couldn't subscribe to feed %s: status=%d",
+                    s_feedtypet(feed), status);
         }
         else {
             McastInfo* const mi = &reply->SubscriptionReply_u.info.mcastInfo;
@@ -1609,7 +1609,8 @@ wakeUpNappingDown7(
  ******************************************************************************/
 
 /**
- * Returns a new downstream LDM-7.
+ * Returns a new downstream LDM-7. The instance doesn't receive anything until
+ * `down7_start()` is called.
  *
  * @param[in] servAddr    Pointer to the address of the server from which to
  *                        obtain multicast information, backlog products, and
@@ -1623,6 +1624,7 @@ wakeUpNappingDown7(
  * @param[in] vcEnd       Local virtual-circuit endpoint
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to the new downstream LDM-7.
+ * @see `down7_start()`
  */
 Down7*
 down7_new(
