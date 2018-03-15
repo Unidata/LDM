@@ -5,7 +5,7 @@
         
     ldmadmin(1):
     	Changed how the PATH environment variable is modified to favor version-
-    	specific utilties to accomodate non-standard installations that don't
+    	specific utilities to accommodate non-standard installations that don't
     	have a version-specific subdirectory.
     	
     	Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
