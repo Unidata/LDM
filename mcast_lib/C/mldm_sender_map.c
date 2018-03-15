@@ -83,8 +83,12 @@ smo_open(
         *fd = myFd;
         status = 0;
     }
+    else if (errno != EEXIST) {
+        log_add_syserr("Couldn't create shared memory object \"%s\"", pathname);
+        status = LDM7_SYSTEM;
+    }
     else {
-        /* Shared memory object already exists. */
+        log_info("Shared memory object \"%s\" already exists");
         myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
 
         if (-1 < myFd) {
@@ -92,7 +96,8 @@ smo_open(
             status = 0;
         }
         else {
-            log_add_syserr("Couldn't open shared memory object %s", pathname);
+            log_add_syserr("Couldn't open shared memory object \"%s\"",
+                    pathname);
             status = LDM7_SYSTEM;
         }
     }
@@ -168,15 +173,20 @@ msm_setSmoPathname(void)
 {
     static const char format[] = "/mldmSenderMap-%s";
     int               status;
-    const char*       userName = getenv("USER");
+    const char*       userName = getenv("LOGNAME");
     if (userName == NULL) {
-        log_add("Couldn't get value of environment variable \"USER\"");
-        status = LDM7_SYSTEM;
+        userName = getenv("USER");
+        if (userName == NULL) {
+            log_add("Couldn't get value of environment variables "
+                    "\"LOGNAME\" or \"USER\"");
+            status = LDM7_SYSTEM;
+        }
     }
-    else {
+    if (userName) {
         int nbytes = snprintf(NULL, 0, format, userName);
         if (nbytes < 0) {
-            log_add_syserr("Couldn't get size of pathname of shared-memory object");
+            log_add_syserr("Couldn't get size of pathname of shared-memory "
+                    "object");
             status = LDM7_SYSTEM;
         }
         else {
@@ -219,11 +229,9 @@ msm_init(void)
         else {
             int fd;
             status = smo_open(smo_pathname, &fd);
-
             if (0 == status) {
                 void* addr;
                 status = smo_init(fd, NUM_FEEDTYPES, &addr);
-
                 if (status) {
                     log_add("Couldn't initialize shared-memory object \"%s\"",
                             smo_pathname);
