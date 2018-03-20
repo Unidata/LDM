@@ -16,7 +16,6 @@
 #include "atofeedt.h"
 #include "AuthServer.h"
 #include "CidrAddr.h"
-#include "prod_index_map.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
@@ -28,6 +27,7 @@
 #include "OffsetMap.h"
 #include "pq.h"
 #include "prod_class.h"
+#include "prod_index_map.h"
 #include "StrBuf.h"
 #include "timestamp.h"
 

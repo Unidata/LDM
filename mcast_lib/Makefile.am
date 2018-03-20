@@ -6,7 +6,7 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS			= C C++ FMTP-LDM7/UnidataFMTP
+SUBDIRS			= ldm7 FMTP-LDM7/UnidataFMTP
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		=
-lib_la_LIBADD		= C/lib.la C++/lib.la FMTP-LDM7/UnidataFMTP/libfmtp.la
+lib_la_LIBADD		= ldm7/lib.la FMTP-LDM7/UnidataFMTP/libfmtp.la

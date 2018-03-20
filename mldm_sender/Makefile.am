@@ -8,15 +8,14 @@
 
 bin_PROGRAMS	= mldm_sender
 AM_CPPFLAGS	= \
-    -I$(top_builddir)/log        -I$(top_srcdir)/log \
-    -I$(top_builddir)/protocol    -I$(top_srcdir)/protocol \
-    -I$(top_builddir)/protocol2   -I$(top_srcdir)/protocol2 \
-    -I$(top_builddir)/registry    -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/pq \
-    -I$(top_builddir)/misc     	  -I$(top_srcdir)/misc \
-    -I$(top_srcdir) \
-    -I$(top_builddir)/mcast_lib/C -I$(top_srcdir)/mcast_lib/C \
-    -I$(top_srcdir)/mcast_lib/C++
+            -I$(top_builddir)/log       	-I$(top_srcdir)/log \
+            -I$(top_builddir)/protocol		-I$(top_srcdir)/protocol \
+            -I$(top_builddir)/protocol2 	-I$(top_srcdir)/protocol2 \
+            -I$(top_builddir)/registry  	-I$(top_srcdir)/registry \
+            -I$(top_srcdir)/pq \
+            -I$(top_builddir)/misc     		-I$(top_srcdir)/misc \
+            -I$(top_srcdir) \
+            -I$(top_builddir)/mcast_lib/ldm7	-I$(top_srcdir)/mcast_lib/ldm7
 noinst_HEADERS		= OffsetMap.h AuthServer.h
 mldm_sender_SOURCES	= mldm_sender.c \
 			  OffsetMap.cpp OffsetMap.h

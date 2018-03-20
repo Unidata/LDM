@@ -14,7 +14,7 @@ AM_CPPFLAGS	= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 uldbutil_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= uldbutil.1
 TAGS_FILES	= \

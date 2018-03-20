@@ -37,7 +37,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 date_sub_CPPFLAGS	= $(AM_CPPFLAGS) -UNDEBUG -DTEST_DATE_SUB
 pqact_LDADD		= \
     $(top_builddir)/lib/libldm.la \

@@ -19,7 +19,7 @@ AM_CPPFLAGS	= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 pqmon_LDADD	= $(top_builddir)/lib/libldm.la
 nodist_man1_MANS	= pqmon.1
 TAGS_FILES	= \

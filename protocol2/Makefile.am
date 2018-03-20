@@ -92,8 +92,7 @@ lib_la_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/log \
     -I$(top_srcdir)/pq \
-    -I$(top_srcdir)/mcast_lib/C \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 if WANT_MULTICAST
 lib_la_CPPFLAGS		+= -I$(top_builddir)/mcast_lib -I$(top_srcdir)/mcast_lib
 endif

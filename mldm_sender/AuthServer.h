@@ -10,7 +10,7 @@
 #ifndef MLDM_SENDER_AUTHSERVER_H_
 #define MLDM_SENDER_AUTHSERVER_H_
 
-#include "Authorizer.h"
+#include "../mcast_lib/ldm7/Authorizer.h"
 #include "ldm.h"
 
 #ifdef __cplusplus

@@ -718,8 +718,7 @@ AC_CONFIG_FILES([
     lib/Makefile
     Makefile
     mcast_lib/Makefile
-    mcast_lib/C/Makefile
-    mcast_lib/C++/Makefile
+    mcast_lib/ldm7/Makefile
     misc/Makefile
     mldm_sender/Makefile
     log/Makefile

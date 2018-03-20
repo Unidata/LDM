@@ -39,7 +39,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 pqing_LDADD		= \
     do_check.o \
     do_nocheck.o \

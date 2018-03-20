@@ -43,7 +43,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
                           -I$(srcdir)/../FMTP/FMTPv3/sender \
                           -I$(top_builddir)/misc -I$(top_srcdir)/misc \
                           -I$(top_srcdir)/rpc \
-                          -I$(top_srcdir)/mcast_lib/C++
+                          -I$(top_srcdir)/mcast_lib/ldm7
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory

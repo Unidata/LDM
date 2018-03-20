@@ -57,7 +57,7 @@ AM_CPPFLAGS	= \
     -I$(top_srcdir)/log \
     -I$(top_srcdir)/rpc \
     -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/C++
+    -I$(top_srcdir)/mcast_lib/ldm7
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \
     ../protocol2/*.c ../protocol2/*.h \

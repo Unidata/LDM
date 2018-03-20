@@ -32,7 +32,7 @@
 #include "autoshift.h"
 #include "down6.h"
 #if WANT_MULTICAST
-    #include "down7_manager.h"
+    #include "../mcast_lib/ldm7/down7_manager.h"
 #endif
 #include "error.h"
 #include "feedTime.h"

@@ -46,8 +46,8 @@
 #include "child_process_set.h"
 #include "inetutil.h"
 #if WANT_MULTICAST
-    #include "mldm_sender_map.h"
-    #include "up7.h"
+    #include "../mcast_lib/ldm7/mldm_sender_map.h"
+    #include "../mcast_lib/ldm7/up7.h"
 #endif
 #include "registry.h"
 #include "remote.h"
