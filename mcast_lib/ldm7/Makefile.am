@@ -55,7 +55,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
-CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim
+CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 LDADD			=  $(top_builddir)/lib/libldm.la
@@ -191,6 +191,17 @@ up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 cond_wait_test_SOURCES		= cond_wait_test.c
 cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
+				  
+SUFFIXES:	.vg
+%.vg:	%
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+            --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            ./$< >&$@
+
+%.supp:	%
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+            --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            --gen-suppressions=all ./$< >&$@
 
 valgrind-prod_index_map_test:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \
@@ -198,7 +209,7 @@ valgrind-prod_index_map_test:	prod_index_map_test
 valgrind-prod_index_queue_test:	prod_index_queue_test
 	$(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
-valgrind-up7_down7_test:	up7_down7_test
+up7_down7_test.valgrind:	up7_down7_test
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
             --suppressions=up7_down7_test.supp \
@@ -218,6 +229,7 @@ MLDM_RPC_TEST		= MldmRpc_test
 UP7_DOWN7_TEST		= up7_down7_test
 endif
 
+TESTS_ENVIRONMENTS	= PATH=$(top_builddir)/mldm_sender:$$PATH
 check_PROGRAMS    	= \
 			$(COND_WAIT_TEST) \
 			$(TCP_SOCK_TEST) \

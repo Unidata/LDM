@@ -27,11 +27,23 @@ extern "C" {
 #endif
 
 /**
+ * Sets the FMTP retransmission timeout. Calls to `umm_subscribe()` will use
+ * this value when creating a new upstream multicast LDM sender.
+ * @param[in] minutes  FMTP retransmission timeout. A negative value obtains the
+ *                     FMTP default.
+ * @see                `umm_subscribe()`
+ */
+void
+umm_setRetxTimeout(const float minutes);
+
+/**
  * Adds a potential multicast LDM sender. The sender is not started. This
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
- * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] info         Information on the multicast group. The port number
+ *                         of the FMTP TCP server is ignored (it will be chosen
+ *                         by the operating sytem). Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.

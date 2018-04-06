@@ -960,7 +960,7 @@ enum Ldm7Status {
 %bool_t
 %xdr_in_addr_t(XDR *xdrs, in_addr_t *objp)
 %{
-%    return xdr_u_long(xdrs, (u_long*)objp);
+%    return xdr_u_int(xdrs, (u_long*)objp);
 %}
 #endif /* RPC_XDR */
 

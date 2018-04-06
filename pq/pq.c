@@ -8920,16 +8920,20 @@ static int sigalrm_received = 0;
 static void
 hndlr_noop(int sig)
 {
-#ifndef NDEBUG
         switch(sig) {
         case SIGALRM :
+#ifndef NDEBUG
                 log_debug("SIGALRM") ;
+#endif
                 sigalrm_received = 1;
                 return ;
         case SIGCONT :
+#ifndef NDEBUG
                 log_debug("SIGCONT") ;
+#endif
                 return;
         }
+#ifndef NDEBUG
         log_debug("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */

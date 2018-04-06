@@ -414,13 +414,17 @@ bool log_is_level_enabled(
  */
 #define log_info(...)        LOG_LOG(LOG_LEVEL_INFO,    __VA_ARGS__)
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the DEBUG level, and then clears the list.
+ * Writes a message at the DEBUG level. Doesn't modify the list.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_debug(...)       LOG_LOG(LOG_LEVEL_DEBUG,   __VA_ARGS__)
+#define log_debug(...) do {\
+    if (LOG_LEVEL_DEBUG >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
+    }\
+} while (0)
 /**
  * Adds a message to the current thread's list of messages, writes the list at
  * the given level, and then clears the list.

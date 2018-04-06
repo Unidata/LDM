@@ -99,6 +99,9 @@ mcastReceiver_init(
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
+    log_debug("Creating FMTP receiver: sendHost=%s, sendPort=%hu, groupId=%s, "
+            "groupPort=%hu, iface=%s", tcpAddr, tcpPort, mcastAddr, mcastPort,
+            iface);
     receiver->fmtpReceiver = new fmtpRecvv3(hostId, tcpPort, groupId,
             mcastPort, notifier, iface);
 }
@@ -115,7 +118,7 @@ mcastReceiver_init(
  * @param[in]  notifier          Receiving application notifier. Freed by
  *                               `mcastReceiver_free()`.
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
- *                               be groupname or formatted IP address.
+ *                               be group name or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
  * @param[in]  iface             IPv4 address of interface for receiving
  *                               multicast and unicast  packets.
@@ -269,11 +272,10 @@ struct mcast_sender {
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
- * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the FMTP layer before being released
- *                              after being multicast to the duration to
- *                              multicast the product. If negative, then the
- *                              default timeout factor is used.
+ * @param[in]     retxTimeout   FMTP retransmission timeout in minutes. Duration
+ *                              that a product will be held by the FMTP layer
+ *                              before being released. If negative, then the
+ *                              default timeout is used.
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -293,7 +295,7 @@ mcastSender_init(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
-    const float            timeoutFactor,
+    const float            retxTimeout,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer)
 {
@@ -305,12 +307,12 @@ mcastSender_init(
                         *static_cast<Authorizer*>(authorizer));
 
         try {
-            fmtpSendv3* fmtpSender = timeoutFactor < 0
+            fmtpSendv3* fmtpSender = retxTimeout < 0
                     ? new fmtpSendv3(serverAddr, serverPort, groupAddr,
                             groupPort, notifier, ttl, ifaceAddr, iProd)
                     : new fmtpSendv3(serverAddr, serverPort, groupAddr,
                             groupPort, notifier, ttl, ifaceAddr, iProd,
-                            timeoutFactor);
+                            retxTimeout);
             sender->fmtpSender = fmtpSender;
             sender->notifier = notifier;
             status = 0;
@@ -368,11 +370,10 @@ mcastSender_init(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
- * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the FMTP layer before being released
- *                              after being multicast to the duration to
- *                              multicast the product. If negative, then the
- *                              default timeout factor is used.
+ * @param[in]     retxTimeout   FMTP retransmission timeout in minutes. Duration
+ *                              that a product will be held by the FMTP layer
+ *                              before being released. If negative, then the
+ *                              default timeout is used.
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -392,7 +393,7 @@ mcastSender_new(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
-    const float            timeoutFactor,
+    const float            retxTimeout,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer)
 {
@@ -405,7 +406,7 @@ mcastSender_new(
     }
     else {
         status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ifaceAddr, ttl, iProd, timeoutFactor, doneWithProd,
+                groupPort, ifaceAddr, ttl, iProd, retxTimeout, doneWithProd,
                 authorizer);
 
         if (status) {
@@ -439,7 +440,7 @@ mcastSender_start(
 
     log_debug("Starting FMTP sender");
     try {
-        sender->fmtpSender->Start();
+        sender->fmtpSender->Start(); // Doesn't block
 
         try {
             *serverPort = sender->fmtpSender->getTcpPortNum();
@@ -521,20 +522,20 @@ mcastSender_create(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
-    const float            timeoutFactor,
+    const float            retxTimeout,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer)
 {
     McastSender* send;
     int          status = mcastSender_new(&send, serverAddr, *serverPort,
-            groupAddr, groupPort, ifaceAddr, ttl, iProd, timeoutFactor,
+            groupAddr, groupPort, ifaceAddr, ttl, iProd, retxTimeout,
             doneWithProd, authorizer);
 
     if (status) {
         log_add("Couldn't create new multicast sender");
     }
     else {
-        status = mcastSender_start(send, serverPort);
+        status = mcastSender_start(send, serverPort); // Doesn't block
 
         if (status) {
             log_add("Couldn't start multicast sender");

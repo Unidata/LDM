@@ -24,7 +24,7 @@
 
 /**
  * Returns a new multicast LDM RPC client.
- * @param[in] port  Port number of the multicast LDM RPC server in host
+ * @param[in] port  Port number of the multicast LDM RPC command-server in host
  *                  byte-order
  * @retval NULL     Failure
  * @return          Pointer to multicast LDM RPC client. Caller should call
@@ -101,13 +101,23 @@ void* mldmSrvr_new(void* inAddrPool);
 in_port_t mldmSrvr_getPort(void* mldmSrvr);
 
 /**
- * Starts the multicast LDM RPC server. Doesn't return unless a fatal error
- * occurs.
+ * Starts the multicast LDM RPC server. Doesn't return until `mldmSrvr_stop()`
+ * is called or a fatal error occurs.
  * @param[in] mldmSrvr     Multicast LDM RPC server
+ * @retval    LDM7_OK      `stop()` called
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @threadsafety           Unsafe
  */
 Ldm7Status mldmSrvr_run(void* mldmSrvr);
+
+/**
+ * Stops the multicast LDM RPC server.
+ * @param[in] mldmSrvr     Multicast LDM RPC server
+ * @retval    LDM7_OK      Success. `mldmSrvr_run()` should return.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @threadsafety           Safe
+ */
+Ldm7Status mldmSrvr_stop(void* mldmSrvr);
 
 /**
  * Destroys an allocated multicast LDM RPC server and deallocates it.
@@ -234,9 +244,15 @@ public:
     in_port_t getPort() const noexcept;
 
     /**
-     * Runs the server. Doesn't return unless a fatal exception is thrown.
+     * Runs the server. Doesn't return until `stop()` is called or a fatal
+     * exception is thrown.
      */
     void operator()() const;
+
+    /**
+     * Stops the server.
+     */
+    void stop();
 };
 
 #endif // `#ifdef __cplusplus`

@@ -52,6 +52,16 @@ VcEndPoint* vcEndPoint_new(
         const char* portId);
 
 /**
+ * Returns a string representation of a virtual-circuit endpoint.
+ * @param[in] vcEnd   Virtual-circuit endpoint
+ * @retval    NULL    Failure. `log_add()` called.
+ * @return            String representation. Caller should free when it's no
+ *                    longer needed.
+ * @threadsafety      Safe
+ */
+char* vcEndPoint_format(const VcEndPoint* vcEnd);
+
+/**
  * Destroys a virtual-circuit endpoint.
  * @param[in] end  Virtual-circuit endpoint to be destroyed.
  */

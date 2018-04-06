@@ -25,6 +25,7 @@
 #include "prod_index_map.h"
 #include "timestamp.h"
 #include "UpMcastMgr.h"
+#include "VirtualCircuit.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -65,6 +66,7 @@ typedef struct {
 typedef struct {
     Down7*                down7;
     pthread_t             thread;
+    Ldm7Status            status;
 } Receiver;
 
 /*
@@ -78,8 +80,11 @@ typedef struct {
 #define                  NUM_TIMES 1
 // Duration, in nanoseconds, between data-product insertions
 #define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
-// Mean residence-time, in seconds, of a data-product
-#define                  MEAN_RESIDENCE_TIME 100
+/*
+ * Mean residence-time, in seconds, of a data-product. Also used to compute the
+ * FMTP retransmission timeout.
+ */
+#define                  MEAN_RESIDENCE_TIME 2
 
 // Mean product size in bytes
 #define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
@@ -99,7 +104,9 @@ static const unsigned    PQ_PROD_CAPACITY = MEAN_NUM_PRODS;
 // Number of data-products to insert
 static const unsigned    NUM_PRODS = NUM_TIMES*MEAN_NUM_PRODS;
 static const char        LOCAL_HOST[] = "127.0.0.1";
+#if USE_SIGWAIT
 static sigset_t          termSigSet;
+#endif
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
 static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
 static McastProdIndex    initialProdIndex;
@@ -109,7 +116,6 @@ static pthread_t         requesterThread;
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
 static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
-static const unsigned short FMTP_UCAST_PORT = 1234; // From Wireshark plug-in
 
 /*
  * The following functions (until otherwise noted) are only called once.
@@ -159,17 +165,17 @@ static void signal_handler(
 {
     switch (sig) {
     case SIGUSR1:
-        log_debug("SIGUSR1");
+        log_notice("SIGUSR1");
         log_refresh();
         return;
     case SIGINT:
-        log_debug("SIGINT");
+        log_notice("SIGINT");
         return;
     case SIGTERM:
-        log_debug("SIGTERM");
+        log_notice("SIGTERM");
         return;
     default:
-        log_debug("Signal %d", sig);
+        log_notice("Signal %d", sig);
         return;
     }
 }
@@ -178,18 +184,20 @@ static int
 setTermSigHandler(void)
 {
     struct sigaction sigact;
-
-    (void)sigemptyset(&sigact.sa_mask);
-    sigact.sa_handler = signal_handler;
-
-    sigact.sa_flags = SA_RESTART;
-    (void)sigaction(SIGUSR1, &sigact, NULL );
-
-    sigact.sa_flags = 0;
-    (void)sigaction(SIGINT, &sigact, NULL );
-    (void)sigaction(SIGTERM, &sigact, NULL );
-
-    return 0;
+    int              status = sigemptyset(&sigact.sa_mask);
+    if (status == 0) {
+        sigact.sa_flags = 0;
+        sigact.sa_handler = signal_handler;
+        status = sigaction(SIGINT, &sigact, NULL);
+        if (status == 0) {
+            status = sigaction(SIGTERM, &sigact, NULL);
+            if (status == 0) {
+                sigact.sa_flags = SA_RESTART;
+                status = sigaction(SIGUSR1, &sigact, NULL);
+            }
+        }
+    }
+    return status;
 }
 
 /**
@@ -216,16 +224,18 @@ setup(void)
     else {
         msm_clear();
 
-        (void)sigemptyset(&termSigSet);
-        (void)sigaddset(&termSigSet, SIGINT);
-        (void)sigaddset(&termSigSet, SIGTERM);
         /*
          * The following allows a SIGTERM to be sent to the process group
-         * without affecting the parent process (e.g., a make(1)).
-         */
+         * without affecting the parent process (e.g., a make(1)). Unfortunately,
+         * it also prevents a `SIGINT` from terminating the process.
         (void)setpgrp();
+         */
 
-        #if !USE_SIGWAIT
+        #if USE_SIGWAIT
+            (void)sigemptyset(&termSigSet);
+            (void)sigaddset(&termSigSet, SIGINT);
+            (void)sigaddset(&termSigSet, SIGTERM);
+        #else
             status = initCondAndMutex();
         #endif
 
@@ -462,7 +472,7 @@ up7_init(
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(xprt, NULL);
 
     /*
-     * Set the remote address of the RPC server-side transport because
+     * Set the remote address in the RPC server-side transport because
      * `svcfd_create()` doesn't.
      */
     {
@@ -491,7 +501,7 @@ funcCancelled(
         void* const arg)
 {
     const char* funcName = (const char*)arg;
-    log_debug("funcCancelled(): %s() thread cancelled", funcName);
+    log_notice("%s() thread cancelled", funcName);
 }
 
 /**
@@ -508,8 +518,10 @@ static int
 up7_run(
         Up7* const up7)
 {
-    const int     sock = up7->xprt->xp_sock;
-    int           status;
+    int                status;
+    const int          sock = up7->xprt->xp_sock;
+    char*              downAddrStr = ipv4Sock_getPeerString(sock);
+    CU_ASSERT_PTR_NOT_NULL(downAddrStr);
 
     struct pollfd fds;
     fds.fd = sock;
@@ -543,17 +555,12 @@ up7_run(
             svc_getreqsock(sock); // calls `ldmprog_7()`
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
-            log_notice("Connection closed by RPC layer");
+            log_notice("Connection with %s closed by RPC layer", downAddrStr);
             // `svc_destroy(up7->xprt)` was called by RPC layer.
             up7->xprt = NULL; // so others don't try to destroy it
             status = 0;
             break;
         }
-    }
-
-    if (up7->xprt) {
-        svc_destroy(up7->xprt);
-        up7->xprt = NULL; // so others don't try to destroy it
     }
 
     /*
@@ -563,6 +570,7 @@ up7_run(
     (void)pthread_setcancelstate(cancelState, &cancelState);
 
     pthread_cleanup_pop(0);
+    free(downAddrStr);
 
     log_debug("up7_run(): Returning %d", status);
     return status;
@@ -574,7 +582,7 @@ up7_destroy(
 {
     svc_unregister(LDMPROG, 7);
     if (up7->xprt)
-        svc_destroy(up7->xprt);
+        svc_destroy(up7->xprt); // Closes socket
     up7->xprt = NULL;
 }
 
@@ -606,19 +614,14 @@ servlet_run(
 
     CU_ASSERT_NOT_EQUAL_FATAL(sock, -1);
 
-    pthread_cleanup_push(closeSocket, &sock);
-
     Up7 up7;
     status = up7_init(&up7, sock);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    pthread_cleanup_push(destroyUp7, &up7); // calls `up7_destroy()`
-
-    status = up7_run(&up7); // will call `svc_destroy(up7->xprt)`
-    CU_ASSERT(status == 0 || status == EINTR);
-
-    pthread_cleanup_pop(1); // might call `svc_destroy(up7->xprt)`
-    pthread_cleanup_pop(0); // `sock` already closed
+    pthread_cleanup_push(destroyUp7, &up7); {
+        status = up7_run(&up7);
+        CU_ASSERT(status == 0 || status == EINTR);
+    } pthread_cleanup_pop(1); // Calls `svc_destroy(up7->xprt)`; closes `sock`
 
     log_debug("servlet_run(): Returning");
     return 0;
@@ -651,6 +654,10 @@ sender_run(
     struct pollfd fds;
     fds.fd = servSock;
     fds.events = POLLIN;
+
+    char* upAddr = ipv4Sock_getLocalString(servSock);
+    log_info("Upstream LDM listening on %s", upAddr);
+    free(upAddr);
 
     for (;;) {
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
@@ -787,8 +794,6 @@ sender_insertProducts(void)
                                (unsigned short)1029384756};
     struct timespec duration;
 
-    duration.tv_sec = 0;
-    duration.tv_nsec = INTER_PRODUCT_INTERVAL;
     info->feedtype = EXP;
     info->ident = ident;
     info->origin = "localhost";
@@ -801,6 +806,7 @@ sender_insertProducts(void)
         CU_ASSERT_TRUE_FATAL(nbytes >= 0 && nbytes < sizeof(ident));
         status = set_timestamp(&info->arrival);
         CU_ASSERT_EQUAL_FATAL(status, 0);
+        // Signature == sequence number
         info->seqno = i;
         uint32_t signet = htonl(i); // decoded in `requester_decide()`
         (void)memcpy(info->signature+sizeof(signaturet)-sizeof(signet), &signet,
@@ -817,8 +823,10 @@ sender_insertProducts(void)
         log_info("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
-        status = nanosleep(&duration, NULL);
-        CU_ASSERT_FATAL(status == 0 || errno == EINTR);
+        duration.tv_sec = 0;
+        duration.tv_nsec = INTER_PRODUCT_INTERVAL;
+        while (nanosleep(&duration, &duration))
+            ;
     }
 
     free(data);
@@ -838,7 +846,7 @@ setMcastInfo(
     else {
         ServiceAddr* ucastServAddr;
 
-        status = sa_new(&ucastServAddr, LOCAL_HOST, FMTP_UCAST_PORT);
+        status = sa_new(&ucastServAddr, LOCAL_HOST, 0); // O/S selects port
         if (status) {
             log_add("Couldn't create unicast service address object");
         }
@@ -871,7 +879,11 @@ sender_start(
                 UP7_PQ_PATHNAME);
     }
     else {
-        // Thread-safe because 2 threads: upstream LDM-7 & product insertion.
+        /*
+         * The product-queue must be thread-safe because there are 2 threads:
+         * - The upstream LDM7 server; and
+         * - The product-insertion thread.
+         */
         status = pq_open(getQueuePath(), PQ_THREADSAFE, &pq);
         if (status) {
             log_add("Couldn't open product-queue \"%s\"", getQueuePath());
@@ -898,6 +910,14 @@ sender_start(
                 }
                 else {
                     // Starts the sender on a new thread
+                    char* mcastInfoStr = mi_format(mcastInfo);
+                    char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
+                    log_notice("Starting up: pq=%s, mcastInfo=%s, "
+                            "vcEnd=%s, subnet=%s", getQueuePath(),
+                            mcastInfoStr, vcEndPoint_format(vcEnd),
+                            fmtpSubnetStr);
+                    free(fmtpSubnetStr);
+                    free(mcastInfoStr);
                     status = sender_spawn();
                     if (status) {
                         log_add("Couldn't spawn sender");
@@ -992,7 +1012,7 @@ terminateMcastSender(void)
  * @retval LDM7_INVAL  No multicast sender child process exists.
  */
 static int
-sender_terminate(void)
+sender_stop(void)
 {
     int retval = 0;
     int status;
@@ -1105,18 +1125,17 @@ requester_decide(
     log_debug("requester_decide(): Entered: info=\"%s\"",
             s_prod_info(infoStr, sizeof(infoStr), info, 1));
     static FmtpProdIndex maxProdIndex;
-    static bool           maxProdIndexSet = false;
+    static bool          maxProdIndexSet = false;
     FmtpProdIndex        prodIndex;
-    RequestArg* const     reqArg = (RequestArg*)arg;
+    RequestArg* const    reqArg = (RequestArg*)arg;
 
     /*
      * The monotonicity of the product-index is checked so that only the most
      * recently-created data-product is eligible for deletion.
+     *
+     * Product index == sequence number == signature
      */
-    (void)memcpy(&prodIndex,
-            info->signature + sizeof(signaturet) - sizeof(FmtpProdIndex),
-            sizeof(FmtpProdIndex));
-    prodIndex = ntohl(prodIndex); // encoded in `sender_insertProducts()`
+    prodIndex = info->seqno;
     if (maxProdIndexSet && prodIndex <= maxProdIndex) {
         reqArg->delete = false;
     }
@@ -1171,8 +1190,11 @@ requester_deleteAndRequest(
 }
 
 /**
- * Executes a requester, which deletes selected data-products from the downstream
- * product-queue and requests them from the upstream LDM.
+ * Executes a requester to test the "backstop" mechanism. Selected data-products
+ * are deleted from the downstream product-queue and then requested from the
+ * upstream LDM.
+ *
+ * Called by `pthread_create()`.
  *
  * @retval NULL  Always
  */
@@ -1222,8 +1244,9 @@ requester_start(
 }
 
 /**
- * Starts a requester, which deletes selected data-products from the downstream
- * product-queue and requests them from the upstream LDM.
+ * Starts a data-product requester thread to test the "backstop" mechanism.
+ * Selected data-products are deleted from the downstream product-queue and then
+ * requested from the upstream LDM.
  *
  * @return pthread_create() return value
  */
@@ -1250,33 +1273,22 @@ requester_destroy(void)
 }
 
 /**
- * Starts a receiver on the current thread. Called by `pthread_create()`.
+ * Runs a receiver on the current thread. Called by `pthread_create()`.
  *
- * @param[in] arg  Pointer to receiver object.
- * @retval    &0   Success.
+ * @param[in] arg   Pointer to receiver object
+ * @return    NULL  Always
  */
 static void*
-receiver_start(
+receiver_run(
         void* const arg)
 {
     Receiver* const receiver = (Receiver*)arg;
-    static int      status;
-
-    status = down7_start(receiver->down7);
-    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
-
-    // setDoneCondition();
-
+    receiver->status = down7_start(receiver->down7);
     // Because at end of thread:
-    if (done) {
-        log_clear();
-    }
-    else {
-        log_flush_error();
-    }
+    log_log(receiver->status == LDM7_OK ? LOG_LEVEL_NOTICE : LOG_LEVEL_ERROR,
+            "Receiver terminated");
     log_free();
-
-    return &status;
+    return NULL;
 }
 
 /**
@@ -1324,6 +1336,8 @@ receiver_init(
         if (status) {
             log_add("Couldn't initialize requester");
         }
+
+        receiver.status = LDM7_OK;
     }
 
     return status;
@@ -1364,7 +1378,7 @@ receiver_destroy(void)
  * @retval 0   Success.
  */
 static int
-receiver_spawn(
+receiver_start(
         const char* const restrict addr,
         const unsigned short       port,
         const feedtypet            feedtype)
@@ -1374,12 +1388,39 @@ receiver_spawn(
         log_add("Couldn't initialize receiver");
     }
     else {
-        status = pthread_create(&receiver.thread, NULL, receiver_start,
+        status = pthread_create(&receiver.thread, NULL, receiver_run,
                 &receiver);
         CU_ASSERT_EQUAL_FATAL(status, 0);
     }
 
     return status;
+}
+
+/**
+ * Stops the receiver.
+ *
+ * @retval        LDM7_LOGIC     No prior call to `receiver_start()`.
+ *                               `log_add()` called.
+ * @retval        LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ * @retval        LDM7_SHUTDOWN  Shutdown requested
+ * @retval        LDM7_SYSTEM    System error. `log_add()` called.
+ */
+static int
+receiver_stop(void)
+{
+    log_debug("Calling down7_stop()");
+    int status = down7_stop(receiver.down7);
+    CU_ASSERT_EQUAL(status, 0);
+
+    log_debug("Joining receiver thread");
+    status = pthread_join(receiver.thread, NULL);
+    CU_ASSERT_EQUAL(status, 0);
+    log_flush_error();
+
+    receiver_destroy();
+    log_flush_error();
+
+    return receiver.status;
 }
 
 static void
@@ -1419,34 +1460,6 @@ static long receiver_getPqeCount(
     return down7_getPqeCount(receiver->down7);
 }
 
-/**
- * Terminates the receiver by stopping it and destroying its resources.
- *
- * @retval    0       Success.
- */
-static int
-receiver_terminate(void)
-{
-    log_debug("Calling down7_stop()");
-    int status = down7_stop(receiver.down7);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    void* statusPtr;
-    log_debug("Joining receiver thread");
-    status = pthread_join(receiver.thread, &statusPtr);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(statusPtr);
-    CU_ASSERT_NOT_EQUAL_FATAL(statusPtr, PTHREAD_CANCELED);
-    status = *(int*)statusPtr;
-    CU_ASSERT_EQUAL(status, LDM7_SHUTDOWN);
-    log_flush_error();
-
-    receiver_destroy();
-    log_flush_error();
-
-    return 0;
-}
-
 static void
 test_up7(
         void)
@@ -1458,7 +1471,7 @@ test_up7(
     sleep(1);
     done = 1;
 
-    status = sender_terminate();
+    status = sender_stop();
     CU_ASSERT_EQUAL(status, LDM7_INVAL);
     log_clear();
 }
@@ -1472,8 +1485,7 @@ test_down7(
     done = 0;
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(LOCAL_HOST, FMTP_MCAST_PORT, ANY);
-    log_flush_error();
+    status = receiver_start(LOCAL_HOST, FMTP_MCAST_PORT, ANY);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
 #if 1
@@ -1483,9 +1495,8 @@ test_down7(
     waitUntilDone();
 #endif
 
-    status = receiver_terminate();
-    log_flush_error();
-    CU_ASSERT_EQUAL(status, 0);
+    status = receiver_stop();
+    CU_ASSERT_EQUAL(status, LDM7_REFUSED);
 }
 
 static void
@@ -1506,15 +1517,16 @@ test_bad_subscription(
 
     receiver_destroy();
 #else
-    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
+    status = receiver_start(sender_getAddr(&sender), sender_getPort(&sender),
             NGRID);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     sleep(1);
-    receiver_terminate();
+    status = receiver_stop();
 #endif
+    CU_ASSERT_EQUAL(status, LDM7_UNAUTH);
 
     log_debug("Terminating sender");
-    status = sender_terminate();
+    status = sender_stop();
     CU_ASSERT_EQUAL(status, LDM7_INVAL);
     log_clear();
 }
@@ -1523,10 +1535,25 @@ static void
 test_up7_down7(
         void)
 {
+    int status;
+
+    // Block pq-used `SIGALRM` and `SIGCONT` to prevent `sleep()` returning
+    struct sigaction sigAction, prevSigAction;
+    sigset_t         sigMask, prevSigMask;
+    sigemptyset(&sigMask);
+    sigaddset(&sigMask, SIGALRM);
+    sigaddset(&sigMask, SIGCONT); // No effect if all threads block
+    status = pthread_sigmask(SIG_BLOCK, &sigMask, &prevSigMask);
+    CU_ASSERT_EQUAL(status, 0);
+    /*
     sigset_t oldSigSet;
     blockSigCont(&oldSigSet);
+    */
 
-    int status = sender_start(ANY); // Doesn't block
+    const float retxTimeout = (MEAN_RESIDENCE_TIME/2.0) / 60.0;
+    umm_setRetxTimeout(retxTimeout);
+
+    status = sender_start(ANY); // Doesn't block
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1536,14 +1563,14 @@ test_up7_down7(
     CU_ASSERT_PTR_NULL_FATAL(errObj);
 
     /* Starts a receiver on a new thread */
-    status = receiver_spawn(sender_getAddr(&sender), sender_getPort(&sender),
+    status = receiver_start(sender_getAddr(&sender), sender_getPort(&sender),
             ANY);
     log_flush_error();
     CU_ASSERT_EQUAL(status, 0);
 
     (void)sleep(2);
 
-    //sender_insertProducts();
+    sender_insertProducts();
 
 #if 0
     (void)sleep(1);
@@ -1572,20 +1599,29 @@ test_up7_down7(
         log_flush_error();
         CU_ASSERT_EQUAL_FATAL(status, 0);
     #else
-        (void)sleep(1);
+        unsigned remaining;
+        #if 1
+            remaining = sleep(2);
+        #else
+            remaining = sleep(UINT_MAX);
+        #endif
+        CU_ASSERT_EQUAL_FATAL(remaining, 0);
     #endif
 
-    log_debug("Terminating receiver");
-    status = receiver_terminate();
-    log_flush_error();
+    log_debug("Stopping receiver");
+    status = receiver_stop();
+    CU_ASSERT_EQUAL(status, LDM7_OK);
+
+    log_debug("Stopping sender");
+    status = sender_stop();
     CU_ASSERT_EQUAL(status, 0);
 
-    log_debug("Terminating sender");
-    status = sender_terminate();
-    log_flush_error();
-    CU_ASSERT_EQUAL(status, 0);
-
+    /*
     status = pthread_sigmask(SIG_SETMASK, &oldSigSet, NULL);
+    CU_ASSERT_EQUAL(status, 0);
+    */
+
+    status = pthread_sigmask(SIG_SETMASK, &prevSigMask, NULL);
     CU_ASSERT_EQUAL(status, 0);
 }
 
@@ -1596,6 +1632,7 @@ int main(
     int status = 1;
 
     (void)log_init(argv[0]);
+    log_set_level(LOG_LEVEL_INFO);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

@@ -46,7 +46,7 @@ void mcastReceiver_stop(
     McastReceiver* const        receiver);
 
 /**
- * Creates an active multicast sender.
+ * Creates an active multicast sender. Doesn't block.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `mcastSender_terminate(*sender)` when it's no
@@ -75,11 +75,10 @@ void mcastReceiver_stop(
  *                                 <255  Unrestricted in scope. Global.
  * @param[in]     iProd         Initial product-index. The first multicast data-
  *                              product will have this as its index.
- * @param[in]     timeoutFactor Ratio of the duration that a data-product will
- *                              be held by the FMTP layer before being released
- *                              after being multicast to the duration to
- *                              multicast the product. If negative, then the
- *                              default timeout factor is used.
+ * @param[in]     retxTimeout   FMTP retransmission timeout in minutes. Duration
+ *                              that a product will be held by the FMTP layer
+ *                              before being released. If negative, then the
+ *                              default timeout is used.
  * @param[in]     doneWithProd  Function to call when the FMTP layer is done
  *                              with a data-product so that its resources may be
  *                              released.
@@ -100,7 +99,7 @@ mcastSender_create(
     const char* const      ifaceAddr,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
-    const float            timeoutFactor,
+    const float            retxTimeout,
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer);
 

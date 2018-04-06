@@ -204,11 +204,11 @@ public:
             const size_t nbytes)
     {
         const auto status = ::recv(sd, buf, nbytes, MSG_WAITALL);
-        if (status == 0 || status == nbytes)
-            return status;
-        throw std::system_error(errno, std::system_category(),
-                "Couldn't receive " + std::to_string(nbytes) + " bytes from "
-                " remote address " + remoteAddrStr());
+        if (status == -1)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't receive " + std::to_string(nbytes) +
+                    " bytes from remote address " + remoteAddrStr());
+        return status < nbytes ? 0 : status;
     }
 
     /**
@@ -245,6 +245,20 @@ public:
     {
         return std::string{"{localAddr="} + localAddrStr() +
                 ", remoteAddr=" + remoteAddrStr() + "}";
+    }
+
+    /**
+     * Closes the connection.
+     * @throw std::system_error  Socket couldn't be closed
+     * @exceptionsafety          Strong guarantee
+     * @threadsafety             Safe
+     */
+    void close()
+    {
+        auto status = ::close(sd);
+        if (status == -1)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't close socket " + std::to_string(sd));
     }
 };
 
@@ -309,6 +323,11 @@ size_t TcpSock::readv(
 std::string TcpSock::to_string() const
 {
     return pImpl->toString();
+}
+
+void TcpSock::close()
+{
+    return pImpl->close();
 }
 
 /******************************************************************************

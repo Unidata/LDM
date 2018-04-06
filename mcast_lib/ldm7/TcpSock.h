@@ -129,6 +129,14 @@ public:
      * @threadsafety             Safe
      */
     std::string to_string() const;
+
+    /**
+     * Closes the connection.
+     * @throw std::system_error  Socket couldn't be closed
+     * @exceptionsafety          Strong
+     * @threadsafety             Safe
+     */
+    void close();
 };
 
 /**

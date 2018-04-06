@@ -286,8 +286,15 @@ readtcp(
 			return (-1);
 
 		case -1:
+		        /*
+		         * The following is commented-out because 1) it prevents
+		         * a program from using signals to terminate a thread;
+		         * and 2) alternatives exist (e.g., using `sigaction(2)`
+		         * with `SA_RESTART`).
+		         * Steven Emmerson 2018-03-26
 			if (errno == EINTR)
 				continue;
+		         */
 			ct->ct_error.re_status = RPC_CANTRECV;
 			ct->ct_error.re_errno = errno;
 			return (-1);

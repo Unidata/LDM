@@ -93,6 +93,23 @@ host_err_str(void)
     return msgstr;
 }
 
+char*
+ipv4Sock_getLocalString(const int sock)
+{
+    struct sockaddr_in addr;
+    socklen_t          sockAddrLen = sizeof(addr);
+    int                status = getsockname(sock, &addr, &sockAddrLen);
+    return sockAddrIn_format(&addr);
+}
+
+char*
+ipv4Sock_getPeerString(const int sock)
+{
+    struct sockaddr_in addr;
+    socklen_t          sockAddrLen = sizeof(addr);
+    int                status = getpeername(sock, &addr, &sockAddrLen);
+    return sockAddrIn_format(&addr);
+}
 
 /**
  * Returns the name of the local host. Checks the registry first. Tries to make
@@ -160,8 +177,21 @@ void sockAddrIn_getHostId(
             NULL, 0, 0)) {
         log_add_syserr("Couldn't resolve IP address %s to a hostname",
                 inet_ntop(AF_INET, &sockAddr->sin_addr, id, size));
-        log_flush_notice();
+        log_flush_info();
     }
+}
+
+char* sockAddrIn_format(const struct sockaddr_in* const sockAddr)
+{
+    // <hostname> + ":" + <port> + NUL
+    const size_t bufSize = _POSIX_HOST_NAME_MAX+1+5+1;
+    char* buf = log_malloc(bufSize, "IPV4 socket address");
+    if (buf) {
+        sockAddrIn_getHostId(sockAddr, buf, bufSize);
+        const size_t used = strlen(buf);
+        snprintf(buf+used, bufSize-used, ":%u", ntohs(sockAddr->sin_port));
+    }
+    return buf;
 }
 
 /**
@@ -1184,7 +1214,7 @@ mcastRecvSock_init(
  *                      `sa_free(*serviceAddr)` when it's no longer needed.
  * @param[in]  addr     Identifier of the service. May be a name or formatted IP
  *                      address. Client may free upon return.
- * @param[in]  port     Port number of the service. Must be non-negative.
+ * @param[in]  port     Port number of the service. `0` means O/S will select.
  * @retval     0        Success. `*svcAddr` is set.
  * @retval     EINVAL   Invalid Internet address or port number. `log_add()`
  *                      called.
@@ -1198,8 +1228,8 @@ sa_new(
 {
     int status;
 
-    if (NULL == addr || 0 > port) {
-        log_add("Invalid Internet ID or port number");
+    if (NULL == addr) {
+        log_add("NULL internet ID");
         status = EINVAL;
     }
     else {

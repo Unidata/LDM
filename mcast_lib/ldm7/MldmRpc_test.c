@@ -59,15 +59,16 @@ static void* runServer(void* mldmSrvr)
 
 static void test_reserveAndRelease(void)
 {
+    int status;
+
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
     CidrAddr* subnet = cidrAddr_new(networkPrefix, 16);
     void* inAddrPool = inAddrPool_new(subnet);
     void* mldmSrvr = mldmSrvr_new(inAddrPool);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
-    pthread_t thread;
-    pthread_create(&thread, NULL, runServer, mldmSrvr);
-    pthread_detach(thread);
+    pthread_t mldmSrvrThread;
+    pthread_create(&mldmSrvrThread, NULL, runServer, mldmSrvr);
 
     void* mldmClnt = mldmClnt_new(port);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmClnt);
@@ -79,6 +80,11 @@ static void test_reserveAndRelease(void)
     CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
 
     mldmClnt_delete(mldmClnt);
+    status = mldmSrvr_stop(mldmSrvr);
+    CU_ASSERT_EQUAL(status, 0);
+    void* ptr;
+    status = pthread_join(mldmSrvrThread, &ptr);
+    CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_delete(mldmSrvr);
     inAddrPool_delete(inAddrPool);
     cidrAddr_delete(subnet);
@@ -86,6 +92,8 @@ static void test_reserveAndRelease(void)
 
 static void test_releaseUnreserved(void)
 {
+    int status;
+
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
     CidrAddr* subnet = cidrAddr_new(networkPrefix, 16);
@@ -102,11 +110,12 @@ static void test_releaseUnreserved(void)
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), LDM7_NOENT);
     log_notice("");
 
-    pthread_cancel(thread);
-    void* retval;
-    pthread_join(thread, &retval);
-
     mldmClnt_delete(mldmClnt);
+    status = mldmSrvr_stop(mldmSrvr);
+    CU_ASSERT_EQUAL(status, 0);
+    void* ptr;
+    status = pthread_join(thread, &ptr);
+    CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_delete(mldmSrvr);
     inAddrPool_delete(inAddrPool);
     cidrAddr_delete(subnet);
@@ -141,5 +150,6 @@ int main(
         }
     }
 
+    log_fini();
     return exitCode;
 }

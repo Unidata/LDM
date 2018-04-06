@@ -129,5 +129,6 @@ int main(
         }
     }
 
+    log_fini();
     return exitCode;
 }

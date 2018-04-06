@@ -1,5 +1,5 @@
 /*
- *   Copyright 2015, University Corporation for Atmospheric Research
+ *   Copyright 2018, University Corporation for Atmospheric Research
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -359,6 +359,20 @@ sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype)
         return -1;
 
     return ft_format(feedtype, buf, bufsize);
+}
+
+char*
+feedtypet_format(feedtypet feed)
+{
+    size_t bufSize = FDTT_SBUF_SIZE + 1;
+    char*  buf = malloc(bufSize);
+    int    nbytes = ft_format(feed, buf, sizeof(buf));
+    if (nbytes >= bufSize) {
+        log_syserr("Couldn't format binary feed specification");
+        free(buf);
+        buf = NULL;
+    }
+    return buf;
 }
 
 /**

@@ -310,11 +310,15 @@ class MldmSrvr::Impl final
 {
 
     /// Pool of available IP addresses
-    InAddrPool   inAddrPool;
+    InAddrPool                     inAddrPool;
     /// Server's listening socket
-    SrvrTcpSock  srvrSock;
+    SrvrTcpSock                    srvrSock;
     /// Authentication secret
-    uint64_t     secret;
+    uint64_t                       secret;
+    typedef std::mutex             Mutex;
+    typedef std::lock_guard<Mutex> Lock;
+    mutable Mutex                  mutex;
+    bool                           stopRequested;
 
     /**
      * Creates the secret that's shared between the multicast LDM RPC server and
@@ -437,6 +441,17 @@ class MldmSrvr::Impl final
         }
     }
 
+    /**
+     * Indicates if `stop()` has been called.
+     * @return `true`  Iff `stop()` has been called
+     * @see            `stop()`
+     */
+    bool done() const
+    {
+        Lock lock{mutex};
+        return stopRequested;
+    }
+
 public:
     /**
      * Constructs. Creates a listening server-socket and a file that contains a
@@ -447,6 +462,8 @@ public:
         : inAddrPool{inAddrPool}
         , srvrSock{InetSockAddr{InetAddr{"127.0.0.1"}}, 32}
         , secret{initSecret(srvrSock.getPort())}
+        , mutex{}
+        , stopRequested{false}
     {}
 
     /**
@@ -463,13 +480,13 @@ public:
      */
     void operator()()
     {
-        for (;;) {
+        while (!done()) {
             try {
                 // Performs authentication/authorization
                 auto connSock = accept();
                 try {
                     for (auto action = getAction(connSock);
-                            action != CLOSE_CONNECTION;
+                            !done() && action != CLOSE_CONNECTION;
                             action = getAction(connSock)) {
                         switch (action) {
                         case RESERVE_ADDR:
@@ -501,6 +518,13 @@ public:
         } // Individual client session
     }
 
+    void stop()
+    {
+        Lock lock{mutex};
+        stopRequested = true;
+        srvrSock.close();
+    }
+
     /**
      * Returns the port number of the server.
      * @return Port number of server in host byte-order
@@ -526,6 +550,11 @@ void MldmSrvr::operator ()() const
     pImpl->operator()();
 }
 
+void MldmSrvr::stop()
+{
+    pImpl->stop();
+}
+
 void* mldmSrvr_new(void* inAddrPool)
 {
     return new MldmSrvr(*static_cast<InAddrPool*>(inAddrPool));
@@ -543,8 +572,21 @@ Ldm7Status mldmSrvr_run(void* mldmSrvr)
     }
     catch (const std::exception& ex) {
         log_add(ex.what());
+        return LDM7_SYSTEM;
     }
-    return LDM7_SYSTEM;
+    return LDM7_OK;
+}
+
+Ldm7Status mldmSrvr_stop(void* mldmSrvr)
+{
+    try {
+        static_cast<MldmSrvr*>(mldmSrvr)->stop();
+    }
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        return LDM7_SYSTEM;
+    }
+    return LDM7_OK;
 }
 
 void mldmSrvr_delete(void* mldmSrvr)

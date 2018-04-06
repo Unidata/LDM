@@ -712,8 +712,8 @@ up7_sendBacklog(
  */
 SubscriptionReply*
 subscribe_7_svc(
-        McastSubReq* const restrict request,
-        struct svc_req* const restrict      rqstp)
+        McastSubReq* const restrict    request,
+        struct svc_req* const restrict rqstp)
 {
     log_debug("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
@@ -723,8 +723,8 @@ subscribe_7_svc(
     const char*               hostname = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(request->feed);
 
-    log_notice("Incoming subscription from %s (%s) port %u for %s", ipv4spec,
-            hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
+    log_notice("Incoming subscription request from %s[%s]:%u for feed %s",
+            ipv4spec, hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
     reply = NULL;
 

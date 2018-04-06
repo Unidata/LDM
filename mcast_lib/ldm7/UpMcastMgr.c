@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /**
@@ -75,118 +76,79 @@ allowSigs(void)
  * Multicast LDM process:
  ******************************************************************************/
 
-static volatile pid_t childPid;
-static feedtypet      feed;
+/// Feed being multicast
+static feedtypet feed;
+/// Pid of multicast LDM sender child process
+static pid_t     childPid;
+/// Port number of FMTP server in multicast LDM sender process
+static in_port_t fmtpSrvrPort;
+/// Port number of RPC command server in multicast LDM sender process
+static in_port_t mldmCmdPort;
 
 static void
-mldm_killChild(void)
+mldm_reset(void)
 {
-    if (childPid) {
-        (void)kill(childPid, SIGTERM);
-        childPid = 0;
-        feed = NONE;
-    }
-}
-
-static int
-mldm_ensureCleanup(const pid_t pid)
-{
-    if (childPid)
-        return 0;
-
-    int status = atexit(mldm_killChild);
-    if (status) {
-        log_add_syserr("Couldn't register cleanup routine");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        childPid = pid;
-    }
-    return status;
-}
-
-/**
- * Indicates if a particular multicast LDM sender is running.
- *
- * @pre                      Multicast LDM sender PID map is locked for writing.
- * @param[in]  feedtype      Feed-type of multicast group.
- * @param[out] port          Port number of the FMTP TCP server.
- * @param[out] mldmSrvrPort  Port number of multicast LDM RPC server
- * @retval     0             The multicast LDM sender associated with the given
- *                           multicast group is running. `*pid` and `*port` are
- *                           set.
- * @retval     LDM7_NOENT    No such process.
- * @retval     LDM7_SYSTEM   System error. `log_add()` called.
- */
-static Ldm7Status
-mldm_isRunning(
-        const feedtypet                feedtype,
-        unsigned short* const restrict port,
-        unsigned short* const restrict mldmSrvrPort)
-{
-    pid_t          msmPid;
-    unsigned short msmPort;
-    unsigned short msmMldmSrvrPort;
-    int   status = msm_get(feedtype, &msmPid, &msmPort, &msmMldmSrvrPort);
-
-    if (status == 0) {
-        if (kill(msmPid, 0) == 0) {
-            /* Can signal the process */
-            *port = msmPort;
-            *mldmSrvrPort = msmMldmSrvrPort;
-        }
-        else {
-            /* Can't signal the process */
-            log_warning("According to my information, the PID of the multicast LDM "
-                    "sender associated with feed-type %s is %d -- but that "
-                    "process can't be signaled by this process. I'll assume "
-                    "the relevant multicast LDM sender is not running.",
-                    s_feedtypet(feedtype), msmPid);
-            (void)msm_remove(msmPid);   // don't care if it exists or not
-            status = LDM7_NOENT;
-        }
-    }
-
-    return status;
+    childPid = 0;
+    fmtpSrvrPort = 0;
+    mldmCmdPort = 0;
 }
 
 /**
  * Gets the port number of the multicast FMTP TCP server and the multicast LDM
  * RPC server from a multicast LDM sender process that writes them to a pipe.
+ * Doesn't close the pipe.
  *
  * @param[in]  pipe          Pipe for reading from the multicast LDM sender
  *                           process
- * @param[out] fmtpSrvrPort  Port number of FMTP TCP server in host byte-order
- * @param[out] mldmSrvrPort  Port number of multicast LDM RPC server in host
- *                           byte-order
- * @retval     0             Success. `*fmtpSrvrPort` and `*mldmSrvrPort` are
- *                           set
+ * @retval     0             Success. `fmtpSrvrPort` and `mldmCmdPort` are set.
  * @retval     LDM7_SYSTEM   System failure. `log_add()` called.
  * @retval     LDM7_LOGIC    Logic failure. `log_add()` called.
  */
 static Ldm7Status
-mldm_getServerPorts(
-    const int                      pipe,
-    unsigned short* const restrict fmtpSrvrPort,
-    unsigned short* const restrict mldmSrvrPort)
+mldm_getServerPorts(const int pipe)
 {
-    int   status;
-    FILE* stream = fdopen(pipe, "r");
+    int     status;
+#if 1
+    char    buf[100];
+    ssize_t nbytes = read(pipe, buf, sizeof(buf));
+    if (nbytes == -1) {
+        log_add_syserr("Couldn't read from pipe to multicast FMTP process");
+        status = LDM7_SYSTEM;
+    }
+    else if (nbytes == 0) {
+        log_add("Couldn't read from pipe to multicast FMTP process due to EOF");
+        status = LDM7_LOGIC;
+    }
+    else {
+        buf[sizeof(buf)-1] = 0;
+        if (sscanf(buf, "%hu %hu ", &fmtpSrvrPort, &mldmCmdPort) != 2) {
+            log_add("Couldn't decode port numbers for multicast FMTP server "
+                    "and RPC server in \"%s\"", buf);
+            status = LDM7_LOGIC;
+        }
+        else {
+            log_debug("Port numbers read from pipe");
+            status = LDM7_OK;
+        }
+    }
+#else
+    FILE*   stream = fdopen(pipe, "r");
     if (stream == NULL) {
         log_add_syserr("Couldn't associate stream with pipe");
         status = LDM7_SYSTEM;
     }
     else {
-        if (fscanf(stream, "%hu %hu ", fmtpSrvrPort, mldmSrvrPort) != 2) {
-            log_add("Couldn't decode port numbers for multicast FMTP server "
-                    "and RPC server");
+        if (fscanf(stream, "%hu %hu ", &fmtpSrvrPort, &mldmCmdPort) != 2) {
+            log_add("Couldn't read port numbers for multicast FMTP server "
+                    "and RPC server from multicast LDM sender process");
             status = LDM7_LOGIC;
         }
         else {
+            log_debug("Port numbers read from pipe");
             status = LDM7_OK;
         }
-        fclose(stream);
     }
+#endif
     return status;
 }
 
@@ -210,16 +172,21 @@ mldm_getServerPorts(
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
  * @param[in] fmtpSubnet     Subnet for client FMTP TCP connections
+ * @param[in] retxTimeout    FMTP retransmission timeout in minutes. Duration
+ *                           that a product will be held by the FMTP layer
+ *                           before being released. If negative, then the
+ *                           default timeout is used.
  * @param[in] pqPathname     Pathname of product-queue. Caller may free.
- * @param[in] pipe           Pipe for writing to parent process.
+ * @param[in] pipe           Write end of pipe to parent process
  */
 static void
 mldm_exec(
     const McastInfo* const restrict info,
     const unsigned short            ttl,
     const CidrAddr* const restrict  fmtpSubnet,
+    const float                     retxTimeout,
     const char* const restrict      pqPathname,
-    const int const                 pipe)
+    const int                       pipe)
 {
     char* args[23]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
@@ -243,6 +210,7 @@ mldm_exec(
 
     char serverPortOptArg[6];
     if (info->server.port != 0) {
+        // O/S won't choose FMTP TCP server port number
         ssize_t nbytes = snprintf(serverPortOptArg, sizeof(serverPortOptArg),
                 "%hu", info->server.port);
         if (nbytes < 0 || nbytes >= sizeof(serverPortOptArg)) {
@@ -254,6 +222,18 @@ mldm_exec(
             args[i++] = "-p";
             args[i++] = serverPortOptArg;
         }
+    }
+
+    char* retxTimeoutOptArg = NULL;
+    if (retxTimeout >= 0) {
+        retxTimeoutOptArg = ldm_format(4, "%f", retxTimeout);
+        if (retxTimeoutOptArg == NULL) {
+            log_add("Couldn't create FMTP retransmission timeout "
+                    "option-argument");
+            goto failure;
+        }
+        args[i++] = "-r";
+        args[i++] = retxTimeoutOptArg;
     }
 
     args[i++] = "-q";
@@ -270,7 +250,7 @@ mldm_exec(
         if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
             log_add("Couldn't create time-to-live option-argument \"%hu\"",
                     ttl);
-            goto failure;
+            goto free_retxTimeoutOptArg;
         }
         args[i++] = "-t";
         args[i++] = ttlOptArg;
@@ -285,13 +265,13 @@ mldm_exec(
             info->group.port);
     if (mcastGroupOperand == NULL) {
         log_add("Couldn't create multicast-group operand");
-        goto failure;
+        goto free_retxTimeoutOptArg;
     }
     args[i++] = mcastGroupOperand;
 
     char* fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
     if (fmtpSubnetArg == NULL) {
-        goto fmtpNetFailure;
+        goto free_mcastGroupOperand;
     }
     else {
         args[i++] = fmtpSubnetArg;
@@ -299,153 +279,268 @@ mldm_exec(
 
     args[i++] = NULL;
 
+    if (dup2(pipe, STDOUT_FILENO) < 0) {
+        log_add("Couldn't redirect standard output stream to pipe");
+        goto free_fmtpSubnetArg;
+    }
+
     StrBuf* command = catenateArgs((const char**)args); // Safe cast
     log_notice("Executing multicast LDM sender: %s", sbString(command));
     sbFree(command);
 
-    (void)dup2(pipe, 1);
     execvp(args[0], args);
 
     log_add_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
             args[0], getenv("PATH"));
+free_fmtpSubnetArg:
     free(fmtpSubnetArg);
-fmtpNetFailure:
+free_mcastGroupOperand:
     free(mcastGroupOperand);
+free_retxTimeoutOptArg:
+    free(retxTimeoutOptArg);
 failure:
     return;
 }
 
 /**
- * Executes a multicast LDM sender as a child process. Doesn't block.
+ * Terminates the multicast LDM sender process and waits for it to terminate.
+ *
+ * Idempotent.
+ * @retval LDM7_OK      Success
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+static Ldm7Status
+mldm_terminateSenderAndWait()
+{
+    int status;
+    if (childPid == 0) {
+        status = LDM7_OK;
+    }
+    else {
+        int status = kill(childPid, SIGTERM);
+        if (status) {
+            log_add_syserr("Couldn't send SIGTERM to multicast LDM sender "
+                    "process %d", childPid);
+            status = LDM7_SYSTEM;
+        }
+        else {
+            int procStatus;
+            status = waitpid(childPid, &procStatus, 0);
+            if (status) {
+                log_add_syserr("Couldn't wait for multicast LDM sender process "
+                        "%d to terminate", childPid);
+                status = LDM7_SYSTEM;
+            }
+            else {
+                if (WIFEXITED(procStatus)) {
+                    log_notice("Multicast LDM sender process %d terminated "
+                            "normally with status %d", childPid,
+                            WEXITSTATUS(procStatus));
+                }
+                else if (WIFSIGNALED(procStatus)) {
+                    log_notice("Multicast LDM sender process %d terminated "
+                            "abnormally due to signal %d", childPid,
+                            WTERMSIG(procStatus));
+                }
+                mldm_reset();
+                status = LDM7_OK;
+            }
+        }
+    }
+    return status;
+}
+
+/**
+ * Handles a just-executed multicast LDM child process.
+ * @param[in] info          Multicast information
+ * @param[in] pid           Process identifier of child process.
+ * @param[in] fds           Pipe to child process
+ * @retval    0             Success
+ * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
+ * @retval    LDM7_LOGIC    Logic failure. `log_add()` called.
+ */
+static Ldm7Status
+mldm_handleExecedChild(
+        McastInfo* const restrict info,
+        const pid_t               pid,
+        const int* restrict       fds)
+{
+    int status;
+    childPid = pid;
+    (void)close(fds[1]);                // write end of pipe unneeded
+    // Sets `fmtpSrvrPort` and `mldmCmdPort`
+    status = mldm_getServerPorts(fds[0]);
+    (void)close(fds[0]);                // no longer needed
+    if (status) {
+        char* const id = mi_format(info);
+        log_add("Couldn't get port numbers from multicast LDM sender "
+                "%s. Terminating that process.", id);
+        free(id);
+        (void)mldm_terminateSenderAndWait(); // Uses `childPid`
+    }
+    else {
+        status = msm_put(info->feed, pid, fmtpSrvrPort, mldmCmdPort);
+        if (status) {
+            // preconditions => LDM7_DUP can't be returned
+            char* const id = mi_format(info);
+            log_add("Couldn't save information on multicast LDM sender "
+                    "%s. Terminating that process.", id);
+            free(id);
+            (void)mldm_terminateSenderAndWait(); // Uses `childPid`
+        } // Information saved in multicast sender map
+    } // FMTP server port and mldm_sender command port set
+    if (status)
+        childPid = 0;
+}
+
+/**
+ * Executes a multicast LDM sender as a child process. Doesn't block. Sets
+ * `childPid`, `fmtpSrvrPort` and `mldmCmdPort`.
  *
  * @param[in,out] info           Information on the multicast group.
- * @param[out]    mldmSrvrPort   Port number of the multicast LDM RPC server
  * @param[in]     ttl            Time-to-live of multicast packets.
  * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
+ * @param[in]     retxTimeout    FMTP retransmission timeout in minutes.
+ *                               Duration that a product will be held by the
+ *                               FMTP layer before being released. If negative,
+ *                               then the default timeout is used.
  * @param[in]     pqPathname     Pathname of product-queue. Caller may free.
- * @param[out]    pid            Process ID of the multicast LDM sender.
- * @retval        0              Success. `*pid` and `info->server.port` are
- *                               set.
+ * @retval        0              Success. `childPid`, `fmtpSrvrPort`, and
+ *                               `mldmCmdPort` are set.
  * @retval        LDM7_SYSTEM    System error. `log_add()` called.
  */
 static Ldm7Status
 mldm_spawn(
     McastInfo* const restrict       info,
-    unsigned short* restrict        mldmSrvrPort,
     const unsigned short            ttl,
     const CidrAddr* const restrict  fmtpSubnet,
-    const char* const restrict      pqPathname,
-    pid_t* const restrict           pid)
+    const float                     retxTimeout,
+    const char* const restrict      pqPathname)
 {
     int   fds[2];
     int   status = pipe(fds);
-
     if (status) {
         log_add_syserr("Couldn't create pipe for multicast LDM sender process");
         status = LDM7_SYSTEM;
     }
     else {
-        pid_t child = fork();
-
-        if (child == -1) {
+        const pid_t pid = fork();
+        if (pid == -1) {
             char* const id = mi_format(info);
-
-            log_add_syserr("Couldn't fork() multicast LDM sender for \"%s\"", id);
+            log_add_syserr("Couldn't fork() for multicast LDM sender %s",
+                    id);
             free(id);
             status = LDM7_SYSTEM;
         }
-        else if (child == 0) {
+        else if (pid == 0) {
             /* Child process */
             (void)close(fds[0]); // read end of pipe unneeded
-            allowSigs(); // so process will terminate and process products
+            allowSigs(); // so process can be terminated
             // The following statement shouldn't return
-            mldm_exec(info, ttl, fmtpSubnet, pqPathname, fds[1]);
+            mldm_exec(info, ttl, fmtpSubnet, retxTimeout, pqPathname, fds[1]);
             log_flush_error();
             exit(1);
         }
         else {
             /* Parent process */
-            (void)close(fds[1]);                // write end of pipe unneeded
-            status = mldm_getServerPorts(fds[0], &info->server.port,
-                    mldmSrvrPort);
-            (void)close(fds[0]);                // no longer needed
-
-            if (status) {
-                log_add("Couldn't get port numbers from multicast LDM sender "
-                        "process. Terminating that process.");
-                (void)kill(child, SIGTERM);
-            }
-            else {
-                *pid = child;
-            }
-        }
-    }
-
+            status = mldm_handleExecedChild(info, pid, fds);
+        } // Parent process
+    } // Pipe created
     return status;
 }
 
 /**
- * Executes the multicast LDM sender for a particular multicast group as a child
- * process. Doesn't block.
- * @pre                          Multicast LDM sender PID map is locked.
- * @pre                          Relevant multicast LDM sender isn't running.
- * @param[in,out] info           Information on the multicast group.
- * @param[out]    mldmSrvrPort   Port number of the multicast LDM RPC server
- * @param[in]     ttl            Time-to-live of multicast packets.
- * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
- * @param[in]     pqPathname     Pathname of product-queue. Caller may free.
- * @retval        0              Success. Multicast LDM sender spawned. `*pid`
- *                               and `info->server.port` are set.
- * @retval        LDM7_SYSTEM    System error. `log_add()` called.
- * @threadsafety                 Hostile
+ * Ensures that a multicast LDM sender process is running.
+ *
+ * @param[in]  info         LDM7 multicast information
+ * @param[in]  ttl          Time-to-live of multicast packets
+ * @param[in]  fmtpSubnet   Subnet for client FMTP TCP connections
+ * @param[in]  retxTimeout  FMTP retransmission timeout in minutes. A
+ *                          negative value obtains the FMTP default.
+ * @param[in]  pqPathname   Pathname of product-queue
+ * @retval     0            Success. The multicast LDM sender associated
+ *                          with the given multicast group was already running
+ *                          or was successfully started.
+ *                          `mldm_getFmtpSrvrPort()` will return the port number
+ *                          of the FMTP server of the multicast LDM sender
+ *                          process.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-mldm_execute(
-    McastInfo* const restrict       info,
-    unsigned short* const restrict  mldmSrvrPort,
-    const unsigned short            ttl,
-    const CidrAddr* const restrict  fmtpSubnet,
-    const char* const restrict      pqPathname)
+mldm_ensureRunning(
+        McastInfo* const restrict       info,
+        const unsigned short            ttl,
+        const CidrAddr* const restrict  fmtpSubnet,
+        const float                     retxTimeout,
+        const char* const restrict      pqPathname)
 {
-    int status;
-
-    if (childPid) {
-        log_add("Can execute only one multicast sender child process");
-        status = LDM7_SYSTEM;
+    /*
+     * The Multicast-LDM Sender Map (MSM) is locked because it might be accessed
+     * multiple times.
+     */
+    int status = msm_lock(true); // Lock for writing
+    if (status) {
+        log_add("Couldn't lock multicast sender map");
     }
     else {
-        const feedtypet feedtype = mi_getFeedtype(info);
-        pid_t           procId;
-
-        // The following will set `info->server.port` and `mldmSrvrPort`
-        status = mldm_spawn(info, mldmSrvrPort, ttl, fmtpSubnet, pqPathname,
-                &procId);
-        if (0 == status) {
-            status = mldm_ensureCleanup(procId);
-            if (status) {
-                (void)kill(procId, SIGTERM);
-            }
-            else {
-                status = msm_put(feedtype, procId, info->server.port,
-                        *mldmSrvrPort);
+        if (childPid == 0) {
+            (void)msm_get(info->feed, &childPid, &fmtpSrvrPort, &mldmCmdPort);
+            if (childPid) {
+                status = kill(childPid, 0);
                 if (status) {
-                    // preconditions => LDM7_DUP can't be returned
-                    char* const id = mi_format(info);
-
-                    log_add("Terminating just-started multicast LDM sender for "
-                            "\"%s\"", id);
-                    free(id);
-                    (void)kill(procId, SIGTERM);
-                }
-                else {
-                    childPid = procId;
-                    feed = feedtype;
+                    log_warning("Multicast LDM sender process %d should exist "
+                            " but doesn't. Re-executing...");
+                    childPid = 0;
                 }
             }
         }
-    }
-
+        if (childPid == 0) {
+            /*
+             * Sets `feed`, `childPid`, `fmtpSrvrPort`, `mldmCmdPort`; calls
+             * `msm_put()`
+             */
+            status = mldm_spawn(info, ttl, fmtpSubnet, retxTimeout, pqPathname);
+        }
+        (void)msm_unlock();
+    } // Multicast sender map is locked
     return status;
+}
+
+/**
+ * Returns the process identifier of the child multicast LDM sender process.
+ * @retval 0  No such process exists
+ * @return    Process identifier of child multicast LDM sender process
+ */
+inline static pid_t
+mldm_getMldmSenderPid()
+{
+    return childPid;
+}
+
+/**
+ * Returns the port number of the FMTP TCP server of the child multicast LDM
+ * sender process.
+ * @retval 0  No such process exists
+ * @return    Port number of FMTP TCP server of child multicast LDM sender
+ *            process.
+ */
+inline static in_port_t
+mldm_getFmtpSrvrPort()
+{
+    return fmtpSrvrPort;
+}
+
+/**
+ * Returns the port number of the RPC command-server of the child multicast LDM
+ * sender process.
+ * @retval 0  No such process exists
+ * @return    Port number of RPC command-server of child multicast LDM sender
+ *            process
+ */
+inline static in_port_t
+mldm_getMldmCmdPort()
+{
+    return mldmCmdPort;
 }
 
 /******************************************************************************
@@ -458,7 +553,6 @@ typedef struct {
     VcEndPoint*    vcEnd;
     char*          pqPathname;
     CidrAddr       fmtpSubnet;
-    unsigned short mldmSrvrPort;
     unsigned short ttl;
 } McastEntry;
 
@@ -692,6 +786,8 @@ me_compareOrConflict(
  * Starts a multicast LDM sender process if necessary.
  *
  * @param[in,out]  entry        Multicast entry
+ * @param[in]      retxTimeout  FMTP retransmission timeout in minutes. A
+ *                              negative value obtains the FMTP default.
  * @retval         0            Success. The multicast LDM sender associated
  *                              with the given multicast group is running or was
  *                              successfully started. `entry->info.server.port`
@@ -700,30 +796,14 @@ me_compareOrConflict(
  * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-me_startIfNecessary(McastEntry* const entry)
+me_startIfNecessary(
+        McastEntry* const entry,
+        const float       retxTimeout)
 {
-    /*
-     * The Multicast-LDM Sender Map (MSM) is locked because it might be accessed
-     * multiple times.
-     */
-    int status = msm_lock(true);
-    if (status) {
-        log_add("Couldn't lock multicast sender map");
-    }
-    else {
-        // Accesses multicast sender map
-        status = mldm_isRunning(entry->info.feed, &entry->info.server.port,
-                &entry->mldmSrvrPort);
-        if (status == LDM7_NOENT) {
-            // The relevant multicast LDM sender isn't running
-            childPid = 0; // because multicast process isn't running
-            // Accesses multicast sender map
-            status = mldm_execute(&entry->info, &entry->mldmSrvrPort,
-                    entry->ttl, &entry->fmtpSubnet, entry->pqPathname);
-        }
-        (void)msm_unlock();
-    } // Multicast sender map is locked
-
+    int status = mldm_ensureRunning(&entry->info, entry->ttl,
+            &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
+    if (status == 0)
+        entry->info.server.port = mldm_getFmtpSrvrPort();
     return status;
 }
 
@@ -741,7 +821,7 @@ me_reserve(
         in_addr_t* const restrict        downFmtpAddr)
 {
     Ldm7Status  status;
-    void* const mldmClnt = mldmClnt_new(entry->mldmSrvrPort);
+    void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
     if (mldmClnt == NULL) {
         log_add("Couldn't create new multicast LDM RPC client");
         status = LDM7_SYSTEM;
@@ -768,9 +848,9 @@ me_release(
         in_addr_t const                  fmtpAddr)
 {
     Ldm7Status  status;
-    void* const mldmClnt = mldmClnt_new(entry->mldmSrvrPort);
+    void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
     if (mldmClnt == NULL) {
-        log_add("Couldn't create new multicast LDM RPC client");
+        log_add("Couldn't create new multicast LDM sender command-client");
         status = LDM7_SYSTEM;
     }
     else {
@@ -822,6 +902,8 @@ me_setSubscriptionReply(
  ******************************************************************************/
 
 static void* mcastEntries;
+/// FMTP retransmission timeout in minutes
+static float retxTimeout = -1.0; // Negative => use FMTP default
 
 /**
  * Returns the multicast entry corresponding to a particular feed.
@@ -841,6 +923,12 @@ umm_getMcastEntry(const feedtypet feed)
         return NULL;
     }
     return *(McastEntry**)node;
+}
+
+void
+umm_setRetxTimeout(const float minutes)
+{
+    retxTimeout = minutes;
 }
 
 Ldm7Status
@@ -890,9 +978,11 @@ umm_subscribe(
         status = LDM7_NOENT;
     }
     else {
-            McastInfo* const info = &entry->info;
-            // Sets port numbers of FMTP & RPC servers of multicast LDM sender
-            status = me_startIfNecessary(entry);
+            /*
+             * Sets port numbers of FMTP & command servers of multicast LDM
+             * sender
+             */
+            status = me_startIfNecessary(entry, retxTimeout);
             if (0 == status)
                 status = me_setSubscriptionReply(entry, reply);
     } // Feed maps to possible multicast LDM sender
@@ -910,7 +1000,7 @@ umm_terminated(
     else {
         status = msm_remove(pid);
         if (pid == childPid)
-            childPid = 0; // No need to kill child
+            childPid = 0; // No need to kill child because must have terminated
         (void)msm_unlock();
     }
     return status;
@@ -919,7 +1009,7 @@ umm_terminated(
 pid_t
 umm_getMldmSenderPid(void)
 {
-    return childPid;
+    return mldm_getMldmSenderPid();
 }
 
 Ldm7Status

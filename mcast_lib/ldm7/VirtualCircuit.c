@@ -8,6 +8,7 @@
 
 #include "config.h"
 
+#include "ldmprint.h"
 #include "log.h"
 #include "VirtualCircuit.h"
 
@@ -55,6 +56,15 @@ VcEndPoint* vcEndPoint_new(
         }
     } // `end` allocated
     return end;
+}
+
+char* vcEndPoint_format(const VcEndPoint* vcEnd)
+{
+    char* str = ldm_format(256, "{switch=%s, port=%s, vlanId=%hu}",
+            vcEnd->switchId, vcEnd->portId, vcEnd->vlanId);
+    if (str == NULL)
+        log_add("Couldn't format virtual-circuit endpoint");
+    return str;
 }
 
 void vcEndPoint_destroy(VcEndPoint* const end)

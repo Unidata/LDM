@@ -111,6 +111,17 @@ ft_format(
 extern int
 sprint_feedtypet(char *buf, size_t bufsize, feedtypet feedtype);
 
+/**
+ * Returns the string representation of a feedtype.
+ *
+ * @param[in] feed  Feedtype
+ * @retval    NULL  Couldn't format feed. `log_add()` called.
+ * @return          String representation of `feed`. Caller should free when
+ *                  it's no longer needed.
+ */
+extern char*
+feedtypet_format(feedtypet feed);
+
 extern const char *
 s_feedtypet(feedtypet feedtype);
 

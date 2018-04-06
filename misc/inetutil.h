@@ -40,6 +40,31 @@ extern int            udpopen(const char *hostname, const char *servicename);
 extern int            isMe(const char *remote);
 extern int            local_sockaddr_in(struct sockaddr_in* addr);
 extern int            sockbind(const char *type, unsigned short port);
+
+/**
+ * Returns the string representation of the local endpoint of an IPv4 socket.
+ * @param[in] sock  IPv4 socket
+ * @retval    NULL  Couldn't format socket endpoint
+ * @return          String representation of the local endpoint in the form
+ *                  `nnn.nnn.nnn.nnn:p`. Caller should free when it's no longer
+ *                  needed.
+ * @threadsafety    Safe
+ */
+char*
+ipv4Sock_getLocalString(const int sock);
+
+/**
+ * Returns the string representation of the remote endpoint of an IPv4 socket.
+ * @param[in] sock  IPv4 socket
+ * @retval    NULL  Couldn't format socket endpoint
+ * @return          String representation of the remote endpoint in the form
+ *                  `nnn.nnn.nnn.nnn:p`. Caller should free when it's no longer
+ *                  needed.
+ * @threadsafety    Safe
+ */
+char*
+ipv4Sock_getPeerString(const int sock);
+
 /**
  * Returns the IPv4 dotted-decimal form of an Internet identifier.
  *
@@ -179,6 +204,21 @@ void sockAddrIn_getHostId(
         const struct sockaddr_in* const restrict sockAddr,
         char* const restrict                     id,
         const size_t                             size);
+
+/**
+ * Returns a string representation of a socket address. The output format is
+ *     <id>:<port>
+ * where:
+ *     <id>    Hostname (if that can be determined) or the IPv4 address in
+ *                      dotted-decimal form
+ *     <port>  Port number
+ * @param[in]  sockAddr  Socket address
+ * @retval     NULL      Couldn't format socket address
+ * @return               String representation of `sockAddr`. Caller should free
+ *                       when it's no longer needed.
+ * @threadsafety         Safe
+ */
+char* sockAddrIn_format(const struct sockaddr_in* sockAddr);
 
 #if WANT_MULTICAST
 /**

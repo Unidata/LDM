@@ -380,7 +380,8 @@ init(
                 ppn_free(notifier);
                 return LDM7_SYSTEM;
             }
-            log_info("init(): Initializing FMTP receiver with %s", miStr);
+            log_info("Initializing FMTP receiver with mcastInfo=%s, iface=%s",
+                    miStr, iface);
             free(miStr);
         }
 
@@ -455,8 +456,7 @@ mlr_free(
  * called or an error occurs.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
- * @retval    0              Success.
- * @retval    LDM7_SHUTDOWN  `mlr_stop()` was called.
+ * @retval    0              `mlr_stop()` was called.
  * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
  * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
  * @see `mlr_stop()`
@@ -474,7 +474,7 @@ mlr_start(
     else {
         status = mcastReceiver_execute(mlr->receiver);
         if (mlr->done) {
-            status = LDM7_SHUTDOWN;
+            status = LDM7_OK;
         }
         else if (status) {
             log_add("Error executing multicast LDM receiver");

@@ -1,5 +1,4 @@
-/* $Id: hupsyslog.c,v 1.9 2002/10/18 20:17:40 steve Exp $ */
-/*
+/**
  * C program to send a HUP signal to syslogd.
  * Install it setuid root.
  */
@@ -14,6 +13,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <errno.h>
