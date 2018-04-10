@@ -213,7 +213,7 @@ scannerPush(
     FileEntry*	entry = malloc(sizeof(FileEntry));
 
     if (entry == NULL) {
-	log_syserr("Couldn't allocate new input-file entry");
+	log_syserr_q("Couldn't allocate new input-file entry");
     }
     else {
 	if (path[0] == '/' || currentFileEntry == NULL) {
@@ -236,14 +236,14 @@ scannerPush(
 	entry->file = fopen(entry->path, "r");
 
 	if (entry->file == NULL) {
-	    log_syserr("Couldn't open input-file \"%s\"", entry->path);
+	    log_syserr_q("Couldn't open input-file \"%s\"", entry->path);
 	}
 	else {
 	    (void)ensure_close_on_exec(fileno(entry->file));
 	    entry->buf = yy_create_buffer(entry->file, YY_BUF_SIZE);
 
 	    if (entry->buf == NULL) {
-		log_syserr("Couldn't create new input-file buffer");
+		log_syserr_q("Couldn't create new input-file buffer");
 	    }
 	    else {
 		entry->prev = currentFileEntry;
