@@ -378,7 +378,7 @@ main (int ac, char *av[])
 		    /*if (mm_md5 (md5ctxp, prod.data, prod.info.sz,
 				prod.info.signature) != 0)
 		      {
-			log_error ("could not compute MD5\0");
+			log_error_q ("could not compute MD5\0");
 		      }
 		    else
 		      { */

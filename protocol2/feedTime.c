@@ -123,9 +123,9 @@ ft_get_time(prod_class_t* const class)
             }
 
             if (!success) {
-                log_warning("Couldn't encode pathname: \"%s\" \"%s\"",
+                log_warning_q("Couldn't encode pathname: \"%s\" \"%s\"",
                     ldmhome, s_prod_class(NULL, 0, class));
-                log_warning("%s:%d: Feed-time cannot be saved");
+                log_warning_q("%s:%d: Feed-time cannot be saved");
             }
             else {
                 /*
@@ -149,7 +149,7 @@ ft_get_time(prod_class_t* const class)
                         success = 1;                    /* success */
                     }
                     else {
-                        log_warning("Feed-time file \"%s\" is corrupt; using "
+                        log_warning_q("Feed-time file \"%s\" is corrupt; using "
                                 "TS_NONE", _pathname);
                     }
 

@@ -186,7 +186,7 @@ else
                b3 = (unsigned char) cpos[14];
                b4 = (unsigned char) cpos[15];
                lensec = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
-               log_error("grib2 length %u\0",lensec);
+               log_error_q("grib2 length %u\0",lensec);
 	       grib2name(cpos, (size_t)lensec, hdr, wmometa);
                }*/
 	    break;

@@ -96,7 +96,7 @@ decodeRegEx(
     int         error = 1;              /* failure */
 
     if (strlen(string) == 0) {
-        log_error("Empty regular-expression");
+        log_error_q("Empty regular-expression");
     }
     else {
         char* const     clone = strdup(string);
@@ -117,7 +117,7 @@ decodeRegEx(
                     /*
                      * Pathological regular expression.
                      */
-                    log_warning("Adjusted pathological regular expression \"%s\"",
+                    log_warning_q("Adjusted pathological regular expression \"%s\"",
                         string);
                 }
 
@@ -230,7 +230,7 @@ warnIfPathological(
         /*
          * Pathological regular expression.
          */
-        log_warning("Pathological regular expression \"%s\"", re);
+        log_warning_q("Pathological regular expression \"%s\"", re);
     }
 }
 

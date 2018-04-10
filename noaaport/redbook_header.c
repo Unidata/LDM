@@ -188,7 +188,7 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    if((blen <= 0)||(blen > 128)||(start > 512))
       {
       DONE = 1;
-      log_error("error in redbook header %d %d\0",blen,start);
+      log_error_q("error in redbook header %d %d\0",blen,start);
       }*/
    
   

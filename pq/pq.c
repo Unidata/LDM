@@ -398,7 +398,7 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
  *
  * @param[in] fbp       Pointer to fblk structure
  * @param[in] level     Level of fblk to return (origin 0).
- * @retval    OFF_NONE  if no fblk is available. `log_error()` called.
+ * @retval    OFF_NONE  if no fblk is available. `log_error_q()` called.
  * @return              An fblk of the given level.
  */
 static fblk_t 
@@ -6357,16 +6357,16 @@ unwind_lock:
  * @retval PQ_BIG       According to its metadata, the data-product is larger
  *                      than the space allocated for it by `pqe_new()` or
  *                      `pqe_newDirect()`. An attempt was made to revert the
- *                      product-queue to a consistent state. `log_error()` called.
+ *                      product-queue to a consistent state. `log_error_q()` called.
  * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
- *                      `log_error()` called.
+ *                      `log_error_q()` called.
  * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
  *                      couldn't be deserialized. The data-product isn't
  *                      inserted. An attempt was made to revert the
- *                      product-queue to a consistent state. `log_error()` called.
+ *                      product-queue to a consistent state. `log_error_q()` called.
  * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
  *                      The state of the product-queue is unspecified.
- *                      `log_error()` called.
+ *                      `log_error_q()` called.
  */
 int
 pqe_insert(pqueue *pq, pqe_index index)

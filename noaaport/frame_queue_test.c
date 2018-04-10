@@ -94,7 +94,7 @@ static void test_write_then_read(void)
         const unsigned nwrite = MAX_FRAME_SIZE*erand48(xsubi) + 0.5;
         if (nwrite) {
             uint8_t*            write_data = NULL;
-            // log_notice("Writing %u-byte frame", nwrite);
+            // log_notice_q("Writing %u-byte frame", nwrite);
             status = fq_reserve(fq, &write_data, nwrite);
             CU_ASSERT_EQUAL(status, 0);
             CU_ASSERT_PTR_NOT_NULL_FATAL(write_data);
@@ -135,7 +135,7 @@ static void* start_writer(void* barrier)
     static   int n = 0;
     while (n < NUM_FILLS*NUM_QUEUE_FRAMES) {
         const unsigned nwrite = MAX_FRAME_SIZE*erand48(xsubi) + 0.5;
-        // log_notice("Writing %u-byte frame", nwrite);
+        // log_notice_q("Writing %u-byte frame", nwrite);
         data = NULL;
         status = fq_reserve(fq, &data, nwrite);
         CU_ASSERT_EQUAL(status, 0);

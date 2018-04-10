@@ -260,7 +260,7 @@ tsFormat(
  * Arguments:
  *      timestamp       Pointer to the timestamp to be parsed.
  * Returns:
- *      -1              Error.  "log_error()" called.
+ *      -1              Error.  "log_error_q()" called.
  *      else            Number of bytes parsed.
  */
 int
