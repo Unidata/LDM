@@ -68,7 +68,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-        log_notice("Exiting");
+        log_notice_q("Exiting");
         log_fini();
 }
 
@@ -147,14 +147,14 @@ int main(int ac, char *av[])
         }
 
         setQueuePath(pqfname);
-        log_notice("Starting Up (%d)", getpgrp());
+        log_notice_q("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 return 1;
         }
 
@@ -171,11 +171,11 @@ int main(int ac, char *av[])
             status = pq_clear_write_count(pqfname);
             if (status) {
                 if (PQ_CORRUPT == status) {
-                    log_error("The product-queue \"%s\" is inconsistent", pqfname);
+                    log_error_q("The product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    log_error("pq_clear_write_count() failure: %s: %s",
+                    log_error_q("pq_clear_write_count() failure: %s: %s",
                             pqfname, strerror(status));
                     return 1;
                 }
@@ -189,23 +189,23 @@ int main(int ac, char *av[])
             status = pq_get_write_count(pqfname, &write_count);
             if (status) {
                 if (ENOSYS == status) {
-                    log_error("Product-queue \"%s\" doesn't have a writer-counter",
+                    log_error_q("Product-queue \"%s\" doesn't have a writer-counter",
                         pqfname);
                     return 2;
                 }
                 else if (PQ_CORRUPT == status) {
-                    log_error("Product-queue \"%s\" is inconsistent", pqfname);
+                    log_error_q("Product-queue \"%s\" is inconsistent", pqfname);
                     return 4;
                 }
                 else {
-                    log_error("pq_get_write_count() failure: %s: %s",
+                    log_error_q("pq_get_write_count() failure: %s: %s",
                         pqfname, strerror(status));
                     return 1;
                 }
             }
         }
 
-        log_info("The writer-counter of the product-queue is %u", write_count);
+        log_info_q("The writer-counter of the product-queue is %u", write_count);
 
         return write_count == 0 ? 0 : 3;
 }

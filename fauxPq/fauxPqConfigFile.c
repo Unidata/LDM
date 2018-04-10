@@ -101,7 +101,7 @@ static void myStartElement(
             currState = IN_ROOT_ELT;
         }
         else {
-            log_error("Root element \"%s\" is not \"%s\"",  name,
+            log_error_q("Root element \"%s\" is not \"%s\"",  name,
                     rootEltName);
             currState = ERROR;
         }
@@ -122,7 +122,7 @@ static void myStartElement(
                     if (strfeedtypet((const char*)nameValuePair[1], &feedType)
                         != FEEDTYPE_OK) {
 
-                        log_error("Invalid feed type: \"%s\"",
+                        log_error_q("Invalid feed type: \"%s\"",
                                 nameValuePair[1]);
                         currState = ERROR;
                     }
@@ -131,7 +131,7 @@ static void myStartElement(
                     prodId = strdup((char*)nameValuePair[1]);
 
                     if (prodId == NULL) {
-                        log_syserr( "Couldn't duplicate product ID: \"%s\"",
+                        log_syserr_q( "Couldn't duplicate product ID: \"%s\"",
                                 nameValuePair[1]);
                         currState = ERROR;
                     }
@@ -140,7 +140,7 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &prodSize)
                         != 1) {
 
-                        log_syserr("Invalid product size: \"%s\"",
+                        log_syserr_q("Invalid product size: \"%s\"",
                                 nameValuePair[1]);
                         currState = ERROR;
                     }
@@ -149,13 +149,13 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &delay)
                         != 1) {
 
-                        log_syserr("Invalid delay time: \"%s\"",
+                        log_syserr_q("Invalid delay time: \"%s\"",
                                 nameValuePair[1]);
                         currState = ERROR;
                     }
                 }
                 else {
-                    log_error("Invalid attribute: \"%s\"", attName);
+                    log_error_q("Invalid attribute: \"%s\"", attName);
                     currState = ERROR;
                 }
             }
@@ -246,7 +246,7 @@ static void xmlWarning(
     va_list     args;
 
     va_start(args, msg);
-    log_vlog(LOG_LEVEL_WARNING, msg, args);
+    log_vlog_q(LOG_LEVEL_WARNING, msg, args);
     va_end(args);
 }
 
@@ -267,7 +267,7 @@ static void xmlError(
     va_list     args;
 
     va_start(args, msg);
-    log_vlog(LOG_LEVEL_ERROR, msg, args);
+    log_vlog_q(LOG_LEVEL_ERROR, msg, args);
     va_end(args);
 
     currState = ERROR;
@@ -330,7 +330,7 @@ int cfOpen(const char* pathname)
     int              status;
 
     if (pathname == NULL) {
-        log_error("NULL pathname");
+        log_error_q("NULL pathname");
         status = EINVAL;
     }
     else {
@@ -361,7 +361,7 @@ int cfOpen(const char* pathname)
             prodData = realloc(prodData, prodSize);
 
             if (prodData == NULL) {
-                log_syserr("Couldn't allocate %u bytes for product data",
+                log_syserr_q("Couldn't allocate %u bytes for product data",
                         prodSize);
                 status = ENOMEM;
             }
@@ -376,7 +376,7 @@ int cfOpen(const char* pathname)
                 prodXdrBuf = realloc(prodXdrBuf, prodXdrLen);
 
                 if (prodXdrBuf == NULL) {
-                    log_syserr("Couldn't allocate %lu bytes for product XDR "
+                    log_syserr_q("Couldn't allocate %lu bytes for product XDR "
                             "buffer", prodXdrLen);
                     status = errno;
                 }
@@ -428,7 +428,7 @@ int cfGetProduct(
     int               status;
 
     if (currState != READY) {
-        log_error("Configuration file not ready");
+        log_error_q("Configuration file not ready");
 
         status = ENOENT;
     }
@@ -440,7 +440,7 @@ int cfGetProduct(
         status = set_timestamp(&info->arrival);
 
         if (status  != 0) {
-            log_errno(status, "Couldn't set product arrival time");
+            log_errno_q(status, "Couldn't set product arrival time");
         }
         else {
             XDR      xdr;
@@ -460,7 +460,7 @@ int cfGetProduct(
                 status = ENOERR;
             }
             else {
-                log_error("Couldn't XDR_ENCODE product");
+                log_error_q("Couldn't XDR_ENCODE product");
                 status = EIO;
             }
 

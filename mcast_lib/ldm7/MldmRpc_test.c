@@ -53,7 +53,7 @@ static void test_construction(void)
 static void* runServer(void* mldmSrvr)
 {
     if (mldmSrvr_run(mldmSrvr))
-        log_error("Multicast LDM RPC server returned");
+        log_error_q("Multicast LDM RPC server returned");
     return NULL;
 }
 
@@ -108,7 +108,7 @@ static void test_releaseUnreserved(void)
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.1", &fmtpAddr), 1);
     CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), LDM7_NOENT);
-    log_notice("");
+    log_notice_q("");
 
     mldmClnt_delete(mldmClnt);
     status = mldmSrvr_stop(mldmSrvr);

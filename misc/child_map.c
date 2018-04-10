@@ -69,7 +69,7 @@ ChildMap* cm_new(void)
     ChildMap*   map = (ChildMap*)malloc(sizeof(ChildMap));
 
     if (NULL == map) {
-        log_syserr("Couldn't allocate new child-map");
+        log_syserr_q("Couldn't allocate new child-map");
     }
     else {
         map->root = NULL;
@@ -77,7 +77,7 @@ ChildMap* cm_new(void)
         map->buf = strBuf_new(132);
 
         if (NULL == map->buf) {
-            log_syserr("Couldn't allocate command-line buffer");
+            log_syserr_q("Couldn't allocate command-line buffer");
             free(map);
 
             map = NULL;
@@ -142,21 +142,21 @@ int cm_add_string(
             Entry* const    entry = (Entry*)malloc(sizeof(Entry));
 
             if (NULL == entry) {
-                log_syserr("Couldn't allocate new entry");
+                log_syserr_q("Couldn't allocate new entry");
                 status = 2;
             }
             else {
                 entry->command = strdup(command);
 
                 if (NULL == entry->command) {
-                    log_syserr("Couldn't duplicate command-line");
+                    log_syserr_q("Couldn't duplicate command-line");
                     status = 2;
                 }
                 else {
                     entry->pid = pid;
 
                     if (NULL == tsearch(entry, &map->root, compare)) {
-                        log_syserr("Couldn't add entry to map");
+                        log_syserr_q("Couldn't add entry to map");
                         status = 2;
                     }
                     else {
@@ -178,21 +178,22 @@ int cm_add_string(
 }
 
 
-/*
+/**
  * Adds an entry to a child-map.
  *
- * @retval 0    Success
- * @retval 1    Usage error. \c log_add() called.
- * @retval 2    O/S failure. \c log_add() called.
+ * @param[in,out] map   Pointer to the child-map
+ * @param[in]     pid   Process ID of the child. Must not already exist in map.
+ * @param[in]     argv  Command-line of the child in argument vector form. Last
+ *                      pointer must be NULL. The strings are defensively
+ *                      copied.
+ * @retval 0            Success
+ * @retval 1            Usage error. `log_add()` called.
+ * @retval 2            O/S failure. `log_add()` called.
  */
 int cm_add_argv(
-    ChildMap* const map,    /**< [in/out] Pointer to the child-map */
-    const pid_t     pid,    /**< [in] Process ID of the child.
-                             *   Must not already exist in map. */
-    char** const    argv)   /**< [in] Command-line of the child in
-                             *   argument vector form. Last pointer
-                             *   must be NULL. The strings are
-                             *   defensively copied. */
+    ChildMap* const restrict    map,
+    const pid_t                 pid,
+    char** restrict argv)
 {
     int                 status = 0;     /* success */
 
@@ -208,7 +209,7 @@ int cm_add_argv(
             if (0 < i)
                 (void)strBuf_appendString(map->buf, " ");
             if (0 != strBuf_appendString(map->buf, argv[i])) {
-                log_syserr(
+                log_syserr_q(
                         "Couldn't append to command-line buffer: \"%s\"",
                         argv[i]);
                 status = 2;

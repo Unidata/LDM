@@ -1159,7 +1159,7 @@ static gini_status_t gini_scan_data_blocks(
             status = gini_unpack(bp, left, uncomp_bytes, sizeof(uncomp_bytes),
                     &num_uncomp_bytes, &num_comp_bytes_scanned);
             if (status) {
-                log_warning("Couldn't uncompress data block %u", num_blocks);
+                log_warning_q("Couldn't uncompress data block %u", num_blocks);
                 break;
             }
             if (num_blocks == 0)
@@ -2266,7 +2266,7 @@ gini_status_t gini_unpack(
         else {
             *out_nbytes = d_stream.total_out;
             *nscanned = d_stream.next_in - in_buf;
-            log_debug("Inflated %u bytes to %u bytes", *nscanned, *out_nbytes);
+            log_debug_1("Inflated %u bytes to %u bytes", *nscanned, *out_nbytes);
             status = 0;
         }
         (void)inflateEnd(&d_stream);

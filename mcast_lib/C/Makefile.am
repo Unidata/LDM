@@ -87,7 +87,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
                           -I/usr/include
 $(FMTPReceiver_stubs):		../FMTP/FMTPv3/receiver/fmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
-$(mcast_stubs):			../C++/mcast.h
+$(mcast_stubs):			../C++/fmtp.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(pq_stubs):			$(top_srcdir)/pq/pq.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)

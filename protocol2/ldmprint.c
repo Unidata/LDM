@@ -368,7 +368,7 @@ feedtypet_format(feedtypet feed)
     char*  buf = malloc(bufSize);
     int    nbytes = ft_format(feed, buf, sizeof(buf));
     if (nbytes >= bufSize) {
-        log_syserr("Couldn't format binary feed specification");
+        log_syserr_q("Couldn't format binary feed specification");
         free(buf);
         buf = NULL;
     }
@@ -570,7 +570,7 @@ sigParse(
     }
 
     if (i != sizeof(signaturet)) {
-        log_syserr("Couldn't parse signature \"%s\"", string);
+        log_syserr_q("Couldn't parse signature \"%s\"", string);
         nbytes = -1;
     }
     else {

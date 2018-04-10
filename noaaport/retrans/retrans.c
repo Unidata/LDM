@@ -34,9 +34,9 @@ int get_cpio_addr(char *addr){
 	}	
 	if(i_row >= NUM_CPIO_ENTRIES){
 		i_row = -1;
-		log_error("\n Fail to find match for cpio addr=%s\n",addr);
+		log_error_q("\n Fail to find match for cpio addr=%s\n",addr);
 	}
-        log_debug("returning i_row = %d",i_row);
+        log_debug_1("returning i_row = %d",i_row);
 	return (i_row);
 }
 
@@ -60,7 +60,7 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 
 	pl_prod_retrans_table = *pp_prod_retrans_table;
 
-	log_debug("%s Begin init retrans_table   base=0x%x\n", FNAME, pl_prod_retrans_table);
+	log_debug_1("%s Begin init retrans_table   base=0x%x\n", FNAME, pl_prod_retrans_table);
 
 	global_time_zone = (char *) utc_time;
 
@@ -78,7 +78,7 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 		ii = 0; /* For now set to 0; Later can setup retrans table depending on the channel type */
 		pl_prod_retrans_table->entry_info[GET_RETRANS_TABLE_TYP(sbn_type)].
 			numb_entries = GET_RETRANS_CHANNEL_ENTRIES(sbn_type);
-		log_debug("%s Total retrans numb_entries for channel %s of sbn_type (%d) = %d \n",
+		log_debug_1("%s Total retrans numb_entries for channel %s of sbn_type (%d) = %d \n",
                                FNAME, sbn_channel_name,sbn_type,pl_prod_retrans_table->entry_info[ii].numb_entries);
 
 		pl_prod_retrans_table->entry_info[GET_RETRANS_TABLE_TYP(sbn_type)].
@@ -135,7 +135,7 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 				p_retrans_entry[iii].entry_flag = 0;
 				p_retrans_entry[iii].WMO_hdr_abbrev[0] = '\0';
 			} /* end for each numb entries */
-		log_debug("%s  OK init retrans_table for channel [%s] numb_entries = %d\n",FNAME,
+		log_debug_1("%s  OK init retrans_table for channel [%s] numb_entries = %d\n",FNAME,
 				sbn_channel_name,pl_prod_retrans_table->entry_info[ii].numb_entries);
 
 	} /* end if pl_prod_retrans_table != NULL */
@@ -143,25 +143,25 @@ int init_retrans(PROD_RETRANS_TABLE **pp_prod_retrans_table)
 
 	/*Open retransmit pipe */
 	if((global_retransmitpipe_fd = open(DEFAULT_RETRANSMIT_PIPENAME, O_RDWR,0)) <= 0){
-		log_error("Fail to open %s pipe errno=%d \n",DEFAULT_RETRANSMIT_PIPENAME,errno);
+		log_error_q("Fail to open %s pipe errno=%d \n",DEFAULT_RETRANSMIT_PIPENAME,errno);
 		perror("pipe open err");
 		return (-1);
 	}
 
 	if((flags = fcntl(global_retransmitpipe_fd, F_GETFL)) < 0){
-		log_error("Fail fcntl(F_GETFL) %s pipe\n",DEFAULT_RETRANSMIT_PIPENAME);
+		log_error_q("Fail fcntl(F_GETFL) %s pipe\n",DEFAULT_RETRANSMIT_PIPENAME);
 		/* Continue for now */
 	}else{
 
 		flags |= DONT_BLOCK;
 		if((rtn_val = fcntl(global_retransmitpipe_fd, F_SETFL, flags)) < 0){
-			log_error("Fail fcntl(F_SETFL) %s pipe \n",DEFAULT_RETRANSMIT_PIPENAME);
+			log_error_q("Fail fcntl(F_SETFL) %s pipe \n",DEFAULT_RETRANSMIT_PIPENAME);
 		}
 
-		log_notice(" OK open pipe[%d] for %s\n", global_retransmitpipe_fd,DEFAULT_RETRANSMIT_PIPENAME);
+		log_notice_q(" OK open pipe[%d] for %s\n", global_retransmitpipe_fd,DEFAULT_RETRANSMIT_PIPENAME);
 	}
 
-	log_debug("%s Exiting  init retrans_table   base=0x%lx\n", FNAME,(unsigned long) pl_prod_retrans_table);
+	log_debug_1("%s Exiting  init retrans_table   base=0x%lx\n", FNAME,(unsigned long) pl_prod_retrans_table);
 	return(0);
 
 } /* end init_retrans */
@@ -247,11 +247,11 @@ int do_prod_lost( BUFF_HDR *buff_hdr, ACQ_TABLE *acq_tbl)
 	/* Need to log prod_errors */
 	
 	if(acq_tbl->proc_base_prod_seqno_last == 0){
-		log_info("LOST=%ld total(%ld) %s prod(%ld) prod_seqno was RESET to 0 \n",
+		log_info_q("LOST=%ld total(%ld) %s prod(%ld) prod_seqno was RESET to 0 \n",
 		prod_errors,acq_tbl->proc_tot_prods_lost_errs,
 		GET_PROD_TYPE_NAME(buff_hdr->proc_prod_type),buff_hdr->proc_prod_seqno);
 	}else{
-		log_info("LOST=%ld total(%ld) %s prod(%ld) expect prod(%ld)\n",
+		log_info_q("LOST=%ld total(%ld) %s prod(%ld) expect prod(%ld)\n",
 			prod_errors, acq_tbl->proc_tot_prods_lost_errs,
 			GET_PROD_TYPE_NAME(buff_hdr->proc_prod_type),buff_hdr->proc_prod_seqno,
 			acq_tbl->proc_base_prod_seqno_last + 1);
@@ -285,7 +285,7 @@ int generate_retrans_rqst(ACQ_TABLE *p_acqtable,
 
 	if(global_retransmitpipe_fd <= 0){
 		/* Unable to open/write to pipe */
-		log_error("Unable to open or write to pipe %s \n",DEFAULT_RETRANSMIT_PIPENAME);
+		log_error_q("Unable to open or write to pipe %s \n",DEFAULT_RETRANSMIT_PIPENAME);
 		return (0);
 	}
 	
@@ -311,11 +311,11 @@ int generate_retrans_rqst(ACQ_TABLE *p_acqtable,
 	p_pipe_requesthdr->pipe_request_cause = RETRANS_RQST_CAUSE_RCV_ERR;
 
 
-	log_debug("pipe_request_numb = %ld | ctl_flag = %d | link_id = %d | channel_type = %d | rqst cause = %d \n",
+	log_debug_1("pipe_request_numb = %ld | ctl_flag = %d | link_id = %d | channel_type = %d | rqst cause = %d \n",
 			p_pipe_requesthdr->pipe_request_numb,p_pipe_requesthdr->pipe_ctl_flag,p_pipe_requesthdr->pipe_link_id,
 			p_pipe_requesthdr->pipe_channel_type,p_pipe_requesthdr->pipe_request_cause);
 
-	log_debug("cpio addr = %ld | rqst time = %ld | first prod seqno = [%d-%ld] | last prod seqno = %ld | run number = %d | delay_send = %d \n",
+	log_debug_1("cpio addr = %ld | rqst time = %ld | first prod seqno = [%d-%ld] | last prod seqno = %ld | run number = %d | delay_send = %d \n",
 			p_pipe_requesthdr->pipe_cpio_addr, p_pipe_requesthdr->pipe_request_time,p_pipe_requesthdr->pipe_first_prod_seqno,first_prod_seqno,
 			p_pipe_requesthdr->pipe_last_prod_seqno,p_pipe_requesthdr->pipe_run_numb,p_pipe_requesthdr->pipe_delay_send);
 
@@ -323,7 +323,7 @@ int generate_retrans_rqst(ACQ_TABLE *p_acqtable,
 	if((bytes_written = write(global_retransmitpipe_fd,
 		p_pipe_requesthdr, sizeof(PIPE_RETRANSMIT_HDR))) !=
 			sizeof(PIPE_RETRANSMIT_HDR)) {
-		log_error("FAIL write#%ld pipe[%d] tot(%ld) %s link[%d] prod(%ld-%ld)\n",
+		log_error_q("FAIL write#%ld pipe[%d] tot(%ld) %s link[%d] prod(%ld-%ld)\n",
 			p_pipe_requesthdr->pipe_request_numb,
 			global_retransmitpipe_fd,
 			p_acqtable->proc_tot_prods_retrans_rqstd, 
@@ -332,14 +332,14 @@ int generate_retrans_rqst(ACQ_TABLE *p_acqtable,
 			first_prod_seqno, last_prod_seqno);
 	} else {
 		if(first_prod_seqno != last_prod_seqno) {
-			log_info("OK rqst#%ld tot(%ld) %s link[%d] prod(%ld-%ld)\n",
+			log_info_q("OK rqst#%ld tot(%ld) %s link[%d] prod(%ld-%ld)\n",
 				request_numb,
 				p_acqtable->proc_tot_prods_retrans_rqstd, 
 				GET_SBN_TYP_NAME(p_pipe_requesthdr->pipe_channel_type),
 				p_pipe_requesthdr->pipe_link_id,
 				first_prod_seqno, last_prod_seqno);
 		} else {
-			log_info("OK rqst#%ld tot(%ld) %s link[%d] prod(%ld)\n",
+			log_info_q("OK rqst#%ld tot(%ld) %s link[%d] prod(%ld)\n",
 				request_numb,
 				p_acqtable->proc_tot_prods_retrans_rqstd, 
 				GET_SBN_TYP_NAME(p_pipe_requesthdr->pipe_channel_type),
@@ -376,13 +376,13 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 	if(prod_retrans_get_addr(p_acqtable->proc_base_channel_type_last,
 		p_prod_retrans_table, &p_retrans_entry_info, &p_retrans_entry, 
 		&retrans_table_type) < 0) {
-		log_notice("%s ignore retrans_ck\n",	FNAME);
+		log_notice_q("%s ignore retrans_ck\n",	FNAME);
 		return(match_value);
 	}
 
 	if(p_acqtable->proc_orig_prod_seqno_last != 0) {
 
-		log_debug("%s ok retrans channel_typ=%d tbl[%d] so ck more\n",
+		log_debug_1("%s ok retrans channel_typ=%d tbl[%d] so ck more\n",
 			FNAME, p_acqtable->proc_base_channel_type_last, retrans_table_type);
 
 		/* Assume have retransmitted product do following */
@@ -419,7 +419,7 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 			
 		}
 
-		log_debug("%s %s duplicate run(%d) prod|orig(%ld|%ld) tbl[%d]=%ld\n",
+		log_debug_1("%s %s duplicate run(%d) prod|orig(%ld|%ld) tbl[%d]=%ld\n",
 			FNAME,
 			(match_value==PROD_DUPLICATE_MATCH)?"OK MATCH":"NO MATCH",
 			p_acqtable->proc_orig_prod_run_id,
@@ -531,7 +531,7 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 /* Debug only */
 
 	if(match_value & PROD_NODUPLICATE) {
-		log_debug(" %s %s entry(%d) prod(%ld) code=%d %s[%d]\n",
+		log_debug_1(" %s %s entry(%d) prod(%ld) code=%d %s[%d]\n",
 			FNAME,
 			GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
 			index_value,
@@ -543,7 +543,7 @@ int prod_retrans_ck(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr, time_t *orig_arr
 				"UNKNOWN",
 			match_value);
 	} else {
-		log_debug("%s %s entry(%d) prod|orig(%ld|%ld) code=%d %s[%d]\n",
+		log_debug_1("%s %s entry(%d) prod|orig(%ld|%ld) code=%d %s[%d]\n",
 			FNAME,
 			GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
 			index_value,
@@ -579,7 +579,7 @@ int prod_retrans_update_entry(
 
 /* Debug only */
 		if(p_buffhdr != (BUFF_HDR *)NULL) {
-			log_debug("%s %s prod(%ld) code=%d %s[0x%x] update\n",
+			log_debug_1("%s %s prod(%ld) code=%d %s[0x%x] update\n",
 				FNAME,
 				GET_PROD_TYPE_NAME(p_buffhdr->proc_prod_type),
 				prod_seqno,
@@ -592,7 +592,7 @@ int prod_retrans_update_entry(
 				"UNKNOWN",
 				entry_flag);
 		} else {
-			log_debug("%s prod(%ld)  %s[0x%x] update\n",
+			log_debug_1("%s prod(%ld)  %s[0x%x] update\n",
 				FNAME,
 				prod_seqno,
 				(entry_flag & RETRANS_ENTRY_FLAG_AVAIL)?"AVAIL":
@@ -681,7 +681,7 @@ int prod_retrans_get_addr(
 
 
 	if(prod_retrans_table == (PROD_RETRANS_TABLE *)NULL) {
-		log_error("%s null prod_retrans_table ptr so give up\n",	FNAME);
+		log_error_q("%s null prod_retrans_table ptr so give up\n",	FNAME);
 		return(ERROR);
 	}
 
@@ -697,7 +697,7 @@ int prod_retrans_get_addr(
 
 	if(p_retrans_entry_info->numb_entries == 0) {
 		/* assume have no entries */
-		log_error("%s OK prod_retrans_table entry_info=0x%x numb_entry=%d\n",
+		log_error_q("%s OK prod_retrans_table entry_info=0x%x numb_entry=%d\n",
 			FNAME,
 			(unsigned long)*in_p_retrans_entry_info,
 			p_retrans_entry_info->numb_entries);
@@ -793,7 +793,7 @@ static long log_eop_count;  /* counter to track number of log EOP entries */
 	}
 
 	/* Finally do the brief product logging */
-	log_notice("%s \n", prod_log_buff);
+	log_notice_q("%s \n", prod_log_buff);
 
     	return(0);
 } /* end acqpro_log_prod_end */
@@ -877,7 +877,7 @@ int do_prod_mismatch(ACQ_TABLE *p_acqtable, BUFF_HDR *p_buffhdr)
 					/* its a duplicate retrans and hence may get discarded */
 					/*  Note: This needs to be done only when retrans prod is in error again and again*/
 					if(p_acqtable->proc_orig_prod_seqno_last != 0){
-						log_debug(" Aborting orig seqno [%ld] in retrans table. Cuurent prod seqno [%ld] \n",
+						log_debug_1(" Aborting orig seqno [%ld] in retrans table. Cuurent prod seqno [%ld] \n",
 							p_acqtable->proc_orig_prod_seqno_last,proc_prod_seqno);
 							prod_retrans_abort_entry(p_acqtable, p_acqtable->proc_orig_prod_seqno_last,
 							RETRANS_RQST_CAUSE_RCV_ERR);
@@ -932,7 +932,7 @@ int log_prod_lost(long in_prod_errors, long in_tot_prods_lost_errs, long in_prod
 	catPrint(prod_log_buff, sizeof(prod_log_buff), " %s",
 			get_date_time(tmtime, global_time_zone));
 
-	log_info("%s %s \n",get_date_time(tmtime, global_time_zone),prod_log_buff);
+	log_info_q("%s %s \n",get_date_time(tmtime, global_time_zone),prod_log_buff);
 
 	return(0);
 
@@ -949,7 +949,7 @@ int prod_retrans_abort_entry (ACQ_TABLE *p_acqtable, long prod_seqno, int err_ca
 
 	if(prod_retrans_get_addr(p_acqtable->proc_base_channel_type_last, p_prod_retrans_table,
 		&p_retrans_entry_info, &p_retrans_entry, &retrans_table_typ) < 0){
-			log_error("%s ignore abort \n",FNAME);
+			log_error_q("%s ignore abort \n",FNAME);
 			return(ERROR);
 		}
 
@@ -963,7 +963,7 @@ int prod_retrans_abort_entry (ACQ_TABLE *p_acqtable, long prod_seqno, int err_ca
 		index_value = 0;
 	}
 
-	log_info("%s ok abort %s tbl[%d]=%ld\n",FNAME,
+	log_info_q("%s ok abort %s tbl[%d]=%ld\n",FNAME,
 		GET_SBN_TYP_NAME(p_acqtable->proc_base_channel_type_last),
 		index_value,
 		p_retrans_entry[index_value].prod_seqno);

@@ -24,7 +24,7 @@ open_rawfile(const char *rawfname)
 		rawfd = open(rawfname, (O_WRONLY|O_CREAT), 0664);
 		if(rawfd < 0)
 		{
-			log_syserr("Couldn't open feed raw file \"%s\"",
+			log_syserr_q("Couldn't open feed raw file \"%s\"",
 				rawfname);
 			return(-1);
 		}
@@ -44,7 +44,7 @@ write_rawfile(size_t nbytes, char *buf)
 		const ssize_t nwrote = write(rawfd, buf, nbytes);
 		if(nwrote < nbytes)
 		{
-			log_syserr("Couldn't write raw data, closing raw file");
+			log_syserr_q("Couldn't write raw data, closing raw file");
 			(void) close(rawfd);
 			rawfd = -1;
 		}

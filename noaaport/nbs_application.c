@@ -209,21 +209,21 @@ nbs_status_t nbsa_recv_gini(
             status = pq_insert(nbsa->pq, prod);
             switch (status) {
             case 0:
-                log_info("Product inserted: %s", s_prod_info(NULL, 0, info,
+                log_info_q("Product inserted: %s", s_prod_info(NULL, 0, info,
                         0));
                 break;
             case PQ_DUP:
-                log_info("Duplicate product: %s", s_prod_info(NULL, 0, info,
+                log_info_q("Duplicate product: %s", s_prod_info(NULL, 0, info,
                         0));
                 status = 0;
                 break;
             case PQ_BIG:
-                log_warning("Product too big for queue: %s",
+                log_warning_q("Product too big for queue: %s",
                         s_prod_info(NULL, 0, info, 0));
                 status = 0;
                 break;
             default:
-                log_errno(status, "Couldn't insert product: %s",
+                log_errno_q(status, "Couldn't insert product: %s",
                         s_prod_info(NULL, 0, info, 0));
                 status = NBS_STATUS_SYSTEM;
                 break;

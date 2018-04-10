@@ -47,10 +47,10 @@ for(i=j;i>=0;i--)
       {
       k = unnextc(buf,ic[i]);
       if(k != ic[i])
-         log_error("Error in peek_ahead unnext: %d %d\0",ic[i],k);
+         log_error_q("Error in peek_ahead unnext: %d %d\0",ic[i],k);
       }
    if(isstart == 0)
-      log_debug("Peek_ahead check %d %d\0",i,ic[i]);
+      log_debug_1("Peek_ahead check %d %d\0",i,ic[i]);
    }
 
 if(isstart)
@@ -145,7 +145,7 @@ int peek_ahead(xbuf *buf);
 		state	= SOH_;
 	    } else {
 		if (CR != ch && NL != ch) {
-		    log_debug("garbage encountered while searching for header");
+		    log_debug_1("garbage encountered while searching for header");
 		}
 		state	= SEARCH;
 	    }
@@ -225,7 +225,7 @@ int peek_ahead(xbuf *buf);
 		    else
 		    {
 			not_wmo++;
-			log_error("scan_wmo_binary: length %ld too short",
+			log_error_q("scan_wmo_binary: length %ld too short",
 				plen);
 		    }
 		    justify_xbuf(buf, 0);
@@ -257,7 +257,7 @@ int peek_ahead(xbuf *buf);
 		break;
 	    case CHECKBYTE_SEEN:
 		if (0 != crc) {
-			log_error("Checksum (0x%04x) error          %s",
+			log_error_q("Checksum (0x%04x) error          %s",
 				crc, wmo_err_ident(buf));
 			bad_cksum++;
 		}
@@ -271,7 +271,7 @@ int peek_ahead(xbuf *buf);
 		    else
 		    {
 			not_wmo++;
-			log_error("scan_wmo_binary_crc: length %ld too short",
+			log_error_q("scan_wmo_binary_crc: length %ld too short",
 				plen);
 		    }
 		}
@@ -319,23 +319,23 @@ scan_wmo_parity (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug("Resync skipped %05ld bytes",
+				log_debug_1("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 #if 0
 			case SEARCH:
-				log_debug("Search %05ld bytes",
+				log_debug_1("Search %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 #endif
 			case HEADER_SEEN:
 				sohetx_missed++;
-				log_error("Lone SOH error                   %s",
+				log_error_q("Lone SOH error                   %s",
 					wmo_err_ident(buf));
 				break;
 			case PARITY_PIP:
 				bad_cksum++;
-				log_error("Parity error                     %s",
+				log_error_q("Parity error                     %s",
 					wmo_err_ident(buf));
 				break;
 			}
@@ -349,7 +349,7 @@ scan_wmo_parity (xbuf * buf)
 			case SEARCH:
 #endif
 				sohetx_missed++;
-				log_error("Lone ETX error                   %s",
+				log_error_q("Lone ETX error                   %s",
 					wmo_err_ident(buf));
 				break;
 			case HEADER_SEEN:
@@ -363,7 +363,7 @@ scan_wmo_parity (xbuf * buf)
 				else
 				{
 					not_wmo++;
-					log_error("scan_wmo: length %ld too short",
+					log_error_q("scan_wmo: length %ld too short",
 						plen);
 				}
 				justify_xbuf (buf, 0);
@@ -372,7 +372,7 @@ scan_wmo_parity (xbuf * buf)
 				break;
 			case PARITY_PIP:
 				bad_cksum++;
-				log_error("Parity error                     %s",
+				log_error_q("Parity error                     %s",
 					wmo_err_ident(buf));
 				break;
 			}

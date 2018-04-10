@@ -49,7 +49,7 @@ err_new(
     err = (ErrorObj*)malloc(sizeof(ErrorObj));
 
     if (NULL == err) {
-        log_syserr("malloc(%lu) failure",
+        log_syserr_q("malloc(%lu) failure",
             (unsigned long)sizeof(ErrorObj));
     }
     else {
@@ -233,7 +233,7 @@ err_log(
          * might have formatting characters in it (e.g., "%") from, for example,
          * a call to "s_prod_info()" with a dangerous product-identifier.
          */
-        log_log(log_levels[level], "%s", buf);
+        log_log_q(log_levels[level], "%s", buf);
     }
 }
 

@@ -1098,7 +1098,7 @@ h_clnt_call(
 #if INSTRUMENT
         if(hcp->rpcerr.re_status == RPC_SUCCESS
                         && hcp->elapsed.tv_sec > INSTR_WARN_TIME)
-                log_error("h_clnt_call: %s: %s: time elapsed %3ld.%06ld",
+                log_error_q("h_clnt_call: %s: %s: time elapsed %3ld.%06ld",
                         hcp->remote,
                         s_ldmproc(proc),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec);
@@ -1238,7 +1238,7 @@ open_h_clnt(
         if( h_clnt_open(hcp, timeout) < H_CLNTED)
         {
 #if 0 /* debug */
-                log_error("open_h_clnt(%s, %d, %d, %s)%s"
+                log_error_q("open_h_clnt(%s, %d, %d, %s)%s"
                         host, prognum, versnum, protocol, clnt_spcreateerror(""));
 #endif
                 free_h_clnt(hcp);
@@ -1365,7 +1365,7 @@ done:
 #if INSTRUMENT
         if(hcp->rpcerr.re_status == RPC_SUCCESS
                         && hcp->elapsed.tv_sec > INSTR_WARN_TIME)
-                log_error("h_clnt_flush: %s: time elapsed %3ld.%06ld",
+                log_error_q("h_clnt_flush: %s: time elapsed %3ld.%06ld",
                         hcp->remote,
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec);
 #endif /* INSTRUMENT */

@@ -22,6 +22,13 @@
 #include <unistd.h>
 #include <unordered_set>
 
+static std::string to_string(const CidrAddr& addr)
+{
+    char buf[INET_ADDRSTRLEN];
+    return std::string{::inet_ntop(AF_INET, &addr.addr, buf, sizeof(buf))} +
+            "/" + std::to_string(addr.prefixLen);
+}
+
 /**
  * Returns the pathname of the file that contains the authorization secret.
  * @param[in] port   Port number of multicast LDM RPC server
@@ -213,6 +220,7 @@ public:
         , allocated{}
         , mutex{}
     {
+        log_debug_1(("subnet= " + to_string(subnet)).c_str());
         auto size = available.size();
         for (in_addr_t i = 1; i <= size; ++i)
             available[i] |= htonl(i);
@@ -231,6 +239,7 @@ public:
         in_addr_t addr = {available.at(0)};
         available.pop_front();
         allocated.insert(addr);
+        log_debug_1(("Reserved address " + to_string(addr)).c_str());
         return addr;
     }
 
@@ -245,7 +254,11 @@ public:
     bool isReserved(const in_addr_t addr) const noexcept
     {
         LockGuard lock{mutex};
-        return allocated.find(addr) != allocated.end();
+        bool found = allocated.find(addr) != allocated.end();
+        if (!found)
+            log_debug_1((std::string("Address ") + to_string(addr) +
+                    " not found").c_str());
+        return found;
     }
 
     /**
@@ -505,7 +518,7 @@ public:
                 }
                 catch (const std::exception& ex) {
                     log_add(ex.what());
-                    log_notice("Couldn't serve client %s",
+                    log_notice_q("Couldn't serve client %s",
                             connSock.to_string().c_str());
                 }
             }
@@ -513,7 +526,7 @@ public:
                 throw; // Fatal error
             }
             catch (const std::exception& ex) {
-                log_notice(ex.what()); // Non-fatal error
+                log_notice_q(ex.what()); // Non-fatal error
             }
         } // Individual client session
     }

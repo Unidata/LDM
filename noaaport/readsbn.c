@@ -21,7 +21,7 @@ int readsbn(char *buf, sbn_struct *sbn)
         csum = csum + (unsigned char)buf[i];
 
     if (csum != lval) {
-        log_error("SBN checksum invalid %u %u",csum,lval);
+        log_error_q("SBN checksum invalid %u %u",csum,lval);
         return(-1);
     }
     else {
@@ -31,7 +31,7 @@ int readsbn(char *buf, sbn_struct *sbn)
     b1 = buf[0];
     if (b1 != 255) {
         for(i=0;i<32;i++)
-            log_info("look val %d %u",i,buf[i]);
+            log_info_q("look val %d %u",i,buf[i]);
         return(-1);
     }
 
@@ -49,7 +49,7 @@ int readsbn(char *buf, sbn_struct *sbn)
         case 10:/* Test message */
              break;
         default:
-            log_error ( "Invalid SBN command %d", sbn->command );
+            log_error_q ( "Invalid SBN command %d", sbn->command );
             return(-1);
     }
 

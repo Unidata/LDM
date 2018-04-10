@@ -657,7 +657,7 @@ int pq_last(
     int status = set_timestamp(tsp);
 
     if (status  != 0) {
-        log_errno(status, "Couldn't set time");
+        log_errno_q(status, "Couldn't set time");
     }
 
     return status;

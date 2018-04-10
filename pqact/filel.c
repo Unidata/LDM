@@ -345,7 +345,7 @@ dump_fl(void)
     fl_entry *entry;
     int fd;
 
-    log_debug("thefl->size %d", thefl->size);
+    log_debug_1("thefl->size %d", thefl->size);
     for(entry = thefl->head; entry != NULL;
             entry = entry->next )
     {
@@ -370,7 +370,7 @@ dump_fl(void)
         default :
             fd = -2;
         }
-        log_debug("%d %s", fd, entry->path);
+        log_debug_1("%d %s", fd, entry->path);
     }
 }
 #endif
@@ -421,11 +421,11 @@ fl_removeAndFree(
         int logLevel = (DR_ERROR == dr) ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
 
         if (PIPE == entry->type) {
-            log_log(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
+            log_log_q(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
                     REASON_STRING[dr], entry->private, entry->path);
         }
         else {
-            log_log(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
+            log_log_q(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
                     TYPE_NAME[entry->type], entry->path);
         }
 
@@ -449,7 +449,7 @@ fl_sync(
         prev = entry->prev;
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block)) {
-                log_error("Couldn't sync entry");
+                log_error_q("Couldn't sync entry");
                 fl_removeAndFree(entry, DR_ERROR); // public function so remove
             }
         }
@@ -633,7 +633,7 @@ dupstrip(
 
     out = malloc(len);
     if (out == NULL ) {
-        log_syserr("dupstrip: malloc %ld failed", (long) len);
+        log_syserr_q("dupstrip: malloc %ld failed", (long) len);
         return NULL ;
     }
 
@@ -924,17 +924,17 @@ static void *stripHeaders (const void *data, size_t *sz) {
 	    !memcmp (&dptr[7], "\040\015\015\012", 4))) {
 		dptr += SIZE_SBN_HDR;
 		*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
-		log_debug("Stripping LDM header/trailer");
+		log_debug_1("Stripping LDM header/trailer");
 	}
 
 	if ((wmo_offset = getWmoOffset (dptr, slen, &wmo_len)) >= 0) {
 		dptr += (wmo_offset + wmo_len);
 		*sz -= (wmo_offset + wmo_len);
 
-		log_debug("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
+		log_debug_1("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
 			wmo_offset, wmo_len, isz, *sz);
 	} else {
-		log_debug("WMO header not found in product with length %d", *sz);
+		log_debug_1("WMO header not found in product with length %d", *sz);
 	}
 
 	return (void *) dptr;
@@ -1002,7 +1002,7 @@ static int unio_open(
             fl_closeLru(0);
         }
 
-        log_syserr("unio_open: %s", path);
+        log_syserr_q("unio_open: %s", path);
     }
     else {
         /*
@@ -1012,7 +1012,7 @@ static int unio_open(
          */
         int status = ensureCloseOnExec(writeFd);
         if (status) {
-            log_error("Couldn't open FILE output-file");
+            log_error_q("Couldn't open FILE output-file");
         }
         else {
             if (!(flags & O_TRUNC)) {
@@ -1020,7 +1020,7 @@ static int unio_open(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr("unio_open(): Couldn't seek to EOF: %s", path);
+                    log_syserr_q("unio_open(): Couldn't seek to EOF: %s", path);
                 }
             }
 
@@ -1028,7 +1028,7 @@ static int unio_open(
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX - 1] = 0; /* just in case */
 
-            log_debug("%d %s", entry->handle.fd, entry->path);
+            log_debug_1("%d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
         if (status) {
@@ -1043,10 +1043,10 @@ static int unio_open(
 static void unio_close(
         fl_entry *entry)
 {
-    log_debug("%d", entry->handle.fd);
+    log_debug_1("%d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
-            log_syserr("close: %s", entry->path);
+            log_syserr_q("close: %s", entry->path);
         }
     }
 
@@ -1057,7 +1057,7 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("%d %s", entry->handle.fd, block ? "" : "non-block");
+    log_debug_1("%d %s", entry->handle.fd, block ? "" : "non-block");
 
     if (0 == fsync(entry->handle.fd)) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -1084,7 +1084,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        log_debug("handle: %d size: %d", entry->handle.fd, sz);
+        log_debug_1("handle: %d size: %d", entry->handle.fd, sz);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -1282,7 +1282,7 @@ int unio_prodput(
     fl_entry	*entry = fl_getEntry(UNIXIO, argc, argv, NULL);
     char	must_free_data = 0;
 
-    log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
+    log_debug_1("%d %s", entry == NULL ? -1 : entry->handle.fd,
     prodp->info.ident);
 
     if (entry == NULL ) {
@@ -1292,7 +1292,7 @@ int unio_prodput(
     else {
         if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
-                log_error(
+                log_error_q(
                         "Notification specified but shared memory is not available.");
             }
             else {
@@ -1304,7 +1304,7 @@ int unio_prodput(
                 strncpy(msg->ident, prodp->info.ident, 256);
                 msg->ident[256-1] = 0;
                 if (shmdt((void*)queue) == -1) {
-                    log_error("Detaching shared memory failed.");
+                    log_error_q("Detaching shared memory failed.");
                 }
             }
         }
@@ -1338,7 +1338,7 @@ int unio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr("Couldn't seek to BOF: %s", entry->path);
+                    log_syserr_q("Couldn't seek to BOF: %s", entry->path);
                 }
             }
 
@@ -1356,7 +1356,7 @@ int unio_prodput(
                 }
                 else {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
+                        log_notice_q("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
                                         log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
@@ -1433,7 +1433,7 @@ static int stdio_open(
             fl_closeLru(0);
         }
 
-        log_syserr("mkdirs_open: %s", path);
+        log_syserr_q("mkdirs_open: %s", path);
     }
     else {
         /*
@@ -1442,13 +1442,13 @@ static int stdio_open(
          */
         int status = ensureCloseOnExec(fd);
         if (status) {
-            log_error("Couldn't open STDIOFILE output-file");
+            log_error_q("Couldn't open STDIOFILE output-file");
         }
         else {
             entry->handle.stream = fdopen(fd, mode);
 
             if (NULL == entry->handle.stream) {
-                log_syserr("fdopen: %s", path);
+                log_syserr_q("fdopen: %s", path);
             }
             else {
                 if (!entry_isFlagSet(entry, O_TRUNC)) {
@@ -1456,13 +1456,13 @@ static int stdio_open(
                         /*
                          * The "file" must be a pipe or FIFO.
                          */
-                        log_syserr("stdio_open(): Couldn't seek to EOF: %s", path);
+                        log_syserr_q("stdio_open(): Couldn't seek to EOF: %s", path);
                     }
                 }
 
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
-                log_debug("%d", fileno(entry->handle.stream));
+                log_debug_1("%d", fileno(entry->handle.stream));
                 status = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
@@ -1479,11 +1479,11 @@ static int stdio_open(
 static void stdio_close(
         fl_entry *entry)
 {
-    log_debug("%d",
+    log_debug_1("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
-            log_syserr("fclose: %s", entry->path);
+            log_syserr_q("fclose: %s", entry->path);
         }
     }
     entry->handle.stream = NULL;
@@ -1494,12 +1494,12 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("%d",
+    log_debug_1("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
 
     if (fflush(entry->handle.stream) == EOF) {
         if (EINTR != errno) {
-            log_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
+            log_syserr_q("Couldn't flush I/O to file \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1519,14 +1519,14 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    log_debug("%d", fileno(entry->handle.stream));
+    log_debug_1("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
     if (nwrote != sz) {
         if (errno != EINTR) {
-            log_syserr("fwrite() error: \"%s\"", entry->path);
+            log_syserr_q("fwrite() error: \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1553,7 +1553,7 @@ int stdio_prodput(
     fl_entry*	entry = fl_getEntry(STDIO, argc, argv, NULL);
     char	must_free_data = 0;
 
-    log_debug("%d %s",
+    log_debug_1("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1582,7 +1582,7 @@ int stdio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr("Couldn't seek to BOF: %s",
+                    log_syserr_q("Couldn't seek to BOF: %s",
                             entry->path);
                 }
             }
@@ -1596,7 +1596,7 @@ int stdio_prodput(
                 status = flushIfAppropriate(entry);
 
                 if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
-                    log_notice("StdioFiled in \"%s\": %s", argv[argc - 1],
+                    log_notice_q("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info,
                                     log_is_enabled_debug));
             } /* data written */
@@ -1739,7 +1739,7 @@ static int pipe_open(
             fl_closeLru(0);
         }
 
-        log_syserr("Couldn't create pipe");
+        log_syserr_q("Couldn't create pipe");
     }
     else {
         /*
@@ -1749,13 +1749,13 @@ static int pipe_open(
          */
         int status = ensureCloseOnExec(pfd[1]);
         if (status) {
-            log_error("Couldn't set write-end of pipe to close on exec()");
+            log_error_q("Couldn't set write-end of pipe to close on exec()");
         }
         else {
             pid_t pid = ldmfork();
 
             if (-1 == pid) {
-                log_error("Couldn't fork PIPE process");
+                log_error_q("Couldn't fork PIPE process");
             }
             else {
                 if (0 == pid) {
@@ -1772,7 +1772,7 @@ static int pipe_open(
                      * (e.g., SIGCONTs, SIGINTs, and SIGTERMs).
                      */
                     if (setpgid(0, 0) == -1) {
-                        log_warning(
+                        log_warning_q(
                                 "Couldn't make decoder a process-group leader");
                     }
 
@@ -1787,7 +1787,7 @@ static int pipe_open(
                      */
                     if (STDIN_FILENO != pfd[0]) {
                         if (-1 == dup2(pfd[0], STDIN_FILENO)) {
-                            log_syserr("Couldn't redirect standard input to "
+                            log_syserr_q("Couldn't redirect standard input to "
                                     "read-end of pipe: pfd[0]=%d", pfd[0]);
                         }
                         else {
@@ -1798,9 +1798,9 @@ static int pipe_open(
 
                     if (STDIN_FILENO == pfd[0]) {
                         endpriv();
-                        log_info("Executing decoder \"%s\"", av[0]);
+                        log_info_q("Executing decoder \"%s\"", av[0]);
                         (void)execvp(av[0], &av[0]);
-                        log_syserr("Couldn't execute decoder \"%s\";"
+                        log_syserr_q("Couldn't execute decoder \"%s\";"
                                 "PATH=%s", av[0], getenv("PATH"));
                     }
 
@@ -1825,14 +1825,14 @@ static int pipe_open(
                     #endif
 
                     if (NULL == entry->handle.pbuf) {
-                        log_syserr("Couldn't create pipe-buffer");
+                        log_syserr_q("Couldn't create pipe-buffer");
                     }
                     else {
                         entry->private = pid;
                         writeFd = pfd[1]; /* success */
 
                         argcat(entry->path, PATH_MAX - 1, argc, argv);
-                        log_debug("%d %d", writeFd, pid);
+                        log_debug_1("%d %d", writeFd, pid);
                     }
                 } /* parent process */
             } /* fork() success */
@@ -1851,7 +1851,7 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
+    log_debug_1("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 
@@ -1878,7 +1878,7 @@ static void pipe_close(
     pid_t pid = (pid_t) entry->private;
     int pfd = -1;
 
-    log_debug("%d, %d",
+    log_debug_1("%d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
         if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
@@ -1889,7 +1889,7 @@ static void pipe_close(
     }
     if (pfd != -1) {
         if (close(pfd) == -1) {
-            log_syserr("pipe close: %s", entry->path);
+            log_syserr_q("pipe close: %s", entry->path);
         }
         /*
          * The close should cause termination of the child
@@ -1913,7 +1913,7 @@ static int pipe_put(
 {
     int status;
 
-    log_debug("%d",
+    log_debug_1("%d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
@@ -2152,7 +2152,7 @@ int pipe_prodput(
         status = -1;
     }
     else {
-        log_debug("%d %s",
+        log_debug_1("%d %s",
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
@@ -2186,7 +2186,7 @@ int pipe_prodput(
                  * happened). Remove the entry, free its resources, and try
                  * again -- once.
                  */
-                log_error("Decoder terminated prematurely");
+                log_error_q("Decoder terminated prematurely");
                 fl_removeAndFree(entry, DR_ERROR);
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
                 if (entry == NULL ) {
@@ -2243,7 +2243,7 @@ int spipe_prodput(
     conv sync;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("%d %s",
+    log_debug_1("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2315,7 +2315,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    log_debug("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    log_debug_1("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
@@ -2328,7 +2328,7 @@ int spipe_prodput(
          * try again once.
          */
         fl_removeAndFree(entry, DR_ERROR);
-        log_error("trying again");
+        log_error_q("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
@@ -2356,7 +2356,7 @@ int xpipe_prodput(
     fl_entry *entry;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug("%d %s",
+    log_debug_1("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2369,7 +2369,7 @@ int xpipe_prodput(
          * try again once.
          */
         fl_removeAndFree(entry, DR_ERROR);
-        log_error("trying again");
+        log_error_q("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
             return -1;
@@ -2398,7 +2398,7 @@ int xpipe_prodput(
 static void ldmdb_fatal(
         const char * str)
 {
-    log_syserr("ldmdb_fatal(): %s", str);
+    log_syserr_q("ldmdb_fatal(): %s", str);
 }
 
 /*
@@ -2428,7 +2428,7 @@ static int ldmdb_open(
             dblocksize = (int) tmp;
         }
         else {
-            log_error("%s: -dblocksize %s invalid", path, argv[1]);
+            log_error_q("%s: -dblocksize %s invalid", path, argv[1]);
         }
     }
 
@@ -2436,7 +2436,7 @@ static int ldmdb_open(
     {
         /* create directories if needed */
         if (diraccess(path, (R_OK | W_OK), !0) == -1) {
-            log_syserr("Couldn't access directories leading to %s", path);
+            log_syserr_q("Couldn't access directories leading to %s", path);
             return -1;
         }
     }
@@ -2453,21 +2453,21 @@ static int ldmdb_open(
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        log_syserr("gdbm_open: %s", path);
+        log_syserr_q("gdbm_open: %s", path);
         return -1;
     }
     entry->handle.db = db;
     entry->private = read_write;
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX - 1] = 0; /* just in case */
-    log_debug("%s", entry->path);
+    log_debug_1("%s", entry->path);
     return 0;
 }
 
 static void ldmdb_close(
         fl_entry *entry)
 {
-    log_debug("%s", entry->path);
+    log_debug_1("%s", entry->path);
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
@@ -2510,7 +2510,7 @@ static int ldmdb_sync(
         int block)
 {
     /* there is no gdbm_sync */
-    log_debug("%s", entry->handle.db ? entry->path : "");
+    log_debug_1("%s", entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
@@ -2545,14 +2545,14 @@ static int ldmdb_put(
         int size;
         datum old_stuff, new_stuff;
         old_stuff = gdbm_fetch(entry->handle.db, key);
-        log_debug("\tConcatenating data under key %s", key.dptr);
+        log_debug_1("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr) {
-            log_syserr("Inconsistent Duplicate Key storage");
+            log_syserr_q("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = content.dsize + old_stuff.dsize;
         if (NULL == (new_stuff.dptr = malloc(size))) {
-            log_syserr("malloc failed");
+            log_syserr_q("malloc failed");
             free(old_stuff.dptr);
             return -1;
         }
@@ -2603,7 +2603,7 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     /* create directories if needed */
     if(diraccess(path, (R_OK | W_OK), 1) == -1)
     {
-        log_syserr("Couldn't access directories leading to %s", path);
+        log_syserr_q("Couldn't access directories leading to %s", path);
         return -1;
     }
 
@@ -2623,19 +2623,19 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        log_syserr("ldmdb_open: %s", path);
+        log_syserr_q("ldmdb_open: %s", path);
         return -1;
     }
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX-1] = 0; /* just in case */
-    log_debug("%s", entry->path);
+    log_debug_1("%s", entry->path);
     return 0;
 }
 
 static void
 ldmdb_close(fl_entry *entry)
 {
-    log_debug("%s", entry->path);
+    log_debug_1("%s", entry->path);
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
@@ -2653,7 +2653,7 @@ static int
 ldmdb_sync(fl_entry *entry, int block)
 {
     /* there is no dbm_sync */
-    log_debug("%s",
+    log_debug_1("%s",
             entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
@@ -2688,16 +2688,16 @@ ldmdb_put(fl_entry *entry, const char *keystr,
         int size;
         datum old_stuff, new_stuff;
         old_stuff = dbm_fetch(entry->handle.db, key);
-        log_debug("\tConcatenating data under key %s", key.dptr);
+        log_debug_1("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr)
         {
-            log_syserr("Inconsistent Duplicate Key storage");
+            log_syserr_q("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = (int)(content.dsize+old_stuff.dsize);
         if (NULL == (new_stuff.dptr = malloc(size)))
         {
-            log_syserr("malloc failed");
+            log_syserr_q("malloc failed");
             free (old_stuff.dptr);
             return -1;
         }
@@ -2746,7 +2746,7 @@ int ldmdb_prodput(
             dblocksizep = *av;
         }
         else
-            log_error("Invalid argument %s", *av);
+            log_error_q("Invalid argument %s", *av);
 
     }
 
@@ -2760,7 +2760,7 @@ int ldmdb_prodput(
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
         entry = fl_getEntry(FT_DB, argc, argv, NULL);
-        log_debug("%s %s", entry == NULL ? "" : entry->path,
+        log_debug_1("%s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
             return -1;
@@ -2785,7 +2785,7 @@ int ldmdb_prodput(
 #endif
 
     if (status == -1) {
-        log_error("%s error for %s, dbkey %s", entry->path, prod->info.ident,
+        log_error_q("%s error for %s, dbkey %s", entry->path, prod->info.ident,
                 keystr);
     }
     if (closeflag || status == -1) {
@@ -2820,12 +2820,12 @@ entry_new(
         #ifndef NO_DB
             ops = &ldmdb_ops;
         #else
-            log_error("DB type not enabled");
+            log_error_q("DB type not enabled");
             ops = NULL;
         #endif
         break;
     default:
-        log_error("unknown type %d", type);
+        log_error_q("unknown type %d", type);
         ops = NULL;
     }
 
@@ -2836,7 +2836,7 @@ entry_new(
         entry = Alloc(1, fl_entry);
 
         if (NULL == entry) {
-            log_syserr("entry_new: malloc");
+            log_syserr_q("entry_new: malloc");
         }
         else {
             entry->ops = ops;
@@ -2871,7 +2871,7 @@ set_avail_fd_count(
     int error;
 
     if (fdCount <= 1) {
-        log_error("Invalid file-descriptor count: %ld", fdCount);
+        log_error_q("Invalid file-descriptor count: %ld", fdCount);
         error = -1;
     }
     else {
@@ -2894,7 +2894,7 @@ int set_shared_space(
 {
     int error;
     if (shid == -1 || semid == -1) {
-        log_error("Shared memory is not available.  Notification system disabled.");
+        log_error_q("Shared memory is not available.  Notification system disabled.");
         error = -1;
     }
     else {
@@ -2970,7 +2970,7 @@ pid_t reap(
             /*
              * Unwaited-for child processes exist.
              */
-            log_syserr("waitpid()");
+            log_syserr_q("waitpid()");
         }
     }
     else if (wpid != 0) {
@@ -3007,19 +3007,19 @@ pid_t reap(
         }
 
         if (WIFSTOPPED(status)) {
-            log_notice(cmd
+            log_notice_q(cmd
                         ? "child %d stopped by signal %d (%s %s)"
                         : "child %d stopped by signal %d",
                     wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            log_warning("Child %d terminated by signal %d", wpid, WTERMSIG(status));
+            log_warning_q("Child %d terminated by signal %d", wpid, WTERMSIG(status));
 
             if (!isExec) {
                 fl_removeAndFree(entry, DR_TERMINATED); // NULL `entry` safe
             }
             else {
-                log_info("Deleting terminated EXEC entry \"%s\"", cmd);
+                log_info_q("Deleting terminated EXEC entry \"%s\"", cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
@@ -3029,13 +3029,13 @@ pid_t reap(
                     exitStatus ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
             const DeleteReason dr = exitStatus ? DR_ERROR : DR_TERMINATED;
 
-            log_log(logLevel, "Child %d exited with status %d", wpid, exitStatus);
+            log_log_q(logLevel, "Child %d exited with status %d", wpid, exitStatus);
 
             if (!isExec) {
                 fl_removeAndFree(entry, dr);    // NULL `entry` safe
             }
             else {
-                log_log(logLevel, "Deleting %s EXEC entry \"%s\"",
+                log_log_q(logLevel, "Deleting %s EXEC entry \"%s\"",
                         REASON_STRING[dr], cmd);
                 (void)cm_remove(execMap, wpid);
             }

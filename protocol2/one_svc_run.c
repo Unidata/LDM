@@ -103,7 +103,7 @@ one_svc_run(
         } /* socket is read-ready */
         else {
             if (errno != EINTR) {
-                log_syserr("select() error on socket %d", sock);
+                log_syserr_q("select() error on socket %d", sock);
                 return errno;
             }
 

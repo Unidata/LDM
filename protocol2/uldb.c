@@ -820,7 +820,7 @@ static int entry_toString(
     if (entry_getProdClass(entry, &prodClass)) {
         const char* const   msg = "Couldn't format entry";
 
-        log_error("%s", msg);
+        log_error_q("%s", msg);
         nbytes = snprintf(buf, size, "%s", msg);
     }
     else {
@@ -1527,12 +1527,12 @@ static uldb_Status sm_vetUpstreamLdm(
                     (void)entry_toString(entry, buf, sizeof(buf));
 
                     if (kill(entry_getPid(entry), SIGTERM)) {
-                        log_warning(
+                        log_warning_q(
                                 "Couldn't terminate redundant upstream LDM %s",
                                 buf);
                     }
                     else {
-                        log_notice("Terminated redundant upstream LDM %s", buf);
+                        log_notice_q("Terminated redundant upstream LDM %s", buf);
                     }
                 }
                 else {

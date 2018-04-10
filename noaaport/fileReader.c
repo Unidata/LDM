@@ -38,14 +38,14 @@ int fileReaderNew(
 
     if (isStandardInput) {
         if ((fd = fileno(stdin)) == -1) {
-            log_syserr(
+            log_syserr_q(
                     "Couldn't get file-descriptor of standard input stream");
             status = 1;
         }
     }
     else {
         if ((fd = open(pathname, O_RDONLY)) == -1) {
-            log_syserr("Couldn't open file \"%s\"", pathname);
+            log_syserr_q("Couldn't open file \"%s\"", pathname);
             status = 1;
         }
     }

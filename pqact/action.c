@@ -71,7 +71,7 @@ exec_prodput(
         execMap = cm_new();
 
         if (NULL == execMap) {
-            log_error("Couldn't create child-process map for EXEC entries");
+            log_error_q("Couldn't create child-process map for EXEC entries");
             pid = -1;
         }
     }
@@ -86,7 +86,7 @@ exec_prodput(
 
         pid = ldmfork();
         if (-1 == pid) {
-            log_syserr("Couldn't fork EXEC process");
+            log_syserr_q("Couldn't fork EXEC process");
         }
         else if (0 == pid) {
             /*
@@ -105,9 +105,9 @@ exec_prodput(
 
             // Don't let the child process get any inappropriate privileges.
             endpriv();
-            log_info("Executing program \"%s\"", argv[0]);
+            log_info_q("Executing program \"%s\"", argv[0]);
             (void)execvp(argv[0], argv);
-            log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
+            log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
                     getenv("PATH"));
             exit(EXIT_FAILURE); // cleanup() calls log_fini()
         }
@@ -116,10 +116,10 @@ exec_prodput(
             (void)cm_add_argv(execMap, pid, argv);
 
             if (!waitOnChild) {
-                log_debug("exec %s[%d]", argv[0], pid);
+                log_debug_1("exec %s[%d]", argv[0], pid);
             }
             else {
-                log_debug("exec -wait %s[%d]", argv[0], pid);
+                log_debug_1("exec -wait %s[%d]", argv[0], pid);
                 (void)reap(pid, 0);
             }
         }
@@ -174,7 +174,7 @@ atoaction(
 
         if(str == NULL || *str == 0)
         {
-                log_debug("atoaction: Invalid string argument");
+                log_debug_1("atoaction: Invalid string argument");
                 return -1;
         }
 

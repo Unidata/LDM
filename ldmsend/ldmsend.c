@@ -139,7 +139,7 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
     for (; exitIfDone(1) && st_size > 0; st_size -= (off_t)nread) {
         nread = read(fd, buf, sizeof(buf));
         if(nread <= 0) {
-            log_syserr("fd_md5: read");
+            log_syserr_q("fd_md5: read");
             return -1;
         } /* else */
         MD5Update(md5ctxp, (unsigned char *)buf, (unsigned int)nread);
@@ -178,13 +178,13 @@ send_product(
     product.data = mmap(NULL, info->sz, PROT_READ, MAP_PRIVATE, fd, 0);
 
     if (MAP_FAILED == product.data) {
-        log_syserr("Couldn't memory-map file");
+        log_syserr_q("Couldn't memory-map file");
         status = SYSTEM_ERROR;
     }
     else {
         status = lp_send(proxy, &product);
         if (LP_UNWANTED == status) {
-            log_notice("Unwanted product: %s", s_prod_info(NULL, 0, info,
+            log_notice_q("Unwanted product: %s", s_prod_info(NULL, 0, info,
                         log_is_enabled_debug));
             status = 0;
         }
@@ -235,7 +235,7 @@ ldmsend(
     md5ctxp = new_MD5_CTX();
     if (md5ctxp == NULL)
     {
-        log_syserr("new_md5_CTX failed");
+        log_syserr_q("new_md5_CTX failed");
         return SYSTEM_ERROR;
     }
 
@@ -263,27 +263,27 @@ ldmsend(
              * against what the other guy has said he wants.
              */
             if (!prodInClass(offer, &info)) {
-                log_info("Not going to send %s", filename);
+                log_info_q("Not going to send %s", filename);
                 continue;       
             }
             if (!prodInClass(want, &info)) {
-                log_info("%s doesn't want %s", lp_host(ldmProxy), filename);
+                log_info_q("%s doesn't want %s", lp_host(ldmProxy), filename);
                 continue;       
             }
 
             fd = open(filename, O_RDONLY, 0);
             if (fd == -1) {
-                log_syserr("open: %s", filename);
+                log_syserr_q("open: %s", filename);
                 continue;
             }
 
             if (fstat(fd, &statb) == -1) {
-                log_syserr("fstat: %s", filename);
+                log_syserr_q("fstat: %s", filename);
                 (void) close(fd);
                 continue;
             }
 
-            log_info("Sending %s, %d bytes", filename, statb.st_size);
+            log_info_q("Sending %s, %d bytes", filename, statb.st_size);
             
             /* These members, and seqno, vary over the loop. */
             if (fd_md5(md5ctxp, fd, statb.st_size, info.signature) != 0) {
@@ -291,7 +291,7 @@ ldmsend(
                 continue;
             }
             if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
-                log_syserr("rewind: %s", filename);
+                log_syserr_q("rewind: %s", filename);
                 (void) close(fd);
                 continue;
             }
@@ -423,7 +423,7 @@ main(
      */
     if(atexit(cleanup) != 0)
     {
-        log_syserr("atexit");
+        log_syserr_q("atexit");
         exit(SYSTEM_ERROR);
     }
 
@@ -449,7 +449,7 @@ main(
             : CONNECTION_ABORTED;
     }
     else {
-        log_debug("version %u", lp_version(ldmProxy));
+        log_debug_1("version %u", lp_version(ldmProxy));
 
         status = ldmsend(ldmProxy, &clss, myname, seq_start, ac, av);
 

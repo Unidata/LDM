@@ -54,7 +54,7 @@ class AuthServer::Impl final
             }
         } // Loop
         // Log now because end-of-thread
-        log_error("Authorization-server failure for message-queue %s",
+        log_error_q("Authorization-server failure for message-queue %s",
                 authMsgQ.getName().c_str());
     }
 
@@ -86,7 +86,7 @@ public:
     {
         auto status = ::pthread_cancel(thread.native_handle());
         if (status)
-            log_errno(status, "Couldn't cancel server-thread for authorization "
+            log_errno_q(status, "Couldn't cancel server-thread for authorization "
                     "message-queue %s", authMsgQ.getName().c_str());
         thread.join(); // Can't fail. Might hang, though
     }

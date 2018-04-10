@@ -160,7 +160,7 @@ static Status printPath(
     RegStatus   regStatus;
     char*       value;
 
-    log_debug("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    log_debug_1("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     /*
      * The path name is first assumed to reference an existing value;
@@ -188,7 +188,7 @@ static Status printPath(
             if (0 != (regStatus = reg_getNode(path, &node, 0))) {
                 if (ENOENT == regStatus) {
                     if (!quiet) {
-                        log_error("No such value or node: \"%s\"", path);
+                        log_error_q("No such value or node: \"%s\"", path);
                     }
                     status = NO_SUCH_ENTRY;
                 }
@@ -222,10 +222,10 @@ static Status createRegistry(void)
 {
     RegNode*    rootNode;
 
-    log_debug("Creating registry");
+    log_debug_1("Creating registry");
 
     if (0 != reg_getNode("/", &rootNode, 1)) {
-        log_error("Couldn't create registry");
+        log_error_q("Couldn't create registry");
         return SYSTEM_ERROR;
     }
 
@@ -241,10 +241,10 @@ static Status createRegistry(void)
  */
 static Status resetRegistry(void)
 {
-    log_debug("Resetting registry");
+    log_debug_1("Resetting registry");
 
     if (0 != reg_reset()) {
-        log_error("Couldn't reset registry");
+        log_error_q("Couldn't reset registry");
         return SYSTEM_ERROR;
     }
 
@@ -270,7 +270,7 @@ static Status deletePath(
     const char* const   path,
     const int           quiet)
 {
-    log_debug("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    log_debug_1("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     switch (reg_deleteValue(path)) {
         case 0:
@@ -291,7 +291,7 @@ static Status deletePath(
                     return 0;
                 case ENOENT:
                     if (!quiet) {
-                        log_error("No such value or node: \"%s\"", path);
+                        log_error_q("No such value or node: \"%s\"", path);
                     }
                     return NO_SUCH_ENTRY;
                 default:
@@ -370,7 +370,7 @@ int main(
     (void)log_init(progname);
 
     if ((status = sb_new(&_valuePath, 80))) {
-        log_error("Couldn't initialize utility");
+        log_error_q("Couldn't initialize utility");
         status = SYSTEM_ERROR;
     }
     else {
@@ -413,7 +413,7 @@ int main(
 
                 if (status == 0) {
                     if (CREATE == action) {
-                        log_error("Create option ignored");
+                        log_error_q("Create option ignored");
                     }
                     action = PUT_BOOL;
                 }
@@ -443,7 +443,7 @@ int main(
                 }
                 else {
                     if (CREATE == action) {
-                        log_info("Create action ignored");
+                        log_info_q("Create action ignored");
                     }
                     action = PUT_SIGNATURE;
                     status = 0;
@@ -476,7 +476,7 @@ int main(
             }
             case 's': {
                 if (CREATE == action) {
-                    log_info("Create action  ignored");
+                    log_info_q("Create action  ignored");
                 }
                 string = optarg;
                 action = PUT_STRING;
@@ -491,7 +491,7 @@ int main(
                 }
                 else {
                     if (CREATE == action) {
-                        log_info("Create action ignored");
+                        log_info_q("Create action ignored");
                     }
                     action = PUT_TIME;
                     status = 0;
@@ -510,7 +510,7 @@ int main(
                 }
                 else {
                     if (CREATE == action) {
-                        log_info("Create option ignored");
+                        log_info_q("Create option ignored");
                     }
                     action = PUT_UINT;
                 }
@@ -552,7 +552,7 @@ int main(
             switch (action) {
                 case CREATE: {
                     if (0 < argCount) {
-                        log_error("Too many arguments");
+                        log_error_q("Too many arguments");
                         usage(progname);
                         status = COMMAND_SYNTAX;
                     }
@@ -563,7 +563,7 @@ int main(
                 }
                 case RESET: {
                     if (0 < argCount) {
-                        log_error("Too many arguments");
+                        log_error_q("Too many arguments");
                         usage(progname);
                         status = COMMAND_SYNTAX;
                     }
@@ -574,20 +574,20 @@ int main(
                 }
                 case REMOVE: {
                     if (0 == argCount) {
-                        log_error(
+                        log_error_q(
                             "Removal action requires absolute pathname(s)");
                         usage(progname);
                         status = COMMAND_SYNTAX;
                     }
                     else {
-                        log_debug("Removing registry");
+                        log_debug_1("Removing registry");
                         status = actUponPathList(argv + optind, deletePath,
                             quiet);
                     }
                     break;
                 }
                 case PRINT: {
-                    log_debug("Printing registry");
+                    log_debug_1("Printing registry");
                     status = (0 == argCount)
                         ? printPath("/", quiet)
                         : actUponPathList(argv + optind, printPath, quiet);
@@ -598,7 +598,7 @@ int main(
                      * Must be some kind of "put".
                      */
                     if (0 == argCount) {
-                        log_error("Put action requires value pathname");
+                        log_error_q("Put action requires value pathname");
                         usage(progname);
                         status = COMMAND_SYNTAX;
                     }

@@ -114,7 +114,7 @@ createEnvHandle(
     log_list_clear();
 
     if (status = db_env_create(&env, 0)) {
-        log_syserr("Couldn't create environment handle for database: %s",
+        log_syserr_q("Couldn't create environment handle for database: %s",
             db_strerror(status));
         status = ENOMEM;
     }
@@ -390,7 +390,7 @@ makeDatabasePath(
     char*               buf = (char*)malloc(len);
 
     if (NULL == buf) {
-        log_syserr("Couldn't allocate %lu bytes", (unsigned long)len);
+        log_syserr_q("Couldn't allocate %lu bytes", (unsigned long)len);
     }
     else {
         (void)strcpy(strcpy(strcpy(strcpy(buf, path) + lenPath, "/") + 1, 
@@ -575,7 +575,7 @@ beOpen(
     assert(NULL != dir);
 
     if (NULL == back) {
-        log_syserr("Couldn't allocate %lu bytes", (long)sizeof(Backend));
+        log_syserr_q("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = ENOMEM;
     }
     else {
@@ -699,7 +699,7 @@ beReset(
         /*
          * The backend database needs to be restored.
          */
-        log_notice("Restoring from backup");
+        log_notice_q("Restoring from backup");
 
         if (0 == (status = removeEnvironment(path))) {
             status = copyDatabase(path, ".bck", "");
@@ -1013,7 +1013,7 @@ beFirstEntry(
         char* const dupKey = strdup(key);
 
         if (NULL == dupKey) {
-            log_syserr("Couldn't allocate %lu bytes", (long)strlen(key));
+            log_syserr_q("Couldn't allocate %lu bytes", (long)strlen(key));
             status = ENOMEM;
         }
         else {

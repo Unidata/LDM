@@ -1,0 +1,26 @@
+==36162== Memcheck, a memory error detector
+==36162== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==36162== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright info
+==36162== Command: /home/steve/Projects/ldm/src/mcast_lib/ldm7/.libs/lt-Authorizer_test
+==36162== 
+[==========] Running 2 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 2 tests from AuthorizerTest
+[ RUN      ] AuthorizerTest.Construction
+[       OK ] AuthorizerTest.Construction (41 ms)
+[ RUN      ] AuthorizerTest.Authorization
+[       OK ] AuthorizerTest.Authorization (27 ms)
+[----------] 2 tests from AuthorizerTest (74 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test case ran. (100 ms total)
+[  PASSED  ] 2 tests.
+==36162== 
+==36162== HEAP SUMMARY:
+==36162==     in use at exit: 0 bytes in 0 blocks
+==36162==   total heap usage: 333 allocs, 333 frees, 60,124 bytes allocated
+==36162== 
+==36162== All heap blocks were freed -- no leaks are possible
+==36162== 
+==36162== For counts of detected and suppressed errors, rerun with: -v
+==36162== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

@@ -12,8 +12,8 @@
 #ifndef PROD_INDEX_QUEUE_H
 #define PROD_INDEX_QUEUE_H
 
+#include "fmtp.h"
 #include "ldm.h"
-#include "mcast.h"
 
 typedef struct prod_index_queue  ProdIndexQueue;
 

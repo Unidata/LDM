@@ -167,7 +167,7 @@ static RegStatus addChild(
         }
         else {
             if (NULL == tsearch(child, &parent->children, compareNodes)) {
-                log_syserr("tsearch() failure");
+                log_syserr_q("tsearch() failure");
                 status = ENOMEM;
             }
             else {
@@ -879,7 +879,7 @@ static RegStatus putValue(
                     if (0 == (status = reg_cloneString(&vt->name, name))) {
                         if (NULL == (ptr = tsearch(vt, &node->values,
                                 compareValueThings))) {
-                            log_syserr("tsearch() failure");
+                            log_syserr_q("tsearch() failure");
                             status = ENOMEM;
                         }
                         else {
@@ -958,7 +958,7 @@ static RegStatus deleteValue(
             (void)tdelete(vt, &node->values, compareValueThings);
 
             if (NULL == tsearch(vt, &node->deletedValues, compareValueThings)) {
-                log_syserr("Couldn't add value to set of deleted values");
+                log_syserr_q("Couldn't add value to set of deleted values");
                 status = ENOMEM;
             }
             else {

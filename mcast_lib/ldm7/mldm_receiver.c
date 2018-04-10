@@ -13,10 +13,10 @@
 #include "config.h"
 
 #include "down7.h"
+#include "fmtp.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mcast_info.h"
 #include "mldm_receiver.h"
 #include "PerProdNotifier.h"
@@ -38,7 +38,7 @@
 struct mlr {
     pqueue*               pq;         // product-queue to use */
     Down7*                down7;      // pointer to associated downstream LDM-7
-    McastReceiver*        receiver;   // FMTP C Receiver
+    FmtpReceiver*        receiver;   // FMTP C Receiver
     volatile sig_atomic_t done;
 };
 
@@ -64,7 +64,7 @@ allocateSpace(
         char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
-    log_debug("allocateSpace(): Entered: prodSize=%zu", prodSize);
+    log_debug_1("allocateSpace(): Entered: prodSize=%zu", prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
@@ -74,7 +74,7 @@ allocateSpace(
         if (status == PQUEUE_DUP) {
             if (log_is_enabled_info) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-                log_info("Duplicate product: sig=%s, size=%zu", sigStr,
+                log_info_q("Duplicate product: sig=%s, size=%zu", sigStr,
                         prodSize);
             }
             *prodStart = NULL;
@@ -89,12 +89,12 @@ allocateSpace(
     else {
         if (log_is_enabled_debug) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            log_debug("allocateSpace(): Allocated queue-space for product: "
+            log_debug_1("allocateSpace(): Allocated queue-space for product: "
                     "sig=%s, size=%zu", sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
-    log_debug("allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
+    log_debug_1("allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
             *prodStart, prodSize);
 
     return status;
@@ -131,7 +131,7 @@ bop_func(
      */
     int  status;
 
-    log_debug("bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
+    log_debug_1("bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
             prodSize, metaSize, prod);
 
     if (sizeof(signaturet) > metaSize) {
@@ -151,7 +151,7 @@ bop_func(
     if (status)
         log_flush_error(); // because called by FMTP layer
 
-    log_debug("bop_func(): Returning: prod=%p, prodSize=%zu",
+    log_debug_1("bop_func(): Returning: prod=%p, prodSize=%zu",
             *prod, prodSize);
 
     return status;
@@ -231,7 +231,7 @@ finishInsertion(
         if (log_is_enabled_info) {
             char infoStr[LDM_INFO_MAX];
 
-            log_info("Received: %s",
+            log_info_q("Received: %s",
                     s_prod_info(infoStr, sizeof(infoStr), info, 1));
         }
         lastReceived(mlr, info);
@@ -351,7 +351,7 @@ init(
         Down7* const restrict           down7)
 {
     int            status;
-    McastReceiver* receiver;
+    FmtpReceiver* receiver;
 
     if (mlr == NULL) {
         log_add("NULL multicast-LDM-receiver argument");
@@ -380,12 +380,12 @@ init(
                 ppn_free(notifier);
                 return LDM7_SYSTEM;
             }
-            log_info("Initializing FMTP receiver with mcastInfo=%s, iface=%s",
+            log_info_q("Initializing FMTP receiver with mcastInfo=%s, iface=%s",
                     miStr, iface);
             free(miStr);
         }
 
-        status = mcastReceiver_new(&receiver, mcastInfo->server.inetId,
+        status = fmtpReceiver_new(&receiver, mcastInfo->server.inetId,
                 mcastInfo->server.port, notifier, mcastInfo->group.inetId,
                 mcastInfo->group.port, iface);
         if (status) {
@@ -447,7 +447,7 @@ void
 mlr_free(
         Mlr* const  mlr)
 {
-    mcastReceiver_free(mlr->receiver);
+    fmtpReceiver_free(mlr->receiver);
     free(mlr);
 }
 
@@ -472,7 +472,7 @@ mlr_start(
         status = LDM7_INVAL;
     }
     else {
-        status = mcastReceiver_execute(mlr->receiver);
+        status = fmtpReceiver_execute(mlr->receiver);
         if (mlr->done) {
             status = LDM7_OK;
         }
@@ -496,5 +496,5 @@ mlr_stop(
         Mlr* const mlr)
 {
     mlr->done = 1;
-    mcastReceiver_stop(mlr->receiver);
+    fmtpReceiver_stop(mlr->receiver);
 }

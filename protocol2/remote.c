@@ -51,7 +51,7 @@ so_buf(int sock, int optname)
         if(getsockopt(sock, SOL_SOCKET, optname,
                         (void*) &optval, &optlen) < 0)
         {
-                log_syserr("getsockopt %s", s_optname(optname));
+                log_syserr_q("getsockopt %s", s_optname(optname));
                 return 0;
         }
         /* else */
@@ -66,13 +66,13 @@ so_buf(int sock, int optname)
                  * MAX_RPC_BUF_NEEDED for all systems?
                  */
 
-                log_debug("%s %d, setting to %d",
+                log_debug_1("%s %d, setting to %d",
                          s_optname(optname), optval, MAX_RPC_BUF_NEEDED);
                 optval = MAX_RPC_BUF_NEEDED;
                 if(setsockopt(sock, SOL_SOCKET, optname,
                                 (char *) &optval, optlen) < 0)
                 {
-                        log_syserr("setsockopt %s %d", s_optname(optname), optval);
+                        log_syserr_q("setsockopt %s %d", s_optname(optname), optval);
                         return 0;
                 }
 #if 0 /* DEBUG verify */
@@ -80,11 +80,11 @@ so_buf(int sock, int optname)
                 if(getsockopt(sock, SOL_SOCKET, SO_SNDBUF,
                                 (char *) &optval, &optlen) < 0)
                 {
-                        log_syserr("getsockopt 2 %s", s_optname(optname));
+                        log_syserr_q("getsockopt 2 %s", s_optname(optname));
                 }
 #endif
         }
-        log_debug("%s %d", s_optname(optname), optval);
+        log_debug_1("%s %d", s_optname(optname), optval);
         return optval;
 }
 
@@ -180,7 +180,7 @@ setremote(
         if(remote.recvsz > MAX_RPC_BUF_NEEDED || remote.recvsz == 0)
             remote.recvsz = MAX_RPC_BUF_NEEDED;
 
-        log_info("RPC buffer sizes for %s: send=%u; recv=%u",
+        log_info_q("RPC buffer sizes for %s: send=%u; recv=%u",
             remote_name(), remote.sendsz, remote.recvsz);
     }                                   /* remote host differs from previous */
 
@@ -278,7 +278,7 @@ set_remote_class(
         newProdClass = dup_prod_class(prodClass);
 
         if (NULL == newProdClass) {
-            log_syserr("Couldn't duplicate product-class");
+            log_syserr_q("Couldn't duplicate product-class");
             return ENOMEM;
         }
     }

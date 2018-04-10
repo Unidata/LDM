@@ -139,11 +139,11 @@ up7_closeProdIndexMap()
             char feedStr[256];
             int  nbytes = ft_format(feedtype, feedStr, sizeof(feedStr));
             if (nbytes == -1 || nbytes >= sizeof(feedStr)) {
-                log_error("Couldn't close product-index map for feed %#lx",
+                log_error_q("Couldn't close product-index map for feed %#lx",
                         (unsigned long)feedStr);
             }
             else {
-                log_error("Couldn't close product-index map for feed %s", feedStr);
+                log_error_q("Couldn't close product-index map for feed %s", feedStr);
             }
         }
         else {
@@ -236,7 +236,7 @@ static feedtypet reduceToAllowed(
     size_t              numFeeds = lcf_getAllowedFeeds(hostId, inAddr, maxFeeds,
             allowedFeeds);
     if (numFeeds > maxFeeds) {
-        log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
+        log_error_q("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
         numFeeds = maxFeeds;
     }
     return lcf_reduceByFeeds(feed, allowedFeeds, numFeeds);
@@ -284,7 +284,7 @@ up7_subscribe(
     feedtypet           reducedFeed = reduceToAllowed(request->feed, hostId,
             inAddr);
     if (reducedFeed == NONE) {
-        log_notice("Host %s isn't allowed to receive any part of feed %s",
+        log_notice_q("Host %s isn't allowed to receive any part of feed %s",
                 hostId, s_feedtypet(request->feed));
         reply->status = LDM7_UNAUTH;
         replySet = true;
@@ -353,7 +353,7 @@ up7_deliverProduct(
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
-    log_debug("up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
+    log_debug_1("up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
             missedProd.iProd, info->ident);
     (void)deliver_missed_product_7(&missedProd, clnt);
 
@@ -363,7 +363,7 @@ up7_deliverProduct(
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (log_is_enabled_info)
-            log_info("up7_deliverProduct(): Missed product sent: %s",
+            log_info_q("up7_deliverProduct(): Missed product sent: %s",
                     s_prod_info(NULL, 0, &missedProd.prod.info,
                     log_is_enabled_debug));
         return 0;
@@ -457,7 +457,7 @@ closePq(void)
 {
     if (pq) {
         if (pq_close(pq)) {
-            log_error("Couldn't close global product-queue");
+            log_error_q("Couldn't close global product-queue");
         }
         pq = NULL;
     }
@@ -523,7 +523,7 @@ up7_setCursorFromSignature(
     case 0:
         return 0;
     case PQ_NOTFOUND:
-        log_info("Data-product with signature %s wasn't found in product-queue",
+        log_info_q("Data-product with signature %s wasn't found in product-queue",
                 s_signaturet(NULL, 0, after));
         return LDM7_NOENT;
     default:
@@ -618,7 +618,7 @@ up7_sendIfNotSignature(
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         if (log_is_enabled_info)
-            log_notice("Backlog product sent: %s",
+            log_notice_q("Backlog product sent: %s",
                     s_prod_info(NULL, 0, info,
                             log_is_enabled_debug));
         return 0;
@@ -715,7 +715,7 @@ subscribe_7_svc(
         McastSubReq* const restrict    request,
         struct svc_req* const restrict rqstp)
 {
-    log_debug("subscribe_7_svc(): Entered");
+    log_debug_1("subscribe_7_svc(): Entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -723,13 +723,13 @@ subscribe_7_svc(
     const char*               hostname = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(request->feed);
 
-    log_notice("Incoming subscription request from %s[%s]:%u for feed %s",
+    log_notice_q("Incoming subscription request from %s[%s]:%u for feed %s",
             ipv4spec, hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
     up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
     reply = NULL;
 
     if (!up7_subscribe(request, xprt, &result)) {
-        log_error("Subscription failure");
+        log_error_q("Subscription failure");
     }
     else {
         if (result.status == LDM7_OK) {
@@ -740,7 +740,7 @@ subscribe_7_svc(
         }
         else {
             if (!up7_createClientTransport(xprt)) {
-                log_error("Couldn't create client-side RPC transport to "
+                log_error_q("Couldn't create client-side RPC transport to "
                         " downstream host %s", hostname);
             }
             else {
@@ -791,12 +791,12 @@ request_product_7_svc(
     FmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    log_debug("request_product_7_svc(): Entered: iProd=%lu",
+    log_debug_1("request_product_7_svc(): Entered: iProd=%lu",
             (unsigned long)*iProd);
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
-        log_error("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
+        log_error_q("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
         svcerr_systemerr(xprt); // so the remote client will learn
         svc_destroy(xprt);      // so the caller will learn
     }
@@ -824,11 +824,11 @@ request_backlog_7_svc(
     BacklogSpec* const    backlog,
     struct svc_req* const rqstp)
 {
-    log_debug("request_backlog_7_svc(): Entered");
+    log_debug_1("request_backlog_7_svc(): Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
-        log_error("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
+        log_error_q("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
         svc_destroy(xprt);      // asynchrony => no sense replying
     }
     else if (!up7_sendBacklog(backlog)) {
@@ -851,6 +851,6 @@ test_connection_7_svc(
     void* const           no_op,
     struct svc_req* const rqstp)
 {
-    log_debug("test_connection_7_svc(): Entered");
+    log_debug_1("test_connection_7_svc(): Entered");
     return NULL;                // don't reply
 }

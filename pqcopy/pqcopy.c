@@ -49,7 +49,7 @@ static int              nprods;
 static void
 dump_stats(void)
 {
-    log_notice("Number of products copied: %d", nprods);
+    log_notice_q("Number of products copied: %d", nprods);
 }
 
 
@@ -70,17 +70,17 @@ copyProduct(
     switch (pq_insert(outPq, &product)) {
     case 0:
         if (log_is_enabled_info)
-            log_info("%s", s_prod_info(NULL, 0, infop,
+            log_info_q("%s", s_prod_info(NULL, 0, infop,
                     log_is_enabled_debug));
         nprods++;
         return 0;
     case PQUEUE_DUP:
-        log_info("duplicate product: %s",
+        log_info_q("duplicate product: %s",
             s_prod_info(NULL, 0, infop,
                     log_is_enabled_debug));
         return 0;
     default:
-        log_syserr("Product copy failed");
+        log_syserr_q("Product copy failed");
         return 1;
     }
 }
@@ -110,7 +110,7 @@ usage(const char *av0) /*  id string */
 static void
 cleanup(void)
 {
-    log_notice("Exiting");
+    log_notice_q("Exiting");
 
     if (!intr) {
         if (inPq != NULL)  
@@ -287,13 +287,13 @@ int main(
         outPath = av[optind++];
     }                                   /* command-line decoding block */
 
-    log_notice("Starting Up (%d)", getpgrp());
+    log_notice_q("Starting Up (%d)", getpgrp());
 
     /*
      * Register exit handler
      */
     if(atexit(cleanup) != 0) {
-        log_syserr("atexit");
+        log_syserr_q("atexit");
         return 1;
     }
 
@@ -307,11 +307,11 @@ int main(
      */
     if (0 != (status = pq_open(inPath, PQ_READONLY, &inPq))) {
         if (PQ_CORRUPT == status) {
-            log_error("The input product-queue \"%s\" is inconsistent\n",
+            log_error_q("The input product-queue \"%s\" is inconsistent\n",
                 inPath);
         }
         else {
-            log_error("pq_open failed: %s: %s\n", inPath, strerror(status));
+            log_error_q("pq_open failed: %s: %s\n", inPath, strerror(status));
         }
         return 1;
     }
@@ -321,11 +321,11 @@ int main(
      */
     if (0 != (status = pq_open(outPath, 0, &outPq))) {
         if (PQ_CORRUPT == status) {
-            log_error("The output product-queue \"%s\" is inconsistent\n",
+            log_error_q("The output product-queue \"%s\" is inconsistent\n",
                 outPath);
         }
         else {
-            log_error("pq_open failed: %s: %s\n", outPath, strerror(status));
+            log_error_q("pq_open failed: %s: %s\n", outPath, strerror(status));
         }
         return 1;
     }
@@ -347,17 +347,17 @@ int main(
         case 0: /* no error */
             continue;                   /* N.B., other cases sleep */
         case PQUEUE_END:
-            log_debug("End of Queue");
+            log_debug_1("End of Queue");
             done = 1;
             status = 0;
             break;
         case EAGAIN:
         case EACCES:
-            log_debug("Hit a lock");
+            log_debug_1("Hit a lock");
             return 1;
             break;
         default:
-            log_error("pq_sequence failed: %s (errno = %d)", strerror(status),
+            log_error_q("pq_sequence failed: %s (errno = %d)", strerror(status),
                 status);
             return 1;
             break;

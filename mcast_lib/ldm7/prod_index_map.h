@@ -12,8 +12,8 @@
 #ifndef FILE_ID_MAP_H_
 #define FILE_ID_MAP_H_
 
+#include "fmtp.h"
 #include "ldm.h"
-#include "mcast.h"
 
 #ifdef __cplusplus
     extern "C" {

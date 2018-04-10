@@ -29,10 +29,10 @@ static int unrecognizable = 0;
 void
 afos_stats(void)
 {
-	log_notice("  AFOS Messages seen: %8d", seqno - unrecognizable);
-	log_notice("  Errors:  lone ZCZC: %8d", nnnn_missed);
-	log_notice("           lone NNNN: %8d", zczc_missed);
-	log_notice("      Unrecognizable: %8d", unrecognizable);
+	log_notice_q("  AFOS Messages seen: %8d", seqno - unrecognizable);
+	log_notice_q("  Errors:  lone ZCZC: %8d", nnnn_missed);
+	log_notice_q("           lone NNNN: %8d", zczc_missed);
+	log_notice_q("      Unrecognizable: %8d", unrecognizable);
 }
 
 
@@ -83,7 +83,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 	/* DEBUG */
 	if(mess->len < MIN_AFOS_MSG_LEN)
 	{
-		log_error("new_afos_message: length %d too short", mess->len);
+		log_error_q("new_afos_message: length %d too short", mess->len);
 		goto err;
 	}
 
@@ -130,7 +130,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 
 	if(zczc_missing)
 	{
-		log_error(" Missing ZCZC: %6s %03d %8d  %s",
+		log_error_q(" Missing ZCZC: %6s %03d %8d  %s",
 				"AFOS",
 				seqno,
 				mess->len,
@@ -138,7 +138,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 	}
 	if(memcmp(&mess->msg[mess->len -4], "NNNN", 4) != 0)
 	{
-		log_error(" Missing NNNN: %6s %03d %8d  %s",
+		log_error_q(" Missing NNNN: %6s %03d %8d  %s",
 				"AFOS",
 				seqno,
 				mess->len,
@@ -150,7 +150,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 	return 0;
 err:
 	unrecognizable++;
-	log_error("Unrecognizable: %5s %03d %8d",
+	log_error_q("Unrecognizable: %5s %03d %8d",
 			"AFOS",
 			seqno,
 			buf->cnt);
@@ -226,7 +226,7 @@ scan_afos(xbuf *buf)
 				{
 	      				/* missing trailer */
 					nnnn_missed++;
-					log_debug("Missing NNNN trailer");
+					log_debug_1("Missing NNNN trailer");
 					afos_send_buf(buf, 4);
 					sent = 1;
 	     			}
@@ -243,7 +243,7 @@ scan_afos(xbuf *buf)
 				{
 					/* missing header */
 					zczc_missed++;
-					log_debug("Missing ZCZC header");
+					log_debug_1("Missing ZCZC header");
 				}
 				afos_send_buf(buf, 0);
 				sent = 1;

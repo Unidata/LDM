@@ -188,7 +188,7 @@ int main(int ac, char *av[])
         }
 
 
-        log_info("Creating %s, %ld bytes, %ld products.\n",
+        log_info_q("Creating %s, %ld bytes, %ld products.\n",
                 pqfname, (long)initialsz, (long)nproducts);
 
         errnum = pq_create(pqfname, 0666, pflags,

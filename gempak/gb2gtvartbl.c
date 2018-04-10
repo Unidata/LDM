@@ -72,12 +72,12 @@ initEntry(
         status = -31;
     }
     else {
-        log_info("Read GRIB2 parameter file \"%s\"", entry->filename);
+        log_info_q("Read GRIB2 parameter file \"%s\"", entry->filename);
 
         void* node = tsearch(entry, &cache, compare);
 
         if (NULL == node) {
-            log_syserr("Couldn't allocate new tsearch(3) node");
+            log_syserr_q("Couldn't allocate new tsearch(3) node");
             status = ENOMEM;
         }
         else {
@@ -106,7 +106,7 @@ addEntry(
     Entry* ent = malloc(sizeof(Entry));
 
     if (NULL == ent) {
-        log_syserr("Couldn't allocate new cache entry");
+        log_syserr_q("Couldn't allocate new cache entry");
         status = ENOMEM;
     }
     else {

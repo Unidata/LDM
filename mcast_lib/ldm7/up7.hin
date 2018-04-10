@@ -12,8 +12,8 @@
 #ifndef UP_LDM7_H
 #define UP_LDM7_H
 
+#include "fmtp.h"
 #include "ldm.h"
-#include "mcast.h"
 
 typedef struct UpLdm7Proxy UpLdm7Proxy;
 

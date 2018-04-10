@@ -63,7 +63,7 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        log_notice("exiting");
+        log_notice_q("exiting");
 
         /* TODO: sign off */
 
@@ -218,7 +218,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 /* 
                  * your code here, example just logs it 
                  */
-                log_info("%s", s_prod_info(NULL, 0, &notice,
+                log_info_q("%s", s_prod_info(NULL, 0, &notice,
                         log_is_enabled_debug));
 
 
@@ -231,7 +231,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 (void)exitIfDone(0);
 
                 if(!svc_freeargs(transp, xdr_prod_info, (caddr_t) &notice)) {
-                        log_error("unable to free arguments");
+                        log_error_q("unable to free arguments");
                         exit(1);
                 }
                 /* no break */
@@ -380,7 +380,7 @@ int main(int ac, char *av[])
 
         } /* End getopt block */
 
-        log_notice("Starting Up: %s: %s",
+        log_notice_q("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -389,7 +389,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 exit(1);
         }
 

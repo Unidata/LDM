@@ -13,8 +13,8 @@
 #define UPMCASTMGR_H
 
 #include "CidrAddr.h"
+#include "fmtp.h"
 #include "ldm.h"
-#include "mcast.h"
 #include "pq.h"
 #include "VirtualCircuit.h"
 

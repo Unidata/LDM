@@ -85,7 +85,7 @@ static pid_t reap(
 #endif
     if (wpid == -1) {
         if (!(errno == ECHILD && pid == -1)) /* Only complain when relevant */
-            log_syserr("waitpid");
+            log_syserr_q("waitpid");
         return -1;
     }
     /* else */
@@ -101,7 +101,7 @@ static pid_t reap(
 
 #if defined(WIFSTOPPED)
         if (WIFSTOPPED(status)) {
-            log_notice(
+            log_notice_q(
                     nbytes <= 0
                         ? "child %ld stopped by signal %d"
                         : "child %ld stopped by signal %d: %*s",
@@ -117,7 +117,7 @@ static pid_t reap(
             (void)msm_remove(wpid); // Multicast LDM senders
 #endif
 
-            log_notice(
+            log_notice_q(
                     nbytes <= 0
                         ? "child %ld terminated by signal %d"
                         : "child %ld terminated by signal %d: %*s",
@@ -147,7 +147,7 @@ static pid_t reap(
 #ifdef SIGXFSZ
             case SIGXFSZ:
 #endif
-                log_notice("Killing (SIGTERM) process group");
+                log_notice_q("Killing (SIGTERM) process group");
                 exit_status = 3;
                 (void) kill(0, SIGTERM);
                 break;
@@ -164,7 +164,7 @@ static pid_t reap(
 #endif
             int         exitStatus = WEXITSTATUS(status);
             log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-            log_log(level,
+            log_log_q(level,
                     nbytes <= 0
                         ? "child %ld exited with status %d"
                         : "child %ld exited with status %d: %*s",
@@ -185,7 +185,7 @@ static void cleanup(
 {
     const char* const pqfname = getQueuePath();
 
-    log_notice("Exiting");
+    log_notice_q("Exiting");
 
     lcf_savePreviousProdInfo();
 
@@ -229,7 +229,7 @@ static void cleanup(
 
             for (vers = MIN_LDM_VERSION; vers <= MAX_LDM_VERSION; vers++) {
                 if (!pmap_unset(LDMPROG, vers))
-                    log_error("pmap_unset(LDMPROG %lu, LDMVERS %lu) "
+                    log_error_q("pmap_unset(LDMPROG %lu, LDMVERS %lu) "
                             "failed", LDMPROG, vers);
                 else
                     portIsMapped = 0;
@@ -256,7 +256,7 @@ static void cleanup(
         /*
          * Signal my process group.
          */
-        log_notice("Terminating process group");
+        log_notice_q("Terminating process group");
         (void) kill(0, SIGTERM);
 
         while (reap(-1, 0) > 0)
@@ -300,31 +300,31 @@ static void signal_handler(
 #endif
     switch (sig) {
     case SIGINT:
-        log_notice("SIGINT received");
+        log_notice_q("SIGINT received");
         exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
-        log_notice("SIGTERM received");
+        log_notice_q("SIGTERM received");
         up6_close();
         req6_close();
         done = 1;
         return;
     case SIGUSR1:
-        log_info("SIGUSR1 received");
+        log_info_q("SIGUSR1 received");
         log_refresh();
         return;
     case SIGUSR2:
-        log_info("SIGUSR2 received");
+        log_info_q("SIGUSR2 received");
         log_roll_level();
         return;
     case SIGPIPE:
-        log_debug("SIGPIPE received");
+        log_debug_1("SIGPIPE received");
         return;
     case SIGCHLD:
-        log_debug("SIGCHLD received");
+        log_debug_1("SIGCHLD received");
         return;
     case SIGALRM:
-        log_debug("SIGALRM received");
+        log_debug_1("SIGALRM received");
         return;
     }
 }
@@ -452,12 +452,12 @@ static int create_ldm_tcp_svc(
     /*
      * Get a TCP socket.
      */
-    log_debug("create_ldm_tcp_svc(): Getting TCP socket");
+    log_debug_1("create_ldm_tcp_svc(): Getting TCP socket");
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
         error = errno;
 
-        log_syserr("Couldn't get socket for server");
+        log_syserr_q("Couldn't get socket for server");
     }
     else {
         (void)ensure_close_on_exec(sock);
@@ -470,7 +470,7 @@ static int create_ldm_tcp_svc(
          * We get this if an upstream data source hasn't tried to
          * write on the other end and we are in FIN_WAIT_2
          */
-        log_debug("create_ldm_tcp_svc(): Eliminating EADDRINUSE problem.");
+        log_debug_1("create_ldm_tcp_svc(): Eliminating EADDRINUSE problem.");
         {
             int on = 1;
 
@@ -487,14 +487,14 @@ static int create_ldm_tcp_svc(
          * If privilege available, set it so we can bind to the port for LDM
          * services.  Also needed for the pmap_set() call.
          */
-        log_debug("create_ldm_tcp_svc(): Getting root privs");
+        log_debug_1("create_ldm_tcp_svc(): Getting root privs");
         rootpriv();
 
-        log_debug("create_ldm_tcp_svc(): Binding socket");
+        log_debug_1("create_ldm_tcp_svc(): Binding socket");
         if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
             error = errno;
 
-            log_syserr("Couldn't obtain local address %s:%u for server",
+            log_syserr_q("Couldn't obtain local address %s:%u for server",
                     inet_ntoa(addr.sin_addr), (unsigned) port);
 
             if (error == EACCES) {
@@ -504,7 +504,7 @@ static int create_ldm_tcp_svc(
                 if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                     error = errno;
 
-                    log_syserr("Couldn't obtain local address %s:* for server",
+                    log_syserr_q("Couldn't obtain local address %s:* for server",
                             inet_ntoa(addr.sin_addr));
                 }
             } /* requested port is reserved */
@@ -514,23 +514,23 @@ static int create_ldm_tcp_svc(
             /*
              * Get the local address associated with the bound socket.
              */
-            log_debug("create_ldm_tcp_svc(): Calling getsockname()");
+            log_debug_1("create_ldm_tcp_svc(): Calling getsockname()");
             if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
                 error = errno;
 
-                log_syserr("Couldn't get local address of server's socket");
+                log_syserr_q("Couldn't get local address of server's socket");
             }
             else {
                 port = (short) ntohs((short) addr.sin_port);
 
-                log_notice("Using local address %s:%u", inet_ntoa(addr.sin_addr),
+                log_notice_q("Using local address %s:%u", inet_ntoa(addr.sin_addr),
                         (unsigned) port);
 
-                log_debug("create_ldm_tcp_svc(): Calling listen()");
+                log_debug_1("create_ldm_tcp_svc(): Calling listen()");
                 if (listen(sock, 32) != 0) {
                     error = errno;
 
-                    log_syserr("Couldn't listen() on server's socket");
+                    log_syserr_q("Couldn't listen() on server's socket");
                 }
                 else {
                     /*
@@ -539,14 +539,14 @@ static int create_ldm_tcp_svc(
                      * FreeBSD 4.7-STABLE system, a pmap_set() call takes
                      * one minute even if the portmapper isn't running.
                      */
-                    log_debug("create_ldm_tcp_svc(): Checking portmapper");
+                    log_debug_1("create_ldm_tcp_svc(): Checking portmapper");
                     if (local_portmapper_running()) {
-                        log_debug("create_ldm_tcp_svc(): Registering");
+                        log_debug_1("create_ldm_tcp_svc(): Registering");
 
                         if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
-                            log_warning("Can't register TCP service %lu on "
+                            log_warning_q("Can't register TCP service %lu on "
                                     "port %u", LDMPROG, (unsigned) port);
-                            log_warning("Downstream LDMs won't be able to "
+                            log_warning_q("Downstream LDMs won't be able to "
                                     "connect via the RPC portmapper daemon "
                                     "(rpcbind(8), portmap(8), etc.)");
                         }
@@ -560,7 +560,7 @@ static int create_ldm_tcp_svc(
                     /*
                      * Done with the need for privilege.
                      */
-                    log_debug("create_ldm_tcp_svc(): Releasing root privs");
+                    log_debug_1("create_ldm_tcp_svc(): Releasing root privs");
                     unpriv();
 
                     *sockp = sock;
@@ -605,7 +605,7 @@ static void handle_connection(
             goto again;
         }
         /* else */
-        log_syserr("accept() failure");
+        log_syserr_q("accept() failure");
         return;
     }
 
@@ -616,7 +616,7 @@ static void handle_connection(
      */
     if (cps_count() >= maxClients) {
         setremote(&raddr, xp_sock);
-        log_notice("Denying connection from [%s] because too many clients",
+        log_notice_q("Denying connection from [%s] because too many clients",
                 remote->astr);
         (void) close(xp_sock);
         return;
@@ -624,7 +624,7 @@ static void handle_connection(
 
     pid = ldmfork();
     if (pid == -1) {
-        log_error("Couldn't fork process to handle incoming connection");
+        log_error_q("Couldn't fork process to handle incoming connection");
         /* TODO: try again?*/
         (void) close(xp_sock);
         return;
@@ -636,7 +636,7 @@ static void handle_connection(
         (void) close(xp_sock);
 
         if (cps_add(pid))
-            log_syserr("Couldn't add child PID to set");
+            log_syserr_q("Couldn't add child PID to set");
 
         return;
     }
@@ -649,11 +649,11 @@ static void handle_connection(
         ensureRemoteName(&raddr);
         if (!lcf_isHostOk(remote)) {
             if (remote->printname == remote->astr) {
-                log_notice("Denying connection from [%s] because not "
+                log_notice_q("Denying connection from [%s] because not "
                         "allowed", remote->astr);
             }
             else {
-                log_notice("Denying connection from \"%s\" because not "
+                log_notice_q("Denying connection from \"%s\" because not "
                         "allowed", remote_name());
             }
 
@@ -682,11 +682,11 @@ static void handle_connection(
     /* Set the ulog identifier, optional. */
     log_set_id(remote_name());
 
-    log_info("Connection from %s", remote_name());
+    log_info_q("Connection from %s", remote_name());
 
     xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
     if (xprt == NULL ) {
-        log_error("Can't create fd service.");
+        log_error_q("Can't create fd service.");
         goto unwind_sock;
     }
     /* hook up the remote address to the xprt. */
@@ -695,26 +695,26 @@ static void handle_connection(
     xprt->xp_addrlen = (int) len;
 
     if (!svc_register(xprt, LDMPROG, 4, ldmprog_4, 0)) {
-        log_error("unable to register LDM-4 service.");
+        log_error_q("unable to register LDM-4 service.");
         svc_destroy(xprt);
         goto unwind_sock;
     }
 
     if (!svc_register(xprt, LDMPROG, FIVE, ldmprog_5, 0)) {
-        log_error("unable to register LDM-5 service.");
+        log_error_q("unable to register LDM-5 service.");
         svc_destroy(xprt);
         goto unwind_sock;
     }
 
     if (!svc_register(xprt, LDMPROG, SIX, ldmprog_6, 0)) {
-        log_error("unable to register LDM-6 service.");
+        log_error_q("unable to register LDM-6 service.");
         svc_destroy(xprt);
         goto unwind_sock;
     }
 
 #if WANT_MULTICAST
     if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
-        log_error("unable to register LDM-7 service.");
+        log_error_q("unable to register LDM-7 service.");
         svc_destroy(xprt);
         goto unwind_sock;
     }
@@ -727,14 +727,14 @@ static void handle_connection(
         const unsigned  TIMEOUT = 2*interval;
         status = one_svc_run(xp_sock, TIMEOUT);
         if (status == 0) {
-            log_info("Done");
+            log_info_q("Done");
         }
         else if (status == ETIMEDOUT) {
-            log_notice("Connection from client LDM silent for %u seconds",
+            log_notice_q("Connection from client LDM silent for %u seconds",
                     TIMEOUT);
         }
         else { /* connection to client lost */
-            log_info("Connection with client LDM closed");
+            log_info_q("Connection with client LDM closed");
             status = 0; /* EXIT_SUCCESS */
         }
     }
@@ -769,7 +769,7 @@ static void sock_svc(
              * Handle EINTR as a special case.
              */
             if (errno != EINTR) {
-                log_syserr("sock select");
+                log_syserr_q("sock select");
                 done = 1;
                 exit(1);
             }
@@ -917,13 +917,13 @@ int main(
     /*
      * Vet the configuration file.
      */
-    log_debug("main(): Vetting configuration-file");
+    log_debug_1("main(): Vetting configuration-file");
     if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
         log_flush_error();
         exit(1);
     }
     if (!lcf_haveSomethingToDo()) {
-        log_error("The LDM configuration-file \"%s\" is effectively empty",
+        log_error_q("The LDM configuration-file \"%s\" is effectively empty",
                 getLdmdConfigPath());
         exit(1);
     }
@@ -945,7 +945,7 @@ int main(
         pid_t pid;
         pid = ldmfork();
         if (pid == -1) {
-            log_error("Couldn't fork LDM daemon");
+            log_error_q("Couldn't fork LDM daemon");
             exit(2);
         }
 
@@ -973,15 +973,15 @@ int main(
 
     logfname = log_get_destination();
 
-    log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
+    log_notice_q("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 
     /*
      * register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit");
-        log_notice("Exiting");
+        log_syserr_q("atexit");
+        log_notice_q("Exiting");
         exit(1);
     }
 
@@ -999,24 +999,24 @@ int main(
              * created because this is the function that relinquishes superuser
              * privileges.
              */
-            log_debug("main(): Creating service portal");
+            log_debug_1("main(): Creating service portal");
             if (create_ldm_tcp_svc(&sock, ldmIpAddr, ldmPort) != ENOERR) {
                 /* error reports are emitted from create_ldm_tcp_svc() */
                 exit(1);
             }
-            log_debug("tcp sock: %d", sock);
+            log_debug_1("tcp sock: %d", sock);
         }
 
         /*
          * Verify that the product-queue can be open for writing.
          */
-        log_debug("main(): Opening product-queue");
+        log_debug_1("main(): Opening product-queue");
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
-                log_error("The product-queue \"%s\" is inconsistent", pqfname);
+                log_error_q("The product-queue \"%s\" is inconsistent", pqfname);
             }
             else {
-                log_error("pq_open failed: %s: %s", pqfname, strerror(status));
+                log_error_q("pq_open failed: %s: %s", pqfname, strerror(status));
             }
             exit(1);
         }
@@ -1026,19 +1026,19 @@ int main(
         /*
          * Create the sharable database of upstream LDM metadata.
          */
-        log_debug("main(): Creating shared upstream LDM database");
+        log_debug_1("main(): Creating shared upstream LDM database");
         if ((status = uldb_delete(NULL))) {
             if (ULDB_EXIST == status) {
                 log_clear();
             }
             else {
-                log_error(
+                log_error_q(
                         "Couldn't delete existing shared upstream LDM database");
                 exit(1);
             }
         }
         if (uldb_create(NULL, maxClients * 1024)) {
-            log_error("Couldn't create shared upstream LDM database");
+            log_error_q("Couldn't create shared upstream LDM database");
             exit(1);
         }
 
@@ -1047,7 +1047,7 @@ int main(
          */
 #if WANT_MULTICAST
         if (msm_init()) {
-            log_error("Couldn't initialize multicast LDM sender map");
+            log_error_q("Couldn't initialize multicast LDM sender map");
             exit(1);
         }
 #endif
@@ -1057,7 +1057,7 @@ int main(
          * started).
          */
         lcf_free(); // Prevent duplicates
-        log_debug("main(): Reading configuration-file");
+        log_debug_1("main(): Reading configuration-file");
         if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_flush_error();
             exit(1);
@@ -1067,7 +1067,7 @@ int main(
             /*
              * Serve
              */
-            log_debug("main(): Serving socket");
+            log_debug_1("main(): Serving socket");
             sock_svc(sock);
         }
         else {

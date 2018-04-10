@@ -70,7 +70,7 @@ static RegStatus ensure(
         char*   buf = (char*)realloc(strBuf->buf, max);
 
         if (NULL == buf) {
-            log_syserr("Couldn't allocate %lu-bytes", (unsigned long)max);
+            log_syserr_q("Couldn't allocate %lu-bytes", (unsigned long)max);
             status = ENOMEM;
         }
         else {

@@ -154,7 +154,7 @@ my_hiya_5(
             /* N.B. we use the downstream patterns */
             /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
             (void)s_prod_class(buf, sizeof(buf)-1, *want);
-            log_notice("%s: reclass: %s", proxy->host, buf);
+            log_notice_q("%s: reclass: %s", proxy->host, buf);
             break;
     }
 
@@ -242,13 +242,13 @@ my_hiya_6(
                 /* N.B. we use the downstream patterns */
                 /* Use of "buf" added to prevent SIGSEGV on 64-bit RHEL 6 */
                 (void)s_prod_class(buf, sizeof(buf)-1, *want);
-                log_notice("%s: reclass: %s", proxy->host, buf);
+                log_notice_q("%s: reclass: %s", proxy->host, buf);
                 status = 0;
                 break;
         }
 
         if (LP_OK != status)
-            log_debug("max_hereis = %u", proxy->max_hereis);
+            log_debug_1("max_hereis = %u", proxy->max_hereis);
     }
 
     return status;
@@ -488,7 +488,7 @@ my_csbd_6(
     comingsoon_reply_t* reply;
     comingsoon_args     soonArg;
 
-    log_debug("Sending file via COMINGSOON_6/BLKDATA_6");
+    log_debug_1("Sending file via COMINGSOON_6/BLKDATA_6");
 
     soonArg.infop = info;
     soonArg.pktsz = size;
@@ -547,7 +547,7 @@ my_hereis_6(
 {
     LdmProxyStatus      status = 0;     /* success */
 
-    log_debug("Sending file via HEREIS_6");
+    log_debug_1("Sending file via HEREIS_6");
 
     (void)hereis_6(product, proxy->clnt);
     /*
@@ -681,14 +681,14 @@ lp_new(
     LdmProxy*           proxy = (LdmProxy*)malloc(nbytes);
 
     if (NULL == proxy) {
-        log_syserr("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
+        log_syserr_q("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
         status = LP_SYSTEM;
     }
     else {
         proxy->host = strdup(host);
 
         if (NULL == proxy->host) {
-            log_syserr("Couldn't duplicate string \"%s\"", host);
+            log_syserr_q("Couldn't duplicate string \"%s\"", host);
             status = LP_SYSTEM;
         }
         else {

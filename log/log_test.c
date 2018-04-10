@@ -64,11 +64,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    log_error("Error");
-    log_warning("Warning");
-    log_notice("Notice");
-    log_info("Information");
-    log_debug("Debug");
+    log_error_q("Error");
+    log_warning_q("Warning");
+    log_notice_q("Notice");
+    log_info_q("Information");
+    log_debug_1("Debug");
 }
 
 static void vlogMessage(
@@ -78,7 +78,7 @@ static void vlogMessage(
 {
     va_list args;
     va_start(args, format);
-    log_vlog(level, format, args);
+    log_vlog_q(level, format, args);
     va_end(args);
 }
 
@@ -169,13 +169,13 @@ static void test_log_open_default(void)
     const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-    log_error("Standard error stream");
+    log_error_q("Standard error stream");
 
     status = log_set_destination(tmpPathname);
     actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
-    log_error("File \"%s\"", tmpPathname);
+    log_error_q("File \"%s\"", tmpPathname);
 
     log_fini();
 }
@@ -227,7 +227,7 @@ static void test_lower_level_not_clear(void)
         log_add("Logging level %d", level);
 
         level--;
-        log_log(level, "Logging level %d", level);
+        log_log_q(level, "Logging level %d", level);
 
         log_flush(++level);
 
@@ -372,7 +372,7 @@ static void test_log_add(void)
 
     log_add("LOG_ADD message 1");
     log_add("LOG_ADD message 2");
-    log_error("LOG_ERROR message");
+    log_error_q("LOG_ERROR message");
 
     log_fini();
 
@@ -391,14 +391,14 @@ static void test_log_syserr(void)
     status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    log_errno(ENOMEM, NULL);
-    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one");
-    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one "
+    log_errno_q(ENOMEM, NULL);
+    log_errno_q(ENOMEM, "LOG_ERRNO() previous message is part of this one");
+    log_errno_q(ENOMEM, "LOG_ERRNO() previous message is part of this one "
             "#%d", 2);
     errno = EEXIST;
-    log_syserr(NULL);
-    log_syserr("log_syserr() previous message is part of this one");
-    log_syserr("log_syserr() previous message is part of this one #%d", 2);
+    log_syserr_q(NULL);
+    log_syserr_q("log_syserr() previous message is part of this one");
+    log_syserr_q("log_syserr() previous message is part of this one #%d", 2);
 
     log_fini();
 
@@ -622,7 +622,7 @@ static void test_performance(void)
 
     const long num_messages = 1000000;
     for (long i = 0; i < num_messages; i++)
-        log_error("Error message %ld", i);
+        log_error_q("Error message %ld", i);
 
     struct timeval stop;
     (void)gettimeofday(&stop, NULL);
@@ -630,7 +630,7 @@ static void test_performance(void)
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice("%ld printed messages in %g seconds = %g/s", num_messages, dur,
+    log_notice_q("%ld printed messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     status = log_set_destination("/dev/null");
@@ -639,14 +639,14 @@ static void test_performance(void)
     (void)gettimeofday(&start, NULL);
 
     for (long i = 0; i < num_messages; i++)
-        log_debug("Debug message %ld", i);
+        log_debug_1("Debug message %ld", i);
 
     (void)gettimeofday(&stop, NULL);
     dur = duration(&stop, &start);
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
+    log_notice_q("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     log_fini();

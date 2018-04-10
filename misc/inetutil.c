@@ -139,11 +139,11 @@ ghostname(void)
             free(cp);
         }
         else {
-            log_warning("Couldn't get name of local host from registry");
+            log_warning_q("Couldn't get name of local host from registry");
             if (gethostname(hostname, sizeof(hostname)) < 0) {
                 (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
                 hostname[sizeof(hostname)-1] = 0;
-                log_warning("Couldn't get name of local host from "
+                log_warning_q("Couldn't get name of local host from "
                         "gethostname(). Using default: \"%s\"", hostname);
             }
             else if (strchr(hostname, '.') == NULL) {
@@ -152,7 +152,7 @@ ghostname(void)
                 if (hp == NULL || hp->h_addrtype != AF_INET) {
                     (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
                     hostname[sizeof(hostname)-1] = 0;
-                    log_warning("Couldn't get fully-qualified name of local "
+                    log_warning_q("Couldn't get fully-qualified name of local "
                             "host from registry, gethostname(), or "
                             "gethostbyname(). Using default: \"%s\"", hostname);
                 }
@@ -550,7 +550,7 @@ hostent_new(
      */
     entry = gethostbyname(name);
     if (NULL == entry)
-        log_error("Couldn't get information on host %s: %s", name, host_err_str());
+        log_error_q("Couldn't get information on host %s: %s", name, host_err_str());
     else
     {
         int             num_aliases;
@@ -601,7 +601,7 @@ hostent_new(
          */
         new = (struct hostent *) malloc(nbytes);
         if (NULL == new)
-            log_syserr(
+            log_syserr_q(
             "Couldn't allocate %lu bytes for information on host \"%s\"", 
                    (unsigned long) nbytes, name);
         else
@@ -742,7 +742,7 @@ local_sockaddr_in(struct sockaddr_in* addr)
         (void)memset(&cachedAddr, 0, sizeof(cachedAddr));
 
         if (gethostname(name, sizeof(name))) {
-            log_syserr("gethostname()");
+            log_syserr_q("gethostname()");
 
             error = errno;
         }
@@ -752,7 +752,7 @@ local_sockaddr_in(struct sockaddr_in* addr)
             if (addrbyhost(name, &cachedAddr)) {
                 if (addrbyhost("localhost", &cachedAddr)) {
                     if (addrbyhost("0.0.0.0", &cachedAddr)) {
-                        log_syserr("addrbyhost()");
+                        log_syserr_q("addrbyhost()");
 
                         error = errno;
                     }
@@ -885,7 +885,7 @@ sockbind(
         }
         if(memcmp(req->addr.buf, ret->addr.buf, ret->addr.len) != 0)
         {
-                log_error("memcmp: t_bind changed address");
+                log_error_q("memcmp: t_bind changed address");
         }
 
         (void) t_free((char *)req, T_BIND);
@@ -1116,13 +1116,13 @@ udpSock_init(
     int status;
 
     if (-1 == fd) {
-        log_syserr("Couldn't create UDP socket");
+        log_syserr_q("Couldn't create UDP socket");
         status = 2;
     }
     else {
         status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
         if (status) {
-            log_syserr("Couldn't bind UDP socket");
+            log_syserr_q("Couldn't bind UDP socket");
             (void)close(fd);
             status = 2;
         }
@@ -1242,7 +1242,7 @@ sa_new(
             char* id = strdup(addr);
 
             if (id == NULL) {
-                log_syserr("Couldn't duplicate service address \"%s\"", addr);
+                log_syserr_q("Couldn't duplicate service address \"%s\"", addr);
                 free(sa);
                 status = ENOMEM;
             }
@@ -1301,7 +1301,7 @@ sa_copy(
     char* const inetId = strdup(src->inetId);
 
     if (inetId == NULL) {
-        log_syserr("Couldn't copy Internet identifier");
+        log_syserr_q("Couldn't copy Internet identifier");
         return false;
     }
 

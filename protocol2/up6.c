@@ -239,7 +239,7 @@ hereis(
         _flushNeeded = 1;
 
         if (log_is_enabled_debug)
-            log_debug("%s", s_prod_info(NULL, 0, infop, 1));
+            log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
     }
 
     return errObj;
@@ -310,7 +310,7 @@ csbd(
                 _flushNeeded = 1; /* because asynchronous RPC call */
 
                 if (log_is_enabled_debug)
-                    log_debug("%s", s_prod_info(NULL, 0, infop, 1));
+                    log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
             }
         }
 
@@ -399,7 +399,7 @@ flushConnection(
 #endif
         _lastSendTime = time(NULL );
         _flushNeeded = 0;
-        log_debug("flushConnection() success");
+        log_debug_1("flushConnection() success");
         return NULL;
     }
 
@@ -435,17 +435,17 @@ static up6_error_t up6_run(
 
     if (NOTIFY == _mode) {
         log_set_upstream_id(_downName, false);
-        log_notice("Starting Up(%s/6): %s, SIG=%s", PACKAGE_VERSION,
+        log_notice_q("Starting Up(%s/6): %s, SIG=%s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig);
     }
     else {
         log_set_upstream_id(_downName, true);
-        log_notice("Starting Up(%s/6): %s, SIG=%s, %s", PACKAGE_VERSION,
+        log_notice_q("Starting Up(%s/6): %s, SIG=%s, %s", PACKAGE_VERSION,
                 s_prod_class(NULL, 0, _class), sig,
                 _isPrimary ? "Primary" : "Alternate");
     }
 
-    log_notice("topo:  %s %s", _downName, upFilter_toString(_upFilter));
+    log_notice_q("topo:  %s %s", _downName, upFilter_toString(_upFilter));
     /* s_feedtypet(clss_feedtypeU(_class))); */
 
     /*
@@ -459,13 +459,13 @@ static up6_error_t up6_run(
     flags = fcntl(_socket, F_GETFL);
 
     if (-1 == flags) {
-        log_syserr("fcntl(F_GETFL) failure");
+        log_syserr_q("fcntl(F_GETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else if ((flags & O_NONBLOCK)
             && -1 == fcntl(_socket, F_SETFL, flags & ~O_NONBLOCK)) {
 
-        log_syserr("fcntl(F_SETFL) failure");
+        log_syserr_q("fcntl(F_SETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else {
@@ -480,7 +480,7 @@ static up6_error_t up6_run(
         } while (_clnt == NULL && rpc_createerr.cf_stat == RPC_TIMEDOUT);
 
         if (_clnt == NULL ) {
-            log_error("Couldn't connect to downstream LDM on %s%s", _downName,
+            log_error_q("Couldn't connect to downstream LDM on %s%s", _downName,
                     clnt_spcreateerror(""));
 
             errCode = UP6_CLIENT_FAILURE;
@@ -514,7 +514,7 @@ static up6_error_t up6_run(
                             time_t timeSinceLastSend = time(NULL)
                                     - _lastSendTime;
 
-                            log_debug(err == PQUEUE_END
+                            log_debug_1(err == PQUEUE_END
                                     ? "End of product-queue"
                                     : "Hit a lock");
 
@@ -529,7 +529,7 @@ static up6_error_t up6_run(
                         }
                     } /* end-of-queue reached or lock hit */
                     else {
-                        log_error("Product send failure: %s", strerror(err));
+                        log_error_q("Product send failure: %s", strerror(err));
 
                         errCode = UP6_PQ;
                     }
@@ -616,10 +616,10 @@ static up6_error_t up6_init(
      */
     if ((errCode = pq_open(pqPath, PQ_READONLY, &_pq))) {
         if (PQ_CORRUPT == errCode) {
-            log_error("The product-queue \"%s\" is inconsistent", pqPath);
+            log_error_q("The product-queue \"%s\" is inconsistent", pqPath);
         }
         else {
-            log_error("Couldn't open product-queue \"%s\": %s", pqPath,
+            log_error_q("Couldn't open product-queue \"%s\": %s", pqPath,
                     strerror(errCode));
         }
 

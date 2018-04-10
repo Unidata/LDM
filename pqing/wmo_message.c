@@ -39,10 +39,10 @@ unsigned long not_wmo = 0;
 void
 wmo_stats(void)
 {
-	log_notice("  WMO Messages seen:  %8lu", completed);
-	log_notice("  SOH/ETX missing  :  %8lu", sohetx_missed);
-	log_notice("  parity/chksum err:  %8lu", bad_cksum);
-	log_notice("  WMO format errors:  %8lu", not_wmo);
+	log_notice_q("  WMO Messages seen:  %8lu", completed);
+	log_notice_q("  SOH/ETX missing  :  %8lu", sohetx_missed);
+	log_notice_q("  parity/chksum err:  %8lu", bad_cksum);
+	log_notice_q("  WMO format errors:  %8lu", not_wmo);
 }
 
 
@@ -310,20 +310,20 @@ grib_ident(size_t remaining, const char *const wmo_msg, const char *const ident)
 	cp = scanFor("GRIB", remaining, wmo_msg);
 	if(!cp)
 	{
-		log_notice("%s: Can't find `GRIB'", ident);
+		log_notice_q("%s: Can't find `GRIB'", ident);
 		return nada;
 	}
 	remaining -= cp - wmo_msg;
 	if(remaining < (8 + 28 +4))
 	{
-		log_notice("%s: way too short", ident);
+		log_notice_q("%s: way too short", ident);
 		return NULL;
 	}
 
 	len = ids_len(cp);
 	if(remaining < len)
 	{
-		log_notice("%s: %d bytes too short", ident, len - remaining);
+		log_notice_q("%s: %d bytes too short", ident, len - remaining);
 		return NULL;
 	}
 
@@ -339,7 +339,7 @@ grib_ident(size_t remaining, const char *const wmo_msg, const char *const ident)
 
 	if(scanFor("7777", 8, cp + len - 8) == NULL)
 	{
-		log_notice("%s: no end of product", ident);
+		log_notice_q("%s: no end of product", ident);
 		return NULL;
 	}
 
@@ -424,7 +424,7 @@ wmo_send_buf(
 		)
 	{
 		not_wmo++;
-		log_error("Not a WMO format message.        %s",
+		log_error_q("Not a WMO format message.        %s",
 			wmo_err_ident(buf));
 		return;
 	}
@@ -439,7 +439,7 @@ wmo_send_buf(
 		if(ni == NULL)
 		{
 			not_wmo++;
-			log_error("Not a WMO GRIB format message.   %s",
+			log_error_q("Not a WMO GRIB format message.   %s",
 				wmo_err_ident(buf));
 			return;
 		}

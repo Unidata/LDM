@@ -35,7 +35,7 @@ static unsigned get_size(void)
     const int   status = uldb_getSize(&count);
 
     if (status) {
-        log_error("Couldn't get size of database");
+        log_error_q("Couldn't get size of database");
         CU_ASSERT_EQUAL(status, 0);
     }
 
@@ -49,7 +49,7 @@ static void clear(void)
         uldb_Iter*  iter;
 
         if (status = uldb_getIterator(&iter)) {
-            log_error("Couldn't get iterator");
+            log_error_q("Couldn't get iterator");
             CU_ASSERT_TRUE(0);
         }
         else {
@@ -92,13 +92,13 @@ static int setup(
             log_clear();
         }
         else {
-            log_error("Couldn't delete existing database");
+            log_error_q("Couldn't delete existing database");
             return 1;
         }
     }
 
     if (uldb_create(__FILE__, 0)) {
-        log_error("Couldn't create database");
+        log_error_q("Couldn't create database");
         return 1;
     }
 
@@ -119,12 +119,12 @@ static int teardown(
     sleep(1); /** allow child processes to remove themselves from the ULDB */
 
     if (uldb_close()) {
-        log_error("Couldn't close database");
+        log_error_q("Couldn't close database");
         return 1;
     }
 
     if (uldb_delete(__FILE__)) {
-        log_error("Couldn't delete database");
+        log_error_q("Couldn't delete database");
         return 1;
     }
 
@@ -174,7 +174,7 @@ static pid_t spawn_upstream(
     pid_t   pid = fork();
 
     if (pid < 0) {
-        log_syserr("Couldn't fork child process");
+        log_syserr_q("Couldn't fork child process");
         return pid;
     }
 
@@ -199,12 +199,12 @@ static pid_t spawn_upstream(
         status = uldb_addProcess(pid, proto, sockAddr, desired, &allowed,
                 isNotifier, isPrimary);
         if (status) {
-            log_error("Couldn't add upstream LDM process %d", pid);
+            log_error_q("Couldn't add upstream LDM process %d", pid);
             status = 1;
         }
         else {
             if (!clss_eq(&_clss_all, allowed)) {
-                log_error("Allowed != desired");
+                log_error_q("Allowed != desired");
                 status = 2;
             }
             else {
@@ -215,12 +215,12 @@ static pid_t spawn_upstream(
             free_prod_class(allowed);
 
             if (uldb_remove(pid)) {
-                log_error("Couldn't remove upstream LDM process %d", pid);
+                log_error_q("Couldn't remove upstream LDM process %d", pid);
                 status = 3;
             }
 
             if (uldb_close()) {
-                log_error("Couldn't close ULDB database");
+                log_error_q("Couldn't close ULDB database");
                 status = 4;
             }
         }
@@ -474,7 +474,7 @@ static void test_random(
             pid = spawn_perf_upstream();
 
             if (pid <= 0) {
-                log_error("Couldn't spawn performance child");
+                log_error_q("Couldn't spawn performance child");
                 CU_ASSERT_TRUE(0);
             }
             else {
@@ -488,12 +488,12 @@ static void test_random(
             if (errno == ECHILD) {
                 /* No child processes left */
                 if (done) {
-                    log_notice("Number of spawned processes = %u", numChild);
+                    log_notice_q("Number of spawned processes = %u", numChild);
                     return;
                 }
             }
             else {
-                log_syserr("waitpid() failure");
+                log_syserr_q("waitpid() failure");
                 CU_ASSERT_TRUE(0);
             }
         }

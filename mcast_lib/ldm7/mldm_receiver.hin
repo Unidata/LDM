@@ -13,9 +13,9 @@
 #define MCAST_DOWN_H
 
 #include "down7.h"
+#include "fmtp.h"
 #include "ldm.h"
 #include "pq.h"
-#include "mcast.h"
 
 typedef struct mlr Mlr;
 /**

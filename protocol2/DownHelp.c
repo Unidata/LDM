@@ -160,11 +160,11 @@ dh_saveDataProduct(
 
     if (!error) {
         if (log_is_enabled_info)
-            log_info("%s", s_prod_info(NULL, 0, info, log_is_enabled_debug));
+            log_info_q("%s", s_prod_info(NULL, 0, info, log_is_enabled_debug));
 
         error = savedInfo_set(info);
         if (error) {
-            log_error("Couldn't save product-information: %s",
+            log_error_q("Couldn't save product-information: %s",
                     savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
@@ -172,7 +172,7 @@ dh_saveDataProduct(
             if (notifyAutoShift) {
                 error = as_process(1, info->sz);
                 if (error) {
-                    log_error("Couldn't process acceptance of data-product: %s",
+                    log_error_q("Couldn't process acceptance of data-product: %s",
                             strerror(error));
                     retCode = DOWN6_SYSTEM_ERROR;
                 }
@@ -180,27 +180,27 @@ dh_saveDataProduct(
         }                               /* "savedInfo" updated */
     }                                   /* data-product inserted */
     else if (PQUEUE_BIG == error) {
-        log_error("Product too big: %s",
+        log_error_q("Product too big: %s",
             s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ_BIG;
 
         error = savedInfo_set(info);
         if (error) {
-            log_error("Couldn't save product-information: %s",
+            log_error_q("Couldn't save product-information: %s",
                     savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
     }                                   /* product too big */
     else if (PQUEUE_DUP == error) {
         if (log_is_enabled_info)
-            log_info("%s: duplicate: %s",
+            log_info_q("%s: duplicate: %s",
                 wasHereis ? "hereis" : "comingsoon/blkdata",
                 s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_UNWANTED;
 
         error = savedInfo_set(info);
         if (error) {
-            log_error("Couldn't save product-information: %s",
+            log_error_q("Couldn't save product-information: %s",
                     savedInfo_strerror(error));
             retCode = DOWN6_SYSTEM_ERROR;
         }
@@ -208,7 +208,7 @@ dh_saveDataProduct(
             if (notifyAutoShift) {
                 error = as_process(0, info->sz);
                 if (error) {
-                    log_error("Couldn't process rejection of data-product: %s",
+                    log_error_q("Couldn't process rejection of data-product: %s",
                             strerror(error));
                     retCode = DOWN6_SYSTEM_ERROR;
                 }
@@ -216,7 +216,7 @@ dh_saveDataProduct(
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
     else {
-        log_error("pq_insert() failed: %s: %s",
+        log_error_q("pq_insert() failed: %s: %s",
             strerror(error), s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ;             /* fatal product-queue error */
     }                                   /* general insertion failure */

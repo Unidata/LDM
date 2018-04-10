@@ -250,7 +250,7 @@ int log_set_destination(
 const char* log_get_destination(void);
 
 /**
- * Clears the message-list of the current thread.
+ * Clears the message-queue of the current thread.
  */
 void log_clear(void);
 
@@ -294,7 +294,20 @@ bool log_is_level_enabled(
 #define log_is_enabled_debug    log_is_level_enabled(LOG_LEVEL_DEBUG)
 
 /**
- * Adds a message to the current thread's list of error messages:
+ * Logs a single message at the DEBUG level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ */
+#define log_debug_1(...) do {\
+    if (LOG_LEVEL_DEBUG >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log_1(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
+ * Adds a message to the current thread's queue of messages:
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
@@ -305,10 +318,10 @@ bool log_is_level_enabled(
 } while (false)
 
 /**
- * Adds a variadic message to the current thread's list of error messages:
+ * Adds a variadic message to the current thread's queue of messages:
  *
  * @param[in] fmt  The format of the message.
- * @param[in] args The `va_list` arguments of the message.
+ * @param[in] args The arguments of the format.
  */
 #define log_vadd(fmt, args) do { \
     LOG_LOC_DECL(loc); \
@@ -317,7 +330,7 @@ bool log_is_level_enabled(
 
 /**
  * Adds a message based on a system error number (e.g., `errno`) to the current
- * thread's list of error messages:
+ * thread's queue of messages:
  *
  * @param[in] n    The system error number (e.g., `errno`).
  * @param[in] ...  Optional arguments of the message -- starting with the format
@@ -330,114 +343,113 @@ bool log_is_level_enabled(
 
 /**
  * Adds a message based on the system error code (i.e., `errno`) to the current
- * thread's list of error messages:
+ * thread's queue of error messages:
  *
  * @param[in] ...  Optional arguments of the message.
  */
 #define log_add_syserr(...)  log_add_errno(errno, __VA_ARGS__)
 
 /**
- * The following macros add a message to the current thread's list of error
- * messages, emit the list, and then clear the list:
+ * The following macros add a message to the current thread's queue of
+ * messages, logs the queue, and then clear the queue:
  *
  * The argument-list of the variadic macros must comprise at least a
  * `NULL` argument in order to avoid a syntax error.
  */
 
 /**
- * Adds a variadic message to the message-list of the current thread, writes the
- * list at a given level, and then clears the list.
+ * Adds a variadic message to the message-queue of the current thread, logs the
+ * queue at a given level, and then clears the queue.
  *
- * @param[in] level  The level at which to write the list.
+ * @param[in] level  The level at which to log the queue.
  * @param[in] fmt    Format of the message.
- * @param[in] args   The `va_list` list of arguments for the format.
+ * @param[in] args   The arguments of the format.
  */
-#define log_vlog(level, fmt, args) do { \
+#define log_vlog_q(level, fmt, args) do { \
     LOG_LOC_DECL(loc); \
-    logl_vlog(&loc, level, fmt, args); \
+    logl_vlog_q(&loc, level, fmt, args); \
 } while (false)
 
 /**
- * Adds a message to the current thread's list of messages based on a system
- * error number (e.g., `errno`), writes the list at the error level, and then
- * clears the list.
+ * Adds a message to the current thread's queue of messages based on a system
+ * error number (e.g., `errno`), logs the queue at the error level, and then
+ * clears the queue.
  *
  * @param[in] n    The system error number (e.g., `errno`).
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_errno(n, ...) do {\
+#define log_errno_q(n, ...) do {\
     LOG_LOC_DECL(loc); \
-    logl_errno(&loc, n, __VA_ARGS__); \
+    logl_errno_q(&loc, n, __VA_ARGS__); \
 } while (false)
 
 /**
- * Adds a message to the current thread's list of messages based on the system
- * error number (i.e., `errno`), writes the list at the error level, and then
- * clears the list.
+ * Adds a message to the current thread's queue of messages based on the system
+ * error number (i.e., `errno`), logs the queue at the error level, and then
+ * clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_syserr(...)      log_errno(errno, __VA_ARGS__)
+#define log_syserr_q(...)      log_errno_q(errno, __VA_ARGS__)
 
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the ERROR level, and then clears the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the ERROR level, and then clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_error(...)       LOG_LOG(LOG_LEVEL_ERROR,   __VA_ARGS__)
+#define log_error_q(...)       LOG_LOG(LOG_LEVEL_ERROR,   __VA_ARGS__)
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the WARNING level, and then clears the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the WARNING level, and then clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_warning(...)     LOG_LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define log_warning_q(...)     LOG_LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the NOTICE level, and then clears the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the NOTICE level, and then clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_notice(...)      LOG_LOG(LOG_LEVEL_NOTICE,  __VA_ARGS__)
+#define log_notice_q(...)      LOG_LOG(LOG_LEVEL_NOTICE,  __VA_ARGS__)
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the INFO level, and then clears the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the INFO level, and then clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_info(...)        LOG_LOG(LOG_LEVEL_INFO,    __VA_ARGS__)
+#define log_info_q(...)        LOG_LOG(LOG_LEVEL_INFO,    __VA_ARGS__)
 /**
- * Writes a message at the DEBUG level. Doesn't modify the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the DEBUG level, and then clears the queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_debug(...) do {\
-    if (LOG_LEVEL_DEBUG >= log_level) {\
-        LOG_LOC_DECL(loc);\
-        logl_log(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
-    }\
+#define log_debug_q(...) do {\
+    LOG_LOC_DECL(loc);\
+    logl_log_q(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
 } while (0)
 /**
- * Adds a message to the current thread's list of messages, writes the list at
- * the given level, and then clears the list.
+ * Adds a message to the current thread's queue of messages, logs the queue at
+ * the given level, and then clears the queue.
  *
  * @param[in] level  `log_level_t` logging level.
  * @param[in] ...    Optional arguments of the message -- starting with the
  *                   format of the message.
  */
-#define log_log(level, ...)  LOG_LOG(level,             __VA_ARGS__)
+#define log_log_q(level, ...)  LOG_LOG(level,             __VA_ARGS__)
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets
- * the message-list for the current thread.
+ * the message-queue for the current thread.
  *
  * @param[in] level  The level at which to log the messages. One of
  *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
@@ -450,34 +462,34 @@ bool log_is_level_enabled(
 } while (false)
 
 /**
- * Writes the message-list of the current thread at the ERROR level and then
- * clears the list.
+ * Logs the message-queue of the current thread at the ERROR level and then
+ * clears the queue.
  */
 #define log_flush_error()    log_flush(LOG_LEVEL_ERROR)
 /**
- * Writes the message-list of the current thread at the WARNING level and then
- * clears the list.
+ * Logs the message-queue of the current thread at the WARNING level and then
+ * clears the queue.
  */
 #define log_flush_warning()  log_flush(LOG_LEVEL_WARNING)
 /**
- * Writes the message-list of the current thread at the NOTICE level and then
- * clears the list.
+ * Logs the message-queue of the current thread at the NOTICE level and then
+ * clears the queue.
  */
 #define log_flush_notice()   log_flush(LOG_LEVEL_NOTICE)
 /**
- * Writes the message-list of the current thread at the INFO level and then
- * clears the list.
+ * Logs the message-queue of the current thread at the INFO level and then
+ * clears the queue.
  */
 #define log_flush_info()     log_flush(LOG_LEVEL_INFO)
 /**
- * Writes the message-list of the current thread at the DEBUG level and then
- * clears the list.
+ * Logs the message-queue of the current thread at the DEBUG level and then
+ * clears the queue.
  */
 #define log_flush_debug()    log_flush(LOG_LEVEL_DEBUG)
 
 /**
- * Allocates memory. Adds an error-message the current thread's list of
- * error-messages if an error occurs.
+ * Allocates memory. Adds an message to the current thread's queue of messages
+ * if an error occurs.
  *
  * @param[in] nbytes    Number of bytes to allocate.
  * @param[in] msg       Message to print on error. Should complete the sentence
@@ -489,8 +501,8 @@ bool log_is_level_enabled(
         nbytes, msg)
 
 /**
- * Re-allocates memory. Adds an error-message the current thread's list of
- * error-messages if an error occurs.
+ * Re-allocates memory. Adds an message the current thread's queue of messages
+ * if an error occurs.
  *
  * @param[in] buf       Previously-allocated buffer
  * @param[in] nbytes    Number of bytes to allocate.
@@ -503,13 +515,13 @@ bool log_is_level_enabled(
         buf, nbytes, msg)
 
 /**
- * Writes an error message and then aborts the current process.
+ * Logs an error message and then aborts the current process.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the
  *                 format of the message.
  */
 #define log_abort(...) do { \
-    log_error(__VA_ARGS__); \
+    log_error_q(__VA_ARGS__); \
     abort(); \
 } while (false)
 
@@ -517,7 +529,7 @@ bool log_is_level_enabled(
     #define log_assert(expr)
 #else
     /**
-     * Tests an assertion. Writes an error-message and then aborts the process
+     * Tests an assertion. Logs an error-message and then aborts the process
      * if the assertion is false.
      *
      * @param[in] expr  The assertion to be tested.

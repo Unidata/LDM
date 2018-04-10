@@ -125,7 +125,7 @@ stateRead(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_syserr("Couldn't read comments from \"%s\"", statePathname);
+                log_syserr_q("Couldn't read comments from \"%s\"", statePathname);
             }
             else {
                 unsigned long   seconds;
@@ -177,7 +177,7 @@ stateWrite(
         FILE*   file = fopen(tmpStatePathname, "w");
 
         if (file == NULL) {
-            log_syserr("Couldn't open \"%s\"", tmpStatePathname);
+            log_syserr_q("Couldn't open \"%s\"", tmpStatePathname);
             status = -2;
         }
         else {
@@ -187,19 +187,19 @@ stateWrite(
 "# The following line contains the insertion-time of the last, successfully-\n"
 "# processed data-product.  Do not modify it unless you know exactly what\n"
 "# you're doing!\n", file) < 0) {
-                log_syserr("Couldn't write comment to \"%s\"",
+                log_syserr_q("Couldn't write comment to \"%s\"",
                     tmpStatePathname);
             }
             else {
                 if (fprintf(file, "%lu.%06lu\n",
                         (unsigned long)pqCursor->tv_sec, 
                         (unsigned long)pqCursor->tv_usec) < 0) {
-                    log_syserr("Couldn't write time to \"%s\"",
+                    log_syserr_q("Couldn't write time to \"%s\"",
                         tmpStatePathname);
                 }
                 else {
                     if (rename(tmpStatePathname, statePathname) == -1) {
-                        log_syserr("Couldn't rename \"%s\" to \"%s\"",
+                        log_syserr_q("Couldn't rename \"%s\" to \"%s\"",
                             tmpStatePathname, statePathname);
                     }
                     else {

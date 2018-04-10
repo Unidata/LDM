@@ -479,8 +479,9 @@ static int init(void)
 /**
  * Indicates if a message at a given logging level would be logged.
  *
- * @param[in] level  The logging level
- * @retval    true   iff a message at level `level` would be logged
+ * @param[in] level    The logging level
+ * @retval    true     iff a message at level `level` would be logged
+ * @asyncsignalsafety  Safe
  */
 static bool is_level_enabled(
         const log_level_t level)
@@ -622,6 +623,87 @@ const char* logl_basename(
 {
     const char* const cp = strrchr(pathname, '/');
     return cp ? cp + 1 : pathname;
+}
+
+/**
+ * Tries to return a formatted variadic message.
+ * @param[out] msg          Formatted message. Caller should free if the
+ *                          returned number of bytes is less than the estimated
+ *                          number of bytes.
+ * @param[in]  nbytesGuess  Estimated size of message in bytes -- *including*
+ *                          the terminating NUL
+ * @param[in]  format       Message format
+ * @param[in]  args         Optional argument of format
+ * @retval     -1           Out-of-memory. `logl_internal()` called.
+ * @return                  Number of bytes necessary to contain the formatted
+ *                          message -- *excluding* the terminating NUL. If
+ *                          greater than or equal to the estimated number of
+ *                          bytes, then `*msg` isn't set.
+ */
+static ssize_t tryFormatingMsg(
+        char** const      msg,
+        const ssize_t     nbytesGuess,
+        const char* const format,
+        va_list           args)
+{
+    ssize_t nbytes;
+    char*   buf = malloc(nbytesGuess);
+    if (buf == NULL) {
+        logl_internal(LOG_LEVEL_ERROR, "Couldn't allocate %ld-byte message "
+                "buffer", (long)nbytesGuess);
+        nbytes = -1;
+    }
+    else {
+        nbytes = vsnprintf(buf, nbytesGuess, format, args);
+        if (nbytes >= nbytesGuess) {
+            free(buf);
+        }
+        else {
+            *msg = buf;
+        }
+    }
+    return nbytes;
+}
+
+/**
+ * Returns a a formated variadic message.
+ * @param[in] format  Message format
+ * @param[in] args    Optional format arguments
+ * @retval    NULL    Out-of-memory. `logl_internal()` called.
+ * @return            Allocated string of formatted message. Caller should free
+ *                    when it's no longer needed.
+ */
+static char* formatMsg(
+        const char* format,
+        va_list     args)
+{
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    char*   msg = NULL;
+    ssize_t nbytes = tryFormatingMsg(&msg, 256, format, args);
+    if (nbytes >= 256)
+        (void)tryFormatingMsg(&msg, nbytes+1, format, argsCopy);
+    va_end(argsCopy);
+    return msg;
+}
+
+void logl_vlog_1(
+        const log_loc_t* const  loc,
+        const log_level_t       level,
+        const char* const       format,
+        va_list                 args)
+{
+    if (is_level_enabled(level)) {
+        sigset_t sigset;
+        blockSigs(&sigset);
+        char* msg = formatMsg(format, args);
+        if (msg) {
+            (void)refresh_if_necessary();
+            logi_log(level, loc, msg);
+            free(msg);
+        }
+        restoreSigs(&sigset);
+    } // Message should be logged
 }
 
 /**
@@ -782,7 +864,7 @@ void* logl_realloc(
 }
 
 /**
- * Adds a variadic message to the current thread's queue of messages. Emits and
+ * Adds a variadic message to the current thread's queue of messages. Logs and
  * then clears the queue.
  *
  *
@@ -791,7 +873,7 @@ void* logl_realloc(
  * @param[in] format  Format of the message or NULL.
  * @param[in] args    Optional format arguments.
  */
-void logl_vlog(
+void logl_vlog_q(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
@@ -820,15 +902,14 @@ void logl_vlog(
 }
 
 /**
- * Adds a message to the current thread's queue of messages. Emits and then
- * clears the queue.
+ * Logs a single message.
  *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void logl_log(
+void logl_log_1(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
@@ -836,7 +917,28 @@ void logl_log(
 {
     va_list args;
     va_start(args, format);
-    logl_vlog(loc, level, format, args);
+    logl_vlog_1(loc, level, format, args);
+    va_end(args);
+}
+
+/**
+ * Adds a message to the current thread's queue of messages. Logs and then
+ * clears the queue.
+ *
+ * @param[in] loc     Location where the message was generated.
+ * @param[in] level   Logging level.
+ * @param[in] format  Format of the message or NULL.
+ * @param[in] ...     Optional format arguments.
+ */
+void logl_log_q(
+        const log_loc_t* const restrict loc,
+        const log_level_t               level,
+        const char* const restrict      format,
+                                        ...)
+{
+    va_list args;
+    va_start(args, format);
+    logl_vlog_q(loc, level, format, args);
     va_end(args);
 }
 
@@ -850,7 +952,7 @@ void logl_log(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void logl_errno(
+void logl_errno_q(
         const log_loc_t* const     loc,
         const int                  errnum,
         const char* const restrict fmt,
@@ -859,7 +961,7 @@ void logl_errno(
     va_list args;
     va_start(args, fmt);
     logl_add(loc, "%s", strerror(errnum));
-    logl_vlog(loc, LOG_LEVEL_ERROR, fmt, args);
+    logl_vlog_q(loc, LOG_LEVEL_ERROR, fmt, args);
     va_end(args);
 }
 
@@ -898,7 +1000,7 @@ void logl_free(
 {
     msg_queue_t* queue = queue_get();
     if (!queue_is_empty(queue)) {
-        logl_log(loc, LOG_LEVEL_WARNING,
+        logl_log_q(loc, LOG_LEVEL_WARNING,
                 "logl_free() called with the above messages still in the "
                 "message-queue");
     }

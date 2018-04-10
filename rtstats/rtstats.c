@@ -71,7 +71,7 @@ addtostats(const prod_info *infop, const void *datap,
         if(tvIsNone(tv))
                 tv = TS_ZERO;
         if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, infop,
+                log_info_q("%s", s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
         binstats(infop, &tv);
         return 0;
@@ -81,48 +81,48 @@ addtostats(const prod_info *infop, const void *datap,
 static void
 usage(const char *av0) /*  id string */
 {
-    log_error(
+    log_error_q(
 "Usage: %s [options]", av0);
-    log_error(
+    log_error_q(
 "where:");
-    log_error(
+    log_error_q(
 "    -v           Log INFO-level messages (log each product).");
-    log_error(
+    log_error_q(
 "    -x           Log DEBUG-level messages.");
-    log_error(
+    log_error_q(
 "    -l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"");
-    log_error(
+    log_error_q(
 "                 (standard error), or file `dest`. Default is \"%s\"",
             log_get_default_destination());
     /*
      * NB: Don't use "s_feedtypet(DEFAULT_FEEDTYPE)" in the following because
      * it looks ugly for "ANY - EXP".
      */
-    log_error(
+    log_error_q(
 "    -f feedtype  Scan for data of type \"feedtype\" (default: ");
-    log_error(
+    log_error_q(
 "                 \"ANY - EXP\").");
-    log_error(
+    log_error_q(
 "    -p pattern   Interested in products matching \"pattern\"");
-    log_error(
+    log_error_q(
 "                 (default: \".*\").") ;
-    log_error(
+    log_error_q(
 "    -q queue     Use file \"queue\" as product-queue (default: ");
-    log_error(
+    log_error_q(
 "                 \"%s\").", getDefaultQueuePath());
-    log_error(
+    log_error_q(
 "    -o offset    Oldest product to consider is \"offset\"");
-    log_error(
+    log_error_q(
 "                 seconds before now (default: 0).");
-    log_error(
+    log_error_q(
 "    -i interval  Poll queue every \"interval\" seconds (default:");
-    log_error(
+    log_error_q(
 "                 %d).", DEFAULT_INTERVAL);
-    log_error(
+    log_error_q(
 "    -h hostname  Send to LDM server on host \"hostname\"");
-    log_error(
+    log_error_q(
 "                 (default: LOCALHOST).");
-    log_error(
+    log_error_q(
 "    -P port      Send to port \"port\" (default: %d).", LDM_PORT);
     exit(1);
 }
@@ -131,7 +131,7 @@ usage(const char *av0) /*  id string */
 void
 cleanup(void)
 {
-        log_notice("Exiting");
+        log_notice_q("Exiting");
 
         if(pq && !intr) 
                 (void)pq_close(pq);
@@ -255,7 +255,7 @@ int main(int ac, char *av[])
         if(setenv("TZ", "UTC0",1))
         {
                 int errnum = errno;
-                log_error("setenv: Couldn't set TZ: %s", strerror(errnum));
+                log_error_q("setenv: Couldn't set TZ: %s", strerror(errnum));
                 exit(1);        
         }
 
@@ -285,7 +285,7 @@ int main(int ac, char *av[])
                     case 'p':
                         spec.pattern = optarg;
                         if (re_isPathological(spec.pattern)) {
-                            log_notice("Adjusting pathological regular-expression \"%s\"",
+                            log_notice_q("Adjusting pathological regular-expression \"%s\"",
                                     spec.pattern);
                             re_vetSpec(spec.pattern);
                         }
@@ -293,7 +293,7 @@ int main(int ac, char *av[])
                     case 'f': {
                         int fterr = strfeedtypet(optarg, &spec.feedtype) ;
                         if (fterr != FEEDTYPE_OK) {
-                            log_error("Bad feedtype \"%s\", %s", optarg,
+                            log_error_q("Bad feedtype \"%s\", %s", optarg,
                                     strfeederr(fterr)) ;
                             usage(progname);
                         }
@@ -305,7 +305,7 @@ int main(int ac, char *av[])
                     case 'o':
                         toffset = atoi(optarg);
                         if(toffset == 0 && *optarg != '0') {
-                            log_error("Invalid offset %s", optarg);
+                            log_error_q("Invalid offset %s", optarg);
                             usage(progname);
                         }
                         break;
@@ -319,7 +319,7 @@ int main(int ac, char *av[])
                         if (0 != errno || 0 != *suffix ||
                             0 >= port || 0xffff < port) {
 
-                            log_error("Invalid port %s", optarg);
+                            log_error_q("Invalid port %s", optarg);
                             usage(progname);
                         }
 
@@ -330,23 +330,23 @@ int main(int ac, char *av[])
                     case 'i':
                         interval = atoi(optarg);
                         if (interval == 0 && *optarg != '0') {
-                            log_error("Invalid interval %s", optarg);
+                            log_error_q("Invalid interval %s", optarg);
                             usage(progname);
                         }
                         break;
                     case '?':
-                        log_error("Invalid option \"%c\"", optopt);
+                        log_error_q("Invalid option \"%c\"", optopt);
                         usage(progname);
                         break;
                     case ':':
-                        log_error("No argument for option \"%c\"", optopt);
+                        log_error_q("No argument for option \"%c\"", optopt);
                         usage(progname);
                         break;
                 }
             } /* getopt() loop */
 
             if (optind != ac) {
-                log_error("Invalid operand: \"%s\"", av[optind]);
+                log_error_q("Invalid operand: \"%s\"", av[optind]);
                 usage(progname);
             }
         } /* command-line decoding block */
@@ -354,18 +354,18 @@ int main(int ac, char *av[])
         const char* const  pqfname = getQueuePath();
 
         if (regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB)) {
-            log_error("Bad regular expression \"%s\"\n", spec.pattern);
+            log_error_q("Bad regular expression \"%s\"\n", spec.pattern);
             usage(progname);
         }
 
-        log_notice("Starting Up (%d)", getpgrp());
+        log_notice_q("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 exit(1);
         }
 
@@ -382,11 +382,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    log_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error_q("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    log_error("pq_open failed: %s: %s\n",
+                    log_error_q("pq_open failed: %s: %s\n",
                             pqfname, strerror(status));
                 }
                 exit(1);
@@ -425,14 +425,14 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug("End of Queue");
+                        log_debug_1("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug("Hit a lock");
+                        log_debug_1("Hit a lock");
                         break;
                 default:
-                        log_error("pq_sequence failed: %s (errno = %d)",
+                        log_error_q("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
                         exit(1);
                         break;

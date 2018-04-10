@@ -93,13 +93,13 @@ sus_new(
     char*   str = strdup(string);
 
     if (str == NULL) {
-        log_syserr("Couldn't duplicate string \"%s\"", string);
+        log_syserr_q("Couldn't duplicate string \"%s\"", string);
     }
     else {
         SUS*    sus = malloc(sizeof(SUS));
 
         if (sus == NULL) {
-            log_syserr("Couldn't allocate new string/unsigned object");
+            log_syserr_q("Couldn't allocate new string/unsigned object");
         }
         else {
             sus->string = str;
@@ -511,7 +511,7 @@ getPreviousProdInfo(
     MD5_CTX*    context = new_MD5_CTX();
 
     if (context == NULL) {
-        log_error("Couldn't allocate MD5 structure");
+        log_error_q("Couldn't allocate MD5 structure");
     }
     else {
         /*
@@ -549,12 +549,12 @@ getPreviousProdInfo(
 
         if (file == NULL) {
             if (errno == ENOENT) {
-                log_notice("Previous product-information file \"%s\" "
+                log_notice_q("Previous product-information file \"%s\" "
                     "doesn't exist", statePath);
                 status = 1;
             }
             else {
-                log_syserr("Couldn't open \"%s\"", statePath);
+                log_syserr_q("Couldn't open \"%s\"", statePath);
             }
         }
         else {
@@ -571,7 +571,7 @@ getPreviousProdInfo(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_syserr("Couldn't skip comments in " "\"%s\"", statePath);
+                log_syserr_q("Couldn't skip comments in " "\"%s\"", statePath);
             }
             else {
                 (void)ungetc(c, file);
@@ -619,7 +619,7 @@ initSavedInfo(
     prod_info*  info = pi_new();
 
     if (info == NULL) {
-        log_syserr("Couldn't allocate product-information structure");
+        log_syserr_q("Couldn't allocate product-information structure");
         status = -1;
     }
     else {
@@ -659,7 +659,7 @@ initSavedInfo(
 
         if (status == 0) {
             if (savedInfo_set(info)) {
-                log_syserr("Couldn't set product-information");
+                log_syserr_q("Couldn't set product-information");
 
                 status = -1;
             }
@@ -730,7 +730,7 @@ requester_exec(
      */
     vetFromTime(&clssp->from, backoffTime);
 
-    log_notice("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
+    log_notice_q("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
         s_prod_class(NULL, 0, clssp));
 
     (void)as_setLdmCount(serverCount);
@@ -742,7 +742,7 @@ requester_exec(
      * NB: Potentially lengthy and CPU-intensive.
      */
     if (initSavedInfo(source, port, getQueuePath(), clssp) != 0) {
-        log_error("prog_requester(): "
+        log_error_q("prog_requester(): "
             "Couldn't initialize saved product-information module");
 
         errCode = EXIT_FAILURE;
@@ -796,7 +796,7 @@ requester_exec(
                     isPrimary = !isPrimary;
                     doSleep = 0; /* reconnect immediately */
 
-                    log_notice("Switching data-product transfer-mode to %s",
+                    log_notice_q("Switching data-product transfer-mode to %s",
                                 isPrimary ? "primary" : "alternate");
                 }
             } /* req6_new() success */
@@ -862,23 +862,23 @@ requester_exec(
                             rpctimeo, inactive_timeo, ldmprog_5);
                         (void)exitIfDone(0);
 
-                        log_debug("forn5(...) = %d", feedCode);
+                        log_debug_1("forn5(...) = %d", feedCode);
 
                         if (feedCode == ECONNABORTED) {
-                            log_notice("Connection aborted");
+                            log_notice_q("Connection aborted");
                         }
                         else if (feedCode == ECONNRESET) {
-                            log_notice("Connection closed by upstream LDM");
+                            log_notice_q("Connection closed by upstream LDM");
                         }
                         else if (feedCode == ETIMEDOUT) {
-                            log_notice("Connection timed-out");
+                            log_notice_q("Connection timed-out");
                             doSleep = 0; /* reconnect immediately */
                         }
                         else if (feedCode == ECONNREFUSED) {
-                            log_notice("Connection refused");
+                            log_notice_q("Connection refused");
                         }
                         else if (feedCode != 0){
-                            log_error("Unexpected forn5() return: %d", feedCode);
+                            log_error_q("Unexpected forn5() return: %d", feedCode);
 
                             errCode = EXIT_FAILURE; /* terminate */
                         }
@@ -903,7 +903,7 @@ requester_exec(
                      */
                     const unsigned  sleepAmount = 2*interval;
 
-                    log_info("Sleeping %u seconds before retrying...", sleepAmount);
+                    log_info_q("Sleeping %u seconds before retrying...", sleepAmount);
                     (void)sleep(sleepAmount);
                     (void)exitIfDone(0);
 
@@ -948,7 +948,7 @@ requester_spawn(
         pid_t pid = ldmfork();
         if(pid == -1)
         {
-                log_error("Couldn't fork downstream LDM");
+                log_error_q("Couldn't fork downstream LDM");
                 return -1;
         }
 
@@ -1100,13 +1100,13 @@ sub_new(
     char* const pat = strdup(pattern);
 
     if (pat == NULL) {
-        log_syserr("Couldn't duplicate string \"%s\"", pattern);
+        log_syserr_q("Couldn't duplicate string \"%s\"", pattern);
     }
     else {
         Subscription*   sub = malloc(sizeof(Subscription));
 
         if (sub == NULL) {
-            log_syserr("Couldn't allocate new subscription object");
+            log_syserr_q("Couldn't allocate new subscription object");
         }
         else {
             sub->feedtype = feedtype;
@@ -1441,7 +1441,7 @@ serverEntry_new(
         ServerEntry*  entry = malloc(sizeof(ServerEntry));
 
         if (entry == NULL) {
-            log_syserr("Couldn't allocate new server-entry object");
+            log_syserr_q("Couldn't allocate new server-entry object");
         }
         else {
             entry->serverInfo = clone;
@@ -1722,7 +1722,7 @@ subEntry_new(
         SubEntry*   entry = malloc(sizeof(SubEntry));
 
         if (entry == NULL) {
-            log_syserr("Couldn't allocate new subscription-entry");
+            log_syserr_q("Couldn't allocate new subscription-entry");
         }
         else {
             entry->next = NULL;
@@ -1759,7 +1759,7 @@ subEntry_add(
             (size_t)((entry->serverCount+1)*sizeof(ServerInfo*)));
 
     if (NULL == servers) {
-        log_syserr("Couldn't allocate new server-information array");
+        log_syserr_q("Couldn't allocate new server-information array");
     }
     else {
         const ServerInfo* const clone = serverInfo_clone(server);
@@ -1813,7 +1813,7 @@ subEntry_startRequester(
             sp->pattern = strdup(sub_getPattern(entry->subscription));
 
             if (sp->pattern == NULL) {
-                log_syserr("Couldn't duplicate pattern \"%s\"",
+                log_syserr_q("Couldn't duplicate pattern \"%s\"",
                         sub_getPattern(entry->subscription));
                 status = errno;
             }
@@ -1957,7 +1957,7 @@ subs_startRequesters(void)
 
         for (reqstrp = requesters; reqstrp != NULL; reqstrp = reqstrp->next)
         {
-            log_notice("%s: %s",
+            log_notice_q("%s: %s",
                  reqstrp->source,
                  s_prod_class(buf, sizeof(buf), reqstrp->clssp));
         }
@@ -1989,7 +1989,7 @@ addRequest(
             log_add("Couldn't add subscription to server entry");
         }
         else if (sub_isEmpty(sub)) {
-            log_warning("Ignoring subscription %s because it "
+            log_warning_q("Ignoring subscription %s because it "
                     "duplicates previous subscriptions or specifies nothing",
                     sub_toString(origSub));
             status = 0;
@@ -2002,7 +2002,7 @@ addRequest(
 
                 (void)sub_toString_r(buf, sizeof(buf), origSub);
 
-                log_warning("Subscription %s reduced to %s by previous "
+                log_warning_q("Subscription %s reduced to %s by previous "
                         "subscriptions", buf, sub_toString(sub));
             }
 
@@ -2303,7 +2303,7 @@ proc_exec(Process *proc)
                 endpriv();
                 (void)execvp(proc->wrdexp.we_wordv[0],
                         proc->wrdexp.we_wordv);
-                log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
+                log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s",
                         proc->wrdexp.we_wordv[0], getenv("PATH"));
                 _exit(127) ;
         }
@@ -2721,11 +2721,11 @@ lcf_reduceByFeeds(
         ft = desiredFeed & allowedFeeds[i];
         sprint_feedtypet(s3, sizeof(s3), ft);
         if (ft) {
-            log_debug("hit %s = %s & %s", s3, s1, s2);
+            log_debug_1("hit %s = %s & %s", s3, s1, s2);
             return ft; // First match determines outcome
         }
     }
-    log_debug("miss %s", s1);
+    log_debug_1("miss %s", s1);
     return NONE;
 }
 
@@ -2740,7 +2740,7 @@ lcf_reduceByAllowedFeeds(
     size_t              numFeeds = lcf_getAllowedFeeds(name, addr, maxFeeds,
             allowedFeeds);
     if (numFeeds > maxFeeds) {
-        log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
+        log_error_q("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
         numFeeds = maxFeeds;
     }
     return lcf_reduceByFeeds(desiredFeed, allowedFeeds, numFeeds);
@@ -2791,13 +2791,13 @@ lcf_reduceToAllowed(
          * If there's no access-control-list (ACL) or the host wants nothing,
          * then the intersection is the empty set.
          */
-        log_warning("no ACL or empty request");
+        log_warning_q("no ACL or empty request");
         nhits = 0;
     }
     else {
         nhits = lcf_getAllowedFeeds(name, addr, MAXHITS, feedType);
         if (nhits > MAXHITS) {
-            log_error("nhits (%u) > MAXHITS (%d)", nhits, MAXHITS);
+            log_error_q("nhits (%u) > MAXHITS (%d)", nhits, MAXHITS);
             nhits = MAXHITS;
         }
     }
@@ -3179,7 +3179,7 @@ lcf_reduceToAcceptable(
                 hits[nhits++] = ap;
 
                 if (nhits >= MAXHITS) {
-                        log_error("nhits (%u) >= MAXHITS (%d)",
+                        log_error_q("nhits (%u) >= MAXHITS (%d)",
                                 nhits, MAXHITS);
                         break;
                 }
@@ -3222,7 +3222,7 @@ lcf_reduceToAcceptable(
                 (void)sprint_feedtypet(s1, sizeof(s1), hits[ii]->ft);
 
             if (NONE == fi) {
-                log_debug("miss %s", s1);
+                log_debug_1("miss %s", s1);
             }
             else {
                 if (log_is_enabled_debug) {
@@ -3231,8 +3231,8 @@ lcf_reduceToAcceptable(
                     (void)sprint_feedtypet(s2, sizeof(s2),
                         offerd->psa.psa_val[jj].feedtype);
                     (void)sprint_feedtypet(s3, sizeof(s3), fi);
-                    log_debug("hit %s = %s & %s", s3, s1, s2);
-                    log_debug("    %s was %s", hits[ii]->pattern,
+                    log_debug_1("hit %s = %s & %s", s3, s1, s2);
+                    log_debug_1("    %s was %s", hits[ii]->pattern,
                          offerd->psa.psa_val[jj].pattern);
                 }
 
@@ -3351,7 +3351,7 @@ lcf_free(void)
     execEntries_free();
     #if WANT_MULTICAST
         if (umm_clear())
-            log_error("Couldn't clear multicast LDM sender manager");
+            log_error_q("Couldn't clear multicast LDM sender manager");
         d7mgr_free();  // Clears multicast receiver manager
     #endif
     serverNeeded = false;
@@ -3377,7 +3377,7 @@ lcf_savePreviousProdInfo(void)
         file = fopen(tmpStatePath, "w");
 
         if (file == NULL) {
-            log_syserr("Couldn't open \"%s\" for writing",
+            log_syserr_q("Couldn't open \"%s\" for writing",
                 tmpStatePath);
         }
         else {
@@ -3385,7 +3385,7 @@ lcf_savePreviousProdInfo(void)
 "# The following is the product-information of the last,\n"
 "# successfully-received data-product.  Do not modify it unless\n"
 "# you know exactly what you're doing!\n", file) < 0) {
-                log_syserr("Couldn't write comment to \"%s\"", tmpStatePath);
+                log_syserr_q("Couldn't write comment to \"%s\"", tmpStatePath);
             }
             else {
                 if (pi_print(info, file) < 0 || fputc('\n', file) == EOF) {
@@ -3394,11 +3394,11 @@ lcf_savePreviousProdInfo(void)
                 }
                 else {
                     if (fclose(file) != 0) {
-                        log_syserr("Error closing \"%s\"",
+                        log_syserr_q("Error closing \"%s\"",
                             tmpStatePath);
                     }
                     else if (rename(tmpStatePath, statePath) == -1) {
-                        log_syserr("Couldn't rename "
+                        log_syserr_q("Couldn't rename "
                             "\"%s\" to \"%s\"",
                             tmpStatePath, statePath);
                     }

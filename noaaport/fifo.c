@@ -50,7 +50,7 @@ fifo_init(
     pthread_mutexattr_t mutexAttr;
 
     if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
-        log_errno(status, "Couldn't initialize mutex attributes");
+        log_errno_q(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
@@ -60,12 +60,12 @@ fifo_init(
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
         if ((status = pthread_mutex_init(&fifo->mutex, &mutexAttr)) != 0) {
-            log_errno(status, "Couldn't initialize mutex");
+            log_errno_q(status, "Couldn't initialize mutex");
             status = 2;
         }
         else {
             if ((status = pthread_cond_init(&fifo->cond, NULL)) != 0) {
-                log_errno(status, "Couldn't initialize condition variable");
+                log_errno_q(status, "Couldn't initialize condition variable");
                 status = 2;
             }
             else {
@@ -336,7 +336,7 @@ fifo_transferFromFd(
     }
 
     if (-1 == nb) {
-        log_syserr("Couldn't read up to %lu bytes from file descriptor %d",
+        log_syserr_q("Couldn't read up to %lu bytes from file descriptor %d",
                 (unsigned long)maxBytes, (unsigned long)fd);
         status = 2;
         fifo_lock(fifo); // was locked => deadlock not possible
@@ -410,7 +410,7 @@ fifo_new(
     Fifo* f = (Fifo*)malloc(sizeof(Fifo));
 
     if (NULL == f) {
-        log_syserr("Couldn't allocate FIFO object");
+        log_syserr_q("Couldn't allocate FIFO object");
         status = 2;
     }
     else {
@@ -419,7 +419,7 @@ fifo_new(
         unsigned char* const    buf = (unsigned char*)malloc(size);
 
         if (NULL == buf) {
-            log_syserr("Couldn't allocate %lu bytes for FIFO buffer",
+            log_syserr_q("Couldn't allocate %lu bytes for FIFO buffer",
                     (unsigned long)size);
             status = 2;
         }

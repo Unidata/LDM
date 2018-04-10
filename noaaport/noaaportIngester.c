@@ -107,7 +107,7 @@ decodeCommandLine(
 
                 if (sscanf(optarg, "%12lu %n", &n, &nbytes) != 1 ||
                         optarg[nbytes] != 0) {
-                    log_syserr("Couldn't decode FIFO size in pages: \"%s\"",
+                    log_syserr_q("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
                     status = 1;
                 }
@@ -289,7 +289,7 @@ static void usage(
     int level = log_get_level();
     (void)log_set_level(LOG_LEVEL_NOTICE);
 
-    log_notice(
+    log_notice_q(
 "%s version %s\n"
 "%s\n"
 "\n"
@@ -337,7 +337,7 @@ static inline void
 tryLockingProcessInMemory(void)
 {
     if (lockProcessInMemory()) {
-        log_warning("Couldn't lock process in physical memory");
+        log_warning_q("Couldn't lock process in physical memory");
     }
 }
 
@@ -352,7 +352,7 @@ sigusr1_handler(
         const int sig)
 {
     if (SIGUSR1 == sig) {
-        log_notice("SIGUSR1 received");
+        log_notice_q("SIGUSR1 received");
         (void)pthread_mutex_lock(&mutex);
         reportStatistics = true;
         (void)pthread_cond_signal(&cond);
@@ -379,17 +379,17 @@ static void signal_handler(
 
     switch (sig) {
         case SIGTERM:
-            log_notice("SIGTERM received");
+            log_notice_q("SIGTERM received");
             done = 1;
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
         case SIGUSR2:
-            log_notice("SIGUSR2 received");
+            log_notice_q("SIGUSR2 received");
             (void)log_roll_level();
             break;
         default:
-            log_notice("Unexpected signal received: %d", sig);
+            log_notice_q("Unexpected signal received: %d", sig);
     }
 
     return;
@@ -524,7 +524,7 @@ static int spawnProductMaker(
         status = pthread_create(thread, attr, pmStart, pm);
 
         if (status) {
-            log_errno(status, "Couldn't start product-maker thread");
+            log_errno_q(status, "Couldn't start product-maker thread");
             status = SYSTEM_FAILURE;
         }
         else {
@@ -762,7 +762,7 @@ static void reportStats(
     (void)snprintf(buf, size,
 "----------------------------------------");
     msg[sizeof(msg)-1] = 0;
-    log_notice("%s", msg); // Danger! `msg` contains '%' characters
+    log_notice_q("%s", msg); // Danger! `msg` contains '%' characters
 
     (void)log_set_level(logLevel);
 
@@ -842,12 +842,12 @@ initThreadAttr(
     int status = pthread_attr_init(attr);
 
     if (status) {
-        log_errno(status, "Couldn't initialize thread attributes object");
+        log_errno_q(status, "Couldn't initialize thread attributes object");
         status = (EBUSY == status) ? USAGE_ERROR : SYSTEM_FAILURE;
     }
     else if (isMcastInput) {
         #ifndef _POSIX_THREAD_PRIORITY_SCHEDULING
-            log_warning("Can't adjust thread scheduling due to lack of support from "
+            log_warning_q("Can't adjust thread scheduling due to lack of support from "
                     "the environment");
         #else
             struct sched_param  param;
@@ -944,7 +944,7 @@ spawnReader(
         status = pthread_create(thread, attr, readerStart, rdr);
 
         if (status) {
-            log_errno(status, "Couldn't create input-reader thread");
+            log_errno_q(status, "Couldn't create input-reader thread");
             readerFree(rdr);
             status = SYSTEM_FAILURE;
         }
@@ -1017,7 +1017,7 @@ waitOnReader(
     int   status = pthread_join(thread, &voidPtr);
 
     if (status) {
-        log_errno(status, "Couldn't join input-reader thread");
+        log_errno_q(status, "Couldn't join input-reader thread");
         status = SYSTEM_FAILURE;
     }
     else {
@@ -1075,7 +1075,7 @@ runInner(
         pthread_mutexattr_t attr;
         status = pthread_mutexattr_init(&attr);
         if (status) {
-            log_errno(status, "Couldn't initialize mutex attributes");
+            log_errno_q(status, "Couldn't initialize mutex attributes");
         }
         else {
             // At most one lock per thread
@@ -1289,18 +1289,18 @@ int main(
             &mcastSpec, &interface);
 
     if (status) {
-        log_error("Couldn't decode command-line");
+        log_error_q("Couldn't decode command-line");
         usage(progname, npages, COPYRIGHT_NOTICE);
     }
     else {
-        log_notice("Starting Up %s", PACKAGE_VERSION);
-        log_notice("%s", COPYRIGHT_NOTICE);
+        log_notice_q("Starting Up %s", PACKAGE_VERSION);
+        log_notice_q("%s", COPYRIGHT_NOTICE);
 
         tryLockingProcessInMemory(); // because NOAAPORT is realtime
         status = execute(npages, prodQueuePath, mcastSpec, interface);
 
         if (status)
-            log_error("Couldn't ingest NOAAPort data");
+            log_error_q("Couldn't ingest NOAAPort data");
     }                               /* command line decoded */
 
     log_fini();

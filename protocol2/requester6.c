@@ -196,7 +196,7 @@ run_service(
                 else {
                     as_init(isPrimary);
 
-                    log_debug("Downstream LDM initialized");
+                    log_debug_1("Downstream LDM initialized");
 
                     for (;;) {
                         /*
@@ -212,12 +212,12 @@ run_service(
                         (void)exitIfDone(0);
 
                         if (err == ETIMEDOUT) {
-                            log_info("Connection from upstream LDM silent for "
+                            log_info_q("Connection from upstream LDM silent for "
                                     "%u seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
                             if (is_upstream_alive(upName, upAddr, upId)) {
-                                log_info("Upstream LDM is alive.  Waiting...");
+                                log_info_q("Upstream LDM is alive.  Waiting...");
 
                                 continue;
                             }
@@ -295,7 +295,7 @@ make_request(
         while (!errObj && !finished && exitIfDone(0)) {
             fornme_reply_t*     feedmeReply;
 
-            log_debug("Calling feedme_6(...)");
+            log_debug_1("Calling feedme_6(...)");
 
             feedmeReply = feedme_6(&feedpar, clnt);
 
@@ -307,7 +307,7 @@ make_request(
             }
             else {
                 if (feedmeReply->code == 0) {
-                    log_notice("Upstream LDM-6 on %s is willing to be %s feeder",
+                    log_notice_q("Upstream LDM-6 on %s is willing to be %s feeder",
                         upName, isPrimary ? "a primary" : "an alternate");
 
                     *id = feedmeReply->fornme_reply_t_u.id;
@@ -336,7 +336,7 @@ make_request(
 
                             (void)s_prod_class(wantStr, sizeof(wantStr), 
                                 feedpar.prod_class);
-                            log_notice("Product reclassification by upstream LDM: "
+                            log_notice_q("Product reclassification by upstream LDM: "
                                 "%s -> %s",
                                 wantStr, s_prod_class(NULL, 0, allow));
 
@@ -584,7 +584,7 @@ req6_new(
         CLIENT*                 clnt;
         struct sockaddr_in      upAddr;
 
-        log_notice("LDM-6 desired product-class: %s",
+        log_notice_q("LDM-6 desired product-class: %s",
             s_prod_class(NULL, 0, prodClass));
 
         errObj = ldm_clnttcp_create_vers(upName, port, SIX, &clnt,
@@ -619,13 +619,13 @@ req6_new(
              */
             unsigned    id;
 
-            log_info("Connected to upstream LDM-6 on host %s using port %u",
+            log_info_q("Connected to upstream LDM-6 on host %s using port %u",
                 upName, (unsigned)ntohs(upAddr.sin_port));
 
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                log_debug("Calling run_service()");
+                log_debug_1("Calling run_service()");
 
                 errObj = run_service(dataSocket, inactiveTimeout, upName,
                         &upAddr, id, pqPathname, prodClass, pq, isPrimary);

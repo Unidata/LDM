@@ -11,7 +11,7 @@ void er_wmsg(
     *iret = 0;
 
     if (*numerr != 0)
-        log_error("[%s %d] %s", errgrp, *numerr, errstr);
+        log_error_q("[%s %d] %s", errgrp, *numerr, errstr);
     else
-        log_info("[%s %d] %s", errgrp, *numerr, errstr);
+        log_info_q("[%s %d] %s", errgrp, *numerr, errstr);
 }

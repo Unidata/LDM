@@ -298,10 +298,10 @@ tty_speed(const char *baud)
 void
 tty_stats(void)
 {
-	log_notice("  TTY Bytes read:   %10lu",
+	log_notice_q("  TTY Bytes read:   %10lu",
 		total_bytes);
 	if(perrsp != NULL)
-		log_notice("  TTY parity errors:  %8lu",
+		log_notice_q("  TTY parity errors:  %8lu",
 			*perrsp);
 }
 
@@ -313,7 +313,7 @@ read_tty(int ifd, char *rbuf, size_t nbytes, size_t *ngotp)
 	int status = rtty_read(ifd, rbuf, &nread, perrsp);
 	if(status != ENOERR)
 	{
-		log_errno(status, NULL);
+		log_errno_q(status, NULL);
 		return status;
 	}
 	/* else */
@@ -349,7 +349,7 @@ tty_open(const char *feedfname, int *const fdp)
 	if(speed == '?')
 	{
 		status = EINVAL;
-		log_error("%s is not a supported speed", baud);
+		log_error_q("%s is not a supported speed", baud);
 		return status;
 	}
 
@@ -358,18 +358,18 @@ tty_open(const char *feedfname, int *const fdp)
 			fdp, &sav);
 	if(status != ENOERR)
 	{
-		log_error("Couldn't open tty device \"%s\": %s",
+		log_error_q("Couldn't open tty device \"%s\": %s",
 			 feedfname, strerror(status));
 		return(status);
 	}
 
 #ifndef MCIDAS_ONLY
-	log_notice("TERMIOS \"%s\": %s baud, %s parity",
+	log_notice_q("TERMIOS \"%s\": %s baud, %s parity",
 		feedfname,
 		(baud && baud[0]) ? baud : "default",
 		(parity && parity[0]) ? parity : "default" );
 #else /* !MCIDAS_ONLY */
-	log_notice("TERMIOS \"%s\": %s baud, %s parity",
+	log_notice_q("TERMIOS \"%s\": %s baud, %s parity",
 		feedfname,
 		(baud && baud[0]) ? baud : "default",
 		"no" );

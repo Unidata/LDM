@@ -166,7 +166,7 @@ surf_split(const prod_info *infop, const void *datap,
                 dbuf = malloc(size);
 
                 if (dbuf == NULL) {
-                    log_syserr("Couldn't allocate %lu-byte buffer",
+                    log_syserr_q("Couldn't allocate %lu-byte buffer",
                         (unsigned long)size);
                     dbufSize = 0;
                     return -1;
@@ -201,7 +201,7 @@ surf_split(const prod_info *infop, const void *datap,
         }
         if( get_wmo_header(buf, &hdr) == NULL)
         {
-                log_error("get_wmo_header: hdr: %s", hdr);
+                log_error_q("get_wmo_header: hdr: %s", hdr);
                 return -1;
         } 
         usePil = 1;
@@ -234,7 +234,7 @@ surf_split(const prod_info *infop, const void *datap,
                         if( cbuf[3] != 'X' )
                         {
                                 /* punt */
-                                log_error("Unknown SYNOP type: %s", cbuf);
+                                log_error_q("Unknown SYNOP type: %s", cbuf);
                                 return 0;
                         }
                         if(get_yygg(buf, &time) < 0 ) return -1; /* YYGG */
@@ -267,7 +267,7 @@ surf_split(const prod_info *infop, const void *datap,
                         if( cbuf[3] != 'X' )
                         {
                                 /* punt */
-                                log_error("surface_split: Unknown SHIP type: %s",
+                                log_error_q("surface_split: Unknown SHIP type: %s",
                                         cbuf);
                                 return 0;
                         }
@@ -307,8 +307,8 @@ surf_split(const prod_info *infop, const void *datap,
                 }
                 break;  
         default :
-                log_error("Can't handle %s", sMessage_type(mtype) );
-                log_error("HDR + PIL: %s%s %s", hdr.TT, hdr.AA, hdr.PIL ) ;
+                log_error_q("Can't handle %s", sMessage_type(mtype) );
+                log_error_q("HDR + PIL: %s%s %s", hdr.TT, hdr.AA, hdr.PIL ) ;
                 return -1;
         }
 

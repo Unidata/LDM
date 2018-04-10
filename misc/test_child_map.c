@@ -22,7 +22,7 @@ static ChildMap*                childMap = NULL;
 static pid_t                    pidCounter = 1;
 static pid_t                    PID;
 static const char* const        COMMAND = "foo bar";
-static const char* const        ARGV[] = {"foo", "bar", NULL};
+static char*                    ARGV[] = {"foo", "bar", NULL};
 
 static int
 setup(void)

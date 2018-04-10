@@ -12,11 +12,11 @@
 
 #include "config.h"
 
+#include "fmtp.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mldm_receiver_memory.h"
 #include "prod_index_queue.h"
 
@@ -215,7 +215,7 @@ lock(
     int status = pthread_mutex_lock(&mrm->mutex);
 
     if (status) {
-        log_errno(status, "Couldn't lock mutex");
+        log_errno_q(status, "Couldn't lock mutex");
     }
 }
 
@@ -226,7 +226,7 @@ unlock(
     int status = pthread_mutex_unlock(&mrm->mutex);
 
     if (status) {
-        log_errno(status, "Couldn't unlock mutex");
+        log_errno_q(status, "Couldn't unlock mutex");
     }
 }
 
@@ -532,7 +532,7 @@ initMutex(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        log_errno(status, "Couldn't initialize mutex attributes");
+        log_errno_q(status, "Couldn't initialize mutex attributes");
     }
     else {
         // At most one lock per thread.
@@ -543,7 +543,7 @@ initMutex(
         status = pthread_mutex_init(&mrm->mutex, &mutexAttr);
 
         if (status)
-            log_errno(status, "Couldn't initialize mutex");
+            log_errno_q(status, "Couldn't initialize mutex");
 
         (void)pthread_mutexattr_destroy(&mutexAttr);
     } // `mutexAttr` initialized

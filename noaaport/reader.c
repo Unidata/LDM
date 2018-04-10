@@ -46,7 +46,7 @@ static int reader_init(
     int                 status = pthread_mutexattr_init(&attr);
 
     if (status) {
-        log_errno(status, "Couldn't initialize mutex attributes");
+        log_errno_q(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
@@ -58,7 +58,7 @@ static int reader_init(
         status = pthread_mutex_init(&reader->mutex, &attr);
 
         if (status) {
-            log_errno(status, "Couldn't initialize mutex");
+            log_errno_q(status, "Couldn't initialize mutex");
             status = 2;
         }
         else {
@@ -103,7 +103,7 @@ int readerNew(
     Reader*   r = (Reader*)malloc(sizeof(Reader));
 
     if (NULL == r) {
-        log_syserr("Couldn't allocate new reader");
+        log_syserr_q("Couldn't allocate new reader");
         status = 2;
     }
     else {
@@ -165,18 +165,18 @@ readerStart(
         if (status) {
             if (3 == status) {
                 // FIFO was closed
-                log_debug("FIFO was closed");
+                log_debug_1("FIFO was closed");
                 log_clear();
                 status = 1;
             }
             else {
-                log_debug("fifo_readFd() failure");
+                log_debug_1("fifo_readFd() failure");
                 status = 2;
             }
             break;
         }
         if (0 == nbytes) {
-            log_debug("FIFO EOF");
+            log_debug_1("FIFO EOF");
             break; // EOF
         }
 

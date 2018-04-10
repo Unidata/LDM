@@ -74,7 +74,7 @@ static int mutex_init(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        log_errno(status, "Couldn't initialize mutex attributes");
+        log_errno_q(status, "Couldn't initialize mutex attributes");
     }
     else {
         status = pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
@@ -85,7 +85,7 @@ static int mutex_init(
         log_assert(status != EPERM);
         log_assert(status != EBUSY);
         if (status)
-            log_errno(status, "Couldn't initialize mutex");
+            log_errno_q(status, "Couldn't initialize mutex");
 
         (void)pthread_mutexattr_destroy(&mutexAttr);
     }
@@ -132,7 +132,7 @@ static void verifyUnlocked(
 static void exe_lock(
         Executor* const exe)
 {
-    log_debug("exe_lock(): Entered");
+    log_debug_1("exe_lock(): Entered");
     int status = pthread_mutex_lock(&exe->mutex);
     log_assert(status == 0);
 }
@@ -147,7 +147,7 @@ static void exe_lock(
 static void exe_unlock(
         Executor* const exe)
 {
-    log_debug("exe_unlock(): Entered");
+    log_debug_1("exe_unlock(): Entered");
     int status = pthread_mutex_unlock(&exe->mutex);
     log_assert(status == 0);
 }
@@ -482,7 +482,7 @@ static int job_stop(
 {
     int status;
 
-    log_debug("job_stop(): Entered");
+    log_debug_1("job_stop(): Entered");
     job_lock(job);
 
     /*
@@ -490,7 +490,7 @@ static int job_stop(
      * completed on its own.
      */
     if (job->state == JOB_PENDING) {
-        log_debug("job_stop(): Job was PENDING");
+        log_debug_1("job_stop(): Job was PENDING");
         job->state = JOB_COMPLETED;
         job->wasStopped = true;
         job->status = 0;
@@ -503,14 +503,14 @@ static int job_stop(
         job->wasStopped = true;
         if (job->stop) {
             job->state = JOB_STOPPING;
-            log_debug("job_stop(): Calling job's stop() function");
+            log_debug_1("job_stop(): Calling job's stop() function");
             job_unlock(job); // precondition for `job->stop()`
             job->stop(job->arg);
         }
         else {
             job->state = JOB_CANCELLED;
             job_unlock(job); // precondition for `job_cancelled()`
-            log_debug("job_stop(): Canceling job's thread");
+            log_debug_1("job_stop(): Canceling job's thread");
             int status = pthread_cancel(job->thread);
             log_assert(status == 0);
         }
@@ -521,7 +521,7 @@ static int job_stop(
         status = 0;
     }
 
-    log_debug("job_stop(): Returning");
+    log_debug_1("job_stop(): Returning");
     return status;
 }
 
@@ -543,7 +543,7 @@ static int exe_init(
         status = pthread_cond_init(&exe->cond, NULL);
         log_assert(status != EBUSY);
         if (status) {
-            log_errno(status,
+            log_errno_q(status,
                     "Couldn't initialize executor condition variable");
         }
         else {
@@ -665,7 +665,7 @@ static int exe_submitJob(
     else {
         status = pthread_create(&job->thread, NULL, job_start, job);
         if (status) {
-            log_errno(status, "Couldn't create new thread");
+            log_errno_q(status, "Couldn't create new thread");
             exe_removeFromList(exe, job);
         }
         else {
@@ -710,7 +710,7 @@ static int shutdown(
 
     if (status == 0 && exe->errCode) {
         status = exe->errCode;
-        log_errno(status, "The executor encountered an error");
+        log_errno_q(status, "The executor encountered an error");
     }
 
     return status;
@@ -827,7 +827,7 @@ void job_free(
  */
 Executor* exe_new(void)
 {
-    log_debug("exe_new(): Entered");
+    log_debug_1("exe_new(): Entered");
     Executor* exe = log_malloc(sizeof(Executor), "job executor");
 
     if (exe != NULL) {
@@ -860,7 +860,7 @@ int exe_submit(
         void             (*const stop)(void*),
         Job** const restrict     job)
 {
-    log_debug("exe_submit(): Entered");
+    log_debug_1("exe_submit(): Entered");
     int  status;
 
     exe_lock(exe);
@@ -889,7 +889,7 @@ int exe_submit(
 
     exe_unlock(exe);
 
-    log_debug("exe_submit(): Returning %d", status);
+    log_debug_1("exe_submit(): Returning %d", status);
     return status;
 }
 
@@ -904,7 +904,7 @@ int exe_submit(
 size_t exe_count(
         Executor* const exe)
 {
-    log_debug("exe_count(): Entered");
+    log_debug_1("exe_count(): Entered");
     size_t count;
     exe_lock(exe);
     count = dll_size(exe->jobs);
@@ -925,7 +925,7 @@ Job* exe_getCompleted(
 {
     Job* job;
 
-    log_debug("exe_getCompleted(): Entered");
+    log_debug_1("exe_getCompleted(): Entered");
     exe_lock(exe);
 
     while (exe->state != EXE_BEING_FREED && q_size(exe->completed) == 0) {
@@ -943,7 +943,7 @@ Job* exe_getCompleted(
 
     exe_unlock(exe);
 
-    log_debug("exe_getCompleted(): Returning %p", job);
+    log_debug_1("exe_getCompleted(): Returning %p", job);
     return job;
 }
 
@@ -959,23 +959,23 @@ Job* exe_getCompleted(
 int exe_shutdown(
         Executor* const restrict exe)
 {
-    log_debug("exe_shutdown(): Entered");
+    log_debug_1("exe_shutdown(): Entered");
     int status;
 
-    log_debug("exe_shutdown(): Calling exe_lock()");
+    log_debug_1("exe_shutdown(): Calling exe_lock()");
     exe_lock(exe);
 
     for (;;) {
         switch (exe->state) {
             case EXE_ACTIVE:
                 exe->state = EXE_SHUTTING_DOWN;
-                log_debug("exe_shutdown(): Calling shutdown()");
+                log_debug_1("exe_shutdown(): Calling shutdown()");
                 status = shutdown(exe);
                 exe->state = EXE_SHUTDOWN;
                 pthread_cond_broadcast(&exe->cond);
                 continue;
             case EXE_SHUTTING_DOWN:
-                log_debug("exe_shutdown(): Waiting on condition variable");
+                log_debug_1("exe_shutdown(): Waiting on condition variable");
                 while (exe->state == EXE_SHUTTING_DOWN)
                     pthread_cond_wait(&exe->cond, &exe->mutex);
                 continue;
@@ -992,7 +992,7 @@ int exe_shutdown(
 
     exe_unlock(exe);
 
-    log_debug("exe_shutdown(): Returning %d", status);
+    log_debug_1("exe_shutdown(): Returning %d", status);
     return status;
 }
 
@@ -1008,7 +1008,7 @@ int exe_shutdown(
 int exe_clear(
         Executor* const restrict exe)
 {
-    log_debug("exe_clear(): Entered");
+    log_debug_1("exe_clear(): Entered");
     int status;
 
     exe_lock(exe);
@@ -1026,7 +1026,7 @@ int exe_clear(
 
     exe_unlock(exe);
 
-    log_debug("exe_clear(): Returning %d", status);
+    log_debug_1("exe_clear(): Returning %d", status);
     return status;
 }
 
@@ -1043,7 +1043,7 @@ int exe_clear(
 int exe_free(
         Executor* const exe)
 {
-    log_debug("exe_free(): Entered");
+    log_debug_1("exe_free(): Entered");
     int status;
 
     if (exe == NULL) {
@@ -1079,7 +1079,7 @@ int exe_free(
 
                 status = exe->errCode;
                 if (status)
-                    log_errno(status, "The executor encountered an error");
+                    log_errno_q(status, "The executor encountered an error");
 
                 exe_unlock(exe);
                 int tmpStatus = pthread_mutex_destroy(&exe->mutex);
@@ -1092,6 +1092,6 @@ int exe_free(
         }
     }
 
-    log_debug("exe_free(): Returning %d", status);
+    log_debug_1("exe_free(): Returning %d", status);
     return status;
 }

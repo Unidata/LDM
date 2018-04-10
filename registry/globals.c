@@ -98,7 +98,7 @@ static const char* getPath(
         char*           var;
 
         if (reg_getString(name, &var)) {
-            log_warning("Couldn't get pathname of %s from registry. "
+            log_warning_q("Couldn't get pathname of %s from registry. "
                     "Using default: \"%s\"", desc, def);
             setPath(def, buf);
         }
@@ -146,7 +146,7 @@ const char* getDefaultQueuePath(void)
     if (0 == defaultQueuePath[0]) {
         char*           var;
         if (reg_getString(REG_QUEUE_PATH, &var)) {
-            log_warning("Couldn't get pathname of product-queue from registry. "
+            log_warning_q("Couldn't get pathname of product-queue from registry. "
                     "Using default: \"%s\"", LDM_QUEUE_PATH);
             strncpy(defaultQueuePath, LDM_QUEUE_PATH,
                     sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
@@ -398,7 +398,7 @@ const char* getSysConfDirPath(void)
         static const char      subdir[] = "/etc";
 
         if (strlen(ldmHome) + strlen(subdir) >= sizeof(sysConfDirPath)) {
-            log_error("System configuration directory pathname too long: "
+            log_error_q("System configuration directory pathname too long: "
                     "\"%s%s\"", ldmHome, subdir);
             abort();
         }
@@ -476,7 +476,7 @@ getTimeOffset(void)
                     ? LOG_LEVEL_WARNING
                     : LOG_LEVEL_ERROR;
             log_add_errno(status, "Couldn't get time-offset value");
-            log_log(level, "Using default value: %u seconds", timeOffset);
+            log_log_q(level, "Using default value: %u seconds", timeOffset);
         }
         isSet = 1;
     }

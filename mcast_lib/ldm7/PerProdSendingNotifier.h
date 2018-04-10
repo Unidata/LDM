@@ -15,7 +15,7 @@
 #define PER_PROD_SENDING_NOTIFIER_H_
 
 #include "Authorizer.h"
-#include "mcast.h"
+#include "fmtp.h"
 #include "SendProxy.h"
 
 #include <sys/types.h>

@@ -58,7 +58,7 @@ int lpqGet(
     static pthread_mutex_t      mutex = PTHREAD_MUTEX_INITIALIZER;
 
     if ((status = pthread_mutex_lock(&mutex)) != 0) {
-        log_errno(status, "Couldn't lock mutex");
+        log_errno_q(status, "Couldn't lock mutex");
         status = 2;
     }
     else {
@@ -80,7 +80,7 @@ int lpqGet(
                     (queueCount+1)*sizeof(LdmProductQueue*));
 
             if (NULL == newArray) {
-                log_syserr("Unable to allocate new LdmProductQueue array: "
+                log_syserr_q("Unable to allocate new LdmProductQueue array: "
                         "queueCount=%d", queueCount);
                 status = 2;
             }
@@ -89,7 +89,7 @@ int lpqGet(
                     (LdmProductQueue*)malloc(sizeof(LdmProductQueue));
 
                 if (NULL == newLpq) {
-                    log_syserr("Unable to allocate new LdmProductQueue");
+                    log_syserr_q("Unable to allocate new LdmProductQueue");
                     status = 2;
                 }
                 else {
@@ -98,7 +98,7 @@ int lpqGet(
 
                     if (err) {
                         if (err > 0) {
-                            log_errno(err,
+                            log_errno_q(err,
                                     "Couldn't open product-queue \"%s\"",
                                     pathname);
                         }
@@ -113,7 +113,7 @@ int lpqGet(
                         char* path = strdup(pathname);
 
                         if (NULL == path) {
-                            log_syserr("Couldn't duplicate string \"%s\"",
+                            log_syserr_q("Couldn't duplicate string \"%s\"",
                                     pathname);
                             status = 2;
                         }
@@ -122,7 +122,7 @@ int lpqGet(
 
                             if ((status = pthread_mutex_init(&mutex, NULL)) !=
                                     0) {
-                                log_errno(status,
+                                log_errno_q(status,
                                         "Couldn't initialize mutex");
                                 free(path);
                                 status = 2;
@@ -178,7 +178,7 @@ int lpqInsert(
     int status = 0;                 /* default success */
 
     if ((status = pthread_mutex_lock(&lpq->mutex)) != 0) {
-        log_errno(status, "Couldn't lock mutex");
+        log_errno_q(status, "Couldn't lock mutex");
         status = 2;
     }
     else {
@@ -214,7 +214,7 @@ int lpqClose(
     int status;
 
     if ((status = pthread_mutex_lock(&lpq->mutex)) != 0) {
-        log_errno(status, "Couldn't lock mutex");
+        log_errno_q(status, "Couldn't lock mutex");
         status = 2;
     }
     else {
@@ -224,7 +224,7 @@ int lpqClose(
                 status = 1;             /* precondition error */
             }
             else {
-                log_syserr("Couldn't close LDM product-queue");
+                log_syserr_q("Couldn't close LDM product-queue");
                 status = 2;
             }
         }

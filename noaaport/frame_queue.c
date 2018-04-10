@@ -64,7 +64,7 @@ static fq_status_t init_mutex(
     pthread_mutexattr_t attr;
     int                 status = pthread_mutexattr_init(&attr);
     if (status) {
-        log_errno(status, "Couldn't initialize mutex attributes");
+        log_errno_q(status, "Couldn't initialize mutex attributes");
         status = FQ_STATUS_SYSTEM;
     }
     else {
@@ -72,7 +72,7 @@ static fq_status_t init_mutex(
         (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
         status = pthread_mutex_init(mutex, &attr);
         if (status) {
-            log_errno(status, "Couldn't initialize mutex");
+            log_errno_q(status, "Couldn't initialize mutex");
             status = FQ_STATUS_SYSTEM;
         }
         (void)pthread_mutexattr_destroy(&attr);
@@ -119,7 +119,7 @@ static fq_status_t lock_init(
     if (status == 0) {
         status = pthread_cond_init(&fq->cond, NULL);
         if (status) {
-            log_errno(status, "Couldn't initialize condition variable");
+            log_errno_q(status, "Couldn't initialize condition variable");
             (void)pthread_mutex_destroy(&fq->mutex);
             status = FQ_STATUS_SYSTEM;
         }
@@ -168,7 +168,7 @@ static fq_status_t init(
     else {
         status = lock_init(fq);
         if (status) {
-            log_errno(status, "Couldn't initialize reader/writer lock");
+            log_errno_q(status, "Couldn't initialize reader/writer lock");
             free(frames);
         }
         else {

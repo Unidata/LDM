@@ -12,7 +12,7 @@
 #ifndef DOWN7_H
 #define DOWN7_H
 
-#include "mcast.h"
+#include "fmtp.h"
 #include "ldm.h"
 #include "pq.h"
 

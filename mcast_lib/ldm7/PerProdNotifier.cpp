@@ -15,9 +15,9 @@
 
 #define restrict
 
+#include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mldm_receiver.h"
 #include "PerProdNotifier.h"
 
@@ -111,7 +111,7 @@ void PerProdNotifier::notify_of_bop(
     char sigStr[2*sizeof(signaturet)+1];
     (void)sprint_signaturet(sigStr, sizeof(sigStr),
             (const unsigned char*)metadata);
-    log_debug("PerProdNotifier::notify_of_bop(): Entered: "
+    log_debug_1("PerProdNotifier::notify_of_bop(): Entered: "
             "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
                 (unsigned long)iProd, prodSize, metaSize, sigStr);
 
@@ -119,7 +119,7 @@ void PerProdNotifier::notify_of_bop(
         throw std::runtime_error(
                 "Error notifying receiving application about beginning-of-product");
     if (*prodStart == nullptr) {
-        log_info("PerProdNotifier::notify_of_bop(): Duplicate product: "
+        log_info_q("PerProdNotifier::notify_of_bop(): Duplicate product: "
                 "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
                 (unsigned long)iProd, prodSize, metaSize, sigStr);
     }
@@ -127,7 +127,7 @@ void PerProdNotifier::notify_of_bop(
         std::unique_lock<std::mutex> lock(mutex);
         if (prodInfos.count(iProd)) {
             // Exists
-            log_info("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
+            log_info_q("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
                     "prodIndex=%lu, prodSize=%u",
                     (unsigned long)iProd, prodSize);
         }
@@ -150,7 +150,7 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const FmtpProdIndex prodIndex)
 {
-    log_debug("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
+    log_debug_1("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
             (unsigned long)prodIndex);
 
     std::unique_lock<std::mutex> lock(mutex);
@@ -162,7 +162,7 @@ void PerProdNotifier::notify_of_eop(
         (void)prodInfos.erase(prodIndex);
     }
     catch (const std::out_of_range& e) {
-        log_warning("Unknown product-index: %lu", (unsigned long)prodIndex);
+        log_warning_q("Unknown product-index: %lu", (unsigned long)prodIndex);
     }
 
     log_free(); // to prevent memory leak by FMTP thread
@@ -177,7 +177,7 @@ void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
-    log_info("Missed product: prodIndex=%lu, prodStart=%p",
+    log_info_q("Missed product: prodIndex=%lu, prodStart=%p",
             (unsigned long)prodIndex, prodStart);
 
     missed_prod_func(mlr, prodIndex,

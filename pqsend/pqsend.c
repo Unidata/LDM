@@ -82,35 +82,35 @@ static void update_last_downtime(const timestampt *nowp) {
      * Update last_downtime
      */
     stats.last_downtime = d_diff_timestamp(nowp, &stats.last_disco);
-    log_debug("last_downtime %10.3f", stats.last_downtime);
+    log_debug_1("last_downtime %10.3f", stats.last_downtime);
 }
 
 static void dump_stats(const sendstats *stp) {
     char cp[24];
 
     sprint_timestampt(cp, sizeof(cp), &stp->starttime);
-    log_notice("> Up since:          %s", cp);
+    log_notice_q("> Up since:          %s", cp);
 
     if (stp->nconnects <= 0) {
-        log_notice("> Never connected");
+        log_notice_q("> Never connected");
     } else {
         sprint_timestampt(cp, sizeof(cp), &stp->last_disco);
         if (stp->last_downtime != 0.) {
-            log_notice(">  last disconnect:  %s for %10.3f seconds", cp,
+            log_notice_q(">  last disconnect:  %s for %10.3f seconds", cp,
                     stp->last_downtime);
         } else {
-            log_notice(">  last disconnect:  %s", cp);
+            log_notice_q(">  last disconnect:  %s", cp);
         }
         if (stp->nprods) {
-            log_notice(">     nprods min_latency max_latency");
-            log_notice("> %10d  %10.3f  %10.3f", stp->nprods,
+            log_notice_q(">     nprods min_latency max_latency");
+            log_notice_q("> %10d  %10.3f  %10.3f", stp->nprods,
                     stp->min_latency, stp->max_latency);
         } else {
-            log_notice(">     nprods");
-            log_notice("> %10d", stp->nprods);
+            log_notice_q(">     nprods");
+            log_notice_q("> %10d", stp->nprods);
         }
-        log_notice(">  nconnects      ndisco  secs_disco");
-        log_notice("> %10d  %10d  %10.3f", stp->nconnects, stp->ndisco,
+        log_notice_q(">  nconnects      ndisco  secs_disco");
+        log_notice_q("> %10d  %10d  %10.3f", stp->nconnects, stp->ndisco,
                 stp->downtime);
     }
 }
@@ -161,7 +161,7 @@ static void printUsage(const char* const av0)
 }
 
 static void cleanup(void) {
-    log_notice("Exiting");
+    log_notice_q("Exiting");
 
     lp_free(ldmProxy);
     ldmProxy = NULL;
@@ -266,7 +266,7 @@ static void set_sigactions(void) {
 static int mySend(const prod_info* infop, const void* datap, void* xprod,
         size_t size, void* arg) {
     if (!prodInClass(want, infop)) {
-        log_info("%s doesn't want %s", lp_host(ldmProxy),
+        log_info_q("%s doesn't want %s", lp_host(ldmProxy),
                 s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
     } else {
@@ -280,7 +280,7 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
         if (0 != sendStatus) {
             if (LP_UNWANTED == sendStatus) {
                 if (log_is_enabled_info)
-                    log_info(" dup: %s",
+                    log_info_q(" dup: %s",
                             s_prod_info(NULL, 0, infop,
                                     log_is_enabled_debug));
                 sendStatus = 0;
@@ -294,7 +294,7 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
             double latency;
 
             if (log_is_enabled_info)
-                log_info("%s",
+                log_info_q("%s",
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
@@ -339,7 +339,7 @@ static int getConfiguration(int ac, char* const * const av) {
 
     /* Initialize statistics */
     if (set_timestamp(&stats.starttime) != ENOERR) {
-        log_syserr("Couldn't set timestamp");
+        log_syserr_q("Couldn't set timestamp");
         status = SYSTEM_ERROR;
     } else {
         stats.last_disco = stats.starttime;
@@ -557,7 +557,7 @@ static int executeConnection(void) {
                 else if (0 != status) {
                     /* pq_sequence() encountered a problem */
                     if (PQUEUE_END == status) {
-                        log_debug("End of Queue");
+                        log_debug_1("End of Queue");
 
                         /* Flush the connection. */
                         status = lp_flush(ldmProxy);
@@ -576,13 +576,13 @@ static int executeConnection(void) {
                         exitIfDone(INTERRUPTED);
                         pq_suspend(interval);
                     } else if (EAGAIN == status || EACCES == status) {
-                        log_debug("Hit a lock");
+                        log_debug_1("Hit a lock");
                     } else if (EIO == status) {
-                        log_syserr("Product-queue I/O error");
+                        log_syserr_q("Product-queue I/O error");
                         status = PQ_ERROR;
                         break;
                     } else {
-                        log_syserr("Unexpected pq_sequence() return: %d",
+                        log_syserr_q("Unexpected pq_sequence() return: %d",
                                 status);
                         status = PQ_ERROR;
                         break;
@@ -619,13 +619,13 @@ static int execute(void) {
      * N.B. log ident is the remote
      */
     (void) log_set_id(remote);
-    log_notice("Starting Up (%d)", getpgrp());
+    log_notice_q("Starting Up (%d)", getpgrp());
 
     /*
      * Register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit");
+        log_syserr_q("atexit");
         status = SYSTEM_ERROR;
     } else {
         /*
@@ -639,10 +639,10 @@ static int execute(void) {
         status = pq_open(pqfname, PQ_READONLY, &pq);
         if (status) {
             if (PQ_CORRUPT == status) {
-                log_error("The product-queue \"%s\" is inconsistent\n",
+                log_error_q("The product-queue \"%s\" is inconsistent\n",
                         pqfname);
             } else {
-                log_error("pq_open failed: %s: %s\n", pqfname,
+                log_error_q("pq_open failed: %s: %s\n", pqfname,
                         strerror(status));
             }
             status = PQ_ERROR;
@@ -717,7 +717,7 @@ int main(int ac, char* const * const av) {
 
     int status = getConfiguration(ac, av);
     if (0 != status) {
-        log_error("Couldn't get execution parameters");
+        log_error_q("Couldn't get execution parameters");
         if (INVOCATION_ERROR == status)
             printUsage(av[0]);
     } else {

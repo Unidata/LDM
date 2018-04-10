@@ -68,7 +68,7 @@ static ldm_replyt reply = { OK };
 static void
 cleanup(void)
 {
-        log_notice("exiting");
+        log_notice_q("exiting");
 
         /* TODO: sign off */
 
@@ -188,7 +188,7 @@ hiya_5_svc(prod_class *clssp, struct svc_req *rqstp)
 
         if(log_is_enabled_info)
         {
-                log_info("hiya5: %s: %s",
+                log_info_q("hiya5: %s: %s",
                         remote,
                          s_prod_class(NULL, 0, clssp));
         }
@@ -221,7 +221,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         (void) s_prod_info(infostr, sizeof(infostr), infop, 0);
         if(log_is_enabled_debug)
         {
-                log_debug("comingsoon5: %s %s (pktsz %u)",
+                log_debug_1("comingsoon5: %s %s (pktsz %u)",
                         s_signaturet(NULL, 0, infop->signature),
                         infostr, argsp->pktsz);
         }
@@ -243,7 +243,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
         if(log_is_enabled_debug)
         {
-                log_debug("   blkdata5: %s %8u %5u",
+                log_debug_1("   blkdata5: %s %8u %5u",
                         s_signaturet(NULL, 0, *dpkp->signaturep),
                         dpkp->data.dbuf_len,
                         dpkp->pktnum);
@@ -251,7 +251,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
         if(memcmp(*dpkp->signaturep, signature, sizeof(signaturet)) != 0)
         {
-                log_error("signature mismatch");
+                log_error_q("signature mismatch");
                 goto err;
         }
         /* else */
@@ -269,7 +269,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         {
                 clss.from = arrival;
                 timestamp_incr(&clss.from);
-                log_info("%s", infostr);
+                log_info_q("%s", infostr);
         }
 
 
@@ -279,7 +279,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         if( write(STDOUT_FILENO, dpkp->data.dbuf_val, dpkp->data.dbuf_len) !=
                         dpkp->data.dbuf_len)
         {
-                log_syserr( "data write failed") ;
+                log_syserr_q( "data write failed") ;
                 exit(1) ;
         }
 
@@ -351,7 +351,7 @@ feedmeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 svcerr_systemerr(transp);
         }
         if (!svc_freeargs(transp, xdr_argument, (caddr_t) &argument)) {
-                log_error("unable to free arguments");
+                log_error_q("unable to free arguments");
                 exit(1);
         }
         return;
@@ -475,7 +475,7 @@ int main(int ac, char *av[])
 
         } /* End getopt block */
 
-        log_notice("Starting Up: %s: %s",
+        log_notice_q("Starting Up: %s: %s",
                         remote,
                         s_prod_class(NULL, 0, &clss));
 
@@ -484,7 +484,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 exit(1);
         }
 

@@ -42,7 +42,7 @@ int timeout ;
 static void
 print_label()
 {
-        log_info("%10s %10s %4s   %-21s %s\n",
+        log_info_q("%10s %10s %4s   %-21s %s\n",
                         "State",
                         "Elapsed",
                         "Port",
@@ -58,7 +58,7 @@ print_hstat(hcp)
 h_clnt *hcp ;
 {
         if(hcp->state == RESPONDING)
-                log_info("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                log_info_q("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,
@@ -66,7 +66,7 @@ h_clnt *hcp ;
                         s_hclnt_sperrno(hcp)
                         ) ;
         else
-                log_error("%10s %3ld.%06ld %4d   %-11s  %s\n",
+                log_error_q("%10s %3ld.%06ld %4d   %-11s  %s\n",
                         s_remote_state(hcp->state),
                         hcp->elapsed.tv_sec, hcp->elapsed.tv_usec,
                         hcp->port,

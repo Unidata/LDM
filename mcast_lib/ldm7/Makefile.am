@@ -31,7 +31,7 @@ lib_la_SOURCES		= down7.c \
 			  prod_index_queue.c \
 			  VirtualCircuit.c VirtualCircuit.h \
 			  CidrAddr.c CidrAddr.h \
-			  mcast.cpp mcast.h \
+			  fmtp.cpp fmtp.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
 			  FixedDelayQueue.h \
@@ -79,7 +79,7 @@ if HAVE_OPMOCK
 # "*_stub.*" files aren't included here because all "_SOURCES" files are
 # expected by "make distcheck" and they won't exist on a system that doesn't
 # have Opmock.
-#mcast_test_SOURCES	= mcast_test.cpp mcast.cpp
+#mcast_test_SOURCES	= mcast_test.cpp fmtp.cpp
 #mcast_test_CPPFLAGS	= $(test_cppflags)
 #mcast_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 #
@@ -109,7 +109,7 @@ OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
                           -I/usr/include
 $(FMTPReceiver_stubs):		../FMTP/FMTPv3/receiver/fmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
-$(mcast_stubs):			../C++/mcast.h
+$(mcast_stubs):			../C++/fmtp.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(pq_stubs):			$(top_srcdir)/pq/pq.h
 	opmock2 -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)

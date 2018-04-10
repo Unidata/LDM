@@ -69,15 +69,15 @@ static unsigned long            nmissed = 0;
 
 static void dump_stats(void)
 {
-    log_notice("----------------------------------------\0");
-    log_notice("Ingestion Statistics:\0");
-    log_notice("   Number of missed packets %lu\0", nmissed);
-    log_notice("----------------------------------------\0");
+    log_notice_q("----------------------------------------\0");
+    log_notice_q("Ingestion Statistics:\0");
+    log_notice_q("   Number of missed packets %lu\0", nmissed);
+    log_notice_q("----------------------------------------\0");
 }
 
 static void cleanup(void)
 {
-    log_notice("Exiting...\0");
+    log_notice_q("Exiting...\0");
     dump_stats();
     (void)lpqClose(ldmProdQueue);
 
@@ -207,22 +207,22 @@ static int _shm_bufread(
     int         status;                 /* return status */
 
     if (shm == NULL) {
-        log_error("NULL shared-memory pointer");
+        log_error_q("NULL shared-memory pointer");
         DONE = 1;
         status = -1;                    /* pre-condition failure */
     }
     else if (NULL == buf) {
-        log_error("NULL buffer pointer");
+        log_error_q("NULL buffer pointer");
         status = -1;                    /* pre-condition failure */
     }
     else if (0 > want) {
-        log_error("Negative number of bytes to read: %d", want);
+        log_error_q("Negative number of bytes to read: %d", want);
         status = -1;                    /* pre-condition failure */
     }
     else {
         int     got;                    /* count of "buf" bytes */
 
-        log_debug("shm_bufread %d", want);
+        log_debug_1("shm_bufread %d", want);
 
         status = 0;                     /* success */
 
@@ -245,7 +245,7 @@ static int _shm_bufread(
             ncopy = want - got;
 
             if (ncopy > left) {
-                log_error("Can \"want\" exceed 1 packet?");
+                log_error_q("Can \"want\" exceed 1 packet?");
                 ncopy = left;
             }
 
@@ -299,9 +299,9 @@ static int _fd_bufread(
 
         if (ready < 0) {
             if (errno != EINTR)
-              log_syserr("select");
+              log_syserr_q("select");
             else
-              log_notice("select received interupt\0");
+              log_notice_q("select received interupt\0");
 
             errno = 0;
             continue;
@@ -313,11 +313,11 @@ static int _fd_bufread(
 
             if (idle > 600) {
                 if (log_is_enabled_info)
-                    log_info("Idle for 600 seconds");
+                    log_info_q("Idle for 600 seconds");
                 idle = 0;
             }
             else {
-                log_debug("Idle for %d seconds", idle);
+                log_debug_1("Idle for %d seconds", idle);
             }
 
             continue;		/* was return(-1) */
@@ -331,12 +331,12 @@ static int _fd_bufread(
             bread = bread + nread;
             
             if (nread == -1) {
-                log_syserr("_fd_bufread(): read() failure");
+                log_syserr_q("_fd_bufread(): read() failure");
                 return -2;
             }
             if (nread == 0) {
                 if (log_is_enabled_info)
-                  log_info("End of Input");
+                  log_info_q("End of Input");
 
                 DONE = 1;
 
@@ -351,7 +351,7 @@ static int _fd_bufread(
             }
         }
         else {
-            log_error("select() returned %d but fd not set", ready);
+            log_error_q("select() returned %d but fd not set", ready);
 
             idle += TV_SEC;
 
@@ -497,7 +497,7 @@ int main(
             break;
         case 'l':
             if (optarg[0] == '-' && optarg[1] != 0) {
-                log_error("logfile \"%s\" ??\n", optarg);
+                log_error_q("logfile \"%s\" ??\n", optarg);
                 usage(argv[0]);
             }
             /* else */
@@ -532,19 +532,19 @@ int main(
 
                 while (((status = shmfifo_shm_from_key(shm, 
                           s_port[pid_channel - 1])) == -3) && (cnt < 30)) {
-                    log_info("Trying to get shared-memory FIFO");
+                    log_info_q("Trying to get shared-memory FIFO");
                     cnt++;
                     sleep(1);
                 }
 
                 if (0 != status) {
-                    log_error("Couldn't get shared-memory FIFO. "
+                    log_error_q("Couldn't get shared-memory FIFO. "
                             "Check associated dvbs_multicast(1) process.");
                     shmfifo_free(shm);
                     shm = NULL;
                 }
                 else {
-                    log_info("Got shared-memory FIFO");
+                    log_info_q("Got shared-memory FIFO");
                 }
             }
             break;
@@ -561,14 +561,14 @@ int main(
 
     setQueuePath(pqfname);
 
-    log_notice("Starting Up %s", PACKAGE_VERSION);
+    log_notice_q("Starting Up %s", PACKAGE_VERSION);
 
     fd = ((argc - optind) == 0)
         ? fileno(stdin)
         : open(argv[optind], O_RDONLY, 0);
 
     if ((!shm) && (fd == -1)) {
-        log_error("could not open input file");
+        log_error_q("could not open input file");
         exit(0);
     }
 
@@ -581,7 +581,7 @@ int main(
      * Register atexit routine
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit");
+        log_syserr_q("atexit");
         exit(-1);
     }
 
@@ -593,7 +593,7 @@ int main(
     prodmmap = (char*)malloc(10000);
 
     if (prodmmap == NULL) {
-        log_error("could not allocate read buffer");
+        log_error_q("could not allocate read buffer");
         exit(-1);
     }
 
@@ -621,18 +621,18 @@ int main(
         }
         if ((b1 = (unsigned char)prodmmap[0]) != 255) {
             if (log_is_enabled_info)
-                log_info("trying to resync %u", b1);
-            log_debug("bufread loop");
+                log_info_q("trying to resync %u", b1);
+            log_debug_1("bufread loop");
             continue;
         }
 
         if (bufread(fd, prodmmap + 1, 15) != 0) {
-            log_debug("couldn't read 16 bytes for sbn");
+            log_debug_1("couldn't read 16 bytes for sbn");
             continue;
         }
 
         while ((status = readsbn(prodmmap, sbn)) != 0) {
-            log_debug("Not SBN start");
+            log_debug_1("Not SBN start");
 
             IOFF = 1;
 
@@ -648,28 +648,28 @@ int main(
                     prodmmap[ch - IOFF] = prodmmap[ch];
 
                 if (bufread(fd, prodmmap + 16 - IOFF, IOFF) != 0) {
-                    log_debug("Couldn't read bytes for SBN, resync");
+                    log_debug_1("Couldn't read bytes for SBN, resync");
                     break;
                 }
             }
         }
 
         if (status != 0) {
-            log_debug("SBN status continue");
+            log_debug_1("SBN status continue");
             continue;
         }
 
         IOFF = 0;
 
         if (bufread(fd, prodmmap + 16, 16) != 0) {
-            log_debug("error reading Product Definition Header");
+            log_debug_1("error reading Product Definition Header");
             continue;
         }
 
-        log_debug("***********************************************");
+        log_debug_1("***********************************************");
         if (last_sbn_seqno != -1) {
             if (sbn->seqno != last_sbn_seqno + 1) {
-                log_notice("Gap in SBN sequence number %ld to %ld [skipped %ld]",
+                log_notice_q("Gap in SBN sequence number %ld to %ld [skipped %ld]",
                          last_sbn_seqno, sbn->seqno,
                          sbn->seqno - last_sbn_seqno - 1);
                 if ( sbn->seqno > last_sbn_seqno )
@@ -681,14 +681,14 @@ int main(
         last_sbn_seqno = sbn->seqno;
 
         if (log_is_enabled_info)
-            log_info("SBN seqnumber %ld", sbn->seqno);
+            log_info_q("SBN seqnumber %ld", sbn->seqno);
         if (log_is_enabled_info)
-            log_info("SBN datastream %d command %d", sbn->datastream,
+            log_info_q("SBN datastream %d command %d", sbn->datastream,
                 sbn->command);
-        log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
+        log_debug_1("SBN version %d length offset %d", sbn->version, sbn->len);
         if (((sbn->command != 3) && (sbn->command != 5)) || 
                 (sbn->version != 1)) {
-            log_error("Unknown sbn command/version %d PUNT", sbn->command);
+            log_error_q("Unknown sbn command/version %d PUNT", sbn->command);
             continue;
         }
 
@@ -713,48 +713,48 @@ int main(
 			GOES = 0;
 			break;
 		default:
-			log_error("Unknown NOAAport channel %d PUNT", sbn->datastream);
+			log_error_q("Unknown NOAAport channel %d PUNT", sbn->datastream);
 			continue;
 	}
 
         /* End of SBN version low 4 bits */
 
         if (readpdh(prodmmap + IOFF + sbn->len, pdh) == -1) {
-            log_error("problem with pdh, PUNT");
+            log_error_q("problem with pdh, PUNT");
             continue;
         }
         if (pdh->len > 16) {
             bufread(fd, prodmmap + sbn->len + 16, pdh->len - 16);
         }
 
-        log_debug("Product definition header version %d pdhlen %d",
+        log_debug_1("Product definition header version %d pdhlen %d",
                 pdh->version, pdh->len);
 
         if (pdh->version != 1) {
-            log_error("Error: PDH transfer type %u, PUNT", pdh->transtype);
+            log_error_q("Error: PDH transfer type %u, PUNT", pdh->transtype);
             continue;
         }
-        log_debug("PDH transfer type %u", pdh->transtype);
+        log_debug_1("PDH transfer type %u", pdh->transtype);
 
         if ((pdh->transtype & 8) > 0)
-            log_error("Product transfer flag error %u", pdh->transtype);
+            log_error_q("Product transfer flag error %u", pdh->transtype);
         if ((pdh->transtype & 32) > 0)
-            log_error("Product transfer flag error %u", pdh->transtype);
+            log_error_q("Product transfer flag error %u", pdh->transtype);
 
         if ((pdh->transtype & 16) > 0) {
             PROD_COMPRESSED = 1;
 
-            log_debug("Product transfer flag compressed %u", pdh->transtype);
+            log_debug_1("Product transfer flag compressed %u", pdh->transtype);
         }
         else {
             PROD_COMPRESSED = 0;
         }
 
-        log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen,
+        log_debug_1("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen,
                 pdh->pshlen);
-        log_debug("blocks per record %ld records per block %ld\n",
+        log_debug_1("blocks per record %ld records per block %ld\n",
                 pdh->blocks_per_record, pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size "
+        log_debug_1("product seqnumber %ld block number %ld data block size "
                 "%ld", pdh->seqno, pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
@@ -765,16 +765,16 @@ int main(
 
         if (pdh->pshlen != 0) {
             if (bufread(fd, prodmmap + sbn->len + pdh->len, pdh->pshlen) != 0) {
-                log_error("problem reading psh");
+                log_error_q("problem reading psh");
                 continue;
             }
             else {
-                log_debug("read psh %d", pdh->pshlen);
+                log_debug_1("read psh %d", pdh->pshlen);
             }
 
             /* Timing block */
             if (sbn->command == 5) {
-                log_debug("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
+                log_debug_1("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
                  * progress.
@@ -783,33 +783,33 @@ int main(
             }
 
             if (readpsh(prodmmap + IOFF + sbn->len + pdh->len, psh) == -1) {
-                log_error("problem with readpsh");
+                log_error_q("problem with readpsh");
                 continue;
             }
             if (psh->olen != pdh->pshlen) {
-                log_error("ERROR in calculation of psh len %ld %ld", psh->olen,
+                log_error_q("ERROR in calculation of psh len %ld %ld", psh->olen,
                     pdh->len);
                 continue;
             }
-            log_debug("len %ld", psh->olen);
-            log_debug("product header flag %d, version %d", psh->hflag,
+            log_debug_1("len %ld", psh->olen);
+            log_debug_1("product header flag %d, version %d", psh->hflag,
                     psh->version);
-            log_debug("prodspecific data length %ld", psh->psdl);
-            log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d",
+            log_debug_1("prodspecific data length %ld", psh->psdl);
+            log_debug_1("bytes per record %ld", psh->bytes_per_record);
+            log_debug_1("Fragments = %ld category %d ptype %d code %d",
                     psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
-                log_error("check psh->frags %d", psh->frags);
+                log_error_q("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
-                log_error("original runid %d", psh->origrunid);
-            log_debug("next header offset %ld", psh->nhoff);
-            log_debug("original seq number %ld", psh->seqno);
-            log_debug("receive time %ld", psh->rectime);
-            log_debug("transmit time %ld", psh->transtime);
-            log_debug("run ID %ld", psh->runid);
-            log_debug("original run id %ld", psh->origrunid);
+                log_error_q("original runid %d", psh->origrunid);
+            log_debug_1("next header offset %ld", psh->nhoff);
+            log_debug_1("original seq number %ld", psh->seqno);
+            log_debug_1("receive time %ld", psh->rectime);
+            log_debug_1("transmit time %ld", psh->transtime);
+            log_debug_1("run ID %ld", psh->runid);
+            log_debug_1("original run id %ld", psh->origrunid);
             if (prod.head != NULL) {
-                log_error("OOPS, start of new product [%ld ] with unfinished "
+                log_error_q("OOPS, start of new product [%ld ] with unfinished "
                     "product %ld", pdh->seqno, prod.seqno);
 
                 ds_free();
@@ -822,37 +822,37 @@ int main(
                     PNGINIT = 0;
                 }
 
-                log_error("Product definition header version %d pdhlen %d",
+                log_error_q("Product definition header version %d pdhlen %d",
                         pdh->version, pdh->len);
-                log_error("PDH transfer type %u", pdh->transtype);
+                log_error_q("PDH transfer type %u", pdh->transtype);
 
                 if ((pdh->transtype & 8) > 0)
-                    log_error("Product transfer flag error %u", pdh->transtype);
+                    log_error_q("Product transfer flag error %u", pdh->transtype);
                 if ((pdh->transtype & 32) > 0)
-                    log_error("Product transfer flag error %u", pdh->transtype);
+                    log_error_q("Product transfer flag error %u", pdh->transtype);
 
-                log_error("header length %ld [pshlen = %d]",
+                log_error_q("header length %ld [pshlen = %d]",
                     pdh->len + pdh->pshlen, pdh->pshlen);
-                log_error("blocks per record %ld records per block %ld",
+                log_error_q("blocks per record %ld records per block %ld",
                     pdh->blocks_per_record, pdh->records_per_block);
-                log_error("product seqnumber %ld block number %ld data block "
+                log_error_q("product seqnumber %ld block number %ld data block "
                     "size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
-                log_error("product header flag %d", psh->hflag);
-                log_error("prodspecific data length %ld", psh->psdl);
-                log_error("bytes per record %ld", psh->bytes_per_record);
-                log_error("Fragments = %ld category %d", psh->frags, psh->pcat);
+                log_error_q("product header flag %d", psh->hflag);
+                log_error_q("prodspecific data length %ld", psh->psdl);
+                log_error_q("bytes per record %ld", psh->bytes_per_record);
+                log_error_q("Fragments = %ld category %d", psh->frags, psh->pcat);
 
                 if (psh->frags < 0)
-                    log_error("check psh->frags %d", psh->frags);
+                    log_error_q("check psh->frags %d", psh->frags);
                 if (psh->origrunid != 0)
-                    log_error("original runid %d", psh->origrunid);
+                    log_error_q("original runid %d", psh->origrunid);
 
-                log_error("next header offset %ld", psh->nhoff);
-                log_error("original seq number %ld", psh->seqno);
-                log_error("receive time %ld", psh->rectime);
-                log_error("transmit time %ld", psh->transtime);
-                log_error("run ID %ld", psh->runid);
-                log_error("original run id %ld", psh->origrunid);
+                log_error_q("next header offset %ld", psh->nhoff);
+                log_error_q("original seq number %ld", psh->seqno);
+                log_error_q("receive time %ld", psh->rectime);
+                log_error_q("transmit time %ld", psh->transtime);
+                log_error_q("run ID %ld", psh->runid);
+                log_error_q("original run id %ld", psh->origrunid);
             }
 
             prod.seqno = pdh->seqno;
@@ -864,7 +864,7 @@ int main(
 
             if (bufread(fd, prodmmap + sbn->len + pdh->len + pdh->pshlen,
                     pdh->dbsize) != 0) {
-                log_error("problem reading datablock");
+                log_error_q("problem reading datablock");
                 continue;
             }
             if (sbn->datastream == 4) {
@@ -881,13 +881,13 @@ int main(
             if (GOES == 1) {
                 if (readpdb(prodmmap + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         psh, pdb, PROD_COMPRESSED, pdh->dbsize) == -1) {
-                    log_error("Error reading pdb, punt");
+                    log_error_q("Error reading pdb, punt");
                     continue;
                 }
 
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
-                log_debug("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
+                log_debug_1("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
                         pdh->pshlen, sbn->len + pdh->len + pdh->pshlen,
                         pdb->len);
 
@@ -900,8 +900,8 @@ int main(
 
                 if (readccb(prodmmap + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         ccb, psh, pdh->dbsize) == -1)
-                    log_error("Error reading ccb, using default name");
-                log_debug("look at ccb start %d %d", ccb->b1, ccb->len);
+                    log_error_q("Error reading ccb, using default name");
+                log_debug_1("look at ccb start %d %d", ccb->b1, ccb->len);
 
                 /*
                    cnt = 0;
@@ -917,7 +917,7 @@ int main(
                    if(cnt > 0)
                  */
                 if (log_is_enabled_info)
-                    log_info("%s", psh->pname);
+                    log_info_q("%s", psh->pname);
 
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
@@ -948,18 +948,18 @@ int main(
 
             ccb->len = 0;
 
-            log_debug("continuation record");
+            log_debug_1("continuation record");
             if ((pdh->transtype & 4) > 0) {
                 psh->frags = 0;
             }
             if (bufread(fd, prodmmap + sbn->len + pdh->len + pdh->pshlen,
                     pdh->dbsize) != 0) {
-                log_error("problem reading datablock (cont)");
+                log_error_q("problem reading datablock (cont)");
                 continue;
             }
             if (prod.head == NULL) {
                 if (log_is_enabled_info)
-                    log_info("found data block before header, "
+                    log_info_q("found data block before header, "
                         "skipping sequence %d frag #%d", pdh->seqno, pdh->dbno);
                 continue;
             }
@@ -969,7 +969,7 @@ int main(
         dataoff = IOFF + sbn->len + pdh->len + pdh->pshlen + ccb->len;
         datalen = pdh->dbsize - ccb->len;
 
-        log_debug("look at datalen %d", datalen);
+        log_debug_1("look at datalen %d", datalen);
 
         pfrag = ds_alloc();
         pfrag->seqno = pdh->seqno;
@@ -987,7 +987,7 @@ int main(
             if (pfrag->fragnum > 0) {
                 if (prod.tail && ((pfrag->fragnum != prod.tail->fragnum + 1) ||
                         (pfrag->seqno != prod.seqno))) {
-                    log_error("Missing GOES fragment in sequence, "
+                    log_error_q("Missing GOES fragment in sequence, "
                         "last %d/%d this %d/%d\0", prod.tail->fragnum,
                         prod.seqno, pfrag->fragnum, pfrag->seqno);
                     ds_free();
@@ -999,27 +999,27 @@ int main(
                 }
 
                 if ((PNGINIT != 1) && (!PROD_COMPRESSED)) {
-                    log_error("failed pnginit %d %d %s", sbn->datastream,
+                    log_error_q("failed pnginit %d %d %s", sbn->datastream,
                             psh->pcat, PROD_NAME);
                     continue;
                 }
                 if (pdh->records_per_block < 1) {
-                    log_error("records_per_block %d blocks_per_record %d "
+                    log_error_q("records_per_block %d blocks_per_record %d "
                         "nx %d ny %d", pdh->records_per_block,
                         pdh->blocks_per_record, pdb->nx, pdb->ny);
-                    log_error("source %d sector %d channel %d", pdb->source,
+                    log_error_q("source %d sector %d channel %d", pdb->source,
                         pdb->sector, pdb->channel);
-                    log_error("nrec %d recsize %d date %02d%02d%02d %02d%02d "
+                    log_error_q("nrec %d recsize %d date %02d%02d%02d %02d%02d "
                         "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year,
                         pdb->month, pdb->day, pdb->hour, pdb->minute,
                         pdb->second, pdb->sechunds);
-                    log_error("pshname %s", psh->pname);
+                    log_error_q("pshname %s", psh->pname);
                 }
                 if (!PROD_COMPRESSED) {
                     for (nscan = 0; (nscan * pdb->nx) < pdh->dbsize; nscan++) {
-                        log_debug("png write nscan %d", nscan);
+                        log_debug_1("png write nscan %d", nscan);
                         if (nscan >= pdh->records_per_block) {
-                            log_error("nscan exceeding records per block %d [%d "
+                            log_error_q("nscan exceeding records per block %d [%d "
                                 "%d %d]", pdh->records_per_block, nscan,
                                 pdb->nx, pdh->dbsize);
                         }
@@ -1053,16 +1053,16 @@ int main(
                         datalen);
                     heapcount += datalen;
                 }
-                log_notice("records_per_block %d blocks_per_record %d nx %d ny %d",
+                log_notice_q("records_per_block %d blocks_per_record %d nx %d ny %d",
                     pdh->records_per_block, pdh->blocks_per_record, pdb->nx,
                     pdb->ny);
-                log_notice("source %d sector %d channel %d", pdb->source,
+                log_notice_q("source %d sector %d channel %d", pdb->source,
                     pdb->sector, pdb->channel);
-                log_notice("nrec %d recsize %d date %02d%02d%02d %02d%02d "
+                log_notice_q("nrec %d recsize %d date %02d%02d%02d %02d%02d "
                     "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year, pdb->month,
                     pdb->day, pdb->hour, pdb->minute, pdb->second,
                     pdb->sechunds);
-                log_notice("pshname %s", psh->pname);
+                log_notice_q("pshname %s", psh->pname);
             }
             deflen = 0;
         }
@@ -1077,7 +1077,7 @@ int main(
             if ((prod.nfrag != 0) && (prod.tail != NULL)) {
                 if ((pfrag->fragnum != prod.tail->fragnum + 1) ||
                         (pfrag->seqno != prod.seqno)) {
-                    log_error("Missing fragment in sequence, last %d/%d this "
+                    log_error_q("Missing fragment in sequence, last %d/%d this "
                         "%d/%d\0", prod.tail->fragnum, prod.seqno,
                         pfrag->fragnum, pfrag->seqno);
                     ds_free();
@@ -1097,7 +1097,7 @@ int main(
                     if (memcmp(testme, FOS_TRAILER, 4) == 0) {
                         datalen -= 4;
 
-                        log_debug("removing FOS trailer from %s", PROD_NAME);
+                        log_debug_1("removing FOS trailer from %s", PROD_NAME);
                     }
                     else {
                         break;
@@ -1109,7 +1109,7 @@ int main(
                  * this above wasn't big enough heapsize =
                  * prodalloc(psh->frags,4000+15,&memheap);
                  */
-                log_error("Error in heapsize %d product size %d [%d %d], Punt!\0",
+                log_error_q("Error in heapsize %d product size %d [%d %d], Punt!\0",
                     heapsize, (heapcount + datalen), heapcount, datalen);
                 continue;
             }
@@ -1142,11 +1142,11 @@ int main(
                     heapcount = png_get_prodlen();
                 }
                 else {
-                    log_debug("GOES product already compressed %d", heapcount);
+                    log_debug_1("GOES product already compressed %d", heapcount);
                 }
             }
             if (log_is_enabled_info)
-              log_info("we should have a complete product %ld %ld/%ld %ld /heap "
+              log_info_q("we should have a complete product %ld %ld/%ld %ld /heap "
                   "%ld", prod.seqno, pfrag->seqno, prod.nfrag, pfrag->fragnum,
                  (long) heapcount);
             if ((NWSTG == 1) && (heapcount > 4)) {
@@ -1192,17 +1192,17 @@ int main(
             PNGINIT = 0;
         }
         else {
-            log_debug("processing record %ld [%ld %ld]", prod.seqno,
+            log_debug_1("processing record %ld [%ld %ld]", prod.seqno,
                     prod.nfrag, pfrag->fragnum);
             if ((pdh->transtype & 4) > 0) {
-                log_error("Hmmm....should call completed product %ld [%ld %ld]",
+                log_error_q("Hmmm....should call completed product %ld [%ld %ld]",
                     prod.seqno, prod.nfrag, pfrag->fragnum);
             }
         }
 
         IOFF += (sbn->len + pdh->len + pdh->pshlen + pdh->dbsize);
 
-        log_debug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
+        log_debug_1("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
                 deflen);
     }
 

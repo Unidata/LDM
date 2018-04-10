@@ -17,12 +17,12 @@
 #include "config.h"
 
 #include "down7.h"
+#include "fmtp.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mcast_info.h"
 #include "mldm_receiver.h"
 #include "mldm_receiver_memory.h"
@@ -335,7 +335,7 @@ static void up7proxy_free(
         up7proxy_destroyClient(proxy);
         int status = pthread_mutex_destroy(&proxy->mutex);
         if (status)
-            log_errno(status, "Couldn't destroy mutex");
+            log_errno_q(status, "Couldn't destroy mutex");
         free(proxy->remoteId);
         free(proxy);
     }
@@ -443,7 +443,7 @@ up7proxy_subscribe(
         else {
             McastInfo* const mi = &reply->SubscriptionReply_u.info.mcastInfo;
             char*            miStr = mi_format(mi);
-            log_notice("Subscription reply from %s is %s", proxy->remoteId,
+            log_notice_q("Subscription reply from %s is %s", proxy->remoteId,
                     miStr);
             free(miStr);
             *mcastInfo = mi_clone(mi);
@@ -519,7 +519,7 @@ up7proxy_requestProduct(
     up7proxy_lock(proxy);
     CLIENT* clnt = proxy->clnt;
     int     status;
-    log_debug("iProd=%lu", (unsigned long)iProd);
+    log_debug_1("iProd=%lu", (unsigned long)iProd);
     // Asynchronous send => no reply
     (void)request_product_7((FmtpProdIndex*)&iProd, clnt); // safe cast
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
@@ -593,11 +593,11 @@ down7_assertUnlocked(Down7* const down7)
 static void
 down7_lock(Down7* const down7)
 {
-    log_debug("Locking state");
+    log_debug_1("Locking state");
     int status = pthread_mutex_lock(&down7->mutex);
 #ifndef NDEBUG
     if (status) {
-        log_errno(status, "Mutex can't be locked");
+        log_errno_q(status, "Mutex can't be locked");
         abort();
     }
 #endif
@@ -611,11 +611,11 @@ down7_lock(Down7* const down7)
 static void
 down7_unlock(Down7* const down7)
 {
-    log_debug("Unlocking state");
+    log_debug_1("Unlocking state");
     int status = pthread_mutex_unlock(&down7->mutex);
 #ifndef NDEBUG
     if (status) {
-        log_errno(status, "Mutex can't be unlocked");
+        log_errno_q(status, "Mutex can't be unlocked");
         abort();
     }
 #endif
@@ -964,7 +964,7 @@ run_svc(
     pfd.fd = sock;
     pfd.events = POLLIN;
     for (;;) {
-        log_debug("Calling poll(): socket=%d", sock);
+        log_debug_1("Calling poll(): socket=%d", sock);
         unblockSigTerm(); // Because `SIGTERM` used to stop this thread
         status = poll(&pfd, 1, timeout);
         blockSigTerm();
@@ -987,7 +987,7 @@ run_svc(
             break;
         }
         if ((pfd.revents & POLLHUP) || (pfd.revents & POLLERR)) {
-            log_debug("RPC transport socket with %s closed or in error",
+            log_debug_1("RPC transport socket with %s closed or in error",
                     down7->upId);
             status = 0;
             break;
@@ -997,7 +997,7 @@ run_svc(
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
             // Here if the upstream LDM7 closed the connection
-            log_debug("The RPC layer destroyed the service transport with %s",
+            log_debug_1("The RPC layer destroyed the service transport with %s",
                     down7->upId);
             xprt = NULL;
             status = 0;
@@ -1033,7 +1033,7 @@ run_down7_svc(
      */
     int status = pthread_setspecific(down7Key, down7);
     if (status) {
-        log_errno(status,
+        log_errno_q(status,
                 "Couldn't set thread-specific pointer to downstream LDM7");
         svc_destroy(xprt);
         status = LDM7_SYSTEM;
@@ -1045,7 +1045,7 @@ run_down7_svc(
          * the downstream LDM7's client socket.
          */
         status = run_svc(down7, xprt);
-        log_notice("Downstream LDM7 missed-product receiver terminated");
+        log_notice_q("Downstream LDM7 missed-product receiver terminated");
     } // thread-specific pointer to downstream LDM7 is set
     return status;
 }
@@ -1088,7 +1088,7 @@ requestSessionBacklog(
     spec.timeOffset = getTimeOffset();
     int status = up7proxy_requestSessionBacklog(down7->up7proxy, &spec);
     if (status)
-        log_error("Couldn't request session backlog");
+        log_error_q("Couldn't request session backlog");
     log_free();
     return NULL;
 }
@@ -1123,7 +1123,7 @@ runMissedProdRequester(void* const arg)
          */
         FmtpProdIndex iProd;
         if (!mrm_peekMissedFileWait(down7->mrm, &iProd)) {
-            log_debug("The queue of missed data-products has been shutdown");
+            log_debug_1("The queue of missed data-products has been shutdown");
             status = 0;
             break;
         }
@@ -1166,7 +1166,7 @@ static Ldm7Status
 startMissedProdRequester(Down7* const down7)
 {
     int status;
-    log_debug("Opening multicast session memory");
+    log_debug_1("Opening multicast session memory");
     down7->mrm = mrm_open(down7->servAddr, down7->feedtype);
     if (down7->mrm == NULL) {
         log_add("Couldn't open multicast session memory");
@@ -1208,12 +1208,12 @@ stopMissedProdRequester(Down7* const down7)
 {
     down7_assertLocked(down7);
     int status;
-    log_debug("Entered");
+    log_debug_1("Entered");
     if (down7->mrm == NULL) {
         status = LDM7_OK;
     }
     else {
-        log_debug("Stopping missed-product requester");
+        log_debug_1("Stopping missed-product requester");
         mrm_shutDownMissedFiles(down7->mrm);
         if (!mrm_close(down7->mrm)) {
             log_add("Couldn't close multicast receiver memory");
@@ -1392,7 +1392,7 @@ stopUcastRcvr(Down7* const down7)
         status = 0;
     }
     else {
-        log_debug("Stopping unicast receiver");
+        log_debug_1("Stopping unicast receiver");
         status = pthread_kill(down7->ucastRecvThread, SIGTERM);
         if (status) {
             log_add_errno(status, "Couldn't signal unicast receiving thread");
@@ -1430,12 +1430,12 @@ stopUcastRcvr(Down7* const down7)
 static void*
 runMcastRcvr(void* const arg)
 {
-    log_debug("Entered");
+    log_debug_1("Entered");
     Down7* const down7 = (Down7*)arg;
     int          status = mlr_start(down7->mlr); // Blocks
     down7_setStatusIfOk(down7, status);
     // Because end of task
-    log_log(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO, "Terminating");
+    log_log_q(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO, "Terminating");
     log_free();
     return NULL;
 }
@@ -1452,7 +1452,7 @@ runMcastRcvr(void* const arg)
 static int
 startMcastRcvr(Down7* const down7)
 {
-    log_debug("Entered");
+    log_debug_1("Entered");
     int status;
     down7->mlr = mlr_new(down7->mcastInfo, down7->iface, down7);
     if (down7->mlr == NULL) {
@@ -1491,13 +1491,13 @@ static Ldm7Status
 stopMcastRcvr(Down7* const down7)
 {
     down7_assertLocked(down7);
-    log_debug("Entered");
+    log_debug_1("Entered");
     int status;
     if (down7->mlr == NULL) {
         status = 0;
     }
     else {
-        log_debug("Stopping multicast receiver");
+        log_debug_1("Stopping multicast receiver");
         mlr_stop(down7->mlr);
         down7_unlock(down7);
         status = pthread_join(down7->mcastRecvThread, NULL);
@@ -1662,7 +1662,7 @@ static Ldm7Status
 down7_nap(Down7* const down7)
 {
     down7_assertLocked(down7);
-    log_debug("Napping");
+    log_debug_1("Napping");
     struct timespec duration;
     duration.tv_sec = time(NULL) + 60; // a time in the future
     duration.tv_nsec = 0;
@@ -1695,13 +1695,13 @@ deliver_product(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info("Inserted: %s", buf);
+            log_info_q("Inserted: %s", buf);
         }
         down7_incNumProds(down7);
     }
     else {
         if (status == EINVAL) {
-            log_error("Invalid argument");
+            log_error_q("Invalid argument");
             status = LDM7_SYSTEM;
         }
         else {
@@ -1711,10 +1711,10 @@ deliver_product(
                     log_is_enabled_debug);
 
             if (status == PQUEUE_DUP) {
-                log_info("Duplicate data-product: %s", buf);
+                log_info_q("Duplicate data-product: %s", buf);
             }
             else {
-                log_warning("Product too big for queue: %s", buf);
+                log_warning_q("Product too big for queue: %s", buf);
             }
 
             status = 0; // either too big or duplicate data-product
@@ -1734,7 +1734,7 @@ createDown7Key(void)
     int status = pthread_key_create(&down7Key, NULL);
 
     if (status) {
-        log_errno(status, "Couldn't create thread-specific data-key");
+        log_errno_q(status, "Couldn't create thread-specific data-key");
     }
 }
 
@@ -1754,7 +1754,7 @@ deliveryFailure(
 {
     char buf[LDM_INFO_MAX];
 
-    log_error("%s: %s", msg, s_prod_info(buf, sizeof(buf), info,
+    log_error_q("%s: %s", msg, s_prod_info(buf, sizeof(buf), info,
             log_is_enabled_debug));
     (void)svcerr_systemerr(rqstp->rq_xprt);
     svc_destroy(rqstp->rq_xprt);
@@ -1815,7 +1815,7 @@ down7_new(
     }
 
     if ((status = pthread_cond_init(&down7->cond, NULL)) != 0) {
-        log_errno(status, "Couldn't initialize condition-variable");
+        log_errno_q(status, "Couldn't initialize condition-variable");
         goto free_servAddr;
     }
 
@@ -1824,7 +1824,7 @@ down7_new(
 
         status = pthread_mutexattr_init(&mutexAttr);
         if (status) {
-            log_errno(status, "Couldn't initialize attributes of state-mutex");
+            log_errno_q(status, "Couldn't initialize attributes of state-mutex");
         }
         else {
             (void)pthread_mutexattr_setprotocol(&mutexAttr,
@@ -1833,7 +1833,7 @@ down7_new(
                     PTHREAD_MUTEX_ERRORCHECK );
 
             if ((status = pthread_mutex_init(&down7->mutex, &mutexAttr))) {
-                log_errno(status, "Couldn't initialize mutex");
+                log_errno_q(status, "Couldn't initialize mutex");
                 (void)pthread_mutexattr_destroy(&mutexAttr);
                 goto free_cond;
             }
@@ -1861,7 +1861,7 @@ down7_new(
 
     status = pthread_mutex_init(&down7->numProdMutex, NULL);
     if (status) {
-        log_syserr("Couldn't initialize number-of-products mutex from %s",
+        log_syserr_q("Couldn't initialize number-of-products mutex from %s",
                 down7->upId);
         goto free_upId;
     }
@@ -1968,7 +1968,7 @@ down7_start(Down7* const down7)
         status = 0;
         down7->mainThread = pthread_self();
         down7->haveMainThread = true;
-        log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
+        log_notice_q("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
                 "pq=\"%s\"", down7->upId, s_feedtypet(down7->feedtype),
                 pq_getPathname(down7->pq));
         while (!down7->done) {
@@ -2145,7 +2145,7 @@ down7_free(Down7* const down7)
             free(down7->upId);
             vcEndPoint_destroy(&down7->vcEnd);
             free(down7->iface);
-            log_debug("Closing multicast receiver memory");
+            log_debug_1("Closing multicast receiver memory");
             status = pthread_mutex_destroy(&down7->mutex);
             if (status) {
                 log_add_errno(status, "Couldn't destroy LDM7 mutex");
@@ -2181,7 +2181,7 @@ down7_missedProduct(
      * ignored because nothing can be done about it at this point and no harm
      * should result.
      */
-    log_debug("Entered: iProd=%lu", (unsigned long)iProd);
+    log_debug_1("Entered: iProd=%lu", (unsigned long)iProd);
     (void)mrm_addMissedFile(down7->mrm, iProd);
 }
 
@@ -2215,7 +2215,7 @@ down7_lastReceived(
         int       status = pthread_create(&thread, NULL, requestSessionBacklog,
                 down7);
         if (status) {
-            log_errno(status, "Couldn't start backlog-requesting task");
+            log_errno_q(status, "Couldn't start backlog-requesting task");
         }
         else {
             pthread_detach(thread);
@@ -2282,7 +2282,7 @@ no_such_product_7_svc(
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
 
-        log_warning("Requested product %lu doesn't exist",
+        log_warning_q("Requested product %lu doesn't exist",
                 (unsigned long)*missingIprod);
     }
 
@@ -2331,7 +2331,7 @@ end_backlog_7_svc(
     char   saStr[512];
     Down7* down7 = pthread_getspecific(down7Key);
 
-    log_notice("All backlog data-products received: feedtype=%s, server=%s",
+    log_notice_q("All backlog data-products received: feedtype=%s, server=%s",
             s_feedtypet(down7->feedtype),
             sa_snprint(down7->servAddr, saStr, sizeof(saStr)));
 

@@ -776,7 +776,7 @@ int grib2name (
         gb2_2gem(&g2Msg, &gemInfo, tbllist, &status);
 
         if (status) {
-            log_error("Couldn't decode GRIB2 message. WMO header=\"%s\"",
+            log_error_q("Couldn't decode GRIB2 message. WMO header=\"%s\"",
                     wmohead);
 
             if (lastField) {

@@ -53,7 +53,7 @@ restart:
         rpc_stat = comingsoon5(hcp, infop, feed_pktsz, rpctimeo, &reply);
         if(rpc_stat != RPC_SUCCESS)
         {
-                log_error("%s: %s",
+                log_error_q("%s: %s",
                         infop->ident,
                         clnt_sperrno(rpc_stat));
                 return EIO;
@@ -70,14 +70,14 @@ restart:
         {
                 prod_class_t *want = reply.ldm_replyt_u.newclssp;
                 int status = update_remote_clss(want);
-                log_notice("RECLASS: %s", s_prod_class(NULL, 0, want));
+                log_notice_q("RECLASS: %s", s_prod_class(NULL, 0, want));
 
                 if(status != ENOERR)
                         return EIO;
                 if(remote->clssp == NULL
                                 || remote->clssp->psa.psa_len == 0)
                 {
-                        log_notice("No match for request");
+                        log_notice_q("No match for request");
                         return EIO;
                 }
                 if(!clss_eq(remote->clssp, want))
@@ -88,20 +88,20 @@ restart:
                          * For now, the RECLASS should
                          * only be changing timestamps.
                          */
-                        log_error("SHOULDN'T HAPPEN remote: %s",
+                        log_error_q("SHOULDN'T HAPPEN remote: %s",
                                  s_prod_class(NULL, 0, remote->clssp));
 
                         rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
                             &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
-                                log_error("RECLASS: hiya5 failed: %s",
+                                log_error_q("RECLASS: hiya5 failed: %s",
                                         clnt_sperrno(rpc_stat));
                                 return EIO;
                         }
                         if(reply2.code != OK)
                         {
-                                log_error("reclass hiya5 returns: %s",
+                                log_error_q("reclass hiya5 returns: %s",
                                         s_ldm_errt(reply2.code));
                                 return EIO;
                         }
@@ -112,7 +112,7 @@ restart:
                 break;
         }
         default:
-                log_error("%s: %s",
+                log_error_q("%s: %s",
                         infop->ident,
                         s_ldm_errt(reply.code));
                 return EIO;
@@ -128,7 +128,7 @@ restart:
                 pkt.data.dbuf_val = cp;
                 rpc_stat = blkdata5(hcp, &pkt, rpctimeo, &reply);
                 if(rpc_stat != RPC_SUCCESS) {
-                        log_error("blkdata5(%d): %s", pkt.pktnum,
+                        log_error_q("blkdata5(%d): %s", pkt.pktnum,
                                 clnt_sperrno(rpc_stat));
                         return EIO;
                 }
@@ -140,7 +140,7 @@ restart:
                 case RESTART:
                         goto restart;
                 default:
-                        log_error("%s: %s",
+                        log_error_q("%s: %s",
                                 infop->ident,
                                 s_ldm_errt(reply.code));
                         return EIO;
@@ -151,7 +151,7 @@ restart:
 
         /* else */
         if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, infop,
+                log_info_q("%s", s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
         return ENOERR;
 }
@@ -168,14 +168,14 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
         rpc_stat = xhereis5(hcp, xprod, size, rpctimeo, &reply);        
         if(rpc_stat == RPC_PROCUNAVAIL)
         {
-                log_debug("RPC_PROCUNAVAIL");
+                log_debug_1("RPC_PROCUNAVAIL");
                 nohereis = 1;
                 return s_csbd(hcp, infop, datap);
         }
 
         if(rpc_stat != RPC_SUCCESS)
         {
-                log_error("%s: %s (%d)",
+                log_error_q("%s: %s (%d)",
                         infop->ident,
                         clnt_sperrno(rpc_stat), (int)rpc_stat);
                 return EIO;
@@ -191,14 +191,14 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
         {
                 prod_class_t *want = reply.ldm_replyt_u.newclssp;
                 int status = update_remote_clss(want);
-                log_notice("RECLASS: %s", s_prod_class(NULL, 0, want));
+                log_notice_q("RECLASS: %s", s_prod_class(NULL, 0, want));
 
                 if(status != ENOERR)
                         return EIO;
                 if(remote->clssp == NULL
                                 || remote->clssp->psa.psa_len == 0)
                 {
-                        log_notice("No match for request");
+                        log_notice_q("No match for request");
                         return EIO;
                 }
                 if(!clss_eq(remote->clssp, want))
@@ -209,20 +209,20 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
                          * For now, the RECLASS should
                          * only be changing timestamps.
                          */
-                        log_error("SHOULDN'T HAPPEN remote: %s",
+                        log_error_q("SHOULDN'T HAPPEN remote: %s",
                                  s_prod_class(NULL, 0, remote->clssp));
 
                         rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
                             &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
-                                log_error("RECLASS: hiya5 failed: %s",
+                                log_error_q("RECLASS: hiya5 failed: %s",
                                         clnt_sperrno(rpc_stat));
                                 return EIO;
                         }
                         if(reply2.code != OK)
                         {
-                                log_error("reclass hiya5 returns: %s",
+                                log_error_q("reclass hiya5 returns: %s",
                                         s_ldm_errt(reply2.code));
                                 return EIO;
                         }
@@ -230,7 +230,7 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
                 return ENOERR;  /* but he got it anyway */
         }
         default:
-                log_error("%s: %s",
+                log_error_q("%s: %s",
                         infop->ident,
                         s_ldm_errt(reply.code));
                 return EIO;
@@ -268,7 +268,7 @@ noti5_sqf(const prod_info *infop, const void *datap,
         rpc_stat = notification5(hcp, infop, rpctimeo, &reply);
         if(rpc_stat != RPC_SUCCESS)
         {
-                log_error("%s: %s",
+                log_error_q("%s: %s",
                         infop->ident,
                         clnt_sperrno(rpc_stat));
                 return EIO;
@@ -279,13 +279,13 @@ noti5_sqf(const prod_info *infop, const void *datap,
         {
                 prod_class_t *want = reply.ldm_replyt_u.newclssp;
                 int status = update_remote_clss(want);
-                log_notice("RECLASS: %s", s_prod_class(NULL, 0, want));
+                log_notice_q("RECLASS: %s", s_prod_class(NULL, 0, want));
                 if(status != ENOERR)
                         return EIO;
                 if(remote->clssp == NULL
                                 || remote->clssp->psa.psa_len == 0)
                 {
-                        log_notice("No match for request %s");
+                        log_notice_q("No match for request %s");
                         return EIO;
                 }
                 if(!clss_eq(remote->clssp, want))
@@ -296,20 +296,20 @@ noti5_sqf(const prod_info *infop, const void *datap,
                          * For now, the RECLASS should
                          * only be changing timestamps.
                          */
-                        log_error("SHOULDN'T HAPPEN remote: %s",
+                        log_error_q("SHOULDN'T HAPPEN remote: %s",
                                  s_prod_class(NULL, 0, remote->clssp));
 
                         rpc_stat = hiya5(hcp, remote->clssp, rpctimeo,
                             &reply2);
                         if(rpc_stat != RPC_SUCCESS)
                         {
-                                log_error("RECLASS: hiya5 failed: %s",
+                                log_error_q("RECLASS: hiya5 failed: %s",
                                         clnt_sperrno(rpc_stat));
                                 return EIO;
                         }
                         if(reply.code != OK)
                         {
-                                log_error("reclass hiya5 returns: %s",
+                                log_error_q("reclass hiya5 returns: %s",
                                         s_ldm_errt(reply2.code));
                                 return EIO;
                         }
@@ -318,7 +318,7 @@ noti5_sqf(const prod_info *infop, const void *datap,
         }
         else if(reply.code != OK)
         {
-                log_error("%s: %s",
+                log_error_q("%s: %s",
                         infop->ident,
                         s_ldm_errt(reply.code));
                 return EIO;
@@ -326,7 +326,7 @@ noti5_sqf(const prod_info *infop, const void *datap,
 
         /* else */
         if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, infop,
+                log_info_q("%s", s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
         return 0;
 }
@@ -378,7 +378,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(remote->clssp == NULL
                         || remote->clssp->psa.psa_len == 0)
         {
-                log_notice("No match for request %s",
+                log_notice_q("No match for request %s",
                         s_prod_class(NULL, 0, want));
                 /* ??? */
                 svcerr_weakauth(rqstp->rq_xprt);
@@ -402,7 +402,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         status = uldb_addProcess(getpid(), 5, downAddr, remote->clssp, &uldbSub,
                 noti5_sqf == doit, 0);
         if (status) {
-            log_error("Couldn't add this process to the upstream LDM database");
+            log_error_q("Couldn't add this process to the upstream LDM database");
             svcerr_systemerr(rqstp->rq_xprt);
             return NULL;
         }
@@ -450,11 +450,11 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    log_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error_q("The product-queue \"%s\" is inconsistent\n",
                             getQueuePath());
                 }
                 else {
-                    log_error("pq_open failed: %s: %s\n",
+                    log_error_q("pq_open failed: %s: %s\n",
                             getQueuePath(), strerror(status)) ;
                 }
                 svcerr_systemerr(rqstp->rq_xprt);
@@ -464,10 +464,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         /* Set the ulog identifier, optional. */
         if(ident != NULL && *ident != 0)
                 log_set_upstream_id(remote_name(), strstr(ident, "feed"));
-        log_notice("Starting Up(%s/5): %s",
+        log_notice_q("Starting Up(%s/5): %s",
             PACKAGE_VERSION, s_prod_class(NULL, 0, remote->clssp));
 
-        log_notice("topo:  %s %s", remote_name(),
+        log_notice_q("topo:  %s %s", remote_name(),
                         s_feedtypet(clss_feedtypeU(remote->clssp)));
 
         /* else, theReply.code == OK */
@@ -478,7 +478,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         }
         if(!svc_freeargs(rqstp->rq_xprt, xdr_prod_class, (caddr_t)want))
         {
-                log_error("unable to free arguments");
+                log_error_q("unable to free arguments");
                 exit(1);
         }
 
@@ -493,7 +493,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         if(h_xprt_turn(&hc, remote_name(), rqstp->rq_xprt,
                         remote->sendsz, remote->recvsz) < H_CLNTED)
         {
-                log_error("%s", s_hclnt_sperrno(&hc));
+                log_error_q("%s", s_hclnt_sperrno(&hc));
                 exit(1);
         }
 
@@ -501,12 +501,12 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         feed_pktsz = remote->sendsz - DATAPKT_RPC_OVERHEAD;
         if(feed_pktsz > DBUFMAX)
                 feed_pktsz = DBUFMAX;
-        log_debug("feed_pktsz %u", feed_pktsz);
+        log_debug_1("feed_pktsz %u", feed_pktsz);
 
         status =  pq_cClassSet(pq,  &mt, remote->clssp);
         if(status)
         {
-                log_error("pq_cClassSet failed: %s: %s\n",
+                log_error_q("pq_cClassSet failed: %s: %s\n",
                         getQueuePath(), strerror(status)) ;
                 exit(1);
         }
@@ -523,10 +523,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         lastsent = timestamp_add(&hc.begin, &hc.elapsed);
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug("End of Queue");
+                        log_debug_1("End of Queue");
                         if(!pq_ctimeck(pq, mt, remote->clssp, &maxlatency))
                         {
-                                log_notice("Request Satisfied");
+                                log_notice_q("Request Satisfied");
                                 done = 1;
                                 continue;
                         }
@@ -538,7 +538,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         rpc_stat = nullproc5(&hc, rpctimeo);
                         if(rpc_stat != RPC_SUCCESS)
                         {
-                                log_error("nullproc5(%s): %s",
+                                log_error_q("nullproc5(%s): %s",
                                         remote_name(), clnt_sperrno(rpc_stat));
                                 done = 1;
                                 continue;
@@ -547,10 +547,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug("Hit a lock");
+                        log_debug_1("Hit a lock");
                         break;
                 default:
-                        log_error("pq_sequence failed: %s (errno = %d)",
+                        log_error_q("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
                         exit(1);
                         break;

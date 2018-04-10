@@ -11,8 +11,8 @@
  * @author: Steven R. Emmerson
  */
 
+#include "fmtp.h"
 #include "log.h"
-#include "mcast.h"
 #include "PerProdSendingNotifier.h"
 
 #include <stdlib.h>
@@ -52,11 +52,11 @@ bool PerProdSendingNotifier::verify_new_recv(int newsock)
     struct sockaddr sockaddr;
     socklen_t       len = sizeof(sockaddr);
     if (::getsockname(newsock, &sockaddr, &len)) {
-        log_warning("Couldn't get address of new FMTP socket");
+        log_warning_q("Couldn't get address of new FMTP socket");
         return false;
     }
     if (sockaddr.sa_family != AF_INET) {
-        log_warning(std::string{"Address family of new FMTP socket is " +
+        log_warning_q(std::string{"Address family of new FMTP socket is " +
                 std::to_string(sockaddr.sa_family) + " and not " +
                 std::to_string(AF_INET) + " (AF_INET)"}.c_str());
         return false;

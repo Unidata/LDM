@@ -942,7 +942,7 @@ pim_put(
             char buf[2*sizeof(signaturet)+1];
             status = sprint_signaturet(buf, sizeof(buf), *sig);
             log_assert(status > 0);
-            log_info("Added: iProd=%lu, sig=%s", (unsigned long)iProd, buf);
+            log_info_q("Added: iProd=%lu, sig=%s", (unsigned long)iProd, buf);
 
             if (mmo->numSigs < maxSigs) {
                 if (0 == mmo->numSigs++)

@@ -71,7 +71,7 @@ static void
 cleanup(void)
 {
         if (!printSizePar)
-            log_notice("Exiting");
+            log_notice_q("Exiting");
 
         if(!intr)
         {
@@ -164,10 +164,10 @@ hndlr_noop(int sig)
 #ifndef NDEBUG
         switch(sig) {
         case SIGALRM :
-                log_debug("SIGALRM") ;
+                log_debug_1("SIGALRM") ;
                 return ;
         }
-        log_debug("hndlr_noop: unhandled signal: %d", sig) ;
+        log_debug_1("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */
         return;
@@ -314,14 +314,14 @@ main(int ac, char *av[])
      * Set up error logging.
      */
     if (!printSizePar)
-        log_notice("Starting Up (%d)", getpgrp());
+        log_notice_q("Starting Up (%d)", getpgrp());
 
     /*
      * register exit handler
      */
     if(atexit(cleanup) != 0)
     {
-        log_syserr("atexit");
+        log_syserr_q("atexit");
         exit(1);
     }
 
@@ -338,11 +338,11 @@ main(int ac, char *av[])
     if(status)
     {
         if (PQ_CORRUPT == status) {
-            log_error("The product-queue \"%s\" is inconsistent\n",
+            log_error_q("The product-queue \"%s\" is inconsistent\n",
                 pqfname);
         }
         else {
-            log_error("pq_open failed: %s: %s\n",
+            log_error_q("pq_open failed: %s: %s\n",
                 pqfname, strerror(status));
         }
         exit(1);
@@ -350,11 +350,11 @@ main(int ac, char *av[])
 
     if (!printSizePar) {
         if (extended) {
-            log_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            log_notice_q("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext    age    maxbytes");
         }
         else {
-            log_notice("nprods nfree  nempty      nbytes  maxprods  maxfree  "
+            log_notice_q("nprods nfree  nempty      nbytes  maxprods  maxfree  "
                 "minempty    maxext  age");
         }
     }
@@ -383,13 +383,13 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                log_error("pq_stats() failed: %s (errno = %d)", strerror(status),
+                log_error_q("pq_stats() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
 
             if (status = pq_isFull(pq, &isFull)) {
-                log_error("pq_isFull() failed: %s (errno = %d)", strerror(status),
+                log_error_q("pq_isFull() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
             }
@@ -406,7 +406,7 @@ main(int ac, char *av[])
                 timestampt      minResidenceTime;
 
                 if (status = pq_getMostRecent(pq, &mostRecent)) {
-                    log_error("pq_getMostRecent() failed: %s (errno = %d)",
+                    log_error_q("pq_getMostRecent() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -417,7 +417,7 @@ main(int ac, char *av[])
 
                 if (status = pq_getMinVirtResTimeMetrics(pq,
                             &minResidenceTime, &mvrtSize, &mvrtSlots)) {
-                    log_error("pq_getMinResidency() failed: %s (errno = %d)",
+                    log_error_q("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
                 }
@@ -449,19 +449,19 @@ main(int ac, char *av[])
                               &age_oldest, &maxextent);
 
             if (status) {
-                log_error("pq_stats() failed: %s (errno = %d)",
+                log_error_q("pq_stats() failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }
 
             if (extended) {
-                log_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
+                log_notice_q("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f %11lu",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest,
                     maxbytes);
             }
             else {
-                log_notice("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
+                log_notice_q("%6ld %5lu %7lu %11lu %9lu %8lu %9lu %9lu %.0f",
                     nprods,   nfree,   nempty, nbytes,
                     maxprods, maxfree, minempty, maxextent, age_oldest);
             }
@@ -469,7 +469,7 @@ main(int ac, char *av[])
                 status = pq_fext_dump(pq);
             }
             if (status) {
-                log_error("pq_fext_dump failed: %s (errno = %d)",
+                log_error_q("pq_fext_dump failed: %s (errno = %d)",
                    strerror(status), status);
                 exit(1);
             }

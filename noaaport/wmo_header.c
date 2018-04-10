@@ -246,7 +246,7 @@ if(hdr.model[0] != '\0')
 
 if((strlen(wmoid) > 128)||(strlen(wmoid) < 1)) 
    {
-   log_error("wmoid is bizzare %d\n",strlen(wmoid));
+   log_error_q("wmoid is bizzare %d\n",strlen(wmoid));
    return(-1);
    }
 

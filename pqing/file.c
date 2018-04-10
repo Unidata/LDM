@@ -21,7 +21,7 @@ static unsigned long file_bytes = 0; /* total bytes read */
 void
 file_stats(void)
 {
-        log_notice("  FILE Bytes read:    %8lu",
+        log_notice_q("  FILE Bytes read:    %8lu",
                 file_bytes);
 }
 
@@ -51,12 +51,12 @@ file_open(const char *feedfname, int *const fdp)
         if(fd < 0)
         {
                 const int status = errno;
-                log_syserr("Couldn't open file \"%s\"", feedfname);
+                log_syserr_q("Couldn't open file \"%s\"", feedfname);
                 return status;
         }
 
         *fdp = fd;
-        log_notice("FILE \"%s\"", feedfname);
+        log_notice_q("FILE \"%s\"", feedfname);
         return ENOERR;
 }
 

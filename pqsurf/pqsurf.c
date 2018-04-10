@@ -110,7 +110,7 @@ run_child(int argc, char *argv[])
                         nbytes = strlen(argv[ii]);
                         left -= (nbytes <= left) ? nbytes : left;
                 }
-                log_debug("exec'ing: \"%s\"", command);
+                log_debug_1("exec'ing: \"%s\"", command);
         }
 
         pid = ldmfork();
@@ -132,7 +132,7 @@ run_child(int argc, char *argv[])
 
                 (void) execvp(argv[0], &argv[0]);
 
-                log_syserr("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
+                log_syserr_q("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
                         getenv("PATH"));
                 _exit(127);
         }
@@ -149,9 +149,9 @@ static int ndups = 0;
 static void
 dump_stats(void)
 {
-        log_notice("Number of products %d", nprods);
-        log_notice("Number of observations %d", nsplit);
-        log_notice("Number of dups %d", ndups);
+        log_notice_q("Number of products %d", nprods);
+        log_notice_q("Number of observations %d", nsplit);
+        log_notice_q("Number of dups %d", ndups);
 }
 
 
@@ -166,7 +166,7 @@ doOne(const prod_info *infop, const void *datap)
         int status = ENOERR;
 
         if(log_is_enabled_debug)
-                log_debug("%s", s_prod_info(NULL, 0, infop, 1));
+                log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
         
         prod.info = *infop;
         prod.data = (void *)datap; /* cast away const */
@@ -184,14 +184,14 @@ doOne(const prod_info *infop, const void *datap)
         {
                 ndups++;
                 if(log_is_enabled_info)
-                        log_info("Product already in queue: %s",
+                        log_info_q("Product already in queue: %s",
                                 s_prod_info(NULL, 0, &prod.info,
                                          log_is_enabled_debug));
                 return status;
         }
 
         /* else, error */
-        log_error("pq_insert() returned %d", status);
+        log_error_q("pq_insert() returned %d", status);
 
         return status;
 }
@@ -207,7 +207,7 @@ split_prod(const prod_info *infop, const void *datap,
         int ns;
 
         if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, infop,
+                log_info_q("%s", s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
 
         ns = surf_split(infop, datap, doOne);
@@ -284,7 +284,7 @@ reap_act(int options)
                     if(!(errno == ECHILD && act_pid == -1))
                     {
                              /* Only complain if relevant */
-                            log_syserr("waitpid");
+                            log_syserr_q("waitpid");
                     }
                     return -1;
             }
@@ -297,12 +297,12 @@ reap_act(int options)
 #ifdef HAVE_WAITPID
                     if(WIFSTOPPED(status))
                     {
-                            log_notice("child %d stopped by signal %d",
+                            log_notice_q("child %d stopped by signal %d",
                                     wpid, WSTOPSIG(status));
                     }
                     else if(WIFSIGNALED(status))
                     {
-                            log_notice("child %d terminated by signal %d",
+                            log_notice_q("child %d terminated by signal %d",
                                     wpid, WTERMSIG(status));
                             /* DEBUG */
                             switch(WTERMSIG(status)) {
@@ -337,10 +337,10 @@ reap_act(int options)
                     else if(WIFEXITED(status))
                     {
                             if(WEXITSTATUS(status) != 0)
-                                    log_notice("child %d exited with status %d",
+                                    log_notice_q("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             else
-                                    log_debug("child %d exited with status %d",
+                                    log_debug_1("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             act_pid = -1;
                             exit(WEXITSTATUS(status));
@@ -356,7 +356,7 @@ reap_act(int options)
 void
 cleanup(void)
 {
-        log_notice("Exiting");
+        log_notice_q("Exiting");
 
         if(act_pid != -1)
         {
@@ -373,9 +373,9 @@ cleanup(void)
                 (void) pq_close(opq);
                 opq = NULL;
 
-                log_notice("  Queue usage (bytes):%8ld",
+                log_notice_q("  Queue usage (bytes):%8ld",
                                         (long)highwater);
-                log_notice("           (nregions):%8ld",
+                log_notice_q("           (nregions):%8ld",
                                         (long)maxregions);
         }
 
@@ -497,7 +497,7 @@ expire(pqueue *epq, const unsigned interval, const double age)
         if(d_diff_timestamp(&now, &eclss.to) < interval + age)
         {
                 /* only run this routine every interval seconds */
-                log_debug("not yet");
+                log_debug_1("not yet");
                 return ENOERR;
         }
         /* else */
@@ -508,7 +508,7 @@ expire(pqueue *epq, const unsigned interval, const double age)
         {
                 char cp[64];
                 sprint_timestampt(cp, sizeof(cp), &eclss.to);
-                log_debug("to %s", cp);
+                log_debug_1("to %s", cp);
         }
 
         pq_cset(epq, &TS_ZERO);
@@ -525,36 +525,36 @@ expire(pqueue *epq, const unsigned interval, const double age)
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                log_debug("max_latency %.3f", max_latency);
+                                log_debug_1("max_latency %.3f", max_latency);
                         }
                         
                         if(nr == 0)
                         {
                                 diff = d_diff_timestamp(&cursor, &eclss.to);
-                                log_debug("diff %.3f", diff);
+                                log_debug_1("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        log_debug("heuristic depth break");
+                                        log_debug_1("heuristic depth break");
                                         break;
                                 }
 
                         }
                         continue; /* N.B., other cases break and return */
                 case PQUEUE_END:
-                        log_debug("expire: End of Queue");
+                        log_debug_1("expire: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug("Hit a lock");
+                        log_debug_1("Hit a lock");
                         break;
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        log_errno(status, NULL);
+                        log_errno_q(status, NULL);
                         break;
                 default:
-                        log_errno(status, "pq_seqdel failed");
+                        log_errno_q(status, "pq_seqdel failed");
                         break;
                 }
                 break;
@@ -735,14 +735,14 @@ int main(int ac, char *av[])
                 clss.from.tv_sec -= (age - interval);
         }
 
-        log_notice("Starting Up (%d)", getpgrp());
+        log_notice_q("Starting Up (%d)", getpgrp());
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 exit(1);
         }
 
@@ -759,11 +759,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    log_error("The output product-queue \"%s\" is inconsistent\n",
+                    log_error_q("The output product-queue \"%s\" is inconsistent\n",
                             opqfname);
                 }
                 else {
-                    log_errno(status, "pq_open failed: %s", opqfname);
+                    log_errno_q(status, "pq_open failed: %s", opqfname);
                 }
                 exit(1);
         }
@@ -780,11 +780,11 @@ int main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    log_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error_q("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    log_errno(status, "pq_open failed: %s", pqfname);
+                    log_errno_q(status, "pq_open failed: %s", pqfname);
                 }
                 exit(1);
         }
@@ -805,7 +805,7 @@ int main(int ac, char *av[])
         if(log_is_enabled_info)
         {
                 char buf[1984];
-                log_info("%s",
+                log_info_q("%s",
                          s_prod_class(buf, sizeof(buf), &clss));
         }
 
@@ -823,14 +823,14 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug("surf: End of Queue");
+                        log_debug_1("surf: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug("Hit a lock");
+                        log_debug_1("Hit a lock");
                         break;
                 default:
-                        log_errno(status, "pq_sequence failed");
+                        log_errno_q(status, "pq_sequence failed");
                         exit(1);
                         break;
                 }

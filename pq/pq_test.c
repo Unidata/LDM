@@ -111,14 +111,14 @@ static int insert_prod_reserve_no_sig(
         XDR xdrs ;
         xdrmem_create(&xdrs, space, extent, XDR_ENCODE);
         if (!xdr_product(&xdrs, prod)) {
-            log_error("xdr_product() failed");
+            log_error_q("xdr_product() failed");
             (void)pqe_discard(pq, pqe_index);
             status = -1;
         }
         else {
             status = pqe_insert(pq, pqe_index);
             if (status)
-                log_error("pqe_insert() failed");
+                log_error_q("pqe_insert() failed");
         }
     }
     return status;
@@ -193,7 +193,7 @@ static int insert_products(
             break;
         }
         char buf[LDM_INFO_MAX];
-        log_notice("Inserted: prodInfo=\"%s\"",
+        log_notice_q("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
         num_bytes += size;
     }
@@ -249,13 +249,13 @@ static void test_pq_insert(
     int status = insert_products(pq, insert_prod);
     CU_ASSERT_EQUAL(status, 0);
     double dur = duration(&stop, &start);
-    log_notice("Elapsed time       = %g s", dur);
-    log_notice("Number of bytes    = %lu", num_bytes);
-    log_notice("Number of products = %lu", NUM_PRODS);
-    log_notice("Mean product size  = %lu", num_bytes / NUM_PRODS);
-    log_notice("Product rate       = %g/s", NUM_PRODS/dur);
-    log_notice("Byte rate          = %g/s", num_bytes/dur);
-    log_notice("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
+    log_notice_q("Elapsed time       = %g s", dur);
+    log_notice_q("Number of bytes    = %lu", num_bytes);
+    log_notice_q("Number of products = %lu", NUM_PRODS);
+    log_notice_q("Mean product size  = %lu", num_bytes / NUM_PRODS);
+    log_notice_q("Product rate       = %g/s", NUM_PRODS/dur);
+    log_notice_q("Byte rate          = %g/s", num_bytes/dur);
+    log_notice_q("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
     close_pq(pq);
 }
 
@@ -267,13 +267,13 @@ static void test_pq_insert_reserve_no_sig(
     int status = insert_products(pq, insert_prod_reserve_no_sig);
     CU_ASSERT_EQUAL(status, 0);
     double dur = duration(&stop, &start);
-    log_notice("Elapsed time       = %g s", dur);
-    log_notice("Number of bytes    = %lu", num_bytes);
-    log_notice("Number of products = %lu", NUM_PRODS);
-    log_notice("Mean product size  = %lu", num_bytes / NUM_PRODS);
-    log_notice("Product rate       = %g/s", NUM_PRODS/dur);
-    log_notice("Byte rate          = %g/s", num_bytes/dur);
-    log_notice("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
+    log_notice_q("Elapsed time       = %g s", dur);
+    log_notice_q("Number of bytes    = %lu", num_bytes);
+    log_notice_q("Number of products = %lu", NUM_PRODS);
+    log_notice_q("Mean product size  = %lu", num_bytes / NUM_PRODS);
+    log_notice_q("Product rate       = %g/s", NUM_PRODS/dur);
+    log_notice_q("Byte rate          = %g/s", num_bytes/dur);
+    log_notice_q("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
     close_pq(pq);
 }
 

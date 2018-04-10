@@ -79,11 +79,11 @@ int main(
             status = uldb_delete(NULL);
             if (status) {
                 if (ULDB_EXIST == status) {
-                    log_info("The upstream LDM database doesn't exist");
+                    log_info_q("The upstream LDM database doesn't exist");
                     status = 2;
                 }
                 else {
-                    log_error("Couldn't open the upstream LDM database");
+                    log_error_q("Couldn't open the upstream LDM database");
                     status = 3;
                 }
             }
@@ -93,11 +93,11 @@ int main(
             if (status) {
                 if (ULDB_EXIST == status) {
                     log_add("The upstream LDM database doesn't exist");
-                    log_notice("Is the LDM running?");
+                    log_notice_q("Is the LDM running?");
                     status = 2;
                 }
                 else {
-                    log_error("Couldn't open the upstream LDM database");
+                    log_error_q("Couldn't open the upstream LDM database");
                     status = 3;
                 }
             }
@@ -106,7 +106,7 @@ int main(
 
                 status = uldb_getIterator(&iter);
                 if (status) {
-                    log_error("Couldn't get database iterator");
+                    log_error_q("Couldn't get database iterator");
                     status = 3;
                 }
                 else {
@@ -119,7 +119,7 @@ int main(
                         prod_class* prodClass;
 
                         if (uldb_entry_getProdClass(entry, &prodClass)) {
-                            log_error(
+                            log_error_q(
                                     "Couldn't get product-class of database entry");
                             status = 3;
                             break;

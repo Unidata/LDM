@@ -135,7 +135,7 @@ int down6_set_prod_class(prod_class_t *offered)
     int         errCode = 0;            /* success */
 
     if (!_initialized) {
-        log_error("down6_set_prod_class(): Module not initialized");
+        log_error_q("down6_set_prod_class(): Module not initialized");
         errCode = DOWN6_UNINITIALIZED;
     }
     else {
@@ -183,14 +183,14 @@ prod_class_t *down6_get_prod_class()
     prod_class_t *clone;
 
     if (NULL == _class) {
-        log_error("down6_get_prod_class(): Product-class not set");
+        log_error_q("down6_get_prod_class(): Product-class not set");
         clone = NULL;
     }
     else {
         clone = dup_prod_class(_class);
 
         if (clone == NULL)
-            log_error("Couldn't allocate new product-class: %s",
+            log_error_q("Couldn't allocate new product-class: %s",
                 strerror(errno));
     }
 
@@ -225,7 +225,7 @@ down6_hereis(
     int         errCode = 0;            /* success */
 
     if (!_initialized) {
-        log_error("Module not initialized");
+        log_error_q("Module not initialized");
         errCode = DOWN6_UNINITIALIZED;
     }
     else {
@@ -293,11 +293,11 @@ int down6_notification(prod_info *info)
     int         errCode = 0;            /* success */
 
     if (!_initialized) {
-        log_error("Module not initialized");
+        log_error_q("Module not initialized");
         errCode = DOWN6_UNINITIALIZED;
     }
     else {
-        log_warning("notification6: %s", s_prod_info(NULL, 0, info,
+        log_warning_q("notification6: %s", s_prod_info(NULL, 0, info,
                 log_is_enabled_debug));
     }
 
@@ -328,14 +328,14 @@ down6_comingsoon(
     int         errCode = 0;            /* success */
 
     if (!_initialized) {
-        log_error("Module not initialized");
+        log_error_q("Module not initialized");
         errCode = DOWN6_UNINITIALIZED;
     }
     else {
         prod_info *infop = argp->infop;
 
         if (_expectBlkdata) {
-            log_warning("Discarding incomplete product: %s",
+            log_warning_q("Discarding incomplete product: %s",
                 s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug));
 
@@ -418,7 +418,7 @@ down6_comingsoon(
                  * The data-product is too big to insert into the
                  * product-queue.
                  */
-                log_error("Product too big: %s",
+                log_error_q("Product too big: %s",
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
@@ -433,7 +433,7 @@ down6_comingsoon(
                  */
                 if (log_is_enabled_info ||
                         log_is_enabled_debug)
-                    log_info("comingsoon6: duplicate: %s",
+                    log_info_q("comingsoon6: duplicate: %s",
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
@@ -498,18 +498,18 @@ down6_blkdata(
     int         errCode = 0;            /* success */
 
     if (!_initialized) {
-        log_error("Module not initialized");
+        log_error_q("Module not initialized");
         errCode = DOWN6_UNINITIALIZED;
     }
     else {
         if (!_expectBlkdata) {
-            log_warning("Unexpected BLKDATA");
+            log_warning_q("Unexpected BLKDATA");
         }
         else {
             if(memcmp(dpkp->signaturep, _info->signature, sizeof(signaturet))
                 != 0) {
 
-                log_warning("Invalid BLKDATA signature");
+                log_warning_q("Invalid BLKDATA signature");
 
                 errCode = DOWN6_BAD_PACKET;
             }
@@ -518,7 +518,7 @@ down6_blkdata(
                 unsigned got = data->dbuf_len;
 
                 if (got > _remaining) {
-                    log_warning(
+                    log_warning_q(
                         "BLKDATA size too large: remaining %u; got %u",
                         _remaining, got);
                     xd_reset();
@@ -559,7 +559,7 @@ void down6_destroy()
     _class = NULL;
 
     if (_expectBlkdata) {
-        log_info("Discarding incomplete product: %s",
+        log_info_q("Discarding incomplete product: %s",
             s_prod_info(NULL, 0, _info,
                     log_is_enabled_debug));
 

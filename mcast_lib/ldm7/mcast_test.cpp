@@ -13,9 +13,9 @@
 
 #include "config.h"
 
+#include "fmtp.h"
 #include "FMTPReceiver_stub.hpp"
 #include "log.h"
-#include "mcast.h"
 #include "mldm_receiver.h"
 
 #include <errno.h>
@@ -42,7 +42,7 @@ void missed_file_func(void* obj, const FmtpProdIndex iProd)
 void test_fmtpReceiver_new()
 {
     int                         status;
-    McastReceiver*              receiver;
+    FmtpReceiver*              receiver;
     const char*                 addr = "224.0.0.1";
     const unsigned short        port = 1;
     const char* const           tcpAddr = "127.0.0.1";

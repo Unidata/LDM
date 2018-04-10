@@ -33,7 +33,7 @@ set_timestamp(timestampt *tsp)
         {
                 /* should never happen ... */
                 status = errno;
-                log_error("gettimeofday: %s", strerror(status));
+                log_error_q("gettimeofday: %s", strerror(status));
         }
         return status;
 }
@@ -281,7 +281,7 @@ tsParse(
                             &hour, &minute, &second, &microseconds);
 
     if (6 > nfields) {
-        log_error("Couldn't decode timestamp \"%s\" with format \"%s\"", string,
+        log_error_q("Couldn't decode timestamp \"%s\" with format \"%s\"", string,
             format);
     }
     else if (month < 1 || month > 12 ||
@@ -290,7 +290,7 @@ tsParse(
             minute < 0 || minute > 59 ||
             second < 0 || second > 61 ||
             microseconds < 0) {
-        log_error("Invalid timestamp \"%s\"", string);
+        log_error_q("Invalid timestamp \"%s\"", string);
     }
     else {
         struct tm           tm;

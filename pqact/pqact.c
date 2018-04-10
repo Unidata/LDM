@@ -108,7 +108,7 @@ static int configure_stdio_file_descriptors(void)
 static void
 cleanup(void)
 {
-    log_notice("Exiting");
+    log_notice_q("Exiting");
 
     if (done) {
         /*
@@ -124,11 +124,11 @@ cleanup(void)
             timestampt  now;
 
             (void)set_timestamp(&now);
-            log_notice("Behind by %g s",
+            log_notice_q("Behind by %g s",
                     d_diff_timestamp(&now, &palt_last_insertion));
 
             if (stateWrite(&palt_last_insertion) < 0) {
-                log_error("Couldn't save insertion-time of last processed "
+                log_error_q("Couldn't save insertion-time of last processed "
                     "data-product");
             }
         }
@@ -138,7 +138,7 @@ cleanup(void)
     }
 
     if(shmid != -1) {
-        log_notice("Deleting shared segment.");
+        log_notice_q("Deleting shared segment.");
         shmctl(shmid, IPC_RMID, NULL);
     }
     if(semid != -1) {
@@ -244,37 +244,37 @@ static void
 usage(
         const char* const av0)
 {
-        log_error("Usage: %s [options] [config_file]\t\nOptions:\n", av0);
-        log_error("Options:");
-        log_error(
+        log_error_q("Usage: %s [options] [config_file]\t\nOptions:\n", av0);
+        log_error_q("Options:");
+        log_error_q(
 "\t-v           Log INFO-level messages, log each match (SIGUSR2 cycles)");
-        log_error(
+        log_error_q(
 "\t-x           Log DEBUG-level messages (SIGUSR2 cycles)");
-        log_error(
+        log_error_q(
 "\t-l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
 "\t             (standard error), or file `dest`. Default is \"%s\"\n",
                 log_get_default_destination());
-        log_error(
+        log_error_q(
 "\t-d datadir   cd(1) to \"datadir\" before interpreting pathnames in\n"
 "\t             configuration-file (default: \"%s\")", getPqactDataDirPath());
-        log_error(
+        log_error_q(
 "\t-q queue     Use product-queue \"queue\" (default: \"%s\")",
                 getDefaultQueuePath());
-        log_error(
+        log_error_q(
 "\t-p pattern   Only process products matching \"pattern\" (default: \"%s\")",
                 DEFAULT_PATTERN);
-        log_error(
+        log_error_q(
 "\t-f feedtype  Only process products from feed \"feedtype\" (default: %s)",
                 s_feedtypet(DEFAULT_FEEDTYPE));
-        log_error(
+        log_error_q(
 "\t-i interval  Loop, polling every \"interval\" seconds (default: %d)",
                 DEFAULT_INTERVAL);
-        log_error(
+        log_error_q(
 "\t-t timeo     Set write timeout for PIPE subprocs to \"timeo\" secs (default: %d)",
                 DEFAULT_PIPE_TIMEO);
-        log_error(
+        log_error_q(
 "\t-o offset    Start with products arriving \"offset\" seconds before now (default: 0)");
-        log_error(
+        log_error_q(
 "\tconfig_file  Pathname of configuration-file (default: " "\"%s\")",
                 getPqactConfigPath());
         exit(EXIT_FAILURE);
@@ -311,7 +311,7 @@ main(int ac, char *av[])
         if(set_timestamp(&clss.from)) /* corrected by toffset below */
         {
                 int errnum = errno;
-                log_error("Couldn't set timestamp: %s", strerror(errnum));
+                log_error_q("Couldn't set timestamp: %s", strerror(errnum));
                 exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
@@ -359,7 +359,7 @@ main(int ac, char *av[])
                         fterr = strfeedtypet(optarg, &spec.feedtype);
                         if(fterr != FEEDTYPE_OK)
                         {
-                                log_error("Bad feedtype \"%s\", %s\n",
+                                log_error_q("Bad feedtype \"%s\", %s\n",
                                         optarg, strfeederr(fterr));
                                 usage(progname);
                         }
@@ -371,7 +371,7 @@ main(int ac, char *av[])
                         toffset = atoi(optarg);
                         if(toffset == 0 && *optarg != '0')
                         {
-                                log_error("invalid offset %s\n", optarg);
+                                log_error_q("invalid offset %s\n", optarg);
                                 usage(progname);   
                         }
                         break;
@@ -379,7 +379,7 @@ main(int ac, char *av[])
                         interval = atoi(optarg);
                         if(interval == 0 && *optarg != '0')
                         {
-                                log_error("invalid interval %s\n", optarg);
+                                log_error_q("invalid interval %s\n", optarg);
                                 usage(progname);   
                         }
                         break;
@@ -387,7 +387,7 @@ main(int ac, char *av[])
                         pipe_timeo = atoi(optarg);
                         if(pipe_timeo == 0 && *optarg != 0)
                         {
-                                log_error("invalid pipe_timeo %s", optarg);
+                                log_error_q("invalid pipe_timeo %s", optarg);
                                 usage(progname);   
                         }
                         break;
@@ -407,7 +407,7 @@ main(int ac, char *av[])
                 int numOperands = ac - optind;
 
                 if (1 < numOperands) {
-                    log_error("Too many operands");
+                    log_error_q("Too many operands");
                     usage(progname);
                 }
                 else if (1 == numOperands) {
@@ -417,7 +417,7 @@ main(int ac, char *av[])
         }
 
         setQueuePath(pqfname);
-        log_notice("Starting Up");
+        log_notice_q("Starting Up");
 
         if ('/' != conffilename[0]) {
             /*
@@ -431,14 +431,14 @@ main(int ac, char *av[])
             char    buf[_POSIX_PATH_MAX];   /* includes NUL */
 #endif
             if (getcwd(buf, sizeof(buf)) == NULL) {
-                log_syserr("Couldn't get current working directory");
+                log_syserr_q("Couldn't get current working directory");
                 exit(EXIT_FAILURE);
             }
             (void)strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
             (void)strncat(buf, conffilename, sizeof(buf)-strlen(buf)-1);
             conffilename = strdup(buf);
             if (conffilename == NULL) {
-                log_syserr("Couldn't duplicate string \"%s\"", buf);
+                log_syserr_q("Couldn't duplicate string \"%s\"", buf);
                 exit(EXIT_FAILURE);
             }
         }
@@ -447,7 +447,7 @@ main(int ac, char *av[])
          * Initialize the previous-state module for this process.
          */
         if (stateInit(conffilename) < 0) {
-            log_error("Couldn't initialize previous-state module");
+            log_error_q("Couldn't initialize previous-state module");
             exit(EXIT_FAILURE);
             /*NOTREACHED*/
         }
@@ -456,7 +456,7 @@ main(int ac, char *av[])
          * Configure the standard I/O streams for execution of child processes.
          */
         if (configure_stdio_file_descriptors()) {
-            log_error("Couldn't configure standard I/O streams for execution "
+            log_error_q("Couldn't configure standard I/O streams for execution "
                     "of child processes");
             exit(EXIT_FAILURE);
         }
@@ -469,8 +469,8 @@ main(int ac, char *av[])
          */
         if (0 != set_avail_fd_count(openMax() - 6))
         {
-            log_error("Couldn't set number of available file-descriptors");
-            log_notice("Exiting");
+            log_error_q("Couldn't set number of available file-descriptors");
+            log_notice_q("Exiting");
             exit(EXIT_FAILURE);
             /*NOTREACHED*/
         }
@@ -488,16 +488,16 @@ main(int ac, char *av[])
          */
         if (re_isPathological(spec.pattern))
         {
-                log_error("Adjusting pathological regular-expression: \"%s\"",
+                log_error_q("Adjusting pathological regular-expression: \"%s\"",
                     spec.pattern);
                 re_vetSpec(spec.pattern);
         }
         status = regcomp(&spec.rgx, spec.pattern, REG_EXTENDED|REG_NOSUB);
         if(status != 0)
         {
-                log_error("Can't compile regular expression \"%s\"",
+                log_error_q("Can't compile regular expression \"%s\"",
                         spec.pattern);
-                log_notice("Exiting");
+                log_notice_q("Exiting");
                 exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
@@ -507,8 +507,8 @@ main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
-                log_notice("Exiting");
+                log_syserr_q("atexit");
+                log_notice_q("Exiting");
                 exit(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
@@ -527,7 +527,7 @@ main(int ac, char *av[])
                 /*NOTREACHED*/
         }
         else if (status == 0) {
-            log_notice("Configuration-file \"%s\" has no entries. "
+            log_notice_q("Configuration-file \"%s\" has no entries. "
                 "You should probably not start this program instead.",
                 conffilename);
         }
@@ -539,11 +539,11 @@ main(int ac, char *av[])
         if(status)
         {
                 if (PQ_CORRUPT == status) {
-                    log_error("The product-queue \"%s\" is inconsistent\n",
+                    log_error_q("The product-queue \"%s\" is inconsistent\n",
                             pqfname);
                 }
                 else {
-                    log_error("pq_open failed: %s: %s\n",
+                    log_error_q("pq_open failed: %s: %s\n",
                             pqfname, strerror(status));
                 }
                 exit(EXIT_FAILURE);
@@ -570,7 +570,7 @@ main(int ac, char *av[])
             status = stateRead(&insertTime);
 
             if (status) {
-                log_warning("Couldn't get insertion-time of last-processed "
+                log_warning_q("Couldn't get insertion-time of last-processed "
                         "data-product from previous session");
             }
             else {
@@ -578,14 +578,14 @@ main(int ac, char *av[])
                 (void)set_timestamp(&now);
 
                 if (tvCmp(now, insertTime, <)) {
-                    log_warning("Time of last-processed data-product from previous "
+                    log_warning_q("Time of last-processed data-product from previous "
                             "session is in the future");
                 }
                 else {
                     char buf[80];
                     (void)strftime(buf, sizeof(buf), "%Y-%m-%d %T",
                         gmtime(&insertTime.tv_sec));
-                    log_notice("Starting from insertion-time %s.%06lu UTC", buf,
+                    log_notice_q("Starting from insertion-time %s.%06lu UTC", buf,
                         (unsigned long)insertTime.tv_usec);
 
                     pq_cset(pq, &insertTime);
@@ -594,7 +594,7 @@ main(int ac, char *av[])
             }
 
             if (startAtTailEnd) {
-                log_notice("Starting at tail-end of product-queue");
+                log_notice_q("Starting at tail-end of product-queue");
                 (void)pq_last(pq, &clss, NULL);
             }
         }
@@ -602,7 +602,7 @@ main(int ac, char *av[])
         if(log_is_enabled_info)
         {
                 char buf[1984];
-                log_info("%s", s_prod_class(buf, sizeof(buf), &clss));
+                log_info_q("%s", s_prod_class(buf, sizeof(buf), &clss));
         }
 
         /*
@@ -613,7 +613,7 @@ main(int ac, char *av[])
                 /* change to data directory */
                 if (chdir(datadir) == -1)
                 {
-                        log_syserr("cannot chdir to %s", datadir);
+                        log_syserr_q("cannot chdir to %s", datadir);
                         exit(4);
                         /*NOTREACHED*/
                 }
@@ -632,7 +632,7 @@ main(int ac, char *av[])
          */
         for (;;) {
             if (hupped) {
-                log_notice("Rereading configuration file %s", conffilename);
+                log_notice_q("Rereading configuration file %s", conffilename);
                 (void) readPatFile(conffilename);
                 hupped = 0;
             }
@@ -649,7 +649,7 @@ main(int ac, char *av[])
                  * Product-queue error. No data-product was processed.
                  */
                 if (status == PQUEUE_END) {
-                    log_debug("End of Queue");
+                    log_debug_1("End of Queue");
 
                     if (interval == 0)
                         break;
@@ -660,7 +660,7 @@ main(int ac, char *av[])
                     fl_sync(FALSE);
                 }
                 else if (status == EAGAIN || status == EACCES) {
-                    log_debug("Hit a lock");
+                    log_debug_1("Hit a lock");
                     /*
                      * Close the least recently used file descriptor.
                      */
@@ -671,14 +671,14 @@ main(int ac, char *av[])
                     || status == EDEADLOCK
 #endif
                 ) {
-                    log_syserr(NULL);
+                    log_syserr_q(NULL);
                     /*
                      * Close the least recently used file descriptor.
                      */
                     fl_closeLru(FL_NOTRANSIENT);
                 }
                 else {
-                    log_error("pq_next() failure: %s (errno = %d)",
+                    log_error_q("pq_next() failure: %s (errno = %d)",
                         strerror(status), status);
                     exit(EXIT_FAILURE);
                     /*NOTREACHED*/

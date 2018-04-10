@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file:   mcast.h
+ * @file:   fmtp.h
  * @author: Steven R. Emmerson
  *
  * This file declares the C API for the Virtual Circuit Multicast Transport
@@ -22,13 +22,13 @@
     extern "C" {
 #endif
 
-typedef uint32_t                 FmtpProdIndex;
-#define xdr_McastFileId          xdr_u_long
-typedef struct mcast_receiver    McastReceiver;
-typedef struct mcast_sender      McastSender;
+typedef uint32_t                FmtpProdIndex;
+#define xdr_McastFileId         xdr_u_long
+typedef struct fmtp_receiver    FmtpReceiver;
+typedef struct fmtp_sender      FmtpSender;
 
-int mcastReceiver_new(
-    McastReceiver**       receiver,
+int fmtpReceiver_new(
+    FmtpReceiver**        receiver,
     const char* const     tcpAddr,
     unsigned short        tcpPort,
     void*                 notifier,
@@ -36,20 +36,20 @@ int mcastReceiver_new(
     const unsigned short  mcastPort,
     const char* const     iface);
 
-void mcastReceiver_free(
-    McastReceiver*              receiver);
+void fmtpReceiver_free(
+    FmtpReceiver*              receiver);
 
-int mcastReceiver_execute(
-    const McastReceiver*        receiver);
+int fmtpReceiver_execute(
+    const FmtpReceiver*        receiver);
 
-void mcastReceiver_stop(
-    McastReceiver* const        receiver);
+void fmtpReceiver_stop(
+    FmtpReceiver* const        receiver);
 
 /**
  * Creates an active multicast sender. Doesn't block.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
- *                              `mcastSender_terminate(*sender)` when it's no
+ *                              `fmtpSender_terminate(*sender)` when it's no
  *                              longer needed.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
  *                              which the TCP server will listen for connections
@@ -90,8 +90,8 @@ void mcastReceiver_stop(
  * @retval        3             System error. `log_add()` called.
  */
 int
-mcastSender_create(
-    McastSender** const    sender,
+fmtpSender_create(
+    FmtpSender** const     sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
     const char* const      groupAddr,
@@ -109,8 +109,8 @@ mcastSender_create(
  * @return             The product-index of the next product to be sent.
  */
 FmtpProdIndex
-mcastSender_getNextProdIndex(
-    McastSender* const    sender);
+fmtpSender_getNextProdIndex(
+    FmtpSender* const    sender);
 
 /**
  * Sends a product.
@@ -123,8 +123,8 @@ mcastSender_getNextProdIndex(
  * @retval     EIO     Failure. `log_add()` called.
  */
 int
-mcastSender_send(
-    McastSender* const    sender,
+fmtpSender_send(
+    FmtpSender* const    sender,
     const void* const     data,
     const size_t          nbytes,
     const void* const     metadata,
@@ -140,8 +140,8 @@ mcastSender_send(
  * @retval    3       System error. `log_add()` called.
  */
 int
-mcastSender_terminate(
-    McastSender* const sender);
+fmtpSender_terminate(
+    FmtpSender* const sender);
 
 #ifdef __cplusplus
 }

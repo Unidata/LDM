@@ -14,8 +14,8 @@
 #ifndef PER_PROD_NOTIFIER_H_
 #define PER_PROD_NOTIFIER_H_
 
+#include "fmtp.h"
 #include "mldm_receiver.h"
-#include "mcast.h"
 #include "pq.h"
 
 #include <sys/types.h>

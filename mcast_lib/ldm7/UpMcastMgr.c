@@ -18,10 +18,10 @@
 
 #include "AuthClient.h"
 #include "CidrAddr.h"
+#include "fmtp.h"
 #include "globals.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mcast_info.h"
 #include "MldmRpc.h"
 #include "mldm_sender_map.h"
@@ -127,7 +127,7 @@ mldm_getServerPorts(const int pipe)
             status = LDM7_LOGIC;
         }
         else {
-            log_debug("Port numbers read from pipe");
+            log_debug_1("Port numbers read from pipe");
             status = LDM7_OK;
         }
     }
@@ -144,7 +144,7 @@ mldm_getServerPorts(const int pipe)
             status = LDM7_LOGIC;
         }
         else {
-            log_debug("Port numbers read from pipe");
+            log_debug_1("Port numbers read from pipe");
             status = LDM7_OK;
         }
     }
@@ -193,20 +193,23 @@ mldm_exec(
 
     args[i++] = "mldm_sender";
 
-    char feedtypeBuf[256];
-    if (info->feed != EXP) {
-        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
-        args[i++] = "-f";
-        args[i++] = feedtypeBuf; // multicast group identifier
-    }
-
     char* arg = (char*)log_get_destination(); // safe cast
     if (arg != NULL) {
         args[i++] = "-l";
         args[i++] = arg;
     }
 
-    int logOptions = log_get_options();
+    if (log_is_enabled_info)
+        args[i++] = "-v";
+    if (log_is_enabled_debug)
+        args[i++] = "-x";
+
+    char feedtypeBuf[256];
+    if (info->feed != EXP) {
+        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
+        args[i++] = "-f";
+        args[i++] = feedtypeBuf; // multicast group identifier
+    }
 
     char serverPortOptArg[6];
     if (info->server.port != 0) {
@@ -256,11 +259,6 @@ mldm_exec(
         args[i++] = ttlOptArg;
     }
 
-    if (log_is_enabled_info)
-        args[i++] = "-v";
-    if (log_is_enabled_debug)
-        args[i++] = "-x";
-
     char* mcastGroupOperand = ldm_format(128, "%s:%hu", info->group.inetId,
             info->group.port);
     if (mcastGroupOperand == NULL) {
@@ -285,7 +283,7 @@ mldm_exec(
     }
 
     StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    log_notice("Executing multicast LDM sender: %s", sbString(command));
+    log_notice_q("Executing multicast LDM sender: %s", sbString(command));
     sbFree(command);
 
     execvp(args[0], args);
@@ -333,12 +331,12 @@ mldm_terminateSenderAndWait()
             }
             else {
                 if (WIFEXITED(procStatus)) {
-                    log_notice("Multicast LDM sender process %d terminated "
+                    log_notice_q("Multicast LDM sender process %d terminated "
                             "normally with status %d", childPid,
                             WEXITSTATUS(procStatus));
                 }
                 else if (WIFSIGNALED(procStatus)) {
-                    log_notice("Multicast LDM sender process %d terminated "
+                    log_notice_q("Multicast LDM sender process %d terminated "
                             "abnormally due to signal %d", childPid,
                             WTERMSIG(procStatus));
                 }
@@ -488,7 +486,7 @@ mldm_ensureRunning(
             if (childPid) {
                 status = kill(childPid, 0);
                 if (status) {
-                    log_warning("Multicast LDM sender process %d should exist "
+                    log_warning_q("Multicast LDM sender process %d should exist "
                             " but doesn't. Re-executing...");
                     childPid = 0;
                 }

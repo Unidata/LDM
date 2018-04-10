@@ -103,7 +103,7 @@ int i;
 
 if(len*2 < 21) 
    {
-   log_error("mode 2 submode 2 short %d\0",len);
+   log_error_q("mode 2 submode 2 short %d\0",len);
    return;
    }
 memcpy(cpilid,buf+11,9);
@@ -161,7 +161,7 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    {
    get_block(buf+start,&FF,&blen,&mode,&submode); 
 
-   log_debug("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
+   log_debug_1("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
 
    if ( ( FF != 1 ) || ( blen <= 0 ) || ( nbytes < (start + blen*2) ) )
       {

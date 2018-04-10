@@ -12,9 +12,9 @@
 #ifndef MCAST_SESSION_MEMORY_H
 #define MCAST_SESSION_MEMORY_H
 
+#include "fmtp.h"
 #include "inetutil.h"
 #include "ldm.h"
-#include "mcast.h"
 
 #include <stdbool.h>
 

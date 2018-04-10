@@ -66,7 +66,7 @@ initTheXbuf(
 		if(theBuf == NULL)
 		{
 			const int status = errno == 0 ? ENOMEM : errno;
-			log_syserr("new_xbuf");
+			log_syserr_q("new_xbuf");
 			return status;
 		}
 	}
@@ -93,20 +93,20 @@ feedTheXbuf(const int ifd)
 
 	if (remaining <= CHUNKSIZE) {
 		if (theBuf->bufsiz >= maxProductSize) {
-			log_warning(
+			log_warning_q(
 			        "Data-product would exceed %lu bytes. Resetting input buffer.",
 				maxProductSize);
 			justify_xbuf(theBuf, 0);
 		}
 
-		log_info("Expanding input buffer size to %lu\n",
+		log_info_q("Expanding input buffer size to %lu\n",
 			(unsigned long)(2 * theBuf->bufsiz));
 
 		theBuf = expand_xbuf(theBuf, theBuf->bufsiz);
 
 		if (theBuf == NULL) {
 			status = errno == 0 ? ENOMEM : errno;
-			log_syserr("expand_xbuf");
+			log_syserr_q("expand_xbuf");
 			return status;
 		}
 	}
@@ -114,7 +114,7 @@ feedTheXbuf(const int ifd)
 	status = (*read_feed)(ifd, (char *)theBuf->put, CHUNKSIZE, &nn);
 	if(status != ENOERR)
 	{
-		log_errno(status, "read_feed");
+		log_errno_q(status, "read_feed");
 		return status;
 	}
 	/* else */

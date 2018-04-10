@@ -223,11 +223,11 @@ int main(int argc, char *argv[])
                 for (p = buf, endp = buf + sizeof(buf) - 2; *argv;) {
                         len = strlen(*argv);
                         if (p + len > endp && p > buf) {
-                                log_log(pri, "%s", buf);
+                                log_log_q(pri, "%s", buf);
                                 p = buf;
                         }
                         if (len > sizeof(buf) - 1)
-                                log_log(pri, "%s", *argv++);
+                                log_log_q(pri, "%s", *argv++);
                         else {
                                 if (p != buf)
                                         *p++ = ' ';
@@ -236,13 +236,13 @@ int main(int argc, char *argv[])
                         }
                 }
                 if (p != buf)
-                        log_log(pri, "%s", buf);
+                        log_log_q(pri, "%s", buf);
                 return(0);
         }
 
         /* main loop */
         while (fgets(buf, sizeof(buf), stdin) != NULL)
-                log_log(pri, "%s", buf);
+                log_log_q(pri, "%s", buf);
 
         return(0);
 }

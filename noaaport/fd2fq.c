@@ -86,7 +86,7 @@ static nbs_status_t fd2fq_transfer_frame(
     else {
         nbytes = read(fd2fq->fd, data, nbytes);
         if (nbytes < 0) {
-            log_syserr("Couldn't read from file-descriptor %d", fd2fq->fd);
+            log_syserr_q("Couldn't read from file-descriptor %d", fd2fq->fd);
             status = NBS_STATUS_SYSTEM;
         }
         else if (nbytes == 0) {

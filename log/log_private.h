@@ -14,6 +14,7 @@
 
 #include "config.h"
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/types.h>
@@ -46,7 +47,7 @@ typedef struct {
 } log_loc_t;
 
 /**
- * A log-message.  Such structures accumulate in a thread-specific message-list.
+ * A log-message.  Such structures accumulate in a thread-specific message-queue.
  */
 typedef struct message {
     struct message* next;       ///< Pointer to next message
@@ -136,30 +137,58 @@ const char* logl_basename(
         const char* const pathname);
 
 /**
- * Adds a variadic message to the current thread's list of messages. Emits and
- * then clears the list.
+ * Logs a single variadic message, bypassing the message-queue.
  *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
  * @param[in] format  Format of the message.
  * @param[in] args    Format arguments.
  */
-void logl_vlog(
+void logl_vlog_1(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
         va_list                 args);
 
 /**
- * Adds a message to the current thread's list of messages. Emits and then
- * clears the list.
+ * Logs a single message, bypassing the message-queue.
+ *
+ * @param[in] loc     Location where the message was generated.
+ * @param[in] level   Logging level.
+ * @param[in] format  Format of the message or NULL.
+ * @param[in] ...     Optional format arguments.
+ */
+void logl_log_1(
+        const log_loc_t* const loc,
+        const log_level_t      level,
+        const char* const      format,
+                               ...);
+
+/**
+ * Adds a variadic message to the current thread's queue of messages. Emits and
+ * then clears the queue.
+ *
+ * @param[in] loc     Location where the message was generated.
+ * @param[in] level   Logging level.
+ * @param[in] format  Format of the message.
+ * @param[in] args    Format arguments.
+ */
+void logl_vlog_q(
+        const log_loc_t* const  loc,
+        const log_level_t       level,
+        const char* const       format,
+        va_list                 args);
+
+/**
+ * Adds a message to the current thread's queue of messages. Emits and then
+ * clears the queue.
  *
  * @param[in] loc     Location where the message was generated.
  * @param[in] level   Logging level.
  * @param[in] format  Format of the message or NULL.
  * @param[in] ...     Optional Format arguments.
  */
-void logl_log(
+void logl_log_q(
         const log_loc_t* const loc,
         const log_level_t      level,
         const char* const      format,
@@ -167,7 +196,7 @@ void logl_log(
 
 /**
  * Adds a system error message and an optional user's message to the current
- * thread's message-list, emits the list, and then clears the list.
+ * thread's message-queue, emits the queue, and then clears the queue.
  *
  * @param[in] loc     The location where the error occurred. `loc->file` must
  *                    persist.
@@ -175,7 +204,7 @@ void logl_log(
  * @param[in] fmt     Format of the user's message or NULL.
  * @param[in] ...     Optional format arguments.
  */
-void logl_errno(
+void logl_errno_q(
         const log_loc_t* const loc,
         const int              errnum,
         const char* const      fmt,
@@ -183,7 +212,7 @@ void logl_errno(
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets
- * the message-list for the current thread.
+ * the message-queue for the current thread.
  *
  * @param[in] loc    Location.
  * @param[in] level  The level at which to log the messages. One of
@@ -196,7 +225,7 @@ void logl_flush(
         const log_level_t      level);
 
 /**
- * Adds a variadic log-message to the message-list for the current thread.
+ * Adds a variadic log-message to the message-queue for the current thread.
  *
  * @param[in] loc       Location where the message was created. `loc->file` must
  *                      persist.
@@ -327,7 +356,7 @@ void* logl_realloc(
     }\
     else {\
         LOG_LOC_DECL(loc);\
-        logl_log(&loc, level, __VA_ARGS__);\
+        logl_log_q(&loc, level, __VA_ARGS__);\
     }\
 } while (0)
 

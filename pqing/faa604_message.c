@@ -29,10 +29,10 @@ static unsigned long not_faa604 = 0;
 void
 faa604_stats(void)
 {
-	log_notice("  FAA Messages seen:  %8lu", completed);
-	log_notice("  SOH/ETX missing  :  %8lu", sohetx_missed);
-	log_notice("  parity errors    :  %8lu", parity_errs);
-	log_notice("  format errors    :  %8lu", not_faa604);
+	log_notice_q("  FAA Messages seen:  %8lu", completed);
+	log_notice_q("  SOH/ETX missing  :  %8lu", sohetx_missed);
+	log_notice_q("  parity errors    :  %8lu", parity_errs);
+	log_notice_q("  format errors    :  %8lu", not_faa604);
 }
 
 static const char *
@@ -161,21 +161,21 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 	/* DEBUG */
 	if(mess->msg == NULL || mess->msg[0] != SOH)
 	{
-		log_debug("new_faa604_message: Missing SOH");
+		log_debug_1("new_faa604_message: Missing SOH");
 	}
 	else if(mess->len < MIN_FAA604_MSG_LEN)
 	{
-		log_debug("new_faa604_message: length %d too short", mess->len);
+		log_debug_1("new_faa604_message: length %d too short", mess->len);
 	}
 	else if(mess->msg[mess->len-1] != ETX )
 	{
-		log_debug("new_faa604_message: Missing ETX");
+		log_debug_1("new_faa604_message: Missing ETX");
 	}
 
 	if( get_wnum(clone, &mess->seqno, 3) == EOB || mess->seqno < 1)
 	{
 		not_faa604++;
-		log_error("Invalid sequence number  - %s",
+		log_error_q("Invalid sequence number  - %s",
 			faa604_err_ident(buf));
 		return -1;
 	}
@@ -189,7 +189,7 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 		if(!(isascii(ch) && isdigit(ch)))
 		{
 			not_faa604++;
-			log_error("Invalid catalogue number - %s",
+			log_error_q("Invalid catalogue number - %s",
 				faa604_err_ident(buf));
 			return -1;
 		}
@@ -200,7 +200,7 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 	if(ch != STX)
 	{
 		not_faa604++;
-		log_error("Missing header STX       - %s",
+		log_error_q("Missing header STX       - %s",
 			faa604_err_ident(buf));
 		return -1;
 	}
@@ -212,7 +212,7 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 	if(!(isascii(ch) && isdigit(ch)))
 	{
 		not_faa604++;
-		log_error("Invalid date             - %s",
+		log_error_q("Invalid date             - %s",
 			faa604_err_ident(buf));
 		return -1;
 	}
@@ -225,7 +225,7 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 		if(!(isascii(ch) && isdigit(ch)))
 		{
 			not_faa604++;
-			log_error("Invalid date/time        - %s",
+			log_error_q("Invalid date/time        - %s",
 				faa604_err_ident(buf));
 			return -1;
 		}
@@ -301,17 +301,17 @@ scan_faa604_parity (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug("Resync skipped %05ld bytes",
+				log_debug_1("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 			case HEADER_SEEN:
 				sohetx_missed++;
-				log_error("Lone SOH error           - %s",
+				log_error_q("Lone SOH error           - %s",
 					faa604_err_ident(buf));
 				break;
 			case PARITY_PIP:
 				parity_errs++;
-				log_error("Parity error             - %s",
+				log_error_q("Parity error             - %s",
 					faa604_err_ident(buf));
 				break;
 			}
@@ -325,7 +325,7 @@ scan_faa604_parity (xbuf * buf)
 			case SEARCH:
 #endif
 				sohetx_missed++;
-				log_error("Lone ETX error           - %s",
+				log_error_q("Lone ETX error           - %s",
 					faa604_err_ident(buf));
 				break;
 			case HEADER_SEEN:
@@ -339,7 +339,7 @@ scan_faa604_parity (xbuf * buf)
 				else
 				{
 					not_faa604++;
-					log_error("scan_faa604 - length %ld too short",
+					log_error_q("scan_faa604 - length %ld too short",
 						plen);
 				}
 				justify_xbuf (buf, 0);
@@ -348,7 +348,7 @@ scan_faa604_parity (xbuf * buf)
 				break;
 			case PARITY_PIP:
 				parity_errs++;
-				log_error("Parity error             - %s",
+				log_error_q("Parity error             - %s",
 					faa604_err_ident(buf));
 				break;
 			}
@@ -394,12 +394,12 @@ scan_faa604 (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug("Resync skipped %05ld bytes",
+				log_debug_1("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 			case HEADER_SEEN:
 				sohetx_missed++;
-				log_error("Lone SOH error           - %s",
+				log_error_q("Lone SOH error           - %s",
 					faa604_err_ident(buf));
 				break;
 			}
@@ -413,7 +413,7 @@ scan_faa604 (xbuf * buf)
 			case SEARCH:
 #endif
 				sohetx_missed++;
-				log_error("Lone ETX error           - %s",
+				log_error_q("Lone ETX error           - %s",
 					faa604_err_ident(buf));
 				break;
 			case HEADER_SEEN:
@@ -427,7 +427,7 @@ scan_faa604 (xbuf * buf)
 				else
 				{
 					not_faa604++;
-					log_error("scan_faa604 - length %ld too short",
+					log_error_q("scan_faa604 - length %ld too short",
 						plen);
 				}
 				justify_xbuf (buf, 0);

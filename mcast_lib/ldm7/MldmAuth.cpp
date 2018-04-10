@@ -192,12 +192,12 @@ public:
             }
             catch (const std::exception& ex) {
                 log_add(ex.what());
-                log_notice("Couldn't read authorization request from "
+                log_notice_q("Couldn't read authorization request from "
                         "socket %s. Ignoring request.");
                 continue;
             }
             if (clntSecret != secret) {
-                log_notice("Invalid secret read from socket %s. "
+                log_notice_q("Invalid secret read from socket %s. "
                         "Ignoring authorization request.",
                         connSock.to_string().c_str());
             }
@@ -210,8 +210,8 @@ public:
                         connSock.write(&ldm7Status, sizeof(ldm7Status));
                     }
                     catch (const std::exception& ex) {
-                        log_notice(ex.what());
-                        log_notice("Couldn't reply to authorization request "
+                        log_notice_q(ex.what());
+                        log_notice_q("Couldn't reply to authorization request "
                                 " on socket %s", connSock.to_string().c_str());
                     }
                 }

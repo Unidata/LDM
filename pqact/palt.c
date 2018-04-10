@@ -169,7 +169,7 @@ again1:
 
         cp = &buf[len-1];
         if(*cp != '\n' && !feof(fp)) {
-                log_error("Entry too long at line %d", linenumber);
+                log_error_q("Entry too long at line %d", linenumber);
                 return -2;
         }
         /* get rid of trailing white space */
@@ -205,7 +205,7 @@ again2:
                         ungetc(ch, fp);
                         if(len >= bufsize)
                         {
-                                log_error("Entry too long to continue at line %d", linenumber);
+                                log_error_q("Entry too long to continue at line %d", linenumber);
                                 return -2;
                         }
                         /* else */
@@ -325,14 +325,14 @@ new_palt_fromStr(char *buf)
 
         if(ntabtoks < 3 )
         {
-                log_error("Syntax error at line %d, not enough fields", linenumber);
+                log_error_q("Syntax error at line %d, not enough fields", linenumber);
                 goto err;
         }
 
         status = strfeedtypet(tabtoks[0], &pal->feedtype);
         if(status != FEEDTYPE_OK)
         {
-                log_error("feedtype error at line %d: %s: \"%s\"",
+                log_error_q("feedtype error at line %d: %s: \"%s\"",
                         linenumber, strfeederr(status), tabtoks[0]);
                 goto err;
         }
@@ -340,13 +340,13 @@ new_palt_fromStr(char *buf)
         log_assert(tabtoks[1] != NULL && *tabtoks[1] != 0);
         if(strlen(tabtoks[1]) >= (size_t)PATSZ)
         {
-                log_error("Pattern string too long at line %d: \"%s\"",
+                log_error_q("Pattern string too long at line %d: \"%s\"",
                         linenumber, tabtoks[1]);
                 goto err;
         }
         if (re_isPathological(tabtoks[1]))
         {
-                log_warning("Adjusting pathological regular-expression at line "
+                log_warning_q("Adjusting pathological regular-expression at line "
                     "%d: \"%s\"", linenumber, tabtoks[1]);
                 re_vetSpec(tabtoks[1]);
         }
@@ -356,21 +356,21 @@ new_palt_fromStr(char *buf)
 
         if( regcomp(&pal->prog, pal->pattern, REG_EXTENDED) != 0)
         {
-                log_error("regcomp error at line %d: \"%s\"", linenumber, tabtoks[1]);
+                log_error_q("regcomp error at line %d: \"%s\"", linenumber, tabtoks[1]);
                 goto err;
         }
         pal->pmatchp = Alloc(pal->prog.re_nsub + 1, regmatch_t);
         if(pal->pmatchp == NULL)
         {
                 regfree(&pal->prog);
-                log_syserr("malloc failed");
+                log_syserr_q("malloc failed");
                 goto err;
         }
 
         if(atoaction(tabtoks[2], &pal->action) < 0)
         {
                 /* duplicate reporting */
-                log_error("Unknown action \"%s\" at line %d", tabtoks[2], linenumber);
+                log_error_q("Unknown action \"%s\" at line %d", tabtoks[2], linenumber);
                 goto err;
         }
 
@@ -382,7 +382,7 @@ new_palt_fromStr(char *buf)
                 pal->private = malloc(len+1);
                 if(pal->private == NULL)
                 {
-                        log_syserr("malloc failed");
+                        log_syserr_q("malloc failed");
                         goto err;
                 }
                 (void) strcpy(pal->private, tabtoks[3]);
@@ -416,7 +416,7 @@ readPatFile(const char *path)
     FILE        *fp = fopen(path, "r");
 
     if (fp == NULL) {
-        log_syserr("Couldn't open configuration-file \"%s\"", path);
+        log_syserr_q("Couldn't open configuration-file \"%s\"", path);
         status = -1;
     }
     else {
@@ -457,7 +457,7 @@ readPatFile(const char *path)
         }
 
         if (status < 0) {
-            log_error("Error in configuration-file \"%s\"", path);
+            log_error_q("Error in configuration-file \"%s\"", path);
 
             /*
              * Free new list.
@@ -480,7 +480,7 @@ readPatFile(const char *path)
 
             pal = paList = begin;
 
-            log_info("Successfully read configuration-file \"%s\"", path);
+            log_info_q("Successfully read configuration-file \"%s\"", path);
         }
 
         (void)fclose(fp);
@@ -506,7 +506,7 @@ gm_strftime(char *str, size_t maxsize, char *format, time_t arrival)
     struct tm atm;
 
     if (gmtime_r(&arrival, &atm) == NULL) {
-        log_debug("gmtime_r() returns NULL");
+        log_debug_1("gmtime_r() returns NULL");
         /* you should never really execute this */
         strncpy(str, format, maxsize-1);
         return strlen(str);
@@ -542,7 +542,7 @@ utcToEpochTime(
     epochTime = timegm(&localTime);
 
     if (epochTime == (time_t)-1)
-        log_syserr("timegm() failure");
+        log_syserr_q("timegm() failure");
 
 #else
     /*
@@ -562,7 +562,7 @@ utcToEpochTime(
     epochTime = mktime(&localTime);
 
     if (epochTime == (time_t)-1)
-        log_syserr("mktime() failure");
+        log_syserr_q("mktime() failure");
 
 #endif
 
@@ -600,7 +600,7 @@ seq_sub(
            static char     seq_exp[] = "\\(seq\\)";
 
            if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
-              log_syserr("Bad regular expression or out of memory: %s", seq_exp);
+              log_syserr_q("Bad regular expression or out of memory: %s", seq_exp);
            seqfirst = 0;
         }
 
@@ -680,7 +680,7 @@ date_sub(
         static char     date_exp[] = "\\(([0-9]{2}):([^)]*)\\)";
 
         if (regcomp(&prog, date_exp, REG_EXTENDED) != 0)
-            log_syserr("Bad regular expression or out of memory: %s", date_exp);
+            log_syserr_q("Bad regular expression or out of memory: %s", date_exp);
 
         first = 0;
     }
@@ -689,7 +689,7 @@ date_sub(
      * Convert time argument to broken-down times.
      */
     if (gmtime_r(&prodClock, &utcProdTime) == NULL)
-        log_error("gmtime_r() returns NULL");
+        log_error_q("gmtime_r() returns NULL");
 
     tdom = utcProdTime.tm_mday;         /* UTC-based day-of-month */
 
@@ -732,7 +732,7 @@ date_sub(
          * Validate day-of-month from substring.
          */
         if (dom < 0 || dom > 31) {
-            log_error("bad day of month in ident: %s",istring);
+            log_error_q("bad day of month in ident: %s",istring);
             dom = -1;
         }
 
@@ -805,7 +805,7 @@ date_sub(
                                         ? prodMonthClock
                                         : prevMonthClock;
                             if (gmtime_r(&adjClock, &adjProdTime) == NULL)
-                                log_error("gmtime_r() failure");
+                                log_error_q("gmtime_r() failure");
                         }               /* valid "nextMonthClock" */
                     }                   /* valid "prevMonthClock" */
                 }                       /* valid "prodMonthClock" */
@@ -848,7 +848,7 @@ date_sub(
                 ostring += 2;
             }
             else {
-                log_error("unknown date indicator: %s",select);
+                log_error_q("unknown date indicator: %s",select);
             }
         }                               /* good date indicator */
     }                                   /* date substitution loop */
@@ -1096,7 +1096,7 @@ static void
 regsub(const palt* const pal, const char *ident, char *dest, size_t size)
 {
     if (size == 0) {
-        log_error("Zero-length output buffer");
+        log_error_q("Zero-length output buffer");
     }
     else {
         register const char *src = pal->private;
@@ -1120,7 +1120,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
 
                                 if (sscanf(src+1, "%d%n)", &i, &nbytes) != 1 ||
                                         i < 0 || src[1+nbytes] != ')') {
-                                    log_error("Invalid parenthetical backreference: \"%s\"",
+                                    log_error_q("Invalid parenthetical backreference: \"%s\"",
                                             src);
                                     break;
                                 }
@@ -1151,7 +1151,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
                         dst += len;
                         if (len != 0 && *(dst-1) == '\0') {
                                 /* strncpy hit NUL. */
-                                log_error("Invalid match string: \"%s\"",
+                                log_error_q("Invalid match string: \"%s\"",
                                         &ident[pal->pmatchp[no].rm_so]);
                                 return;
                         }
@@ -1161,7 +1161,7 @@ regsub(const palt* const pal, const char *ident, char *dest, size_t size)
             *dst++ = '\0';
         }
         else {
-            log_error("Output buffer too small: \"%.*s\"", (int)size, dest);
+            log_error_q("Output buffer too small: \"%.*s\"", (int)size, dest);
             dest[size-1] = 0;
         }
     }
@@ -1184,7 +1184,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         argc = 0;
         status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
         if (status)
-            log_error("Couldn't process product: "
+            log_error_q("Couldn't process product: "
                     "feedtype=%s, pattern=\"%s\", action=%s",
                     s_feedtypet(prod->info.feedtype), pal->pattern,
                     pal->action.name);
@@ -1218,7 +1218,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        log_info("               %s: %s and the ident is %s",
+        log_info_q("               %s: %s and the ident is %s",
                 s_actiont(&pal->action), INBUF, prod->info.ident);
 
         argc = tokenize(INBUF, argv, ARRAYLEN(argv));
@@ -1228,14 +1228,14 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
             argv[argc] = NULL;
             status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
             if (status)
-                log_error("Couldn't process product: "
+                log_error_q("Couldn't process product: "
                         "feedtype=%s, pattern=\"%s\", action=%s, "
                         "args=\"%s\"", s_feedtypet(prod->info.feedtype),
                         pal->pattern, pal->action.name, pal->private);
         }
         else
         {
-            log_error("Too many arguments: \"%s\"", INBUF);
+            log_error_q("Too many arguments: \"%s\"", INBUF);
             status = -1;
         }
     }
@@ -1273,7 +1273,7 @@ processProduct(
         bool            errorOccurred = false;
         product         prod;
 
-        log_info("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
+        log_info_q("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
 
         for(pal = paList; pal != NULL; pal = next)
         {
@@ -1334,7 +1334,7 @@ processProduct(
     bool                   didMatch = false;
     bool                   errorOccurred = false;
 
-    log_info("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
+    log_info_q("%s", s_prod_info(NULL, 0, infop, log_is_enabled_debug));
 
     for (palt* pal = paList; pal != NULL; pal = next) {
         next = pal->next;
@@ -1366,7 +1366,7 @@ processProduct(
         char        buf[LDM_INFO_MAX];
         timestampt  now;
         (void)set_timestamp(&now);
-        log_warning("Processed oldest product in full queue: age=%g s, prod=%s",
+        log_warning_q("Processed oldest product in full queue: age=%g s, prod=%s",
             d_diff_timestamp(&now, &queue_par->inserted),
             s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
     }

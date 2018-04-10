@@ -88,7 +88,7 @@ smo_open(
         status = LDM7_SYSTEM;
     }
     else {
-        log_info("Shared memory object \"%s\" already exists");
+        log_info_q("Shared memory object \"%s\" already exists");
         myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
 
         if (-1 < myFd) {
@@ -215,7 +215,7 @@ msm_setSmoPathname(void)
 Ldm7Status
 msm_init(void)
 {
-    log_debug("Entered");
+    log_debug_1("Entered");
     int status;
     if (smo_pathname) {
         log_add("Multicast sender map is already initialized");
@@ -248,7 +248,7 @@ msm_init(void)
         } // `smo_pathname` set
     } // module not initialized
 
-    log_debug("Returning");
+    log_debug_1("Returning");
     return status;
 }
 
@@ -426,11 +426,11 @@ msm_clear(void)
 void
 msm_destroy(void)
 {
-    log_debug("Entered");
+    log_debug_1("Entered");
     if (smo_pathname) {
         smo_close(fileDes, smo_pathname);
         free(smo_pathname);
         smo_pathname = NULL;
     }
-    log_debug("Returning");
+    log_debug_1("Returning");
 }

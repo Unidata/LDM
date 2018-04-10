@@ -122,9 +122,9 @@ local_portmapper_running()
                     PMAPVERS, &socket, 50, 500)) == NULL) {
                 status = 0;
 
-                log_notice("clnttcp_create() failure: %s",
+                log_notice_q("clnttcp_create() failure: %s",
                         clnt_spcreateerror(""));
-                log_info("Portmapper daemon is not running on local host");
+                log_info_q("Portmapper daemon is not running on local host");
             }
             else {
                 status = 1;

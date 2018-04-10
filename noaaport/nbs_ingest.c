@@ -132,7 +132,7 @@ static void print_usage(void)
 {
     log_level_t level = log_get_level();
     (void)log_set_level(LOG_LEVEL_INFO);
-    log_info(
+    log_info_q(
 "Usage: %s [options] mcast_ip_addr\n"
 "Options:\n"
 "    -l dest        Log to <dest>. One of: \"\" (system logging daemon),\n"
@@ -242,7 +242,7 @@ static void signal_handler(
             (void)close(sock); // Closes input
             break;
         default:
-            log_error("Unhandled signal: %d", sig);
+            log_error_q("Unhandled signal: %d", sig);
     }
 }
 
@@ -361,7 +361,7 @@ static bool init(void)
 {
     int status = mutex_init(&mutex, false, true);
     if (status) {
-        log_errno(status, "Couldn't initialize mutex");
+        log_errno_q(status, "Couldn't initialize mutex");
     }
     else {
         status = open_pq(&pq, getQueuePath());
@@ -477,19 +477,19 @@ int main(
     // Done first in case something happens that needs to be reported.
     progname = basename(av[0]);
     (void)log_init(progname);
-    log_notice("Starting up");
+    log_notice_q("Starting up");
 
     int status = EXIT_FAILURE;
     if (!decode_command_line(ac, av)) {
-        log_error("Couldn't decode command-line");
+        log_error_q("Couldn't decode command-line");
         print_usage();
     }
     else if (!init()) {
-        log_error("Couldn't initialize program");
+        log_error_q("Couldn't initialize program");
     }
     else {
         if (!execute()) {
-            log_error("Couldn't execute program");
+            log_error_q("Couldn't execute program");
         }
         else {
             print_stats();
@@ -498,7 +498,7 @@ int main(
         fini();
     }
 
-    log_notice("Exiting");
+    log_notice_q("Exiting");
     log_fini();
     return status;
 }

@@ -3,9 +3,9 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * This file defines the C API to the multicasting layer.
+ * This file defines the C API to the FMTP layer.
  *
- *   @file: mcast.cpp
+ *   @file: fmtp.cpp
  * @author: Steven R. Emmerson
  */
 
@@ -14,7 +14,7 @@
 #include "log.h"
 #include "fmtpRecvv3.h"
 #include "fmtpSendv3.h"
-#include "mcast.h"
+#include "fmtp.h"
 #include "PerProdSendingNotifier.h"
 
 #include <errno.h>
@@ -40,11 +40,11 @@ void log_what(const std::exception& e)
 
 
 /**
- * The multicast receiver:
+ * The FMTP receiver:
  */
-struct mcast_receiver {
+struct fmtp_receiver {
     /**
-     * The multicast-layer receiver.
+     * The FMTP-layer receiver.
      */
     fmtpRecvv3*      fmtpReceiver;
     /**
@@ -54,7 +54,7 @@ struct mcast_receiver {
 };
 
 /**
- * Initializes a multicast receiver.
+ * Initializes an FMTP receiver.
  *
  * @param[out] receiver               The receiver to initialize.
  * @param[in]  hostId                 Address of the TCP server from which to
@@ -63,7 +63,7 @@ struct mcast_receiver {
  * @param[in]  tcpPort                Port number of the TCP server to which to
  *                                    connect.
  * @param[in]  notifier               Receiving application notifier. Freed by
- *                                    `mcastReceiver_free()`.
+ *                                    `fmtpReceiver_free()`.
  * @param[in]  mcastAddr              Address of the multicast group to receive.
  *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
@@ -83,12 +83,11 @@ struct mcast_receiver {
  *                                    Internet address.
  * @throws     std::runtime_error     if the multicast group couldn't be
  *                                    added to the socket.
- * @throws     std::exception         If the multicast receiver can't be
- *                                    initialized.
+ * @throws     std::exception         If the FMTP receiver can't be initialized.
  */
 static void
-mcastReceiver_init(
-    McastReceiver* const        receiver,
+fmtpReceiver_init(
+    FmtpReceiver* const        receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
     RecvProxy* const            notifier,
@@ -99,15 +98,15 @@ mcastReceiver_init(
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
-    log_debug("Creating FMTP receiver: sendHost=%s, sendPort=%hu, groupId=%s, "
-            "groupPort=%hu, iface=%s", tcpAddr, tcpPort, mcastAddr, mcastPort,
-            iface);
+    log_debug_1("Creating FMTP receiver: sendHost=%s, sendPort=%hu, "
+            "groupId=%s, groupPort=%hu, iface=%s", tcpAddr, tcpPort, mcastAddr,
+            mcastPort, iface);
     receiver->fmtpReceiver = new fmtpRecvv3(hostId, tcpPort, groupId,
             mcastPort, notifier, iface);
 }
 
 /**
- * Returns a new multicast receiver.
+ * Returns a new FMTP receiver.
  *
  * @param[out] receiver          Pointer to returned receiver.
  * @param[in]  tcpAddr           Address of the TCP server from which to
@@ -116,14 +115,14 @@ mcastReceiver_init(
  * @param[in]  tcpPort           Port number of the TCP server to which to
  *                               connect.
  * @param[in]  notifier          Receiving application notifier. Freed by
- *                               `mcastReceiver_free()`.
+ *                               `fmtpReceiver_free()`.
  * @param[in]  mcastAddr         Address of the multicast group to receive. May
  *                               be group name or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
  * @param[in]  iface             IPv4 address of interface for receiving
  *                               multicast and unicast  packets.
- * @retval     0                 Success. The client should call \c
- *                               mcastReceiver_free(*receiver) when the
+ * @retval     0                 Success. The client should call
+ *                               `fmtpReceiver_free(*receiver)` when the
  *                               receiver is no longer needed.
  * @retval     EINVAL            if @code{0==buf_func || 0==eof_func ||
  *                               0==missed_prod_func || 0==addr} or the
@@ -133,8 +132,8 @@ mcastReceiver_init(
  * @retval     -1                Other failure. \c log_add() called.
  */
 int
-mcastReceiver_new(
-    McastReceiver** const receiver,
+fmtpReceiver_new(
+    FmtpReceiver** const receiver,
     const char* const     tcpAddr,
     const unsigned short  tcpPort,
     void* const           notifier,
@@ -142,14 +141,14 @@ mcastReceiver_new(
     const unsigned short  mcastPort,
     const char* const     iface)
 {
-    McastReceiver* rcvr = (McastReceiver*)log_malloc(sizeof(McastReceiver),
-            "multicast receiver");
+    FmtpReceiver* rcvr = (FmtpReceiver*)log_malloc(sizeof(FmtpReceiver),
+            "FMTP receiver");
 
     if (0 == rcvr)
         return ENOMEM;
 
     try {
-        mcastReceiver_init(rcvr, tcpAddr, tcpPort, (RecvProxy*)notifier,
+        fmtpReceiver_init(rcvr, tcpAddr, tcpPort, (RecvProxy*)notifier,
                 mcastAddr, mcastPort, iface);
         *receiver = rcvr;
         return 0;
@@ -167,13 +166,13 @@ mcastReceiver_new(
 }
 
 /**
- * Frees the resources of a multicast receiver.
+ * Frees the resources of an FMTP receiver.
  *
- * @param[in,out] receiver      The multicast receiver.
+ * @param[in,out] receiver      The FMTP receiver.
  */
 void
-mcastReceiver_free(
-    McastReceiver* const       receiver)
+fmtpReceiver_free(
+    FmtpReceiver* const       receiver)
 {
     // FMTP call
     delete receiver->fmtpReceiver;
@@ -182,8 +181,8 @@ mcastReceiver_free(
 }
 
 /**
- * Executes a multicast receiver. Doesn't return until an error occurs or
- * `mcastReceiver_stop()` is called.
+ * Executes an FMTP receiver. Doesn't return until an error occurs or
+ * `fmtpReceiver_stop()` is called.
  *
  * @param[in,out] receiver      The receiver.
  * @retval        0             Success.
@@ -191,8 +190,8 @@ mcastReceiver_free(
  * @retval        -1            Other failure. \c log_add() called.
  */
 int
-mcastReceiver_execute(
-    const McastReceiver* const receiver)
+fmtpReceiver_execute(
+    const FmtpReceiver* const receiver)
 {
     int status;
 
@@ -215,23 +214,23 @@ mcastReceiver_execute(
 }
 
 /**
- * Stops a multicast receiver. Undefined behavior results if called from a
+ * Stops an FMTP receiver. Undefined behavior results if called from a
  * signal handler that was invoked by the delivery of a signal during execution
  * of an async-signal-unsafe function. Idempotent.
  *
- * @param[in] receiver  Pointer to the multicast receiver to be stopped.
+ * @param[in] receiver  Pointer to the FMTP receiver to be stopped.
  */
 void
-mcastReceiver_stop(
-    McastReceiver* const receiver)
+fmtpReceiver_stop(
+    FmtpReceiver* const receiver)
 {
     receiver->fmtpReceiver->Stop();
 }
 
 /**
- * The multicast sender:
+ * The FMTP sender:
  */
-struct mcast_sender {
+struct fmtp_sender {
     /**
      * The FMTP sender:
      */
@@ -244,8 +243,8 @@ struct mcast_sender {
 };
 
 /**
- * Initializes a new multicast sender. The sender isn't active until
- * `mcastSender_start()` is called.
+ * Initializes a new FMTP sender. The sender isn't active until
+ * `fmtpSender_start()` is called.
  *
  * @param[in]     sender        Pointer to sender to be initialized.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
@@ -286,8 +285,8 @@ struct mcast_sender {
  * @retval        3             System error. `log_add()` called.
  */
 static int
-mcastSender_init(
-    McastSender* const     sender,
+fmtpSender_init(
+    FmtpSender* const     sender,
     const char* const      serverAddr,
     const unsigned short   serverPort,
     const char* const      groupAddr,
@@ -340,11 +339,11 @@ mcastSender_init(
 }
 
 /**
- * Returns a new multicast sender. The sender isn't active until
- * `mcastSender_start()` is called.
+ * Returns a new FMTP sender. The sender isn't active until `fmtpSender_start()`
+ * is called.
  *
  * @param[out]    sender        Pointer to returned sender. Caller should call
- *                              `mcastSender_free(*sender)` when it's no longer
+ *                              `fmtpSender_free(*sender)` when it's no longer
  *                              needed.
  * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
  *                              which the TCP server will listen for connections
@@ -384,8 +383,8 @@ mcastSender_init(
  * @retval        3             System error. `log_add()` called.
  */
 static int
-mcastSender_new(
-    McastSender** const    sender,
+fmtpSender_new(
+    FmtpSender** const     sender,
     const char* const      serverAddr,
     const unsigned short   serverPort,
     const char* const      groupAddr,
@@ -397,20 +396,20 @@ mcastSender_new(
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer)
 {
-    McastSender* const send = (McastSender*)log_malloc(sizeof(McastSender),
-            "multicast sender");
+    FmtpSender* const send = (FmtpSender*)log_malloc(sizeof(FmtpSender),
+            "FMTP sender");
     int                status;
 
     if (send == NULL) {
         status = 3;
     }
     else {
-        status = mcastSender_init(send, serverAddr, serverPort, groupAddr,
+        status = fmtpSender_init(send, serverAddr, serverPort, groupAddr,
                 groupPort, ifaceAddr, ttl, iProd, retxTimeout, doneWithProd,
                 authorizer);
 
         if (status) {
-            log_add("Couldn't initialize multicast sender");
+            log_add("Couldn't initialize FMTP sender");
         }
         else {
             *sender = send;
@@ -421,24 +420,24 @@ mcastSender_new(
 }
 
 /**
- * Starts a multicast sender. Returns immediately.
+ * Starts an FMTP sender. Returns immediately.
  *
  * @param[in]  sender      The sender to be started.
- * @param[out] serverPort  Port number of the multicast TCP server in host
+ * @param[out] serverPort  Port number of the FMTP TCP server in host
  *                         byte-order.
- * @retval     0           Success. `mcastSender_stop()` was called.
+ * @retval     0           Success. `fmtpSender_stop()` was called.
  *                         `*serverPort` is set.
  * @retval     2           Non-system runtime error. `log_add()` called.
  * @retval     3           System error. `log_add()` called.
  */
 static int
-mcastSender_start(
-        McastSender* const    sender,
+fmtpSender_start(
+        FmtpSender* const     sender,
         unsigned short* const serverPort)
 {
     int status;
 
-    log_debug("Starting FMTP sender");
+    log_debug_1("Starting FMTP sender");
     try {
         sender->fmtpSender->Start(); // Doesn't block
 
@@ -469,7 +468,7 @@ mcastSender_start(
 }
 
 /**
- * Stops a multicast sender. Blocks until the sender has stopped.
+ * Stops an FMTP sender. Blocks until the sender has stopped.
  *
  * @param[in] sender  The sender to be stopped.
  * @retval    0       Success.
@@ -477,8 +476,8 @@ mcastSender_start(
  * @retval    3       System error. `log_add()` called.
  */
 static int
-mcastSender_stop(
-        McastSender* const sender)
+fmtpSender_stop(
+        FmtpSender* const sender)
 {
     int status;
 
@@ -499,13 +498,13 @@ mcastSender_stop(
 }
 
 /**
- * Frees a multicast sender's resources.
+ * Frees an FMTP sender's resources.
  *
- * @param[in] sender  The multicast sender whose resources are to be freed.
+ * @param[in] sender  The FMTP sender whose resources are to be freed.
  */
 static void
-mcastSender_free(
-    McastSender* const sender)
+fmtpSender_free(
+    FmtpSender* const sender)
 {
     delete sender->fmtpSender;
     delete sender->notifier;
@@ -513,8 +512,8 @@ mcastSender_free(
 }
 
 int
-mcastSender_create(
-    McastSender** const    sender,
+fmtpSender_create(
+    FmtpSender** const     sender,
     const char* const      serverAddr,
     unsigned short* const  serverPort,
     const char* const      groupAddr,
@@ -526,20 +525,20 @@ mcastSender_create(
     void                 (*doneWithProd)(FmtpProdIndex iProd),
     void*                  authorizer)
 {
-    McastSender* send;
-    int          status = mcastSender_new(&send, serverAddr, *serverPort,
+    FmtpSender*  send;
+    int          status = fmtpSender_new(&send, serverAddr, *serverPort,
             groupAddr, groupPort, ifaceAddr, ttl, iProd, retxTimeout,
             doneWithProd, authorizer);
 
     if (status) {
-        log_add("Couldn't create new multicast sender");
+        log_add("Couldn't create new FMTP sender");
     }
     else {
-        status = mcastSender_start(send, serverPort); // Doesn't block
+        status = fmtpSender_start(send, serverPort); // Doesn't block
 
         if (status) {
-            log_add("Couldn't start multicast sender");
-            mcastSender_free(send);
+            log_add("Couldn't start FMTP sender");
+            fmtpSender_free(send);
         }
         else {
             *sender = send;
@@ -555,8 +554,8 @@ mcastSender_create(
  * @return the product-index of the next product to be sent.
  */
 FmtpProdIndex
-mcastSender_getNextProdIndex(
-    McastSender* const    sender)
+fmtpSender_getNextProdIndex(
+    FmtpSender* const    sender)
 {
   return sender->fmtpSender->getNextProdIndex();
 }
@@ -572,8 +571,8 @@ mcastSender_getNextProdIndex(
  * @retval     EIO     Failure. `log_add()` called.
  */
 int
-mcastSender_send(
-    McastSender* const    sender,
+fmtpSender_send(
+    FmtpSender* const    sender,
     const void* const     data,
     const size_t          nbytes,
     const void* const     metadata,
@@ -596,18 +595,18 @@ mcastSender_send(
 }
 
 /**
- * Terminates a multicast sender by stopping it and releasing its resources.
+ * Terminates an FMTP sender by stopping it and releasing its resources.
  *
- * @param[in] sender  The multicast sender to be terminated.
+ * @param[in] sender  The FMTP sender to be terminated.
  * @retval    0       Success.
  * @retval    2       Non-system runtime error. `log_add()` called.
  * @retval    3       System error. `log_add()` called.
  */
 int
-mcastSender_terminate(
-    McastSender* const sender)
+fmtpSender_terminate(
+    FmtpSender* const sender)
 {
-    int status = mcastSender_stop(sender);
-    mcastSender_free(sender);
+    int status = fmtpSender_stop(sender);
+    fmtpSender_free(sender);
     return status;
 }

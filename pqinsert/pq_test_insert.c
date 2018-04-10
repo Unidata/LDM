@@ -149,7 +149,7 @@ static void pti_usage(void)
     const char* pqPath = getDefaultQueuePath();
 
     (void)ft_format(feedtype, feedbuf, sizeof(feedbuf));
-    log_error(
+    log_error_q(
 "Usage: %s [options] [file]\n"
 "Options:\n"
 "    -f feedtype   Use <feedtype> as data-product feed-type. Default is %s.\n"
@@ -202,12 +202,12 @@ static bool pti_init(void)
         log_add("The product-queue \"%s\" is corrupt\n", pqfname);
     }
     else if (status) {
-        log_errno(status, "Couldn't open product-queue \"%s\"", pqfname);
+        log_errno_q(status, "Couldn't open product-queue \"%s\"", pqfname);
     }
     else {
         prod.data = malloc(max_prod_size);
         if (prod.data == NULL) {
-            log_syserr("Couldn't allocate buffer for data-product");
+            log_syserr_q("Couldn't allocate buffer for data-product");
         }
         else {
             (void)strncpy(myname, ghostname(), sizeof(myname));
@@ -391,7 +391,7 @@ static bool pti_setCreationTime(
         if (timeval_isPositive(&sleepInterval)) {
             if (sleep(sleepInterval.tv_sec) != 0 ||
                     usleep(sleepInterval.tv_usec)) {
-                log_syserr("Couldn't sleep");
+                log_syserr_q("Couldn't sleep");
                 return false;
             }
         }
@@ -416,7 +416,7 @@ static bool pti_process_input_file()
     bool success;
 
     if (freopen(inputPathname, "r", stdin) == NULL) {
-        log_syserr("Couldn't open input-file \"%s\"", inputPathname);
+        log_syserr_q("Couldn't open input-file \"%s\"", inputPathname);
         success = false;
     }
     else {
@@ -430,7 +430,7 @@ static bool pti_process_input_file()
         tm.tm_isdst = 0;
 
         (void)ft_format(feedtype, feedStr, sizeof(feedStr));
-        log_notice("Starting up: feedtype=%s, seq_start=%u", feedStr,
+        log_notice_q("Starting up: feedtype=%s, seq_start=%u", feedStr,
                 seq_start);
 
         for (lineNo = 1, success = true; success; prod.info.seqno++, lineNo++) {
@@ -446,7 +446,7 @@ static bool pti_process_input_file()
             (void)snprintf(id, sizeof(id), "%u", prod.info.seqno);
             prod.data = realloc(prod.data, prod.info.sz);
             if (prod.data == NULL) {
-                log_syserr("Couldn't allocate memory for data-product");
+                log_syserr_q("Couldn't allocate memory for data-product");
                 success = false;
                 break;
             }
@@ -463,7 +463,7 @@ static bool pti_process_input_file()
             switch (status) {
             case ENOERR:
                 if (log_is_enabled_info)
-                    log_info("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
+                    log_info_q("%s", s_prod_info(NULL, 0, &prod.info, 1)) ;
                 log_clear(); // just in case
                 break;
             case PQUEUE_DUP:
@@ -477,7 +477,7 @@ static bool pti_process_input_file()
                 success = false;
                 break;
             case ENOMEM:
-                log_errno(status, "Queue full?");
+                log_errno_q(status, "Queue full?");
                 success = false;
                 break;
             case EINTR:
@@ -529,7 +529,7 @@ static bool pti_generate_products(void)
                     s_prod_info(buf, sizeof(buf), info, 1));
             break;
         }
-        log_info("Inserted: prodInfo=\"%s\"",
+        log_info_q("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
     }
 
@@ -567,7 +567,7 @@ int main(
 
     int         status = EXIT_FAILURE;
     if (!pti_decodeCommandLine(ac, av)) {
-        log_error("Couldn't decode command-line");
+        log_error_q("Couldn't decode command-line");
         pti_usage();
     }
     else {

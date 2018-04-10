@@ -21,7 +21,6 @@
 #include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mcast.h"
 #include "mcast_info.h"
 #include "MldmRpc.h"
 #include "OffsetMap.h"
@@ -45,6 +44,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "../mcast_lib/ldm7/fmtp.h"
 
 #ifndef _XOPEN_PATH_MAX
 /* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
@@ -54,9 +54,9 @@
 #define NELT(a) (sizeof(a)/sizeof((a)[0]))
 
 /**
- * C-callable multicast sender.
+ * C-callable FMTP sender.
  */
-static McastSender*          mcastSender;
+static FmtpSender*          fmtpSender;
 /**
  * Information on the multicast group.
  */
@@ -533,13 +533,13 @@ mls_setDoneFlag(
         const int sig)
 {
     if (sig == SIGTERM) {
-        log_notice("SIGTERM");
+        log_notice_q("SIGTERM");
     }
     else if (sig == SIGINT) {
-        log_notice("SIGINT");
+        log_notice_q("SIGINT");
     }
     else {
-        log_notice("Signal %d", sig);
+        log_notice_q("Signal %d", sig);
     }
     done = 1;
 }
@@ -643,7 +643,7 @@ mls_openProdIndexMap(
 }
 
 /**
- * Accepts notification that the multicast layer is finished with a data-product
+ * Accepts notification that the FMTP layer is finished with a data-product
  * and releases associated resources.
  *
  * @param[in] prodIndex  Index of the product.
@@ -655,13 +655,13 @@ mls_doneWithProduct(
     off_t offset;
     int   status = om_get(offMap, prodIndex, &offset);
     if (status) {
-        log_error("Couldn't get file-offset corresponding to product-index %lu",
+        log_error_q("Couldn't get file-offset corresponding to product-index %lu",
                 (unsigned long)prodIndex);
     }
     else {
         status = pq_release(pq, offset);
         if (status) {
-            log_error("Couldn't release data-product in product-queue "
+            log_error_q("Couldn't release data-product in product-queue "
                     "corresponding to file-offset %ld, product-index %lu",
                     (long)offset, (unsigned long)prodIndex);
         }
@@ -671,7 +671,9 @@ mls_doneWithProduct(
 /**
  * Initializes the resources of this module. Sets `mcastInfo`; in particular,
  * sets `mcastInfo.server.port` to the actual port number used by the FMTP
- * TCP server (in case the number was chosen by the operating-system).
+ * TCP server (in case the number was chosen by the operating-system). Upon
+ * return, all FMTP threads have been created -- in particular,  the FMTP TCP
+ * server is listening.
  *
  * @param[in] info           Information on the multicast group.
  * @param[in] ttl            Time-to-live of outgoing packets.
@@ -698,7 +700,7 @@ mls_doneWithProduct(
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
  *                           IPv4 address because it's invalid or unknown.
  *                           `log_add()` called.
- * @retval    LDM7_MCAST     Failure in multicast system. `log_add()` called.
+ * @retval    LDM7_MCAST     Failure in FMTP system. `log_add()` called.
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static Ldm7Status
@@ -751,11 +753,11 @@ mls_init(
         goto close_prod_index_map;
     }
 
-    if ((status = mcastSender_create(&mcastSender, serverInetAddr,
+    if ((status = fmtpSender_create(&fmtpSender, serverInetAddr,
             &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
             ifaceAddr, ttl, iProd, retxTimeout, mls_doneWithProduct,
             authorizer))) {
-        log_add("Couldn't create multicast sender");
+        log_add("Couldn't create FMTP sender");
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)
@@ -790,7 +792,7 @@ return_status:
 static inline int       // inlined because small and only called in one place
 mls_destroy(void)
 {
-    int status = mcastSender_terminate(mcastSender);
+    int status = fmtpSender_terminate(fmtpSender);
 
     (void)xdr_free(xdr_McastInfo, (char*)&mcastInfo);
     (void)pim_close();
@@ -826,7 +828,7 @@ mls_multicastProduct(
         void* const restrict            arg)
 {
     off_t          offset = *(off_t*)arg;
-    FmtpProdIndex iProd = mcastSender_getNextProdIndex(mcastSender);
+    FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
     int            status = om_put(offMap, iProd, offset);
     if (status) {
         log_add("Couldn't add product %lu, offset %lu to map",
@@ -846,7 +848,7 @@ mls_multicastProduct(
                     s_prod_info(buf, sizeof(buf), info, 1));
         }
         else {
-            status = mcastSender_send(mcastSender, xprod, size,
+            status = fmtpSender_send(fmtpSender, xprod, size,
                     (void*)info->signature, sizeof(signaturet), &iProd);
 
             if (status) {
@@ -857,7 +859,7 @@ mls_multicastProduct(
             else {
                 if (log_is_enabled_info) {
                     char buf[LDM_INFO_MAX];
-                    log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                    log_info_q("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                             (unsigned long)iProd,
                             s_prod_info(buf, sizeof(buf), info, 1));
                 }
@@ -944,7 +946,7 @@ mls_tryMulticast(
         unblockTermSigs();
     }
     else if (status < 0) {
-        log_errno(status, "Error in product-queue");
+        log_errno_q(status, "Error in product-queue");
         status = LDM7_PQ;
     }
 
@@ -1002,7 +1004,7 @@ static void*
 runMldmSrvr(void* mldmSrvr)
 {
     if (mldmSrvr_run(mldmSrvr))
-        log_error("Multicast LDM RPC server returned");
+        log_error_q("Multicast LDM RPC server returned");
     return NULL;
 }
 
@@ -1023,15 +1025,16 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
         else {
             mldmCmdSrvr = mldmSrvr_new(inAddrPool);
             if (mldmCmdSrvr == NULL) {
-                log_add_syserr("Couldn't create multicast LDM RPC server");
+                log_add_syserr("Couldn't create multicast LDM RPC "
+                        "command-server");
                 status = LDM7_SYSTEM;
             }
             else {
                 status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
                         mldmCmdSrvr);
                 if (status) {
-                    log_add_syserr("Couldn't create multicast LDM RPC server "
-                            "thread");
+                    log_add_syserr("Couldn't create multicast LDM RPC "
+                            "command-server thread");
                     mldmSrvr_delete(mldmCmdSrvr);
                     mldmCmdSrvr = NULL;
                     status = LDM7_SYSTEM;
@@ -1055,13 +1058,15 @@ stopAuthorization()
 {
     int   status = pthread_cancel(mldmSrvrThread);
     if (status) {
-        log_add_syserr("Couldn't cancel multicast LDM RPC server thread");
+        log_add_syserr("Couldn't cancel multicast LDM RPC command-server "
+                "thread");
     }
     else {
         void* result;
         status = pthread_join(mldmSrvrThread, &result);
         if (status) {
-            log_add_syserr("Couldn't join multicast LDM RPC server thread");
+            log_add_syserr("Couldn't join multicast LDM RPC command-server "
+                    "thread");
         }
         else {
             mldmSrvr_delete(mldmCmdSrvr);
@@ -1072,7 +1077,7 @@ stopAuthorization()
 }
 
 /**
- * Executes a multicast upstream LDM. Blocks until termination is requested or
+ * Executes a multicast LDM. Blocks until termination is requested or
  * an error occurs.
  *
  * @param[in]  info          Information on the multicast group.
@@ -1149,7 +1154,7 @@ mls_execute(
              * - The port number of the FMTP TCP server in case it wasn't
              *   specified by the user and was, instead, chosen by the
              *   operating system; and
-             * - The port number of the multicast LDM RPC server so that
+             * - The port number of the multicast LDM RPC command-server so that
              *   upstream LDM processes can communicate with it to, for
              *   example, reserve IP addresses for remote FMTP clients.
              */
@@ -1167,7 +1172,7 @@ mls_execute(
                  * goes wrong.
                  */
                 char* miStr = mi_format(&mcastInfo);
-                log_notice("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
+                log_notice_q("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
                         "pq=\"%s\", mldmCmdPort=%hu", ifaceAddr, miStr, ttl,
                         pqPathname, mldmSrvr_getPort(mldmCmdSrvr));
                 free(miStr);
@@ -1229,7 +1234,7 @@ main(
         status = mls_execute(groupInfo, ttl, ifaceAddr, retxTimeout,
                 getQueuePath(), fmtpSubnet);
         if (status) {
-            log_error("Couldn't execute multicast LDM sender");
+            log_error_q("Couldn't execute multicast LDM sender");
             switch (status) {
                 case LDM7_INVAL: status = 1; break;
                 case LDM7_PQ:    status = 3; break;
@@ -1240,7 +1245,7 @@ main(
 
         cidrAddr_delete(fmtpSubnet);
         mi_free(groupInfo);
-        log_notice("Terminating");
+        log_notice_q("Terminating");
     } // `groupInfo` allocated
 
     log_fini();

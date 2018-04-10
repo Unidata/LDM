@@ -45,7 +45,7 @@ static void* read_from_fd(void* arg)
     for (;;) {
         int nbytes = read(fd, buf, sizeof(buf));
         if (nbytes <= 0) {
-            log_syserr("read() failure");
+            log_syserr_q("read() failure");
             break;
         }
         (void)printf("Read %d bytes\n", nbytes);

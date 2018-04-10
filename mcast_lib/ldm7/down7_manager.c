@@ -123,7 +123,7 @@ executeDown7(
             status = pthread_create(&termWaitThread, NULL, waitForTermSig,
                     down7);
             if (status) {
-                log_errno(status,
+                log_errno_q(status,
                         "Couldn't create termination-waiting thread");
                 status = LDM7_SYSTEM;
             }

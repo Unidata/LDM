@@ -90,7 +90,7 @@ static int reset_secs = DEFAULT_RESET_SECS;
 static void
 cleanup(void)
 {
-        log_notice("Exiting");
+        log_notice_q("Exiting");
         if(!intr)
         {
                 /* We are not in the interrupt context */
@@ -111,11 +111,11 @@ cleanup(void)
                         if(feed_close)
                                 (*feed_close)(ifd);
                         ifd = -1;
-                        log_notice("  Queue usage (bytes):%8ld",
+                        log_notice_q("  Queue usage (bytes):%8ld",
                                                 (long)highwater);
-                        log_notice("           (nregions):%8ld",
+                        log_notice_q("           (nregions):%8ld",
                                                 (long)maxregions);
-                        log_notice("  Duplicates rejected:%8lu", ndups);
+                        log_notice_q("  Duplicates rejected:%8lu", ndups);
                 }
                 (*prod_stats)();
                 (*feed_stats)();
@@ -346,14 +346,14 @@ toClients(timestampt arrival,
           {
           MD5Update(md5ctxp, (const unsigned char *)result, len-(result-buf));
 #if DEBUG
-          log_info("WMO prod: Skipping %d chars\n", result-buf);
+          log_info_q("WMO prod: Skipping %d chars\n", result-buf);
 #endif
           }
         else  /* calculate checksum on entire product */         
         {
           MD5Update(md5ctxp, (const unsigned char *)buf, len);
 #if DEBUG
-          log_info("not a WMO Prod\n");
+          log_info_q("not a WMO Prod\n");
 #endif
         }
         MD5Final((unsigned char*)prod.info.signature, md5ctxp);
@@ -374,7 +374,7 @@ toClients(timestampt arrival,
            }
 
         if(log_is_enabled_info)
-                log_info("%s", s_prod_info(NULL, 0, &prod.info,
+                log_info_q("%s", s_prod_info(NULL, 0, &prod.info,
                         log_is_enabled_debug));
 
         if(pq == NULL)          /* if we are "feedtest", do nothing else */
@@ -390,16 +390,16 @@ toClients(timestampt arrival,
         if(status == PQUEUE_DUP)
         {
                 ndups++;
-                log_info("Product already in queue");
+                log_info_q("Product already in queue");
                 return;
         }
 
         /* else, error */
         if (status > 0) {
-            log_errno(status, "pq_insert");
+            log_errno_q(status, "pq_insert");
         }
         else {
-            log_error("pq_insert: Internal error");
+            log_error_q("pq_insert: Internal error");
         }
         exit(1); /* ??? */
 }
@@ -527,7 +527,7 @@ main(int ac, char *av[])
                             *((int *)&server_port) = atoi(optarg); /* cast away const */
                             if(server_port <= 0 || server_port > 65536)
                             {
-                                    log_error("Invalid server port: \"%s\"", optarg);
+                                    log_error_q("Invalid server port: \"%s\"", optarg);
                                     usage(progname);
                             }
                             break;
@@ -546,7 +546,7 @@ main(int ac, char *av[])
 
                             if (sscanf(optarg, "%lu %n", &size, &nbytes) != 1 ||
                                     optarg[nbytes] != 0 || 1 > size) {
-                                log_error("Invalid maximum data-product size: \"%s\"",
+                                log_error_q("Invalid maximum data-product size: \"%s\"",
                                         optarg);
                                 usage(progname);
                             }
@@ -595,15 +595,15 @@ main(int ac, char *av[])
 
         pqpath = getQueuePath();
 
-        log_notice("Starting Up");
-        log_debug(PACKAGE_VERSION);
+        log_notice_q("Starting Up");
+        log_debug_1(PACKAGE_VERSION);
 
         /*
          * register exit handler
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr("atexit");
+                log_syserr_q("atexit");
                 return 1;
         }
 
@@ -620,11 +620,11 @@ main(int ac, char *av[])
                 if((ready = pq_open(pqpath, PQ_DEFAULT, &pq)))
                 {
                         if (PQ_CORRUPT == ready) {
-                            log_error("The product-queue \"%s\" is inconsistent\n",
+                            log_error_q("The product-queue \"%s\" is inconsistent\n",
                                     pqpath);
                         }
                         else {
-                            log_error("pq_open: \"%s\" failed: %s",
+                            log_error_q("pq_open: \"%s\" failed: %s",
                                     pqpath, strerror(ready));
                         }
                         return 1;
@@ -652,7 +652,7 @@ main(int ac, char *av[])
                 (feedtype & HRS))
               {
               usePil = 1;
-              log_info("Creating AFOS-like pil tags\0");
+              log_info_q("Creating AFOS-like pil tags\0");
               }
            else
               {
@@ -673,7 +673,7 @@ main(int ac, char *av[])
                 /* this is the combined NOAAPORT fos-alike. We know these have the
                    4 byte start and end sequences. Using the binary scanner
                    ensures that we don't stop on an arbitrary embedded CTRL-C */
-                log_notice("Note: Using the wmo_binary scanner for SDI ingest\0");
+                log_notice_q("Note: Using the wmo_binary scanner for SDI ingest\0");
                 setTheScanner (scan_wmo_binary); 
         }
         else if (feedtype & (NMC2 | NMC3))
@@ -725,7 +725,7 @@ main(int ac, char *av[])
         md5ctxp = new_MD5_CTX();
         if(md5ctxp == NULL)
         {
-                log_syserr("new_md5_CTX failed");
+                log_syserr_q("new_md5_CTX failed");
                 return 1;
         }
 
@@ -758,26 +758,26 @@ if (INPUT_IS_SOCKET)
 #endif
                 if(stats_req)
                 {
-                        log_notice("Statistics Request");
+                        log_notice_q("Statistics Request");
                         if(pq != NULL)
                         {
                                 off_t highwater = 0;
                                 size_t maxregions = 0;
                                 (void) pq_highwater(pq, &highwater,
                                          &maxregions);
-                                log_notice("  Queue usage (bytes):%8ld",
+                                log_notice_q("  Queue usage (bytes):%8ld",
                                                         (long)highwater);
-                                log_notice("           (nregions):%8ld",
+                                log_notice_q("           (nregions):%8ld",
                                                         (long)maxregions);
                         }
-                        log_notice("       Idle: %8lu seconds", idle);
+                        log_notice_q("       Idle: %8lu seconds", idle);
 #if NET
 if (INPUT_IS_SOCKET)
 {
-                        log_notice("    Timeout: %8d", reset_secs);
+                        log_notice_q("    Timeout: %8d", reset_secs);
 }
 #endif
-                        log_notice("%21s: %s", "Status",
+                        log_notice_q("%21s: %s", "Status",
                                 (ifd < 0) ?
                                 "Not connected or input not open." :
                                 "Connected.");
@@ -794,18 +794,18 @@ if (INPUT_IS_SOCKET)
                         static int retries = 0;
                         if (retries > MAX_RETRIES)
                         {
-                                log_error ("maximum retry attempts %d, aborting",
+                                log_error_q ("maximum retry attempts %d, aborting",
                                         MAX_RETRIES);
                                 done = !0;
                                 continue;
                         }
                         /* Try to reopen on tcp read errors */
-                        log_notice("Trying to re-open connection on port %d",
+                        log_notice_q("Trying to re-open connection on port %d",
                                 server_port);
                         ++retries;
                         if(open_feed(feedfname, &ifd, maxProductSize) != ENOERR)
                         {
-                                log_notice ("sleeping %d seconds before retry %d",
+                                log_notice_q ("sleeping %d seconds before retry %d",
                                          retries * RETRY_DELAY, retries+1);
                                 sleep (retries * RETRY_DELAY);
                                 continue;
@@ -830,14 +830,14 @@ if (INPUT_IS_SOCKET)
                                 errno = 0;
                                 continue;
                         }
-                        log_syserr("select");
+                        log_syserr_q("select");
                         return 1;
                 }
                 /* else */
 #if 0
                 if (FD_ISSET(ifd, &exceptfds))
                 {
-                        log_error("Exception on input fd %d, select returned %d",
+                        log_error_q("Exception on input fd %d, select returned %d",
                                ifd, ready);
                 }
 #endif
@@ -864,7 +864,7 @@ if (INPUT_IS_SOCKET)
                         }
                         else
                         {
-                                log_error("select returned %d but ifd not set",
+                                log_error_q("select returned %d but ifd not set",
                                         ready);
                                 idle += timeo.tv_sec;
                         }
@@ -896,7 +896,7 @@ if (INPUT_IS_SOCKET)
 {
                 if ((reset_secs > 0) && (idle >= reset_secs))
                 {
-                        log_notice("Idle for %ld seconds, reconnecting",
+                        log_notice_q("Idle for %ld seconds, reconnecting",
                                 idle);
                         /* force reconnect */
                         port_error = !0;

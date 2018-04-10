@@ -307,7 +307,7 @@ static void fh_log_if_unexpected(
         const fh_t* const restrict curr)
 {
     if (!fh_is_next(prev, curr))
-        log_warning("Current frame is out-of-sequence: prev_run=%"PRIuFAST32", "
+        log_warning_q("Current frame is out-of-sequence: prev_run=%"PRIuFAST32", "
                 "prev_seqnum=%"PRIuFAST32", curr_run=%"PRIuFAST32", "
                 "curr_seqnum=%"PRIuFAST32, prev->bin.sbn_run,
                 prev->bin.sbn_sequence_num, curr->bin.sbn_run,
@@ -514,7 +514,7 @@ static nbs_status_t pdh_deserialize(
             status = NBS_STATUS_INVAL;
         }
         else {
-            log_debug("bin->pdh_length=%"PRIuFAST32, bin->pdh_length);
+            log_debug_1("bin->pdh_length=%"PRIuFAST32, bin->pdh_length);
             bin->trans_type = buf[1];
             bin->psh_length = decode_uint16(buf+2) - bin->pdh_length;
             bin->block_num = decode_uint16(buf+4);
@@ -526,7 +526,7 @@ static nbs_status_t pdh_deserialize(
             status = 0;
             if (bin->pdh_length > PDH_LENGTH) {
                 if (bin->pdh_length <= nbytes) {
-                    log_notice("Product-definition header longer than %d "
+                    log_notice_q("Product-definition header longer than %d "
                             "bytes: %u", PDH_VERSION,
                             (unsigned)bin->pdh_length);
                 }
@@ -539,7 +539,7 @@ static nbs_status_t pdh_deserialize(
             }
             if (status == 0) {
                 if (log_is_enabled_debug)
-                    log_debug("pdh=%s", pdh_format(pdh));
+                    log_debug_1("pdh=%s", pdh_format(pdh));
                 *nscanned = bin->pdh_length;
             }
         }
@@ -931,7 +931,7 @@ static nbs_status_t psh_deserialize(
                 char string[512];
                 (void)psh_format(psh, string, sizeof(string));
                 string[sizeof(string)-1] = 0;
-                log_debug("psh=%s", string);
+                log_debug_1("psh=%s", string);
             }
             *nscanned = n;
             status = 0;
@@ -1024,7 +1024,7 @@ static nbs_status_t pdhpsh_deserialize_psh(
     }
     else {
         if (!pdh_is_product_start(pdh))
-            log_notice("Frame after start-of-product has product-specific "
+            log_notice_q("Frame after start-of-product has product-specific "
                     "header");
         /*
          * Because the number of bytes in a start-of-product frame has been seen
