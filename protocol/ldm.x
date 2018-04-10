@@ -824,7 +824,7 @@ program LDMPROG {
 %
 %	    if (NULL == (objp->dbuf_val =
 %		    (char*)xd_getNextSegment(objp->dbuf_len))) {
-%		log_syserr("xdr_dbuf()");
+%		log_syserr_q("xdr_dbuf()");
 %		return FALSE;
 %	    }
 %
