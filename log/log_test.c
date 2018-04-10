@@ -397,8 +397,8 @@ static void test_log_syserr(void)
             "#%d", 2);
     errno = EEXIST;
     log_syserr_q(NULL);
-    log_syserr_q("log_syserr() previous message is part of this one");
-    log_syserr_q("log_syserr() previous message is part of this one #%d", 2);
+    log_syserr_q("log_syserr_q() previous message is part of this one");
+    log_syserr_q("log_syserr_q() previous message is part of this one #%d", 2);
 
     log_fini();
 

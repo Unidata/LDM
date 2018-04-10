@@ -623,7 +623,7 @@ static int setIdent(
         StringBuf* const prods = strBuf_new(127); /* initially empty */
 
         if (NULL == prods) {
-            log_syserr("Couldn't allocate string-buffer for products");
+            log_syserr_q("Couldn't allocate string-buffer for products");
             status = 3;
         }
         else {

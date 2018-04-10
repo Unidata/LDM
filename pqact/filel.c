@@ -613,7 +613,7 @@ static inline int flushIfAppropriate(
  * @param[in] in       Input character array.
  * @param[in] len      Input size in bytes.
  * @param[in] outlenp  Output size in bytes.
- * @retval    NULL     System failure. `log_syserr()` called.
+ * @retval    NULL     System failure. `log_syserr_q()` called.
  * @return             Pointer to new character array. Caller should free when
  *                     it's no longer needed.
  */
