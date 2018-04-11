@@ -1172,9 +1172,12 @@ mls_execute(
                  * goes wrong.
                  */
                 char* miStr = mi_format(&mcastInfo);
+                char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
                 log_notice_q("Starting up: iface=%s, mcastInfo=%s, ttl=%u, "
-                        "pq=\"%s\", mldmCmdPort=%hu", ifaceAddr, miStr, ttl,
-                        pqPathname, mldmSrvr_getPort(mldmCmdSrvr));
+                        "fmtpSubnet=%s, pq=\"%s\", mldmCmdPort=%hu", ifaceAddr,
+                        miStr, ttl, fmtpSubnetStr, pqPathname,
+                        mldmSrvr_getPort(mldmCmdSrvr));
+                free(fmtpSubnetStr);
                 free(miStr);
                 status = mls_startMulticasting();
 

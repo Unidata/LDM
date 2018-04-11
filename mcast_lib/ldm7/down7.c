@@ -16,6 +16,7 @@
 
 #include "config.h"
 
+#include "CidrAddr.h"
 #include "down7.h"
 #include "fmtp.h"
 #include "globals.h"
@@ -441,10 +442,15 @@ up7proxy_subscribe(
                     s_feedtypet(feed), proxy->remoteId, status);
         }
         else {
-            McastInfo* const mi = &reply->SubscriptionReply_u.info.mcastInfo;
-            char*            miStr = mi_format(mi);
-            log_notice_q("Subscription reply from %s is %s", proxy->remoteId,
-                    miStr);
+            const McastInfo* const mi =
+                    &reply->SubscriptionReply_u.info.mcastInfo;
+            char*                  miStr = mi_format(mi);
+            const CidrAddr* const  fmtpAddr =
+                    &reply->SubscriptionReply_u.info.fmtpAddr;
+            char*                  fmtpAddrStr = cidrAddr_format(fmtpAddr);
+            log_notice_q("Subscription reply from %s: mcastGroup=%s,"
+                    "fmtpAddr=%s", proxy->remoteId, miStr, fmtpAddrStr);
+            free(fmtpAddrStr);
             free(miStr);
             *mcastInfo = mi_clone(mi);
         }
