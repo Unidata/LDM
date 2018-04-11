@@ -62,8 +62,8 @@ static void test_reserveAndRelease(void)
     int status;
 
     in_addr_t networkPrefix;
-    CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
-    CidrAddr* subnet = cidrAddr_new(networkPrefix, 16);
+    CU_ASSERT_EQUAL(inet_pton(AF_INET, "1.0.0.0", &networkPrefix), 1);
+    CidrAddr* subnet = cidrAddr_new(networkPrefix, 24);
     void* inAddrPool = inAddrPool_new(subnet);
     void* mldmSrvr = mldmSrvr_new(inAddrPool);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
@@ -75,6 +75,7 @@ static void test_reserveAndRelease(void)
     in_addr_t fmtpAddr = 0;
     CU_ASSERT_EQUAL(mldmClnt_reserve(mldmClnt, &fmtpAddr), 0);
     CU_ASSERT_NOT_EQUAL(fmtpAddr, 0);
+    CU_ASSERT_TRUE(cidrAddr_isMember(subnet, fmtpAddr));
     CU_ASSERT_TRUE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), 0);
     CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));

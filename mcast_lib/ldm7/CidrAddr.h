@@ -56,6 +56,17 @@ void
 cidrAddr_delete(CidrAddr* cidrAddr);
 
 /**
+ * Indicates if an address is a valid member of a CIDR address.
+ * @param[in] cidrAddr  CIDR address
+ * @param[in] addr      Possible address in network byte order
+ * @retval    `true`    Iff address is valid member of CIDR address
+ */
+bool
+cidrAddr_isMember(
+        const CidrAddr* cidrAddr,
+        const in_addr_t addr);
+
+/**
  * Returns the network address.
  * @param[in] cidrAddr  CIDR address
  * @return              IPv4 address in network byte-order

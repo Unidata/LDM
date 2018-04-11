@@ -109,9 +109,11 @@ public:
     {
         static const auto action = MldmRpcAct::RESERVE_ADDR;
         tcpSock.write(&action, sizeof(action));
-        in_addr_t inAddr;
+        struct in_addr inAddr;
         tcpSock.read(&inAddr, sizeof(inAddr));
-        return inAddr;
+        log_debug_1((std::string("Obtained reserved address ") +
+                inet_ntoa(inAddr)).c_str());
+        return inAddr.s_addr;
     }
 
     /**
@@ -215,8 +217,9 @@ public:
      * @param[in] subnet             Subnet specification
      */
     Impl(const CidrAddr& subnet)
-        : available{cidrAddr_getNumHostAddrs(&subnet),
-                cidrAddr_getAddr(&subnet)}
+        // Parentheses are needed to obtain correct construction
+        : available(cidrAddr_getNumHostAddrs(&subnet),
+                cidrAddr_getAddr(&subnet))
         , allocated{}
         , mutex{}
     {
@@ -409,12 +412,14 @@ class MldmSrvr::Impl final
      */
     void reserveAddr(TcpSock& connSock)
     {
-        auto fmtpAddr = inAddrPool.reserve();
+        struct in_addr fmtpAddr = {inAddrPool.reserve()};
         try {
-            connSock.write(&fmtpAddr, sizeof(fmtpAddr));
+            connSock.write(&fmtpAddr.s_addr, sizeof(fmtpAddr));
+            log_debug_1((std::string("Reserved address ") +
+                    ::inet_ntoa(fmtpAddr)).c_str());
         }
         catch (const std::exception& ex) {
-            inAddrPool.release(fmtpAddr);
+            inAddrPool.release(fmtpAddr.s_addr);
             log_add(ex.what());
             throw std::system_error(errno, std::system_category(),
                     "Couldn't reply to client");
