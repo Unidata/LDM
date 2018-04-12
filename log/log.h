@@ -307,6 +307,19 @@ bool log_is_level_enabled(
 } while (0)
 
 /**
+ * Logs a single message at the INFO level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ */
+#define log_info_1(...) do {\
+    if (LOG_LEVEL_INFO >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log_1(&loc, LOG_LEVEL_INFO, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
  * Adds a message to the current thread's queue of messages:
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
