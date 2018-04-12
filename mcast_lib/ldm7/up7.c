@@ -584,14 +584,17 @@ up7_setProductQueueCursor(
  * Sends a data-product to the downstream LDM-7 if it doesn't have a given
  * signature.
  *
+ * Called by `pq_sequence()`.
+ *
  * @param[in] info         Data-product's metadata.
  * @param[in] data         Data-product's data.
  * @param[in] xprod        XDR-encoded version of data-product (data and metadata).
  * @param[in] size         Size, in bytes, of XDR-encoded version.
  * @param[in] arg          Signature.
  * @retval    0            Success.
- * @retval    LDM7_EXISTS  Data-product has given signature. Not sent.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    EEXIST       Data-product has given signature. Not sent.
+ * @retval    EIO          Couldn't send to downstream LDM-7
+ * @return                 `pq_sequence()` return value
  */
 static int
 up7_sendIfNotSignature(
@@ -601,32 +604,36 @@ up7_sendIfNotSignature(
     const size_t                    size,
     void* const restrict            arg)
 {
+    int               status;
     const signaturet* sig = (const signaturet*)arg;
 
-    if (0 == memcmp(sig, info->signature, sizeof(signaturet)))
-        return LDM7_EXISTS;
+    if (0 == memcmp(sig, info->signature, sizeof(signaturet))) {
+        status = EEXIST;
+    }
+    else {
+        product prod;
+        prod.info = *info;
+        prod.data = (void*)data;    // cast away `const`
 
-    product prod;
-    prod.info = *info;
-    prod.data = (void*)data;    // cast away `const`
+        deliver_backlog_product_7(&prod, clnt);
 
-    deliver_backlog_product_7(&prod, clnt);
-
-    /*
-     * The status will be RPC_TIMEDOUT unless an error occurs because the RPC
-     * call uses asynchronous message-passing.
-     */
-    if (clnt_stat(clnt) == RPC_TIMEDOUT) {
-        if (log_is_enabled_info)
-            log_notice_q("Backlog product sent: %s",
-                    s_prod_info(NULL, 0, info,
-                            log_is_enabled_debug));
-        return 0;
+        /*
+         * The status will be RPC_TIMEDOUT unless an error occurs because the
+         * RPC call uses asynchronous message-passing.
+         */
+        if (clnt_stat(clnt) != RPC_TIMEDOUT) {
+            log_add("Couldn't send backlog data-product to downstream LDM-7: "
+                    "%s", clnt_errmsg(clnt));
+            status = EIO;
+        }
+        else {
+            log_notice_q("Backlog product sent: %s", s_prod_info(NULL, 0, info,
+                    log_is_enabled_debug));
+            status = 0;
+        }
     }
 
-    log_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
-
-    return LDM7_SYSTEM;
+    return status;
 }
 
 /**
@@ -637,7 +644,7 @@ up7_sendIfNotSignature(
  * @param[in] before       Signature of data-product at which to stop sending.
  * @retval    0            Success.
  * @retval    LDM7_NOENT   Data-product with given signature not found before
- *                         end of queue reached.
+ *                         end of queue reached. `log_info_1()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
@@ -652,17 +659,21 @@ up7_sendUpToSignature(
 
     prodClass->psa.psa_val->feedtype = feedtype;        // was `ANY`
 
-    int status;
+    int  status;
     for (;;) {
         status = pq_sequence(pq, TV_GT, prodClass, up7_sendIfNotSignature,
                 (signaturet*)before);                   // cast away `const`
-
+        if (status == EEXIST) {
+            status = 0;
+            break;
+        }
+        if (status == PQUEUE_END) {
+            log_info_1("End-of-backlog product not found before end-of-queue");
+            status = LDM7_NOENT;
+            break;
+        }
         if (status) {
-            status = (PQUEUE_END == status)
-                ? LDM7_NOENT
-                : (LDM7_EXISTS == status)
-                    ? 0
-                    : LDM7_SYSTEM;
+            status = LDM7_SYSTEM;
             break;
         }
     }
