@@ -83,7 +83,7 @@ typedef void pq_next_func(
 #define PQ_DEFAULT	0x00
 #define PQ_NOCLOBBER	0x01	/* Don't destroy existing file on create */
 #define PQ_READONLY	0x02	/* Default is read/write */
-#define PQ_NOLOCK	0x04	/* Disable locking */
+#define PQ_NOLOCK	0x04	/* Disable locking (DANGER!) */
 #define PQ_PRIVATE	0x08	/* mmap() the file MAP_PRIVATE, default MAP_SHARED */
 #define PQ_NOGROW	0x10	/* If pq_create(), must have intialsz */
 #define PQ_NOMAP	0x20	/* Use malloc/read/write/free instead of mmap() */

@@ -36,11 +36,20 @@ CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
 pq.h:		pq.hin pq.c
 
 if HAVE_CUNIT
-check_PROGRAMS		= pq_test
+check_PROGRAMS		= fileLockedBySelf pq_test
+
+fileLockedBySelf_SOURCES	= fileLockedBySelf.c
+fileLockedBySelf_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+fileLockedBySelf_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 
 pq_test_SOURCES		= pq_test.c pq.c
 pq_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 pq_test_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+
+%.log:	%
+	./% >&$@
+
+TESTS			= $(check_PROGRAMS)
 
 check-local:	pq_test
 	rm -f pq_test.pq pq_test.out

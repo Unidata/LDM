@@ -1,4 +1,4 @@
-6.13.7	2018-04-10T14:53:56-0600
+6.13.7.1	2018-04-10T14:53:56-0600
     Build:
         Added explicit defines of some C macro values to "1" to avoid problems
         with configure(1) on BSD systems.
@@ -19,7 +19,12 @@
         interrupt in order to ensure proper response to an "ldmadmin stop".
         
         Added O_TTY_INIT to open of a TTY to ensure conforming TTY behavior.
-
+        
+    pq(3) (product-queue):
+        Refactored the code that allows an application to reserve space in the
+        product-queue for a data-product that will be written in pieces because
+        the code wasn't sufficiently thread-safe.
+        
     NOAAPort Ingest:
         Tom added entries to the GEMPAK Grib2 tables for some, otherwise,
         unknown parameters.
