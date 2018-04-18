@@ -1,0 +1,2187 @@
+20180412T190842.160618Z lt-up7_down7_test[108150] ERROR up7.c:626:up7_sendIfNotSignature() Couldn't send backlog data-product to downstream LDM-7: RPC: Unable to send; errno = Bad file descriptor
+20180412T190842.174033Z lt-up7_down7_test[108150] ERROR up7.c:846:request_backlog_7_svc() Log messages flushed
+==108150== Invalid read of size 8
+==108150==    at 0x4ED7251: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x72558d8 is 8 bytes inside a block of size 80 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F8C: svctcp_destroy (svc_tcp.c:298)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DA4: makefd_xprt (svc_tcp.c:218)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0851B: svctcp_freeargs (svc_tcp.c:441)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255910 is 64 bytes inside a block of size 80 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F8C: svctcp_destroy (svc_tcp.c:298)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DA4: makefd_xprt (svc_tcp.c:218)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid write of size 4
+==108150==    at 0x4F08523: svctcp_freeargs (svc_tcp.c:443)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F095DE: my_xdr_opaque (xdr.c:453)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8BD7: xdr_BacklogSpec (ldm_xdr.c:667)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F0962B: my_xdr_opaque (xdr.c:462)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8BD7: xdr_BacklogSpec (ldm_xdr.c:667)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F09674: my_xdr_opaque (xdr.c:471)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8BD7: xdr_BacklogSpec (ldm_xdr.c:667)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F09101: my_xdr_int (xdr.c:120)
+==108150==    by 0x4ED8BF9: xdr_BacklogSpec (ldm_xdr.c:669)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F0912C: my_xdr_int (xdr.c:126)
+==108150==    by 0x4ED8BF9: xdr_BacklogSpec (ldm_xdr.c:669)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F09168: my_xdr_int (xdr.c:137)
+==108150==    by 0x4ED8BF9: xdr_BacklogSpec (ldm_xdr.c:669)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F095DE: my_xdr_opaque (xdr.c:453)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8C1B: xdr_BacklogSpec (ldm_xdr.c:671)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F0962B: my_xdr_opaque (xdr.c:462)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8C1B: xdr_BacklogSpec (ldm_xdr.c:671)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F09674: my_xdr_opaque (xdr.c:471)
+==108150==    by 0x4ED7F24: xdr_signaturet (ldm_xdr.c:147)
+==108150==    by 0x4ED8C1B: xdr_BacklogSpec (ldm_xdr.c:671)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_opaque
+   fun:xdr_signaturet
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F09191: my_xdr_u_int (xdr.c:160)
+==108150==    by 0x4ED8C3D: xdr_BacklogSpec (ldm_xdr.c:673)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_u_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F091BC: my_xdr_u_int (xdr.c:166)
+==108150==    by 0x4ED8C3D: xdr_BacklogSpec (ldm_xdr.c:673)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_u_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F091F8: my_xdr_u_int (xdr.c:177)
+==108150==    by 0x4ED8C3D: xdr_BacklogSpec (ldm_xdr.c:673)
+==108150==    by 0x4F0853D: svctcp_freeargs (svc_tcp.c:444)
+==108150==    by 0x4ED7268: ldmprog_7 (ldm_svc.c:191)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255970 is 16 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdr_u_int
+   fun:xdr_BacklogSpec
+   fun:svctcp_freeargs
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0714A: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x72558d8 is 8 bytes inside a block of size 80 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F8C: svctcp_destroy (svc_tcp.c:298)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DA4: makefd_xprt (svc_tcp.c:218)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F08439: svctcp_stat (svc_tcp.c:396)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255910 is 64 bytes inside a block of size 80 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F8C: svctcp_destroy (svc_tcp.c:298)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DA4: makefd_xprt (svc_tcp.c:218)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F0843D: svctcp_stat (svc_tcp.c:399)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255960 is 0 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0A85F: my_xdrrec_eof (xdr_rec.c:531)
+==108150==    by 0x4F08455: svctcp_stat (svc_tcp.c:401)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255988 is 40 bytes inside a block of size 464 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F07F84: svctcp_destroy (svc_tcp.c:297)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F07DDE: makefd_xprt (svc_tcp.c:223)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:my_xdrrec_eof
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0A8A1: my_xdrrec_eof (xdr_rec.c:533)
+==108150==    by 0x4F08455: svctcp_stat (svc_tcp.c:401)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255bd8 is 104 bytes inside a block of size 128 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F0A7D0: xdrrec_destroy (xdr_rec.c:493)
+==108150==    by 0x4F07F7C: svctcp_destroy (svc_tcp.c:295)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F0A19D: my_xdrrec_create (xdr_rec.c:237)
+==108150==    by 0x4F07E44: makefd_xprt (svc_tcp.c:231)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:my_xdrrec_eof
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 4
+==108150==    at 0x4F0A8AA: my_xdrrec_eof (xdr_rec.c:533)
+==108150==    by 0x4F08455: svctcp_stat (svc_tcp.c:401)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255be0 is 112 bytes inside a block of size 128 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F0A7D0: xdrrec_destroy (xdr_rec.c:493)
+==108150==    by 0x4F07F7C: svctcp_destroy (svc_tcp.c:295)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F0A19D: my_xdrrec_create (xdr_rec.c:237)
+==108150==    by 0x4F07E44: makefd_xprt (svc_tcp.c:231)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:my_xdrrec_eof
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0A8B1: my_xdrrec_eof (xdr_rec.c:540)
+==108150==    by 0x4F08455: svctcp_stat (svc_tcp.c:401)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255bc8 is 88 bytes inside a block of size 128 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F0A7D0: xdrrec_destroy (xdr_rec.c:493)
+==108150==    by 0x4F07F7C: svctcp_destroy (svc_tcp.c:295)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F0A19D: my_xdrrec_create (xdr_rec.c:237)
+==108150==    by 0x4F07E44: makefd_xprt (svc_tcp.c:231)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:my_xdrrec_eof
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== Invalid read of size 8
+==108150==    at 0x4F0A8B5: my_xdrrec_eof (xdr_rec.c:540)
+==108150==    by 0x4F08455: svctcp_stat (svc_tcp.c:401)
+==108150==    by 0x4F07157: svc_getreqsock (svc.c:565)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Address 0x7255bd0 is 96 bytes inside a block of size 128 free'd
+==108150==    at 0x4C2ACDD: free (vg_replace_malloc.c:530)
+==108150==    by 0x4F0A7D0: xdrrec_destroy (xdr_rec.c:493)
+==108150==    by 0x4F07F7C: svctcp_destroy (svc_tcp.c:295)
+==108150==    by 0x4F448E9: request_backlog_7_svc (up7.c:848)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150==    by 0x403D68: servlet_run (up7_down7_test.c:623)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150==  Block was alloc'd at
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F0A19D: my_xdrrec_create (xdr_rec.c:237)
+==108150==    by 0x4F07E44: makefd_xprt (svc_tcp.c:231)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:my_xdrrec_eof
+   fun:svctcp_stat
+   fun:svc_getreqsock
+   fun:up7_run
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+20180412T190842.180878Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:558:up7_run() Connection with localhost:60574 closed
+20180412T190844.275792Z lt-up7_down7_test[108150] ERROR pq.c:5226:pq_del_oldest() no unlocked products left to delete!
+20180412T190844.278912Z lt-up7_down7_test[108150] ERROR pq.c:6204:pqe_newDirect() rpqe_new() failure
+20180412T190844.279172Z lt-up7_down7_test[108150] ERROR mldm_receiver.c:85:allocateSpace() Couldn't allocate region for 988296-byte data-product
+20180412T190844.280552Z lt-up7_down7_test[108150] ERROR mldm_receiver.c:152:bop_func() Log messages flushed
+20180412T190844.305530Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:1587:test_up7_down7() 40 sender product-queue insertions
+20180412T190844.306628Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:1589:test_up7_down7() 1 product deletions
+20180412T190844.312126Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:1591:test_up7_down7() 7 receiver product-queue insertions
+20180412T190844.314380Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:1593:test_up7_down7() 32 outstanding product reservations
+20180412T190845.051458Z lt-up7_down7_test[108150] ERROR fmtp.cpp:38:log_what() Error notifying receiving application about beginning-of-product
+20180412T190845.051571Z lt-up7_down7_test[108150] ERROR mldm_receiver.c:480:mlr_start() Error executing multicast LDM receiver
+20180412T190845.051683Z lt-up7_down7_test[108150] ERROR down7.c:1444:runMcastRcvr() Terminating
+20180412T190845.123075Z lt-up7_down7_test[108150] NOTE up7_down7_test.c:175:signal_handler() SIGTERM
+20180412T190845.124476Z lt-up7_down7_test[108150] NOTE down7.c:1054:run_down7_svc() Downstream LDM7 missed-product receiver terminated
+20180412T190845.126620Z lt-up7_down7_test[108150] ERROR down7.c:2011:down7_start() Execution error
+20180412T190845.126674Z lt-up7_down7_test[108150] ERROR up7_down7_test.c:1291:receiver_run() Receiver terminated
+20180412T190846.317478Z lt-up7_down7_test[108150] ERROR down7.c:2041:down7_stop() Main thread isn't running
+20180412T190846.317564Z lt-up7_down7_test[108150] ERROR up7_down7_test.c:1420:receiver_stop() Log messages flushed
+20180412T190846.321019Z lt-mldm_sender[108181] NOTE mldm_sender.c:536:mls_setDoneFlag() SIGTERM
+20180412T190846.322706Z lt-mldm_sender[108181] ERROR fmtp.cpp:38:log_what() TcpBase::recvall() Error receiving from socket 13: Connection reset by peer
+20180412T190846.322721Z lt-mldm_sender[108181] ERROR mldm_sender.c:1240:main() Couldn't execute multicast LDM sender
+20180412T190846.322733Z lt-mldm_sender[108181] NOTE mldm_sender.c:1251:main() Terminating
+FAILED
+    1. up7_down7_test.c:1594  - CU_ASSERT_EQUAL(numDownInserts - numDeletedProds,NUM_PRODS)
+    2. up7_down7_test.c:1415  - CU_ASSERT_EQUAL(status,0)
+    3. up7_down7_test.c:1615  - CU_ASSERT_EQUAL(status,LDM7_OK)
+    4. up7_down7_test.c:1004  - CU_ASSERT_EQUAL(WEXITSTATUS(status),0)
+
+Run Summary:    Type  Total    Ran Passed Failed Inactive
+              suites      1      1    n/a      0        0
+               tests      4      4      3      1        0
+             asserts    272    272    268      4      n/a
+
+Elapsed time =    4.950 seconds
+==108150== 
+==108150== HEAP SUMMARY:
+==108150==     in use at exit: 11,292 bytes in 37 blocks
+==108150==   total heap usage: 8,137 allocs, 8,100 frees, 23,191,916 bytes allocated
+==108150== 
+==108150== Thread 1:
+==108150== 5 bytes in 1 blocks are still reachable in loss record 1 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 6 bytes in 1 blocks are still reachable in loss record 2 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA21: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 6 bytes in 1 blocks are still reachable in loss record 3 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BAB1: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 7 bytes in 1 blocks are still reachable in loss record 4 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA7D: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 9 bytes in 1 blocks are still reachable in loss record 5 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA3B: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 9 bytes in 1 blocks are still reachable in loss record 6 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA5C: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 9 bytes in 1 blocks are still reachable in loss record 7 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BACB: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 10 bytes in 1 blocks are still reachable in loss record 8 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x6868949: strdup (in /usr/lib64/libc-2.17.so)
+==108150==    by 0x4EEB10B: lcf_newHostSet (ldm_config_file.c:2570)
+==108150==    by 0x406768: test_up7_down7 (up7_down7_test.c:1562)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:strdup
+   fun:lcf_newHostSet
+   fun:test_up7_down7
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 10 bytes in 1 blocks are still reachable in loss record 9 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x6868949: strdup (in /usr/lib64/libc-2.17.so)
+==108150==    by 0x4EB64CC: sa_copy (inetutil.c:1301)
+==108150==    by 0x4F3C7E9: mi_init (mcast_info.c:61)
+==108150==    by 0x4F3CA07: mi_copy (mcast_info.c:168)
+==108150==    by 0x4F351AB: me_setSubscriptionReply (UpMcastMgr.c:911)
+==108150==    by 0x4F3555E: umm_subscribe (UpMcastMgr.c:1018)
+==108150==    by 0x4F43468: up7_subscribe (up7.c:299)
+==108150==    by 0x4F44388: subscribe_7_svc (up7.c:742)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:strdup
+   fun:sa_copy
+   fun:mi_init
+   fun:mi_copy
+   fun:me_setSubscriptionReply
+   fun:umm_subscribe
+   fun:up7_subscribe
+   fun:subscribe_7_svc
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+}
+==108150== 10 bytes in 1 blocks are still reachable in loss record 10 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x6868949: strdup (in /usr/lib64/libc-2.17.so)
+==108150==    by 0x4EB64CC: sa_copy (inetutil.c:1301)
+==108150==    by 0x4F3C85D: mi_init (mcast_info.c:66)
+==108150==    by 0x4F3CA07: mi_copy (mcast_info.c:168)
+==108150==    by 0x4F351AB: me_setSubscriptionReply (UpMcastMgr.c:911)
+==108150==    by 0x4F3555E: umm_subscribe (UpMcastMgr.c:1018)
+==108150==    by 0x4F43468: up7_subscribe (up7.c:299)
+==108150==    by 0x4F44388: subscribe_7_svc (up7.c:742)
+==108150==    by 0x4ED7226: ldmprog_7 (ldm_svc.c:187)
+==108150==    by 0x4F070F1: svc_getreqsock (svc.c:541)
+==108150==    by 0x403A29: up7_run (up7_down7_test.c:555)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:strdup
+   fun:sa_copy
+   fun:mi_init
+   fun:mi_copy
+   fun:me_setSubscriptionReply
+   fun:umm_subscribe
+   fun:up7_subscribe
+   fun:subscribe_7_svc
+   fun:ldmprog_7
+   fun:svc_getreqsock
+   fun:up7_run
+}
+==108150== 11 bytes in 1 blocks are still reachable in loss record 11 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5497B78: xmlStrndup (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541B902: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA97: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlStrndup
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 12 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EEB217: lcf_addAllow (ldm_config_file.c:2631)
+==108150==    by 0x4067B4: test_up7_down7 (up7_down7_test.c:1564)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:lcf_addAllow
+   fun:test_up7_down7
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 13 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5494BEA: xmlNewMutex (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5493E08: xmlInitGlobals (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424969: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewMutex
+   fun:xmlInitGlobals
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 14 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5494BEA: xmlNewMutex (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x544FCBE: xmlInitMemory (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x542498A: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewMutex
+   fun:xmlInitMemory
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 15 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA21: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 16 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA3B: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 17 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA5C: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 18 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA7D: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 19 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BA97: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 20 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BAB1: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 21 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x541BACB: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+}
+==108150== 40 bytes in 1 blocks are still reachable in loss record 22 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B91C: xmlNewCharEncodingHandler (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150==    by 0x4EFB9C6: getTimeOffset (globals.c:472)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewCharEncodingHandler
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+   fun:getTimeOffset
+}
+==108150== 80 bytes in 1 blocks are still reachable in loss record 23 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EEB095: lcf_newHostSet (ldm_config_file.c:2557)
+==108150==    by 0x406768: test_up7_down7 (up7_down7_test.c:1562)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:lcf_newHostSet
+   fun:test_up7_down7
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 96 bytes in 1 blocks are still reachable in loss record 24 of 37
+==108150==    at 0x4C2B975: calloc (vg_replace_malloc.c:711)
+==108150==    by 0x4F01E8E: my_authnone_create (auth_none.c:81)
+==108150==    by 0x4F040DD: my_clnttcp_create (clnt_tcp.c:469)
+==108150==    by 0x4F36004: up7proxy_init (down7.c:249)
+==108150==    by 0x4F3613E: up7proxy_new (down7.c:299)
+==108150==    by 0x4F37509: newSubscriptionClient (down7.c:935)
+==108150==    by 0x4F38D7B: runDown7Once (down7.c:1620)
+==108150==    by 0x4F39DB8: down7_start (down7.c:1981)
+==108150==    by 0x405B59: receiver_run (up7_down7_test.c:1288)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   fun:my_authnone_create
+   fun:my_clnttcp_create
+   fun:up7proxy_init
+   fun:up7proxy_new
+   fun:newSubscriptionClient
+   fun:runDown7Once
+   fun:down7_start
+   fun:receiver_run
+   fun:start_thread
+   fun:clone
+}
+==108150== 104 bytes in 1 blocks are still reachable in loss record 25 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x5494CBA: xmlNewRMutex (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x54E90A8: __xmlInitializeDict (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x65D2E1F: pthread_once (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x54950AA: xmlIsMainThread (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5494798: __xmlKeepBlanksDefaultValue (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x54221BC: xmlKeepBlanksDefault (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01222: parseXmlFile (backend.c:734)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlNewRMutex
+   fun:__xmlInitializeDict
+   fun:pthread_once
+   fun:xmlIsMainThread
+   fun:__xmlKeepBlanksDefaultValue
+   fun:xmlKeepBlanksDefault
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+}
+==108150== 112 bytes in 1 blocks are indirectly lost in loss record 26 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB9377: msg_new (log.c:201)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA601: logl_vlog_q (log.c:884)
+==108150==    by 0x4EBA75F: logl_log_q (log.c:941)
+==108150==    by 0x4ECF18D: pq_del_oldest (pq.c:5226)
+==108150==    by 0x4ECF23C: rpqe_mkspace (pq.c:5371)
+==108150==    by 0x4ECF4B6: rpqe_new (pq.c:5496)
+==108150==    by 0x4ED0C92: pqe_newDirect (pq.c:6201)
+==108150==    by 0x4F3CEDB: allocateSpace (mldm_receiver.c:70)
+==108150==    by 0x4F3D27E: bop_func (mldm_receiver.c:144)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_vlog_q
+   fun:logl_log_q
+   fun:pq_del_oldest
+   fun:rpqe_mkspace
+   fun:rpqe_new
+   fun:pqe_newDirect
+   fun:allocateSpace
+   fun:bop_func
+}
+==108150== 112 bytes in 1 blocks are indirectly lost in loss record 27 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB9377: msg_new (log.c:201)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA351: logl_add (log.c:776)
+==108150==    by 0x4F3D018: allocateSpace (mldm_receiver.c:84)
+==108150==    by 0x4F3D27E: bop_func (mldm_receiver.c:144)
+==108150==    by 0x4F2ED4C: PerProdNotifier::notify_of_bop(unsigned int, unsigned long, void*, unsigned int, void**) (PerProdNotifier.cpp:118)
+==108150==    by 0x4F55498: fmtpRecvv3::BOPHandler(FmtpPacketHeader const&, char const*) (fmtpRecvv3.cpp:389)
+==108150==    by 0x4F55137: fmtpRecvv3::mcastBOPHandler(FmtpPacketHeader const&) (fmtpRecvv3.cpp:303)
+==108150==    by 0x4F563AC: fmtpRecvv3::mcastHandler() (fmtpRecvv3.cpp:760)
+==108150==    by 0x4F58D2C: fmtpRecvv3::StartMcastHandler(void*) (fmtpRecvv3.cpp:1847)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_add
+   fun:allocateSpace
+   fun:bop_func
+   fun:_ZN15PerProdNotifier13notify_of_bopEjmPvjPS0_
+   fun:_ZN10fmtpRecvv310BOPHandlerERK16FmtpPacketHeaderPKc
+   fun:_ZN10fmtpRecvv315mcastBOPHandlerERK16FmtpPacketHeader
+   fun:_ZN10fmtpRecvv312mcastHandlerEv
+   fun:_ZN10fmtpRecvv317StartMcastHandlerEPv
+}
+==108150== 112 bytes in 1 blocks are indirectly lost in loss record 28 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB9377: msg_new (log.c:201)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA351: logl_add (log.c:776)
+==108150==    by 0x4EBA86D: logl_flush (log.c:987)
+==108150==    by 0x4F3D2E0: bop_func (mldm_receiver.c:152)
+==108150==    by 0x4F2ED4C: PerProdNotifier::notify_of_bop(unsigned int, unsigned long, void*, unsigned int, void**) (PerProdNotifier.cpp:118)
+==108150==    by 0x4F55498: fmtpRecvv3::BOPHandler(FmtpPacketHeader const&, char const*) (fmtpRecvv3.cpp:389)
+==108150==    by 0x4F55137: fmtpRecvv3::mcastBOPHandler(FmtpPacketHeader const&) (fmtpRecvv3.cpp:303)
+==108150==    by 0x4F563AC: fmtpRecvv3::mcastHandler() (fmtpRecvv3.cpp:760)
+==108150==    by 0x4F58D2C: fmtpRecvv3::StartMcastHandler(void*) (fmtpRecvv3.cpp:1847)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_add
+   fun:logl_flush
+   fun:bop_func
+   fun:_ZN15PerProdNotifier13notify_of_bopEjmPvjPS0_
+   fun:_ZN10fmtpRecvv310BOPHandlerERK16FmtpPacketHeaderPKc
+   fun:_ZN10fmtpRecvv315mcastBOPHandlerERK16FmtpPacketHeader
+   fun:_ZN10fmtpRecvv312mcastHandlerEv
+   fun:_ZN10fmtpRecvv317StartMcastHandlerEPv
+}
+==108150== 256 bytes in 1 blocks are indirectly lost in loss record 29 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB93F1: msg_new (log.c:209)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA601: logl_vlog_q (log.c:884)
+==108150==    by 0x4EBA75F: logl_log_q (log.c:941)
+==108150==    by 0x4ECF18D: pq_del_oldest (pq.c:5226)
+==108150==    by 0x4ECF23C: rpqe_mkspace (pq.c:5371)
+==108150==    by 0x4ECF4B6: rpqe_new (pq.c:5496)
+==108150==    by 0x4ED0C92: pqe_newDirect (pq.c:6201)
+==108150==    by 0x4F3CEDB: allocateSpace (mldm_receiver.c:70)
+==108150==    by 0x4F3D27E: bop_func (mldm_receiver.c:144)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_vlog_q
+   fun:logl_log_q
+   fun:pq_del_oldest
+   fun:rpqe_mkspace
+   fun:rpqe_new
+   fun:pqe_newDirect
+   fun:allocateSpace
+   fun:bop_func
+}
+==108150== 256 bytes in 1 blocks are indirectly lost in loss record 30 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB93F1: msg_new (log.c:209)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA351: logl_add (log.c:776)
+==108150==    by 0x4F3D018: allocateSpace (mldm_receiver.c:84)
+==108150==    by 0x4F3D27E: bop_func (mldm_receiver.c:144)
+==108150==    by 0x4F2ED4C: PerProdNotifier::notify_of_bop(unsigned int, unsigned long, void*, unsigned int, void**) (PerProdNotifier.cpp:118)
+==108150==    by 0x4F55498: fmtpRecvv3::BOPHandler(FmtpPacketHeader const&, char const*) (fmtpRecvv3.cpp:389)
+==108150==    by 0x4F55137: fmtpRecvv3::mcastBOPHandler(FmtpPacketHeader const&) (fmtpRecvv3.cpp:303)
+==108150==    by 0x4F563AC: fmtpRecvv3::mcastHandler() (fmtpRecvv3.cpp:760)
+==108150==    by 0x4F58D2C: fmtpRecvv3::StartMcastHandler(void*) (fmtpRecvv3.cpp:1847)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_add
+   fun:allocateSpace
+   fun:bop_func
+   fun:_ZN15PerProdNotifier13notify_of_bopEjmPvjPS0_
+   fun:_ZN10fmtpRecvv310BOPHandlerERK16FmtpPacketHeaderPKc
+   fun:_ZN10fmtpRecvv315mcastBOPHandlerERK16FmtpPacketHeader
+   fun:_ZN10fmtpRecvv312mcastHandlerEv
+   fun:_ZN10fmtpRecvv317StartMcastHandlerEPv
+}
+==108150== 256 bytes in 1 blocks are indirectly lost in loss record 31 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB93F1: msg_new (log.c:209)
+==108150==    by 0x4EB9973: queue_getNextEntry (log.c:384)
+==108150==    by 0x4EBA22A: logl_vadd (log.c:746)
+==108150==    by 0x4EBA351: logl_add (log.c:776)
+==108150==    by 0x4EBA86D: logl_flush (log.c:987)
+==108150==    by 0x4F3D2E0: bop_func (mldm_receiver.c:152)
+==108150==    by 0x4F2ED4C: PerProdNotifier::notify_of_bop(unsigned int, unsigned long, void*, unsigned int, void**) (PerProdNotifier.cpp:118)
+==108150==    by 0x4F55498: fmtpRecvv3::BOPHandler(FmtpPacketHeader const&, char const*) (fmtpRecvv3.cpp:389)
+==108150==    by 0x4F55137: fmtpRecvv3::mcastBOPHandler(FmtpPacketHeader const&) (fmtpRecvv3.cpp:303)
+==108150==    by 0x4F563AC: fmtpRecvv3::mcastHandler() (fmtpRecvv3.cpp:760)
+==108150==    by 0x4F58D2C: fmtpRecvv3::StartMcastHandler(void*) (fmtpRecvv3.cpp:1847)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   fun:msg_new
+   fun:queue_getNextEntry
+   fun:logl_vadd
+   fun:logl_add
+   fun:logl_flush
+   fun:bop_func
+   fun:_ZN15PerProdNotifier13notify_of_bopEjmPvjPS0_
+   fun:_ZN10fmtpRecvv310BOPHandlerERK16FmtpPacketHeaderPKc
+   fun:_ZN10fmtpRecvv315mcastBOPHandlerERK16FmtpPacketHeader
+   fun:_ZN10fmtpRecvv312mcastHandlerEv
+   fun:_ZN10fmtpRecvv317StartMcastHandlerEPv
+}
+==108150== 256 bytes in 1 blocks are definitely lost in loss record 32 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EBA4BE: logl_malloc (log.c:829)
+==108150==    by 0x4EE55E7: tryFormat (ldmprint.c:92)
+==108150==    by 0x4EE5660: ldm_vformat (ldmprint.c:124)
+==108150==    by 0x4EE574E: ldm_format (ldmprint.c:158)
+==108150==    by 0x4F35904: vcEndPoint_format (VirtualCircuit.c:63)
+==108150==    by 0x404BF9: sender_start (up7_down7_test.c:917)
+==108150==    by 0x406319: test_up7 (up7_down7_test.c:1469)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:logl_malloc
+   fun:tryFormat
+   fun:ldm_vformat
+   fun:ldm_format
+   fun:vcEndPoint_format
+   fun:sender_start
+   fun:test_up7
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 256 bytes in 1 blocks are definitely lost in loss record 33 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EBA4BE: logl_malloc (log.c:829)
+==108150==    by 0x4EE55E7: tryFormat (ldmprint.c:92)
+==108150==    by 0x4EE5660: ldm_vformat (ldmprint.c:124)
+==108150==    by 0x4EE574E: ldm_format (ldmprint.c:158)
+==108150==    by 0x4F35904: vcEndPoint_format (VirtualCircuit.c:63)
+==108150==    by 0x404BF9: sender_start (up7_down7_test.c:917)
+==108150==    by 0x40648D: test_bad_subscription (up7_down7_test.c:1508)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:logl_malloc
+   fun:tryFormat
+   fun:ldm_vformat
+   fun:ldm_format
+   fun:vcEndPoint_format
+   fun:sender_start
+   fun:test_bad_subscription
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 256 bytes in 1 blocks are definitely lost in loss record 34 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EBA4BE: logl_malloc (log.c:829)
+==108150==    by 0x4EE55E7: tryFormat (ldmprint.c:92)
+==108150==    by 0x4EE5660: ldm_vformat (ldmprint.c:124)
+==108150==    by 0x4EE574E: ldm_format (ldmprint.c:158)
+==108150==    by 0x4F35904: vcEndPoint_format (VirtualCircuit.c:63)
+==108150==    by 0x404BF9: sender_start (up7_down7_test.c:917)
+==108150==    by 0x4066D7: test_up7_down7 (up7_down7_test.c:1558)
+==108150==    by 0x51DE211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE4A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x51DE825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==108150==    by 0x406D45: main (up7_down7_test.c:1649)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:logl_malloc
+   fun:tryFormat
+   fun:ldm_vformat
+   fun:ldm_format
+   fun:vcEndPoint_format
+   fun:sender_start
+   fun:test_up7_down7
+   obj:/usr/lib64/libcunit.so.1.0.1
+   obj:/usr/lib64/libcunit.so.1.0.1
+   fun:CU_run_all_tests
+   fun:main
+}
+==108150== 400 bytes in 1 blocks are still reachable in loss record 35 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x541B9F1: xmlInitCharEncodingHandlers (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5424994: ??? (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x5437E24: xmlSAXParseFileWithData (in /usr/lib64/libxml2.so.2.9.1)
+==108150==    by 0x4F01231: parseXmlFile (backend.c:735)
+==108150==    by 0x4F0143D: acquireBackend (backend.c:792)
+==108150==    by 0x4F01BA8: beInitCursor (backend.c:1203)
+==108150==    by 0x4EFE0E4: sync (registry.c:505)
+==108150==    by 0x4EFE53D: initRegistry (registry.c:621)
+==108150==    by 0x4EFE940: getValue (registry.c:834)
+==108150==    by 0x4EFEE06: reg_getUint (registry.c:1126)
+==108150==    by 0x4EFB9C6: getTimeOffset (globals.c:472)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xmlInitCharEncodingHandlers
+   obj:/usr/lib64/libxml2.so.2.9.1
+   fun:xmlSAXParseFileWithData
+   fun:parseXmlFile
+   fun:acquireBackend
+   fun:beInitCursor
+   fun:sync
+   fun:initRegistry
+   fun:getValue
+   fun:reg_getUint
+   fun:getTimeOffset
+}
+==108150== 1,120 (16 direct, 1,104 indirect) bytes in 1 blocks are definitely lost in loss record 36 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4EB978A: queue_get (log.c:313)
+==108150==    by 0x4EB99DE: queue_clear (log.c:405)
+==108150==    by 0x4EBAD9C: log_clear (log.c:1326)
+==108150==    by 0x4ECEA17: pq_set_mvrt (pq.c:5080)
+==108150==    by 0x4ECF098: pq_del_oldest (pq.c:5218)
+==108150==    by 0x4ECF23C: rpqe_mkspace (pq.c:5371)
+==108150==    by 0x4ECF4B6: rpqe_new (pq.c:5496)
+==108150==    by 0x4ED0C92: pqe_newDirect (pq.c:6201)
+==108150==    by 0x4F3CEDB: allocateSpace (mldm_receiver.c:70)
+==108150==    by 0x4F3D27E: bop_func (mldm_receiver.c:144)
+==108150==    by 0x4F2ED4C: PerProdNotifier::notify_of_bop(unsigned int, unsigned long, void*, unsigned int, void**) (PerProdNotifier.cpp:118)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:queue_get
+   fun:queue_clear
+   fun:log_clear
+   fun:pq_set_mvrt
+   fun:pq_del_oldest
+   fun:rpqe_mkspace
+   fun:rpqe_new
+   fun:pqe_newDirect
+   fun:allocateSpace
+   fun:bop_func
+   fun:_ZN15PerProdNotifier13notify_of_bopEjmPvjPS0_
+}
+==108150== 8,192 bytes in 1 blocks are still reachable in loss record 37 of 37
+==108150==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==108150==    by 0x4F067EA: my_xprt_register (svc.c:102)
+==108150==    by 0x4F07E7E: makefd_xprt (svc_tcp.c:241)
+==108150==    by 0x4F07D84: my_svcfd_create (svc_tcp.c:206)
+==108150==    by 0x4035CF: up7_init (up7_down7_test.c:471)
+==108150==    by 0x403CD1: servlet_run (up7_down7_test.c:619)
+==108150==    by 0x403FF9: sender_run (up7_down7_test.c:676)
+==108150==    by 0x65CDE24: start_thread (in /usr/lib64/libpthread-2.17.so)
+==108150==    by 0x68DA34C: clone (in /usr/lib64/libc-2.17.so)
+==108150== 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:my_xprt_register
+   fun:makefd_xprt
+   fun:my_svcfd_create
+   fun:up7_init
+   fun:servlet_run
+   fun:sender_run
+   fun:start_thread
+   fun:clone
+}
+==108150== LEAK SUMMARY:
+==108150==    definitely lost: 784 bytes in 4 blocks
+==108150==    indirectly lost: 1,104 bytes in 6 blocks
+==108150==      possibly lost: 0 bytes in 0 blocks
+==108150==    still reachable: 9,404 bytes in 27 blocks
+==108150==         suppressed: 0 bytes in 0 blocks
+==108150== 
+==108150== For counts of detected and suppressed errors, rerun with: -v
+==108150== Use --track-origins=yes to see where uninitialised values come from
+==108150== ERROR SUMMARY: 28 errors from 28 contexts (suppressed: 2 from 2)

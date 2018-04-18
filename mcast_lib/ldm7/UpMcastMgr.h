@@ -41,6 +41,9 @@ umm_setRetxTimeout(const float minutes);
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
+ * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ *                         "0.0.0.0" obtains the system's default multicast
+ *                         interface.
  * @param[in] info         Information on the multicast group. The port number
  *                         of the FMTP TCP server is ignored (it will be chosen
  *                         by the operating sytem). Caller may free.
@@ -65,6 +68,7 @@ umm_setRetxTimeout(const float minutes);
  */
 Ldm7Status
 umm_addPotentialSender(
+    const struct in_addr              mcastIface,
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
     const VcEndPoint* const restrict  vcEnd,

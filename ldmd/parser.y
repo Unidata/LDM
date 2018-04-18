@@ -407,7 +407,8 @@ decodeMulticastEntry(
     const char* const   vlanIdSpec,
     const char* const   switchSpec,
     const char* const   switchPortSpec,
-    const char* const   fmtpSubnetSpec)
+    const char* const   fmtpSubnetSpec,
+    const char* const   mcastIfaceSpec)
 {
     int         status = EINVAL;
     feedtypet   feed;
@@ -463,8 +464,20 @@ decodeMulticastEntry(
                                     status = LDM7_SYSTEM;
                                 }
                                 else {
-                                    status = lcf_addMulticast(mcastInfo, ttl,
-                                            vcEnd, fmtpSubnet, getQueuePath());
+                                    struct in_addr mcastIface;
+                                    status = inet_pton(AF_INET, mcastIfaceSpec, 
+                                            &mcastIface);
+                                    if (status != 1) {
+                                        log_add("Couldn't decode multicast "
+                                                "interface specification "
+                                                "\"%s\"", mcastIfaceSpec);
+                                        status = LDM7_INVAL;
+                                    }
+                                    else {
+                                        status = lcf_addMulticast(mcastIface,
+                                            mcastInfo, ttl, vcEnd, fmtpSubnet,
+                                            getQueuePath());
+                                    }
                                     vcEndPoint_delete(vcEnd);
                                 } // `vcEnd` allocated
                                 mi_free(mcastInfo);
@@ -732,12 +745,26 @@ multicast_entry: MULTICAST_K STRING STRING STRING STRING STRING STRING STRING ST
                 {
                 #if WANT_MULTICAST
                     int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
-                            $8, $9);
+                            $8, $9, "0.0.0.0");
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
                                 "\"MULTICAST %s %s %s %s %s %s %s\"",
                                  $2, $3, $4, $5, $6, $7, $8, $9);
+                        return errCode;
+                    }
+                #endif
+                }
+                | MULTICAST_K STRING STRING STRING STRING STRING STRING STRING STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
+                            $8, $9, $10);
+
+                    if (errCode) {
+                        log_add("Couldn't decode MULTICAST entry "
+                                "\"MULTICAST %s %s %s %s %s %s %s %s\"",
+                                 $2, $3, $4, $5, $6, $7, $8, $9, $10);
                         return errCode;
                     }
                 #endif

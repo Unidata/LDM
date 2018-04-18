@@ -143,11 +143,6 @@ mldm_receiver_memory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
-                                          
-check-UpMcastMgr:	UpMcastMgr_test
-	./UpMcastMgr_test
-check-mldm_receiver:	mldm_receiver_test
-	./mldm_receiver_test
 
 MLDM_RECEIVER_MEMORY_TEST	= mldm_receiver_memory_test
 MLDM_RECEIVER_TEST		= mldm_receiver_test
@@ -192,15 +187,20 @@ cond_wait_test_SOURCES		= cond_wait_test.c
 cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
 				  
-SUFFIXES:	.vg
+SUFFIXES:	.vg .supp .sup .log
+                                          
+%.log:	%
+	./% >&$@
 %.vg:	%
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            --suppressions=up7_down7_test.supp \
             ./$< >&$@
 
-%.supp:	%
+%.sup:	%
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
+            --suppressions=up7_down7_test.supp \
             --gen-suppressions=all ./$< >&$@
 
 valgrind-prod_index_map_test:	prod_index_map_test
@@ -216,8 +216,8 @@ up7_down7_test.valgrind:	up7_down7_test
             ./up7_down7_test
 #            --suppressions=up7_down7_test.supp --gen-suppressions=all 
 
-check-up7_down7_test:		up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
+up7_down7_test.log:		up7_down7_test
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test >&$@
 MldmRpc_test_SOURCES	= MldmRpc_test.c
 MldmRpc_test_LDADD	= $(LDADD) @LIBS_CUNIT@
 

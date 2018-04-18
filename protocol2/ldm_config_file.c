@@ -2997,6 +2997,9 @@ lcf_addAccept(
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
+ * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ *                         "0.0.0.0" obtains the system's default multicasting
+ *                         interface.
  * @param[in] info         Information on the multicast group. Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -3017,14 +3020,15 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
+        const struct in_addr             mcastIface,
         const McastInfo* const restrict  mcastInfo,
         const unsigned short             ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
         const char* const restrict       pqPathname)
 {
-    int status = umm_addPotentialSender(mcastInfo, ttl, vcEnd, fmtpSubnet,
-            pqPathname);
+    int status = umm_addPotentialSender(mcastIface, mcastInfo, ttl, vcEnd,
+            fmtpSubnet, pqPathname);
     if (0 == status) {
         serverNeeded = true;
         somethingToDo = true;

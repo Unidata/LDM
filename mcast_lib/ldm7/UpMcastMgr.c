@@ -160,6 +160,9 @@ mldm_getServerPorts(const int pipe)
  *     - The logging level; and
  *     - The LDM product-queue;
  *
+ * @param[in] mcastIface     IPv4 address of interface to use for multicasting.
+ *                           "0.0.0.0" obtains the system's default multicast
+ *                           interface.
  * @param[in] info           Information on the multicast group.
  * @param[in] ttl            Time-to-live for the multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -181,6 +184,7 @@ mldm_getServerPorts(const int pipe)
  */
 static void
 mldm_exec(
+    const struct in_addr            mcastIface,
     const McastInfo* const restrict info,
     const unsigned short            ttl,
     const CidrAddr* const restrict  fmtpSubnet,
@@ -203,6 +207,13 @@ mldm_exec(
         args[i++] = "-v";
     if (log_is_enabled_debug)
         args[i++] = "-x";
+
+    char mcastIfaceBuf[INET_ADDRSTRLEN];
+    if (mcastIface.s_addr) {
+        inet_ntop(AF_INET, &mcastIface, mcastIfaceBuf, sizeof(mcastIfaceBuf));
+        args[i++] = "-m";
+        args[i++] = mcastIfaceBuf;
+    }
 
     char feedtypeBuf[256];
     if (info->feed != EXP) {
@@ -395,6 +406,9 @@ mldm_handleExecedChild(
  * Executes a multicast LDM sender as a child process. Doesn't block. Sets
  * `childPid`, `fmtpSrvrPort` and `mldmCmdPort`.
  *
+ * @param[in]     mcastIface     IPv4 address of interface to use for
+ *                               multicasting. "0.0.0.0" obtains the system's
+ *                               default multicast interface.
  * @param[in,out] info           Information on the multicast group.
  * @param[in]     ttl            Time-to-live of multicast packets.
  * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
@@ -409,6 +423,7 @@ mldm_handleExecedChild(
  */
 static Ldm7Status
 mldm_spawn(
+    const struct in_addr            mcastIface,
     McastInfo* const restrict       info,
     const unsigned short            ttl,
     const CidrAddr* const restrict  fmtpSubnet,
@@ -435,7 +450,8 @@ mldm_spawn(
             (void)close(fds[0]); // read end of pipe unneeded
             allowSigs(); // so process can be terminated
             // The following statement shouldn't return
-            mldm_exec(info, ttl, fmtpSubnet, retxTimeout, pqPathname, fds[1]);
+            mldm_exec(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
+                    pqPathname, fds[1]);
             log_flush_error();
             exit(1);
         }
@@ -450,6 +466,9 @@ mldm_spawn(
 /**
  * Ensures that a multicast LDM sender process is running.
  *
+ * @param[in] mcastIface    IPv4 address of interface to use for multicasting.
+ *                          "0.0.0.0" obtains the system's default multicast
+ *                          interface.
  * @param[in]  info         LDM7 multicast information
  * @param[in]  ttl          Time-to-live of multicast packets
  * @param[in]  fmtpSubnet   Subnet for client FMTP TCP connections
@@ -466,6 +485,7 @@ mldm_spawn(
  */
 static Ldm7Status
 mldm_ensureRunning(
+        const struct in_addr            mcastIface,
         McastInfo* const restrict       info,
         const unsigned short            ttl,
         const CidrAddr* const restrict  fmtpSubnet,
@@ -497,7 +517,8 @@ mldm_ensureRunning(
              * Sets `feed`, `childPid`, `fmtpSrvrPort`, `mldmCmdPort`; calls
              * `msm_put()`
              */
-            status = mldm_spawn(info, ttl, fmtpSubnet, retxTimeout, pqPathname);
+            status = mldm_spawn(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
+                    pqPathname);
         }
         (void)msm_unlock();
     } // Multicast sender map is locked
@@ -546,6 +567,7 @@ mldm_getMldmCmdPort()
  ******************************************************************************/
 
 typedef struct {
+    struct in_addr mcastIface;
     McastInfo      info;
     /// Local virtual-circuit endpoint
     VcEndPoint*    vcEnd;
@@ -558,6 +580,9 @@ typedef struct {
  * Initializes a multicast entry.
  *
  * @param[out] entry       Entry to be initialized.
+ * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ *                         "0.0.0.0" obtains the system's default multicast
+ *                         interface.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
@@ -572,6 +597,7 @@ typedef struct {
 static Ldm7Status
 me_init(
         McastEntry* const restrict       entry,
+        const struct in_addr             mcastIface,
         const McastInfo* const           info,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
@@ -588,6 +614,7 @@ me_init(
         status = LDM7_SYSTEM;
     }
     else {
+        entry->mcastIface = mcastIface;
         entry->ttl = ttl;
         entry->pqPathname = strdup(pqPathname);
 
@@ -635,6 +662,9 @@ me_destroy(
  * Returns a new multicast entry.
  *
  * @param[out] entry       New, initialized entry.
+ * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
+ *                         "0.0.0.0" obtains the system's default multicast
+ *                         interface.
  * @param[in]  info        Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
@@ -649,6 +679,7 @@ me_destroy(
 static Ldm7Status
 me_new(
         McastEntry** const restrict      entry,
+        const struct in_addr             mcastIface,
         const McastInfo* const           info,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
@@ -671,7 +702,8 @@ me_new(
             status = LDM7_SYSTEM;
         }
         else {
-            status = me_init(ent, info, ttl, vcEnd, fmtpSubnet, pqPathname);
+            status = me_init(ent, mcastIface, info, ttl, vcEnd, fmtpSubnet,
+                    pqPathname);
 
             if (status) {
                 free(ent);
@@ -798,8 +830,8 @@ me_startIfNecessary(
         McastEntry* const entry,
         const float       retxTimeout)
 {
-    int status = mldm_ensureRunning(&entry->info, entry->ttl,
-            &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
+    int status = mldm_ensureRunning(entry->mcastIface, &entry->info,
+            entry->ttl, &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
     if (status == 0)
         entry->info.server.port = mldm_getFmtpSrvrPort();
     return status;
@@ -931,6 +963,7 @@ umm_setRetxTimeout(const float minutes)
 
 Ldm7Status
 umm_addPotentialSender(
+    const struct in_addr              mcastIface,
     const McastInfo* const restrict   info,
     const unsigned short              ttl,
     const VcEndPoint* const restrict  vcEnd,
@@ -938,8 +971,8 @@ umm_addPotentialSender(
     const char* const restrict        pqPathname)
 {
     McastEntry* entry;
-    int         status = me_new(&entry, info, ttl, vcEnd, fmtpSubnet,
-            pqPathname);
+    int         status = me_new(&entry, mcastIface, info, ttl, vcEnd,
+            fmtpSubnet, pqPathname);
 
     if (0 == status) {
         const void* const node = tsearch(entry, &mcastEntries,

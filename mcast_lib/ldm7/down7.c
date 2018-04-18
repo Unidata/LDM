@@ -39,6 +39,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
+#include <sys/select.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -107,6 +108,8 @@ struct Down7 {
     /// Persistent multicast receiver memory
     McastReceiverMemory*  mrm;
     Up7Proxy*             up7proxy;      ///< proxy for upstream LDM7
+    /// Server-side transport for missing products
+    SVCXPRT*              xprt;
     pthread_t             mainThread;
     pthread_t             mcastRecvThread;
     pthread_t             ucastRecvThread;
@@ -412,9 +415,9 @@ up7proxy_subscribe(
     /*
      * WARNING: If a standard RPC implementation is used, then it is likely that
      * `subscribe_7()` won't return when `SIGTERM` is received because
-     * `readtcp()` in `clnt_tcp.c` ignores `EINTR`. The RPC implementation
-     * included with the LDM package has been modified to not have this problem.
-     * -- Steve Emmerson 2018-03-26
+     * `readtcp()` in `clnt_tcp.c` nominally ignores `EINTR`. The RPC
+     * implementation included with the LDM package has been modified to not
+     * have this problem. -- Steve Emmerson 2018-03-26
      */
     SubscriptionReply* reply = subscribe_7(&request, clnt);
     blockSigTerm();
@@ -951,29 +954,27 @@ newSubscriptionClient(Down7* const down7)
  * error occurs
  *
  * @param[in]     down7          Pointer to the downstream LDM7.
- * @param[in]     xprt           Pointer to the RPC service transport. Will be
- *                               destroyed upon return.
- * @retval        0              `stopUcastRcvr()` was called. The RPC transport
- *                               is closed.
+ * @retval        0              `stopUcastRcvr()` was called.
  * @retval        LDM7_RPC       Error in RPC layer. `log_add()` called.
  * @retval        LDM7_SYSTEM    System error. `log_add()` called.
  */
 static int
-run_svc(
-    Down7* const restrict   down7,
-    SVCXPRT* restrict       xprt)
+run_svc(Down7* const down7)
 {
     int           status;
-    const int     sock = xprt->xp_sock;
+    const int     sock = down7->xprt->xp_sock;
     int           timeout = interval * 1000; // probably 30 seconds
     struct pollfd pfd;
+
     pfd.fd = sock;
     pfd.events = POLLIN;
-    for (;;) {
+
+    for (status = 0; !down7->done; status = 0) {
         log_debug_1("Calling poll(): socket=%d", sock);
         unblockSigTerm(); // Because `SIGTERM` used to stop this thread
         status = poll(&pfd, 1, timeout);
         blockSigTerm();
+
         if (0 == status) {
             // Timeout
             status = up7proxy_testConnection(down7->up7proxy);
@@ -982,36 +983,37 @@ run_svc(
             continue;
         }
         if (0 > status) {
-            if (errno == EINTR) {
-                status = LDM7_OK;
-            }
-            else {
+            if (errno != EINTR)
                 log_add_syserr("poll() error on socket %d with %s", sock,
                         down7->upId);
-                status = LDM7_SYSTEM;
-            }
+            status = LDM7_INTR;
             break;
         }
-        if ((pfd.revents & POLLHUP) || (pfd.revents & POLLERR)) {
+        if ((pfd.revents & POLLNVAL) || (pfd.revents & POLLERR)) {
             log_debug_1("RPC transport socket with %s closed or in error",
                     down7->upId);
+            status = LDM7_SYSTEM;
+            break;
+        }
+        if (pfd.revents & POLLHUP) {
+            log_debug_1("RPC transport socket with %s closed", down7->upId);
             status = 0;
             break;
         }
-        if (pfd.revents & POLLIN) {
-            svc_getreqsock(sock); // Process RPC message. Calls ldmprog_7()
+        if (pfd.revents & POLLRDNORM) {
+            // Process RPC message. Calls ldmprog_7(). Might destroy `xprt`
+            svc_getreqsock(sock);
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
-            // Here if the upstream LDM7 closed the connection
-            log_debug_1("The RPC layer destroyed the service transport with %s",
+            // `svc_getreqsock()` destroyed `xprt`
+            log_notice_q("Connection to upstream LDM7 %s closed by RPC layer",
                     down7->upId);
-            xprt = NULL;
-            status = 0;
+            down7->xprt = NULL;
+            status = LDM7_RPC;
             break;
         }
     }
-    if (xprt != NULL)
-        svc_destroy(xprt);
+
     return status; // Eclipse IDE wants to see a return
 }
 
@@ -1021,16 +1023,12 @@ run_svc(
  * `stopUcastRcvr()` is called or an error occurs
  *
  * @param[in] down7          Pointer to the downstream LDM7.
- * @param[in] xprt           Pointer to the server-side transport object. Will
- *                           be destroyed upon return.
  * @retval    0              Success. The server transport is closed.
  * @retval    LDM7_RPC       An RPC error occurred. `log_add()` called.
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static int
-run_down7_svc(
-    Down7* const restrict   down7,
-    SVCXPRT* const restrict xprt)
+run_down7_svc(Down7* const restrict down7)
 {
     /*
      * The downstream LDM7 RPC functions don't know their associated downstream
@@ -1041,7 +1039,6 @@ run_down7_svc(
     if (status) {
         log_errno_q(status,
                 "Couldn't set thread-specific pointer to downstream LDM7");
-        svc_destroy(xprt);
         status = LDM7_SYSTEM;
     }
     else {
@@ -1050,9 +1047,10 @@ run_down7_svc(
          * It destroys and unregisters the service transport, which will close
          * the downstream LDM7's client socket.
          */
-        status = run_svc(down7, xprt);
+        status = run_svc(down7);
         log_notice_q("Downstream LDM7 missed-product receiver terminated");
     } // thread-specific pointer to downstream LDM7 is set
+
     return status;
 }
 
@@ -1307,30 +1305,35 @@ static void*
 runUcastRcvr(void* const arg)
 {
     Down7* const down7 = (Down7*)arg;
-    SVCXPRT*     xprt;
-    int          status = createUcastRecvXprt(down7->sock, &xprt);
+    int          status = createUcastRecvXprt(down7->sock, &down7->xprt);
+
     if (0 == status) {
         // Last argument == 0 => don't register with portmapper
-        if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
+        if (!svc_register(down7->xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
             char* sockSpec = sa_format(down7->servAddr);
             log_add("Couldn't register RPC server for receiving "
                     "data-products from \"%s\"",  sockSpec);
             free(sockSpec);
-            svc_destroy(xprt);
             status = LDM7_RPC;
         }
         else {
             /*
              * The following executes until an error occurs or termination is
-             * externally requested. It destroys and unregisters the service
-             * transport, which will close the downstream LDM7's client socket.
+             * externally requested. It will close the downstream LDM7's client
+             * socket and *might* destroy the service transport -- which would
+             * unregister it.
              */
-            status = run_down7_svc(down7, xprt);
+            status = run_down7_svc(down7);
         } // `ldmprog_7` registered
+
+        if (down7->xprt)
+            svc_destroy(down7->xprt);
     } // `xprt` initialized
+
     down7_setStatusIfOk(down7, status);
     log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
     log_free();
+
     return NULL;
 }
 
@@ -1746,14 +1749,16 @@ createDown7Key(void)
 
 /**
  * Handles failure of delivery of a data-product by logging the fact and
- * destroying the server-side RPC transport.
+ * setting the `done` flag in the downstream LDM7.
  *
- * @param[in] msg    The log message.
- * @param[in] info   The product metadata.
- * @param[in] rqstp  The service request.
+ * @param[in,out] down7  Downstream LDM7
+ * @param[in]     msg    The log message.
+ * @param[in]     info   The product metadata.
+ * @param[in]     rqstp  The service request.
  */
 static void
-deliveryFailure(
+down7_deliveryFailure(
+    Down7* const restrict           down7,
     const char* restrict            msg,
     const prod_info* const restrict info,
     struct svc_req* const restrict  rqstp)
@@ -1762,8 +1767,7 @@ deliveryFailure(
 
     log_error_q("%s: %s", msg, s_prod_info(buf, sizeof(buf), info,
             log_is_enabled_debug));
-    (void)svcerr_systemerr(rqstp->rq_xprt);
-    svc_destroy(rqstp->rq_xprt);
+    down7->done = 1;
 }
 
 /******************************************************************************
@@ -2230,12 +2234,12 @@ down7_lastReceived(
 }
 
 /**
- * Processes a missed data-product from a remote LDM7 by attempting to add the
- * data-product to the product-queue. The data-product should have been
- * previously requested from the remote LDM7 because it was missed by the
- * multicast LDM receiver. Destroys the server-side RPC transport if the
- * data-product isn't expected or can't be inserted into the product-queue. Does
- * not reply. Called by the RPC dispatcher `ldmprog_7()`.
+ * Asynchronously processes a missed data-product from a remote LDM7 by
+ * attempting to add the data-product to the product-queue. The data-product
+ * should have been previously requested from the remote LDM7 because it was
+ * missed by the multicast LDM receiver. Destroys the server-side RPC transport
+ * if the data-product isn't expected or can't be inserted into the
+ * product-queue. Does not reply. Called by the RPC dispatcher `ldmprog_7()`.
  *
  * @param[in] missedProd  Pointer to the missed data-product.
  * @param[in] rqstp       Pointer to the RPC service-request.
@@ -2248,26 +2252,28 @@ deliver_missed_product_7_svc(
 {
     prod_info* const info = &missedProd->prod.info;
     Down7*           down7 = pthread_getspecific(down7Key);
-    FmtpProdIndex   iProd;
+    FmtpProdIndex    iProd;
 
     if (!mrm_peekRequestedFileNoWait(down7->mrm, &iProd) ||
             iProd != missedProd->iProd) {
-        deliveryFailure("Unexpected product received", info, rqstp);
+        down7_deliveryFailure(down7, "Unexpected product received", info,
+                rqstp);
     }
     else {
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(down7->mrm, &iProd);
 
         if (deliver_product(down7, &missedProd->prod) != 0)
-            deliveryFailure("Couldn't insert missed product", info, rqstp);
+            down7_deliveryFailure(down7, "Couldn't insert missed product", info,
+                    rqstp);
     }
 
     return NULL; // causes RPC dispatcher to not reply
 }
 
 /**
- * Accepts notification from the upstream LDM7 that a requested data-product
- * doesn't exist. Called by the RPC dispatch routine `ldmprog_7()`.
+ * Asynchronously accepts notification from the upstream LDM7 that a requested
+ * data-product doesn't exist. Called by the RPC dispatch routine `ldmprog_7()`.
  *
  * @param[in] iProd   Index of the data-product.
  * @param[in] rqstp   Pointer to the RPC service-request.
@@ -2296,12 +2302,12 @@ no_such_product_7_svc(
 }
 
 /**
- * Processes a backlog data-product from a remote LDM7 by attempting to add the
- * data-product to the product-queue. The data-product should have been
- * previously requested from the remote LDM7 because it was missed during the
- * previous session. Destroys the server-side RPC transport if the data-product
- * can't be inserted into the product-queue. Does not reply. Called by the RPC
- * dispatcher `ldmprog_7()`.
+ * Asynchronously processes a backlog data-product from a remote LDM7 by
+ * attempting to add the data-product to the product-queue. The data-product
+ * should have been previously requested from the remote LDM7 because it was
+ * missed during the previous session. Destroys the server-side RPC transport if
+ * the data-product can't be inserted into the product-queue. Does not reply.
+ * Called by the RPC dispatcher `ldmprog_7()`.
  *
  * @param[in] prod        Pointer to the backlog data-product.
  * @param[in] rqstp       Pointer to the RPC service-request.
@@ -2315,17 +2321,19 @@ deliver_backlog_product_7_svc(
     Down7* down7 = pthread_getspecific(down7Key);
 
     if (deliver_product(down7, prod))
-        deliveryFailure("Couldn't insert backlog product", &prod->info, rqstp);
+        down7_deliveryFailure(down7, "Couldn't insert backlog product",
+                &prod->info, rqstp);
 
     return NULL; // causes RPC dispatcher to not reply
 }
 
 /**
- * Accepts notification that the downstream LDM7 associated with the current
- * thread has received all backlog data-products from its upstream LDM7. From
- * now on, the current process may be terminated for a time period that is less
- * than the minimum residence time of the upstream LDM7's product-queue without
- * loss of data. Called by the RPC dispatcher `ldmprog_7()`.
+ * Asynchronously accepts notification that the downstream LDM7 associated with
+ * the current thread has received all backlog data-products from its upstream
+ * LDM7. From now on, the current process may be terminated for a time period
+ * that is less than the minimum residence time of the upstream LDM7's
+ * product-queue without loss of data. Called by the RPC dispatcher
+ * `ldmprog_7()`.
  *
  * @param[in] rqstp  Pointer to the RPC server-request.
  */

@@ -46,6 +46,8 @@ static const char* const    GROUP_ADDR_2 = "224.0.0.2";
 static const unsigned short GROUP_PORT_1 = 1;
 static const unsigned short GROUP_PORT_2 = 2;
 static const char* const    SERVER_ADDR = "127.0.0.1";
+static const char* const    MCAST_IFACE = "127.0.0.1";
+static const struct in_addr mcastIface;
 static McastInfo*           mcastInfo_1;
 static McastInfo*           mcastInfo_2;
 static feedtypet            feedtype_1 = 1;
@@ -69,6 +71,8 @@ init()
     OP_ASSERT_TRUE(serverAddr_1 != NULL);
     status = sa_new(&serverAddr_2, SERVER_ADDR, 0); // O/S chooses port number
     OP_ASSERT_EQUAL_INT(0, status);
+    status = inet_pton(AF_INET, MCAST_IFACE, &mcastIface);
+    OP_ASSERT_EQUAL_INT(1, status);
     OP_ASSERT_TRUE(serverAddr_2 != NULL);
     status = mi_new(&mcastInfo_1, feedtype_1, groupAddr_1, serverAddr_1);
     OP_ASSERT_EQUAL_INT(0, status);
@@ -110,11 +114,14 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = umm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
+    int status = umm_addPotentialSender(mcastIface, mcastInfo_1, 0, NULL,
+            PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = umm_addPotentialSender(mcastInfo_1, 0, NULL, PQ_PATHNAME);
+    status = umm_addPotentialSender(mcastIface, mcastInfo_1, 0, NULL,
+            PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
-    status = umm_addPotentialSender(mcastInfo_2, 0, NULL, PQ_PATHNAME);
+    status = umm_addPotentialSender(mcastIface, mcastInfo_2, 0, NULL,
+            PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();
     OP_VERIFY();

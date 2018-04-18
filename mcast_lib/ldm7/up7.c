@@ -79,6 +79,10 @@ static char*     circuitId = NULL;
  * Whether or not the product-index map is open.
  */
 static bool pimIsOpen = false;
+/**
+ * Whether or not this component is done.
+ */
+static bool isDone = false;
 
 /**
  * Idempotent.
@@ -164,13 +168,24 @@ static void up7_destroyClient(void)
 }
 
 /**
- * Idempotent.
+ * Resets this module. Idempotent.
  */
 void up7_reset(void)
 {
     releaseDownFmtpAddr();
     up7_destroyClient();
     up7_closeProdIndexMap();
+    isDone = false;
+}
+
+/**
+ * Indicates if this module should no longer be used unless `up7_reset()` is
+ * called.
+ * @retval `true`  Iff this module should no longer be used
+ */
+bool up7_isDone()
+{
+    return isDone;
 }
 
 /**
@@ -709,8 +724,8 @@ up7_sendBacklog(
  ******************************************************************************/
 
 /**
- * Sets the subscription of the associated downstream LDM-7. Called by the RPC
- * dispatch function `ldmprog_7()`.
+ * Synchronously subscribes the associated downstream LDM-7 to a feed. Called by
+ * the RPC dispatch function `ldmprog_7()`.
  *
  * This function is thread-compatible but not thread-safe.
  *
@@ -743,35 +758,35 @@ subscribe_7_svc(
         log_error_q("Subscription failure");
     }
     else {
-        if (result.status == LDM7_OK) {
-            reply = &result;
-        }
-        else if (!up7_ensureProductQueueOpen()) {
-            log_flush_error();
+        if (result.status != LDM7_OK) {
+            reply = &result; // Unsuccessful reply; but one nonetheless
         }
         else {
-            if (!up7_createClientTransport(xprt)) {
-                log_error_q("Couldn't create client-side RPC transport to "
-                        " downstream host %s", hostname);
+            if (!up7_ensureProductQueueOpen()) {
+                log_flush_error();
             }
             else {
-                // `clnt` set
-                reply = &result; // Reply
-            }
+                if (!up7_createClientTransport(xprt)) {
+                    log_error_q("Couldn't create client-side RPC transport to "
+                            " downstream host %s", hostname);
+                }
+                else {
+                    // `clnt` set
+                    reply = &result; // Successful reply
+                } // Client-side transport to downstream LDM-7 created
+            } // Product-queue is open
         } // `result->status == LDM7_OK`
         if (reply == NULL)
             up7_ensureFree(xdr_SubscriptionReply, &result);
-    } // `up7_subscribe()` was successful. `result` is set.
+    } // `result` is set.
     if (reply == NULL) {
         /*
          * A NULL reply will cause the RPC dispatch routine to not reply. This
-         * is good because `svcerr_systemerr()` will be called and the
-         * server-side transport destroyed.
+         * is good because `svcerr_systemerr()` replies instead.
          */
         log_flush_error();
-        // in `rpc/svc.c`; only valid for synchronous RPC
-        svcerr_systemerr(xprt);
-        svc_destroy(xprt);
+        svcerr_systemerr(xprt); // In `svc.c`; Valid for synchronous calls only
+        isDone = true;
     }
 
     return reply;
@@ -808,14 +823,12 @@ request_product_7_svc(
 
     if (clnt == NULL) {
         log_error_q("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        svcerr_systemerr(xprt); // so the remote client will learn
-        svc_destroy(xprt);      // so the caller will learn
+        isDone = true;
     }
     else if (!up7_findAndSendProduct(*iProd)) {
         log_flush_error();
-        svcerr_systemerr(xprt); // so the remote client will learn
         up7_destroyClient();
-        svc_destroy(xprt);      // so the caller will learn
+        isDone = true;
     }
 
     return NULL;                // don't reply
@@ -840,12 +853,12 @@ request_backlog_7_svc(
 
     if (clnt == NULL) {
         log_error_q("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        svc_destroy(xprt);      // asynchrony => no sense replying
+        isDone = true;
     }
     else if (!up7_sendBacklog(backlog)) {
         log_flush_error();
         up7_destroyClient();
-        svc_destroy(xprt);      // asynchrony => no sense replying
+        isDone = true;
     }
 
     return NULL;                // don't reply

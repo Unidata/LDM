@@ -256,7 +256,7 @@ struct fmtp_sender {
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
  * @param[in]     groupPort     Port number of the multicast group.
- * @param[in]     ifaceAddr     IP address of the interface to use to send
+ * @param[in]     mcastIface    IP address of the interface to use to send
  *                              multicast packets. "0.0.0.0" obtains the default
  *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
@@ -286,12 +286,12 @@ struct fmtp_sender {
  */
 static int
 fmtpSender_init(
-    FmtpSender* const     sender,
+    FmtpSender* const      sender,
     const char* const      serverAddr,
     const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
-    const char* const      ifaceAddr,
+    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -308,9 +308,9 @@ fmtpSender_init(
         try {
             fmtpSendv3* fmtpSender = retxTimeout < 0
                     ? new fmtpSendv3(serverAddr, serverPort, groupAddr,
-                            groupPort, notifier, ttl, ifaceAddr, iProd)
+                            groupPort, notifier, ttl, mcastIface, iProd)
                     : new fmtpSendv3(serverAddr, serverPort, groupAddr,
-                            groupPort, notifier, ttl, ifaceAddr, iProd,
+                            groupPort, notifier, ttl, mcastIface, iProd,
                             retxTimeout);
             sender->fmtpSender = fmtpSender;
             sender->notifier = notifier;
@@ -354,7 +354,7 @@ fmtpSender_init(
  * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
  *                              multicast group.
  * @param[in]     groupPort     Port number of the multicast group.
- * @param[in]     ifaceAddr     IP address of the interface to use to send
+ * @param[in]     mcastIface    IP address of the interface to use to send
  *                              multicast packets. "0.0.0.0" obtains the default
  *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
@@ -389,7 +389,7 @@ fmtpSender_new(
     const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
-    const char* const      ifaceAddr,
+    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -405,7 +405,7 @@ fmtpSender_new(
     }
     else {
         status = fmtpSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, ifaceAddr, ttl, iProd, retxTimeout, doneWithProd,
+                groupPort, mcastIface, ttl, iProd, retxTimeout, doneWithProd,
                 authorizer);
 
         if (status) {
@@ -518,7 +518,7 @@ fmtpSender_create(
     unsigned short* const  serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
-    const char* const      ifaceAddr,
+    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -527,7 +527,7 @@ fmtpSender_create(
 {
     FmtpSender*  send;
     int          status = fmtpSender_new(&send, serverAddr, *serverPort,
-            groupAddr, groupPort, ifaceAddr, ttl, iProd, retxTimeout,
+            groupAddr, groupPort, mcastIface, ttl, iProd, retxTimeout,
             doneWithProd, authorizer);
 
     if (status) {

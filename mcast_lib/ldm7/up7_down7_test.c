@@ -24,6 +24,7 @@
 #include "pq.h"
 #include "prod_index_map.h"
 #include "timestamp.h"
+#include "up7.h"
 #include "UpMcastMgr.h"
 #include "VirtualCircuit.h"
 
@@ -55,7 +56,6 @@
 
 typedef struct {
     SVCXPRT*              xprt;
-    bool                  xprtAllocated;
 } Up7;
 
 typedef struct {
@@ -207,8 +207,8 @@ static int
 setup(void)
 {
     /*
-     * Ensure that the upstream component `up7` obtains the upstream queue from
-     * `getQueuePath()`. This is not done for the downstream component because
+     * Ensure that the upstream module `up7` obtains the upstream queue from
+     * `getQueuePath()`. This is not done for the downstream module because
      * `down7.c` implements an object-specific product-queue. The path-prefix of
      * the product-queue is also used to construct the pathname of the product-
      * index map (*.pim).
@@ -496,54 +496,58 @@ up7_init(
     return 0;
 }
 
-static void
-funcCancelled(
-        void* const arg)
-{
-    const char* funcName = (const char*)arg;
-    log_notice_q("%s() thread cancelled", funcName);
-}
-
 /**
- * @param[in] up7    Upstream LDM-7.
- * @retval    0      Success. Connection was closed by downstream LDM-7.
- * @retval    EINTR  A signal was caught.
- * @retval    EIO    I/O error. `log_add()` called.
- * @retval    EAGAIN The allocation of internal data structures failed but a
- *                   subsequent request may succeed.
- * @post             `svc_destroy(up7->xprt)` will have been called.
- * @post             `up7->xprt == NULL`
+ * @param[in] up7          Upstream LDM-7.
+ * @retval    0            Success. Connection was closed by downstream LDM-7.
+ * @retval    LDM7_INTR    Signal was caught.
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static int
 up7_run(
         Up7* const up7)
 {
-    int                status;
-    const int          sock = up7->xprt->xp_sock;
-    char*              downAddrStr = ipv4Sock_getPeerString(sock);
+    int       status;
+    const int sock = up7->xprt->xp_sock;
+    char*     downAddrStr = ipv4Sock_getPeerString(sock);
     CU_ASSERT_PTR_NOT_NULL(downAddrStr);
 
     struct pollfd fds;
     fds.fd = sock;
     fds.events = POLLRDNORM;
 
-    pthread_cleanup_push(funcCancelled, "up7_run");
-
-    int cancelState;
-    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-
-    for (;;) {
+    /**
+     * The `up7.c` module needs to tell this function to return when a error
+     * occurs that prevents continuation. The following mechanisms were
+     * considered:
+     * - Using a thread-specific signaling value. This was rejected because
+     *   that would increase the coupling between this function and the `up7.c`
+     *   module by
+     *   - Requiring the `up7_..._7_svc()` functions use this mechanism; and
+     *   - Requiring that the thread-specific data-key be publicly visible.
+     * - Closing the socket in the `up7.c` module. This was rejected because of
+     *   the race condition between closing the socket and the file descriptor
+     *   being reused by another thread.
+     * - Having `up7.c` call `svc_unregister()` and then checking `svc_fdset`
+     *   in this function. This was rejected because the file description can
+     *   also be removed from `svc_fdset` by `svc_getreqsock()`, except that the
+     *   latter also destroys the transport.
+     * - Having `up7.c` call `svc_destroy()` and then checking `svc_fdset`
+     *   in this function. This was rejected because it destroys the transport,
+     *   which is dereferenced by `ldmprog_7`.
+     * - Creating and using the function `up7_isDone()`. This was chosen.
+     */
+    while (!up7_isDone()) {
         log_debug_1("up7_run(): Calling poll()");
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
         if (0 > status) {
             if (errno != EINTR)
-                log_add_syserr("up7_run(): poll() failure");
-            status = errno;
+                log_add_syserr("Couldn't poll() socket %d", sock);
+            status = LDM7_INTR;
             break;
         }
         if ((fds.revents & POLLERR) || (fds.revents & POLLNVAL)) {
-            status = EIO;
+            status = LDM7_SYSTEM;
             break;
         }
         if (fds.revents & POLLHUP) {
@@ -552,25 +556,22 @@ up7_run(
         }
         if (fds.revents & POLLRDNORM) {
             log_debug_1("up7_run(): Calling svc_getreqsock()");
-            svc_getreqsock(sock); // calls `ldmprog_7()`
+            // calls `ldmprog_7()`; *might* destroy `xprt`
+            svc_getreqsock(sock);
         }
         if (!FD_ISSET(sock, &svc_fdset)) {
-            log_notice_q("Connection with %s closed by RPC layer", downAddrStr);
-            // `svc_destroy(up7->xprt)` was called by RPC layer.
-            up7->xprt = NULL; // so others don't try to destroy it
-            status = 0;
+            // `svc_getreqsock()` destroyed `xprt`
+            log_notice_q("Connection to downstream LDM7, %s, closed by RPC "
+                    "module", downAddrStr);
+            // Prevent SIGSEGV from `up7_destroy()` calling `svc_destroy()`
+            up7->xprt = NULL;
+            status = LDM7_RPC;
             break;
         }
-    }
+    } // While not done loop
 
-    /*
-     * In order to play nice with the caller, the cancelability state is
-     * reverted to its value on entry.
-     */
-    (void)pthread_setcancelstate(cancelState, &cancelState);
-
-    pthread_cleanup_pop(0);
     free(downAddrStr);
+    up7_reset();
 
     log_debug_1("up7_run(): Returning %d", status);
     return status;
@@ -581,9 +582,10 @@ up7_destroy(
         Up7* const up7)
 {
     svc_unregister(LDMPROG, 7);
-    if (up7->xprt)
-        svc_destroy(up7->xprt); // Closes socket
-    up7->xprt = NULL;
+    if (up7->xprt) {
+        svc_destroy(up7->xprt); // Closes socket; frees `up7->xprt`
+        up7->xprt = NULL;
+    }
 }
 
 static void
@@ -615,28 +617,26 @@ servlet_run(
     CU_ASSERT_NOT_EQUAL_FATAL(sock, -1);
 
     Up7 up7;
-    status = up7_init(&up7, sock);
+    status = up7_init(&up7, sock); // Initializes `up7->xprt`
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    pthread_cleanup_push(destroyUp7, &up7); {
-        status = up7_run(&up7);
-        CU_ASSERT(status == 0 || status == EINTR);
-    } pthread_cleanup_pop(1); // Calls `svc_destroy(up7->xprt)`; closes `sock`
+    status = up7_run(&up7);
+    CU_ASSERT(status == 0 || status == EINTR);
+    up7_destroy((Up7*)&up7); // Ensures socket closed
 
     log_debug_1("servlet_run(): Returning");
     return 0;
 }
 
-static void
-freeLogging(
-        void* const arg)
-{
-    log_free();
-}
-
 /**
  * Called by `pthread_create()`. The thread is cancelled by
  * `sender_terminate()`.
+ *
+ * An upstream LDM7 (sender) process has 2 threads that read from the
+ * product-queue:
+ * - A thread that sequences through the queue in order to send the backlog of
+ *   products missed since the end of the previous session; and
+ * - A thread that sends products that were missed by the receiver's FMTP layer.
  *
  * @param[in] arg  Pointer to sender.
  * @retval    &0   Success. Input end of sender's termination pipe(2) is closed.
@@ -647,11 +647,9 @@ sender_run(
 {
     Sender* const sender = (Sender*)arg;
     static int    status;
-
-    pthread_cleanup_push(freeLogging, NULL);
-
     const int     servSock = sender->sock;
     struct pollfd fds;
+
     fds.fd = servSock;
     fds.events = POLLIN;
 
@@ -661,9 +659,6 @@ sender_run(
 
     for (;;) {
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
-
-        int cancelState;
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
         if (0 > status)
             break;
@@ -679,8 +674,6 @@ sender_run(
                 break;
             }
         }
-
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
     } // `poll()` loop
 
     /* Because the current thread is ending: */
@@ -691,9 +684,9 @@ sender_run(
         log_clear(); // don't care about errors if termination requested
     }
 
-    pthread_cleanup_pop(1); // calls `log_free()`
-
     log_debug_1("sender_run(): Returning &%d", status);
+    log_free();
+
     return &status;
 }
 
@@ -866,8 +859,7 @@ setMcastInfo(
 }
 
 static int
-sender_start(
-        const feedtypet feedtype)
+sender_start(const feedtypet feedtype)
 {
     // Ensure that the first product-index will be 0
     int status = pim_delete(NULL, feedtype);
@@ -880,9 +872,11 @@ sender_start(
     }
     else {
         /*
-         * The product-queue must be thread-safe because there are 2 threads:
-         * - The upstream LDM7 server; and
-         * - The product-insertion thread.
+         * The product-queue must be thread-safe because it's accessed on
+         * multiple threads:
+         * - The product-insertion thread
+         * - The backlog thread
+         * - The missed-product thread
          */
         status = pq_open(getQueuePath(), PQ_THREADSAFE, &pq);
         if (status) {
@@ -903,8 +897,9 @@ sender_start(
                 CU_ASSERT_EQUAL(inet_pton(AF_INET, LOCAL_HOST, &subnet), 1);
                 CidrAddr*   fmtpSubnet = cidrAddr_new(subnet, 24);
                 CU_ASSERT_PTR_NOT_NULL(fmtpSubnet);
-                status = umm_addPotentialSender(mcastInfo, 2, vcEnd, fmtpSubnet,
-                        UP7_PQ_PATHNAME);
+                const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
+                status = umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
+                        fmtpSubnet, UP7_PQ_PATHNAME);
                 if (status) {
                     log_add("mlsm_addPotentialSender() failure");
                 }
@@ -1018,10 +1013,10 @@ sender_stop(void)
     int status;
 
     #if CANCEL_SENDER
-        log_debug_1("Canceling sender TCP server thread");
-        status = pthread_cancel(sender.thread);
+        log_debug_1("Sending SIGTERM to sender TCP server thread");
+        status = pthread_kill(sender.thread, SIGTERM);
         if (status) {
-            log_errno_q(status, "Couldn't cancel sender thread");
+            log_errno_q(status, "Couldn't terminate sender thread");
             retval = status;
         }
     #else
@@ -1275,6 +1270,13 @@ requester_destroy(void)
 /**
  * Runs a receiver on the current thread. Called by `pthread_create()`.
  *
+ * This implementation of a receiver has 3 threads that modify the
+ * product-queue:
+ * - A thread that writes multicast data-blocks;
+ * - A requester thread that deletes products pseudo-randomly to simulate
+ *   the FMTP layer missing products; and
+ * - A thread that receives missed products.
+ *
  * @param[in] arg   Pointer to receiver object
  * @return    NULL  Always
  */
@@ -1311,6 +1313,13 @@ receiver_init(
                 DOWN7_PQ_PATHNAME);
     }
     else {
+        /*
+         * The product-queue is opened thread-safe because it's accessed on
+         * multiple threads:
+         * - Multicast data-block insertion
+         * - Missed data-block insertion
+         * - Missed or backlog product insertion
+         */
         status = pq_open(DOWN7_PQ_PATHNAME, PQ_THREADSAFE, &receiverPq);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -1557,7 +1566,7 @@ test_up7_down7(
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    host_set* hostSet = lcf_newHostSet(HS_DOTTED_QUAD, "127.0.0.1", NULL);
+    host_set* hostSet = lcf_newHostSet(HS_DOTTED_QUAD, LOCAL_HOST, NULL);
     CU_ASSERT_PTR_NOT_NULL_FATAL(hostSet);
     ErrorObj* errObj = lcf_addAllow(ANY, hostSet, ".*", NULL);
     CU_ASSERT_PTR_NULL_FATAL(errObj);
@@ -1632,7 +1641,7 @@ int main(
     int status = 1;
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_DEBUG);
+    log_set_level(LOG_LEVEL_NOTICE);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
