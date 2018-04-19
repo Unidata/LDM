@@ -3035,7 +3035,8 @@ riul_add(
         const off_t           offset,
         const size_t          extent,
         void* const restrict  vp,
-        const int             rflags)
+        const int             rflags,
+        riu** const restrict  rpp)
 {
         riu *rp;
         riul *rl = *riulpp;
@@ -3081,6 +3082,8 @@ riul_add(
         rp->extent = extent;
         rp->vp = vp;
         rp->rflags = rflags;
+
+        *rpp = rp;
 
         rl->nelems++;
         if(rl->nelems > rl->maxelems) {
@@ -3598,7 +3601,7 @@ unmapwrap(void *const ptr,
  *                    - RGN_WRITE   Region will be modified
  *                    - RGN_NOWAIT  Return immediately if can't lock, else wait
  * @retval 0          Success
- * @retval EACCESS or EAGAIN
+ * @retval EACCES or EAGAIN
  *                    The "cmd" argument is F_SETLK: the type of lock (l_type)
  *                    is a shared (F_RDLCK) or exclusive (F_WRLCK) lock and the
  *                    segment of a file to be locked is already exclusive-locked
@@ -3699,7 +3702,7 @@ rgn2_unlock(
 
 /**
  * Reserves a region in a product-queue for reading or writing.
- * - File-locks the region in the product-queue
+ * - Locks the region in the product-queue file
  * - Adds the region to the list of regions-in-use
  *
  * @param[in,out] pq       Product queue
@@ -3712,10 +3715,9 @@ rgn2_unlock(
  *                         - RGN_NOWAIT  Return immediately if can't lock, else
  *                                       wait
  * @param[in]     vp       Data area of region
+ * @param[out]    rpp      Region in use entry
  * @retval        0        Success
- * @retval        EACCES   Region already reserved. `log_add()` called.
- * @retval        EAGAIN   Number of read-locks would exceed system limit.
- *                         `log_add()` called.
+ * @retval        EACCES   Region already reserved. `log_add()` *not* called.
  * @retval        EDEADLK  Deadlock condition detected. `log_add()` called.
  * @retval        ENOLCK   Number of file-locks would exceed system limit.
  *                         `log_add()` called.
@@ -3728,37 +3730,44 @@ rgn2_reserve(
         const off_t            offset,
         const size_t           extent,
         const int              rflags,
-        void* const restrict   vp)
+        void* const restrict   vp,
+        riu** const restrict   rpp)
 {
     int status;
 
     if (riul_find(pq->riulp, offset)) {
-        log_add("Region with offset %ld is already in use", (long)offset);
         status = EACCES;
     }
     else {
         status = rgn2_lock(pq, offset, extent, rflags);
 
-        if (status) {
-            log_add_errno(status, "rgn_lock() failure");
-        }
-        else {
-            status = riul_add(&pq->riulp, pq->pagesz, offset, extent, vp,
-                    rflags);
-
-            if (status) {
-                log_add_errno(status, "riul_add() failure");
-                (void)rgn2_unlock(pq, offset, extent,
-                        fMask(rflags, RGN_MODIFIED|RGN_NOWAIT));
+        if (status != EACCES) {
+            if (status == EAGAIN) {
+                status = EACCES;
             }
-        } // Region in file locked
-    } // Region not already in use
+            else if (status) {
+                log_add_errno(status, "rgn_lock() failure");
+            }
+            else {
+                status = riul_add(&pq->riulp, pq->pagesz, offset, extent, vp,
+                        rflags, rpp);
+
+                if (status) {
+                    log_add_errno(status, "riul_add() failure");
+                    (void)rgn2_unlock(pq, offset, extent,
+                            fMask(rflags, RGN_MODIFIED|RGN_NOWAIT));
+                }
+            } // Region in file locked
+        } // Locking region didn't return `EACCES`
+    } // Region not in list of regions-in-use
 
     return status;
 }
 
 /**
- * Releases a region in a product-queue that was previously reserved.
+ * Releases a region in a product-queue that was previously reserved by
+ *   - Deleting the relevant entry in the list of regions-in-use
+ *   - Unlocking the relevant section of the product-queue file
  *
  * @param[in,out] pq      Product queue
  * @param[in]     offset  Offset to region in bytes
@@ -3766,6 +3775,7 @@ rgn2_reserve(
  *                         - RGN_NOLOCK     Don't lock region; locking handled
  *                                          elsewhere
  *                         - RGN_MODIFIED   Region was modified
+ * @retval        0       Success
  * @retval        EINVAL  Region with given offset isn't in use
  * @see `region_reserve()`
  */
@@ -3807,365 +3817,342 @@ rgn2_release(
  * Memory <-> File Synchronization Functions:
  ******************************************************************************/
 
-/*
- * file to memory lseek/malloc/read
+/**
+ * Synchronizes a region in the product-queue file to memory using `lseek(2)`,
+ * `malloc(3)`, and `read(2)`. Locks the file-region.
+ *
+ * @param[in,out] pqueue  Product queue
+ * @param[in]     offset  Offset to file region in bytes
+ * @param[in]     extent  Extent of region in bytes
+ * @param[in]     rflags  Region flags. Bitwise OR of
+ *                        - RGN_NOLOCK  Don't lock region; locking handled
+ *                                      elsewhere
+ *                        - RGN_WRITE   Region will be modified
+ *                        - RGN_NOWAIT  Return immediately if can't lock, else
+ *                                      wait
+ * @param[out]    ptrp    Location of region in memory
+ * @retval        0       Success
+ * @retval        EACCES  Region already reserved. `log_add()` *not* called.
+ * @retval        EDEADLK Deadlock condition detected. `log_add()` called.
+ * @retval        ENOLCK  Number of file-locks would exceed system limit.
+ *                        `log_add()` called.
+ * @retval        ENOMEM  Insufficient memory available. `log_add()` called.
+ * @retval        EIO     An I/O error occurred while accessing the file system.
+ *                        `log_add()` called.
+ * @retval        EINTR   A signal was caught during execution. `log_add()`
+ *                        called.
+ * @see `f_mtof()`
  */
-/*ARGSUSED*/
 static int
-f_ftom(pqueue *const pq,
-        const off_t offset,
-        const size_t extent,
-        const int rflags,
-        void **const ptrp)
+f_ftom(
+        pqueue *const pq,
+        const off_t   offset,
+        const size_t  extent,
+        const int     rflags,
+        void **const  ptrp)
 {
-        int status = ENOERR;
-        void *vp = NULL;
-        ssize_t nread = 0;
+    log_assert(pq != NULL);
+    log_assert(pq->datao > 0);
+    log_assert(pq->datao % pq->pagesz == 0);
+    log_assert(pq->ixo >= pq->datao);
+    log_assert(pq->ixo % pq->pagesz == 0);
+    log_assert(pq->ixsz >= pq->pagesz);
+    log_assert(pq->ixsz % pq->pagesz == 0);
 
-        log_assert(pq != NULL);
-        log_assert(pq->datao > 0);
-        log_assert(pq->datao % pq->pagesz == 0);
-        log_assert(pq->ixo >= pq->datao);
-        log_assert(pq->ixo % pq->pagesz == 0);
-        log_assert(pq->ixsz >= pq->pagesz);
-        log_assert(pq->ixsz % pq->pagesz == 0);
+    log_assert(0 <= offset && offset <= pq->ixo);
+    log_assert(0 != extent && extent < TOTAL_SIZE(pq));
 
-        log_assert(0 <= offset && offset <= pq->ixo);
-        log_assert(0 != extent && extent < TOTAL_SIZE(pq));
+    log_assert(pIf(fIsSet(rflags, RGN_WRITE),
+                !fIsSet(pq->pflags, PQ_READONLY)));
 
-        log_assert(pIf(fIsSet(rflags, RGN_WRITE),
-                        !fIsSet(pq->pflags, PQ_READONLY)));
-        
-        vp = malloc(extent);
-        if(vp == NULL)
-        {
-                status = errno;
-                log_syserr_q("f_ftom malloc %lu", (unsigned long)extent);
-                return status;
+    void* vp = NULL;
+    riu*  rp;
+    int   status = rgn2_reserve(pq, offset, extent, rflags, vp, &rp);
+
+    if (status != EACCES) {
+        if (status) {
+            log_add("Couldn't reserve %lu bytes starting at offset %ld",
+                    (unsigned long)extent, (long)offset);
         }
-        /* DEBUG */
-        memset(vp, 0, extent);
+        else {
+            vp = malloc(extent);
 
-        status = rgn2_lock(pq, offset, extent, rflags);
-        if(status != ENOERR)
-                goto unwind_alloc;
-
-        if(lseek(pq->fd, offset, SEEK_SET) != offset)
-        {
+            if (vp == NULL) {
+                log_add_syserr("Couldn't malloc() %lu bytes",
+                        (unsigned long)extent);
                 status = errno;
-                log_syserr_q("f_ftom lseek %ld", (long)offset);
-                goto unwind_lock;
-        }
+            }
+            else {
+                rp->vp = vp; // Set region-in-use pointer; was `NULL`
 
-        errno = 0;
-        nread = read(pq->fd, vp, extent);
-        if(nread != extent)
-        {
-                /* N.B. No EINTR retry */
-                status = errno;
-                if(nread == -1)
-                {
-                        log_syserr_q("f_ftom read %lu", (unsigned long)extent);
-                        goto unwind_lock;
+                (void)memset(vp, 0, extent);
+
+                ssize_t nread = pread(pq->fd, vp, extent, offset);
+
+                if (nread == -1) {
+                    log_add_syserr("Couldn't read %lu bytes from "
+                            "product-queue starting at offset %ld",
+                            (unsigned long)extent, (long)offset);
+                    status = errno;
                 }
-                /* else */
-                if(status != ENOERR)
-                {
-                        log_syserr_q("f_ftom at %ld incomplete read %d != %lu",
-                                (long)offset, nread, (unsigned long)extent);
-                        goto unwind_lock;
+                else if (nread && nread != extent) {
+                    log_add("Read %ld bytes from product-queue at offset %ld; "
+                            "expected to read %lu", (long)nread, (long)offset,
+                            (unsigned long)extent);
+                    status = EIO;
                 }
-                /* else, its okay we read zero. pq_create */
-        }
-        
-        status = riul_add(&pq->riulp, pq->pagesz,
-                        offset, extent, vp, rflags);
-        if(status != ENOERR)
-                goto unwind_lock;
+                else {
+                    // Requested number of bytes read or none at all.
+                    // It's okay to read zero bytes because of pq_create(3)
+                    *ptrp = vp;
+                }
 
-        *ptrp = vp;
-        return ENOERR;
-        
-unwind_lock:
-        (void) rgn2_unlock(pq, offset, extent,
-                        fMask(rflags, RGN_MODIFIED|RGN_NOWAIT));
-        /*FALLTHROUGH*/
-unwind_alloc:
-        free(vp);
-        return status;
+                if (status)
+                    free(vp);
+            } // Memory successfully `malloc()`ed
+
+            if (status)
+                (void)rgn2_release(pq, offset, rflags);
+        } // Region successfully reserved
+    } // Region not found in list of regions-in-use
+
+    return status;
 }
 
-/*
- * memory release, write()/free() version;
+/**
+ * Synchronizes memory to a region of a product-queue file using `write(2)`, and
+ * `free(3)` for a region in use. Unlocks the file-region in question.
+ *
+ * @param[in,out] pq      Product queue
+ * @param[in]     offset  Offset to region in file in bytes
+ * @param[in]     rflags  Region flags. Bitwise inclusive OR of
+ *                        - RGN_NOLOCK     Don't lock region; locking handled
+ *                                         elsewhere
+ *                        - RGN_MODIFIED   Region was modified
+ * @retval        0       Success
+ * @retval        EINVAL  Region with given offset isn't in use
+ * @see `mm_ftom()`
  */
 static int
-f_mtof(pqueue *const pq,
+f_mtof( pqueue *const pq,
         off_t const offset,
         int const rflags)
 {
-        int status = ENOERR;
-        riu *rp = NULL;
-        size_t extent;
-        void *vp;
-        ssize_t nwrote;
+    log_assert(pq != NULL); /* would have core dumped already initializing */
+    log_assert(pq->datao > 0);
+    log_assert(pq->datao % pq->pagesz == 0);
+    log_assert(pq->ixo >= pq->datao);
+    log_assert(pq->ixo % pq->pagesz == 0);
+    log_assert(pq->ixsz >= pq->pagesz);
+    log_assert(pq->ixsz % pq->pagesz == 0);
 
-        log_assert(pq != NULL); /* would have core dumped already initializing */
-        log_assert(pq->datao > 0);
-        log_assert(pq->datao % pq->pagesz == 0);
-        log_assert(pq->ixo >= pq->datao);
-        log_assert(pq->ixo % pq->pagesz == 0);
-        log_assert(pq->ixsz >= pq->pagesz);
-        log_assert(pq->ixsz % pq->pagesz == 0);
+    log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+                    !fIsSet(pq->pflags, PQ_READONLY)));
 
-        log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
-                        !fIsSet(pq->pflags, PQ_READONLY)));
+    int  status;
 
-        if(riul_r_find(pq->riulp, offset, &rp) == 0)
-        {
-                log_error_q("Couldn't riul_r_find %ld", (long)offset);
-                return EINVAL;
-        }
-
-        log_assert(rp->offset == offset);
-        log_assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
-        extent = rp->extent;
+    riu* rp;
+    if (riul_r_find(pq->riulp, offset, &rp) == 0) {
+        log_add("Region with offset %ld isn't in use", (long)offset);
+        status = EINVAL;
+    }
+    else {
         log_assert(rp->vp != NULL);
-        vp = rp->vp;
-        log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
-                        fIsSet(rp->rflags, RGN_WRITE)));
-        log_assert(fIsSet(rflags, RGN_NOLOCK) ==
-                        fIsSet(rp->rflags, RGN_NOLOCK));
 
-        riul_delete(pq->riulp, rp);
-        
-        if(fIsSet(rflags, RGN_MODIFIED))
-        {
-                log_assert(!fIsSet(pq->pflags, PQ_READONLY));
-                if(lseek(pq->fd, offset, SEEK_SET) != offset)
-                {
-                        status = errno;
-                        log_syserr_q("f_mtof lseek %ld", (long)offset);
-                        goto unwind_vp;
-                }
-                nwrote = write(pq->fd, vp, extent);
-                if(nwrote != extent)
-                {
-                        /* N.B. No EINTR retry */
-                        status = errno;
-                        if(nwrote == -1)
-                        {
-                                log_syserr_q("f_mtof write %lu",
-                                        (unsigned long)extent);
-                        }
-                        else
-                        {
-                        log_syserr_q("f_mtof at %ld incomplete write %d != %lu",
-                                        (long)offset, nwrote,
-                                        (unsigned long)extent);
-                        }
-                }
+        size_t extent = rp->extent;
+        void*  vp = rp->vp;
+
+        if (fIsSet(rflags, RGN_MODIFIED)) {
+            log_assert(!fIsSet(pq->pflags, PQ_READONLY));
+
+            ssize_t nwrote = pwrite(pq->fd, vp, extent, offset);
+
+            if (nwrote == -1) {
+                log_add_syserr("Couldn't write %lu bytes to product-queue "
+                        "starting at offset %ld", (unsigned long)extent,
+                        (long)offset);
+                status = errno;
+            }
+            else if (nwrote != extent) {
+                log_add("Wrote %ld bytes to product-queue at offset %ld; "
+                        "expected to write %lu", nwrote, (long)offset,
+                        (unsigned long)extent);
+                status = EIO;
+            }
         }
-        (void) rgn2_unlock(pq, offset, extent, rflags);
-unwind_vp:
-        (void)free(vp);
-        return status;
+
+        (void)rgn2_release(pq, offset, rflags);
+        free(vp);
+    } // Region found in list of regions-in-use
+
+    return status;
 }
 
 
 #ifdef HAVE_MMAP
-/*
- * file to memory using mmap
+/**
+ * Synchronizes a region of the product-queue file to memory using `mmap(2)`.
+ * Locks the file-region in question.
  *
- * Returns:
- *      0       Success
- *      EACCESS or EAGAIN
- *              "rflags" contains RGN_NOWAIT and the segment of a file to
- *              be locked is already exclusive-locked by another process,
- *              or "rflags" contains RGN_WRITE and some portion of the
- *              segment of the file to be locked is already shared-locked or
- *              exclusive-locked by another process.
- *      EACCES  "pq->fd" is not open for read, regardless of the protection
- *              specified, or "fd" is not open for write and PROT_WRITE was
- *              specified for a MAP_SHARED type mapping.
- *      EAGAIN  The mapping could not be locked in memory, if required by
- *              mlockall(), due to a lack of resources.
- *      EBADF   "pq->fd" is not a valid open file descriptor, or "rflags" 
- *              doesn't contain RGN_WRITE and "pq->fd" is not a valid file
- *              descriptor open for reading, or "rflags" contains RGN_WRITE
- *              and "pq->fd" is not a valid file descriptor open for writing.
- *      EDEADLK "rflags" doesn't contain RGN_NOWAIT, the lock is blocked by some
- *              lock from another process and putting the calling process to
- *              sleep, waiting for that lock to become free would cause a
- *              deadlock.
- *      EFBIG or EINVAL
- *              The "extent" argument was greater than the maximum file size.
- *      EFBIG   The file is a regular file and length is greater than the offset
- *              maximum established in the open file description associated with
- *              "pq->fd".
- *      EINTR   A signal was caught during execution.
- *      EINVAL  "offset", or "extent" is not valid, or "pq->fd" refers to a file
- *              that does not support locking.
- *      EINVAL  "offset" is not a multiple of the page size as returned by 
- *              sysconf(), or is considered invalid by the implementation.
- *      EIO     An I/O error occurred while reading from the file system.
- *      EMFILE  The number of mapped regions would exceed an
- *              implementation-dependent limit (per process or per system).
- *      ENODEV  "pq->fd" refers to a file whose type is not supported by mmap().
- *      ENOLCK  Satisfying the request would result in the number of locked
- *              regions in the system exceeding a system-imposed limit.
- *      ENOMEM  There is insufficient room in the address space to effect the
- *              necessary mapping.
- *      ENOMEM  The mapping could not be locked in memory, if required by
- *              mlockall(), because it would require more space than the system
- *              is able to supply.
- *      ENOMEM  Insufficient memory is available.
- *      ENOTSUP The implementation does not support the combination of accesses
- *              requested in "pq->pflags" and "rflags".
- *      ENXIO   Addresses in the range [offset, offset + extent) are invalid for
- *              the object specified by "pq->fd".
- *      EOVERFLOW
- *              The smallest or, if "extent" is non-zero, the largest offset of
- *              any byte in the requested segment cannot be represented
- *              correctly in an object of type off_t.
- *      EOVERFLOW
- *              The file size in bytes or the number of blocks allocated to the
- *              file or the file serial number cannot be represented correctly.
- *      EOVERFLOW
- *              The file is a regular file and the value of "offset" plus 
- *              "extent" exceeds the offset maximum established in the open file
- *              description associated with "fd". 
- *      EROFS   The file resides on a read-only file system.
+ * @param[in,out] pqueue  Product queue
+ * @param[in]     offset  Offset to region in bytes
+ * @param[in]     extent  Extent of region in bytes
+ * @param[in]     rflags  Region flags. Bitwise OR of
+ *                        - RGN_NOLOCK  Don't lock region; locking handled
+ *                                      elsewhere
+ *                        - RGN_WRITE   Region will be modified
+ *                        - RGN_NOWAIT  Return immediately if can't lock, else
+ *                                      wait
+ * @param[out]    ptrp    Location of mapped region in memory
+ * @retval        0       Success
+ * @retval        EACCES  Region already reserved. `log_add()` *not* called.
+ * @retval        EDEADLK Deadlock condition detected. `log_add()` called.
+ * @retval        ENOLCK  Number of file-locks would exceed system limit.
+ *                        `log_add()`
+ *                        called.
+ * @retval        ENOMEM  Insufficient memory available. `log_add()` called.
+ * @retval        EIO     An I/O error occurred while accessing the file system.
+ *                        `log_add()` called.
+ * @retval        EINTR   A signal was caught during execution. `log_add()`
+ *                        called.
+ * @retval        EMFILE  The number of mapped regions would exceed an
+ *                        implementation-dependent limit (per process or per
+ *                        system). `log_add()` called.
+ * @see `mm_mtof()`
  */
-/*ARGSUSED*/
 static int
-mm_ftom(pqueue *const pq,
-        const off_t offset,
-        const size_t extent,
-        const int rflags,
-        void **const ptrp)
+mm_ftom(pqueue* const pq,
+        const off_t   offset,
+        const size_t  extent,
+        const int     rflags,
+        void** const  ptrp)
 {
-        int status = ENOERR;
-        int mflags = fIsSet(pq->pflags, PQ_PRIVATE) ?
-                        MAP_PRIVATE : MAP_SHARED;
-        int prot = fIsSet(pq->pflags, PQ_READONLY)
-                         && !fIsSet(rflags, RGN_WRITE) ?
-                        PROT_READ : (PROT_READ|PROT_WRITE);
-        size_t rem = offset % pq->pagesz;
-        off_t pageo = offset;
-        size_t pagext = _RNDUP(rem + extent, pq->pagesz);
-        void *vp = NULL;
+    int    mflags = fIsSet(pq->pflags, PQ_PRIVATE) ? MAP_PRIVATE : MAP_SHARED;
+    int    prot = (fIsSet(pq->pflags, PQ_READONLY) && !fIsSet(rflags, RGN_WRITE))
+            ? PROT_READ
+            : (PROT_READ|PROT_WRITE);
+    size_t rem = offset % pq->pagesz;
+    size_t pagext = _RNDUP(rem + extent, pq->pagesz);
 
-        log_assert(pq != NULL); /* would have core dumped already initializing */
-        log_assert(pq->datao > 0);
-        log_assert(pq->datao % pq->pagesz == 0);
-        log_assert(pq->ixo >= pq->datao);
-        log_assert(pq->ixo % pq->pagesz == 0);
-        log_assert(pq->ixsz >= pq->pagesz);
-        log_assert(pq->ixsz % pq->pagesz == 0);
+    log_assert(pq != NULL); /* would have core dumped already initializing */
+    log_assert(pq->datao > 0);
+    log_assert(pq->datao % pq->pagesz == 0);
+    log_assert(pq->ixo >= pq->datao);
+    log_assert(pq->ixo % pq->pagesz == 0);
+    log_assert(pq->ixsz >= pq->pagesz);
+    log_assert(pq->ixsz % pq->pagesz == 0);
 
-        log_assert(0 <= offset && offset <= pq->ixo);
-        log_assert(0 != extent && extent < TOTAL_SIZE(pq));
+    log_assert(0 <= offset && offset <= pq->ixo);
+    log_assert(0 != extent && extent < TOTAL_SIZE(pq));
 
-        log_assert(pIf(fIsSet(rflags, RGN_WRITE),
-                        !fIsSet(pq->pflags, PQ_READONLY)));
+    log_assert(pIf(fIsSet(rflags, RGN_WRITE),
+                    !fIsSet(pq->pflags, PQ_READONLY)));
 
-        if(rem != 0)
-                pageo -= rem;
+    void* vp = NULL;
+    riu*  rp;
+    int   status = rgn2_reserve(pq, offset, extent, rflags, vp, &rp);
 
-        status = rgn2_lock(pq, offset, extent, rflags);
-        if(status != ENOERR)
-                return status;
-
-        if(fIsSet(prot, PROT_WRITE))
-        {
-                status = fgrow(pq->fd, offset + extent, 
-                               fIsSet(pq->pflags, PQ_SPARSE));
-                if(status != ENOERR)
-                        goto unwind_lock;
+    if (status != EACCES) {
+        if (status) {
+            log_add("rgn2_reserve() failure");
         }
+        else {
+            if (fIsSet(prot, PROT_WRITE)) {
+                status = fgrow(pq->fd, offset+extent,
+                        fIsSet(pq->pflags, PQ_SPARSE));
+                if (status)
+                    log_add_errno(status, "fgrow() failure");
+            }
 
-        log_assert(pageo % pq->pagesz == 0);
-        log_assert(pagext % pq->pagesz == 0);
-        status = mapwrap(pq->fd, pageo, pagext, prot, mflags, &vp);
-        if(status != ENOERR)
-                goto unwind_lock;
-        /* else */
+            if (status == 0) {
+                off_t  pageo = offset - rem;
 
-        if(rem != 0)
-                vp = (char *)vp + rem;
+                log_assert(pageo % pq->pagesz == 0);
+                log_assert(pagext % pq->pagesz == 0);
 
-        status = riul_add(&pq->riulp, pq->pagesz,
-                        offset, extent, vp, rflags);
-        if(status != ENOERR)
-                goto unwind_lock;
+                status = mapwrap(pq->fd, pageo, pagext, prot, mflags, &vp);
 
-        *ptrp = vp;
-        return status;
-        
-unwind_lock:
-        (void) rgn2_unlock(pq, offset, extent,
-                        fMask(rflags, RGN_MODIFIED|RGN_NOWAIT));
-        return status;
+                if (status == 0) {
+                    vp = (char*)vp + rem;
+                    rp->vp = vp; // Set region-in-use pointer. Was `NULL`.
+                    *ptrp = vp;
+                } // Region was successfully memory-mapped
+            } // Region in file was successfully extended if necessary
+
+            if (status)
+                (void)rgn2_release(pq, offset, rflags);
+        } // Region was successfully reserved
+    } // Locking file didn't return `EACCES`
+
+    return status;
 }
 
-/*
- * memory release, mmap version
+/**
+ * Synchronizes memory to a region of the file using `mmap(2)` for a region in
+ * use. Unlocks the file-region in question.
+ *
+ * @param[in,out] pq      Product queue
+ * @param[in]     offset  Offset to region in file in bytes
+ * @param[in]     rflags  Region flags. Bitwise inclusive OR of
+ *                        - RGN_NOLOCK     Don't lock region; locking handled
+ *                                         elsewhere
+ *                        - RGN_MODIFIED   Region was modified
+ * @retval        0       Success
+ * @retval        EINVAL  Region with given offset isn't in use
+ * @see `mm_ftom()`
  */
 static int
 mm_mtof(pqueue *const pq,
-        off_t const offset,
-        int const rflags)
+        off_t const   offset,
+        int const     rflags)
 {
-        int status = ENOERR;
-        int mflags = 0; /* TODO: translate rflags to mflags */
-        off_t rem = offset % (off_t)pq->pagesz;
-        riu *rp = NULL;
-        size_t extent;
-        void *vp;
+    int status;
 
-        log_assert(pq != NULL); /* would have core dumped already initializing */
-        log_assert(pq->datao > 0);
-        log_assert(pq->datao % pq->pagesz == 0);
-        log_assert(pq->ixo >= pq->datao);
-        log_assert(pq->ixo % pq->pagesz == 0);
-        log_assert(pq->ixsz >= pq->pagesz);
-        log_assert(pq->ixsz % pq->pagesz == 0);
+    log_assert(pq != NULL); /* would have core dumped already initializing */
+    log_assert(pq->datao > 0);
+    log_assert(pq->datao % pq->pagesz == 0);
+    log_assert(pq->ixo >= pq->datao);
+    log_assert(pq->ixo % pq->pagesz == 0);
+    log_assert(pq->ixsz >= pq->pagesz);
+    log_assert(pq->ixsz % pq->pagesz == 0);
 
-        log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
-                        !fIsSet(pq->pflags, PQ_READONLY)));
+    log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
+                    !fIsSet(pq->pflags, PQ_READONLY)));
 
-        if(riul_r_find(pq->riulp, offset, &rp) == 0)
-        {
-                log_error_q("Couldn't riul_r_find %ld", (long)offset);
-                return EINVAL;
-        }
-
-        log_assert(rp->offset == offset);
-        log_assert(0 < rp->extent && rp->extent < TOTAL_SIZE(pq));
-        extent = rp->extent;
+    riu *rp = NULL;
+    if (riul_r_find(pq->riulp, offset, &rp) == 0) {
+        log_add("Region with offset %ld is not in use", (long)offset);
+        status = EINVAL;
+    }
+    else {
         log_assert(rp->vp != NULL);
-        vp = rp->vp;
-        log_assert(pIf(fIsSet(rflags, RGN_MODIFIED),
-                        fIsSet(rp->rflags, RGN_WRITE)));
-        log_assert(fIsSet(rflags, RGN_NOLOCK) ==
-                        fIsSet(rp->rflags, RGN_NOLOCK));
 
-        riul_delete(pq->riulp, rp);
-        
-        if(rem == 0)
-        {
-                status =  unmapwrap(vp, offset, extent, mflags);
+        int    mflags = 0; /* TODO: translate rflags to mflags */
+        off_t  rem = offset % (off_t)pq->pagesz;
+        size_t extent = rp->extent;
+        void*  vp = rp->vp;
+
+        if (rem == 0) {
+            status =  unmapwrap(vp, offset, extent, mflags);
         }
-        else
-        {
-                off_t pageno = offset / (off_t)pq->pagesz;
-                size_t pagext = _RNDUP(rem + extent, (off_t)pq->pagesz);
-                vp = (char *)vp - rem;
-                status = unmapwrap(vp, pageno * (off_t)pq->pagesz,
-                        pagext, mflags);
+        else {
+            off_t pageno = offset / (off_t)pq->pagesz;
+            size_t pagext = _RNDUP(rem + extent, (off_t)pq->pagesz);
+            vp = (char *)vp - rem;
+            status = unmapwrap(vp, pageno*(off_t)pq->pagesz, pagext, mflags);
         }
-        (void) rgn2_unlock(pq, offset, extent, rflags);
-        return status;
+
+        if (status) {
+            log_add_errno(status, "unmapwrap() failure");
+        }
+        else {
+            status = rgn2_release(pq, offset, rflags);
+            if (status)
+                log_add_errno(status, "rgn2_release() failure");
+        }
+    } // Region found in regions-in-use list
+
+    return status;
 }
 
 /**
@@ -4251,8 +4238,8 @@ mm0_map(pqueue *const pq)
 }
 
 /**
- * File-to-memory "transfer" using `mmap()` to map the whole file. Locks the
- * region in question.
+ * Synchronizes a region in the product-queue file to memory using `mmap()` to
+ * map the whole file. Locks the region in question.
  *
  * @param[in] rflags  Region flags: bitwise OR of
  *                    - RGN_NOLOCK  Don't lock region; locking handled elsewhere
@@ -4260,8 +4247,7 @@ mm0_map(pqueue *const pq)
  *                    - RGN_NOWAIT  Return immediately if can't lock, else wait
  *
  * `log_add()` is called for all of the following:
- * @retval EACCES or EAGAIN
- *                    The region is already locked by another process.
+ * @retval EACCES     The region is already locked by another process.
  * @retval EINVAL     The product-queue file doesn't support locking.
  * @retval ENOLCK     The number of locked regions would exceed a system-imposed
  *                    limit.
@@ -4276,8 +4262,6 @@ mm0_map(pqueue *const pq)
  *                    The size of the product-queue is greater than the maximum
  *                    file size.
  * @retval EROFS      The named file resides on a read-only file system.
- * @retval EAGAIN     The mapping could not be locked in memory, if required by
- *                    mlockall(), due to a lack of resources.
  * @retval EINVAL     The product-queue object wants to map the product-queue to
  *                    a fixed memory location that is not a multiple of the page
  *                    size as returned by sysconf(), or is considered invalid
@@ -4331,16 +4315,19 @@ mm0_ftom(pqueue *const pq,
 
     if (status == 0) {
         void* const vp = (char*)pq->base + offset;
+        riu*        rp; // Not used
 
-        status = rgn2_reserve(pq, offset, extent, rflags, vp);
+        status = rgn2_reserve(pq, offset, extent, rflags, vp, &rp);
 
-        if (status) {
-            log_add("region_reserve() failure");
-        }
-        else {
-            *ptrp = vp;
-        }
-    } // Product-queue file is memory-mapped
+        if (status != EACCES) {
+            if (status) {
+                log_add("rgn2_reserve() failure");
+            }
+            else {
+                *ptrp = vp;
+            }
+        } // File locking didn't return `EACCES`
+    } // Product-queue file was successfully memory-mapped if necessary
 
     return status;
 }
