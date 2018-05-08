@@ -43,7 +43,6 @@ lib_la_SOURCES		= \
 			  StopFlag.c StopFlag.h \
 			  Future.c Future.h \
 			  Executor.c Executor.h
-#			  Task.c Task.h \
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
