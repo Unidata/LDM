@@ -157,7 +157,13 @@ void MldmClnt::release(const in_addr_t fmtpAddr) const
 
 void* mldmClnt_new(const in_port_t port)
 {
-    return new MldmClnt(port);
+    try {
+        return new MldmClnt(port);
+    }
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        return NULL;
+    }
 }
 
 Ldm7Status mldmClnt_reserve(

@@ -983,8 +983,8 @@ void logl_flush(
         /*
          * The following message is added so that the location of the call to
          * log_flush() is logged in case the call needs to be adjusted.
-         */
         logl_add(loc, "Log messages flushed");
+         */
         flush(level);
     }
 }

@@ -399,7 +399,7 @@ mls_decodeOperands(
                 }
             }
             if (status)
-                sa_free(mcastAddr);
+                sa_delete(mcastAddr);
         } // `mcastAddr` set
     }
 
@@ -434,7 +434,7 @@ mls_setMcastGroupInfo(
 
     if (0 == status) {
         status = mi_new(mcastInfo, feed, groupAddr, serverAddr) ? 2 : 0;
-        sa_free(serverAddr);
+        sa_delete(serverAddr);
     }
 
     return status;
@@ -501,7 +501,7 @@ mls_decodeCommandLine(
         if (0 == status) {
             status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
                     groupAddr, mcastInfo);
-            sa_free(groupAddr);
+            sa_delete(groupAddr);
 
             if (0 == status)
                 *ifaceAddr = mcastIf;
@@ -1247,7 +1247,7 @@ main(
         }
 
         cidrAddr_delete(fmtpSubnet);
-        mi_free(groupInfo);
+        mi_delete(groupInfo);
         log_notice_q("Terminating");
     } // `groupInfo` allocated
 

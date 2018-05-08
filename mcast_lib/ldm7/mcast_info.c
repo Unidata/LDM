@@ -130,8 +130,8 @@ void
 mi_destroy(
     McastInfo* const info)
 {
-    sa_destroy(&info->group);
-    sa_destroy(&info->server);
+    sa_deinit(&info->group);
+    sa_deinit(&info->server);
 }
 
 /**
@@ -142,7 +142,7 @@ mi_destroy(
  *                           by `mi_new()`.
  */
 void
-mi_free(
+mi_delete(
     McastInfo* const mcastInfo)
 {
     if (mcastInfo) {

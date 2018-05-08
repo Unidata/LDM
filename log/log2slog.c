@@ -198,17 +198,32 @@ static void stream_log(
     (void)gettimeofday(&now, NULL);
     struct tm tm;
     (void)gmtime_r(&now.tv_sec, &tm);
+
     int msglen = strlen(msg);
     if (msg[msglen-1] == '\n')
         msglen--;
+
     (void)fprintf(dest->stream,
-            "%04d%02d%02dT%02d%02d%02d.%06ldZ %s[%d] %s %s:%d:%s() %.*s\n",
+            "%04d%02d%02dT%02d%02d%02d.%06ldZ",
             tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-            tm.tm_sec, (long)now.tv_usec,
-            ident, getpid(),
-            level_to_string(level),
-            logl_basename(loc->file), loc->line, loc->func,
-            msglen, msg);
+            tm.tm_sec, (long)now.tv_usec);
+
+#ifndef MAX
+#define MAX(a,b) ((a) >= (b) ? (a) : (b))
+#endif
+
+    static const char padding[] =
+            "                                                    ";
+
+    int nbytes = fprintf(dest->stream, " %s[%d]", ident, getpid());
+    (void)fprintf(dest->stream, "%.*s", MAX(25-nbytes, 0), padding);
+
+    nbytes = fprintf(dest->stream, " %s:%d:%s()", logl_basename(loc->file),
+            loc->line, loc->func);
+    (void)fprintf(dest->stream, "%.*s", MAX(51-nbytes, 0), padding);
+
+    (void)fprintf(dest->stream, "%-5s %.*s\n", level_to_string(level), msglen,
+            msg);
 }
 
 /**

@@ -1,3 +1,9 @@
+6.13.7.2
+    Logging:
+        Made the width of the location field in log messages to a file or the
+        standard error stream for the default logging module match the longest
+        location field seen. This should make viewing log messages easier.
+
 6.13.7.1	2018-04-19T15:26:05-0600
     Build:
         Added explicit defines of some C macro values to "1" to avoid problems

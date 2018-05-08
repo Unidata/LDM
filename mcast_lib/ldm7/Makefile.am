@@ -19,7 +19,8 @@ BUILT_SOURCES           = down7.h \
                           sock_funcs.h \
                           up7.h
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= down7.c \
+lib_la_SOURCES		= \
+			  down7.c \
                           down7_manager.c down7_manager.h \
 			  up7.c \
 			  prod_index_map.c prod_index_map.h \
@@ -38,7 +39,11 @@ lib_la_SOURCES		= down7.c \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
-			  MldmRpc.cpp MldmRpc.h
+			  MldmRpc.cpp MldmRpc.h \
+			  StopFlag.c StopFlag.h \
+			  Future.c Future.h \
+			  Executor.c Executor.h
+#			  Task.c Task.h \
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
@@ -70,9 +75,11 @@ prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
 
+check_PROGRAMS		=
+
 server_test_SOURCES	= server_test.c
 server_test_LDADD	= -lpthread
-SERVER_TEST		= server_test
+check_PROGRAMS		+= server_test
 
 if HAVE_OPMOCK
 
@@ -128,6 +135,7 @@ UpMcastMgr_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 UpMcastMgr_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 UpMcastMgr_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  	  @OPMOCK_LDADD@
+check_PROGRAMS			+= UpMcastMgr_test
 
 mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
 nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
@@ -136,6 +144,7 @@ mldm_receiver_test_CPPFLAGS		= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
+check_PROGRAMS				+= mldm_receiver_test
 
 mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
 nodist_mldm_receiver_memory_test_SOURCES = $(globals_stubs)
@@ -143,65 +152,99 @@ mldm_receiver_memory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
                                           @OPMOCK_LDADD@
-
-MLDM_RECEIVER_MEMORY_TEST	= mldm_receiver_memory_test
-MLDM_RECEIVER_TEST		= mldm_receiver_test
-UP_MCAST_MGR_TEST		= UpMcastMgr_test
+check_PROGRAMS				+= mldm_receiver_memory_test
 endif
 
 if HAVE_GTEST
 TcpSock_test_SOURCES	= TcpSock_test.cpp
 TcpSock_test_LDADD	= $(LDADD) -lgtest
+check_PROGRAMS		+= TcpSock_test
 
 Authorizer_test_SOURCES	= Authorizer_test.cpp
 Authorizer_test_LDADD	= $(LDADD) -lgtest
+check_PROGRAMS		+= Authorizer_test
 
 #MldmAuth_test_SOURCES	= MldmAuth_test.cpp
 #MldmAuth_test_LDADD  	= $(LDADD) -lgtest
 
-TCP_SOCK_TEST		= TcpSock_test
-AUTHORIZER_TEST		= Authorizer_test
 endif
 
 if HAVE_CUNIT
+
+Future_test_SOURCES		= Future_test.c
+Future_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Future_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= Future_test
+
+Executor_test_SOURCES		= Executor_test.c
+Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= Executor_test
+
+Task_test_SOURCES		= Task_test.c
+Task_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Task_test_LDADD			= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS			+= Task_test
+
+CunitAssertTest_SOURCES		= CunitAssertTest.c
+CunitAssertTest_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \
+                                  @LIBS_CUNIT@
+check_PROGRAMS			+= CunitAssertTest
+
 # `up7_down7_test is separate in order to have it built by `make check` but
 # executed by `make check-local`.
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+check_PROGRAMS			+= mldm_sender_map_test
+
 prod_index_map_test_SOURCES	= prod_index_map_test.c prod_index_map.c
 prod_index_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+check_PROGRAMS			+= prod_index_map_test
+
 prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
 prod_index_queue_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+check_PROGRAMS			+= prod_index_queue_test
+
 up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
+check_PROGRAMS			+= up7_down7_test
 
 cond_wait_test_SOURCES		= cond_wait_test.c
 cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
+check_PROGRAMS			+= cond_wait_test
 				  
 SUFFIXES:	.vg .supp .sup .log
                                           
 %.log:	%
 	./% >&$@
 %.vg:	%
-	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
-            --mode=execute valgrind --leak-check=full --show-reachable=yes \
-            --suppressions=up7_down7_test.supp \
-            ./$< >&$@
+	if test -e %.supp; then \
+		PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+		--mode=execute valgrind --leak-check=full --show-reachable=yes \
+		--suppressions=%.supp ./$< >&$@; \
+	else \
+		PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+		--mode=execute valgrind --leak-check=full --show-reachable=yes \
+		./$< >&$@; \
+	fi
 
 %.sup:	%
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
             --mode=execute valgrind --leak-check=full --show-reachable=yes \
-            --suppressions=up7_down7_test.supp \
-            --gen-suppressions=all ./$< >&$@
+            --suppressions=%.supp --gen-suppressions=all ./$< >&$@
 
 valgrind-prod_index_map_test:	prod_index_map_test
 	$(LIBTOOL) --mode=execute valgrind \
@@ -218,31 +261,13 @@ up7_down7_test.valgrind:	up7_down7_test
 
 up7_down7_test.log:		up7_down7_test
 	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test >&$@
+
 MldmRpc_test_SOURCES	= MldmRpc_test.c
 MldmRpc_test_LDADD	= $(LDADD) @LIBS_CUNIT@
-
-PROD_INDEX_MAP_TEST	= prod_index_map_test
-MLDM_SENDER_MAP_TEST	= mldm_sender_map_test
-PROD_INDEX_QUEUE_TEST	= prod_index_queue_test
-COND_WAIT_TEST		= cond_wait_test
-MLDM_RPC_TEST		= MldmRpc_test
-UP7_DOWN7_TEST		= up7_down7_test
+check_PROGRAMS		+= MldmRpc_test
 endif
 
 TESTS_ENVIRONMENTS	= PATH=$(top_builddir)/mldm_sender:$$PATH
-check_PROGRAMS    	= \
-			$(COND_WAIT_TEST) \
-			$(TCP_SOCK_TEST) \
-			$(SERVER_TEST) \
-			$(PROD_INDEX_MAP_TEST) \
-			$(MLDM_SENDER_MAP_TEST) \
-			$(PROD_INDEX_QUEUE_TEST) \
-			$(AUTHORIZER_TEST) \
-			$(MLDM_RECEIVER_MEMORY_TEST) \
-                        $(MLDM_RECEIVER_TEST) \
-                        $(UP_MCAST_MGR_TEST) \
-			$(MLDM_RPC_TEST) \
-			$(UP7_DOWN7_TEST)
 
 check-local:	check-up7_down7_test
 TESTS			= $(check_PROGRAMS)

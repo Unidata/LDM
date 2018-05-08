@@ -3080,7 +3080,7 @@ lcf_addReceive(
             somethingToDo = true;
             status = 0;
         }
-        vcEndPoint_destroy(&vcEnd);
+        vcEndPoint_deinit(&vcEnd);
     } // `vcEnd` constructed
     return status;
 }

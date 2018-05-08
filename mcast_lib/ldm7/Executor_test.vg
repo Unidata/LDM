@@ -1,0 +1,143 @@
+==1022== Memcheck, a memory error detector
+==1022== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==1022== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright info
+==1022== Command: /home/steve/Projects/ldm/src/mcast_lib/ldm7/.libs/lt-Executor_test
+==1022== 
+
+
+     CUnit - A unit testing framework for C - Version 2.1-2
+     http://cunit.sourceforge.net/
+
+
+Suite: Executor_test.c
+  Test: test_construction ...passed
+  Test: test_nullJob ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x401112: test_nullJob (Executor_test.c:98)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+  Test: test_returnOne ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x4011F6: test_returnOne (Executor_test.c:112)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+  Test: test_returnObj ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x401342: test_returnObj (Executor_test.c:131)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+  Test: test_cancel ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x40145B: test_cancel (Executor_test.c:147)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+  Test: test_shutdown ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x40159B: test_shutdown (Executor_test.c:162)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F2763C: executor_shutdown (Executor.c:356)
+==1022==    by 0x4015DD: test_shutdown (Executor_test.c:165)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+  Test: test_shutdownNow ...==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F27482: executor_submit (Executor.c:318)
+==1022==    by 0x40171E: test_shutdownNow (Executor_test.c:184)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+==1022== Conditional jump or move depends on uninitialised value(s)
+==1022==    at 0x4F2763C: executor_shutdown (Executor.c:356)
+==1022==    by 0x401760: test_shutdownNow (Executor_test.c:187)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+passed
+
+Run Summary:    Type  Total    Ran Passed Failed Inactive
+              suites      1      1    n/a      0        0
+               tests      7      7      7      0        0
+             asserts     28     28     28      0      n/a
+
+Elapsed time =    0.070 seconds
+==1022== 
+==1022== HEAP SUMMARY:
+==1022==     in use at exit: 384 bytes in 3 blocks
+==1022==   total heap usage: 58 allocs, 55 frees, 4,225 bytes allocated
+==1022== 
+==1022== 16 bytes in 1 blocks are still reachable in loss record 1 of 3
+==1022==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==1022==    by 0x4EB9C3A: queue_get (log.c:313)
+==1022==    by 0x4EBA6B0: logl_vadd (log.c:740)
+==1022==    by 0x4EBA801: logl_add (log.c:776)
+==1022==    by 0x4F274CF: executor_submit (Executor.c:319)
+==1022==    by 0x4015FE: test_shutdown (Executor_test.c:168)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+==1022== 112 bytes in 1 blocks are still reachable in loss record 2 of 3
+==1022==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==1022==    by 0x4EB9827: msg_new (log.c:201)
+==1022==    by 0x4EB9E23: queue_getNextEntry (log.c:384)
+==1022==    by 0x4EBA6DA: logl_vadd (log.c:746)
+==1022==    by 0x4EBA801: logl_add (log.c:776)
+==1022==    by 0x4F274CF: executor_submit (Executor.c:319)
+==1022==    by 0x4015FE: test_shutdown (Executor_test.c:168)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+==1022== 256 bytes in 1 blocks are still reachable in loss record 3 of 3
+==1022==    at 0x4C29BE3: malloc (vg_replace_malloc.c:299)
+==1022==    by 0x4EB98A1: msg_new (log.c:209)
+==1022==    by 0x4EB9E23: queue_getNextEntry (log.c:384)
+==1022==    by 0x4EBA6DA: logl_vadd (log.c:746)
+==1022==    by 0x4EBA801: logl_add (log.c:776)
+==1022==    by 0x4F274CF: executor_submit (Executor.c:319)
+==1022==    by 0x4015FE: test_shutdown (Executor_test.c:168)
+==1022==    by 0x51E2211: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E24A7: ??? (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x51E2825: CU_run_all_tests (in /usr/lib64/libcunit.so.1.0.1)
+==1022==    by 0x401997: main (Executor_test.c:224)
+==1022== 
+==1022== LEAK SUMMARY:
+==1022==    definitely lost: 0 bytes in 0 blocks
+==1022==    indirectly lost: 0 bytes in 0 blocks
+==1022==      possibly lost: 0 bytes in 0 blocks
+==1022==    still reachable: 384 bytes in 3 blocks
+==1022==         suppressed: 0 bytes in 0 blocks
+==1022== 
+==1022== For counts of detected and suppressed errors, rerun with: -v
+==1022== Use --track-origins=yes to see where uninitialised values come from
+==1022== ERROR SUMMARY: 8 errors from 8 contexts (suppressed: 0 from 0)

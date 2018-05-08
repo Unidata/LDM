@@ -1214,7 +1214,8 @@ mcastRecvSock_init(
  *                      `sa_free(*serviceAddr)` when it's no longer needed.
  * @param[in]  addr     Identifier of the service. May be a name or formatted IP
  *                      address. Client may free upon return.
- * @param[in]  port     Port number of the service. `0` means O/S will select.
+ * @param[in]  port     Port number of the service in host byte-order. `0` means
+ *                      O/S will select.
  * @retval     0        Success. `*svcAddr` is set.
  * @retval     EINVAL   Invalid Internet address or port number. `log_add()`
  *                      called.
@@ -1264,7 +1265,7 @@ sa_new(
  * @param[in] sa  Service address to be destroyed.
  */
 void
-sa_destroy(
+sa_deinit(
         ServiceAddr* const sa)
 {
     free(sa->inetId);
@@ -1276,11 +1277,11 @@ sa_destroy(
  * @param[in] sa  Pointer to the service address to be freed or NULL.
  */
 void
-sa_free(
+sa_delete(
     ServiceAddr* const sa)
 {
     if (sa != NULL) {
-        sa_destroy(sa);
+        sa_deinit(sa);
         free(sa);
     }
 }

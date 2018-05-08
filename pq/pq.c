@@ -5724,9 +5724,20 @@ pq_new(
     riul_init(pq->riulp, 0, pq->pagesz);
 
     {
-        int status = pthread_mutex_init(&pq->mutex, NULL);
+        pthread_mutexattr_t attr;
+        int                 status = pthread_mutexattr_init(&attr);
         if (status) {
-            log_add_errno(status, "pthread_mutex_init() failure");
+            log_add_errno(status, "Couldn't initialize mutex attributes");
+        }
+        else {
+            (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+            (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+            status = pthread_mutex_init(&pq->mutex, &attr);
+            if (status)
+                log_add_errno(status, "Couldn't initialize mutex");
+            (void)pthread_mutexattr_destroy(&attr);
+        }
+        if (status) {
             free(pq->riulp);
             free(pq);
             return NULL;
@@ -6360,7 +6371,6 @@ unwind_lock:
 int
 pq_insert(pqueue *pq, const product *prod)
 {
-        pq_lockIf(pq);
         int status = pq_insertNoSig(pq, prod);
         if(status == ENOERR)
         {
@@ -6372,7 +6382,6 @@ pq_insert(pqueue *pq, const product *prod)
                  */
                 (void)kill(0, SIGCONT);
         }
-        pq_unlockIf(pq);
         return status;
 }
 
@@ -7430,6 +7439,8 @@ pq_processProduct(
         void* const       optArg)
 {
     pq_lockIf(pq);
+    bool instanceLocked = true;
+
     int status;
 
     /*
@@ -7477,7 +7488,7 @@ pq_processProduct(
                 }
                 else {
                     /*
-                     * Unlocked the control-region to allow concurrent
+                     * The control-region is unlocked to allow concurrent
                      * write-access by another process. This may safely be done
                      * because the data-product's data-region is locked,
                      */
@@ -7487,6 +7498,14 @@ pq_processProduct(
                     }
                     else {
                         controlRegionLocked = false;
+
+                        /*
+                         * This instance is unlocked to allow concurrent access
+                         * on another thread. This is safe because the data-
+                         * product's region is locked.
+                         */
+                        pq_unlockIf(pq);
+                        instanceLocked = false;
 
                         /*
                          * Decode the data-product's metadata to pass to the
@@ -7516,7 +7535,7 @@ pq_processProduct(
                         xdr_destroy(&xdrs);
                     }                   // control-region unlocked
 
-                    (void)rgn_rel(pq, offset, 0);
+                    (void)rgn_rel(pq, offset, 0); // Unlocks data-product
                 }                       // data-product region locked
             }                           // corresponding region-entry exists
         }                               // signature-entry found
@@ -7529,7 +7548,9 @@ pq_processProduct(
             (void)ctl_rel(pq, 0);
     }                                   // control region locked
 
-    pq_unlockIf(pq);
+    if (instanceLocked)
+        pq_unlockIf(pq);
+
     return status;
 }
 
@@ -7641,6 +7662,8 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         info = &buf.b_i;
         info->origin = &buf.b_origin[0];
         info->ident = &buf.b_ident[0];
+
+        pq_lockIf(pq);
         
         /* if necessary, initialize cursor */
         if(tvIsNone(pq->cursor))
@@ -7656,8 +7679,10 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
 
         /* Read lock pq->xctl.  */
         status = ctl_get(pq, 0);
-        if(status != ENOERR)
+        if(status != ENOERR) {
+            pq_unlockIf(pq);
             goto unwind_lock;
+        }
 
         /* find the specified queue element */
         tqep = tqe_find(pq->tqp, &pq->cursor, mt);
@@ -7725,6 +7750,8 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         /* We've got the data, so we can let go of the ctl */
         status = ctl_rel(pq, 0);
         log_assert(status == 0);
+
+        pq_unlockIf(pq);
 
         /*
          * Decode it
@@ -7799,6 +7826,7 @@ unwind_rgn:
         return status;
 unwind_ctl:
         (void) ctl_rel(pq, 0);
+        pq_unlockIf(pq);
 unwind_lock:
         return status;
 }
@@ -7874,10 +7902,7 @@ int
 pq_sequence(pqueue *pq, pq_match mt,
         const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs)
 {
-    pq_lockIf(pq);
-    int status = pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, NULL);
-    pq_unlockIf(pq);
-    return status;
+    return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, NULL);
 }
 
 /**
@@ -7964,10 +7989,7 @@ pq_sequenceLock(
         void* const                        otherargs,
         off_t* const restrict              offset)
 {
-    pq_lockIf(pq);
-    int status = pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
-    pq_unlockIf(pq);
-    return status;
+    return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
 }
 
 /**

@@ -225,7 +225,7 @@ char* sockAddrIn_format(const struct sockaddr_in* sockAddr);
  * Returns a new service address.
  *
  * @param[out] svcAddr  Service address. Caller should call
- *                      `sa_free(*serviceAddr)` when it's no longer needed.
+ *                      `sa_delete(*serviceAddr)` when it's no longer needed.
  * @param[in]  addr     Identifier of the service. May be a name or formatted IP
  *                      address. Client may free upon return.
  * @param[in]  port     Port number of the service. Must be non-negative.
@@ -239,7 +239,7 @@ sa_new(
     ServiceAddr** const  svcAddr,
     const char* const    addr,
     const int            port);
-extern void           sa_free(ServiceAddr* const sa);
+extern void           sa_delete(ServiceAddr* const sa);
 /**
  * Copies a service address.
  *
@@ -251,7 +251,7 @@ extern void           sa_free(ServiceAddr* const sa);
 extern bool           sa_copy(
     ServiceAddr* const restrict       dest,
     const ServiceAddr* const restrict src);
-extern void           sa_destroy(ServiceAddr* sa);
+extern void           sa_deinit(ServiceAddr* sa);
 extern ServiceAddr*   sa_clone(const ServiceAddr* const sa);
 extern const char*    sa_getInetId(const ServiceAddr* const sa);
 extern unsigned short sa_getPort(const ServiceAddr* const sa);
@@ -275,7 +275,7 @@ extern char*          sa_format(const ServiceAddr* const sa);
  * square brackets) and `port` is the port number.
  *
  * @param[out] serviceAddr  Internet service address. Caller should call
- *                          `sa_free(*sa)` when it's no longer needed.
+ *                          `sa_delete(*sa)` when it's no longer needed.
  * @param[in]  spec         String containing the specification.
  * @retval     0            Success. `*sa` is set.
  * @retval     EINVAL       Invalid specification. `log_add()` called.
@@ -291,7 +291,7 @@ sa_parse(
  * corresponding default value is used, if possible.
  *
  * @param[out] svcAddr      Internet service address. Caller should call
- *                          `sa_free(*sa)` when it's no longer needed.
+ *                          `sa_delete(*sa)` when it's no longer needed.
  * @param[in]  spec         String containing the specification. Caller may
  *                          free.
  * @param[in]  defId        Default Internet identifier or NULL. If NULL, then

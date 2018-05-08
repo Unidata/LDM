@@ -27,62 +27,6 @@
 #include <unistd.h>
 
 /**
- * The set of termination signals.
- */
-static sigset_t termSigSet;
-
-/**
- * Initializes the set of termination signals.
- */
-static void
-setTermSigSet(void)
-{
-    (void)sigemptyset(&termSigSet);
-    (void)sigaddset(&termSigSet, SIGINT);
-    (void)sigaddset(&termSigSet, SIGTERM);
-}
-
-/**
- * Returns the set of termination signals.
- *
- * @return Pointer to the set of termination signals.
- */
-static sigset_t*
-getTermSigSet()
-{
-    static pthread_once_t initialized = PTHREAD_ONCE_INIT;
-    (void)pthread_once(&initialized, setTermSigSet);
-    return &termSigSet;
-}
-
-/**
- * Adds termination signals to the set of blocked signals.
- */
-static inline void
-blockTermSigs(void)
-{
-    (void)pthread_sigmask(SIG_BLOCK, getTermSigSet(), NULL);
-}
-
-/**
- * Waits for a termination signal and then stops a downstream LDM-7.
- *
- * @param[in] arg  Pointer to the downstream LDM-7 to be stopped upon receiving
- *                 a termination signal.
- */
-static void*
-waitForTermSig(
-        void* const arg)
-{
-    int sig;
-    (void)sigwait(getTermSigSet(), &sig);
-    if (down7_stop((Down7*)arg))
-        log_flush_error();
-    log_free();
-    return NULL;
-}
-
-/**
  * Executes a downstream LDM-7. Doesn't return until an error occurs or a
  * termination signal is received.
  *
@@ -113,27 +57,30 @@ executeDown7(
         status = LDM7_SYSTEM;
     }
     else {
-        Down7* down7 = down7_new(servAddr, feedtype, iface, vcEnd, pq);
+        McastReceiverMemory* const mrm = mrm_open(servAddr, feedtype);
 
-        if (NULL == down7) {
+        if (mrm == NULL) {
+            log_add("Couldn't open multicast receiver memory");
             status = LDM7_SYSTEM;
         }
         else {
-            pthread_t termWaitThread;
-            status = pthread_create(&termWaitThread, NULL, waitForTermSig,
-                    down7);
-            if (status) {
-                log_errno_q(status,
-                        "Couldn't create termination-waiting thread");
+            Down7* down7 = down7_new(servAddr, feedtype, iface, vcEnd, pq, mrm);
+
+            if (NULL == down7) {
                 status = LDM7_SYSTEM;
             }
             else {
-                (void)pthread_detach(termWaitThread);
-                blockTermSigs();
-                status = down7_start(down7);
-            }
-            down7_free(down7);
-        } // `down7` allocated
+                status = down7_run(down7); // Blocks until error
+
+                if (status == LDM7_INTR)
+                    status = 0;
+
+                (void)down7_delete(down7);
+            } // `down7` allocated
+
+            (void)mrm_close(mrm);
+        } // `mrm` open
+
         (void)pq_close(pq);
     } // product-queue open
 
@@ -196,7 +143,7 @@ elt_new(
                     free(elt->iface);
             } // `elt->iface` allocated
             if (failure)
-                sa_free(elt->ul7);
+                sa_delete(elt->ul7);
         } // `elt->ul7` allocated
         if (failure) {
             free(elt);
@@ -217,7 +164,7 @@ elt_free(
         Elt* const elt)
 {
     if (elt) {
-        sa_free(elt->ul7);
+        sa_delete(elt->ul7);
         free(elt->iface);
         free(elt);
     }

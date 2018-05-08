@@ -368,8 +368,8 @@ up7_deliverProduct(
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
-    log_debug_1("up7_deliverProduct(): Delivering: iProd=%lu, ident=\"%s\"",
-            missedProd.iProd, info->ident);
+    log_debug_1("Delivering: iProd=%lu, ident=\"%s\"", missedProd.iProd,
+            info->ident);
     (void)deliver_missed_product_7(&missedProd, clnt);
 
     /*
@@ -377,10 +377,9 @@ up7_deliverProduct(
      * call uses asynchronous message-passing.
      */
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
-        if (log_is_enabled_info)
-            log_info_q("up7_deliverProduct(): Missed product sent: %s",
-                    s_prod_info(NULL, 0, &missedProd.prod.info,
-                    log_is_enabled_debug));
+        log_info_q("Missed product sent: %s",
+                s_prod_info(NULL, 0, &missedProd.prod.info,
+                log_is_enabled_debug));
         return 0;
     }
 
@@ -741,7 +740,7 @@ subscribe_7_svc(
         McastSubReq* const restrict    request,
         struct svc_req* const restrict rqstp)
 {
-    log_debug_1("subscribe_7_svc(): Entered");
+    log_debug_1("Entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -817,8 +816,7 @@ request_product_7_svc(
     FmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    log_debug_1("request_product_7_svc(): Entered: iProd=%lu",
-            (unsigned long)*iProd);
+    log_debug_1("Entered: iProd=%lu", (unsigned long)*iProd);
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
@@ -848,7 +846,7 @@ request_backlog_7_svc(
     BacklogSpec* const    backlog,
     struct svc_req* const rqstp)
 {
-    log_debug_1("request_backlog_7_svc(): Entered");
+    log_debug_1("Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
@@ -875,6 +873,6 @@ test_connection_7_svc(
     void* const           no_op,
     struct svc_req* const rqstp)
 {
-    log_debug_1("test_connection_7_svc(): Entered");
+    log_debug_1("Entered");
     return NULL;                // don't reply
 }

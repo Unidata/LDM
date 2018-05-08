@@ -92,7 +92,7 @@ one_svc_run(
                  * The RPC layer closed the socket and destroyed the associated
                  * SVCXPRT structure.
                  */
-                 log_add("one_svc_run(): RPC layer closed connection");
+                 log_add("RPC layer closed connection");
                  return ECONNRESET;
             }
 

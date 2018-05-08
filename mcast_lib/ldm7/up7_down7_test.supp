@@ -19,3 +19,12 @@
    fun:clnttcp_call
    ...
 }
+{
+   authnone_private
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   fun:my_authnone_create
+   fun:my_clnttcp_create
+   ...
+}

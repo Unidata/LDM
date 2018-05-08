@@ -36,9 +36,9 @@
  * The multicast LDM receiver data-structure:
  */
 struct mlr {
-    pqueue*               pq;         // product-queue to use */
-    Down7*                down7;      // pointer to associated downstream LDM-7
-    FmtpReceiver*        receiver;   // FMTP C Receiver
+    pqueue*               pq;         // Product-queue to use */
+    Downlet*              downlet;    // Associated one-time downstream LDM-7
+    FmtpReceiver*         receiver;   // FMTP C Receiver
     volatile sig_atomic_t done;
 };
 
@@ -179,7 +179,7 @@ tryToInsert(
         status = -1;
     }
     else {
-        down7_incNumProds(mlr->down7);
+        downlet_incNumProds(mlr->downlet);
     }
 
     return status;
@@ -198,7 +198,7 @@ lastReceived(
         Mlr* const restrict             mlr,
         const prod_info* const restrict info)
 {
-    down7_lastReceived(mlr->down7, info);
+    downlet_lastReceived(mlr->downlet, info);
 }
 
 /**
@@ -325,7 +325,7 @@ missed_prod_func(
     if (pqeIndex)
         (void)pqe_discard(mlr->pq, *pqeIndex);
 
-    down7_missedProduct(((Mlr*)obj)->down7, iProd);
+    downlet_missedProduct(((Mlr*)obj)->downlet, iProd);
 }
 
 /**
@@ -335,11 +335,13 @@ missed_prod_func(
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  iface          IPv4 address of interface to use for receiving
  *                            multicast and unicast packets.
- * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
+ * @param[in]  pq             Product queue. Must exist until `deinit()`
+ *                            returns.
+ * @param[in]  downlet        Pointer to associated one-time downstream LDM-7
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
  * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
- *                            mcastInfo == NULL || down7 == NULL`. `log_add()`
+ *                            mcastInfo == NULL || downlet == NULL`. `log_add()`
  *                            called.
  * @retval     LDM7_FMTP     FMTP error. `log_add()` called.
  */
@@ -348,7 +350,8 @@ init(
         Mlr* const restrict             mlr,
         const McastInfo* const restrict mcastInfo,
         const char* const restrict      iface,
-        Down7* const restrict           down7)
+        pqueue* const restrict          pq,
+        Downlet* const restrict         downlet)
 {
     int            status;
     FmtpReceiver* receiver;
@@ -361,8 +364,8 @@ init(
         log_add("NULL multicast-group-information argument");
         return LDM7_INVAL;
     }
-    if (down7 == NULL) {
-        log_add("NULL downstream LDM-7 argument");
+    if (downlet == NULL) {
+        log_add("NULL one-time downstream LDM-7 argument");
         return LDM7_INVAL;
     }
 
@@ -396,11 +399,17 @@ init(
     } // `notifier` allocated
 
     mlr->receiver = receiver;
-    mlr->pq = down7_getPq(down7); // for convenience
-    mlr->down7 = down7;
+    mlr->pq = pq;
+    mlr->downlet = downlet;
     mlr->done  = 0;
 
     return 0;
+}
+
+static int
+deinit(Mlr* const mlr)
+{
+    fmtpReceiver_free(mlr->receiver);
 }
 
 /******************************************************************************
@@ -413,7 +422,9 @@ init(
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  iface          IP address of interface to use for receiving
  *                            multicast and unicast packets.
- * @param[in]  down7          Pointer to the associated downstream LDM-7 object.
+ * @param[in]  pq             Product queue. Must exist until `deinit()`
+ *                            returns.
+ * @param[in]  downlet        Pointer to associated one-time downstream LDM-7
  * @retval     NULL           Failure. `log_add()` called.
  * @return                    Pointer to a new multicast LDM receiver object.
  *                            The caller should call `mlr_free()` when it's no
@@ -423,12 +434,13 @@ Mlr*
 mlr_new(
         const McastInfo* const restrict mcastInfo,
         const char* const restrict      iface,
-        Down7* const restrict           down7)
+        pqueue* const restrict          pq,
+        Downlet* const restrict         downlet)
 {
     Mlr* mlr = log_malloc(sizeof(Mlr), "multicast LDM receiver object");
 
     if (mlr) {
-        if (init(mlr, mcastInfo, iface, down7)) {
+        if (init(mlr, mcastInfo, iface, pq, downlet)) {
             log_add("Couldn't initialize multicast LDM receiver");
             free(mlr);
             mlr = NULL;
@@ -444,15 +456,15 @@ mlr_new(
  * @param[in,out] mlr   The multicast LDM receiver object.
  */
 void
-mlr_free(
+mlr_delete(
         Mlr* const  mlr)
 {
-    fmtpReceiver_free(mlr->receiver);
+    deinit(mlr);
     free(mlr);
 }
 
 /**
- * Executes a multicast LDM receiver. Doesn't return until `mlr_stop()` is
+ * Executes a multicast LDM receiver. Doesn't return until `mlr_halt()` is
  * called or an error occurs.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
@@ -462,7 +474,7 @@ mlr_free(
  * @see `mlr_stop()`
  */
 int
-mlr_start(
+mlr_run(
         Mlr* const  mlr)
 {
     int status;
@@ -492,7 +504,7 @@ mlr_start(
  * @param[in] mlr  Pointer to the multicast LDM receiver to stop.
  */
 void
-mlr_stop(
+mlr_halt(
         Mlr* const mlr)
 {
     mlr->done = 1;

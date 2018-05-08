@@ -56,7 +56,7 @@ mi_destroy(
  *                           by `mgi_new()`.
  */
 void
-mi_free(
+mi_delete(
     McastInfo* const mcastInfo);
 
 /**
@@ -78,7 +78,7 @@ mi_copy(
  * @param[in] info  Multicast information object to be cloned.
  * @retval    NULL  Failure. `log_add()` called.
  * @return          Clone of multicast information object. Caller should call
- *                  `mi_free()` when the clone is no longer needed.
+ *                  `mi_delete()` when the clone is no longer needed.
  */
 McastInfo*
 mi_clone(

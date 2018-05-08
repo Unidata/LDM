@@ -14,11 +14,13 @@
 
 #include "fmtp.h"
 #include "ldm.h"
+#include "mldm_receiver_memory.h"
 #include "pq.h"
 
 #include <inetutil.h>
 
-typedef struct Down7 Down7;
+typedef struct down7   Down7;
+typedef struct downlet Downlet;
 
 #ifdef __cplusplus
 extern "C" {
