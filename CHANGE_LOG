@@ -3,6 +3,9 @@
         Made the width of the location field in log messages to a file or the
         standard error stream for the default logging module match the longest
         location field seen. This should make viewing log messages easier.
+        
+        Improved currency management in the default logging module: simultaneous
+        log messages should no longer overlap.
 
 6.13.7.1	2018-04-19T15:26:05-0600
     Build:
