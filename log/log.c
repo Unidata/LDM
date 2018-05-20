@@ -38,8 +38,8 @@
 
 #undef NDEBUG
 #include "log.h"
-#include "mutex.h"
 #include "StrBuf.h"
+#include "Thread.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -120,7 +120,7 @@ static sigset_t              prevSigs;
 /**
  * The mutex that makes this module thread-safe.
  */
-static mutex_t               log_mutex;
+static pthread_mutex_t       log_mutex;
 
 /**
  * Blocks all signals for the current thread. This is done so that the
@@ -468,7 +468,7 @@ static int init(void)
         usr1_sigaction.sa_flags = SA_RESTART;
         usr1_sigaction.sa_handler = handle_sigusr1;
         (void)sigaction(SIGUSR1, &usr1_sigaction, &prev_usr1_sigaction);
-        status = mutex_init(&log_mutex, false, true);
+        status = mutex_init(&log_mutex, PTHREAD_MUTEX_ERRORCHECK, true);
         if (status)
             logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
                     strerror(status));
@@ -527,21 +527,24 @@ static void flush(
     blockSigs(&sigset);
     msg_queue_t*   queue = queue_get();
 
-    if (NULL != queue && NULL != queue->last) {
-        if (is_level_enabled(level)) {
-            (void)refresh_if_necessary();
-            for (const Message* msg = queue->first; NULL != msg;
-                    msg = msg->next) {
-                logi_log(level, &msg->loc, msg->string);
+    logl_lock();
+        if (NULL != queue && NULL != queue->last) {
+            if (is_level_enabled(level)) {
+                (void)refresh_if_necessary();
+                for (const Message* msg = queue->first; NULL != msg;
+                        msg = msg->next) {
+                    logi_log(level, &msg->loc, msg->string);
 
-                if (msg == queue->last)
-                    break;
-            }                       /* message loop */
-            logi_flush();
-        }                           /* messages should be printed */
+                    if (msg == queue->last)
+                        break;
+                }                       /* message loop */
+                logi_flush();
+            }                           /* messages should be printed */
 
-        queue_clear();
-    }                               /* have messages */
+            queue_clear();
+        }                               /* have messages */
+    logl_unlock();
+
     restoreSigs(&sigset);
 }
 
@@ -699,7 +702,9 @@ void logl_vlog_1(
         char* msg = formatMsg(format, args);
         if (msg) {
             (void)refresh_if_necessary();
-            logi_log(level, loc, msg);
+            logl_lock();
+                logi_log(level, loc, msg);
+            logl_unlock();
             free(msg);
         }
         restoreSigs(&sigset);
@@ -1334,9 +1339,7 @@ void
 log_free_located(
         const log_loc_t* const loc)
 {
-    logl_lock();
     logl_free(loc);
-    logl_unlock();
 }
 
 /**
@@ -1350,11 +1353,9 @@ log_free_located(
 int log_fini_located(
         const log_loc_t* const loc)
 {
-    logl_lock();
     int status = logl_fini(loc);
-    logl_unlock();
     if (status == 0) {
-        status = mutex_fini(&log_mutex);
+        status = mutex_destroy(&log_mutex);
         if (status == 0) {
             (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
             isInitialized = false;

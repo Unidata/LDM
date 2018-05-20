@@ -11,8 +11,8 @@
 
 #include "config.h"
 
-#include "mutex.h"
 #include "log.h"
+#include "Thread.h"
 
 #undef NDEBUG
 #include <assert.h>
@@ -805,7 +805,7 @@ int logi_init(
     else {
         status = init(id);
         if (status == 0) {
-            status = mutex_init(&mutex, true, true);
+            status = mutex_init(&mutex, PTHREAD_MUTEX_ERRORCHECK, true);
             if (status == 0)
                 initialized = true;
         }

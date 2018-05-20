@@ -8,7 +8,7 @@
 
 SUBDIRS			= ulog
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= mutex.c mutex.h log.c log.h log_private.h
+lib_la_SOURCES		= log.c log.h log_private.h
 lib_la_CPPFLAGS		= -I$(top_srcdir)/misc -I$(top_srcdir)/protocol2
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
 MAIN_PAGE		= simple-logging.md
