@@ -14,12 +14,12 @@
 
 #include "globals.h"
 #include "log.h"
-#include "mutex.h"
 #include "nbs_application.h"
 #include "nbs_link.h"
 #include "nbs_stack.h"
 #include "noaaport_socket.h"
 #include "pq.h"
+#include "Thread.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -359,7 +359,7 @@ static void fini_receiving_nbs_stack(void)
  */
 static bool init(void)
 {
-    int status = mutex_init(&mutex, false, true);
+    int status = mutex_init(&mutex, PTHREAD_MUTEX_ERRORCHECK, true);
     if (status) {
         log_errno_q(status, "Couldn't initialize mutex");
     }
@@ -389,7 +389,7 @@ static bool init(void)
                 (void)pq_close(pq);
         } // `pq` open
         if (status)
-            (void)mutex_fini(&mutex);
+            (void)mutex_destroy(&mutex);
     } // `mutex` initialized
 
     return status == 0;
@@ -403,7 +403,7 @@ static void fini(void)
     fini_receiving_nbs_stack();
     (void)close(sock);  sock = -1;
     (void)pq_close(pq); pq = NULL;
-    (void)mutex_fini(&mutex);
+    (void)mutex_destroy(&mutex);
     (void)pthread_cond_destroy(&cond);
 }
 
