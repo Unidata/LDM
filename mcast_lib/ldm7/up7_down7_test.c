@@ -1094,7 +1094,7 @@ receiver_init(
 static void
 receiver_deinit(Receiver* const recvr)
 {
-    CU_ASSERT_EQUAL(down7_delete(recvr->down7), 0);
+    CU_ASSERT_EQUAL(down7_free(recvr->down7), 0);
 
     CU_ASSERT_TRUE(mrm_close(recvr->mrm));
 

@@ -1,3 +1,6 @@
+*.supp
+*.vg
+*.log
 /child_map.h
 /semRWLock.h
 testSemRWLock
@@ -8,3 +11,6 @@ test_inetutil
 executor_test
 doubly_linked_list_test
 queue_test
+/Completer_test.vg
+/Executor_test.vg
+/Future_test.vg

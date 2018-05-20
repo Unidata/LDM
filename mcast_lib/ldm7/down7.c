@@ -17,7 +17,6 @@
 #include "config.h"
 
 #include "CidrAddr.h"
-#include "StopFlag.h"
 #include "down7.h"
 #include "fmtp.h"
 #include "globals.h"
@@ -32,7 +31,7 @@
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
-#include "Task.h"
+#include "Thread.h"
 #include "timestamp.h"
 #include "VirtualCircuit.h"
 
@@ -52,227 +51,45 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
+#include "../../misc/Completer.h"
+#include "../../misc/StopFlag.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 #endif
+
+/******************************************************************************
+ * Miscellaneous stuff
+ ******************************************************************************/
 
 /**
  * Key for getting the pointer to a downstream LDM7 that's associated with a
  * thread:
  */
 static pthread_key_t  down7Key;
+
 /**
  * Lockout for initializing `down7Key`:
  */
 static pthread_once_t down7KeyControl = PTHREAD_ONCE_INIT;
 
-typedef enum {
-    DOWN7_INITIALIZED,
-    DOWN7_SUBSCRIBING,
-    DOWN7_RECEIVING,
-    DOWN7_STOPPING,
-    DOWN7_STOPPED
-} Down7State;
+/******************************************************************************
+ * Proxy for an upstream LDM7
+ ******************************************************************************/
 
 /**
- * Thread-safe proxy for an upstream LDM7 associated with a downstream LDM7.
+ * Data-structure of a thread-safe proxy for an upstream LDM7 associated with a
+ * downstream LDM7.
  */
-typedef struct {
+typedef struct up7Proxy {
     char*                 remoteId; ///< Socket address of upstream LDM7
     CLIENT*               clnt;     ///< client-side RPC handle
     pthread_mutex_t       mutex;    ///< because accessed by multiple threads
 } Up7Proxy;
 
-/******************************************************************************
- * Requester of Data-Product Missed by the FMTP Layer:
- ******************************************************************************/
-
-typedef struct backstop {
-    McastReceiverMemory*  mrm;       ///< Persistent multicast receiver memory
-    Up7Proxy*             up7Proxy;  ///< Proxy for upstream LDM7
-    struct downlet*       downlet;   ///< Parent one-time downstream LDM7
-    signaturet            prevLastMcast;    ///< Previous session's Last prod
-    bool                  prevLastMcastSet; ///< `prevLastMcast` set?
-} Backstop;
-
-typedef struct ucastRcvr {
-    SVCXPRT*              xprt;
-    char*                 remoteStr;
-    struct downlet*       downlet;
-    StopFlag              stopFlag;
-} UcastRcvr;
-
-typedef struct mcastRcvr {
-    Mlr*            mlr;     ///< Multicast LDM receiver
-    struct downlet* downlet; ///< Parent one-time downstream LDM7
-} McastRcvr;
-
-typedef struct backlogger {
-    /// Signature of first product received via multicast
-    signaturet            before;
-    struct downlet*       downlet; ///< Parent one-time downstream LDM7
-    StopFlag              stopFlag;
-} Backlogger;
-
-typedef struct downlet {
-    struct down7*        down7;      ///< Parent downstream LDM7
-    Up7Proxy*            up7proxy;   ///< Proxy for upstream LDM7
-    Backstop*            backstop;   ///< Requests products FMTP layer missed
-    UcastRcvr*           ucastRcvr;  ///< Receiver of unicast products
-    Backlogger*          backlogger; ///< Requests backlog of products
-    Task*                backstopTask;
-    Task*                ucastRcvrTask;
-    Task*                backloggerTask;
-    Task*                mcastRcvrTask;
-    Up7Proxy*            up7Proxy;   ///< Proxy for upstream LDM7
-    pqueue*              pq;         ///< pointer to the product-queue
-    const ServiceAddr*   servAddr;   ///< socket address of remote LDM7
-    McastInfo*           mcastInfo;  ///< information on multicast group
-    /**
-     * IP address of interface to use for receiving multicast and unicast
-     * packets
-     */
-    const char*          iface;
-    McastRcvr*           mcastRcvr;
-    char*                upId;          ///< ID of upstream LDM7
-    char*                feedId;        ///< Desired feed specification
-    /// Server-side transport for missing products
-    SVCXPRT*             xprt;
-    ///< Persistent multicast receiver memory
-    McastReceiverMemory* mrm;
-    const VcEndPoint*    vcEnd;         ///< Local virtual-circuit endpoint
-    pthread_t            thread;
-    pthread_mutex_t      mutex;         ///< Mutex for state changes
-    pthread_cond_t       cond;          ///< Condition-variable for status
-    feedtypet            feedtype;      ///< Feed of multicast group
-    Ldm7Status           status;        ///< Downstream LDM7 status
-    int                  sock;          ///< Socket with remote LDM7
-    volatile bool        mcastWorking;  ///< Product received via multicast?
-} Downlet;
-
-/**
- * The data structure of a downstream LDM7:
- */
-struct down7 {
-    pqueue*               pq;            ///< pointer to the product-queue
-    ServiceAddr*          servAddr;      ///< socket address of remote LDM7
-    McastInfo*            mcastInfo;     ///< information on multicast group
-    /**
-     * IP address of interface to use for receiving multicast and unicast
-     * packets
-     */
-    char*                 iface;
-    /**
-     * Signature of the first data-product received by the associated multicast
-     * LDM receiver during the current session.
-     */
-    signaturet            firstMcast;
-    ///< Persistent multicast receiver memory
-    McastReceiverMemory*  mrm;
-    /**
-     * Signature of the last data-product received by the associated multicast
-     * LDM receiver during the previous session.
-     */
-    signaturet            prevLastMcast;
-    pthread_mutex_t       mutex;            ///< Mutex for state changes
-    pthread_cond_t        cond;             ///< Condition-variable for status
-    pthread_mutex_t       numProdMutex;     ///< Mutex for number of products
-    uint64_t              numProds;         ///< Number of inserted products
-    feedtypet             feedtype;         ///< Feed of multicast group
-    VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
-    Ldm7Status            status;           ///< Downstream LDM7 status
-    volatile bool         mcastWorking;     ///< Product received via multicast?
-    bool                  prevLastMcastSet; ///< `prevLastMcast` set?
-    StopFlag              stopFlag;
-};
-
-// Type for obtaining integer status from `pthread_create()` start-function.
-typedef union {
-    void* ptr;
-    int   val;
-} PtrInt;
-
+// Forward declaration
 static Ldm7Status
 downlet_testConnection(Downlet* const downlet);
-
-/**
- * Initializes a mutex.
- * @param[out] mutex        Mutex to be initialized
- * @retval     0            Success
- * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
- */
-static Ldm7Status
-mutex_init(pthread_mutex_t* const mutex)
-{
-    pthread_mutexattr_t mutexAttr;
-    int                 status = pthread_mutexattr_init(&mutexAttr);
-
-    if (status) {
-        log_add_errno(status, "Couldn't initialize attributes of mutex");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
-        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK );
-
-        status = pthread_mutex_init(mutex, &mutexAttr);
-
-        if (status) {
-            log_add_errno(status, "Couldn't initialize mutex");
-            status = LDM7_SYSTEM;
-        }
-
-        (void)pthread_mutexattr_destroy(&mutexAttr);
-    } // `mutexAttr` initialized
-
-    return status;
-}
-
-inline static void
-mutex_deinit(pthread_mutex_t* const mutex)
-{
-    int status = pthread_mutex_destroy(mutex);
-    log_assert(status == 0);
-}
-
-
-static void
-signalCond(pthread_cond_t* const cond)
-{
-    int status = pthread_cond_signal(cond);
-    log_assert(status == 0);
-}
-
-/**
- * Asserts that a non-recursive mutex is locked. Calls `log_abort()` if it
- * isn't.
- * @param[in] mutex     Non-recursive mutex
- */
-inline static void
-assertLocked(pthread_mutex_t* const mutex)
-{
-#ifndef NDEBUG
-    int status = pthread_mutex_trylock(mutex);
-    if (status == 0)
-        log_abort("Mutex was unlocked");
-#endif
-}
-
-/**
- * Asserts that a non-recursive mutex is unlocked. Calls `log_abort()` if it
- * isn't.
- * @param[in] mutex     Non-recursive mutex
- */
-inline static void
-assertUnlocked(pthread_mutex_t* const mutex)
-{
-#ifndef NDEBUG
-    int status = pthread_mutex_trylock(mutex);
-    if (status != 0)
-        log_abort("Mutex was locked");
-#endif
-}
 
 static int up7proxy_init(
         Up7Proxy* const restrict  proxy,
@@ -285,7 +102,7 @@ static int up7proxy_init(
         status = LDM7_INVAL;
     }
     else {
-        status = pthread_mutex_init(&proxy->mutex, NULL);
+        status = mutex_init(&proxy->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
         if (status) {
             log_add_errno(status, "Couldn't initialize mutex");
@@ -640,215 +457,16 @@ up7proxy_testConnection(
 }
 
 /******************************************************************************
- * One-time downstream LDM7 callback functions
+ * Requester of Data-Products Missed by the FMTP Layer:
  ******************************************************************************/
 
-inline static void
-downlet_assertLocked(Downlet* const downlet)
-{
-    assertLocked(&downlet->mutex);
-}
-
-inline static void
-downlet_assertUnlocked(Downlet* const downlet)
-{
-    assertUnlocked(&downlet->mutex);
-}
-
-/**
- * Locks the state of a one-time downstream LDM7.
- *
- * @pre              One-time downstream LDM7 is unlocked
- * @param[in] down7  One-time downstream LDM7 to have its state locked
- * @post             One-time downstream LDM7 is locked
- */
-static void
-downlet_lock(Downlet* const downlet)
-{
-    log_debug_1("Locking state");
-    int status = pthread_mutex_lock(&downlet->mutex);
-    log_assert(status == 0);
-}
-
-/**
- * Unlocks the state of a one-time downstream LDM7.
- *
- * @param[in] down7  One-time downstream LDM7 to have its state unlocked.
- */
-static void
-downlet_unlock(Downlet* const downlet)
-{
-    log_debug_1("Unlocking state");
-    int status = pthread_mutex_unlock(&downlet->mutex);
-    log_assert(status == 0);
-}
-
-/**
- * Compares and sets the status of a one-time downstream LDM7.
- * @param[in,out] downlet    one-time downstream LDM7
- * @param[in]     expect     Expected status
- * @param[in]     newStatus  New status iff `downlet->status == expect`
- * @return                   Current status
- */
-static Ldm7Status
-downlet_casStatus(
-        Downlet* const   downlet,
-        const Ldm7Status expect,
-        const Ldm7Status newStatus)
-{
-    downlet_assertLocked(downlet);
-
-    if (downlet->status == expect) {
-        downlet->status = newStatus;
-
-        // Not `pthread_cond_broadcast()` because only the main-thread waits
-        signalCond(&downlet->cond);
-    }
-
-    return downlet->status;
-}
-
-/**
- * Waits for a change in the status of a one-time downstream LDM7.
- * @param[in] down7  One-time downstream LDM7
- * @return           Status of one-time downstream LDM7
- */
-static Ldm7Status
-downlet_waitForStatusChange(Downlet* const downlet)
-{
-    downlet_lock(downlet);
-        while (downlet->status == LDM7_OK) {
-            int status = pthread_cond_wait(&downlet->cond, &downlet->mutex);
-            log_assert(status == 0);
-        }
-    downlet_unlock(downlet);
-
-    return downlet->status;
-}
-
-/**
- * Changes the status of a downstream LDM7 iff its current status is `LDM7_OK`
- * and signals its condition variable.
- * @pre                      Downstream LDM7 is unlocked
- * @param[in,out] down7      Downstream LDM7
- * @param[in]     newStatus  New status iff `down7->status == LDM7_OK`
- * @return                   Current status of downstream LDM7
- * @pre                      Downstream LDM7 is unlocked
- */
-static Ldm7Status
-downlet_setStatusIfOk(
-        Downlet* const     downlet,
-        const Ldm7Status newStatus)
-{
-    downlet_lock(downlet);
-        int status = downlet_casStatus(downlet, LDM7_OK, newStatus);
-    downlet_unlock(downlet);
-
-    return status;
-}
-
-/**
- * Called by `backlogger_run()`.
- *
- * @param[in] downlet   One-time downstream LDM7
- * @param[in] before    Signature of first product received via multicast
- * @retval    0         Success
- * @retval    LDM7_RPC  Error in RPC layer. `log_add()` called.
- */
-static Ldm7Status
-downlet_requestBacklog(
-        Downlet* const   downlet,
-        const signaturet before)
-{
-    BacklogSpec  spec;
-
-    spec.afterIsSet = mrm_getLastMcastProd(downlet->mrm, spec.after);
-    if (!spec.afterIsSet)
-        (void)memset(spec.after, 0, sizeof(signaturet));
-    (void)memcpy(spec.before, before, sizeof(signaturet));
-    spec.timeOffset = getTimeOffset();
-
-    int status = up7proxy_requestBacklog(downlet->up7proxy, &spec);
-
-    if (status)
-        log_add("Couldn't request session backlog");
-
-    return status;
-}
-
-/******************************************************************************
- * Requester of the backlog of data products
- ******************************************************************************/
-
-/**
- *
- * @param[out] backlogger  Backlog requester
- * @param[in]  before      Signature of first product received via multicast
- * @param[in]  downlet     One-time downstream LDM7. Must exist until
- *                         `backlogger_destroy()` is called.
- */
-static void
-backlogger_init(
-        Backlogger* const backlogger,
-        const signaturet  before,
-        Downlet* const    downlet)
-{
-    backlogger->downlet = downlet;
-
-    int status = stopFlag_init(&backlogger->stopFlag);
-    log_assert(status == 0);
-
-    (void)memcpy(backlogger->before, before, sizeof(signaturet));
-}
-
-static Backlogger*
-backlogger_new(
-        const signaturet before,
-        Downlet* const   downlet)
-{
-    Backlogger* backlogger = log_malloc(sizeof(Backlogger),
-            "missed-product backlog requester");
-
-    if (backlogger)
-        backlogger_init(backlogger, before, downlet);
-
-    return backlogger;
-}
-
-inline static void
-backlogger_delete(Backlogger* const backlogger)
-{
-    free(backlogger);
-}
-
-static int
-backlogger_run(Backlogger* const backlogger)
-{
-    int status;
-
-    if (stopFlag_isSet(&backlogger->stopFlag)) {
-        status = 0;
-    }
-    else {
-        status = downlet_requestBacklog(backlogger->downlet,
-                backlogger->before);
-    }
-
-    return status;
-}
-
-static void
-backlogger_halt(
-        Backlogger* const backlogger,
-        const pthread_t   thread)
-{
-    stopFlag_set(&backlogger->stopFlag);
-    pthread_kill(thread, SIGTERM);
-}
-
-/******************************************************************************
- * Requester of data-products missed by the FMTP layer
- ******************************************************************************/
+typedef struct backstop {
+    McastReceiverMemory*  mrm;       ///< Persistent multicast receiver memory
+    Up7Proxy*             up7Proxy;  ///< Proxy for upstream LDM7
+    struct downlet*       downlet;   ///< Parent one-time downstream LDM7
+    signaturet            prevLastMcast;    ///< Previous session's Last prod
+    bool                  prevLastMcastSet; ///< `prevLastMcast` set?
+} Backstop;
 
 /**
  * Initializes a one-time LDM7 missed-product backstop.
@@ -890,7 +508,7 @@ backstop_new(
 }
 
 static void
-backstop_delete(Backstop* const backstop)
+backstop_free(Backstop* const backstop)
 {
     free(backstop);
 }
@@ -952,60 +570,26 @@ backstop_run(Backstop* const backstop)
     return status;
 }
 
-static void
-backstop_halt(Backstop* const backstop)
+static int
+backstop_halt(
+        Backstop* const backstop,
+        const pthread_t thread)
 {
     mrm_shutDownMissedFiles(backstop->mrm);
+
+    return 0;
 }
 
 /******************************************************************************
- * LDM7 receiver of unicast data-products.
+ * Receiver of unicast products from an upstream LDM7
  ******************************************************************************/
 
-/**
- * Creates an RPC transport for receiving unicast data-product from an upstream
- * LDM7.
- *
- * @param[in]  sock         The TCP socket connected to the upstream LDM7.
- * @param[out] rpcXprt      The created RPC transport. Caller should call
- *                          `svc_destroy(xprt)` when it's no longer needed.
- * @retval     0            Success.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
- * @retval     LDM7_RPC     RPC error. `log_add()` called.
- */
-static int
-ucastRcvr_createXprt(
-    const int       sock,
-    SVCXPRT** const rpcXprt)
-{
-    struct sockaddr_in addr;
-    socklen_t          addrLen = sizeof(addr);
-    int                status = getpeername(sock, (struct sockaddr*)&addr,
-            &addrLen);
-    if (status) {
-        log_add_syserr("Couldn't get Internet address of upstream LDM7");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        SVCXPRT* const xprt = svcfd_create(sock, 0, MAX_RPC_BUF_NEEDED);
-        if (xprt == NULL) {
-            log_add("Couldn't create server-side RPC transport for receiving "
-                    "data-products from \"%s\"", inet_ntoa(addr.sin_addr));
-            status = LDM7_RPC;
-        }
-        else {
-            /*
-             * Set the remote address of the server-side RPC transport because
-             * `svcfd_create()` doesn't.
-             */
-            xprt->xp_raddr = addr;
-            xprt->xp_addrlen = addrLen;
-            *rpcXprt = xprt;
-            status = 0;
-        }
-    }
-    return status;
-}
+typedef struct ucastRcvr {
+    SVCXPRT*              xprt;
+    char*                 remoteStr;
+    struct downlet*       downlet;
+    StopFlag              stopFlag;
+} UcastRcvr;
 
 /**
  * Runs the RPC-based server of a downstream LDM7. *Might* destroy and
@@ -1131,6 +715,51 @@ ucastRcvr_halt(
     pthread_kill(thread, SIGTERM);
 }
 
+/**
+ * Creates an RPC transport for receiving unicast data-product from an upstream
+ * LDM7.
+ *
+ * @param[in]  sock         The TCP socket connected to the upstream LDM7.
+ * @param[out] rpcXprt      The created RPC transport. Caller should call
+ *                          `svc_destroy(xprt)` when it's no longer needed.
+ * @retval     0            Success.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval     LDM7_RPC     RPC error. `log_add()` called.
+ */
+static int
+ucastRcvr_createXprt(
+    const int       sock,
+    SVCXPRT** const rpcXprt)
+{
+    struct sockaddr_in addr;
+    socklen_t          addrLen = sizeof(addr);
+    int                status = getpeername(sock, (struct sockaddr*)&addr,
+            &addrLen);
+    if (status) {
+        log_add_syserr("Couldn't get Internet address of upstream LDM7");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        SVCXPRT* const xprt = svcfd_create(sock, 0, MAX_RPC_BUF_NEEDED);
+        if (xprt == NULL) {
+            log_add("Couldn't create server-side RPC transport for receiving "
+                    "data-products from \"%s\"", inet_ntoa(addr.sin_addr));
+            status = LDM7_RPC;
+        }
+        else {
+            /*
+             * Set the remote address of the server-side RPC transport because
+             * `svcfd_create()` doesn't.
+             */
+            xprt->xp_raddr = addr;
+            xprt->xp_addrlen = addrLen;
+            *rpcXprt = xprt;
+            status = 0;
+        }
+    }
+    return status;
+}
+
 static Ldm7Status
 ucastRcvr_init(
         UcastRcvr* const restrict ucastRcvr,
@@ -1171,7 +800,7 @@ ucastRcvr_init(
 }
 
 static void
-ucastRcvr_deinit(UcastRcvr* const ucastRcvr)
+ucastRcvr_destroy(UcastRcvr* const ucastRcvr)
 {
     svc_unregister(LDMPROG, SEVEN);
 
@@ -1214,15 +843,20 @@ ucastRcvr_new(
 }
 
 static void
-ucastRcvr_delete(UcastRcvr* const ucastRcvr)
+ucastRcvr_free(UcastRcvr* const ucastRcvr)
 {
-    ucastRcvr_deinit(ucastRcvr);
+    ucastRcvr_destroy(ucastRcvr);
     free(ucastRcvr);
 }
 
 /******************************************************************************
- * Multicast receiver
+ * Receiver of multicast products from an upstream LDM7 (uses the FMTP layer)
  ******************************************************************************/
+
+typedef struct mcastRcvr {
+    Mlr*            mlr;     ///< Multicast LDM receiver
+    struct downlet* downlet; ///< Parent one-time downstream LDM7
+} McastRcvr;
 
 static int
 mcastRcvr_init(
@@ -1249,7 +883,7 @@ mcastRcvr_init(
 }
 
 inline static void
-mcastRcvr_deinit(McastRcvr* const mcastRcvr)
+mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
     mlr_delete(mcastRcvr->mlr);
 }
@@ -1275,9 +909,9 @@ mcastRcvr_new(
 }
 
 inline static void
-mcastRcvr_delete(McastRcvr* const mcastRcvr)
+mcastRcvr_free(McastRcvr* const mcastRcvr)
 {
-    mcastRcvr_deinit(mcastRcvr);
+    mcastRcvr_destroy(mcastRcvr);
     free(mcastRcvr);
 }
 
@@ -1301,16 +935,199 @@ mcastRcvr_run(McastRcvr* const mcastRcvr)
     return mlr_run(mcastRcvr->mlr); // Blocks
 }
 
-inline static void
-mcastRcvr_halt(McastRcvr* const mcastRcvr)
+inline static int
+mcastRcvr_halt(
+        McastRcvr* const mcastRcvr,
+        const pthread_t  thread)
 {
     log_debug_1("Stopping multicast receiver");
     mlr_halt(mcastRcvr->mlr);
+
+    return 0;
+}
+
+/******************************************************************************
+ * Requester of the backlog of data products
+ ******************************************************************************/
+
+typedef struct backlogger {
+    /// Signature of first product received via multicast
+    signaturet            before;
+    struct downlet*       downlet; ///< Parent one-time downstream LDM7
+    StopFlag              stopFlag;
+} Backlogger;
+
+/**
+ *
+ * @param[out] backlogger  Backlog requester
+ * @param[in]  before      Signature of first product received via multicast
+ * @param[in]  downlet     One-time downstream LDM7. Must exist until
+ *                         `backlogger_destroy()` is called.
+ */
+static void
+backlogger_init(
+        Backlogger* const backlogger,
+        const signaturet  before,
+        Downlet* const    downlet)
+{
+    backlogger->downlet = downlet;
+
+    int status = stopFlag_init(&backlogger->stopFlag);
+    log_assert(status == 0);
+
+    (void)memcpy(backlogger->before, before, sizeof(signaturet));
+}
+
+static Backlogger*
+backlogger_new(
+        const signaturet before,
+        Downlet* const   downlet)
+{
+    Backlogger* backlogger = log_malloc(sizeof(Backlogger),
+            "missed-product backlog requester");
+
+    if (backlogger)
+        backlogger_init(backlogger, before, downlet);
+
+    return backlogger;
+}
+
+inline static void
+backlogger_free(Backlogger* const backlogger)
+{
+    free(backlogger);
+}
+
+// Forward declaration
+static Ldm7Status
+downlet_requestBacklog(
+        Downlet* const   downlet,
+        const signaturet before);
+
+static int
+backlogger_run(Backlogger* const backlogger)
+{
+    int status;
+
+    if (stopFlag_isSet(&backlogger->stopFlag)) {
+        status = 0;
+    }
+    else {
+        status = downlet_requestBacklog(backlogger->downlet,
+                backlogger->before);
+    }
+
+    return status;
+}
+
+static int
+backlogger_halt(
+        Backlogger* const backlogger,
+        const pthread_t   thread)
+{
+    stopFlag_set(&backlogger->stopFlag);
+    pthread_kill(thread, SIGTERM);
+
+    return 0;
 }
 
 /******************************************************************************
  * One-time downstream LDM7
  ******************************************************************************/
+
+/**
+ * Data structure of a one-time downstream LDM7. It is executed only once per
+ * connection attempt.
+ */
+typedef struct downlet {
+    struct down7*        down7;      ///< Parent downstream LDM7
+    Up7Proxy*            up7proxy;   ///< Proxy for upstream LDM7
+    Backstop*            backstop;   ///< Requests products FMTP layer missed
+    UcastRcvr*           ucastRcvr;  ///< Receiver of unicast products
+    Backlogger*          backlogger; ///< Requests backlog of products
+    Future*              backloggerFuture;
+    Up7Proxy*            up7Proxy;   ///< Proxy for upstream LDM7
+    pqueue*              pq;         ///< pointer to the product-queue
+    const ServiceAddr*   servAddr;   ///< socket address of remote LDM7
+    McastInfo*           mcastInfo;  ///< information on multicast group
+    /**
+     * IP address of interface to use for receiving multicast and unicast
+     * packets
+     */
+    const char*          iface;
+    McastRcvr*           mcastRcvr;
+    char*                upId;          ///< ID of upstream LDM7
+    char*                feedId;        ///< Desired feed specification
+    /// Server-side transport for missing products
+    SVCXPRT*             xprt;
+    ///< Persistent multicast receiver memory
+    McastReceiverMemory* mrm;
+    const VcEndPoint*    vcEnd;         ///< Local virtual-circuit endpoint
+    Completer*           completer;     ///< Async.-task completion service
+    pthread_t            thread;
+    feedtypet            feedtype;      ///< Feed of multicast group
+    Ldm7Status           status;        ///< Downstream LDM7 status
+    int                  sock;          ///< Socket with remote LDM7
+    volatile bool        mcastWorking;  ///< Product received via multicast?
+} Downlet;
+
+/**
+ * Waits for a change in the status of a one-time downstream LDM7.
+ * @param[in] down7  One-time downstream LDM7
+ * @return           Status of one-time downstream LDM7
+ */
+static Ldm7Status
+downlet_waitForStatusChange(Downlet* const downlet)
+{
+    int status = 0;
+
+    do {
+        Future* future = completer_take(downlet->completer);
+
+        if (future == NULL)
+            break;
+
+        status = future_getResult(future, NULL);
+
+        // A one-time downstream LDM7 should not be terminated due to the
+        // successful completion of its backlogger task
+        if (future != downlet->backloggerFuture)
+            status = LDM7_SYSTEM;
+
+        future_free(future);
+    } while (status == 0);
+
+    return status;
+}
+
+/**
+ * Called by `backlogger_run()`.
+ *
+ * @param[in] downlet   One-time downstream LDM7
+ * @param[in] before    Signature of first product received via multicast
+ * @retval    0         Success
+ * @retval    LDM7_RPC  Error in RPC layer. `log_add()` called.
+ */
+static Ldm7Status
+downlet_requestBacklog(
+        Downlet* const   downlet,
+        const signaturet before)
+{
+    BacklogSpec  spec;
+
+    spec.afterIsSet = mrm_getLastMcastProd(downlet->mrm, spec.after);
+    if (!spec.afterIsSet)
+        (void)memset(spec.after, 0, sizeof(signaturet));
+    (void)memcpy(spec.before, before, sizeof(signaturet));
+    spec.timeOffset = getTimeOffset();
+
+    int status = up7proxy_requestBacklog(downlet->up7proxy, &spec);
+
+    if (status)
+        log_add("Couldn't request session backlog");
+
+    return status;
+}
 
 /**
  * Returns a socket that's connected to an Internet server via TCP.
@@ -1471,7 +1288,7 @@ downlet_initConn(Downlet* const downlet)
  * @param[in] arg  Downstream LDM7
  */
 static void
-downlet_deinitConn(
+downlet_destroyConn(
         Downlet* downlet)
 {
     up7proxy_delete(downlet->up7proxy); // won't close externally-created socket
@@ -1526,6 +1343,8 @@ downlet_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
+    int status;
+
     downlet->down7 = down7;
     downlet->servAddr = servAddr;
     downlet->iface = mcastIface;
@@ -1540,55 +1359,46 @@ downlet_init(
     downlet->ucastRcvr = NULL;
     downlet->backlogger = NULL;
     downlet->mrm = mrm;
-    downlet->backloggerTask = NULL;
-    downlet->backstopTask = NULL;
-    downlet->ucastRcvrTask = NULL;
+    downlet->backloggerFuture = NULL;
 
-    int status = pthread_cond_init(&downlet->cond, NULL);
+    downlet->upId = sa_format(servAddr);
 
-    if (status) {
-        log_add_errno(status, "Couldn't initialize condition-variable");
+    if (downlet->upId == NULL) {
+        log_add("Couldn't format socket address of upstream LDM7");
         status = LDM7_SYSTEM;
     }
     else {
-        status = mutex_init(&downlet->mutex);
+        downlet->feedId = feedtypet_format(feed);
 
-        if (status == 0) {
-            downlet->upId = sa_format(servAddr);
+        if (downlet->feedId == NULL) {
+            log_add("Couldn't format desired feed specification");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            downlet->completer = completer_new();
 
-            if (downlet->upId == NULL) {
-                log_add("Couldn't format socket address of upstream LDM7");
-                status = LDM7_SYSTEM;
+            if (downlet->completer == NULL) {
+                log_add("Couldn't create new completion service");
+                status = ENOMEM;
             }
             else {
-                downlet->feedId = feedtypet_format(feed);
+                // Initializes `downlet->up7Proxy` and `downlet->sock`
+                status = downlet_initConn(downlet);
 
-                if (downlet->feedId == NULL) {
-                    log_add("Couldn't format desired feed specification");
-                    status = LDM7_SYSTEM;
+                if (status) {
+                    log_add("Couldn't establish connection to upstream LDM7 "
+                            "server %s", downlet->upId);
+                    completer_free(downlet->completer);
                 }
-                else {
-                    // Initializes `downlet->up7Proxy` and `downlet->sock`
-                    status = downlet_initConn(downlet);
-
-                    if (status) {
-                        log_add("Couldn't establish connection to upstream "
-                                "LDM7 server %s", downlet->upId);
-                        free(downlet->feedId);
-                    }
-                } // `downlet->feedId` initialized
-
-                if (status)
-                    free(downlet->upId);
-            } // `downlet->upId` initialized
+            } // Completion service created
 
             if (status)
-                mutex_deinit(&downlet->mutex);
-        } // `downlet->mutex` initialized
+                free(downlet->feedId);
+        } // `downlet->feedId` created
 
         if (status)
-            (void)pthread_cond_destroy(&downlet->cond);
-    } // `downlet->cond` initialized
+            free(downlet->upId);
+    } // `downlet->upId` created
 
     return status;
 }
@@ -1599,47 +1409,33 @@ downlet_init(
  * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
-downlet_deinit(Downlet* const downlet)
+downlet_destroy(Downlet* const downlet)
 {
-    downlet_deinitConn(downlet);
+    downlet_destroyConn(downlet);
+    completer_free(downlet->completer);
     free(downlet->feedId);
     free(downlet->upId);
 
-    mutex_deinit(&downlet->mutex);
-
-    int status = pthread_cond_destroy(&downlet->cond);
-    if (status) {
-        log_add_errno(status, "Couldn't destroy condition-variable");
-        status = LDM7_SYSTEM;
-    }
-
-    return status;
+    return 0;
 }
 
 /**
  * Receives unicast data-products from the associated upstream LDM7 -- either
  * because they were missed by the multicast LDM receiver or because they are
  * part of the backlog. Doesn't return until `downlet_haltUcastRcvr()` is called
- * or an error occurs. On return
- *   - `down7_setStatusIfOk()` will have been called; and
- *   - The TCP socket will be closed.
+ * or an error occurs. On return the TCP socket will be closed.
  *
  * @param[in] arg   One-time LDM7 unicast receiver
- * @retval    NULL  Always
+ * @retval    0     Success
+ * @return          Error code. `log_add()` called.
  * @see            `downlet_haltUcastRcvr()`
  */
-static void*
-downlet_runUcastRcvr(void* const arg)
+static int
+downlet_runUcastRcvr(
+        void* const restrict  arg,
+        void** const restrict result)
 {
-    Downlet* const   downlet = (Downlet*)arg;
-    int              status = ucastRcvr_run(downlet->ucastRcvr);
-
-    (void)downlet_setStatusIfOk(downlet, status);
-
-    // Because end of thread
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
-
-    return NULL;
+    return ucastRcvr_run(((Downlet*)arg)->ucastRcvr);
 }
 
 static int
@@ -1647,82 +1443,9 @@ downlet_haltUcastRcvr(
         void* const arg,
         pthread_t   thread)
 {
-    Downlet* const   downlet = (Downlet*)arg;
-    UcastRcvr* const ucastRcvr = downlet->ucastRcvr;
-
-    ucastRcvr_halt(ucastRcvr, thread);
+    ucastRcvr_halt(((Downlet*)arg)->ucastRcvr, thread);
 
     return 0;
-}
-
-/**
- * Creates an asynchronous subtask of a one-time downstream LDM7. Executes the
- * subtask on a separate thread.
- *
- * @param[in]     downlet      One-time downstream LDM7
- * @param[in]     id           Identifer of the subtask for log messages
- * @param[out]    task         One-time downstream LDM7 subtask
- * @param[in]     runFunc      Task run function
- * @param[in]     haltFunc     Task halt function
- * @retval        0            Success
- * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
- * @see `downlet_destroyTask()`
- */
-static int
-downlet_createTask(
-        Downlet* const restrict    downlet,
-        const char* const restrict id,
-        Task** const restrict      task,
-        void*                    (*runFunc)(void *),
-        int                      (*haltFunc)(void*, pthread_t))
-{
-    int status;
-
-    /*
-     * '*task` must be assigned before `runFunc` is called because the latter
-     * references the former
-     */
-    *task = NULL; // task_new(downlet, runFunc, haltFunc);
-
-    if (*task == NULL) {
-        log_add("Couldn't create asynchronous task for %s", id);
-        status = LDM7_SYSTEM;
-    }
-    else {
-        //status = task_start(*task);
-
-        if (status) {
-            log_add("Couldn't start task for %s", id);
-
-            // task_delete(*task);
-            *task = NULL;
-
-            status = LDM7_SYSTEM;
-        }
-    } // `*task` constructed
-
-    return status;
-}
-
-static int
-downlet_destroyTask(
-        Task* const restrict       task,
-        const char* const restrict id)
-{
-    int status;
-
-    if (task) {
-        status = 0; // task_stop(task, NULL);
-
-        if (status) {
-            log_add("Couldn't stop task for %s");
-        }
-        else {
-            // task_delete(task); // TODO
-        }
-    }
-
-    return status;
 }
 
 /**
@@ -1736,60 +1459,39 @@ downlet_destroyTask(
  * @see `downlet_destroyUcastRcvr()`
  */
 static int
-downlet_createUcastRcvr(
-        Downlet* const downlet)
+downlet_createUcastRcvr(Downlet* const downlet)
 {
-    static char id[] = "one-time LDM7 unicast receiver";
     int         status;
+    static char id[] = "one-time LDM7 unicast receiver";
 
-    downlet->ucastRcvr = ucastRcvr_new(downlet->sock, downlet);
+    UcastRcvr* const ucastRcvr = ucastRcvr_new(downlet->sock, downlet);
 
-    if (downlet->ucastRcvr == NULL) {
+    if (ucastRcvr == NULL) {
         log_add("Couldn't construct %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        status = downlet_createTask(downlet, id, &downlet->ucastRcvrTask,
-                downlet_runUcastRcvr, downlet_haltUcastRcvr);
-
-        if (status) {
-            ucastRcvr_delete(downlet->ucastRcvr);
-            downlet->ucastRcvr = NULL;
+        if (completer_submit(downlet->completer, downlet, downlet_runUcastRcvr,
+                downlet_haltUcastRcvr) == NULL) {
+            log_add("Couldn't submit %s for execution", id);
+            ucastRcvr_free(ucastRcvr);
+            status = LDM7_SYSTEM;
         }
-    } // `downlet->ucastRcvr` constructed
+        else {
+            downlet->ucastRcvr = ucastRcvr;
+            status = 0; // Success
+        }
+    } // `ucastRcvr` created
 
     return status;
 }
 
-static void
-downlet_destroyUcastRcvr(
-        Downlet* const downlet)
+static int
+downlet_runBackstop(
+        void* const restrict  arg,
+        void** const restrict result)
 {
-    if (downlet_destroyTask(downlet->ucastRcvrTask,
-            "one-time LDM7 unicast receiver")) {
-        log_flush_error();
-    }
-    else {
-        downlet->ucastRcvrTask = NULL;
-
-        ucastRcvr_delete(downlet->ucastRcvr);
-        downlet->ucastRcvr = NULL;
-    }
-}
-
-static void*
-downlet_runBackstop(void* const arg)
-{
-    Downlet* const  downlet = (Downlet*)arg;
-    Backstop* const backstop = downlet->backstop;
-    int             status = backstop_run(backstop);
-
-    (void)downlet_setStatusIfOk(downlet, status);
-
-    // Because end of thread
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
-
-    return NULL;
+    return backstop_run(((Downlet*)arg)->backstop);
 }
 
 static int
@@ -1797,69 +1499,44 @@ downlet_haltBackstop(
         void* const     arg,
         const pthread_t thread)
 {
-    Downlet* const  downlet = (Downlet*)arg;
-    Backstop* const backstop = downlet->backstop;
-
-    backstop_halt(backstop);
-
-    return 0;
+    return backstop_halt(((Downlet*)arg)->backstop, thread);
 }
 
 static int
 downlet_createBackstop(Downlet* const downlet)
 {
-    static char id[] = "one-time LDM7 backstop";
     int         status;
+    static char id[] = "one-time LDM7 backstop";
 
-    downlet->backstop = backstop_new(downlet->up7Proxy, downlet->mrm, downlet);
+    Backstop* const backstop = backstop_new(downlet->up7Proxy, downlet->mrm,
+            downlet);
 
-    if (downlet->backstop == NULL) {
+    if (backstop == NULL) {
         log_add("Couldn't construct %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        status = downlet_createTask(downlet, id, &downlet->backstopTask,
-                downlet_runBackstop, downlet_haltBackstop);
-
-        if (status) {
-            backstop_delete(downlet->backstop);
-            downlet->backstop = NULL;
+        if (completer_submit(downlet->completer, downlet,
+                downlet_runBackstop, downlet_haltBackstop) == NULL) {
+            log_add("Couldn't submit %s for execution", id);
+            backstop_free(backstop);
+            status = LDM7_SYSTEM;
         }
-    } // `downlet->backstop` constructed
+        else {
+            downlet->backstop = backstop;
+            status = 0; // Success
+        }
+    } // `backstop` created
 
     return status;
 }
 
-static void
-downlet_destroyBackstop(
-        Downlet* const downlet)
+static int
+downlet_runMcastRcvr(
+        void* const restrict  arg,
+        void** const restrict result)
 {
-    if (downlet_destroyTask(downlet->backstopTask,
-            "one-time LDM7 backstop")) {
-        log_flush_error();
-    }
-    else {
-        downlet->backstopTask = NULL;
-
-        backstop_delete(downlet->backstop);
-        downlet->backstop = NULL;
-    }
-}
-
-
-static void*
-downlet_runMcastRcvr(void* const arg)
-{
-    Downlet* const   downlet = (Downlet*)arg;
-    McastRcvr* const mcastRcvr = downlet->mcastRcvr;
-    int status = mcastRcvr_run(mcastRcvr);
-
-    (void)downlet_setStatusIfOk(downlet, status);
-
-    // Because end of thread
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
-
-    return NULL;
+    return mcastRcvr_run(((Downlet*)arg)->mcastRcvr);
 }
 
 static int
@@ -1867,12 +1544,7 @@ downlet_haltMcastRcvr(
         void* const     arg,
         const pthread_t thread)
 {
-    Downlet* const   downlet = (Downlet*)arg;
-    McastRcvr* const mcastRcvr = downlet->mcastRcvr;
-
-    mcastRcvr_halt(mcastRcvr);
-
-    return 0;
+    return mcastRcvr_halt(((Downlet*)arg)->mcastRcvr, thread);
 }
 
 /**
@@ -1891,55 +1563,35 @@ downlet_createMcastRcvr(
     static char id[] = "one-time LDM7 multicast receiver";
     int         status;
 
-    downlet->mcastRcvr = mcastRcvr_new(downlet->mcastInfo, downlet->iface,
-            downlet->pq, downlet);
+    McastRcvr* const mcastRcvr = mcastRcvr_new(downlet->mcastInfo,
+            downlet->iface, downlet->pq, downlet);
 
-    if (downlet->mcastRcvr == NULL) {
+    if (mcastRcvr == NULL) {
         log_add("Couldn't construct %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        status = downlet_createTask(downlet, id, &downlet->mcastRcvrTask,
-                downlet_runMcastRcvr, downlet_haltMcastRcvr);
-
-        if (status) {
-            mcastRcvr_delete(downlet->mcastRcvr);
-            downlet->mcastRcvr = NULL;
+        if (completer_submit(downlet->completer, downlet, downlet_runMcastRcvr,
+                downlet_haltMcastRcvr) == NULL) {
+            log_add("Couldn't submit %s for execution", id);
+            mcastRcvr_free(mcastRcvr);
+            status = LDM7_SYSTEM;
         }
-    } // `downlet->mcastRcvr` constructed
+        else {
+            downlet->mcastRcvr = mcastRcvr;
+            status = 0;
+        }
+    } // `mcastRcvr` created
 
     return status;
 }
 
-static void
-downlet_destroyMcastRcvr(
-        Downlet* const downlet)
+static int
+downlet_runBacklogger(
+        void* const restrict  arg,
+        void** const restrict result)
 {
-    if (downlet_destroyTask(downlet->mcastRcvrTask,
-            "one-time LDM7 multicast receiver")) {
-        log_flush_error();
-    }
-    else {
-        downlet->mcastRcvrTask = NULL;
-
-        mcastRcvr_delete(downlet->mcastRcvr);
-        downlet->mcastRcvr = NULL;
-    }
-}
-
-static void*
-downlet_runBacklogger(void* const arg)
-{
-    Downlet* const    downlet = (Downlet*)arg;
-    Backlogger* const backlogger = downlet->backlogger;
-    int               status = backlogger_run(backlogger);
-
-    (void)downlet_setStatusIfOk(downlet, status);
-
-    // Because end of thread
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO);
-
-    return NULL;
+    return backlogger_run(((Downlet*)arg)->backlogger);
 }
 
 static int
@@ -1947,12 +1599,7 @@ downlet_haltBacklogger(
         void* const     arg,
         const pthread_t thread)
 {
-    Downlet* const    downlet = (Downlet*)arg;
-    Backlogger* const backlogger = downlet->backlogger;
-
-    backlogger_halt(backlogger, thread);
-
-    return 0;
+    return backlogger_halt(((Downlet*)arg)->backlogger, thread);
 }
 
 static int
@@ -1963,49 +1610,65 @@ downlet_createBacklogger(
     static char id[] = "one-time LDM7 backlog requester";
     int         status;
 
-    downlet->backlogger = backlogger_new(before, downlet);
+    Backlogger* const backlogger = backlogger_new(before, downlet);
 
-    if (downlet->backlogger == NULL) {
+    if (backlogger == NULL) {
         log_add("Couldn't construct %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        status = downlet_createTask(downlet, id, &downlet->backloggerTask,
-                downlet_runBacklogger, downlet_haltBacklogger);
-
-        if (status)
-            backlogger_delete(downlet->backlogger);
-    } // `backlogger` constructed
+        if (completer_submit(downlet->completer, downlet, downlet_runBacklogger,
+                downlet_haltBacklogger)) {
+            log_add("Couldn't submit %s for execution", id);
+            backlogger_free(backlogger);
+            status = LDM7_SYSTEM;
+        }
+        else {
+            downlet->backlogger = backlogger;
+            status = 0; // Success
+        }
+    } // `backlogger` created
 
     return status;
 }
 
-static void
-downlet_destroyBacklogger(
-        Downlet* const downlet)
+/**
+ * Destroys the asynchronous subtasks of a one-time downstream LDM7.
+ *
+ * @param[in,out] downlet  One-time downstream LDM7
+ * @retval        0        Success
+ * @retval        ENOMEM   Out of memory
+ */
+static int
+downlet_destroyTasks(Downlet* const downlet)
 {
-    if (downlet_destroyTask(downlet->backloggerTask,
-            "one-time LDM7 backlog requester")) {
-        log_flush_error();
+    int status = completer_shutdown(downlet->completer, true);
+
+    if (status) {
+        log_add("Couldn't shut down completion service");
     }
     else {
-        downlet->backloggerTask = NULL;
+        Future* future;
+        while ((future = completer_take(downlet->completer)))
+            future_free(future);
 
-        backlogger_delete(downlet->backlogger);
-        downlet->backlogger = NULL;
+        backlogger_free(downlet->backlogger);
+        mcastRcvr_free(downlet->mcastRcvr);
+        backstop_free(downlet->backstop);
+        ucastRcvr_free(downlet->ucastRcvr);
     }
+
+    return status;
 }
 
 /**
  * Starts the asynchronous subtasks of a downstream LDM7 that collectively
  * receive data-products. Blocks until all subtasks have started.
  *
- * @pre                       Downstream LDM7 is locked
  * @param[in]  down7          Pointer to the downstream LDM7.
  * @retval     0              Success.
  * @retval     LDM7_SHUTDOWN  The LDM7 has been shut down. No task is running.
  * @retval     LDM7_SYSTEM    Error. `log_add()` called. No task is running.
- * @post                      Downstream LDM7 is locked
  */
 static int
 downlet_createTasks(Downlet* const downlet)
@@ -2024,35 +1687,16 @@ downlet_createTasks(Downlet* const downlet)
         else {
             status = downlet_createMcastRcvr(downlet);
 
-            if (status) {
-                log_add("Couldn't create one-time LDM7 multicast receiver task");
-                downlet_destroyBackstop(downlet);
-            }
+            if (status)
+                log_add("Couldn't create one-time LDM7 multicast receiver "
+                        "task");
         } // One-time LDM7 backstop task created
 
         if (status)
-            downlet_destroyUcastRcvr(downlet);
+            (void)downlet_destroyTasks(downlet);
     } // One-time LDM7 unicast receiver task created
 
     return status;
-}
-
-/**
- * Destroys the asynchronous subtasks of a one-time downstream LDM7.
- *
- * @pre                    One-time downstream LDM7 is unlocked
- * @param[in,out] downlet  One-time downstream LDM7
- * @post                   One-time downstream LDM7 is unlocked
- */
-static void
-downlet_destroyTasks(Downlet* const downlet)
-{
-    downlet_assertUnlocked(downlet);
-
-    (void)downlet_destroyBacklogger(downlet);
-    (void)downlet_destroyMcastRcvr(downlet);
-    (void)downlet_destroyBackstop(downlet);
-    (void)downlet_destroyUcastRcvr(downlet);
 }
 
 /**
@@ -2100,14 +1744,14 @@ downlet_run(Downlet* const downlet)
                         downlet->feedId, downlet->upId);
             }
             else {
-                downlet_waitForStatusChange(downlet); // Sets `downlet->status`
-                downlet_destroyTasks(downlet);
+                downlet->status = downlet_waitForStatusChange(downlet);
+                (void)downlet_destroyTasks(downlet);
             } // Subtasks started
 
             mi_delete(downlet->mcastInfo); // NULL safe
         } // `downlet->mcastInfo` set
 
-        downlet_deinitConn(downlet);
+        downlet_destroyConn(downlet);
     } // Subscription client allocated
 
     return downlet->status;
@@ -2156,7 +1800,7 @@ downlet_try(
     else {
         status = downlet_run(&downlet);
 
-        downlet_deinit(&downlet);
+        downlet_destroy(&downlet);
     }
 
     return status;
@@ -2286,8 +1930,7 @@ downlet_lastReceived(
 
         if (status) {
             log_add("Couldn't start task to request product backlog");
-            log_flush_error();
-            downlet_setStatusIfOk(downlet, LDM7_SYSTEM);
+            (void)downlet_destroyTasks(downlet);
         }
     }
 }
@@ -2295,6 +1938,40 @@ downlet_lastReceived(
 /******************************************************************************
  * Downstream LDM7
  ******************************************************************************/
+
+/**
+ * The data structure of a downstream LDM7:
+ */
+struct down7 {
+    pqueue*               pq;            ///< pointer to the product-queue
+    ServiceAddr*          servAddr;      ///< socket address of remote LDM7
+    McastInfo*            mcastInfo;     ///< information on multicast group
+    /**
+     * IP address of interface to use for receiving multicast and unicast
+     * packets
+     */
+    char*                 iface;
+    /**
+     * Signature of the first data-product received by the associated multicast
+     * LDM receiver during the current session.
+     */
+    signaturet            firstMcast;
+    ///< Persistent multicast receiver memory
+    McastReceiverMemory*  mrm;
+    /**
+     * Signature of the last data-product received by the associated multicast
+     * LDM receiver during the previous session.
+     */
+    signaturet            prevLastMcast;
+    pthread_mutex_t       numProdMutex;     ///< Mutex for number of products
+    uint64_t              numProds;         ///< Number of inserted products
+    feedtypet             feedtype;         ///< Feed of multicast group
+    VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
+    Ldm7Status            status;           ///< Downstream LDM7 status
+    volatile bool         mcastWorking;     ///< Product received via multicast?
+    bool                  prevLastMcastSet; ///< `prevLastMcast` set?
+    StopFlag              stopFlag;
+};
 
 /**
  * Creates the thread-specific data-key for the pointer to the one-time
@@ -2372,66 +2049,49 @@ down7_init(
             status = LDM7_SYSTEM;
         }
         else {
-            if ((status = pthread_cond_init(&down7->cond, NULL)) != 0) {
-                log_add_errno(status, "Couldn't initialize condition-variable");
+            down7->iface = strdup(mcastIface);
+
+            if (down7->iface == NULL) {
+                log_add("Couldn't copy multicast interface specification");
                 status = LDM7_SYSTEM;
             }
             else {
-                status = mutex_init(&down7->mutex);
+                if (!vcEndPoint_copy(&down7->vcEnd, vcEnd)) {
+                    log_add("Couldn't copy receiver-side virtual-circuit "
+                            "endpoint");
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    status = mutex_init(&down7->numProdMutex,
+                            PTHREAD_MUTEX_ERRORCHECK, true);
 
-                if (status) {
-                    down7->iface = strdup(mcastIface);
-
-                    if (down7->iface == NULL) {
-                        log_add("Couldn't copy multicast interface "
-                                "specification");
+                    if (status) {
+                        log_add_errno(status,
+                                "Couldn't initialize number-of-products mutex");
                         status = LDM7_SYSTEM;
                     }
                     else {
-                        if (!vcEndPoint_copy(&down7->vcEnd, vcEnd)) {
-                            log_add("Couldn't copy receiver-side "
-                                    "virtual-circuit endpoint");
+                        if ((status = pthread_once(&down7KeyControl,
+                                down7_createThreadKey)) != 0) {
+                            log_add_errno(status, "Couldn't create downstream "
+                                    "LDM7 thread-key");
                             status = LDM7_SYSTEM;
                         }
                         else {
-                            status = mutex_init(&down7->numProdMutex);
-
-                            if (status) {
-                                log_syserr_q("Couldn't initialize "
-                                        "number-of-products mutex");
-                                status = LDM7_SYSTEM;
-                            }
-                            else {
-                                if ((status = pthread_once(&down7KeyControl,
-                                        down7_createThreadKey)) != 0) {
-                                    log_add_errno(status,
-                                            "Couldn't create downstream LDM7 "
-                                            "thread-key");
-                                    status = LDM7_SYSTEM;
-                                }
-                                else {
-                                    status = 0; // Success
-                                }
-
-                                if (status)
-                                    mutex_deinit(&down7->numProdMutex);
-                            } // `down7->numProdMutex` initialized
-
-                            if (status)
-                                vcEndPoint_deinit(&down7->vcEnd);
-                        } // `down7->vcEnd` initialized
+                            status = 0; // Success
+                        }
 
                         if (status)
-                            free(down7->iface);
-                    } // `down7->iface` initialized
+                            pthread_mutex_destroy(&down7->numProdMutex);
+                    } // `down7->numProdMutex` initialized
 
                     if (status)
-                        mutex_deinit(&down7->mutex);
-                } // `down7->mutex` initialized
+                        vcEndPoint_deinit(&down7->vcEnd);
+                } // `down7->vcEnd` initialized
 
                 if (status)
-                    (void)pthread_cond_destroy(&down7->cond);
-            } // `down7->cond` initialized
+                    free(down7->iface);
+            } // `down7->iface` initialized
 
             if (status)
                 sa_delete(down7->servAddr);
@@ -2442,24 +2102,17 @@ down7_init(
 }
 
 static Ldm7Status
-down7_deinit(Down7* const down7)
+down7_destroy(Down7* const down7)
 {
-    // Can't destroy `down7Key` because it's static
+    // `down7Key` is not destroyed because it's static
 
-    mutex_deinit(&down7->numProdMutex);
+    pthread_mutex_destroy(&down7->numProdMutex);
     vcEndPoint_deinit(&down7->vcEnd);
     free(down7->iface);
-    mutex_deinit(&down7->mutex);
-
-    int status = pthread_cond_destroy(&down7->cond);
-    if (status) {
-        log_add_errno(status, "Couldn't destroy condition-variable");
-        status = LDM7_SYSTEM;
-    }
 
     sa_delete(down7->servAddr);
 
-    return status;
+    return 0;
 }
 
 /**
@@ -2517,9 +2170,9 @@ down7_new(
  * @see `down7_new()`
  */
 int
-down7_delete(Down7* const down7)
+down7_free(Down7* const down7)
 {
-    int status = down7_deinit(down7);
+    int status = down7_destroy(down7);
     free(down7);
     return status;
 }
@@ -2534,20 +2187,6 @@ pqueue* down7_getPq(
         Downlet* const downlet)
 {
     return downlet->pq;
-}
-
-static void
-down7_lock(Down7* const down7)
-{
-    int status = pthread_mutex_lock(&down7->mutex);
-    log_assert(status == 0);
-}
-
-static void
-down7_unlock(Down7* const down7)
-{
-    int status = pthread_mutex_unlock(&down7->mutex);
-    log_assert(status == 0);
 }
 
 /**
@@ -2593,7 +2232,7 @@ down7_run(Down7* const down7)
 }
 
 /**
- * Halts an executing downstream LDM7.
+ * Halts a downstream LDM7 that's executing on another thread.
  *
  * @param[in] down7   Downstream LDM7
  * @param[in] thread  Thread on which the downstream LDM7 is executing
@@ -2602,40 +2241,6 @@ void
 down7_halt(
         Down7* const    down7,
         const pthread_t thread)
-{
-    stopFlag_set(&down7->stopFlag);
-    int status = pthread_kill(thread, SIGTERM);
-    log_assert(status == 0);
-}
-
-static int
-down7_haltTask(
-        void* const     arg,
-        const pthread_t thread)
-{
-    down7_halt((Down7*)arg, thread);
-    return 0;
-}
-
-static void*
-down7_runTask(void* const arg)
-{
-    Down7* const down7 = (Down7*)arg;
-
-    down7_run(down7);
-
-    return &down7->status;
-}
-
-/**
- * Starts a downstream LDM7.
- *
- * @param[in,out] down7        Downstream LDM7
- * @retval        0            Success
- * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
- */
-static Ldm7Status
-down7_start(Down7* const down7)
 {
     /*
      * The mechanism for stopping a downstream LDM7 must work even if the thread
@@ -2654,96 +2259,9 @@ down7_start(Down7* const down7)
      *     about.
      * The `pthread_kill()` solution was chosen.
      */
-    // Uses `pthread_kill()`
-    Task* task = NULL; // task_create(down7, down7_runTask, down7_haltTask);
-    int   status;
-
-    if (task == NULL) {
-        log_add_errno(status, "Couldn't create downstream LDM7 task");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        //down7->task = task; TODO
-        status = 0;
-    }
-
-    return status;
-}
-
-inline static Ldm7Status
-down7_stop(Down7* const down7)
-{
-#if 0
-    int status = task_stop(down7->task, NULL);
-
-    (void)task_delete(down7->task);
-
-    return status ? LDM7_SYSTEM : 0;
-#endif // TODO
-}
-
-/**
- * Creates an asynchronous downstream LDM7.
- *
- * @param[in]  servAddr    Pointer to the address of the server from which to
- *                         obtain multicast information, backlog products, and
- *                         products missed by the FMTP layer. Caller may free
- *                         upon return.
- * @param[in]  feed        Feed of multicast group to be received
- * @param[in]  mcastIface  IP address of interface to use for receiving
- *                         multicast packets. Caller may free upon return.
- * @param[in]  pq          The product-queue. Must be thread-safe (i.e.,
- *                         `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
- * @param[in]  mrm         Persistent multicast receiver memory. Must exist
- *                         until `down7_destroy()` returns.
- * @param[in]  vcEnd       Local virtual-circuit endpoint
- * @retval     NULL        Failure. `log_add()` called.
- * @return                 Pointer to the executing downstream LDM7. Caller
- *                         should call `down7_destroy()` when it's no longe
- *                         needed.
- * @see `down7_destroy()`
- */
-Down7*
-down7_create(
-        const ServiceAddr* const restrict   servAddr,
-        const feedtypet                     feed,
-        const char* const restrict          mcastIface,
-        const VcEndPoint* const restrict    vcEnd,
-        pqueue* const restrict              pq,
-        McastReceiverMemory* const restrict mrm)
-{
-    Down7* down7 = down7_new(servAddr, feed, mcastIface, vcEnd, pq, mrm);
-
-    if (down7 == NULL) {
-        log_add("Couldn't construct downstream LDM7");
-    }
-    else {
-        if (down7_start(down7)) {
-            log_add("Couldn't start downstream LDM7");
-            down7_delete(down7);
-            down7 = NULL;
-        }
-    }
-
-    return down7;
-}
-
-/**
- * Destroys a downstream LDM7 by stopping it and then deleting it. Blocks until
- * that's done.
- * @param[in,out] down7        Downstream LDM7
- * @retval        0            Success
- * @retval        LDM7_SYSTEM  System failure. `log_add()` called.
- */
-Ldm7Status
-down7_destroy(Down7* const down7)
-{
-    int status = down7_stop(down7);
-
-    if (status == 0)
-        status = down7_delete(down7);
-
-    return status;
+    stopFlag_set(&down7->stopFlag);
+    int status = pthread_kill(thread, SIGTERM);
+    log_assert(status == 0);
 }
 
 /**
@@ -2815,6 +2333,10 @@ down7_getPqeCount(
 {
     return pqe_get_count(down7->pq);
 }
+
+/******************************************************************************
+ * LDM7 RPC server functions
+ ******************************************************************************/
 
 /**
  * Processes a missed data-product from a remote LDM7 by attempting to add the

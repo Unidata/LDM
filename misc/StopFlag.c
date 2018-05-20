@@ -9,9 +9,10 @@
  *  Created on: May 2, 2018
  *      Author: Steven R. Emmerson
  */
+#include "../../misc/StopFlag.h"
+
 #include "config.h"
 
-#include "StopFlag.h"
 #include "log.h"
 
 #include <pthread.h>

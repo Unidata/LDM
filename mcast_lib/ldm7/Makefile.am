@@ -39,10 +39,7 @@ lib_la_SOURCES		= \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
-			  MldmRpc.cpp MldmRpc.h \
-			  StopFlag.c StopFlag.h \
-			  Future.c Future.h \
-			  Executor.c Executor.h
+			  MldmRpc.cpp MldmRpc.h
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
@@ -59,7 +56,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
-CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg
+CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg *.supp
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 LDADD			=  $(top_builddir)/lib/libldm.la
@@ -170,24 +167,6 @@ endif
 
 if HAVE_CUNIT
 
-Future_test_SOURCES		= Future_test.c
-Future_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Future_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS    		+= Future_test
-
-Executor_test_SOURCES		= Executor_test.c
-Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS    		+= Executor_test
-
-Task_test_SOURCES		= Task_test.c
-Task_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Task_test_LDADD			= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS			+= Task_test
-
 CunitAssertTest_SOURCES		= CunitAssertTest.c
 CunitAssertTest_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \
@@ -225,41 +204,23 @@ cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
 check_PROGRAMS			+= cond_wait_test
 				  
-SUFFIXES:	.vg .supp .sup .log
+SUFFIXES:	.vg .sup .supp .log
                                           
 %.log:	%
 	./% >&$@
+
+# Precursor to Valgrind suppression file
+%.supp:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+	    --mode=execute valgrind --leak-check=full --show-reachable=yes \
+	    $${supOpt} --gen-suppressions=all ./$< >&$@
+# Valgrind output
 %.vg:	%
-	if test -e %.supp; then \
-		PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
-		--mode=execute valgrind --leak-check=full --show-reachable=yes \
-		--suppressions=%.supp ./$< >&$@; \
-	else \
-		PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
-		--mode=execute valgrind --leak-check=full --show-reachable=yes \
-		./$< >&$@; \
-	fi
-
-%.sup:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
 	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
-            --mode=execute valgrind --leak-check=full --show-reachable=yes \
-            --suppressions=%.supp --gen-suppressions=all ./$< >&$@
-
-valgrind-prod_index_map_test:	prod_index_map_test
-	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./prod_index_map_test
-valgrind-prod_index_queue_test:	prod_index_queue_test
-	$(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./prod_index_queue_test
-up7_down7_test.valgrind:	up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
-            --mode=execute valgrind --leak-check=full --show-reachable=yes \
-            --suppressions=up7_down7_test.supp \
-            ./up7_down7_test
-#            --suppressions=up7_down7_test.supp --gen-suppressions=all 
-
-up7_down7_test.log:		up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test >&$@
+	    --mode=execute valgrind --leak-check=full --show-reachable=yes \
+	    $${supOpt} ./$< >&$@
 
 MldmRpc_test_SOURCES	= MldmRpc_test.c
 MldmRpc_test_LDADD	= $(LDADD) @LIBS_CUNIT@

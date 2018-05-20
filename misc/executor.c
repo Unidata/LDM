@@ -806,8 +806,8 @@ void* job_result(
  * @pre               The job is unlocked.
  * @param[in] job     The job to be freed or NULL.
  */
-void job_free(
-        Job* const job)
+void
+job_free(Job* const job)
 {
     if (job != NULL) {
         // Because pthread_mutex_destroy() may return 0 for a locked mutex
@@ -825,7 +825,8 @@ void job_free(
  *               called.
  * @return       Pointer to new job executor.
  */
-Executor* exe_new(void)
+Executor*
+exe_new(void)
 {
     log_debug_1("exe_new(): Entered");
     Executor* exe = log_malloc(sizeof(Executor), "job executor");

@@ -11,6 +11,7 @@
  */
 #include "config.h"
 
+#include <pthread.h>
 #include <stdbool.h>
 
 #ifndef MCAST_LIB_LDM7_THREAD_H_
@@ -40,6 +41,29 @@ mutex_init(
         const int              type,
         const bool             inherit);
 
+/**
+ * Deinitializes a mutex. Calls `log_assert()` to assert success.
+ *
+ * @param[in],out] mutex  Mutex.
+ */
+int
+mutex_destroy(pthread_mutex_t* const mutex);
+
+/**
+ * Locks a mutex. Calls `log_assert()` to assert success.
+ *
+ * @param[in,out] mutex  Mutex
+ */
+int
+mutex_lock(pthread_mutex_t* const mutex);
+
+/**
+ * Unlocks a mutex. Calls `log_assert()` to assert success.
+ *
+ * @param[in,out] mutex  Mutex
+ */
+int
+mutex_unlock(pthread_mutex_t* const mutex);
 
 #ifdef __cplusplus
     }

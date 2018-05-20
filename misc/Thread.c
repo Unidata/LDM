@@ -9,10 +9,11 @@
  *  Created on: May 7, 2018
  *      Author: Steven R. Emmerson
  */
+#include "Thread.h"
+
 #include "config.h"
 
 #include "log.h"
-#include "Thread.h"
 
 int
 mutex_init(
@@ -46,5 +47,29 @@ mutex_init(
         (void)pthread_mutexattr_destroy(&mutexAttr);
     } // `mutexAttr` initialized
 
+    return status;
+}
+
+int
+mutex_destroy(pthread_mutex_t* const mutex)
+{
+    int status = pthread_mutex_destroy(mutex);
+    log_assert(status == 0);
+    return status;
+}
+
+int
+mutex_lock(pthread_mutex_t* const mutex)
+{
+    int status = pthread_mutex_lock(mutex);
+    log_assert(status == 0);
+    return status;
+}
+
+int
+mutex_unlock(pthread_mutex_t* const mutex)
+{
+    int status = pthread_mutex_unlock(mutex);
+    log_assert(status == 0);
     return status;
 }

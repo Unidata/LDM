@@ -75,7 +75,7 @@ executeDown7(
                 if (status == LDM7_INTR)
                     status = 0;
 
-                (void)down7_delete(down7);
+                (void)down7_free(down7);
             } // `down7` allocated
 
             (void)mrm_close(mrm);

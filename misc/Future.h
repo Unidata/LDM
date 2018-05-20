@@ -27,10 +27,10 @@ typedef struct future Future;
  * Returns a new future for an asynchronous task.
  *
  * @param[in] obj       Executable object
- * @param[in] runFunc   Function to start execution
+ * @param[in] runFunc   Function to start execution. Must return 0 on success.
  * @param[in] haltFunc  Function to stop execution or `NULL`. Parameters are
  *                      `obj` and thread on which `runFunc` is executing. Must
- *                      return `true` on success and `false` on failure. If
+ *                      return 0 on success and `false` on failure. If
  *                      `NULL`, then the thread on which `runFunc` is executing
  *                      is sent a SIGTERM. NB: `pthread_cond_wait()` doesn't
  *                      return when interrupted, so a task that uses it --
@@ -42,8 +42,8 @@ typedef struct future Future;
 Future*
 future_new(
         void*   obj,
-        void* (*runFunc)(void* obj),
-        bool  (*haltFunc)(void* obj, pthread_t thread));
+        int   (*runFunc)(void* obj, void** result),
+        int   (*haltFunc)(void* obj, pthread_t thread));
 
 /**
  *
@@ -53,7 +53,38 @@ future_new(
  * @threadsafety  Safe
  */
 int
-future_delete(Future* future);
+future_free(Future* future);
+
+/**
+ * Identify the thread that is or is about to execute a future.
+ *
+ * @param[in,out] future  Future
+ * @param[in]     thread  Thread identifier
+ */
+void
+future_setThread(
+        Future* const   future,
+        const pthread_t thread);
+
+/**
+ * Returns the thread on which a future is executing. Bad things will happen if
+ * `future_run()` or `future_setThread()` isn't called first.
+ *
+ * @param[in] future  Future
+ * @return            Thread on which future is executing
+ * @threadsafety      Safe
+ */
+pthread_t
+future_getThread(Future* const future);
+
+/**
+ * Returns the object given to `future_new()`.
+ *
+ * @param[in] future  Future
+ * @return            Object given to `future_new()`
+ */
+void*
+future_getObj(Future* const future);
 
 /**
  * Executes a future's task on the current thread.
@@ -67,39 +98,58 @@ int
 future_run(Future* future);
 
 /**
+ * Cancels a future.
  *
- * @param future
- * @retval `true`   Task was canceled
- * @retval `false`  Task could not be canceled
- * @threadsafety    Safe
+ * @param[in,out] future  Future to be canceled
+ * @retval        0  Success
+ * @return           Error code. `log_add()` called.
+ * @threadsafety     Safe
  */
-bool
+int
 future_cancel(Future* future);
 
 /**
- * Waits for a future's task to complete.
+ * Returns the result of a future's task. Doesn't wait for the task to complete;
+ * consequently, it must be known that the task has completed. This function
+ * should only be used by the `Executor` module.
+ *
+ * @param[in,out] future     Future
+ * @param[out]    result     Result of task execution or `NULL`
+ * @retval        0          Success. `*result` is set if `result != NULL`.
+ * @retval        ECANCELED  Task was canceled
+ * @return                   Return value of `future_new()`'s `runFunc` argument
+ * @threadsafety             Safe
+ */
+int
+future_getResultNoWait(
+        Future* future,
+        void**  result);
+
+/**
+ * Returns the result of a future's task. Waits for the task to complete.
  *
  * @param[in,out] future     Future
  * @param[out]    result     Result of task execution or `NULL`
  * @retval        0          Success. `*result` is set if `result != NULL`.
  * @retval        EDEADLK    Deadlock detected
  * @retval        ECANCELED  Task was canceled
+ * @return                   Return value of `future_new()`'s `runFunc` argument
  * @threadsafety             Safe
  */
 int
-future_wait(
+future_getResult(
         Future* future,
         void**  result);
 
 /**
- * Returns the executable object given to `future_new()`.
+ * Indicates if the run function given to `future_new()` was called.
  *
- * @param[in] future  Future
- * @return            Executable object given to `future_new()`
- * @threadsafety      Safe
+ * @param[in] future
+ * @retval    `true`   Run function was called
+ * @retval    `false`  Run function was not called
  */
-void*
-future_getObj(Future* future);
+bool
+future_runFuncCalled(Future* future);
 
 /**
  * Indicates if two futures are considered equal.

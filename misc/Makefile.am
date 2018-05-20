@@ -49,7 +49,12 @@ lib_la_SOURCES	= \
 	semRWLock.c semRWLock.h \
 	statsMath.c \
 	StrBuf.c StrBuf.h \
-	StringBuf.c StringBuf.h
+	StringBuf.c StringBuf.h \
+	Thread.c Thread.h \
+        StopFlag.c StopFlag.h \
+        Future.c Future.h \
+        Executor.c Executor.h \
+        Completer.c Completer.h
 AM_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
@@ -79,9 +84,33 @@ doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
 doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
 semRWLock.h:		semRWLock.hin semRWLock.c
 
+check_PROGRAMS	=
+
 if HAVE_CUNIT
-check_PROGRAMS		= test_inetutil test_child_map testSemRWLock \
-			  queue_test doubly_linked_list_test executor_test
+Future_test_SOURCES		= Future_test.c
+Future_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Future_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= Future_test
+
+Executor_test_SOURCES		= Executor_test.c
+Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= Executor_test
+
+Completer_test_SOURCES		= Completer_test.c
+Completer_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Completer_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= Completer_test
+
+#Task_test_SOURCES		= Task_test.c
+#Task_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Task_test_LDADD			= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
+#check_PROGRAMS			+= Task_test
+
 
 test_inetutil_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -89,10 +118,10 @@ test_inetutil_CPPFLAGS	= \
     -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
-
 test_inetutil_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
+check_PROGRAMS		+= test_inetutil
 
 test_child_map_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -101,10 +130,10 @@ test_child_map_CPPFLAGS	= \
     -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
-
 test_child_map_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
+check_PROGRAMS		+= test_child_map
 
 testSemRWLock_CPPFLAGS	= \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -113,41 +142,62 @@ testSemRWLock_CPPFLAGS	= \
     -I$(top_srcdir)/log \
     -I$(top_srcdir) \
     @CPPFLAGS_CUNIT@
-
 testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
+check_PROGRAMS		+= testSemRWLock
 
 queue_test_SOURCES	= queue_test.c
 queue_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 check-queue:		queue_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./queue_test
+check_PROGRAMS		+= queue_test
 
 doubly_linked_list_test_SOURCES	= doubly_linked_list_test.c 
 doubly_linked_list_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
 check-doubly_linked_list:	doubly_linked_list_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
 	    --leak-check=full --show-reachable=yes ./doubly_linked_list_test
+check_PROGRAMS		+= doubly_linked_list_test
 
-executor_test_SOURCES	= executor_test.c
+#Task_test_SOURCES		= Task_test.c
+#Task_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Task_test_LDADD			= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
+#check_PROGRAMS			+= Task_test
+
+#executor_test_SOURCES	= executor_test.c
 # `executor.c` is in the list to maintain the dependency graph.
-executor_test_LDADD	=  executor.lo $(top_builddir)/lib/libldm.la \
-			   @LIBS_CUNIT@
+#executor_test_LDADD	=  executor.lo $(top_builddir)/lib/libldm.la \
+#			   @LIBS_CUNIT@
+#check-executor:		executor_test
+#	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
+#	    --leak-check=full --show-reachable=yes ./executor_test
 
-check-executor:		executor_test
-	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./executor_test
+TESTS			= $(check_PROGRAMS)
 
-TESTS			= test_inetutil test_child_map testSemRWLock
+SUFFIXES:	.vg .sup .supp .log
+                                          
+%.log:	%
+	./% >&$@
+
+# Precursor to Valgrind suppression file
+%.supp:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+	    --mode=execute valgrind --leak-check=full --show-reachable=yes \
+	    $${supOpt} --gen-suppressions=all ./$< >&$@
+# Valgrind output
+%.vg:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
+	PATH=$(top_builddir)/mldm_sender:$$PATH $(LIBTOOL) \
+	    --mode=execute valgrind --leak-check=full --show-reachable=yes \
+	    $${supOpt} ./$< >&$@
 
 debug:		test_child_map
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_child_map
 
 debug_inetutil:		test_inetutil
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute gdb test_inetutil
-
-valgrind:	test_child_map
-	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./test_child_map
 endif
