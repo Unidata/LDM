@@ -56,7 +56,8 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
-CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg *.supp
+CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg *.supp \
+			  *_test
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 LDADD			=  $(top_builddir)/lib/libldm.la

@@ -16,7 +16,7 @@ EXTRA_DIST	        = \
         doubly_linked_list.hin \
         doubly_linked_stack.hin \
         semRWLock.hin
-CLEANFILES		= $(BUILT_SOURCES) *.i
+CLEANFILES		= $(BUILT_SOURCES) *.i *_test
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
 	ldmalloc.h \

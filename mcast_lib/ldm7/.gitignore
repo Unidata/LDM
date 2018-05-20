@@ -1,4 +1,5 @@
-/up7_down7_test.vg
 *.supp
 *.vg
 *.log
+*_test
+CunitAssertTest
