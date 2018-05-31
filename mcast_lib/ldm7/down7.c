@@ -17,6 +17,7 @@
 #include "config.h"
 
 #include "CidrAddr.h"
+#include "Completer.h"
 #include "down7.h"
 #include "fmtp.h"
 #include "globals.h"
@@ -31,6 +32,7 @@
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
+#include "StopFlag.h"
 #include "Thread.h"
 #include "timestamp.h"
 #include "VirtualCircuit.h"
@@ -51,8 +53,6 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
-#include "../../misc/Completer.h"
-#include "../../misc/StopFlag.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
