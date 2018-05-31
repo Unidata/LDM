@@ -26,56 +26,58 @@ typedef struct future Future;
 /**
  * Returns a new future for an asynchronous task.
  *
- * @param[in] obj       Executable object
- * @param[in] runFunc   Function to start execution. Must return 0 on success.
- * @param[in] haltFunc  Function to stop execution or `NULL`. Parameters are
- *                      `obj` and thread on which `runFunc` is executing. Must
+ * @param[in] obj       Executable object. Not freed by `future_free()`.
+ * @param[in] run       Function to start execution. Must return 0 on success.
+ * @param[in] halt      Function to cancel execution or `NULL`. Parameters are
+ *                      `obj` and thread on which `run` is executing. Must
  *                      return 0 on success and `false` on failure. If
- *                      `NULL`, then the thread on which `runFunc` is executing
+ *                      `NULL`, then the thread on which `run` is executing
  *                      is sent a SIGTERM. NB: `pthread_cond_wait()` doesn't
  *                      return when interrupted, so a task that uses it --
  *                      including via `StopFlag` --  should explicitly specify
  *                      the halt function that doesn't use `pthread_kill()`.
+ * @param[in] get       Function to return the result of the task or `NULL` if
+ *                      no result will be returned.
  * @retval    `NULL`    Out of memory. `log_add()` called.
  * @threadsafety        Safe
  */
 Future*
 future_new(
         void*   obj,
-        int   (*runFunc)(void* obj, void** result),
-        int   (*haltFunc)(void* obj, pthread_t thread));
+        int   (*run)(void* obj),
+        int   (*halt)(void* obj, pthread_t thread),
+        int   (*get)(void* obj, void** result));
 
 /**
+ * Frees a future. Doesn't free the object given to `future_new()` unless
+ * `future_addFree()` was called.
  *
- * @param future
- * @retval 0      Success
- * @retval EBUSY  Task is executing
- * @threadsafety  Safe
+ * NB: Undefined behavior will result if any of the other future functions are
+ * called after this function on the same future.
+ *
+ * NB: A memory-leak will occur if the task allocated a result object which was
+ * not retrieved by a call to `future_getResult()`.
+ *
+ * @param[in] future     Future to be freed
+ * @retval    0          Success
+ * @retval    EINVAL     Future is being executed. Future wasn't freed.
+ *                       `log_add()` called.
+ * @threadsafety         Thread-compatible but not thread-safe
  */
 int
 future_free(Future* future);
 
 /**
- * Identify the thread that is or is about to execute a future.
- *
- * @param[in,out] future  Future
- * @param[in]     thread  Thread identifier
- */
-void
-future_setThread(
-        Future* const   future,
-        const pthread_t thread);
-
-/**
- * Returns the thread on which a future is executing. Bad things will happen if
- * `future_run()` or `future_setThread()` isn't called first.
+ * Sets the function for freeing a future's object.
  *
  * @param[in] future  Future
- * @return            Thread on which future is executing
- * @threadsafety      Safe
+ * @param[in] free    Function to free the object given to `future_new()` or
+ *                    NULL for no such freeing
  */
-pthread_t
-future_getThread(Future* const future);
+void
+future_setFree(
+        Future* const future,
+        void        (*free)(void* obj));
 
 /**
  * Returns the object given to `future_new()`.
@@ -98,12 +100,13 @@ int
 future_run(Future* future);
 
 /**
- * Cancels a future.
+ * Cancels a future. If the task hasn't started, then it should never start.
+ * Does nothing if the task has already completed.
  *
  * @param[in,out] future  Future to be canceled
- * @retval        0  Success
- * @return           Error code. `log_add()` called.
- * @threadsafety     Safe
+ * @retval        0       Success
+ * @return                Error code. `log_add()` called.
+ * @threadsafety          Safe
  */
 int
 future_cancel(Future* future);
@@ -126,10 +129,31 @@ future_getResultNoWait(
         void**  result);
 
 /**
- * Returns the result of a future's task. Waits for the task to complete.
+ * Returns the result of a future's task. Blocks until the task has completed
+ * and any executing thread is joined.
  *
  * @param[in,out] future     Future
  * @param[out]    result     Result of task execution or `NULL`
+ * @retval        0          Success. `*result` is set if `result != NULL`.
+ * @retval        EDEADLK    Deadlock detected. Can be because `future_run()`
+ *                           was executed on the current thread.
+ * @retval        ECANCELED  Task was canceled
+ * @return                   Return value of `future_new()`'s `runFunc` argument
+ * @threadsafety             Safe
+ */
+int
+future_getResult(
+        Future* const restrict future,
+        void** const restrict  result);
+
+/**
+ * Returns the result of a future's task and frees the future. Blocks until the
+ * task has completed. The future should not be dereferenced upon return.
+ *
+ * @param[in,out] future     Future
+ * @param[out]    result     Result of task execution or `NULL`. A memory-leak
+ *                           will occur if the task allocated a result object
+ *                           and `result` is NULL.
  * @retval        0          Success. `*result` is set if `result != NULL`.
  * @retval        EDEADLK    Deadlock detected
  * @retval        ECANCELED  Task was canceled
@@ -137,9 +161,9 @@ future_getResultNoWait(
  * @threadsafety             Safe
  */
 int
-future_getResult(
-        Future* future,
-        void**  result);
+future_getAndFree(
+        Future* const restrict future,
+        void** const restrict  result);
 
 /**
  * Indicates if the run function given to `future_new()` was called.

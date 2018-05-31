@@ -130,7 +130,7 @@ sa_parse_test(
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), inetId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);
-    sa_delete(sa);
+    sa_free(sa);
 }
 
 static void
@@ -154,7 +154,7 @@ test_sa_parseWithDefaults(void)
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(sa_getInetId(sa), hostId);
     CU_ASSERT_EQUAL(sa_getPort(sa), port);
-    sa_delete(sa);
+    sa_free(sa);
 }
 
 #endif // WANT_MULTICAST

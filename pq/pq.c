@@ -7703,7 +7703,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
          */
         if(clss == NULL || ifMatch == NULL)
         {
-                log_debug_1("pq_sequence NOOP");
+                log_debug_1("NOOP");
                 goto unwind_ctl;
         }
         /* else */
@@ -7779,7 +7779,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
          */
         if(log_is_enabled_debug) {
             double latency = d_diff_timestamp(&pq_time, &info->arrival);
-            log_debug_1("pq_sequence(): time(insert)-time(create): %.4f s", latency);
+            log_debug_1("time(insert)-time(create): %.4f s", latency);
         }
 
         /*

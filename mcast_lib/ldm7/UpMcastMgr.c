@@ -119,8 +119,12 @@ mldm_getServerPorts(const int pipe)
         log_add("Couldn't read from pipe to multicast FMTP process due to EOF");
         status = LDM7_LOGIC;
     }
+    else if (nbytes >= sizeof(buf)) {
+        log_add("Read too many bytes from pipe to multicast FMTP process");
+        status = LDM7_LOGIC;
+    }
     else {
-        buf[sizeof(buf)-1] = 0;
+        buf[nbytes] = 0;
         if (sscanf(buf, "%hu %hu ", &fmtpSrvrPort, &mldmCmdPort) != 2) {
             log_add("Couldn't decode port numbers for multicast FMTP server "
                     "and RPC server in \"%s\"", buf);
@@ -654,7 +658,7 @@ me_destroy(
         McastEntry* const entry)
 {
     mi_destroy(&entry->info);
-    vcEndPoint_delete(entry->vcEnd);
+    vcEndPoint_free(entry->vcEnd);
     free(entry->pqPathname);
 }
 

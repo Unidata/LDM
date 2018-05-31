@@ -399,7 +399,7 @@ mls_decodeOperands(
                 }
             }
             if (status)
-                sa_delete(mcastAddr);
+                sa_free(mcastAddr);
         } // `mcastAddr` set
     }
 
@@ -434,7 +434,7 @@ mls_setMcastGroupInfo(
 
     if (0 == status) {
         status = mi_new(mcastInfo, feed, groupAddr, serverAddr) ? 2 : 0;
-        sa_delete(serverAddr);
+        sa_free(serverAddr);
     }
 
     return status;
@@ -501,7 +501,7 @@ mls_decodeCommandLine(
         if (0 == status) {
             status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
                     groupAddr, mcastInfo);
-            sa_delete(groupAddr);
+            sa_free(groupAddr);
 
             if (0 == status)
                 *ifaceAddr = mcastIf;

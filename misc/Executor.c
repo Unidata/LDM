@@ -24,29 +24,38 @@
 typedef struct job {
     /// Future of task submitted to `executor_submitFuture()`
     Future*          future;
-    struct executor* executor; ///< Associated execution service
-    struct job*      prev;     ///< Previous job in list
-    struct job*      next;     ///< Next job in list
+    struct executor* executor;   ///< Associated execution service
+    struct job*      prev;       ///< Previous job in list
+    struct job*      next;       ///< Next job in list
 } Job;
+
+// Forward declaration
+typedef struct executor Executor;
 
 static Job*
 job_new(
-        struct executor* const restrict executor,
-        Future* const restrict          future)
+        Executor* const restrict executor,
+        Future* const restrict   future)
 {
     Job* job = log_malloc(sizeof(Job), "job");
 
     if (job) {
-        job->future = future;
         job->executor = executor;
         job->prev = job->next = NULL;
+        job->future = future;
     }
 
     return job;
 }
 
+/**
+ * Frees a job. Doesn't free the job's future.
+ *
+ * @param[in,out] job     Job to be freed
+ * @retval        0       Success
+ */
 static void
-job_delete(Job* const job)
+job_free(Job* const job)
 {
     free(job);
 }
@@ -64,21 +73,21 @@ job_run(void* const arg)
 
     (void)future_run(job->future);
 
+    // If this function was executed by a future, then the following wouldn't
+    // run if the future was canceled before this function was called. That
+    // would be bad.
     executor_afterCompletion(job->executor, job);
+
+    job_free(job); // Doesn't free the job's future
 
     log_free();
 
     return NULL;
 }
 
-static int
-job_cancel(Job* const job)
-{
-    return future_cancel(job->future);
-}
-
 /******************************************************************************
- * Thread-compatible but not thread-safe list of jobs:
+ * Thread-compatible but not thread-safe list of jobs. It allows the
+ * execution-service to cancel all running jobs.
  ******************************************************************************/
 
 typedef struct jobList {
@@ -109,34 +118,27 @@ jobList_free(JobList* const jobList)
 
     while (job != NULL) {
         Job* next = job->next;
-        job_delete(job);
+        job_free(job);
         job = next;
     }
 
     free(jobList);
 }
 
-static Job*
+static void
 jobList_add(
         JobList* const restrict  jobList,
-        Executor* const restrict executor,
-        Future* const restrict   future)
+        Job* const restrict      job)
 {
-    Job* const job = job_new(executor, future);
+    job->prev = jobList->tail;
 
-    if (job) {
-        job->prev = jobList->tail;
+    if (jobList->head == NULL)
+        jobList->head = job;
+    if (jobList->tail)
+        jobList->tail->next = job;
 
-        if (jobList->head == NULL)
-            jobList->head = job;
-        if (jobList->tail)
-            jobList->tail->next = job;
-
-        jobList->tail = job;
-        jobList->size++;
-    }
-
-    return job;
+    jobList->tail = job;
+    jobList->size++;
 }
 
 /**
@@ -144,7 +146,7 @@ jobList_add(
  *
  * @param[in,out] jobList  List of jobs
  * @param[in]     job      Job to be removed
- * @threadsafety           Safe
+ * @threadsafety           Compatible but not safe
  */
 static void
 jobList_remove(
@@ -171,26 +173,6 @@ jobList_remove(
     jobList->size--;
 }
 
-static Future*
-jobList_removeHead(JobList* const jobList)
-{
-    Future* future;
-
-    Job* const    headJob = jobList->head;
-
-    if (headJob == NULL) {
-        future = NULL;
-    }
-    else {
-        future = headJob->future;
-
-        jobList_remove(jobList, headJob);
-        job_delete(headJob); // Doesn't delete future
-    }
-
-    return future;
-}
-
 static size_t
 jobList_size(JobList* const jobList)
 {
@@ -204,7 +186,7 @@ jobList_cancelAll(JobList* const jobList)
 
     for (Job* job = jobList->head; job != NULL; ) {
         Job* next = job->next;
-        int  stat = job_cancel(job);
+        int  stat = future_cancel(job->future);
 
         if (stat) {
             log_add("Couldn't cancel job");
@@ -219,56 +201,11 @@ jobList_cancelAll(JobList* const jobList)
 }
 
 /******************************************************************************
- * Iterator over list of futures
- ******************************************************************************/
-
-struct futuresIter {
-    JobList*         jobList;
-    pthread_mutex_t* mutex;
-};
-
-static FuturesIter*
-futuresIter_new(
-        JobList* const restrict         jobList,
-        pthread_mutex_t* const restrict mutex)
-{
-    FuturesIter* iter = log_malloc(sizeof(FuturesIter),
-            "iterator over list of waiting futures");
-
-    if (iter) {
-        iter->mutex = mutex;
-        iter->jobList = jobList;
-    }
-
-    return iter;
-}
-
-void
-futuresIter_delete(FuturesIter* const iter)
-{
-    free(iter);
-}
-
-Future*
-futuresIter_remove(FuturesIter* const iter)
-{
-    mutex_lock(iter->mutex);
-        Future* future;
-        while ((future = jobList_removeHead(iter->jobList)) &&
-                future_runFuncCalled(future))
-            ;
-    mutex_unlock(iter->mutex);
-
-    return future;
-}
-
-/******************************************************************************
  * Thread-safe execution service:
  ******************************************************************************/
 
 struct executor {
     pthread_mutex_t mutex;
-    pthread_cond_t  cond;
     JobList*        jobList;
     void*           completer;
     int           (*afterCompletion)(void* completer, Future* future);
@@ -290,37 +227,21 @@ executor_unlock(Executor* const executor)
 }
 
 static int
-executor_init(
-        Executor* const executor,
-        int           (*afterCompletion)(
-                            void* const restrict   completer,
-                            Future* const restrict future),
-        void* const     completer)
+executor_init(Executor* const executor)
 {
     int status;
 
     executor->isShutdown = false;
     executor->jobList = jobList_new();
-    executor->afterCompletion = afterCompletion;
-    executor->completer = completer;
+    executor->afterCompletion = NULL;
+    executor->completer = NULL;
 
     if (executor->jobList == NULL) {
         log_add("Couldn't create new job list");
         status = ENOMEM;
     }
     else {
-        status = pthread_cond_init(&executor->cond, NULL);
-
-        if (status) {
-            log_add_errno(status, "Couldn't initialize condition-variable");
-        }
-        else {
-            status = mutex_init(&executor->mutex, PTHREAD_MUTEX_ERRORCHECK,
-                    true);
-
-            if (status)
-                (void)pthread_cond_destroy(&executor->cond);
-        } // `executor->cond` created
+        status = mutex_init(&executor->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
         if (status)
             jobList_free(executor->jobList);
@@ -339,17 +260,27 @@ executor_destroy(Executor* const executor)
     (void)mutex_destroy(&executor->mutex);
 }
 
+static void
+executor_afterCompletion(
+        Executor* const restrict executor,
+        Job* const restrict      job)
+{
+    if (executor->afterCompletion &&
+            executor->afterCompletion(executor->completer, job->future))
+        log_add("Couldn't process task's future after it completed");
+
+    executor_lock(executor);
+        jobList_remove(executor->jobList, job);
+    executor_unlock(executor);
+}
+
 Executor*
-executor_new(
-        int       (*afterCompletion)(
-                        void* restrict   completer,
-                        Future* restrict future),
-        void* const completer)
+executor_new(void)
 {
     Executor* executor = log_malloc(sizeof(Executor), "executor");
 
     if (executor) {
-        if (executor_init(executor, afterCompletion, completer)) {
+        if (executor_init(executor)) {
             log_add("Couldn't initialize executor");
             free(executor);
             executor = NULL;
@@ -366,52 +297,64 @@ executor_free(Executor* const executor)
     free(executor);
 }
 
-/**
- * Submits a job's future to be executed asynchronously.
- *
- * @param[in,out] exec      Execution service
- * @param[in,out] future    Job's future. Caller should call `future_delete()`
- *                          when it's no longer needed.
- * @retval        0         Success
- * @retval        EAGAIN    Insufficient system resources. `log_add()` called.
- * @retval        ENOMEM    Out of memory. `log_add()` called.
- * @retval        EPERM     Execution service is shut down. `log_add()` called.
- */
+void
+executor_setAfterCompletion(
+        Executor* const restrict executor,
+        void* const restrict     completer,
+        int                    (*afterCompletion)(
+                                     void* restrict   completer,
+                                     Future* restrict future))
+{
+    executor->completer = completer;
+    executor->afterCompletion = afterCompletion;
+}
+
 static int
 executor_submitFuture(
         Executor* const restrict executor,
         Future* const restrict   future)
 {
-    int status;
+    int        status;
+    Job* const job = job_new(executor, future);
 
-    executor_lock(executor);
-        if (executor->isShutdown) {
-            log_add("Executor is shut down");
-            status = EPERM;
-        }
-        else {
-            Job* job = jobList_add(executor->jobList, executor, future);
-
-            if (job == NULL) {
-                log_add("Couldn't add future to job list");
-                status = ENOMEM;
+    if (job == NULL) {
+        log_add("Couldn't create new job");
+        status = ENOMEM;
+    }
+    else {
+        executor_lock(executor);
+            if (executor->isShutdown) {
+                log_add("Executor is shut down");
+                status = EPERM;
             }
             else {
+                jobList_add(executor->jobList, job);
+
                 pthread_t thread;
                 status = pthread_create(&thread, NULL, job_run, job);
 
                 if (status) {
-                    log_add_errno(status, "Couldn't create job thread");
+                    log_add_errno(status, "Couldn't create job's thread");
                     jobList_remove(executor->jobList, job);
-                    job_delete(job); // Doesn't delete future
                 }
                 else {
-                    future_setThread(future, thread);
-                    (void)pthread_cond_signal(&executor->cond);
+                    /*
+                     * The thread is detached because it can't be joined:
+                     *   - `job_free()` can't join it because it's executing on
+                     *     the same thread; and
+                     *   - `future_getResult()` can't join it without precluding
+                     *     an execution service implementation that uses a
+                     *     thread pool.
+                     */
+                    (void)pthread_detach(thread);
                 }
-            } // `job` created
-        } // Executor is not shut down
-    executor_unlock(executor);
+            } // Executor is not shut down
+        executor_unlock(executor);
+
+        if (status) {
+            job_free(job); // Doesn't free job's future
+        }
+    } // `job` created
 
     return status;
 }
@@ -419,38 +362,24 @@ executor_submitFuture(
 Future*
 executor_submit(
         Executor* const executor,
-        void* const     obj,
-        int           (*runFunc)(void* obj, void** result),
-        int           (*haltFunc)(void* obj, pthread_t thread))
+        void* const   obj,
+        int         (*run)(void* obj),
+        int         (*halt)(void* obj, pthread_t thread),
+        int         (*get)(void* obj, void** result))
 {
-    Future* future = future_new(obj, runFunc, haltFunc);
+    Future* future = future_new(obj, run, halt, get);
 
     if (future == NULL) {
         log_add("Couldn't create new future");
     }
-    else if (executor_submitFuture(executor, future)) {
-        log_add("Couldn't submit task for execution");
-        future_free(future);
-        future = NULL;
+    else {
+        if (executor_submitFuture(executor, future)) {
+            future_free(future);
+            future = NULL;
+        }
     } // `future` created
 
     return future;
-}
-
-static void
-executor_afterCompletion(
-        Executor* const restrict executor,
-        Job* const restrict      job)
-{
-    if (executor->afterCompletion &&
-            executor->afterCompletion(executor->completer, job->future))
-        log_add("Couldn't process task after it completed");
-
-    executor_lock(executor);
-        jobList_remove(executor->jobList, job);
-    executor_unlock(executor);
-
-    job_delete(job); // Doesn't delete future
 }
 
 size_t

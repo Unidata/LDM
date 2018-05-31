@@ -130,8 +130,8 @@ void
 mi_destroy(
     McastInfo* const info)
 {
-    sa_deinit(&info->group);
-    sa_deinit(&info->server);
+    sa_destroy(&info->group);
+    sa_destroy(&info->server);
 }
 
 /**

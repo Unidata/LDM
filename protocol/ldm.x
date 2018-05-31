@@ -947,6 +947,11 @@ enum Ldm7Status {
 %        else if (status == RPC_AUTHERROR) {
 %            status = LDM7_UNAUTH;
 %        }
+%        else if (status == RPC_CANTRECV) {
+%            struct rpc_err rpcErr;
+%            clnt_geterr(clnt, &rpcErr);
+%            status = (rpcErr.re_errno == EINTR) ? LDM7_INTR : LDM7_RPC;
+%        }
 %        else {
 %            status = LDM7_RPC;
 %        }

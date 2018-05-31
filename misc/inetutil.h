@@ -239,7 +239,7 @@ sa_new(
     ServiceAddr** const  svcAddr,
     const char* const    addr,
     const int            port);
-extern void           sa_delete(ServiceAddr* const sa);
+extern void           sa_free(ServiceAddr* const sa);
 /**
  * Copies a service address.
  *
@@ -251,7 +251,7 @@ extern void           sa_delete(ServiceAddr* const sa);
 extern bool           sa_copy(
     ServiceAddr* const restrict       dest,
     const ServiceAddr* const restrict src);
-extern void           sa_deinit(ServiceAddr* sa);
+extern void           sa_destroy(ServiceAddr* sa);
 extern ServiceAddr*   sa_clone(const ServiceAddr* const sa);
 extern const char*    sa_getInetId(const ServiceAddr* const sa);
 extern unsigned short sa_getPort(const ServiceAddr* const sa);

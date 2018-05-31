@@ -65,14 +65,14 @@ char* vcEndPoint_format(const VcEndPoint* vcEnd);
  * Destroys a virtual-circuit endpoint.
  * @param[in] end  Virtual-circuit endpoint to be destroyed.
  */
-void vcEndPoint_deinit(VcEndPoint* const end);
+void vcEndPoint_destroy(VcEndPoint* const end);
 
 /**
  * Deletes a virtual-circuit endpoint.
  * @param[in] end  Virtual-circuit endpoint to be deleted
  * @see vcEndPoint_new()
  */
-void vcEndPoint_delete(VcEndPoint* const end);
+void vcEndPoint_free(VcEndPoint* const end);
 
 bool vcEndPoint_copy(
         VcEndPoint* const restrict       lhs,

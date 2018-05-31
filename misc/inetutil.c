@@ -1265,7 +1265,7 @@ sa_new(
  * @param[in] sa  Service address to be destroyed.
  */
 void
-sa_deinit(
+sa_destroy(
         ServiceAddr* const sa)
 {
     free(sa->inetId);
@@ -1277,11 +1277,11 @@ sa_deinit(
  * @param[in] sa  Pointer to the service address to be freed or NULL.
  */
 void
-sa_delete(
+sa_free(
     ServiceAddr* const sa)
 {
     if (sa != NULL) {
-        sa_deinit(sa);
+        sa_destroy(sa);
         free(sa);
     }
 }

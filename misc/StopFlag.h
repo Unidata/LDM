@@ -29,11 +29,18 @@ typedef struct stopFlag StopFlag;
     extern "C" {
 #endif
 
+/**
+ * Initializes a stop flag.
+ *
+ * @retval     0            Success
+ * @retval     EAGAIN       Out of resources. `log_add()` called.
+ * @retval     ENOMEM       Out of memory. `log_add()` called.
+ */
 int
 stopFlag_init(StopFlag* const stopFlag);
 
 void
-stopFlag_deinit(StopFlag* const stopFlag);
+stopFlag_destroy(StopFlag* const stopFlag);
 
 void
 stopFlag_set(StopFlag* const stopFlag);

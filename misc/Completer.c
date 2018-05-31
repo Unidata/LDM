@@ -1,6 +1,6 @@
 /**
- * This file defines an object that decorates an Executor with a queue of
- * completed asynchronous tasks.
+ * This file defines an object that executes asynchronous tasks and presents a
+ * queue of completed tasks.
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
@@ -10,119 +10,12 @@
  *  Created on: May 8, 2018
  *      Author: Steven R. Emmerson
  */
-#include "../../misc/Completer.h"
 
 #include "config.h"
 
+#include "Completer.h"
 #include "Thread.h"
-
 #include "log.h"
-
-/******************************************************************************
- * Job:
- ******************************************************************************/
-
-typedef struct job {
-    /// Future of task submitted to completion service
-    Future*           future;
-    struct completer* comp;   ///< Associated completion service
-} Job;
-
-/**
- * Creates a new job.
- *
- * @param[in] obj       Object submitted to completion service. May be `NULL`.
- * @param[in] run       Function to execute `obj`
- * @param[in] halt      Function to cancel execution. Must return 0 on success.
- *                      May be `NULL`.
- * @retval    `NULL`    Failure. `log_add()` called.
- */
-static Job*
-job_new(struct completer* const restrict comp,
-        void* const                      obj,
-        int                            (*run)(void* obj, void** result),
-        int                            (*halt)(void* obj, pthread_t thread))
-{
-    Job* job = log_malloc(sizeof(Job), "completion job");
-
-    if (job) {
-        job->comp = comp;
-        job->future = future_new(obj, run, halt);
-
-        if (job->future == NULL) {
-            log_add("Couldn't create future");
-            free(job);
-            job = NULL;
-        }
-    } // `job` allocated
-
-    return job;
-}
-
-/**
- * Frees a job.
- *
- * @param[in,out] job  Job to be freed
- */
-static void
-job_free(Job* const job)
-{
-    future_free(job->future);
-    free(job);
-}
-
-/**
- * Executes a job.
- *
- * @param[in,out] arg        Job to be executed
- * @param[out]    result     Result of executing the job
- * @retval        0          Success
- * @retval        ECANCELED  Job was canceled
- * @retval        ENOMEM     Out of memory. `log_add()` called.
- * @return                   Error code from submitted run function. `log_add()`
- *                           called.
- */
-static int
-job_run(void* const restrict  arg,
-        void** const restrict result)
-{
-    Job* const job = (Job*)arg;
-
-    (void)future_run(job->future);
-
-    /*
-     * `future_run()` returned => task completed => no waiting for result, which
-     * would fail anyway because the current thread would wait on itself
-     */
-    int status = future_getResultNoWait(job->future, result);
-
-    return status;
-}
-
-/**
- * Cancels a job. Called if `completer_shutdown(..., true)` is called.
- *
- * @param[in,out] arg      Job to be canceled
- * @param[in,out] thread   Thread on which the job is executing
- * @retval        0        Success
- * @retval        ENOMEM   Out of memory. `log_add()` called.
- * @return                 Error code from submitted cancel function.
- *                         `log_add()` called.
- */
-static int
-job_cancel(
-        void* const arg,
-        pthread_t   thread)
-{
-    Job* const    job = (Job*)arg;
-    Future* const future = job->future;
-    int           status = future_cancel(future);
-
-    if (status)
-        log_add("Couldn't cancel submitted task");
-
-    return status;
-}
 
 /******************************************************************************
  * Entry in queue of completed futures:
@@ -137,7 +30,7 @@ typedef struct entry {
 /**
  * Creates a new entry for a queue of completed futures.
  *
- * @param[in] future  Future of task submitted to execution service. Not freed.
+ * @param[in] future  Completed future
  * @retval    `NULL`  Out of memory. `log_add()` called.
  * @return            New entry
  */
@@ -217,7 +110,7 @@ doneQ_free(DoneQ* const doneQ)
  * Adds a future to a queue of completed futures.
  *
  * @param[in,out] doneQ   Queue of completed futures
- * @param[in]     future  Future of task submitted to execution service
+ * @param[in]     future  Completed future
  * @retval        0       Success
  * @retval        ENOMEM  Out of memory. `log_add()` called.
  */
@@ -257,7 +150,7 @@ doneQ_add(
  *
  * @param[in,out] doneQ  Queue of completed futures
  * @retval        NULL   Queue is empty
- * @return               Future that was at head of queue
+ * @return               Future at head of queue
  */
 static Future*
 doneQ_take(DoneQ* const doneQ)
@@ -286,12 +179,6 @@ doneQ_take(DoneQ* const doneQ)
     }
 
     return future;
-}
-
-static size_t
-doneQ_size(DoneQ* const doneQ)
-{
-    return doneQ->size;
 }
 
 /******************************************************************************
@@ -329,28 +216,22 @@ completer_unlock(Completer* const comp)
 }
 
 /**
- * Processes the future of a completed task that was submitted to the execution
- * service. Adds the future to the queue of completed futures. Called by the
- * completion service's execution service.
+ * Adds a completed future to the queue of completed futures. Called by
+ * `job_run()`.
  *
  * @param[in,out] arg     Completion service
- * @param[in]     future  Future of task submitted to execution service
+ * @param[in]     future  Completed future
  * @retval        0       Success
  * @retval        ENOMEM  Out of memory. `log_add()` called.
  */
 static int
-completer_afterCompletion(
+completer_add(
         void* const restrict   arg,
         Future* const restrict future)
 {
     int              status;
     Completer* const comp = (Completer*)arg;
 
-    /*
-     * NB: `comp->exec` is holding a lock, so this function must not call an
-     * execution service function on `comp->exec`. See
-     * `executor_afterCompletion()`.
-     */
     completer_lock(comp);
         status = doneQ_add(comp->doneQ, future);
 
@@ -359,11 +240,9 @@ completer_afterCompletion(
         }
         else {
             // Notify `completer_take()`
-            (void)pthread_cond_signal(&comp->cond);
+            (void)pthread_cond_broadcast(&comp->cond);
         }
     completer_unlock(comp);
-
-    job_free(future_getObj(future)); // Must be freed somewhere
 
     return status;
 }
@@ -386,7 +265,7 @@ completer_init(Completer* const comp)
     comp->doneQ = doneQ_new();
 
     if (comp->doneQ == NULL) {
-        log_add("Couldn't create queue for completed futures");
+        log_add("Couldn't create queue for completed jobs");
         status = ENOMEM;
     }
     else {
@@ -396,15 +275,19 @@ completer_init(Completer* const comp)
             log_add_errno(status, "Couldn't initialize condition-variable");
         }
         else {
-            status = mutex_init(&comp->mutex, PTHREAD_MUTEX_RECURSIVE, true);
+            status = mutex_init(&comp->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
             if (status == 0) {
-                comp->exec = executor_new(completer_afterCompletion, comp);
+                comp->exec = executor_new();
 
                 if (comp->exec == NULL) {
                     log_add("Couldn't create new execution service");
                     (void)pthread_mutex_destroy(&comp->mutex);
                     status = ENOMEM;
+                }
+                else {
+                    executor_setAfterCompletion(comp->exec, comp,
+                            completer_add);
                 }
             } // `comp->mutex` initialized
 
@@ -465,25 +348,16 @@ Future*
 completer_submit(
         Completer* const comp,
         void* const      obj,
-        int            (*run)(void* obj, void** result),
-        int            (*halt)(void* obj, pthread_t thread))
+        int            (*run)(void* obj),
+        int            (*halt)(void* obj, pthread_t thread),
+        int            (*get)(void* obj, void** result))
 {
-    Future* future;
-    Job*    job = job_new(comp, obj, run, halt);
+    Future* future = executor_submit(comp->exec, obj, run, halt, get);
 
-    if (job == NULL) {
-        log_add("Couldn't create new job");
-        future = NULL;
+    if (future == NULL) {
+        log_add("Couldn't submit task to execution service");
+        future_free(future);
     }
-    else {
-        future = executor_submit(comp->exec, job, job_run, job_cancel);
-
-        if (future == NULL) {
-            log_add("Couldn't submit job to execution service");
-            job_free(job);
-            job = NULL;
-        }
-    } // `job` created
 
     return future;
 }
@@ -512,11 +386,6 @@ completer_shutdown(
     int status;
 
     completer_lock(comp);
-        /*
-         * Locking isn't necessary and would, otherwise, require a recursive
-         * mutex because `job_cancel()` could be called, which calls
-         * `completer_add()`.
-         */
         status = executor_shutdown(comp->exec, now);
     completer_unlock(comp);
 

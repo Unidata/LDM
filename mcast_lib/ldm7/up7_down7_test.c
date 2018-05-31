@@ -13,6 +13,7 @@
 
 #include "down7.h"
 #include "error.h"
+#include "Executor.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm_config_file.h"
@@ -23,7 +24,6 @@
 #include "mldm_sender_map.h"
 #include "pq.h"
 #include "prod_index_map.h"
-#include "Task.h"
 #include "timestamp.h"
 #include "up7.h"
 #include "UpMcastMgr.h"
@@ -59,23 +59,22 @@ typedef struct {
 typedef struct {
     pthread_mutex_t       mutex;
     pthread_cond_t        cond;
-    pthread_t             thread; ///< Sender TCP server thread
+    Future*               future;
     MyUp7*                myUp7;
-    bool                  threadSet;
     int                   sock;
     bool                  executing;
-    bool                  done;
+    volatile sig_atomic_t done;
 } Sender;
 
 typedef struct {
-    Task*                 down7Task;
     Down7*                down7;
     volatile sig_atomic_t done;
 } Requester;
 
 typedef struct {
-    Task*                 down7Task;
     Requester             requester;
+    Future*               down7Future;
+    Future*               requesterFuture;
     Down7*                down7;
     McastReceiverMemory*  mrm;
 } Receiver;
@@ -124,6 +123,7 @@ static uint64_t          numDeletedProds;
 static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
 static ServiceAddr*      up7Addr;
 static VcEndPoint*       localVcEnd;
+static Executor*         executor;
 
 static void signal_handler(
         int sig)
@@ -214,9 +214,24 @@ setup(void)
                     log_add("Couldn't construct local virtual-circuit endpoint");
                     status = LDM7_SYSTEM;
                 }
-            }
-        }
-    }
+                else {
+                    executor = executor_new();
+
+                    if (executor == NULL) {
+                        vcEndPoint_free(localVcEnd);
+                        log_add("Couldn't create new execution service");
+                        status = LDM7_SYSTEM;
+                    }
+                } // `localVcEnd` created
+
+                if (status)
+                    sa_free(up7Addr);
+            } // `up7Addr` created
+        } // Termination signal handler installed
+
+        if (status)
+            msm_destroy();
+    } // Multicast sender map initialized
 
     if (status)
         log_error_q("setup() failure");
@@ -230,8 +245,9 @@ setup(void)
 static int
 teardown(void)
 {
-    vcEndPoint_delete(localVcEnd);
-    sa_delete(up7Addr);
+    executor_free(executor);
+    vcEndPoint_free(localVcEnd);
+    sa_free(up7Addr);
 
     msm_clear();
     msm_destroy();
@@ -327,6 +343,15 @@ myUp7_init(
     myUp7->xprt = xprt;
 }
 
+static void
+myUp7_destroy(MyUp7* const myUp7)
+{
+    svc_unregister(LDMPROG, 7);
+
+    if (myUp7->xprt) // Might have been destroyed by RPC layer
+        svc_destroy(myUp7->xprt);
+}
+
 /**
  * Returns a new upstream LDM7.
  *
@@ -341,6 +366,19 @@ myUp7_new(int sock)
     CU_ASSERT_PTR_NOT_NULL_FATAL(myUp7);
     myUp7_init(myUp7, sock);
     return myUp7;
+}
+
+/**
+ * Deletes an upstream LDM7 instance. Inverse of `myUp7_new()`.
+ *
+ * @param[in] myUp7  Upstream LDM7
+ * @see `myUp7_new()`
+ */
+static void
+myUp7_free(MyUp7* const myUp7)
+{
+    myUp7_destroy(myUp7);
+    free(myUp7);
 }
 
 /**
@@ -393,7 +431,7 @@ myUp7_run(
         CU_ASSERT_TRUE_FATAL(fds.revents & POLLRDNORM)
 
         log_debug_1("myUp7_run(): Calling svc_getreqsock()");
-        svc_getreqsock(sock); // calls `ldmprog_7()`; *might* destroy `xprt`
+        svc_getreqsock(sock); // Calls `ldmprog_7()`. *Might* destroy `xprt`.
 
         if (!FD_ISSET(sock, &svc_fdset)) {
             // RPC layer called `svc_destroy()` on `myUp7->xprt`
@@ -403,28 +441,6 @@ myUp7_run(
     } // While not done loop
 
     up7_reset();
-}
-
-static void
-myUp7_destroy(MyUp7* const myUp7)
-{
-    svc_unregister(LDMPROG, 7);
-
-    if (myUp7->xprt) // Might have been destroyed by RPC layer
-        svc_destroy(myUp7->xprt);
-}
-
-/**
- * Deletes an upstream LDM7 instance. Inverse of `myUp7_new()`.
- *
- * @param[in] myUp7  Upstream LDM7
- * @see `myUp7_new()`
- */
-static void
-myUp7_delete(MyUp7* const myUp7)
-{
-    myUp7_destroy(myUp7);
-    free(myUp7);
 }
 
 static void
@@ -439,16 +455,42 @@ sender_unlock(Sender* const sender)
     CU_ASSERT_EQUAL_FATAL(pthread_mutex_unlock(&sender->mutex), 0);
 }
 
+static void
+terminateMcastSender(void)
+{
+    pid_t pid = umm_getMldmSenderPid();
+
+    if (pid) {
+        log_debug_1("Sending SIGTERM to multicast LDM sender process");
+        CU_ASSERT_EQUAL_FATAL(kill(pid, SIGTERM), 0);
+
+        /* Reap the terminated multicast sender. */
+        {
+            int status;
+
+            log_debug_1("Reaping multicast sender child process");
+            const pid_t wpid = waitpid(pid, &status, 0);
+
+            CU_ASSERT_EQUAL(wpid, pid);
+            CU_ASSERT_TRUE_FATAL(wpid > 0);
+            CU_ASSERT_TRUE(WIFEXITED(status));
+            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
+            CU_ASSERT_EQUAL(umm_terminated(wpid), 0);
+        }
+    }
+}
+
 /**
- * Called by `pthread_create()`. The thread is cancelled by
- * `sender_halt()`.
+ * Executes a sender. Notifies `sender_start()`.
  *
- * @param[in] arg   Pointer to sender.
- * @retval    NULL  Always
+ * @param[in]  arg     Pointer to sender.
+ * @param[out] result  Result of execution. Ignored.
+ * @retval     0       Success
  */
-static void*
+static int
 sender_run(
-        void* const arg)
+        void* const restrict  arg,
+        void** const restrict result)
 {
     Sender* const sender = (Sender*)arg;
     static int    status;
@@ -489,10 +531,13 @@ sender_run(
                 sender_unlock(sender);
             }
             else {
-                sender->myUp7 = myUp7_new(sock); // Initializes `sender->myUp7.xprt`
+                // Initializes `sender->myUp7.xprt`
+                sender->myUp7 = myUp7_new(sock);
 
                 sender_unlock(sender);
+
                 myUp7_run(sender->myUp7);
+                myUp7_free(sender->myUp7);
             }
         }
     }
@@ -501,11 +546,38 @@ sender_run(
     log_debug_1("sender_run(): Returning &%d", status);
     log_free();
 
-    return NULL;
+    return 0;
+}
+
+/**
+ * Stops a sender that's executing on another thread.
+ *
+ * @param[in] arg     Sender to be stopped
+ * @param[in] thread  Thread on which sender is running
+ */
+static int
+sender_halt(
+        void* const     arg,
+        const pthread_t thread)
+{
+    Sender* const sender = (Sender*)arg;
+
+    log_debug_1("Terminating multicast LDM sender");
+    terminateMcastSender();
+
+    sender_lock(sender);
+
+    sender->done = true;
+
+    CU_ASSERT_EQUAL_FATAL(pthread_kill(thread, SIGTERM), 0);
+
+    sender_unlock(sender);
+
+    return 0;
 }
 
 static int
-senderSock_init(
+sender_initSock(
         int* const sock)
 {
     int status;
@@ -623,7 +695,7 @@ sender_insertProducts(void)
 }
 
 static int
-setMcastInfo(
+sender_setMcastInfo(
         McastInfo** const mcastInfo,
         const feedtypet   feedtype)
 {
@@ -646,8 +718,8 @@ setMcastInfo(
                 log_add("Couldn't create multicast information object");
             }
             else {
-                sa_delete(ucastServAddr);
-                sa_delete(mcastServAddr);
+                sa_free(ucastServAddr);
+                sa_free(mcastServAddr);
             }
         }
     }
@@ -656,8 +728,8 @@ setMcastInfo(
 }
 
 /**
- * Starts executing the sender on a new thread. Blocks until the sender is
- * ready.
+ * Initializes a sender and starts executing it on a new thread. Blocks until
+ * notified by `sender_run()`.
  *
  * @param[in,out] sender  Sender object
  * @param[in]     feed    Feed to be sent
@@ -684,7 +756,7 @@ sender_start(
     CU_ASSERT_EQUAL_FATAL(pq_open(getQueuePath(), PQ_THREADSAFE, &pq), 0);
 
     McastInfo* mcastInfo;
-    CU_ASSERT_EQUAL_FATAL(setMcastInfo(&mcastInfo, feed), 0);
+    CU_ASSERT_EQUAL_FATAL(sender_setMcastInfo(&mcastInfo, feed), 0);
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
@@ -702,7 +774,6 @@ sender_start(
     CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME), 0);
 
-    // Starts the sender on a new thread
     char* mcastInfoStr = mi_format(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
@@ -712,94 +783,38 @@ sender_start(
     free(vcEndPointStr);
     free(mcastInfoStr);
 
-    CU_ASSERT_EQUAL_FATAL(senderSock_init(&sender->sock), 0);
+    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
 
     sender->executing = false;
     sender->done = false;
-    sender->threadSet = false;
     sender->myUp7 = NULL;
 
-    CU_ASSERT_EQUAL_FATAL(pthread_create(&sender->thread, NULL, sender_run,
-            sender), 0);
+    // Starts the sender on a new thread
+    sender->future = executor_submit(executor, sender, sender_run, sender_halt);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(sender->future);
 
     sender_lock(sender);
-    sender->threadSet = true;
     while (!sender->executing)
         CU_ASSERT_EQUAL_FATAL(pthread_cond_wait(&sender->cond, &sender->mutex),
                 0);
     sender_unlock(sender);
 
     cidrAddr_delete(fmtpSubnet);
-    vcEndPoint_delete(vcEnd);
+    vcEndPoint_free(vcEnd);
 
     mi_delete(mcastInfo);
 }
 
-static void
-terminateMcastSender(void)
-{
-    pid_t pid = umm_getMldmSenderPid();
-
-    if (pid) {
-        log_debug_1("Sending SIGTERM to multicast LDM sender process");
-        CU_ASSERT_EQUAL_FATAL(kill(pid, SIGTERM), 0);
-
-        /* Reap the terminated multicast sender. */
-        {
-            int status;
-
-            log_debug_1("Reaping multicast sender child process");
-            const pid_t wpid = waitpid(pid, &status, 0);
-
-            CU_ASSERT_EQUAL(wpid, pid);
-            CU_ASSERT_TRUE_FATAL(wpid > 0);
-            CU_ASSERT_TRUE(WIFEXITED(status));
-            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-            CU_ASSERT_EQUAL(umm_terminated(wpid), 0);
-        }
-    }
-}
-
 /**
- * Stops a sender from running.
- */
-static void
-sender_halt(Sender* const sender)
-{
-    log_debug_1("Terminating multicast LDM sender");
-    terminateMcastSender();
-
-    sender_lock(sender);
-
-    sender->done = true;
-
-    if (sender->threadSet)
-        CU_ASSERT_EQUAL_FATAL(pthread_kill(sender->thread, SIGTERM), 0);
-
-    sender_unlock(sender);
-}
-
-/**
- * Blocks until the sender terminates.
+ * Stops a sender from executing and destroys it.
+ *
+ * @param[in,out]  Sender to be stopped and destroyed
  */
 static void
 sender_stop(Sender* const sender)
 {
-    sender_halt(sender);
-
-    sender_lock(sender);
-    if (!sender->threadSet) {
-        sender_unlock(sender);
-    }
-    else {
-        sender_unlock(sender);
-        log_debug_1("Joining sender thread");
-        CU_ASSERT_EQUAL_FATAL(pthread_join(sender->thread, NULL), 0);
-        sender->threadSet = false;
-    }
-
-    if (sender->myUp7)
-        myUp7_delete(sender->myUp7);
+    CU_ASSERT_EQUAL(future_cancel(sender->future), 0);
+    CU_ASSERT_EQUAL(future_getAndFree(sender->future, NULL), ECANCELED);
 
     CU_ASSERT_EQUAL_FATAL(close(sender->sock), 0);
 
@@ -819,7 +834,7 @@ typedef struct {
 } RequestArg;
 
 static void
-decide(
+requester_subDecide(
         RequestArg* const reqArg,
         const signaturet  sig)
 {
@@ -844,7 +859,7 @@ requester_decide(
         void* const restrict            arg)
 {
     char infoStr[LDM_INFO_MAX];
-    log_debug_1("requester_decide(): Entered: info=\"%s\"",
+    log_debug_1("Entered: info=\"%s\"",
             s_prod_info(infoStr, sizeof(infoStr), info, 1));
     static FmtpProdIndex maxProdIndex;
     static bool          maxProdIndexSet = false;
@@ -862,14 +877,14 @@ requester_decide(
         reqArg->delete = false;
     }
     else {
-        decide(reqArg, info->signature);
+        requester_subDecide(reqArg, info->signature);
         maxProdIndex = prodIndex;
         maxProdIndexSet = true;
     }
 
     char buf[2*sizeof(signaturet)+1];
     sprint_signaturet(buf, sizeof(buf), info->signature);
-    log_debug_1("requester_decide(): Returning %s: prodIndex=%lu",
+    log_debug_1("Returning %s: prodIndex=%lu",
             reqArg->delete ? "delete" : "don't delete",
             (unsigned long)prodIndex);
     return 0; // necessary for `pq_sequence()`
@@ -927,7 +942,7 @@ static void
 requester_run(
         Requester* const requester)
 {
-    log_debug_1("requester_start(): Entered");
+    log_debug_1("requester_run(): Entered");
 
     while (!requester->done) {
         RequestArg reqArg;
@@ -935,7 +950,7 @@ requester_run(
                 requester_decide, &reqArg);
 
         if (status == PQUEUE_END) {
-            (void)pq_suspend(30); // Unblocks SIGCONT
+            (void)pq_suspend(30); // Temporarily unblocks SIGCONT
         }
         else {
             CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -955,33 +970,23 @@ requester_run(
 
     // Because end-of-thread
     log_flush_error();
-    log_debug_1("requester_start(): Returning");
+    log_debug_1("requester_run(): Returning");
 }
 
 static void
-requester_halt(Requester* const requester)
+requester_halt(
+        Requester* const requester,
+        const pthread_t  thread)
 {
     requester->done = true;
-
-    CU_ASSERT_EQUAL(task_kill(requester->down7Task, SIGTERM), 0);
+    CU_ASSERT_EQUAL(pthread_kill(thread, SIGTERM), 0);
 }
 
-static void*
-requester_runTask(void* const arg)
-{
-    requester_run((Requester*)arg);
-    return NULL;
-}
-
-static int
-requester_haltTask(
-        void* const     arg,
-        const pthread_t thread)
-{
-    requester_halt((Requester*)arg);
-    return 0;
-}
-
+/**
+ * Executes a requester to test the "backstop" mechanism. Selected data-products
+ * are deleted from the downstream product-queue and then requested from the
+ * upstream LDM.
+ */
 static void
 requester_init(
         Requester* const requester,
@@ -992,54 +997,8 @@ requester_init(
 }
 
 static void
-requester_deinit(Requester* const requester)
+requester_destroy(Requester* const requester)
 {}
-
-/**
- * Starts a data-product requester on a separate thread to test the "backstop"
- * mechanism. Selected data-products are deleted from the downstream
- * product-queue and then requested from the upstream LDM. Blocks until the
- * requester is started.
- */
-static void
-requester_start(
-        Requester* const requester)
-{
-    requester->down7Task = task_create(requester_runTask, requester,
-            requester_haltTask);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(requester->down7Task);
-}
-
-/**
- * Blocks until requester terminates.
- * @return
- */
-static void
-requester_stop(Requester* const requester)
-{
-    CU_ASSERT_EQUAL(task_destroy(requester->down7Task, NULL), 0);
-}
-
-static void*
-receiver_runTask(void* const arg)
-{
-    CU_ASSERT_EQUAL(down7_run((Down7*)arg), 0);
-
-    // Because at end of thread:
-    log_flush_error();
-    log_free();
-
-    return NULL;
-}
-
-static int
-receiver_haltTask(
-        void* const     arg,
-        const pthread_t thread)
-{
-    down7_halt((Down7*)arg);
-    return 0;
-}
 
 /**
  * Initializes a receiver.
@@ -1083,16 +1042,16 @@ receiver_init(
     receiver->down7 = down7_new(servAddr, feedtype, LOCAL_HOST, vcEnd,
             receiverPq, receiver->mrm);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
-    vcEndPoint_delete(vcEnd);
+    vcEndPoint_free(vcEnd);
 
-    sa_delete(servAddr);
+    sa_free(servAddr);
 }
 
 /**
  * De-initializes a receiver.
  */
 static void
-receiver_deinit(Receiver* const recvr)
+receiver_destroy(Receiver* const recvr)
 {
     CU_ASSERT_EQUAL(down7_free(recvr->down7), 0);
 
@@ -1103,8 +1062,44 @@ receiver_deinit(Receiver* const recvr)
     CU_ASSERT_EQUAL(unlink(DOWN7_PQ_PATHNAME), 0);
 }
 
+static int
+receiver_runRequester(
+        void* const restrict  arg,
+        void** const restrict result)
+{
+    requester_run(&((Receiver*)arg)->requester);
+    return 0;
+}
+
+static int
+receiver_haltRequester(
+        void* const     arg,
+        const pthread_t thread)
+{
+    requester_halt(&((Receiver*)arg)->requester, thread);
+    return 0;
+}
+
+static int
+receiver_runDown7(
+        void* const restrict  arg,
+        void** const restrict result)
+{
+    down7_run((Down7*)arg);
+    return 0;
+}
+
+static int
+receiver_haltDown7(
+        void* const     arg,
+        const pthread_t thread)
+{
+    down7_halt((Down7*)arg, thread);
+    return 0;
+}
+
 /**
- * Starts the receiver on a new thread. Blocks until the receiver is running.
+ * Starts the receiver on a new thread.
  *
  * This implementation access the product-queue on 4 threads:
  * - Multicast data-block receiver thread
@@ -1119,13 +1114,19 @@ receiver_start(
         Receiver* const restrict   recvr)
 {
     requester_init(&recvr->requester, recvr->down7);
-    requester_start(&recvr->requester);
 
-    recvr->down7Task = task_new(recvr->down7, receiver_runTask,
-            receiver_haltTask);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->down7Task);
+    /**
+     * Starts a data-product requester on a separate thread to test the
+     * "backstop" mechanism. Selected data-products are deleted from the
+     * downstream product-queue and then requested from the upstream LDM.
+     */
+    recvr->requesterFuture = executor_submit(executor, &recvr->requester,
+            receiver_runRequester, receiver_haltRequester);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->requesterFuture );
 
-    CU_ASSERT_EQUAL_FATAL(task_start(recvr->down7Task), 0);
+    recvr->down7Future = executor_submit(executor, recvr->down7,
+            receiver_runDown7, receiver_haltDown7);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->down7Future);
 }
 
 /**
@@ -1134,11 +1135,13 @@ receiver_start(
 static void
 receiver_stop(Receiver* const recvr)
 {
-    CU_ASSERT_EQUAL(task_stop(recvr->down7Task, NULL), 0);
-    task_delete(recvr->down7Task);
+    CU_ASSERT_EQUAL(future_cancel(recvr->down7Future), 0);
+    CU_ASSERT_EQUAL(future_getAndFree(recvr->down7Future, NULL), ECANCELED);
 
-    requester_stop(&recvr->requester);
-    requester_deinit(&recvr->requester);
+    CU_ASSERT_EQUAL(future_cancel(recvr->requesterFuture), 0);
+    CU_ASSERT_EQUAL(future_getAndFree(recvr->requesterFuture, NULL), ECANCELED);
+
+    requester_destroy(&recvr->requester);
 }
 
 static void
@@ -1190,7 +1193,7 @@ test_down7(
     sleep(1);
 
     receiver_stop(&receiver);
-    receiver_deinit(&receiver);
+    receiver_destroy(&receiver);
 #else
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(DOWN7_PQ_PATHNAME), 0)
     CU_ASSERT_EQUAL_FATAL(
@@ -1231,7 +1234,7 @@ test_bad_subscription(
     sleep(1);
 
     receiver_stop(&receiver);
-    receiver_deinit(&receiver);
+    receiver_destroy(&receiver);
 
     log_debug_1("Terminating sender");
     sender_stop(&sender);
@@ -1270,10 +1273,9 @@ test_up7_down7(
     ErrorObj* errObj = lcf_addAllow(ANY, hostSet, ".*", NULL);
     CU_ASSERT_PTR_NULL_FATAL(errObj);
 
-    /* Starts a receiver on a new thread */
-    // Blocks until receiver is running
     receiver_init(&receiver, sender_getAddr(&sender), sender_getPort(&sender),
             ANY);
+    /* Starts a receiver on a new thread */
     receiver_start(&receiver);
     log_flush_error();
 
@@ -1282,7 +1284,8 @@ test_up7_down7(
     sender_insertProducts();
 
     //(void)sleep(180);
-    log_notice_q("%lu sender product-queue insertions", (unsigned long)NUM_PRODS);
+    log_notice_q("%lu sender product-queue insertions",
+            (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
     log_notice_q("%lu product deletions", (unsigned long)numDeletedProds);
     log_notice_q("%lu receiver product-queue insertions",
@@ -1318,7 +1321,7 @@ int main(
     int status = 1;
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_INFO);
+    log_set_level(LOG_LEVEL_DEBUG);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
@@ -1326,8 +1329,8 @@ int main(
         if (NULL != testSuite) {
             if (CU_ADD_TEST(testSuite, test_up7)
                     && CU_ADD_TEST(testSuite, test_down7)
-                    //&& CU_ADD_TEST(testSuite, test_bad_subscription)
-                    //&& CU_ADD_TEST(testSuite, test_up7_down7)
+                    && CU_ADD_TEST(testSuite, test_bad_subscription)
+                    && CU_ADD_TEST(testSuite, test_up7_down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();

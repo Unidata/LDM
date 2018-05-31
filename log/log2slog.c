@@ -32,6 +32,10 @@
     #define _XOPEN_PATH_MAX 1024
 #endif
 
+#ifndef MAX
+#define MAX(a,b) ((a) >= (b) ? (a) : (b))
+#endif
+
 /******************************************************************************
  * Private API:
  ******************************************************************************/
@@ -48,6 +52,8 @@ typedef struct dest {
     void (*flush)(struct dest*);
     int  (*get_fd)(const struct dest*);
     void (*fini)(struct dest*);
+    int  (*lock)(struct dest*);
+    int  (*unlock)(struct dest*);
     FILE*  stream; // Unused for system logging
 } dest_t;
 /**
@@ -110,6 +116,10 @@ static const char* level_to_string(
             "ERROR", "ALERT", "CRIT", "EMERG"};
     return logl_vet_level(level) ? strings[level] : "UNKNOWN";
 }
+
+/******************************************************************************
+ * Logging destination is the system logging daemon:
+ ******************************************************************************/
 
 /**
  * Writes a single log message to the system logging daemon.
@@ -180,6 +190,24 @@ static int syslog_init(
     return 0;
 }
 
+/******************************************************************************
+ * Logging destination is an output stream (regular file or standard error
+ * stream):
+ ******************************************************************************/
+
+/**
+ * Returns the file descriptor of the logging stream.
+ *
+ * @param[in,out] dest  Destination object
+ * @retval -1           No knowable file descriptor will be used (e.g., syslog)
+ * @return              The file descriptor that will be used for logging
+ */
+static inline int stream_get_fd(
+        const dest_t* const dest)
+{
+    return fileno(dest->stream);
+}
+
 /**
  * Writes a single log message to a stream.
  *
@@ -203,27 +231,25 @@ static void stream_log(
     if (msg[msglen-1] == '\n')
         msglen--;
 
-    (void)fprintf(dest->stream,
-            "%04d%02d%02dT%02d%02d%02d.%06ldZ",
-            tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-            tm.tm_sec, (long)now.tv_usec);
+    (void)dest->lock(dest);
+        (void)fprintf(dest->stream,
+                "%04d%02d%02dT%02d%02d%02d.%06ldZ",
+                tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+                tm.tm_sec, (long)now.tv_usec);
 
-#ifndef MAX
-#define MAX(a,b) ((a) >= (b) ? (a) : (b))
-#endif
+        static const char padding[] =
+                "                                                    ";
 
-    static const char padding[] =
-            "                                                    ";
+        int nbytes = fprintf(dest->stream, " %s[%d]", ident, getpid());
+        (void)fprintf(dest->stream, "%.*s", MAX(25-nbytes, 0), padding);
 
-    int nbytes = fprintf(dest->stream, " %s[%d]", ident, getpid());
-    (void)fprintf(dest->stream, "%.*s", MAX(25-nbytes, 0), padding);
+        nbytes = fprintf(dest->stream, " %s:%d:%s()", logl_basename(loc->file),
+                loc->line, loc->func);
+        (void)fprintf(dest->stream, "%.*s", MAX(51-nbytes, 0), padding);
 
-    nbytes = fprintf(dest->stream, " %s:%d:%s()", logl_basename(loc->file),
-            loc->line, loc->func);
-    (void)fprintf(dest->stream, "%.*s", MAX(51-nbytes, 0), padding);
-
-    (void)fprintf(dest->stream, "%-5s %.*s\n", level_to_string(level), msglen,
-            msg);
+        (void)fprintf(dest->stream, "%-5s %.*s\n", level_to_string(level),
+                msglen, msg);
+    (void)dest->unlock(dest);
 }
 
 /**
@@ -237,17 +263,18 @@ static inline void stream_flush(
     (void)fflush(dest->stream);
 }
 
-/**
- * Returns the file descriptor of the logging stream.
- *
- * @param[in,out] dest  Destination object
- * @retval -1           No knowable file descriptor will be used (e.g., syslog)
- * @return              The file descriptor that will be used for logging
- */
-static inline int stream_get_fd(
-        const dest_t* const dest)
+/******************************************************************************
+ * Logging is to the standard error stream:
+ ******************************************************************************/
+
+static int stderr_lock(dest_t* const dest)
 {
-    return fileno(dest->stream);
+    return 0;
+}
+
+static int stderr_unlock(dest_t* const dest)
+{
+    return 0;
 }
 
 /**
@@ -263,8 +290,74 @@ static int stderr_init(
     dest->flush = stream_flush;
     dest->get_fd = stream_get_fd;
     dest->fini = stream_flush;
+    dest->lock = stderr_lock;
+    dest->unlock = stderr_lock;
     dest->stream = stderr;
     return 0;
+}
+
+/******************************************************************************
+ * Logging is to a regular file:
+ ******************************************************************************/
+
+/**
+ * Locks a log file against access by another process.
+ *
+ * @param[in] dest     Logging destination
+ * @retval    0        Success
+ * @retval    EINTR    Interrupted by signal
+ * @retval    ENOLCK   Creating the locked region would exceed system limit
+ * @retval    EDEADLK  Deadlock detected
+ */
+static int file_lock(dest_t* const dest)
+{
+    int          status;
+    struct flock lock;
+
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    // `l_start = l_len = 0` => entire file
+    lock.l_start = 0;
+    lock.l_len = 0;
+
+    if (fcntl(stream_get_fd(dest), F_SETLKW, &lock) == -1) {
+        log_add_syserr("Couldn't lock log file");
+        status = errno;
+    }
+    else {
+        status = 0;
+    }
+
+    return status;
+}
+
+/**
+ * Unlocks a log file for access by another process.
+ *
+ * @param[in] dest     Logging destination
+ * @retval    0        Success
+ * @retval    EINTR    Interrupted by signal
+ */
+static int file_unlock(dest_t* const dest)
+{
+    int          status;
+    struct flock lock;
+
+    lock.l_type = F_UNLCK;
+    lock.l_whence = SEEK_SET;
+    // `l_start = l_len = 0` => entire file
+    lock.l_start = 0;
+    lock.l_len = 0;
+
+    if (fcntl(stream_get_fd(dest), F_SETLK, &lock) == -1) {
+        log_add_syserr("Couldn't unlock log file");
+        status = errno;
+    }
+    else {
+        status = 0;
+    }
+
+    return status;
 }
 
 /**
@@ -272,8 +365,7 @@ static int stderr_init(
  *
  * @param[in,out] dest  Destination object
  */
-static void file_fini(
-        dest_t* const             dest)
+static void file_fini(dest_t* const dest)
 {
     if (dest->stream != NULL) {
         (void)fclose(dest->stream); // Will flush
@@ -282,7 +374,7 @@ static void file_fini(
 }
 
 /**
- * Initializes access to the log file.
+ * Initializes access to a log file.
  *
  * @param[in,out] dest  Destination object
  * @retval  0           Success
@@ -317,6 +409,8 @@ static int file_init(
                 dest->flush = stream_flush;
                 dest->get_fd = stream_get_fd;
                 dest->fini = file_fini;
+                dest->lock = file_lock;
+                dest->unlock = file_unlock;
             }
         }
         if (status)

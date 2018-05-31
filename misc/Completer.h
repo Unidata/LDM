@@ -49,15 +49,20 @@ completer_free(Completer* const comp);
  * @param[in]     run       Function to execute `obj`
  * @param[in]     halt      Function to cancel execution. Must return 0 on
  *                          success.
+ * @param[in]     get       Function to get result of task or `NULL` for no
+ *                          result
  * @retval        `NULL`    Failure. `log_add()` called.
- * @return                  Future of the submitted task
+ * @return                  Future of the submitted task. *NB: `future_free()`
+ *                          must not be called on this future until it has been
+ *                          returned by `completer_take()`.*
  */
 Future*
 completer_submit(
         Completer* const comp,
         void* const      obj,
-        int            (*run)(void* obj, void** result),
-        int            (*halt)(void* obj, pthread_t thread));
+        int            (*run)(void* obj),
+        int            (*halt)(void* obj, pthread_t thread),
+        int            (*get)(void* obj, void** result));
 
 /**
  * Returns the future of the oldest completed task. Blocks until a future is
@@ -65,7 +70,9 @@ completer_submit(
  *
  * @param[in] comp    Completion service
  * @retval    `NULL`  No more futures can be returned
- * @return            Future of oldest completed task
+ * @return            Future of oldest completed task. `future_free()` may be
+ *                    called on the future -- but if it is and the task
+ *                    allocated a result object then a memory-leak will occur.
  */
 Future*
 completer_take(Completer* const comp);

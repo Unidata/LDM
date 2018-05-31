@@ -646,7 +646,7 @@ main(int ac, char *av[])
 
             if (status) {
                 /*
-                 * Product-queue error. No data-product was processed.
+                 * No data-product was processed.
                  */
                 if (status == PQUEUE_END) {
                     log_debug_1("End of Queue");
@@ -685,7 +685,7 @@ main(int ac, char *av[])
                 }
 
                 (void)pq_suspend(interval);
-            }                           /* data-product not processed */
+            }                           /* No data-product processed */
 
             (void)exitIfDone(0);
 

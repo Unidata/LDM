@@ -21,32 +21,6 @@
 #endif
 
 /******************************************************************************
- * Iterator over list of uncompleted futures
- ******************************************************************************/
-
-typedef struct futuresIter FuturesIter;
-
-/**
- * Deletes an iterator over a list of futures.
- *
- * @param[in,out] iter  Iterator
- */
-void
-futuresIter_delete(FuturesIter* const iter);
-
-/**
- * Removes the future at the head of a list of futures that were awaiting
- * execution and returns it.
- *
- * @param[in,out] iter  Iterator over a list of futures that were awaiting
- *                      execution
- * @retval        NULL  No more such futures
- * @return              Future at head of list
- */
-Future*
-futuresIter_remove(FuturesIter* const iter);
-
-/******************************************************************************
  * Execution service
  ******************************************************************************/
 
@@ -55,22 +29,11 @@ typedef struct executor Executor;
 /**
  * Creates a new execution service.
  *
- * @param[in] afterCompletion  Function to call with task's future after the
- *                             task has completed -- either by having its run
- *                             function return or by being canceled. Must return
- *                             0 on success. May be `NULL` for no
- *                             post-completion processing.
- * @param[in] completer        Object to pass to `afterCompletion`. May be
- *                             `NULL`. Ignored if `afterCompletion` is `NULL`.
  * @retval    `NULL`           Failure. `log_add()` called.
  * @return                     New execution service.
  */
 Executor*
-executor_new(
-        int       (*afterCompletion)(
-                        void* const restrict   completer,
-                        Future* const restrict future),
-        void* const completer);
+executor_new(void);
 
 /**
  * Deletes an execution service.
@@ -81,22 +44,41 @@ void
 executor_free(Executor* const executor);
 
 /**
+ * Sets the object to call after a task has completed.
+ *
+ * @param[in] executor         Execution service
+ * @param[in] completer        Object to pass to `afterCompletion()` as first
+ *                             argument or `NULL`
+ * @param[in] afterCompletion  Function to call after task has completed or
+ *                             `NULL`. Must return `0` on success.
+ */
+void
+executor_setAfterCompletion(
+        Executor* const restrict executor,
+        void* const restrict     completer,
+        int                    (*afterCompletion)(
+                                     void* restrict   completer,
+                                     Future* restrict future));
+
+/**
  * Submits a task to be executed asynchronously.
  *
  * @param[in,out] exec      Execution service
  * @param[in,out] obj       Job object
- * @param[in]     runFunc   Function to run task. Must return 0 on success.
- * @param[in]     haltFunc  Function to cancel task. Must return 0 on success.
+ * @param[in]     run       Function to run task. Must return 0 on success.
+ * @param[in]     halt      Function to cancel task. Must return 0 on success.
+ * @param[in]     get       Function to return result of task
  * @retval        `NULL`    Failure. `log_add()` called.
- * @return                  Future of task. Caller should call `future_delete()`
+ * @return                  Future of task. Caller should call `future_free()`
  *                          when it's no longer needed.
  */
 Future*
 executor_submit(
         Executor* const exec,
-        void* const     obj,
-        int           (*runFunc)(void* obj, void** result),
-        int           (*haltFunc)(void* obj, pthread_t thread));
+        void* const   obj,
+        int         (*run)(void* obj),
+        int         (*halt)(void* obj, pthread_t thread),
+        int         (*get)(void* obj, void** result));
 
 /**
  * Returns the number of uncompleted task.
@@ -110,11 +92,9 @@ executor_size(Executor* const executor);
 /**
  * Shuts down an execution service by canceling all submitted but not completed
  * tasks. Upon return, the execution service will no longer accept task
- * submissions. Doesn't wait for tasks to complete. Returns an iterator over the
- * list of uncompleted futures whose run functions were not called.
+ * submissions. Doesn't wait for tasks to complete.
  *
- * @param[in,out] exec    Execution service. Must exist for the duration of
- *                        returned iterator.
+ * @param[in,out] exec    Execution service
  * @param[in]     now     Whether or not to cancel uncompleted tasks
  * @retval        0       Success
  * @return                Error code. `log_add()` called.

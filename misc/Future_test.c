@@ -8,17 +8,17 @@
  * @author: Steven R. Emmerson
  */
 
-#include "../../misc/Future.h"
-
 #include "config.h"
 
+#include "Future.h"
 #include "log.h"
+#include "StopFlag.h"
+
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "../../misc/StopFlag.h"
 
 typedef struct {
     StopFlag stopFlag;
@@ -34,9 +34,9 @@ static void obj_init(Obj* const obj)
     CU_ASSERT_EQUAL(stopFlag_init(&obj->stopFlag), 0);
 }
 
-static void obj_deinit(Obj* const obj)
+static void obj_destroy(Obj* const obj)
 {
-    stopFlag_deinit(&obj->stopFlag);
+    stopFlag_destroy(&obj->stopFlag);
 }
 
 static void sigTermHandler(int sig)
@@ -72,10 +72,8 @@ static int setup(void)
     int status = pthread_attr_init(&threadAttr);
 
     if (status == 0) {
-#if 0
         status = pthread_attr_setdetachstate(&threadAttr,
                 PTHREAD_CREATE_DETACHED);
-#endif
 
         if (status == 0)
             status = setSigTermHandler();
@@ -93,15 +91,20 @@ static int teardown(void)
 }
 
 static int
-returnObj(
-        void* const restrict  arg,
-        void** const restrict result)
+runObj(void* const arg)
 {
     Obj* const obj = (Obj*)arg;
 
     obj->ran = true;
-    *result = obj;
 
+    return 0;
+}
+
+static int
+getObj( void* const restrict arg,
+        void** const restrict result)
+{
+    *result = arg;
     return 0;
 }
 
@@ -114,14 +117,11 @@ trivialCancel(
 }
 
 static int
-runCondWait(
-        void* const restrict  arg,
-        void** const restrict result)
+runCondWait(void* const restrict arg)
 {
     Obj* const obj = (Obj*)arg;
 
     stopFlag_wait(&obj->stopFlag);
-    *result = NULL;
 
     return 0;
 }
@@ -139,9 +139,7 @@ cancelCondWait(
 }
 
 static int
-runPause(
-        void* const restrict  arg,
-        void** const restrict result)
+runPause(void* const restrict arg)
 {
     pause();
     return 0;
@@ -152,13 +150,13 @@ static void test_initialization(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, returnObj, trivialCancel);
+    Future* const future = future_new(&obj, runObj, trivialCancel, getObj);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
     CU_ASSERT_PTR_EQUAL(future_getObj(future), &obj);
-    CU_ASSERT_EQUAL(future_free(future), 0);
+    future_free(future);
     CU_ASSERT_FALSE(obj.ran);
 
-    obj_deinit(&obj);
+    obj_destroy(&obj);
 }
 
 static void* runFuture(void* const arg)
@@ -174,21 +172,18 @@ static void test_execution(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, returnObj, trivialCancel);
+    Future* const future = future_new(&obj, runObj, trivialCancel, getObj);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;
-    CU_ASSERT_EQUAL(pthread_create(&thread, NULL, runFuture, future), 0);
-    future_setThread(future, thread);
+    CU_ASSERT_EQUAL(pthread_create(&thread, &threadAttr, runFuture, future), 0);
 
     void* result;
-    CU_ASSERT_EQUAL(future_getResult(future, &result), 0);
+    CU_ASSERT_EQUAL(future_getAndFree(future, &result), 0);
     CU_ASSERT_PTR_EQUAL(result, &obj);
     CU_ASSERT_TRUE(obj.ran);
 
-    CU_ASSERT_EQUAL(future_free(future), 0);
-
-    obj_deinit(&obj);
+    obj_destroy(&obj);
 }
 
 static void test_cancellation(void)
@@ -196,22 +191,20 @@ static void test_cancellation(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runCondWait, cancelCondWait);
+    Future* const future = future_new(&obj, runCondWait, cancelCondWait,
+            getObj);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;
-    CU_ASSERT_EQUAL(pthread_create(&thread, NULL, runFuture, future), 0);
-    future_setThread(future, thread);
+    CU_ASSERT_EQUAL(pthread_create(&thread, &threadAttr, runFuture, future), 0);
 
     CU_ASSERT_EQUAL(future_cancel(future), 0);
 
     void* result;
-    CU_ASSERT_EQUAL(future_getResult(future, &result), ECANCELED);
+    CU_ASSERT_EQUAL(future_getAndFree(future, &result), ECANCELED);
     CU_ASSERT_FALSE(obj.ran);
 
-    CU_ASSERT_EQUAL(future_free(future), 0);
-
-    obj_deinit(&obj);
+    obj_destroy(&obj);
 }
 
 static void test_defaultCancellation(void)
@@ -219,22 +212,19 @@ static void test_defaultCancellation(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runPause, NULL);
+    Future* const future = future_new(&obj, runPause, NULL, getObj);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;
     CU_ASSERT_EQUAL(pthread_create(&thread, &threadAttr, runFuture, future), 0);
-    future_setThread(future, thread);
 
     CU_ASSERT_EQUAL(future_cancel(future), 0);
 
     void* result;
-    CU_ASSERT_EQUAL(future_getResult(future, &result), ECANCELED);
+    CU_ASSERT_EQUAL(future_getAndFree(future, &result), ECANCELED);
     CU_ASSERT_FALSE(obj.ran);
 
-    CU_ASSERT_EQUAL(future_free(future), 0);
-
-    obj_deinit(&obj);
+    obj_destroy(&obj);
 }
 
 int main(

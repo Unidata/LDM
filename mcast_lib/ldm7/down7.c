@@ -69,9 +69,28 @@
 static pthread_key_t  down7Key;
 
 /**
- * Lockout for initializing `down7Key`:
+ * Lockout for creating `down7Key`:
  */
 static pthread_once_t down7KeyControl = PTHREAD_ONCE_INIT;
+
+inline static void
+assertLocked(pthread_mutex_t* const mutex)
+{
+#ifndef NDEBUG
+    int status = pthread_mutex_trylock(mutex);
+    log_assert(status != 0);
+#endif
+}
+
+inline static void
+assertUnlocked(pthread_mutex_t* const mutex)
+{
+#ifndef NDEBUG
+    int status = pthread_mutex_trylock(mutex);
+    log_assert(status == 0);
+    (void)pthread_mutex_unlock(mutex);
+#endif
+}
 
 /******************************************************************************
  * Proxy for an upstream LDM7
@@ -96,7 +115,7 @@ static int up7proxy_init(
         const int                 socket,
         struct sockaddr_in* const sockAddr)
 {
-    int       status;
+    int status;
 
     if (proxy == NULL || socket <= 0 || sockAddr == NULL) {
         status = LDM7_INVAL;
@@ -110,32 +129,58 @@ static int up7proxy_init(
         }
         else {
             proxy->remoteId = sockAddrIn_format(sockAddr);
+
             if (proxy->remoteId == NULL) {
                 log_add("Couldn't format socket address of upstream LDM7");
                 status = LDM7_SYSTEM;
             }
             else {
+                // `log_assert(status == 0)`
+
                 int sock = socket;
-                proxy->clnt = clnttcp_create(sockAddr, LDMPROG, SEVEN,
-                        &sock, 0, 0);
+                proxy->clnt = clnttcp_create(sockAddr, LDMPROG, SEVEN, &sock, 0,
+                        0);
+
                 if (proxy->clnt == NULL) {
                     log_add_syserr("Couldn't create RPC client for %s: %s",
                             proxy->remoteId);
-                    (void)pthread_mutex_destroy(&proxy->mutex);
                     status = LDM7_RPC;
                 }
-                else {
-                    status = 0;
-                }
+
                 if (status)
                     free(proxy->remoteId);
             } // `proxy->remoteId` allocated
+
             if (status)
                 pthread_mutex_destroy(&proxy->mutex);
-        } // `proxy->mutex` allocated
+        } // `proxy->mutex` initialized
     } // Non-NULL input arguments
 
     return status;
+}
+
+/**
+ * Idempotent.
+ *
+ * @param[in] proxy  Upstream LDM7 proxy.
+ * @post             `proxy->clnt == NULL`
+ */
+static void up7proxy_destroyClient(
+        Up7Proxy* const proxy)
+{
+    if (proxy->clnt) {
+        // Destroys *and* frees `clnt`. Won't close externally-created socket.
+        clnt_destroy(proxy->clnt);
+        proxy->clnt = NULL;
+    }
+}
+
+static int
+up7proxy_destroy(Up7Proxy* const proxy)
+{
+    up7proxy_destroyClient(proxy);
+    free(proxy->remoteId);
+    (void)pthread_mutex_destroy(&proxy->mutex);
 }
 
 /**
@@ -181,33 +226,15 @@ static int up7proxy_new(
 }
 
 /**
- * Idempotent.
- *
- * @param[in] proxy  Upstream LDM7 proxy.
- * @post             `proxy->clnt == NULL`
- */
-static void up7proxy_destroyClient(
-        Up7Proxy* const proxy)
-{
-    if (proxy->clnt) {
-        clnt_destroy(proxy->clnt); // won't close externally-created socket
-        proxy->clnt = NULL;
-    }
-}
-
-/**
  * Deletes a proxy for an upstream LDM7.
  * @param[in] proxy
  */
-static void up7proxy_delete(
+static void up7proxy_free(
         Up7Proxy* const proxy)
 {
+    log_debug_1("Entered");
     if (proxy) {
-        up7proxy_destroyClient(proxy);
-        int status = pthread_mutex_destroy(&proxy->mutex);
-        if (status)
-            log_errno_q(status, "Couldn't destroy mutex");
-        free(proxy->remoteId);
+        up7proxy_destroy(proxy);
         free(proxy);
     }
 }
@@ -222,6 +249,7 @@ static void
 up7proxy_lock(
     Up7Proxy* const proxy)
 {
+    log_debug_1("Entered");
     int status = pthread_mutex_lock(&proxy->mutex);
     log_assert(status == 0);
     log_assert(proxy->clnt != NULL);
@@ -236,6 +264,7 @@ static void
 up7proxy_unlock(
     Up7Proxy* const proxy)
 {
+    log_debug_1("Entered");
     int status = pthread_mutex_unlock(&proxy->mutex);
     log_assert(status == 0);
 }
@@ -337,7 +366,7 @@ up7proxy_subscribe(
  * multicast LDM receiver from the previous session (or the time-offset if
  * that product isn't found) to the first product received by the associated
  * multicast LDM receiver of this session (or the current time if that product
- * isn't found). Called by `pthread_create()`.
+ * isn't found).
  *
  * NB: If the current session ends before all backlog products have been
  * received, then the backlog products that weren't received will never be
@@ -382,24 +411,25 @@ up7proxy_requestBacklog(
  * Requests a data-product that was missed by the multicast LDM receiver.
  *
  * @param[in] proxy       Pointer to the upstream LDM7 proxy.
- * @param[in] prodId      LDM product-ID of missed data-product.
+ * @param[in] iProd       FMTP product-ID of missed data-product.
  * @retval    0           Success. A data-product was requested.
  * @retval    LDM7_RPC    RPC error. `log_add()` called.
  */
 static int
 up7proxy_requestProduct(
-    Up7Proxy* const      proxy,
+    Up7Proxy* const     proxy,
     const FmtpProdIndex iProd)
 {
     up7proxy_lock(proxy);
 
-    CLIENT* clnt = proxy->clnt;
     int     status;
+    CLIENT* clnt = proxy->clnt;
 
     log_debug_1("iProd=%lu", (unsigned long)iProd);
 
     // Asynchronous send => no reply
-    (void)request_product_7((FmtpProdIndex*)&iProd, clnt); // Safe cast
+    McastProdIndex index = iProd;
+    (void)request_product_7(&index, clnt);
 
     if (clnt_stat(clnt) == RPC_TIMEDOUT) {
         /*
@@ -510,6 +540,7 @@ backstop_new(
 static void
 backstop_free(Backstop* const backstop)
 {
+    log_debug_1("Entered");
     free(backstop);
 }
 
@@ -575,6 +606,7 @@ backstop_halt(
         Backstop* const backstop,
         const pthread_t thread)
 {
+    log_debug_1("Entered");
     mrm_shutDownMissedFiles(backstop->mrm);
 
     return 0;
@@ -711,6 +743,7 @@ ucastRcvr_halt(
         UcastRcvr* const ucastRcvr,
         const pthread_t  thread)
 {
+    log_debug_1("Entered");
     stopFlag_set(&ucastRcvr->stopFlag);
     pthread_kill(thread, SIGTERM);
 }
@@ -767,7 +800,7 @@ ucastRcvr_init(
         Downlet* const restrict   downlet)
 {
     SVCXPRT* xprt;
-    int      status = ucastRcvr_createXprt(sock, &ucastRcvr->xprt);
+    int      status = ucastRcvr_createXprt(sock, &xprt);
 
     if (status) {
         log_add("Couldn't create server-side transport on socket %d", sock);
@@ -776,25 +809,25 @@ ucastRcvr_init(
         char* remoteStr = ipv4Sock_getPeerString(sock);
 
         // Last argument == 0 => don't register with portmapper
-        if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
+        if (!svc_register(ucastRcvr->xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
             log_add("Couldn't register one-time RPC server for receiving "
                     "data-products from \"%s\"",  remoteStr);
             status = LDM7_RPC;
         }
         else {
-            ucastRcvr->xprt = xprt;
-            ucastRcvr->remoteStr = remoteStr;
-            ucastRcvr->downlet = downlet;
-
             status = stopFlag_init(&ucastRcvr->stopFlag);
             log_assert(status == 0);
+
+            ucastRcvr->downlet = downlet;
+            ucastRcvr->remoteStr = remoteStr;
+            ucastRcvr->xprt = xprt;
 
             status = LDM7_OK;
         } // LDM7 service registered
 
         if (status)
             svc_destroy(xprt);
-    } // `xprt` initialized
+    } // `ucastRcvr->xprt` initialized
 
     return status;
 }
@@ -845,6 +878,7 @@ ucastRcvr_new(
 static void
 ucastRcvr_free(UcastRcvr* const ucastRcvr)
 {
+    log_debug_1("Entered");
     ucastRcvr_destroy(ucastRcvr);
     free(ucastRcvr);
 }
@@ -870,7 +904,7 @@ mcastRcvr_init(
     Mlr* mlr = mlr_new(mcastInfo, iface, pq, downlet);
 
     if (mlr == NULL) {
-        log_add("Couldn't construct multicast LDM receiver");
+        log_add("Couldn't create multicast LDM receiver");
         status = LDM7_SYSTEM;
     }
     else {
@@ -911,6 +945,7 @@ mcastRcvr_new(
 inline static void
 mcastRcvr_free(McastRcvr* const mcastRcvr)
 {
+    log_debug_1("Entered");
     mcastRcvr_destroy(mcastRcvr);
     free(mcastRcvr);
 }
@@ -940,7 +975,7 @@ mcastRcvr_halt(
         McastRcvr* const mcastRcvr,
         const pthread_t  thread)
 {
-    log_debug_1("Stopping multicast receiver");
+    log_debug_1("Entered");
     mlr_halt(mcastRcvr->mlr);
 
     return 0;
@@ -958,24 +993,38 @@ typedef struct backlogger {
 } Backlogger;
 
 /**
- *
  * @param[out] backlogger  Backlog requester
  * @param[in]  before      Signature of first product received via multicast
  * @param[in]  downlet     One-time downstream LDM7. Must exist until
  *                         `backlogger_destroy()` is called.
+ * @retval     0           Success
+ * @retval     EAGAIN      Out of resources. `log_add()` called.
+ * @retval     ENOMEM      Out of memory. `log_add()` called.
  */
-static void
+static int
 backlogger_init(
         Backlogger* const backlogger,
         const signaturet  before,
         Downlet* const    downlet)
 {
-    backlogger->downlet = downlet;
-
     int status = stopFlag_init(&backlogger->stopFlag);
-    log_assert(status == 0);
 
-    (void)memcpy(backlogger->before, before, sizeof(signaturet));
+    if (status) {
+        log_add("Couldn't initialize stop flag");
+    }
+    else {
+        backlogger->downlet = downlet;
+
+        (void)memcpy(backlogger->before, before, sizeof(signaturet));
+    }
+
+    return status;
+}
+
+static void
+backlogger_destroy(Backlogger* const backlogger)
+{
+    stopFlag_destroy(&backlogger->stopFlag);
 }
 
 static Backlogger*
@@ -986,8 +1035,13 @@ backlogger_new(
     Backlogger* backlogger = log_malloc(sizeof(Backlogger),
             "missed-product backlog requester");
 
-    if (backlogger)
-        backlogger_init(backlogger, before, downlet);
+    if (backlogger) {
+        if (backlogger_init(backlogger, before, downlet)) {
+            log_add("Couldn't initialize missed-product backlog requester");
+            free(backlogger);
+            backlogger = NULL;
+        }
+    }
 
     return backlogger;
 }
@@ -995,6 +1049,8 @@ backlogger_new(
 inline static void
 backlogger_free(Backlogger* const backlogger)
 {
+    log_debug_1("Entered");
+    backlogger_destroy(backlogger);
     free(backlogger);
 }
 
@@ -1025,6 +1081,7 @@ backlogger_halt(
         Backlogger* const backlogger,
         const pthread_t   thread)
 {
+    log_debug_1("Entered");
     stopFlag_set(&backlogger->stopFlag);
     pthread_kill(thread, SIGTERM);
 
@@ -1090,7 +1147,7 @@ downlet_waitForStatusChange(Downlet* const downlet)
         status = future_getResult(future, NULL);
 
         // A one-time downstream LDM7 should not be terminated due to the
-        // successful completion of its backlogger task
+        // successful completion of its backlog requester task
         if (future != downlet->backloggerFuture)
             status = LDM7_SYSTEM;
 
@@ -1243,7 +1300,7 @@ downlet_getSocket(
 }
 
 /**
- * Initializes the connection to an upstream LDM7.
+ * Creates a client that's connected to an upstream LDM7 server.
  *
  * @param[in]  downlet        Pointer to one-time downstream LDM7.
  * @retval     0              Success. `downlet->up7proxy` and `downlet->sock`
@@ -1262,7 +1319,7 @@ downlet_getSocket(
  * @retval     LDM7_UNAUTH    Not authorized. `log_add()` called.
  */
 static int
-downlet_initConn(Downlet* const downlet)
+downlet_initClient(Downlet* const downlet)
 {
     int                     sock;
     struct sockaddr_storage sockAddr;
@@ -1291,7 +1348,7 @@ static void
 downlet_destroyConn(
         Downlet* downlet)
 {
-    up7proxy_delete(downlet->up7proxy); // won't close externally-created socket
+    up7proxy_free(downlet->up7proxy); // won't close externally-created socket
     downlet->up7proxy = NULL;
 
     (void)close(downlet->sock);
@@ -1382,12 +1439,14 @@ downlet_init(
                 status = ENOMEM;
             }
             else {
-                // Initializes `downlet->up7Proxy` and `downlet->sock`
-                status = downlet_initConn(downlet);
+                // Sets `downlet->up7Proxy` and `downlet->sock`
+                status = downlet_initClient(downlet);
 
                 if (status) {
-                    log_add("Couldn't establish connection to upstream LDM7 "
-                            "server %s", downlet->upId);
+                    char* feedSpec = feedtypet_format(downlet->feedtype);
+                    log_add("Couldn't create client for feed %s from server %s",
+                            downlet->feedId, downlet->upId);
+                    free(feedSpec);
                     completer_free(downlet->completer);
                 }
             } // Completion service created
@@ -1430,10 +1489,8 @@ downlet_destroy(Downlet* const downlet)
  * @return          Error code. `log_add()` called.
  * @see            `downlet_haltUcastRcvr()`
  */
-static int
-downlet_runUcastRcvr(
-        void* const restrict  arg,
-        void** const restrict result)
+inline static int
+downlet_runUcastRcvr(void* const restrict arg)
 {
     return ucastRcvr_run(((Downlet*)arg)->ucastRcvr);
 }
@@ -1467,18 +1524,19 @@ downlet_createUcastRcvr(Downlet* const downlet)
     UcastRcvr* const ucastRcvr = ucastRcvr_new(downlet->sock, downlet);
 
     if (ucastRcvr == NULL) {
-        log_add("Couldn't construct %s", id);
+        log_add("Couldn't create %s", id);
         status = LDM7_SYSTEM;
     }
     else {
+        downlet->ucastRcvr = ucastRcvr;
+
         if (completer_submit(downlet->completer, downlet, downlet_runUcastRcvr,
-                downlet_haltUcastRcvr) == NULL) {
+                downlet_haltUcastRcvr, NULL) == NULL) {
             log_add("Couldn't submit %s for execution", id);
             ucastRcvr_free(ucastRcvr);
             status = LDM7_SYSTEM;
         }
         else {
-            downlet->ucastRcvr = ucastRcvr;
             status = 0; // Success
         }
     } // `ucastRcvr` created
@@ -1486,10 +1544,8 @@ downlet_createUcastRcvr(Downlet* const downlet)
     return status;
 }
 
-static int
-downlet_runBackstop(
-        void* const restrict  arg,
-        void** const restrict result)
+inline static int
+downlet_runBackstop(void* const restrict arg)
 {
     return backstop_run(((Downlet*)arg)->backstop);
 }
@@ -1512,18 +1568,19 @@ downlet_createBackstop(Downlet* const downlet)
             downlet);
 
     if (backstop == NULL) {
-        log_add("Couldn't construct %s", id);
+        log_add("Couldn't create %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        if (completer_submit(downlet->completer, downlet,
-                downlet_runBackstop, downlet_haltBackstop) == NULL) {
+        downlet->backstop = backstop;
+
+        if (completer_submit(downlet->completer, downlet, downlet_runBackstop,
+                downlet_haltBackstop, NULL) == NULL) {
             log_add("Couldn't submit %s for execution", id);
             backstop_free(backstop);
             status = LDM7_SYSTEM;
         }
         else {
-            downlet->backstop = backstop;
             status = 0; // Success
         }
     } // `backstop` created
@@ -1531,10 +1588,8 @@ downlet_createBackstop(Downlet* const downlet)
     return status;
 }
 
-static int
-downlet_runMcastRcvr(
-        void* const restrict  arg,
-        void** const restrict result)
+inline static int
+downlet_runMcastRcvr(void* const restrict  arg)
 {
     return mcastRcvr_run(((Downlet*)arg)->mcastRcvr);
 }
@@ -1567,18 +1622,19 @@ downlet_createMcastRcvr(
             downlet->iface, downlet->pq, downlet);
 
     if (mcastRcvr == NULL) {
-        log_add("Couldn't construct %s", id);
+        log_add("Couldn't create %s", id);
         status = LDM7_SYSTEM;
     }
     else {
+        downlet->mcastRcvr = mcastRcvr;
+
         if (completer_submit(downlet->completer, downlet, downlet_runMcastRcvr,
-                downlet_haltMcastRcvr) == NULL) {
+                downlet_haltMcastRcvr, NULL) == NULL) {
             log_add("Couldn't submit %s for execution", id);
             mcastRcvr_free(mcastRcvr);
             status = LDM7_SYSTEM;
         }
         else {
-            downlet->mcastRcvr = mcastRcvr;
             status = 0;
         }
     } // `mcastRcvr` created
@@ -1586,10 +1642,8 @@ downlet_createMcastRcvr(
     return status;
 }
 
-static int
-downlet_runBacklogger(
-        void* const restrict  arg,
-        void** const restrict result)
+inline static int
+downlet_runBacklogger(void* const restrict arg)
 {
     return backlogger_run(((Downlet*)arg)->backlogger);
 }
@@ -1607,27 +1661,29 @@ downlet_createBacklogger(
         Downlet* const   downlet,
         const signaturet before)
 {
-    static char id[] = "one-time LDM7 backlog requester";
     int         status;
+    static char id[] = "one-time LDM7 backlog requester";
 
-    Backlogger* const backlogger = backlogger_new(before, downlet);
+    downlet->backlogger = backlogger_new(before, downlet);
 
-    if (backlogger == NULL) {
-        log_add("Couldn't construct %s", id);
+    if (downlet->backlogger == NULL) {
+        log_add("Couldn't create %s", id);
         status = LDM7_SYSTEM;
     }
     else {
-        if (completer_submit(downlet->completer, downlet, downlet_runBacklogger,
-                downlet_haltBacklogger)) {
+        downlet->backloggerFuture = completer_submit(downlet->completer,
+                downlet, downlet_runBacklogger, downlet_haltBacklogger, NULL);
+
+        if (downlet->backloggerFuture == NULL) {
             log_add("Couldn't submit %s for execution", id);
-            backlogger_free(backlogger);
+            backlogger_free(downlet->backlogger);
+            downlet->backlogger = NULL;
             status = LDM7_SYSTEM;
         }
         else {
-            downlet->backlogger = backlogger;
             status = 0; // Success
         }
-    } // `backlogger` created
+    } // `downlet->backlogger` created
 
     return status;
 }
@@ -1648,9 +1704,8 @@ downlet_destroyTasks(Downlet* const downlet)
         log_add("Couldn't shut down completion service");
     }
     else {
-        Future* future;
-        while ((future = completer_take(downlet->completer)))
-            future_free(future);
+        for (Future* future; (future = completer_take(downlet->completer)); )
+            future_free(future); // No result objects => no memory leaks
 
         backlogger_free(downlet->backlogger);
         mcastRcvr_free(downlet->mcastRcvr);
@@ -1718,41 +1773,29 @@ downlet_run(Downlet* const downlet)
             "pq=\"%s\"", downlet->upId, s_feedtypet(downlet->feedtype),
             pq_getPathname(downlet->pq));
 
-    // Sets `downlet->{up7Proxy,sock}`
-    downlet->status = downlet_initConn(downlet);
+    // Blocks until error, reply, or timeout; sets `downlet->mcastInfo`
+    downlet->status = up7proxy_subscribe(downlet->up7proxy, downlet->feedtype,
+            downlet->vcEnd, &downlet->mcastInfo);
 
     if (downlet->status) {
-        char* feedSpec = feedtypet_format(downlet->feedtype);
-        log_add("Couldn't create client for subscribing to feed %s from %s",
-                downlet->feedId, downlet->upId);
-        free(feedSpec);
+        log_add("Couldn't subscribe to feed %s from %s", downlet->feedId,
+                downlet->upId);
     }
     else {
-        // Blocks until error, reply, or timeout; sets `downlet->mcastInfo`
-        downlet->status = up7proxy_subscribe(downlet->up7proxy,
-                downlet->feedtype, downlet->vcEnd, &downlet->mcastInfo);
+        downlet->status = downlet_createTasks(downlet);
 
         if (downlet->status) {
-            log_add("Couldn't subscribe to feed %s from %s", downlet->feedId,
-                    downlet->upId);
+            log_add("Error starting subtasks for feed %s from %s",
+                    downlet->feedId, downlet->upId);
         }
         else {
-            downlet->status = downlet_createTasks(downlet);
+            downlet->status = downlet_waitForStatusChange(downlet);
 
-            if (downlet->status) {
-                log_add("Error starting subtasks for feed %s from %s",
-                        downlet->feedId, downlet->upId);
-            }
-            else {
-                downlet->status = downlet_waitForStatusChange(downlet);
-                (void)downlet_destroyTasks(downlet);
-            } // Subtasks started
+            (void)downlet_destroyTasks(downlet);
+        } // Subtasks started
 
-            mi_delete(downlet->mcastInfo); // NULL safe
-        } // `downlet->mcastInfo` set
-
-        downlet_destroyConn(downlet);
-    } // Subscription client allocated
+        mi_delete(downlet->mcastInfo); // NULL safe
+    } // `downlet->mcastInfo` set
 
     return downlet->status;
 }
@@ -2078,15 +2121,22 @@ down7_init(
                             status = LDM7_SYSTEM;
                         }
                         else {
-                            status = 0; // Success
-                        }
+                            status = stopFlag_init(&down7->stopFlag);
+
+                            if (status) {
+                                log_add("Couldn't initialized stop flag");
+                            }
+                            else {
+                                status = 0; // Success
+                            }
+                        } // Downstream LDM7 thread-key created
 
                         if (status)
                             pthread_mutex_destroy(&down7->numProdMutex);
                     } // `down7->numProdMutex` initialized
 
                     if (status)
-                        vcEndPoint_deinit(&down7->vcEnd);
+                        vcEndPoint_destroy(&down7->vcEnd);
                 } // `down7->vcEnd` initialized
 
                 if (status)
@@ -2094,7 +2144,7 @@ down7_init(
             } // `down7->iface` initialized
 
             if (status)
-                sa_delete(down7->servAddr);
+                sa_free(down7->servAddr);
         } // `down7->servAddr` initialized
     } // Product-queue is thread-safe
 
@@ -2107,10 +2157,10 @@ down7_destroy(Down7* const down7)
     // `down7Key` is not destroyed because it's static
 
     pthread_mutex_destroy(&down7->numProdMutex);
-    vcEndPoint_deinit(&down7->vcEnd);
+    vcEndPoint_destroy(&down7->vcEnd);
     free(down7->iface);
 
-    sa_delete(down7->servAddr);
+    sa_free(down7->servAddr);
 
     return 0;
 }
@@ -2172,6 +2222,7 @@ down7_new(
 int
 down7_free(Down7* const down7)
 {
+    log_debug_1("Entered");
     int status = down7_destroy(down7);
     free(down7);
     return status;
@@ -2218,6 +2269,7 @@ down7_run(Down7* const down7)
             log_flush_warning();
 
             // Problem might be temporary
+            status = 0;
             struct timespec when;
             when.tv_sec = time(NULL) + interval;
             when.tv_nsec = 0;
@@ -2235,7 +2287,7 @@ down7_run(Down7* const down7)
  * Halts a downstream LDM7 that's executing on another thread.
  *
  * @param[in] down7   Downstream LDM7
- * @param[in] thread  Thread on which the downstream LDM7 is executing
+ * @param[in] thread  Thread on which downstream LDM7 is executing
  */
 void
 down7_halt(

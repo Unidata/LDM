@@ -1,5 +1,5 @@
 /**
- * This file defines a "stop" flag.
+ * This file defines a "stop" flag for asynchronous tasks.
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
@@ -9,11 +9,11 @@
  *  Created on: May 2, 2018
  *      Author: Steven R. Emmerson
  */
-#include "../../misc/StopFlag.h"
-
 #include "config.h"
 
 #include "log.h"
+#include "Thread.h"
+#include "StopFlag.h"
 
 #include <pthread.h>
 #include <time.h>
@@ -39,42 +39,11 @@ condBroadcast(StopFlag* const stopFlag)
     log_assert(status == 0);
 }
 
-/**
- * Initializes a mutex.
- * @param[out] mutex        Mutex to be initialized
- * @retval     0            Success
- * @retval     ENOMEM       Out-of-memory. `log_add()` called.
- * @retval     EAGAIN       Insufficient resources. `log_add()` called.
- */
-static int
-initMutex(pthread_mutex_t* const mutex)
-{
-    pthread_mutexattr_t mutexAttr;
-    int                 status = pthread_mutexattr_init(&mutexAttr);
-
-    if (status) {
-        log_add_errno(status, "Couldn't initialize attributes of mutex");
-    }
-    else {
-        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
-        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK );
-
-        status = pthread_mutex_init(mutex, &mutexAttr);
-
-        if (status)
-            log_add_errno(status, "Couldn't initialize mutex");
-
-        (void)pthread_mutexattr_destroy(&mutexAttr);
-    } // `mutexAttr` initialized
-
-    return status;
-}
-
 int stopFlag_init(StopFlag* const stopFlag)
 {
     stopFlag->isSet = false;
 
-    int status = initMutex(&stopFlag->mutex);
+    int status = mutex_init(&stopFlag->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
     if (status == 0) {
         status = pthread_cond_init(&stopFlag->cond, NULL);
@@ -89,7 +58,7 @@ int stopFlag_init(StopFlag* const stopFlag)
     return status;
 }
 
-void stopFlag_deinit(StopFlag* const stopFlag)
+void stopFlag_destroy(StopFlag* const stopFlag)
 {
     int status;
 

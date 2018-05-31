@@ -1,0 +1,34 @@
+{
+   authnone_create
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   fun:my_authnone_create
+   fun:my_clnttcp_create
+   fun:up7proxy_init
+   fun:up7proxy_new
+   fun:downlet_initClient
+   fun:downlet_init
+   fun:downlet_try
+   fun:down7_run
+   fun:receiver_runDown7
+   fun:task_run
+   fun:future_run
+}
+{
+   RPC svc::xports
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:my_xprt_register
+   fun:makefd_xprt
+   fun:my_svcfd_create
+   fun:myUp7_init
+   fun:myUp7_new
+   fun:sender_run
+   fun:task_run
+   fun:future_run
+   fun:job_run
+   fun:start_thread
+   fun:clone
+}

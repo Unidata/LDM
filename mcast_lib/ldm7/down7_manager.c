@@ -143,7 +143,7 @@ elt_new(
                     free(elt->iface);
             } // `elt->iface` allocated
             if (failure)
-                sa_delete(elt->ul7);
+                sa_free(elt->ul7);
         } // `elt->ul7` allocated
         if (failure) {
             free(elt);
@@ -164,7 +164,7 @@ elt_free(
         Elt* const elt)
 {
     if (elt) {
-        sa_delete(elt->ul7);
+        sa_free(elt->ul7);
         free(elt->iface);
         free(elt);
     }

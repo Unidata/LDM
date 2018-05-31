@@ -64,7 +64,7 @@ allocateSpace(
         char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
-    log_debug_1("allocateSpace(): Entered: prodSize=%zu", prodSize);
+    log_debug_1("Entered: prodSize=%zu", prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
@@ -89,13 +89,13 @@ allocateSpace(
     else {
         if (log_is_enabled_debug) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            log_debug_1("allocateSpace(): Allocated queue-space for product: "
+            log_debug_1("Allocated queue-space for product: "
                     "sig=%s, size=%zu", sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
-    log_debug_1("allocateSpace(): Returning: prodStart=%p, prodSize=%zu",
-            *prodStart, prodSize);
+    log_debug_1("Returning: prodStart=%p, prodSize=%zu", *prodStart,
+            prodSize);
 
     return status;
 }
@@ -131,7 +131,7 @@ bop_func(
      */
     int  status;
 
-    log_debug_1("bop_func(): Entered: prodSize=%zu, metaSize=%u, prod=%p",
+    log_debug_1("prodSize=%zu, metaSize=%u, prod=%p",
             prodSize, metaSize, prod);
 
     if (sizeof(signaturet) > metaSize) {
@@ -141,8 +141,7 @@ bop_func(
     }
     else {
         char* prodStart;
-        status = allocateSpace(mlr, metadata, prodSize, &prodStart,
-                pqeIndex);
+        status = allocateSpace(mlr, metadata, prodSize, &prodStart, pqeIndex);
 
         if (status == 0)
             *prod = prodStart; // will be `NULL` if duplicate product
@@ -151,7 +150,7 @@ bop_func(
     if (status)
         log_flush_error(); // because called by FMTP layer
 
-    log_debug_1("bop_func(): Returning: prod=%p, prodSize=%zu",
+    log_debug_1("Returning: prod=%p, prodSize=%zu",
             *prod, prodSize);
 
     return status;
@@ -231,7 +230,7 @@ finishInsertion(
         if (log_is_enabled_info) {
             char infoStr[LDM_INFO_MAX];
 
-            log_info_q("Received: %s",
+            log_info_1("Received: %s",
                     s_prod_info(infoStr, sizeof(infoStr), info, 1));
         }
         lastReceived(mlr, info);

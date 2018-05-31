@@ -111,24 +111,22 @@ void PerProdNotifier::notify_of_bop(
     char sigStr[2*sizeof(signaturet)+1];
     (void)sprint_signaturet(sigStr, sizeof(sigStr),
             (const unsigned char*)metadata);
-    log_debug_1("PerProdNotifier::notify_of_bop(): Entered: "
-            "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
-                (unsigned long)iProd, prodSize, metaSize, sigStr);
+    log_debug_1("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
+            "metadata=%s", (unsigned long)iProd, prodSize, metaSize, sigStr);
 
     if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex))
         throw std::runtime_error(
                 "Error notifying receiving application about beginning-of-product");
     if (*prodStart == nullptr) {
-        log_info_q("PerProdNotifier::notify_of_bop(): Duplicate product: "
-                "prodIndex=%lu, prodSize=%zu, metaSize=%u, metadata=%s",
-                (unsigned long)iProd, prodSize, metaSize, sigStr);
+        log_info_q("Duplicate product: prodIndex=%lu, prodSize=%zu, "
+                "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
+                metaSize, sigStr);
     }
     else {
         std::unique_lock<std::mutex> lock(mutex);
         if (prodInfos.count(iProd)) {
             // Exists
-            log_info_q("PerProdNotifier::notify_of_bop(): Duplicate BOP: "
-                    "prodIndex=%lu, prodSize=%u",
+            log_info_q("Duplicate BOP: prodIndex=%lu, prodSize=%u",
                     (unsigned long)iProd, prodSize);
         }
         else {
@@ -150,8 +148,7 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const FmtpProdIndex prodIndex)
 {
-    log_debug_1("PerProdNotifier::notify_of_eop(): Entered: prodIndex=%lu",
-            (unsigned long)prodIndex);
+    log_debug_1("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
     std::unique_lock<std::mutex> lock(mutex);
     try {

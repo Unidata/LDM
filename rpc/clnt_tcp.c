@@ -102,6 +102,10 @@ clnttcp_call(
 		ct->ct_wait = timeout;
 	}
 
+	/*
+	 * The RPC message is flushed to the TCP connection if a reply is
+	 * expected (including `xdr_void()`) or a non-zero timeout is given.
+	 */
 	shipnow =
 	    (xdr_results == (xdrproc_t)0 && timeout.tv_sec == 0
 	    && timeout.tv_usec == 0) ? FALSE : TRUE;

@@ -67,7 +67,7 @@ char* vcEndPoint_format(const VcEndPoint* vcEnd)
     return str;
 }
 
-void vcEndPoint_deinit(VcEndPoint* const end)
+void vcEndPoint_destroy(VcEndPoint* const end)
 {
     if (end) {
         free(end->portId);
@@ -75,10 +75,10 @@ void vcEndPoint_deinit(VcEndPoint* const end)
     }
 }
 
-void vcEndPoint_delete(VcEndPoint* const end)
+void vcEndPoint_free(VcEndPoint* const end)
 {
     if (end) {
-        vcEndPoint_deinit(end);
+        vcEndPoint_destroy(end);
         free(end);
     }
 }
