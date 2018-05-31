@@ -11,7 +11,7 @@
 
 #include "config.h"
 
-#include "mutex.h"
+#include "Thread.h"
 #include "ldmfork.h"
 #include "log.h"
 
