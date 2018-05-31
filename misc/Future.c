@@ -127,7 +127,6 @@ struct future {
     State           state;
     int             runFuncStatus;
     bool            wasCanceled;
-    bool            haveThread;
     bool            runFuncCalled;
 };
 
