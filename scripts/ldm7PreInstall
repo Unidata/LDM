@@ -1,0 +1,18 @@
+# Terminate on error
+set -x
+
+# Ensure installation of dependent packages
+yum -y update zlib-devel libxml2-devel gnuplot libyaml-devel
+
+# Ensure default access to a C++11-compliant version of g++(1)
+if ! g++ -dumpversion | grep -q '4.[89]'; then
+    wget http://people.centos.org/tru/devtools-2/devtools-2.repo -O \
+            /etc/yum.repos.d/devtools-2.repo
+    yum -y install devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++
+    scl enable devtoolset-2 bash
+    if ! fgrep -q 'source /opt/rh/devtoolset-2/enable' $HOME/.bashrc; then
+        echo >>$HOME/.bashrc
+        echo '# Obtain a C++11-compliant g++(1) by default' >>$HOME/.bashrc
+        echo 'source /opt/rh/devtoolset-2/enable' >>$HOME/.bashrc
+    fi
+fi

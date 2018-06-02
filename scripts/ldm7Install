@@ -1,0 +1,19 @@
+# Exit on error
+set -x
+
+# Go to the top-level source directory
+cd `dirname $0`
+cd ..
+
+# Ensure default access to a C++11-compliant version of g++(1)
+if ! g++ -dumpversion | grep -q '4.[89]'; then
+    scl enable devtoolset-2 bash
+fi
+
+# Configure the build
+./configure --enable-debug --with-multicast --disable-root-actions \
+        --enable-port=38800 CFLAGS='-g -O0' CXXFLAGS='-g -std=c++11' \
+        >&configure.log && echo Configured
+
+# Build and install the package
+make install >&install.log && echo Installed
