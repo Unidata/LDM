@@ -168,12 +168,6 @@ endif
 
 if HAVE_CUNIT
 
-CunitAssertTest_SOURCES		= CunitAssertTest.c
-CunitAssertTest_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \
-                                  @LIBS_CUNIT@
-check_PROGRAMS			+= CunitAssertTest
-
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -196,8 +190,8 @@ up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
-# `up7_down7_test is not part of `check_PROGRAMS` in order to have it built by
-# `make check` but executed by `make check-local`.
+## `up7_down7_test is not part of `check_PROGRAMS` in order to have it built by
+## `make check` but executed by `make check-local`.
 check_PROGRAMS			+= up7_down7_test
 
 MldmRpc_test_SOURCES		= MldmRpc_test.c
@@ -209,13 +203,17 @@ cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
 check_PROGRAMS			+= cond_wait_test
 
-up7_down7_test.log:	up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test >&$@
-				  
 SUFFIXES:	.vg .sup .supp .log
-                                          
+
 %.log:	%
 	./% >&$@
+
+up7_down7_test.log:	up7_down7_test
+	-rm $@
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test -l $@ >>$@
+
+check-local:	up7_down7_test
+	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 
 # Precursor to Valgrind suppression file
 %.supp:	%
@@ -230,11 +228,8 @@ SUFFIXES:	.vg .sup .supp .log
 	    --mode=execute valgrind --leak-check=full --show-reachable=yes \
 	    $${supOpt} ./$< >&$@
 
-check-up7_down7_test:		up7_down7_test
-	PATH=$(top_builddir)/mldm_sender:$$PATH ./up7_down7_test
 endif
 
 #TESTS_ENVIRONMENTS	= PATH=$(top_builddir)/mldm_sender:$$PATH
 
-check-local:	check-up7_down7_test
 TESTS		= $(check_PROGRAMS)

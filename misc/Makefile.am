@@ -87,6 +87,12 @@ semRWLock.h:		semRWLock.hin semRWLock.c
 check_PROGRAMS	=
 
 if HAVE_CUNIT
+
+#CunitAssertTest_SOURCES		= CunitAssertTest.c
+#CunitAssertTest_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \
+#                                  @LIBS_CUNIT@
+
 Future_test_SOURCES		= Future_test.c
 Future_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Future_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
