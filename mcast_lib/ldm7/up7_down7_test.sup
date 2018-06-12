@@ -5,15 +5,7 @@
    fun:calloc
    fun:my_authnone_create
    fun:my_clnttcp_create
-   fun:up7proxy_init
-   fun:up7proxy_new
-   fun:downlet_initClient
-   fun:downlet_init
-   fun:downlet_try
-   fun:down7_run
-   fun:receiver_runDown7
-   fun:task_run
-   fun:future_run
+   ...
 }
 {
    RPC svc::xports
@@ -31,4 +23,49 @@
    fun:job_run
    fun:start_thread
    fun:clone
+}
+{
+   deliver_backlog_product_7 xdrrec_putbytes
+   Memcheck:Param
+   write(buf)
+   obj:/usr/lib64/libpthread-2.17.so
+   fun:writetcp
+   fun:flush_out
+   ...
+   fun:clnttcp_call
+   fun:deliver_backlog_product_7
+   ...
+}
+{
+   parseXmlFile
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:parseXmlFile
+   ...
+}
+{
+   subscribe_7_svc sa_copy
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:strdup
+   fun:sa_copy
+   fun:mi_init
+   fun:mi_copy
+   fun:me_setSubscriptionReply
+   fun:umm_subscribe
+   fun:up7_subscribe
+   fun:subscribe_7_svc
+   ...
+}
+{
+   xd_getBuffer
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:xd_getBuffer
+   fun:xdr_product
+   ...
 }
