@@ -1057,8 +1057,10 @@ inline static void
 backlogger_free(Backlogger* const backlogger)
 {
     log_debug_1("Entered");
-    backlogger_destroy(backlogger);
-    free(backlogger);
+    if (backlogger) {
+        backlogger_destroy(backlogger);
+        free(backlogger);
+    }
 }
 
 // Forward declaration
@@ -2252,16 +2254,15 @@ down7_init(
 static Ldm7Status
 down7_destroy(Down7* const down7)
 {
+    executor_free(down7->executor);
+    stopFlag_destroy(&down7->stopFlag);
     /*
      * `down7Key` is not deleted because it might not have been created during
      * the creation of `down7`.
      */
-
-    executor_free(down7->executor);
     pthread_mutex_destroy(&down7->numProdMutex);
     vcEndPoint_destroy(&down7->vcEnd);
     free(down7->iface);
-
     sa_free(down7->servAddr);
 
     return 0;
@@ -2294,7 +2295,18 @@ down7_runDownlet(
         void** const restrict result)
 {
     Down7* const down7 = (Down7*)arg;
-    int          status = downlet_run(&down7->downlet);
+    int          status = downlet_init(&down7->downlet, down7, down7->servAddr,
+            down7->feedtype, down7->iface, &down7->vcEnd, down7->pq,
+            down7->mrm);
+
+    if (status) {
+        log_add("Couldn't initialize one-time, downstream LDM7");
+    }
+    else {
+        status = downlet_run(&down7->downlet);
+
+        downlet_destroy(&down7->downlet);
+    } // `down7->downlet` initialized
 
     /**
      * Flush all log messages because this is the end of an asynchronous task.
@@ -2322,7 +2334,10 @@ down7_runDownlet(
 }
 
 /**
- * Halts the one-time, downstream LDM7 of a downstream LDM7.
+ * Halts the one-time, downstream LDM7 of a downstream LDM7. The execution
+ * service should only call this function if it has already called
+ * `down7_runDownlet()`; consequently, we can depend on `down7->downlet` being
+ * initialized.
  *
  * @param[in] arg      Downstream LDM7
  * @retval    0        Success
@@ -2340,39 +2355,6 @@ down7_haltDownlet(
         log_add("Couldn't halt one-time, downstream LDM7");
 
     return status;
-}
-
-/**
- * Creates, executes, and destroys a one-time, downstream LDM7. Doesn't return
- * until an error occurs.
- *
- * @param[in] down7          Downstream LDM7
- * @retval    NULL           Failure. `log_add()` called.
- * @return                   Future of one-time, downstream LDM7 task
- */
-static Future*
-down7_runOnce(Down7* const restrict down7)
-{
-    Future* future;
-    int     status = downlet_init(&down7->downlet, down7, down7->servAddr,
-            down7->feedtype, down7->iface, &down7->vcEnd, down7->pq,
-            down7->mrm);
-
-    if (status) {
-        log_add("Couldn't initialize one-time, downstream LDM7");
-        future = NULL;
-    }
-    else {
-        future = executor_submit(down7->executor, down7, down7_runDownlet,
-                down7_haltDownlet);
-
-        if (future == NULL) {
-            log_add("Couldn't submit one-time, downstream LDM7 for execution");
-            downlet_destroy(&down7->downlet);
-        }
-    } // `down7->downlet` initialized
-
-    return future;
 }
 
 /**
@@ -2469,7 +2451,8 @@ down7_run(Down7* const down7)
     int status = 0;
 
     while (!stopFlag_isSet(&down7->stopFlag) && status == 0) {
-        Future* future = down7_runOnce(down7);
+        Future* const future = executor_submit(down7->executor, down7,
+            down7_runDownlet, down7_haltDownlet);
 
         if (future == NULL) {
             log_add("Can't execute downstream LDM7 once");
