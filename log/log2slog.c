@@ -241,7 +241,7 @@ static void stream_log(
                 "                                                    ";
 
         int nbytes = fprintf(dest->stream, " %s[%d]", ident, getpid());
-        (void)fprintf(dest->stream, "%.*s", MAX(25-nbytes, 0), padding);
+        (void)fprintf(dest->stream, "%.*s", MAX(26-nbytes, 0), padding);
 
         nbytes = fprintf(dest->stream, " %s:%d:%s()", logl_basename(loc->file),
                 loc->line, loc->func);
@@ -269,11 +269,13 @@ static inline void stream_flush(
 
 static int stderr_lock(dest_t* const dest)
 {
+    flockfile(dest->stream);
     return 0;
 }
 
 static int stderr_unlock(dest_t* const dest)
 {
+    funlockfile(dest->stream);
     return 0;
 }
 
@@ -291,7 +293,7 @@ static int stderr_init(
     dest->get_fd = stream_get_fd;
     dest->fini = stream_flush;
     dest->lock = stderr_lock;
-    dest->unlock = stderr_lock;
+    dest->unlock = stderr_unlock;
     dest->stream = stderr;
     return 0;
 }
