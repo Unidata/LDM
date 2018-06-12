@@ -175,6 +175,12 @@ endif
 
 if HAVE_CUNIT
 
+cond_wait_test_SOURCES		= cond_wait_test.c
+cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+				  @LIBS_CUNIT@
+check_PROGRAMS			+= cond_wait_test
+TESTS				+= cond_wait_test
+
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
@@ -196,23 +202,17 @@ prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
 check_PROGRAMS			+= prod_index_queue_test
 TESTS				+= prod_index_queue_test
 
+MldmRpc_test_SOURCES		= MldmRpc_test.c
+MldmRpc_test_LDADD		= $(LDADD) @LIBS_CUNIT@
+check_PROGRAMS			+= MldmRpc_test
+TESTS				+= MldmRpc_test
+
 up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
                                   @LIBS_CUNIT@
 check_PROGRAMS			+= up7_down7_test
 TESTS				+= up7_down7_test
-
-MldmRpc_test_SOURCES		= MldmRpc_test.c
-MldmRpc_test_LDADD		= $(LDADD) @LIBS_CUNIT@
-check_PROGRAMS			+= MldmRpc_test
-TESTS				+= MldmRpc_test
-
-cond_wait_test_SOURCES		= cond_wait_test.c
-cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-				  @LIBS_CUNIT@
-check_PROGRAMS			+= cond_wait_test
-TESTS				+= cond_wait_test
 
 SUFFIXES:	.vg .sup .supp
 
