@@ -320,6 +320,45 @@ bool log_is_level_enabled(
 } while (0)
 
 /**
+ * Logs a single message at the NOTICE level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ */
+#define log_notice_1(...) do {\
+    if (LOG_LEVEL_NOTICE >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log_1(&loc, LOG_LEVEL_NOTICE, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
+ * Logs a single message at the WARNING level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ */
+#define log_warning_1(...) do {\
+    if (LOG_LEVEL_WARNING >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log_1(&loc, LOG_LEVEL_WARNING, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
+ * Logs a single message at the ERROR level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ */
+#define log_error_1(...) do {\
+    if (LOG_LEVEL_ERROR >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log_1(&loc, LOG_LEVEL_ERROR, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
  * Adds a message to the current thread's queue of messages:
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
