@@ -348,11 +348,10 @@ Future*
 completer_submit(
         Completer* const comp,
         void* const      obj,
-        int            (*run)(void* obj),
-        int            (*halt)(void* obj, pthread_t thread),
-        int            (*get)(void* obj, void** result))
+        int            (*run)(void* obj, void** result),
+        int            (*halt)(void* obj, pthread_t thread))
 {
-    Future* future = executor_submit(comp->exec, obj, run, halt, get);
+    Future* future = executor_submit(comp->exec, obj, run, halt);
 
     if (future == NULL) {
         log_add("Couldn't submit task to execution service");

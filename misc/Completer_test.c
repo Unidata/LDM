@@ -3,15 +3,14 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * This file tests the `Completer` module.
+ * This file tests the completion-service module.
  *
  * @author: Steven R. Emmerson
  */
 
-#include "../../misc/Completer.h"
-
 #include "config.h"
 
+#include "Completer.h"
 #include "log.h"
 #include "Thread.h"
 
@@ -62,7 +61,9 @@ static int teardown(void)
     return 0;
 }
 
-static int trivialRun(void* const arg)
+static int retNoResult(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     return 0;
 }
@@ -93,7 +94,9 @@ static int retObj(
     return 0;
 }
 
-static int noRet(void* const restrict  arg)
+static int noRet(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     pause();
     return 0;
@@ -122,7 +125,9 @@ pauseTask_destroy(PauseTask* const task)
 }
 
 static int
-pauseTask_run(void* const  arg)
+pauseTask_run(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     PauseTask* task = (PauseTask*)arg;
 
@@ -162,8 +167,7 @@ static void test_nullJob(void)
 {
     Completer* comp = completer_new();
 
-    Future* submitFuture = completer_submit(comp, NULL, trivialRun, NULL,
-            retNull);
+    Future* submitFuture = completer_submit(comp, NULL, retNoResult, NULL);
     CU_ASSERT_PTR_NOT_NULL(submitFuture);
 
     Future* takeFuture = completer_take(comp);
@@ -178,7 +182,7 @@ static void test_returnOne(void)
 {
     Completer* completer = completer_new();
 
-    (void)completer_submit(completer, NULL, trivialRun, NULL, retOne);
+    (void)completer_submit(completer, NULL, retOne, NULL);
     Future* future = completer_take(completer);
 
     void* result;
@@ -195,7 +199,7 @@ static void test_returnObj(void)
 
     Completer* completer = completer_new();
 
-    (void)completer_submit(completer, &obj, trivialRun, NULL, retObj);
+    (void)completer_submit(completer, &obj, retObj, NULL);
     Future*    future = completer_take(completer);
 
     void* result;
@@ -209,7 +213,7 @@ static void test_cancelFuture(void)
 {
     Completer* completer = completer_new();
 
-    Future* submitFuture = completer_submit(completer, NULL, noRet, NULL, NULL);
+    Future* submitFuture = completer_submit(completer, NULL, noRet, NULL);
 
     CU_ASSERT_EQUAL(future_cancel(submitFuture), 0);
 
@@ -223,15 +227,13 @@ static void test_cancelFuture(void)
 static void test_shutdown(void)
 {
     Completer* completer = completer_new();
-    Future*    noRetFuture = completer_submit(completer, NULL, noRet, NULL,
-            NULL);
+    Future*    noRetFuture = completer_submit(completer, NULL, noRet, NULL);
     CU_ASSERT_PTR_NOT_NULL(noRetFuture);
 
     CU_ASSERT_EQUAL(completer_shutdown(completer, false), 0);
 
     int     obj = 3;
-    Future* retObjFuture = completer_submit(completer, &obj, trivialRun, NULL,
-            retObj);
+    Future* retObjFuture = completer_submit(completer, &obj, retObj, NULL);
     CU_ASSERT_PTR_NULL(retObjFuture);
     log_clear();
 
@@ -252,14 +254,13 @@ static void test_shutdownNow(void)
 
     Completer* completer = completer_new();
     Future*    noRetFuture = completer_submit(completer, &pauseTask,
-            pauseTask_run, pauseTask_cancel, NULL);
+            pauseTask_run, pauseTask_cancel);
     CU_ASSERT_PTR_NOT_NULL(noRetFuture);
 
     CU_ASSERT_EQUAL(completer_shutdown(completer, true), 0);
 
     int     obj = 3;
-    Future* retObjFuture = completer_submit(completer, &obj, trivialRun, NULL,
-            retObj);
+    Future* retObjFuture = completer_submit(completer, &obj, retObj, NULL);
     CU_ASSERT_PTR_NULL(retObjFuture);
     log_clear();
 

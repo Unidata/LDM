@@ -13,11 +13,12 @@
 #include "config.h"
 
 #include "Future.h"
+#include "log.h"
 #include "Thread.h"
 
-#include "log.h"
 #include <errno.h>
 #include <signal.h>
+#include <stdint.h>
 
 /******************************************************************************
  * Asynchronous task:
@@ -25,10 +26,8 @@
 
 typedef struct {
     void*   obj;
-    int   (*run)(void* obj);
+    int   (*run)(void* obj, void** result);
     int   (*cancel)(void* obj, pthread_t thread);
-    int   (*get)(void* obj, void** result);
-    void  (*free)(void* obj);
 } Task;
 
 static int
@@ -36,6 +35,21 @@ task_defaultCancelFunc(
         void*     obj,
         pthread_t thread)
 {
+    /*
+     * The default mechanism for stopping an asynchronous task should work even
+     * if the task's thread is currently in `poll()`. Possible mechanisms
+     * include using
+     *   - `pthread_kill()`: Possible if the RPC package that's included with
+     *     the LDM is used rather than a standard RPC implementation (see call
+     *     to `subscribe_7()` for more information). Requires that a signal
+     *     handler be installed (one is in the top-level LDM). The same solution
+     *     will also work to interrupt the `connect()` system call on the main
+     *     thread.
+     *   - `pthread_cancel()`: The resulting code is considerably more complex
+     *     than for `pthread_kill()` and, consequently, more difficult to reason
+     *     about.
+     * The `pthread_kill()` solution was chosen.
+     */
     int status = pthread_kill(thread, SIGTERM);
 
     if (status) {
@@ -53,9 +67,8 @@ task_defaultCancelFunc(
 static Task*
 task_new(
         void* const obj,
-        int       (*run)(void* obj),
-        int       (*cancel)(void* obj, pthread_t thread),
-        int       (*get)(void* obj, void** result))
+        int       (*run)(void* obj, void** result),
+        int       (*cancel)(void* obj, pthread_t thread))
 {
     Task* task = log_malloc(sizeof(Task), "asynchronous task");
 
@@ -63,8 +76,6 @@ task_new(
         task->obj = obj;
         task->run = run;
         task->cancel = cancel ? cancel : task_defaultCancelFunc;
-        task->get = get;
-        task->free = NULL;
     }
 
     return task;
@@ -73,15 +84,15 @@ task_new(
 inline static void
 task_free(Task* const task)
 {
-    if (task->free)
-        task->free(task->obj);
     free(task);
 }
 
 inline static int
-task_run(Task* const restrict  task)
+task_run(
+        Task* const restrict  task,
+        void** const restrict result)
 {
-    return task->run(task->obj); // Blocks while executing
+    return task->run(task->obj, result); // Blocks while executing
 }
 
 inline static int
@@ -90,14 +101,6 @@ task_cancel(
         const pthread_t thread)
 {
     return task->cancel(task->obj, thread);
-}
-
-inline static int
-task_getResult(
-        Task* const restrict  task,
-        void** const restrict result)
-{
-    return task->get ? task->get(task->obj, result) : 0;
 }
 
 inline static bool
@@ -119,16 +122,26 @@ typedef enum {
     STATE_COMPLETED,  ///< Future completed (might have been canceled)
 } State;
 
+typedef uint64_t   Magic;
+static const Magic MAGIC = 0x2acf8f2d19b89ded; ///< Random number
+
 struct future {
-    Task*           task;
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    pthread_t       thread;
-    State           state;
-    int             runFuncStatus;
-    bool            wasCanceled;
-    bool            runFuncCalled;
+    Task*           task;          ///< Encapsulates caller's task
+    void*           result;        ///< Result of run function
+    pthread_mutex_t mutex;         ///< For protecting state changes
+    pthread_cond_t  cond;          ///< For signaling change in state
+    pthread_t       thread;        ///< Thread on which future is executing
+    Magic           magic;         ///< For detecting invalid future
+    State           state;         ///< Current state of future
+    int             runFuncStatus; ///< Return status of run function
+    bool            wasCanceled;   ///< Was future canceled?
 };
+
+inline static void
+future_assertValid(const Future* const future)
+{
+    log_assert(future->magic == MAGIC);
+}
 
 inline static void
 future_assertLocked(Future* const future)
@@ -178,13 +191,14 @@ future_unlock(Future* const future)
 /**
  * Sets the state of a future and signals its condition-variable.
  *
- * @pre                     `future->mutex` is locked
+ * @pre                     future is locked
  * @param[in,out] future    Future
  * @param[in]     newState  New state for future
  * @retval        0         Success
- * @post                    `future->mutex` is locked
+ * @return                  Error code. `log_add()` called.
+ * @post                    future is locked
  */
-inline static int
+static int
 future_setState(
         Future* const future,
         const State   newState)
@@ -219,13 +233,11 @@ future_cas(    Future* const future,
         const State   expect,
         const State   newState)
 {
-    future_assertUnlocked(future);
-
     future_lock(future);
         const bool wasExpected = future->state == expect;
 
         if (wasExpected)
-            future_setState(future, newState);
+            (void)future_setState(future, newState);
     future_unlock(future);
 
     return wasExpected;
@@ -238,17 +250,14 @@ future_cas(    Future* const future,
  * @param[in]  obj     Object to be executed
  * @param[in]  run     Function to execute
  * @param[in]  halt    Function to stop execution
- * @param[in]  get     Function to get future's result or NULL for no result
- * @retval     0       Success
  * @retval     EAGAIN  System lacked necessary resources. `log_add()` called.
  * @retval     ENOMEM  Out of memory. `log_add()` called.
  */
 static int
 future_init(   Future* const future,
         void* const   obj,
-        int         (*run)(void* obj),
-        int         (*halt)(void* obj, pthread_t thread),
-        int         (*get)(void* obj, void** result))
+        int         (*run)(void* obj, void** result),
+        int         (*halt)(void* obj, pthread_t thread))
 {
     int status;
 
@@ -256,9 +265,9 @@ future_init(   Future* const future,
 
     future->state = STATE_INITIALIZED;
     future->wasCanceled = false;
-    future->runFuncCalled = false;
     future->runFuncStatus = 0;
-    future->task = task_new(obj, run, halt, get);
+    future->result = NULL;
+    future->task = task_new(obj, run, halt);
 
     if (future->task == NULL) {
         log_add("Couldn't create new task");
@@ -277,6 +286,9 @@ future_init(   Future* const future,
                 log_add_errno(status, "Couldn't initialize condition variable");
                 (void)pthread_mutex_destroy(&future->mutex);
             }
+            else {
+                future->magic = MAGIC;
+            }
         } // `future->mutex` initialized
     } // `future->task` created
 
@@ -288,7 +300,6 @@ future_init(   Future* const future,
  *
  * @pre                   Future is unlocked
  * @param[in,out] future  Future to destroy
- * @post                  Future is unlocked
  */
 static void
 future_destroy(Future* const future)
@@ -296,6 +307,7 @@ future_destroy(Future* const future)
     future_assertUnlocked(future);
 
     future_lock(future);
+        future->magic = ~MAGIC;
         (void)pthread_cond_destroy(&future->cond);
         task_free(future->task);
     future_unlock(future);
@@ -312,8 +324,6 @@ future_destroy(Future* const future)
  * @param[in] desired          Desired state
  * @retval    0                Success. Future is in desired state.
  * @retval    ENOTRECOVERABLE  State protected by mutex is not recoverable.
- *                             `log_add()` called.
- * @retval    EPERM            Current thread doesn't own `future->mutex`.
  *                             `log_add()` called.
  * @post                       future is locked
  */
@@ -339,14 +349,13 @@ future_wait(Future* const future)
 Future*
 future_new(
         void*   obj,
-        int   (*run)(void* obj),
-        int   (*halt)(void* obj, pthread_t thread),
-        int   (*get)(void* obj, void** result))
+        int   (*run)(void* obj, void** result),
+        int   (*halt)(void* obj, pthread_t thread))
 {
     Future* future = log_malloc(sizeof(Future), "future of asynchronous task");
 
     if (future) {
-        int status = future_init(future, obj, run, halt, get);
+        int status = future_init(future, obj, run, halt);
 
         if (status) {
             log_add("Couldn't initialize future");
@@ -369,6 +378,8 @@ future_free(Future* future)
     int status;
 
     if (future != NULL) {
+        future_assertValid(future);
+
         if (future_cas(future, STATE_RUNNING, STATE_RUNNING)) {
             log_add("Future is being executed");
             status = EINVAL;
@@ -383,19 +394,11 @@ future_free(Future* future)
     return status;
 }
 
-void
-future_setFree(
-        Future* const future,
-        void        (*free)(void* obj))
-{
-    future_lock(future);
-        future->task->free = free;
-    future_unlock(future);
-}
-
 void*
 future_getObj(Future* const future)
 {
+    future_assertValid(future);
+
     return future->task->obj;
 }
 
@@ -403,6 +406,8 @@ int
 future_run(Future* const future)
 {
     int status;
+
+    future_assertValid(future);
 
     future_lock(future);
         if (future->state == STATE_COMPLETED) {
@@ -419,21 +424,33 @@ future_run(Future* const future)
             future->thread = pthread_self();
 
             if (future->wasCanceled) {
-                future_setState(future, STATE_COMPLETED);
-                status = 0;
+                /*
+                 * The object given to `future_new()` must not be dereferenced
+                 * from this point on because `future_cancel()` might have
+                 * returned and the object freed.
+                 */
+                status = future_setState(future, STATE_COMPLETED);
+
+                if (status)
+                    log_add("Couldn't set state of future");
             }
             else {
-                future->runFuncCalled = true;
+                status = future_setState(future, STATE_RUNNING);
 
-                future_setState(future, STATE_RUNNING);
-                future_unlock(future);
-                    status = task_run(future->task);
-                future_lock(future);
+                if (status) {
+                    log_add("Couldn't set state of future");
+                }
+                else {
+                    future_unlock(future);
+                        status = task_run(future->task, &future->result);
+                    future_lock(future);
+
                     future->runFuncStatus = status;
                     status = future_setState(future, STATE_COMPLETED);
 
                     if (status)
                         log_add("Couldn't set state of future");
+                }
             } // future wasn't canceled
 
             future_unlock(future);
@@ -447,6 +464,8 @@ future_cancel(Future* const future)
 {
     int status;
 
+    future_assertValid(future);
+
     future_lock(future);
         if (future->state == STATE_INITIALIZED) {
             future->wasCanceled = true;
@@ -459,34 +478,26 @@ future_cancel(Future* const future)
         }
         else {
             // `future->state == STATE_RUNNING`
+            // Because calling an unknown function can result in deadlock
             future_unlock(future);
 
             status = task_cancel(future->task, future->thread);
 
-            if (status == 0) {
+            if (status) {
+                log_add("Couldn't cancel task");
+            }
+            else {
                 future_lock(future);
                     future->wasCanceled = true;
+                    status = future_wait(future);
+
+                    if (status)
+                        log_add("Error waiting for task to complete");
                 future_unlock(future);
             }
         }
 
     return status;
-}
-
-int
-future_getResultNoWait(
-        Future* future,
-        void**  result)
-{
-    future_lock(future);
-        int runStatus = future->wasCanceled
-                ? ECANCELED
-                : future->runFuncStatus;
-
-        int getStatus = task_getResult(future->task, result);
-    future_unlock(future);
-
-    return runStatus ? runStatus : getStatus;
 }
 
 int
@@ -499,6 +510,8 @@ future_getResult(
 
     int status;
 
+    future_assertValid(future);
+
     future_lock(future);
         switch (future->state) {
         case STATE_INITIALIZED:
@@ -506,17 +519,24 @@ future_getResult(
             status = future_wait(future);
 
             if (status) {
-                future_unlock(future);
                 log_add("Couldn't wait until future's task completed");
                 break;
             }
+
             /* no break */
+
         case STATE_COMPLETED:
         default:
-            future_unlock(future);
+            if (result)
+                *result = future->result;
 
-            status = future_getResultNoWait(future, result);
+            status = future->wasCanceled
+                    ? ECANCELED
+                    : future->runFuncStatus
+                        ? EPERM
+                        : 0;
         }
+    future_unlock(future);
 
     return status;
 }
@@ -536,12 +556,16 @@ future_getAndFree(
     return status;
 }
 
-bool
-future_runFuncCalled(Future* const future)
+int
+future_runFuncStatus(Future* const future)
 {
+    future_assertValid(future);
+
     mutex_lock(&future->mutex);
-        return future->runFuncCalled;
+        int status = future->runFuncStatus;
     mutex_unlock(&future->mutex);
+
+    return status;
 }
 
 bool
@@ -549,5 +573,8 @@ future_areEqual(
         const Future* future1,
         const Future* future2)
 {
+    future_assertValid(future1);
+    future_assertValid(future2);
+
     return task_areEqual(future1->task, future2->task);
 }

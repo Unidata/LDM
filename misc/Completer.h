@@ -49,8 +49,6 @@ completer_free(Completer* const comp);
  * @param[in]     run       Function to execute `obj`
  * @param[in]     halt      Function to cancel execution. Must return 0 on
  *                          success.
- * @param[in]     get       Function to get result of task or `NULL` for no
- *                          result
  * @retval        `NULL`    Failure. `log_add()` called.
  * @return                  Future of the submitted task. *NB: `future_free()`
  *                          must not be called on this future until it has been
@@ -60,9 +58,8 @@ Future*
 completer_submit(
         Completer* const comp,
         void* const      obj,
-        int            (*run)(void* obj),
-        int            (*halt)(void* obj, pthread_t thread),
-        int            (*get)(void* obj, void** result));
+        int            (*run)(void* obj, void** result),
+        int            (*halt)(void* obj, pthread_t thread));
 
 /**
  * Returns the future of the oldest completed task. Blocks until a future is
@@ -82,10 +79,14 @@ completer_take(Completer* const comp);
  * `completer_take()` (and deal with each future) until the completion service
  * is empty.
  *
+ * NB: This function won't return if an uncompleted future is canceled but its
+ * task doesn't complete.
+ *
  * @param[in,out] comp    Completion service
  * @param[in]     now     Whether or not to cancel uncompleted futures
  * @retval        0       Success
  * @retval        ENOMEM  Out of memory
+ * @threadsafety          Safe
  * @see `completer_submit()`
  * @see `future_cancel()`
  */

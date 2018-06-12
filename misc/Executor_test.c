@@ -8,10 +8,9 @@
  * @author: Steven R. Emmerson
  */
 
-#include "../../misc/Executor.h"
-
 #include "config.h"
 
+#include "Executor.h"
 #include "log.h"
 
 #include <CUnit/CUnit.h>
@@ -68,7 +67,9 @@ static void test_construction(void)
     executor_free(executor);
 }
 
-static int trivialRun(void* const restrict arg)
+static int retNoResult(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     return 0;
 }
@@ -91,7 +92,9 @@ static int retObj(
     return 0;
 }
 
-static int noRet(void* const restrict arg)
+static int noRet(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     pause();
     return 0;
@@ -104,7 +107,7 @@ static void test_nullJob(void)
 
     CU_ASSERT_EQUAL(executor_size(executor), 0);
 
-    Future* future = executor_submit(executor, NULL, trivialRun, NULL, NULL);
+    Future* future = executor_submit(executor, NULL, retNoResult, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
     CU_ASSERT_EQUAL(future_getAndFree(future, NULL), 0);
@@ -119,7 +122,7 @@ static void test_returnOne(void)
     Executor* executor = executor_new();
     CU_ASSERT_PTR_NOT_NULL(executor);
 
-    Future* future = executor_submit(executor, NULL, trivialRun, NULL, retOne);
+    Future* future = executor_submit(executor, NULL, retOne, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
     void* result;
@@ -139,7 +142,7 @@ static void test_returnObj(void)
     Executor* executor = executor_new();
     CU_ASSERT_PTR_NOT_NULL(executor);
 
-    Future* future = executor_submit(executor, &obj, trivialRun, NULL, retObj);
+    Future* future = executor_submit(executor, &obj, retObj, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
     void* result;
@@ -154,7 +157,7 @@ static void test_returnObj(void)
 static void test_cancel(void)
 {
     Executor* executor = executor_new();
-    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL, NULL);
+    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL);
 
     CU_ASSERT_EQUAL(future_cancel(noRetFuture), 0);
 
@@ -168,13 +171,12 @@ static void test_cancel(void)
 static void test_shutdown(void)
 {
     Executor* executor = executor_new();
-    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL, NULL);
+    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL);
 
     executor_shutdown(executor, false);
 
     int     obj = 3;
-    Future* retObjFuture = executor_submit(executor, &obj, trivialRun, NULL,
-            retObj);
+    Future* retObjFuture = executor_submit(executor, &obj, retObj, NULL);
     CU_ASSERT_PTR_NULL(retObjFuture);
     log_clear();
 
@@ -189,13 +191,12 @@ static void test_shutdown(void)
 static void test_shutdownNow(void)
 {
     Executor* executor = executor_new();
-    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL, NULL);
+    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL);
 
     executor_shutdown(executor, true);
 
     int     obj = 3;
-    Future* retObjFuture = executor_submit(executor, &obj, trivialRun, NULL,
-            retObj);
+    Future* retObjFuture = executor_submit(executor, &obj, retObj, NULL);
     CU_ASSERT_PTR_NULL(retObjFuture);
     log_clear();
 
@@ -228,8 +229,7 @@ static void test_afterCompletion(void)
     Executor* executor = executor_new();
     executor_setAfterCompletion(executor, NULL, afterComp);
 
-    Future*   future = executor_submit(executor, &submitObj, trivialRun, NULL,
-            retObj);
+    Future*   future = executor_submit(executor, &submitObj, retObj, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
     void* result;

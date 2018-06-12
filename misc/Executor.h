@@ -64,10 +64,12 @@ executor_setAfterCompletion(
  * Submits a task to be executed asynchronously.
  *
  * @param[in,out] exec      Execution service
- * @param[in,out] obj       Job object
+ * @param[in,out] obj       Job object or `NULL`
  * @param[in]     run       Function to run task. Must return 0 on success.
- * @param[in]     halt      Function to cancel task. Must return 0 on success.
- * @param[in]     get       Function to return result of task
+ * @param[in]     halt      Function to cancel task or `NULL` to obtain default
+ *                          cancellation. Must return 0 on success.
+ * @param[in]     get       Function to return result of task or `NULL` if no
+ *                          result will be return
  * @retval        `NULL`    Failure. `log_add()` called.
  * @return                  Future of task. Caller should call `future_free()`
  *                          when it's no longer needed.
@@ -76,9 +78,8 @@ Future*
 executor_submit(
         Executor* const exec,
         void* const   obj,
-        int         (*run)(void* obj),
-        int         (*halt)(void* obj, pthread_t thread),
-        int         (*get)(void* obj, void** result));
+        int         (*run)(void* obj, void** result),
+        int         (*halt)(void* obj, pthread_t thread));
 
 /**
  * Returns the number of uncompleted task.
@@ -92,7 +93,10 @@ executor_size(Executor* const executor);
 /**
  * Shuts down an execution service by canceling all submitted but not completed
  * tasks. Upon return, the execution service will no longer accept task
- * submissions. Doesn't wait for tasks to complete.
+ * submissions. Waits for tasks to complete.
+ *
+ * NB: This function won't return if a future is canceled but its task doesn't
+ * complete.
  *
  * @param[in,out] exec    Execution service
  * @param[in]     now     Whether or not to cancel uncompleted tasks

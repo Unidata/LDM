@@ -91,11 +91,13 @@ static int teardown(void)
 }
 
 static int
-runObj(void* const arg)
+retObj( void* const restrict  arg,
+        void** const restrict result)
 {
     Obj* const obj = (Obj*)arg;
 
     obj->ran = true;
+    *result = obj;
 
     return 0;
 }
@@ -117,11 +119,15 @@ trivialCancel(
 }
 
 static int
-runCondWait(void* const restrict arg)
+waitCondRetObj(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     Obj* const obj = (Obj*)arg;
 
     stopFlag_wait(&obj->stopFlag);
+
+    *result = obj;
 
     return 0;
 }
@@ -139,7 +145,9 @@ cancelCondWait(
 }
 
 static int
-runPause(void* const restrict arg)
+runPause(
+        void* const restrict  arg,
+        void** const restrict result)
 {
     pause();
     return 0;
@@ -150,7 +158,7 @@ static void test_initialization(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runObj, trivialCancel, getObj);
+    Future* const future = future_new(&obj, retObj, trivialCancel);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
     CU_ASSERT_PTR_EQUAL(future_getObj(future), &obj);
     future_free(future);
@@ -172,7 +180,7 @@ static void test_execution(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runObj, trivialCancel, getObj);
+    Future* const future = future_new(&obj, retObj, trivialCancel);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;
@@ -191,8 +199,7 @@ static void test_cancellation(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runCondWait, cancelCondWait,
-            getObj);
+    Future* const future = future_new(&obj, waitCondRetObj, cancelCondWait);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;
@@ -212,7 +219,7 @@ static void test_defaultCancellation(void)
     Obj obj;
     obj_init(&obj);
 
-    Future* const future = future_new(&obj, runPause, NULL, getObj);
+    Future* const future = future_new(&obj, runPause, NULL);
     CU_ASSERT_PTR_NOT_NULL_FATAL(future);
 
     pthread_t thread;

@@ -9,13 +9,13 @@
  *  Created on: May 7, 2018
  *      Author: Steven R. Emmerson
  */
-#include "../../misc/Executor.h"
-
 #include "config.h"
 
+#include "Executor.h"
 #include "log.h"
+#include "Thread.h"
+
 #include <errno.h>
-#include "../../misc/Thread.h"
 
 /******************************************************************************
  * Job to be executed:
@@ -362,12 +362,11 @@ executor_submitFuture(
 Future*
 executor_submit(
         Executor* const executor,
-        void* const   obj,
-        int         (*run)(void* obj),
-        int         (*halt)(void* obj, pthread_t thread),
-        int         (*get)(void* obj, void** result))
+        void* const     obj,
+        int           (*run)(void* obj, void** result),
+        int           (*halt)(void* obj, pthread_t thread))
 {
-    Future* future = future_new(obj, run, halt, get);
+    Future* future = future_new(obj, run, halt);
 
     if (future == NULL) {
         log_add("Couldn't create new future");
@@ -401,7 +400,6 @@ executor_shutdown(
 
     executor_lock(executor);
         if (executor->isShutdown) {
-            executor_unlock(executor);
             status = 0;
         }
         else {
@@ -409,9 +407,8 @@ executor_shutdown(
             status = now
                     ? jobList_cancelAll(executor->jobList)
                     : 0;
-
-            executor_unlock(executor);
         }
+    executor_unlock(executor);
 
     return status;
 }
