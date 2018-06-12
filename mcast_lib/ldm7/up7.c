@@ -298,6 +298,7 @@ up7_subscribe(
     const char*         hostId = hostbyaddr(sockAddr);
     feedtypet           reducedFeed = reduceToAllowed(request->feed, hostId,
             inAddr);
+
     if (reducedFeed == NONE) {
         log_notice_q("Host %s isn't allowed to receive any part of feed %s",
                 hostId, s_feedtypet(request->feed));
@@ -306,12 +307,15 @@ up7_subscribe(
     }
     else {
         Ldm7Status status = up7_addToMcastCircuit();
+
         if (status != LDM7_OK) {
             log_add("Couldn't add host %s to multicast circuit", hostId);
         }
         else {
             SubscriptionReply rep = {};
+
             status = umm_subscribe(request->feed, &rep);
+
             if (status) {
                 if (LDM7_NOENT == status) {
                     log_flush_notice();
@@ -322,7 +326,9 @@ up7_subscribe(
             else {
                 in_addr_t addr = cidrAddr_getAddr(
                         &rep.SubscriptionReply_u.info.fmtpAddr);
+
                 status = up7_openProdIndexMap(request->feed);
+
                 if (status == LDM7_OK) {
                     feedtype = reducedFeed;
                     downFmtpAddr = addr;
@@ -330,15 +336,18 @@ up7_subscribe(
                     reply->status = LDM7_OK;
                     replySet = true;
                 }
+
                 if (status) {
                     (void)umm_unsubscribe(request->feed, addr);
                     up7_ensureFree(xdr_SubscriptionReply, &rep);
                 }
-            } // Successful `umm_subscribe()`. `rep` is set
+            } // `rep` is initialized
+
             if (status)
                 up7_removeFromMcastCircuit();
         } // Downstream client added to multicast virtual circuit
     } // All or part of subscription is allowed by configuration-file
+
     return replySet;
 }
 
@@ -778,13 +787,15 @@ subscribe_7_svc(
                 } // Client-side transport to downstream LDM-7 created
             } // Product-queue is open
         } // `result->status == LDM7_OK`
+
         if (reply == NULL)
             up7_ensureFree(xdr_SubscriptionReply, &result);
     } // `result` is set.
+
     if (reply == NULL) {
         /*
          * A NULL reply will cause the RPC dispatch routine to not reply. This
-         * is good because `svcerr_systemerr()` replies instead.
+         * is good because the following `svcerr_systemerr()` replies instead.
          */
         log_flush_error();
         svcerr_systemerr(xprt); // In `svc.c`; Valid for synchronous calls only
