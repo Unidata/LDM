@@ -914,19 +914,25 @@ me_setSubscriptionReply(
     SubscriptionReply rep;
     int               status = mi_copy(&rep.SubscriptionReply_u.info.mcastInfo,
             &entry->info);
+
     if (status == 0) {
         in_addr_t downFmtpAddr;
+
         status = me_reserve(entry, &downFmtpAddr);
+
         if (status == 0) {
             cidrAddr_construct(&rep.SubscriptionReply_u.info.fmtpAddr,
                     downFmtpAddr, cidrAddr_getPrefixLen(&entry->fmtpSubnet));
             *reply = rep;
             status = LDM7_OK;
         } // `rep->SubscriptionReply_u.info.clntAddr` set
+
         if (status)
             mi_destroy(&rep.SubscriptionReply_u.info.mcastInfo);
     } // `rep->SubscriptionReply_u.info.mcastInfo` allocated
+
     reply->status = status;
+
     return status;
 }
 
