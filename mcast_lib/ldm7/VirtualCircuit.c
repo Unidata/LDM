@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool vcEndPoint_construct(
+bool vcEndPoint_init(
         VcEndPoint* const restrict vcEnd,
         const VlanId               vlanId,
         const char* const restrict switchId,
@@ -50,7 +50,7 @@ VcEndPoint* vcEndPoint_new(
     VcEndPoint* end = log_malloc(sizeof(VcEndPoint),
             "virtual-circuit endpoint");
     if (end) {
-        if (!vcEndPoint_construct(end, vlanId, switchId, portId)) {
+        if (!vcEndPoint_init(end, vlanId, switchId, portId)) {
             free(end);
             end = NULL;
         }
@@ -87,7 +87,7 @@ bool vcEndPoint_copy(
         VcEndPoint* const restrict       lhs,
         const VcEndPoint* const restrict rhs)
 {
-    return vcEndPoint_construct(lhs, rhs->vlanId, rhs->switchId, rhs->portId);
+    return vcEndPoint_init(lhs, rhs->vlanId, rhs->switchId, rhs->portId);
 }
 
 VcEndPoint* vcEndPoint_clone(const VcEndPoint* const end)

@@ -3068,7 +3068,7 @@ lcf_addReceive(
 {
     int        status;
     VcEndPoint vcEnd;
-    if (!vcEndPoint_construct(&vcEnd, vlanId, switchId, portId)) {
+    if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
         log_add("Couldn't construct virtual-circuit endpoint");
         status = ENOMEM;
     }

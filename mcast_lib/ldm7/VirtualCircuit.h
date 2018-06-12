@@ -29,7 +29,7 @@
  * @retval     `false`   Instance not initialized. `log_add()` called.
  * @see vcEndPoint_destroy()
  */
-bool vcEndPoint_construct(
+bool vcEndPoint_init(
         VcEndPoint* const restrict vcEnd,
         const VlanId               vlanId,
         const char* const restrict switchId,
