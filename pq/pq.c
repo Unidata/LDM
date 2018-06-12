@@ -8604,7 +8604,7 @@ pq_clss_setfrom(pqueue *pq,
 
 #include "timestamp.h"
 
-static int sigalrm_received = 0;
+static volatile sig_atomic_t sigalrm_received = 0;
 
 static void
 hndlr_noop(int sig)
