@@ -81,20 +81,24 @@ typedef struct {
 
 /*
  * Proportion of data-products that the receiving LDM-7 will delete from the
- * product-queue and request from the sending LDM-7.
+ * product-queue and request from the sending LDM-7 to simulate network
+ * problems.
  */
-#define                  REQUEST_RATE 0.1
+#define                  REQUEST_RATE 0.2
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
 // Approximate number of times the product-queue will be "filled".
-#define                  NUM_TIMES 1
-// Duration, in nanoseconds, between data-product insertions
+#define                  NUM_TIMES 5
+// Duration, in nanoseconds, before the next product is inserted (i.e., gap
+// duration)
 #define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
 /*
  * Mean residence-time, in seconds, of a data-product. Also used to compute the
  * FMTP retransmission timeout.
  */
 #define                  MEAN_RESIDENCE_TIME 2
+
+// Derived values:
 
 // Mean product size in bytes
 #define                  MEAN_PROD_SIZE (MAX_PROD_SIZE/2)
@@ -484,7 +488,7 @@ terminateMcastSender(void)
  * Executes a sender. Notifies `sender_start()`.
  *
  * @param[in]  arg     Pointer to sender.
- * @param[out] result  Result of execution. Ignored.
+ * @param[out] result  Ignored
  * @retval     0       Success
  */
 static int
@@ -544,7 +548,6 @@ sender_run(
 
     log_flush_error();
     log_debug_1("sender_run(): Returning &%d", status);
-    log_free();
 
     return 0;
 }
@@ -777,8 +780,9 @@ sender_start(
     char* mcastInfoStr = mi_format(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-    log_notice_q("Starting up: pq=%s, mcastInfo=%s, " "vcEnd=%s, subnet=%s",
-            getQueuePath(), mcastInfoStr, vcEndPointStr, fmtpSubnetStr);
+    log_notice_q("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
+            "subnet=%s", getQueuePath(), mcastInfoStr, vcEndPointStr,
+            fmtpSubnetStr);
     free(fmtpSubnetStr);
     free(vcEndPointStr);
     free(mcastInfoStr);
@@ -832,6 +836,35 @@ typedef struct {
     signaturet sig;
     bool       delete;
 } RequestArg;
+
+static void
+thread_blockSigTerm()
+{
+    sigset_t mask;
+
+    (void)sigemptyset(&mask);
+    (void)sigaddset(&mask, SIGTERM);
+    (void)pthread_sigmask(SIG_BLOCK, &mask, NULL);
+}
+
+static bool
+requester_isDone(Requester* const requester)
+{
+    bool done;
+
+    if (requester->done) {
+        done = true;
+    }
+    else {
+        sigset_t sigSet;
+
+        (void)sigpending(&sigSet);
+
+        done = sigismember(&sigSet, SIGTERM);
+    }
+
+    return done;
+}
 
 static void
 requester_subDecide(
@@ -925,7 +958,7 @@ requester_deleteAndRequest(
 
         numDeletedProds++;
 
-        down7_missedProduct(down7, prodIndex);
+        down7_requestProduct(down7, prodIndex);
     }
 
     return status;
@@ -939,18 +972,22 @@ requester_deleteAndRequest(
  * @param[in,out] arg   Pointer to requester object
  */
 static void
-requester_run(
-        Requester* const requester)
+requester_run(Requester* const requester)
 {
     log_debug_1("requester_run(): Entered");
 
-    while (!requester->done) {
+    thread_blockSigTerm();
+
+    while (!requester_isDone(requester)) {
         RequestArg reqArg;
         int        status = pq_sequence(receiverPq, TV_GT, PQ_CLASS_ALL,
                 requester_decide, &reqArg);
 
         if (status == PQUEUE_END) {
-            (void)pq_suspend(30); // Temporarily unblocks SIGCONT
+            static int unblockSigs[] = {SIGTERM};
+
+            // Temporarily unblocks SIGCONT as well
+            (void)pq_suspendAndUnblock(30, unblockSigs, 1);
         }
         else {
             CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -978,7 +1015,7 @@ requester_halt(
         Requester* const requester,
         const pthread_t  thread)
 {
-    requester->done = true;
+    requester->done = 1;
     CU_ASSERT_EQUAL(pthread_kill(thread, SIGTERM), 0);
 }
 
@@ -1067,7 +1104,12 @@ receiver_runRequester(
         void* const restrict  arg,
         void** const restrict result)
 {
-    requester_run(&((Receiver*)arg)->requester);
+    Receiver* receiver = (Receiver*)arg;
+
+    requester_run(&receiver->requester);
+
+    log_flush_error();
+
     return 0;
 }
 
@@ -1076,7 +1118,10 @@ receiver_haltRequester(
         void* const     arg,
         const pthread_t thread)
 {
-    requester_halt(&((Receiver*)arg)->requester, thread);
+    Receiver* receiver = (Receiver*)arg;
+
+    requester_halt(&receiver->requester, thread);
+
     return 0;
 }
 
@@ -1085,7 +1130,12 @@ receiver_runDown7(
         void* const restrict  arg,
         void** const restrict result)
 {
-    down7_run((Down7*)arg);
+    Receiver* receiver = (Receiver*)arg;
+
+    CU_ASSERT_EQUAL(down7_run(receiver->down7), 0);
+
+    log_flush_error();
+
     return 0;
 }
 
@@ -1094,7 +1144,10 @@ receiver_haltDown7(
         void* const     arg,
         const pthread_t thread)
 {
-    down7_halt((Down7*)arg, thread);
+    Receiver* receiver = (Receiver*)arg;
+
+    down7_halt(receiver->down7, thread);
+
     return 0;
 }
 
@@ -1111,7 +1164,7 @@ receiver_haltDown7(
  */
 static void
 receiver_start(
-        Receiver* const restrict   recvr)
+        Receiver* const restrict recvr)
 {
     requester_init(&recvr->requester, recvr->down7);
 
@@ -1120,11 +1173,11 @@ receiver_start(
      * "backstop" mechanism. Selected data-products are deleted from the
      * downstream product-queue and then requested from the upstream LDM.
      */
-    recvr->requesterFuture = executor_submit(executor, &recvr->requester,
+    recvr->requesterFuture = executor_submit(executor, recvr,
             receiver_runRequester, receiver_haltRequester);
     CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->requesterFuture );
 
-    recvr->down7Future = executor_submit(executor, recvr->down7,
+    recvr->down7Future = executor_submit(executor, recvr,
             receiver_runDown7, receiver_haltDown7);
     CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->down7Future);
 }
@@ -1142,13 +1195,6 @@ receiver_stop(Receiver* const recvr)
     CU_ASSERT_EQUAL(future_getAndFree(recvr->requesterFuture, NULL), ECANCELED);
 
     requester_destroy(&recvr->requester);
-}
-
-static void
-receiver_requestLastProduct(
-        Receiver* const receiver)
-{
-    down7_missedProduct(receiver->down7, initialProdIndex + NUM_PRODS - 1);
 }
 
 /**
@@ -1315,13 +1361,32 @@ test_up7_down7(
 }
 
 int main(
-        const int argc,
-        const char* const * argv)
+        const int    argc,
+        char* const* argv)
 {
-    int status = 1;
+    int          status = 1;
+    /*
+    extern int   opterr;
+    extern int   optopt;
+    extern char* optarg;
+    */
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_DEBUG);
+    log_set_level(LOG_LEVEL_NOTICE);
+
+    opterr = 1; // Prevent getopt(3) from printing error messages
+    for (int ch; (ch = getopt(argc, argv, "l:")) != EOF; ) {
+        switch (ch) {
+            case 'l': {
+                (void)log_set_destination(optarg);
+                break;
+            }
+            default: {
+                log_add("Unknown option: \"%c\"", optopt);
+                return 1;
+            }
+        }
+    }
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

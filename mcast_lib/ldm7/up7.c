@@ -362,6 +362,7 @@ up7_deliverProduct(
 	const size_t                    len,
 	void* const restrict            optArg)
 {
+    int           status;
     MissedProduct missedProd;
 
     missedProd.iProd = *(FmtpProdIndex*)optArg;
@@ -376,16 +377,18 @@ up7_deliverProduct(
      * The status will be RPC_TIMEDOUT unless an error occurs because the RPC
      * call uses asynchronous message-passing.
      */
-    if (clnt_stat(clnt) == RPC_TIMEDOUT) {
+    if (clnt_stat(clnt) != RPC_TIMEDOUT) {
+        log_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
+        status = LDM7_SYSTEM;
+    }
+    else {
         log_info_q("Missed product sent: %s",
                 s_prod_info(NULL, 0, &missedProd.prod.info,
                 log_is_enabled_debug));
-        return 0;
+        status = 0;
     }
 
-    log_add("Couldn't RPC to downstream LDM-7: %s", clnt_errmsg(clnt));
-
-    return LDM7_SYSTEM;
+    return status;
 }
 
 /**

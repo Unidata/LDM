@@ -1183,6 +1183,8 @@ mrm_close(
     if (mrm->modified && !dump(mrm))
         return false;
 
+    mrm->magic = NULL;
+
     (void)pthread_mutex_destroy(&mrm->mutex);
     piq_free(mrm->requestedQ);
     piq_free(mrm->missedQ);

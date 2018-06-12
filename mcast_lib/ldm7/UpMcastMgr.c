@@ -884,7 +884,7 @@ me_release(
     Ldm7Status  status;
     void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
     if (mldmClnt == NULL) {
-        log_add("Couldn't create new multicast LDM sender command-client");
+        log_add("Couldn't create new command-client to multicast LDM sender");
         status = LDM7_SYSTEM;
     }
     else {
