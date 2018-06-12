@@ -85,5 +85,5 @@ int main(
         }
     }
 
-    return exitCode;
+    return exitCode == 2 ? 0 : exitCode;
 }
