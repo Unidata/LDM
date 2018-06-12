@@ -24,6 +24,7 @@
 #include "mldm_sender_map.h"
 #include "pq.h"
 #include "prod_index_map.h"
+#include "registry.h"
 #include "timestamp.h"
 #include "up7.h"
 #include "UpMcastMgr.h"
@@ -84,7 +85,7 @@ typedef struct {
  * product-queue and request from the sending LDM-7 to simulate network
  * problems.
  */
-#define                  REQUEST_RATE 0.2
+#define                  REQUEST_RATE 0.1
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
 // Approximate number of times the product-queue will be "filled".
@@ -96,7 +97,7 @@ typedef struct {
  * Mean residence-time, in seconds, of a data-product. Also used to compute the
  * FMTP retransmission timeout.
  */
-#define                  MEAN_RESIDENCE_TIME 2
+#define                  MEAN_RESIDENCE_TIME 4
 
 // Derived values:
 
@@ -258,6 +259,8 @@ teardown(void)
 
     unlink(UP7_PQ_PATHNAME);
     unlink(DOWN7_PQ_PATHNAME);
+
+    reg_close();
 
     return 0;
 }
@@ -1345,6 +1348,7 @@ test_up7_down7(
 
     log_debug_1("Stopping receiver");
     receiver_stop(&receiver);
+    receiver_destroy(&receiver);
 
     log_debug_1("Stopping sender");
     sender_stop(&sender);
