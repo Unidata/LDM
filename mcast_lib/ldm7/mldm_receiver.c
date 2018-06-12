@@ -126,8 +126,8 @@ bop_func(
         pqe_index* const restrict  pqeIndex)
 {
     /*
-     * This function is called on both the FMTP multicast and unicast
-     * threads.
+     * This function is called on both the multicast and unicast threads of the
+     * FMTP module.
      */
     int  status;
 
