@@ -91,3 +91,4 @@ up7_test.pq
 *.yaml
 .*.info
 /nbs_test.pq
+*.pim

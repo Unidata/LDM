@@ -4,3 +4,4 @@
 *.pq
 *_test
 CunitAssertTest
+*.pim
