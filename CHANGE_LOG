@@ -1,3 +1,7 @@
+6.13.7.5
+    Reduced number of messages in logging performance test because Travis was
+    timing-out.
+
 6.13.7.4	2018-06-13T13:36:31-0600
     Removed `distcheck.log` from .travis.yml because the lack of output caused
     Travis to abort.

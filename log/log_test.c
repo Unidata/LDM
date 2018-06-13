@@ -620,7 +620,7 @@ static void test_performance(void)
     struct timeval start;
     (void)gettimeofday(&start, NULL);
 
-    const long num_messages = 1000000;
+    const long num_messages = 100000;
     for (long i = 0; i < num_messages; i++)
         log_error_q("Error message %ld", i);
 
