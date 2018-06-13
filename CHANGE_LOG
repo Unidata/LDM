@@ -1,4 +1,4 @@
-6.13.7.5
+6.13.7.5	2018-06-13T14:00:37-0600
     Reduced number of messages in logging performance test because Travis was
     timing-out.
 
