@@ -1,4 +1,4 @@
-6.13.7.3
+6.13.7.3	2018-06-13T08:38:28-0600
     Logging:
         Increased width of location field in log messages.
         
