@@ -1891,7 +1891,7 @@ downlet_run(Downlet* const downlet)
         else {
             char* const miStr = mi_format(downlet->mcastInfo);
             char* const fmtpAddrStr = cidrAddr_format(&downlet->fmtpAddr);
-            log_notice_q("Subscription reply from %s: mcastGroup=%s,"
+            log_notice_q("Subscription reply from %s: mcastGroup=%s, "
                     "fmtpAddr=%s", downlet->upId, miStr, fmtpAddrStr);
             free(fmtpAddrStr);
             free(miStr);
