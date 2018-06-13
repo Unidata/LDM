@@ -89,7 +89,7 @@ typedef struct {
 // Maximum size of a data-product in bytes
 #define                  MAX_PROD_SIZE 1000000
 // Approximate number of times the product-queue will be "filled".
-#define                  NUM_TIMES 5
+#define                  NUM_TIMES 2
 // Duration, in nanoseconds, before the next product is inserted (i.e., gap
 // duration)
 #define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
@@ -1343,8 +1343,8 @@ test_up7_down7(
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
-    unsigned remaining = sleep(2);
-    CU_ASSERT_EQUAL_FATAL(remaining, 0);
+    unsigned remaining = sleep(1);
+    CU_ASSERT_EQUAL(remaining, 0);
 
     log_debug_1("Stopping receiver");
     receiver_stop(&receiver);
