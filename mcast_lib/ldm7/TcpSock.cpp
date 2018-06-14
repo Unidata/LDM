@@ -412,7 +412,7 @@ public:
      */
     in_port_t getPort() const noexcept
     {
-        return ::ntohs(localAddr().sin_port);
+        return ntohs(localAddr().sin_port);
     }
 
     /**
