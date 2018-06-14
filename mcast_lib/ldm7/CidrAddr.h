@@ -28,7 +28,7 @@
  * @param[in]  subnetLen  Number of bits in network prefix
  */
 bool
-cidrAddr_construct(
+cidrAddr_init(
         CidrAddr*       cidrAddr,
         const in_addr_t addr,
         const SubnetLen subnetLen);

@@ -20,7 +20,7 @@
 #include <string.h>
 
 bool
-cidrAddr_construct(
+cidrAddr_init(
         CidrAddr*       cidrAddr,
         const in_addr_t addr,
         const SubnetLen subnetLen)
@@ -41,7 +41,7 @@ cidrAddr_new(
 {
     CidrAddr* cidrAddr = log_malloc(sizeof(CidrAddr), "CIDR address");
     if (cidrAddr) {
-        if (!cidrAddr_construct(cidrAddr, addr, subnetLen)) {
+        if (!cidrAddr_init(cidrAddr, addr, subnetLen)) {
             free(cidrAddr);
             cidrAddr = NULL;
         }
