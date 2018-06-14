@@ -125,10 +125,14 @@ up7_openProdIndexMap(
         const feedtypet   feed)
 {
     char pathname[_XOPEN_PATH_MAX];
+
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
+
     int status = pim_openForReading(dirname(pathname), feed);
+
     if (status == 0)
         pimIsOpen = true;
+
     return status;
 }
 
@@ -300,7 +304,7 @@ up7_subscribe(
             inAddr);
 
     if (reducedFeed == NONE) {
-        log_notice_q("Host %s isn't allowed to receive any part of feed %s",
+        log_notice_1("Host %s isn't allowed to receive any part of feed %s",
                 hostId, s_feedtypet(request->feed));
         reply->status = LDM7_UNAUTH;
         replySet = true;
@@ -318,9 +322,14 @@ up7_subscribe(
 
             if (status) {
                 if (LDM7_NOENT == status) {
-                    log_flush_notice();
+                    log_notice_q("Requested feed %s isn't multicasted",
+                            s_feedtypet(request->feed));
                     reply->status = LDM7_NOENT;
                     replySet = true;
+                }
+                else {
+                    log_add("Couldn't subscribe host %s to feed %s",
+                            hostId, s_feedtypet(request->feed));
                 }
             }
             else {
@@ -329,7 +338,10 @@ up7_subscribe(
 
                 status = up7_openProdIndexMap(request->feed);
 
-                if (status == LDM7_OK) {
+                if (status) {
+                    log_add("Couldn't open product->index map");
+                }
+                else {
                     feedtype = reducedFeed;
                     downFmtpAddr = addr;
                     *reply = rep;
@@ -735,8 +747,8 @@ up7_sendBacklog(
  ******************************************************************************/
 
 /**
- * Synchronously subscribes the associated downstream LDM-7 to a feed. Called by
- * the RPC dispatch function `ldmprog_7()`.
+ * Synchronously subscribes a downstream LDM-7 to a feed. Called by the RPC
+ * dispatch function `ldmprog_7()`.
  *
  * This function is thread-compatible but not thread-safe.
  *
@@ -762,17 +774,25 @@ subscribe_7_svc(
 
     log_notice_q("Incoming subscription request from %s[%s]:%u for feed %s",
             ipv4spec, hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
-    up7_ensureFree(xdr_SubscriptionReply, reply);       // free any prior use
-    reply = NULL;
+    if (reply) {
+        up7_ensureFree(xdr_SubscriptionReply, reply); // free prior use
+        reply = NULL;
+    }
 
     if (!up7_subscribe(request, xprt, &result)) {
         log_error_q("Subscription failure");
     }
     else {
         if (result.status != LDM7_OK) {
-            reply = &result; // Unsuccessful reply; but one nonetheless
+            /*
+             * The subscription was unsuccessful for a reason that the
+             * downstream LDM7 should understand
+             */
+            reply = &result;
         }
         else {
+            // Subscription was successful
+
             if (!up7_ensureProductQueueOpen()) {
                 log_flush_error();
             }
@@ -786,10 +806,7 @@ subscribe_7_svc(
                     reply = &result; // Successful reply
                 } // Client-side transport to downstream LDM-7 created
             } // Product-queue is open
-        } // `result->status == LDM7_OK`
-
-        if (reply == NULL)
-            up7_ensureFree(xdr_SubscriptionReply, &result);
+        } // Successful subscription: `result->status == LDM7_OK`
     } // `result` is set.
 
     if (reply == NULL) {
