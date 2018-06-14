@@ -26,8 +26,8 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
 				  --with-retrans \
 				  --with-ingester \
 				  --with-gribinsert \
-				  LDMHOME=`cd ../_inst && pwd`
-#				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@
+				  LDMHOME=`cd ../_inst && pwd` \
+				  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@
 # This works and doesn't result in `redefined` warnings but does rely
 # inappropriately on `../_inst` being the `make distcheck` installation
 # directory.
