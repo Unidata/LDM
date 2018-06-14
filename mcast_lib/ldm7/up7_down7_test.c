@@ -1343,7 +1343,7 @@ test_up7_down7(
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
-    unsigned remaining = sleep(1);
+    unsigned remaining = sleep(2);
     CU_ASSERT_EQUAL(remaining, 0);
 
     log_debug_1("Stopping receiver");
