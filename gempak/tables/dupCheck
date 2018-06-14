@@ -1,0 +1,18 @@
+set -e
+
+file=${1?missing filename}
+
+#2345678901234567890123456789012345678901234567890123456789012345678901234567890
+#        1         2         3         4         5         6         7         8
+
+grep -v '^!' $file | sort -n | awk '
+    NR == 1 {first=$1; second=$2; third=$3; info1=substr($0,17); next;}
+    NR > 1 {
+        info2=substr($0, 17);
+        if ($1 == first && $2 == second && $3 == third && info2 != info1)
+            print $0;
+        first=$1;
+        second=$2;
+        third=$3;
+        info1=info2;
+    }'
