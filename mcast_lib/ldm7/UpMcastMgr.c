@@ -16,7 +16,7 @@
 
 #include "config.h"
 
-#include "AuthClient.h"
+//#include "AuthClient.h"
 #include "CidrAddr.h"
 #include "fmtp.h"
 #include "globals.h"
@@ -379,11 +379,14 @@ mldm_handleExecedChild(
         const int* restrict       fds)
 {
     int status;
+
     childPid = pid;
     (void)close(fds[1]);                // write end of pipe unneeded
+
     // Sets `fmtpSrvrPort` and `mldmCmdPort`
     status = mldm_getServerPorts(fds[0]);
     (void)close(fds[0]);                // no longer needed
+
     if (status) {
         char* const id = mi_format(info);
         log_add("Couldn't get port numbers from multicast LDM sender "
@@ -393,6 +396,7 @@ mldm_handleExecedChild(
     }
     else {
         status = msm_put(info->feed, pid, fmtpSrvrPort, mldmCmdPort);
+
         if (status) {
             // preconditions => LDM7_DUP can't be returned
             char* const id = mi_format(info);
@@ -402,8 +406,11 @@ mldm_handleExecedChild(
             (void)mldm_terminateSenderAndWait(); // Uses `childPid`
         } // Information saved in multicast sender map
     } // FMTP server port and mldm_sender command port set
+
     if (status)
         childPid = 0;
+
+    return status;
 }
 
 /**
@@ -436,12 +443,14 @@ mldm_spawn(
 {
     int   fds[2];
     int   status = pipe(fds);
+
     if (status) {
         log_add_syserr("Couldn't create pipe for multicast LDM sender process");
         status = LDM7_SYSTEM;
     }
     else {
         const pid_t pid = fork();
+
         if (pid == -1) {
             char* const id = mi_format(info);
             log_add_syserr("Couldn't fork() for multicast LDM sender %s",
@@ -462,8 +471,12 @@ mldm_spawn(
         else {
             /* Parent process */
             status = mldm_handleExecedChild(info, pid, fds);
+
+            if (status)
+                log_add("Couldn't handle multicast LDM sender process");
         } // Parent process
     } // Pipe created
+
     return status;
 }
 
@@ -501,17 +514,17 @@ mldm_ensureRunning(
      * multiple times.
      */
     int status = msm_lock(true); // Lock for writing
+
     if (status) {
         log_add("Couldn't lock multicast sender map");
     }
     else {
         if (childPid == 0) {
-            (void)msm_get(info->feed, &childPid, &fmtpSrvrPort, &mldmCmdPort);
-            if (childPid) {
-                status = kill(childPid, 0);
-                if (status) {
-                    log_warning_q("Multicast LDM sender process %d should exist "
-                            " but doesn't. Re-executing...");
+            if (msm_get(info->feed, &childPid, &fmtpSrvrPort, &mldmCmdPort) ==
+                    0) {
+                if (kill(childPid, 0)) {
+                    log_warning_1("Multicast LDM sender process %d should "
+                            "exist but doesn't. Re-executing...", childPid);
                     childPid = 0;
                 }
             }
@@ -523,9 +536,14 @@ mldm_ensureRunning(
              */
             status = mldm_spawn(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
                     pqPathname);
+
+            if (status)
+                log_add("Couldn't spawn multicast LDM sender process");
         }
+
         (void)msm_unlock();
     } // Multicast sender map is locked
+
     return status;
 }
 
@@ -836,8 +854,10 @@ me_startIfNecessary(
 {
     int status = mldm_ensureRunning(entry->mcastIface, &entry->info,
             entry->ttl, &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
+
     if (status == 0)
         entry->info.server.port = mldm_getFmtpSrvrPort();
+
     return status;
 }
 
@@ -856,16 +876,20 @@ me_reserve(
 {
     Ldm7Status  status;
     void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
+
     if (mldmClnt == NULL) {
         log_add("Couldn't create new multicast LDM RPC client");
         status = LDM7_SYSTEM;
     }
     else {
         status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
+
         if (status)
             log_add("Couldn't reserve IP address for remote FMTP layer");
+
         mldmClnt_delete(mldmClnt);
     }
+
     return status;
 }
 
@@ -921,7 +945,7 @@ me_setSubscriptionReply(
         status = me_reserve(entry, &downFmtpAddr);
 
         if (status == 0) {
-            cidrAddr_construct(&rep.SubscriptionReply_u.info.fmtpAddr,
+            cidrAddr_init(&rep.SubscriptionReply_u.info.fmtpAddr,
                     downFmtpAddr, cidrAddr_getPrefixLen(&entry->fmtpSubnet));
             *reply = rep;
             status = LDM7_OK;
@@ -1015,7 +1039,9 @@ umm_subscribe(
 {
     int         status;
     McastEntry* entry = umm_getMcastEntry(feed);
+
     if (NULL == entry) {
+        log_add("No multicast entry corresponds to feed %s", s_feedtypet(feed));
         status = LDM7_NOENT;
     }
     else {
@@ -1024,9 +1050,18 @@ umm_subscribe(
              * sender
              */
             status = me_startIfNecessary(entry, retxTimeout);
-            if (0 == status)
+
+            if (status) {
+                log_add("Couldn't ensure running multicast sender");
+            }
+            else {
                 status = me_setSubscriptionReply(entry, reply);
+
+                if (status)
+                    log_add("Couldn't set subscription reply");
+            }
     } // Feed maps to possible multicast LDM sender
+
     return status;
 }
 
