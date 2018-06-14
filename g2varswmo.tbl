@@ -691,13 +691,13 @@
 002 000 000 011 Land cover (1=land, 2=sea)       Proportion           LAND             0  -9999.00
 002 000 001 000 Surface Roughness                m                    SFCR             0  -9999.00
 002 000 002 000 Soil Temperature                 K                    SLTK             0  -9999.00
-002 000 002 001 Soil temperature                 K                    SLTK             0  -9999.00
-002 000 002 011 Soil temperature                 K                    SLTK             0  -9999.00
+002 000 002 001 Soil Temperature                 K                    SLTK             0  -9999.00
+002 000 002 011 Soil Temperature                 K                    SLTK             0  -9999.00
 002 000 003 000 Soil Moisture Content            kg m**-2             SOILM            0  -9999.00
 002 000 004 000 Vegetation                       %                    VEG              0  -9999.00
 002 000 005 000 Water Runoff                     kg m**-2             WATR             0  -9999.00
-002 000 005 008 Water runoff                     kg m**-2             WATR             0  -9999.00
-002 000 005 011 Water runoff                     kg m**-2             WATR             0  -9999.00
+002 000 005 008 Water Runoff                     kg m**-2             WATR             0  -9999.00
+002 000 005 011 Water Runoff                     kg m**-2             WATR             0  -9999.00
 002 000 006 000 Evapotranspiration               kg**-2 s**-1         EVAPT            0  -9999.00
 002 000 007 000 Model Terrain Height             m                    MTERH            0  -9999.00
 002 000 008 000 Land Use                         code table           LANDU            0  -9999.00
@@ -714,9 +714,9 @@
 002 000 019 000 Temperature parameter in canopy  Proportion           RCT              0  -9999.00
 002 000 020 000 Humidity parameter in canopy con Proportion           RCQ              0  -9999.00
 002 000 021 000 Soil moisture parameter in canop Proportion           RCSOL            0  -9999.00
-002 000 022 000 Soil Moisture top 20cm           kg m**-3             SOILM            0  -9999.00
-002 000 022 001 Soil moisture top 20cm           kg m**-3             SOILM            0  -9999.00
-002 000 022 011 Soil moisture top 20cm           kg m**-3             SOILM            0  -9999.00
+002 000 022 000 Soil Moisture Top 20cm           kg m**-3             SOILM            0  -9999.00
+002 000 022 001 Soil Moisture Top 20cm           kg m**-3             SOILM            0  -9999.00
+002 000 022 011 Soil Moisture Top 20cm           kg m**-3             SOILM            0  -9999.00
 002 000 023 000 Column-Integrated Soil Water     kg m**-2             CISOILW          0  -9999.00
 002 000 024 000 Heat Flux                        W m**-2              HFLUX            0  -9999.00
 002 000 025 000 Volumetric Soil Moisture         m**3 m**-3           VSOILM           0  -9999.00
