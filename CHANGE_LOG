@@ -1,3 +1,6 @@
+6.13.7.6
+    Got "make distcheck" to work.
+
 6.13.7.5	2018-06-13T14:00:37-0600
     Reduced number of messages in logging performance test because Travis was
     timing-out.
