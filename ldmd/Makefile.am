@@ -181,4 +181,4 @@ check-multicast:
 	rm up7.pq down7.pq
 endif
 
-check-local: check-empty-conf $(CHECK_MULTICAST)
+check-local: check-empty-conf #$(CHECK_MULTICAST)
