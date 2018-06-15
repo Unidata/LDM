@@ -14,7 +14,7 @@ before_install:
   - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - mkdir m4
   - autoreconf -i
-  - ./configure --enable-debug --disable-root-actions --with-noaaport --with-multicast CFLAGS='-g -O0' CXXFLAGS='-g -O0'
+  - ./configure --disable-root-actions --with-noaaport --with-multicast CFLAGS='-g -O0' CXXFLAGS='-g -O0'
 
 #addons:
 #  coverity_scan:
