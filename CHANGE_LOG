@@ -1,4 +1,4 @@
-6.13.7.8
+6.13.7.8	2018-06-15T09:10:38-0600
     Changed the example LDM home-directory from "/usr/local/ldm" to "/opt/ldm"
     to conform to the Linux Filesystem Hierarchy Standard
     <https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard>.
