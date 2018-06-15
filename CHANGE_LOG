@@ -3,6 +3,9 @@
     to conform to the Linux Filesystem Hierarchy Standard
     <https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard>.
 
+    Removed "--enable-debug" from Travis build because "-O2" was still being
+    used.
+
 6.13.7.7	2018-06-14T17:00:30-0600
     Capitalized some words in variable descriptions in GEMPAK parameter tables.
 
