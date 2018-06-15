@@ -1,3 +1,9 @@
+6.13.7.9
+    Remove "-O0" from CFLAGS and CXXFLAGS in .travis.yml because they don't
+    affect the "make distcheck" build.
+
+    Improved efficiency of pq_test(1) so that it doesn't take so long.
+
 6.13.7.8	2018-06-15T09:10:38-0600
     Changed the example LDM home-directory from "/usr/local/ldm" to "/opt/ldm"
     to conform to the Linux Filesystem Hierarchy Standard

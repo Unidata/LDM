@@ -63,8 +63,8 @@ valgrind:	pq_test
 	rm pq_test.pq pq_test.out
 
 callgrind:	pq_test
-	rm -f pq_test.pq pq_test.out callgrind.out.*
+	-rm -f pq_test.pq pq_test.out callgrind.out.*
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind ./pq_test
-	rm pq_test.pq pq_test.out
+	-rm pq_test.pq pq_test.out
 	kcachegrind
 endif

@@ -81,6 +81,12 @@ static void close_pq(
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
+static void unlink_pq()
+{
+    int status = unlink(PQ_PATHNAME);
+    CU_ASSERT_EQUAL(status, 0);
+}
+
 /**
  * Returns the time interval between two times.
  *
@@ -111,14 +117,14 @@ static int insert_prod_reserve_no_sig(
         XDR xdrs ;
         xdrmem_create(&xdrs, space, extent, XDR_ENCODE);
         if (!xdr_product(&xdrs, prod)) {
-            log_error_q("xdr_product() failed");
+            log_add("xdr_product() failed");
             (void)pqe_discard(pq, pqe_index);
             status = -1;
         }
         else {
             status = pqe_insert(pq, pqe_index);
             if (status)
-                log_error_q("pqe_insert() failed");
+                log_add("pqe_insert() failed");
         }
     }
     return status;
@@ -193,7 +199,7 @@ static int insert_products(
             break;
         }
         char buf[LDM_INFO_MAX];
-        log_notice_q("Inserted: prodInfo=\"%s\"",
+        log_info_q("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
         num_bytes += size;
     }
@@ -222,7 +228,7 @@ static int read_products(
     for (bool done = false; !done;) {
         status = pq_sequence(pq, TV_GT, PQ_CLASS_ALL, read_prod, &done);
         if (status == PQUEUE_END) {
-            (void)pq_suspend(5); // Unblocks SIGCONT
+            (void)pq_suspend(0); // Indefinite wait. Unblocks SIGCONT
         }
         else {
             CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -249,6 +255,8 @@ static void test_pq_insert(
     int status = insert_products(pq, insert_prod);
     CU_ASSERT_EQUAL(status, 0);
     double dur = duration(&stop, &start);
+    close_pq(pq);
+
     log_notice_q("Elapsed time       = %g s", dur);
     log_notice_q("Number of bytes    = %lu", num_bytes);
     log_notice_q("Number of products = %lu", NUM_PRODS);
@@ -256,7 +264,8 @@ static void test_pq_insert(
     log_notice_q("Product rate       = %g/s", NUM_PRODS/dur);
     log_notice_q("Byte rate          = %g/s", num_bytes/dur);
     log_notice_q("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
-    close_pq(pq);
+
+    unlink_pq();
 }
 
 static void test_pq_insert_reserve_no_sig(
@@ -267,6 +276,8 @@ static void test_pq_insert_reserve_no_sig(
     int status = insert_products(pq, insert_prod_reserve_no_sig);
     CU_ASSERT_EQUAL(status, 0);
     double dur = duration(&stop, &start);
+    close_pq(pq);
+
     log_notice_q("Elapsed time       = %g s", dur);
     log_notice_q("Number of bytes    = %lu", num_bytes);
     log_notice_q("Number of products = %lu", NUM_PRODS);
@@ -274,7 +285,8 @@ static void test_pq_insert_reserve_no_sig(
     log_notice_q("Product rate       = %g/s", NUM_PRODS/dur);
     log_notice_q("Byte rate          = %g/s", num_bytes/dur);
     log_notice_q("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
-    close_pq(pq);
+
+    unlink_pq();
 }
 
 static void test_pq_insert_children(void)
@@ -305,6 +317,8 @@ static void test_pq_insert_children(void)
         CU_ASSERT_TRUE(WIFEXITED(child_status));
         CU_ASSERT_EQUAL(WEXITSTATUS(child_status), 0);
     }
+
+    unlink_pq();
 }
 
 static void test_pq_sequence(void)
@@ -318,11 +332,12 @@ static void test_pq_sequence(void)
     CU_ASSERT_NOT_EQUAL(pid, -1);
     if (pid == 0) {
         pq = open_pq(true);
-        status = insert_products(pq, insert_prod_after_delay);
+        status = insert_products(pq, insert_prod);
         CU_ASSERT_EQUAL(status, 0);
         close_pq(pq);
         exit(0);
     }
+
     pq = open_pq(false);
     CU_ASSERT_PTR_NOT_NULL_FATAL(pq);
     status = read_products(pq);
@@ -334,6 +349,8 @@ static void test_pq_sequence(void)
     CU_ASSERT_EQUAL(status, pid);
     CU_ASSERT_TRUE(WIFEXITED(child_status));
     CU_ASSERT_EQUAL(WEXITSTATUS(child_status), 0);
+
+    unlink_pq();
 }
 
 int main(
@@ -347,15 +364,15 @@ int main(
         exitCode = 1;
     }
     else {
-        log_set_destination("pq_test.out");
+        //log_set_destination("pq_test.out");
         if (CUE_SUCCESS == CU_initialize_registry()) {
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (//CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig) &&
-                        CU_ADD_TEST(testSuite, test_pq_insert) &&
-                        CU_ADD_TEST(testSuite, test_pq_sequence) &&
-                        CU_ADD_TEST(testSuite, test_pq_insert_children)
+                if (//CU_ADD_TEST(testSuite, test_pq_insert_reserve_no_sig)
+                        CU_ADD_TEST(testSuite, test_pq_insert)
+                        && CU_ADD_TEST(testSuite, test_pq_sequence)
+                        && CU_ADD_TEST(testSuite, test_pq_insert_children)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
