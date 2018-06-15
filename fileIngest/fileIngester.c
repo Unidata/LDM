@@ -86,9 +86,9 @@
  *
  *			ldm	300029	ldmd
  *
- *		In /usr/local/ldm/etc/ldmd.conf, add an entry to allow the downstream
- *		LDM instance to access it. It should be something like this (with TAB
- *		characters between each field:
+ *		In the LDM configuration-file, etc/ldmd.conf, add an entry to
+ *		allow the downstream LDM instance to access it. It should be
+ *		something like this (with TAB characters between each field:
  *
  *			ALLOW	ANY	^<host regex>.*$
  *
@@ -99,24 +99,26 @@
  *			EXEC	"fileIngester -p<polling dir> -L<log dir> -M<log dir> \
  *				-iGOESR -oLDM -q<LDM product queue path/name> -a0 -d2 -n2"
  *
- *		Update the LDM registry (/usr/local/ldm/etc/registry.xml) with reasonable
- *		values. Be sure to updated the clock and provide a fully-qualified
- *		name for the local host.
+ *		Update the LDM registry, etc/registry.xml, with reasonable
+ *		values. Be sure to updated the clock and provide a
+ *		fully-qualified name for the local host.
  *
- *		A sample system service file (ldm-raftr) in in /usr/local/ldm/src/ldm/raftr
- *		if needed.
+ *		A sample system service file (ldm-raftr) in
+ *		/opt/src/ldm/raftr if needed.
  *
  *
  *		Downstream LDM Server
  *
- *		In /usr/local/ldm/etc/ldmd.conf, add an entry to request data from raftr
- *		(white space must be tabs). For instance, if the upstream LDM instance
- *		were raftr-tbwo, this would be used:
+ *		In the LDM configuration-file, etc/ldmd.conf, add an entry to
+ *		request data from raftr (white space must be tabs). For
+ *		instance, if the upstream LDM instance were raftr-tbwo, this
+ *		would be used:
  *
  *			REQUEST ANY ".*" raftr-tbwo
  *
- *		In /usr/local/ldm/etc/pqact.conf, add an entry for the GOES-R WMO headers
- *		using tabs as field separators.  For instance:
+ *		In the pqact(1) configuration-file, etc/pqact.conf, add an entry
+ *		for the GOES-R WMO headers using tabs as field separators.  For
+ *		instance:
  *
  *			ANY 	^(TI[RS]...) (KNES) (..)(..)(..) (...)
  *			    	FILE	-overwrite -log -close -edex    /data_store/goesr/\1_\2_\3\4\5_\6.nc

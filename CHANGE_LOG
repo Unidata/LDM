@@ -1,3 +1,8 @@
+6.13.7.8
+    Changed the example LDM home-directory from "/usr/local/ldm" to "/opt/ldm"
+    to conform to the Linux Filesystem Hierarchy Standard
+    <https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard>.
+
 6.13.7.7	2018-06-14T17:00:30-0600
     Capitalized some words in variable descriptions in GEMPAK parameter tables.
 
