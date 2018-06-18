@@ -1,4 +1,4 @@
-6.13.7.9
+6.13.7.9	2018-06-18T10:45:33-0600
     Remove "-O0" from CFLAGS and CXXFLAGS in .travis.yml because they don't
     affect the "make distcheck" build.
 
