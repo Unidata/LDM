@@ -35,26 +35,21 @@ CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
 	mv -f $@.tmp $@
 pq.h:		pq.hin pq.c
 
+check_PROGRAMS		=
+
 if HAVE_CUNIT
-check_PROGRAMS		= fileLockedBySelf pq_test
 
 fileLockedBySelf_SOURCES	= fileLockedBySelf.c
 fileLockedBySelf_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 fileLockedBySelf_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
+check_PROGRAMS			+= fileLockedBySelf
 
 pq_test_SOURCES		= pq_test.c pq.c
 pq_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 pq_test_LDADD		= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@
-
-%.log:	%
-	./% >&$@
+check_PROGRAMS		+= pq_test
 
 TESTS			= $(check_PROGRAMS)
-
-check-local:	pq_test
-	rm -f pq_test.pq pq_test.out
-	./pq_test
-	rm pq_test.pq pq_test.out
 
 valgrind:	pq_test
 	rm -f pq_test.pq pq_test.out
@@ -67,4 +62,5 @@ callgrind:	pq_test
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind ./pq_test
 	-rm pq_test.pq pq_test.out
 	kcachegrind
+
 endif

@@ -364,7 +364,6 @@ int main(
         exitCode = 1;
     }
     else {
-        //log_set_destination("pq_test.out");
         if (CUE_SUCCESS == CU_initialize_registry()) {
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
