@@ -1,4 +1,4 @@
-6.13.7.10
+6.13.7.10	2018-06-19T10:15:11-0600
     Enhanced `log_test` to see if deadlock in that unit-test caused the Travis
     build to hang. It doesn't.
     
