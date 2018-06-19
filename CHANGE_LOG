@@ -1,4 +1,4 @@
-6.13.7.15
+6.13.7.15	2018-06-19T13:43:04-0600
     .travis.yml:
         - Removed test of /dev/random.
         - Replaced execution of log_test with "make all check". Random and
