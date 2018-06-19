@@ -1,4 +1,4 @@
-6.13.7.13
+6.13.7.13	2018-06-19T11:49:09-0600
     Modified log_test to 
       - Close /dev/random
       - Explicitly set sleep seconds to 0
