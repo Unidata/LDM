@@ -1,4 +1,4 @@
-6.13.7.11
+6.13.7.11	2018-06-19T10:51:21-0600
     Removed logging to system logging daemon in case that is causing the Travis
     build to hang.
 
