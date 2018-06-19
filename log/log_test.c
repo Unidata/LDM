@@ -724,13 +724,13 @@ static void test_randomProcesses()
     CU_ASSERT_EQUAL(close(fd), 0);
 
     // Create shared barrier
-    #define           NUM_THREADS 5
+    #define           NUM_CHILDREN 5
     CU_ASSERT_EQUAL_FATAL(pthread_barrier_init(barrier, &barrierAttr,
-            NUM_THREADS), 0);
+            NUM_CHILDREN), 0);
     CU_ASSERT_EQUAL(pthread_barrierattr_destroy(&barrierAttr), 0);
 
-    pid_t pids[NUM_THREADS];
-    for (int i = 0; i < NUM_THREADS; ++i) {
+    pid_t pids[NUM_CHILDREN];
+    for (int i = 0; i < NUM_CHILDREN; ++i) {
         status = fork();
 
         CU_ASSERT_NOT_EQUAL(status, -1);
@@ -744,7 +744,7 @@ static void test_randomProcesses()
         }
     }
 
-    for (int i = 0; i < NUM_THREADS; ++i) {
+    for (int i = 0; i < NUM_CHILDREN; ++i) {
         const pid_t wpid = waitpid(pids[i], &status, 0);
 
         CU_ASSERT_EQUAL(wpid, pids[i]);
