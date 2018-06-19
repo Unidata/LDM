@@ -1,6 +1,10 @@
+6.13.7.12
+    Modify .travis.yml to execute log_test in an attempt to see what's causing
+    the hanging.
+
 6.13.7.11	2018-06-19T10:51:21-0600
     Removed logging to system logging daemon in case that is causing the Travis
-    build to hang.
+    build to hang. It's not.
 
 6.13.7.10	2018-06-19T10:15:11-0600
     Enhanced `log_test` to see if deadlock in that unit-test caused the Travis
