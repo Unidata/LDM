@@ -3,5 +3,7 @@
 *.log
 *.pq
 *_test
-CunitAssertTest
 *.pim
+CunitAssertTest
+Executor_test
+Future_test
