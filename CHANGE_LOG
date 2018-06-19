@@ -1,4 +1,4 @@
-6.13.7.17
+6.13.7.17	2018-06-19T16:02:04-0600
     Remove warnings/lint revealed by Travis build. Including updating Doxyfile.
     
     Back to "make distclean" in Travis build.
