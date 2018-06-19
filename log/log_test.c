@@ -67,10 +67,10 @@ static int numLines(
 
 static void logMessages(void)
 {
-    log_error_q("Error");
-    log_warning_q("Warning");
-    log_notice_q("Notice");
-    log_info_q("Information");
+    log_error_1("Error");
+    log_warning_1("Warning");
+    log_notice_1("Notice");
+    log_info_1("Information");
     log_debug_1("Debug");
 }
 
@@ -207,13 +207,13 @@ static void test_log_open_default(void)
     const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-    log_error_q("Standard error stream");
+    log_error_1("Standard error stream");
 
     status = log_set_destination(tmpPathname);
     actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
-    log_error_q("File \"%s\"", tmpPathname);
+    log_error_1("File \"%s\"", tmpPathname);
 
     log_fini();
 }
@@ -387,7 +387,7 @@ static void test_log_set_output(void)
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    static const char* outputs[] = {"", "-", tmpPathname};
+    static const char* outputs[] = {"-", tmpPathname};
     for (int i = 0; i < sizeof(outputs)/sizeof(outputs[0]); i++) {
         const char* expected = outputs[i];
         status = log_set_destination(expected);
@@ -435,8 +435,8 @@ static void test_log_syserr(void)
             "#%d", 2);
     errno = EEXIST;
     log_syserr_q(NULL);
-    log_syserr_q("log_syserr_q() previous message is part of this one");
-    log_syserr_q("log_syserr_q() previous message is part of this one #%d", 2);
+    log_syserr_q("log_syserr_1() previous message is part of this one");
+    log_syserr_q("log_syserr_1() previous message is part of this one #%d", 2);
 
     log_fini();
 
@@ -773,7 +773,7 @@ static void test_performance(void)
 
     const long num_messages = 100000;
     for (long i = 0; i < num_messages; i++)
-        log_error_q("Error message %ld", i);
+        log_error_1("Error message %ld", i);
 
     struct timeval stop;
     (void)gettimeofday(&stop, NULL);
@@ -781,7 +781,7 @@ static void test_performance(void)
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice_q("%ld printed messages in %g seconds = %g/s", num_messages, dur,
+    log_notice_1("%ld printed messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     status = log_set_destination("/dev/null");
@@ -797,7 +797,7 @@ static void test_performance(void)
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice_q("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
+    log_notice_1("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     log_fini();
@@ -815,7 +815,6 @@ int main(
 
         if (NULL != testSuite) {
             if (       CU_ADD_TEST(testSuite, test_init_fini)
-                    && CU_ADD_TEST(testSuite, test_init_fini)
                     && CU_ADD_TEST(testSuite, test_log_get_level)
                     && CU_ADD_TEST(testSuite, test_log_roll_level)
                     && CU_ADD_TEST(testSuite, test_log_modify_id)
