@@ -478,7 +478,7 @@ decodeMulticastEntry(
                                             mcastInfo, ttl, vcEnd, fmtpSubnet,
                                             getQueuePath());
                                     }
-                                    vcEndPoint_delete(vcEnd);
+                                    vcEndPoint_free(vcEnd);
                                 } // `vcEnd` allocated
                                 mi_free(mcastInfo);
                             } // `mcastInfo` allocated

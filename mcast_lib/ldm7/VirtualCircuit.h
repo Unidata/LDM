@@ -43,8 +43,8 @@ bool vcEndPoint_init(
  * @param[in] portId    Identifier of port on switch (e.g., "1/7”)
  * @retval    NULL      Couldn't construct new instance. `log_add()` called.
  * @return              Virtual-circuit endpoint. Caller should call
- *                      `vcEndPoint_delete()` when it's no longer needed.
- * @see vcEndPoint_delete()
+ *                      `vcEndPoint_free()` when it's no longer needed.
+ * @see vcEndPoint_free()
  */
 VcEndPoint* vcEndPoint_new(
         VlanId      vlanId,
@@ -82,9 +82,9 @@ bool vcEndPoint_copy(
  * Clones a virtual-circuit endpoint.
  * @param[in] end   Endpoint to be cloned
  * @retval    NULL  Couldn't clone instance. `log_add()` called.
- * @return          Clone of `end`. Caller should call `vcEndPoint_delete()` on
+ * @return          Clone of `end`. Caller should call `vcEndPoint_free()` on
  *                  it when it's no longer needed.
- * @see vcEndPoint_delete()
+ * @see vcEndPoint_free()
  */
 VcEndPoint* vcEndPoint_clone(const VcEndPoint* end);
 
