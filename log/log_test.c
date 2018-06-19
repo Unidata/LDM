@@ -126,6 +126,8 @@ static void logRandomMessages(
     ssize_t         nbytes = read(fd, xsubi, sizeof(xsubi));
     CU_ASSERT_EQUAL(nbytes, sizeof(xsubi));
 
+    CU_ASSERT_EQUAL(close(fd), 0);
+
     static const char template[] = "This is a message template. It doesn't "
             "mean anything: it's just used for testing";
 
@@ -141,8 +143,9 @@ static void logRandomMessages(
         log_flush(level);
 
         if (maxSleep) {
-            struct timespec sleep = {};
+            struct timespec sleep;
 
+            sleep.tv_sec = 0;
             sleep.tv_nsec = (long)(maxSleep*erand48(xsubi));
 
             CU_ASSERT_EQUAL(nanosleep(&sleep, NULL), 0);
@@ -654,7 +657,8 @@ static void test_random()
     status = log_set_destination("/dev/null");
     CU_ASSERT_EQUAL(status, 0);
 
-    logRandomMessages(50000, 0);
+    //logRandomMessages(50000, 0);
+    logRandomMessages(500, 0);
 
     log_fini();
 }
@@ -665,7 +669,8 @@ static void* startRandomLogging(void* const barrier)
 
     CU_ASSERT_FATAL(status == 0 || status == PTHREAD_BARRIER_SERIAL_THREAD);
 
-    logRandomMessages(2000, 1000);
+    //logRandomMessages(2000, 1000);
+    logRandomMessages(20, 10000);
 
     log_free(); // Because end of thread/process
 

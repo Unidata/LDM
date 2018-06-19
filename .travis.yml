@@ -29,7 +29,9 @@ before_install:
 
 #install:
 
-script: if [ ${COVERITY_SCAN_BRANCH:-0} != 1 ]; then make; cd log; make log_test; ./log_test; fi
+script:
+  - head -c 12 /dev/random | od -b
+  - if [ ${COVERITY_SCAN_BRANCH:-0} != 1 ]; then make; cd log; make log_test; ./log_test; fi
 
 after_failure:
   - cat config.log

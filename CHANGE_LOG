@@ -1,3 +1,11 @@
+6.13.7.13
+    Modified log_test to 
+      - Close /dev/random
+      - Explicitly set sleep seconds to 0
+      - Use fewer random messages
+    
+    Modified .travis.yml to test /dev/random.
+
 6.13.7.12	2018-06-19T11:24:06-0600
     Modify .travis.yml to execute log_test in an attempt to see what's causing
     the hanging.
