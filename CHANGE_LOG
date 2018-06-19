@@ -1,7 +1,7 @@
 6.13.7.17
-    Remove warnings/lint revealed by Travis build.
+    Remove warnings/lint revealed by Travis build. Including updating Doxyfile.
     
-    Update Doxyfile.
+    Back to "make distclean" in Travis build.
 
 6.13.7.16	2018-06-19T15:13:11-0600
     vcEndPoint_delete() -> vcEndPoint_free() in parser.y.
