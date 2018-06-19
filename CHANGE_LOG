@@ -1,6 +1,12 @@
+6.13.7.15
+    .travis.yml:
+        - Removed test of /dev/random.
+        - Replaced execution of log_test with "make all check". Random and
+          performance tests are still commented-out.
+
 6.13.7.14	2018-06-19T12:22:58-0600
     Eliminated random and performance tests from log_test to eliminate Travis
-    hanging.
+    hanging. It worked.
 
 6.13.7.13	2018-06-19T11:49:09-0600
     Modified log_test to 
