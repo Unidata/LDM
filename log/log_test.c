@@ -15,12 +15,15 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <CUnit/CUnit.h>
@@ -30,9 +33,9 @@
     #define _XOPEN_PATH_MAX 1024
 #endif
 
-static char* progname;
-static const char tmpPathname[] = "/tmp/log_test.log";
-static const char tmpPathname1[] = "/tmp/log_test.log.1";
+static char*             progname;
+static const char        tmpPathname[] = "/tmp/log_test.log";
+static const char        tmpPathname1[] = "/tmp/log_test.log.1";
 
 /**
  * Only called once.
@@ -110,6 +113,41 @@ static void make_expected_id(
 #endif
     CU_ASSERT_TRUE(status > 0);
     CU_ASSERT_TRUE(status < size);
+}
+
+static void logRandomMessages(
+        const size_t        numGroups,
+        const unsigned long maxSleep)
+{
+    int fd = open("/dev/random", O_RDONLY);
+    CU_ASSERT_NOT_EQUAL(fd, -1);
+
+    unsigned short  xsubi[3];
+    ssize_t         nbytes = read(fd, xsubi, sizeof(xsubi));
+    CU_ASSERT_EQUAL(nbytes, sizeof(xsubi));
+
+    static const char template[] = "This is a message template. It doesn't "
+            "mean anything: it's just used for testing";
+
+    for (int i = 0; i < numGroups; ++i) {
+        const int numMsgs = (int)(6 * erand48(xsubi));
+
+        for (int j = 0; j < numMsgs; ++j) {
+            const int msgLen = (int)(sizeof(template)*erand48(xsubi));
+            log_add("%.*s", msgLen, template);
+        }
+
+        const int level = (int)((LOG_LEVEL_ERROR+1) * erand48(xsubi));
+        log_flush(level);
+
+        if (maxSleep) {
+            struct timespec sleep = {};
+
+            sleep.tv_nsec = (long)(maxSleep*erand48(xsubi));
+
+            CU_ASSERT_EQUAL(nanosleep(&sleep, NULL), 0);
+        }
+    }
 }
 
 static void test_init_fini(void)
@@ -608,6 +646,119 @@ static double duration(
         1e-6*(later->tv_usec - earlier->tv_usec);
 }
 
+static void test_random()
+{
+    int status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL(status, 0);
+
+    logRandomMessages(50000, 0);
+
+    log_fini();
+}
+
+static void* startRandomLogging(void* const barrier)
+{
+    int status = pthread_barrier_wait(barrier);
+
+    CU_ASSERT_FATAL(status == 0 || status == PTHREAD_BARRIER_SERIAL_THREAD);
+
+    logRandomMessages(2000, 1000);
+
+    log_free(); // Because end of thread/process
+
+    return NULL;
+}
+
+static void test_randomThreads()
+{
+    int status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    #define           NUM_THREADS 5
+    pthread_barrier_t barrier;
+    CU_ASSERT_EQUAL_FATAL(pthread_barrier_init(&barrier, NULL, NUM_THREADS), 0);
+
+    pthread_t threadId[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; ++i) {
+        CU_ASSERT_EQUAL(pthread_create(threadId+i, NULL, startRandomLogging,
+                &barrier), 0);
+    }
+
+    for (int i = 0; i < NUM_THREADS; ++i)
+        CU_ASSERT_EQUAL(pthread_join(threadId[i], NULL), 0);
+
+    CU_ASSERT_EQUAL(pthread_barrier_destroy(&barrier), 0);
+
+    log_fini();
+}
+
+static void test_randomProcesses()
+{
+    int status = log_init(progname);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    status = log_set_destination("/dev/null");
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    // Create shared barrier attribute
+    pthread_barrierattr_t barrierAttr;
+    CU_ASSERT_EQUAL_FATAL(pthread_barrierattr_init(&barrierAttr), 0);
+    CU_ASSERT_EQUAL_FATAL(pthread_barrierattr_setpshared(&barrierAttr,
+            PTHREAD_PROCESS_SHARED), 0);
+
+    // Create shared memory object
+    const char pathname[] = "/test_log.barrier";
+    int fd = shm_open(pathname, O_RDWR|O_CREAT, 0600);
+    CU_ASSERT_NOT_EQUAL_FATAL(fd, -1);
+    status = ftruncate(fd, sizeof(pthread_barrier_t));
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+    pthread_barrier_t* const barrier = mmap(NULL, sizeof(pthread_barrier_t),
+            PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    CU_ASSERT_NOT_EQUAL_FATAL(barrier, MAP_FAILED);
+    CU_ASSERT_EQUAL(close(fd), 0);
+
+    // Create shared barrier
+    #define           NUM_THREADS 5
+    CU_ASSERT_EQUAL_FATAL(pthread_barrier_init(barrier, &barrierAttr,
+            NUM_THREADS), 0);
+    CU_ASSERT_EQUAL(pthread_barrierattr_destroy(&barrierAttr), 0);
+
+    pid_t pids[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; ++i) {
+        status = fork();
+
+        CU_ASSERT_NOT_EQUAL(status, -1);
+
+        if (status) {
+            pids[i] = status;
+        }
+        else {
+            startRandomLogging(barrier);
+            exit(0);
+        }
+    }
+
+    for (int i = 0; i < NUM_THREADS; ++i) {
+        const pid_t wpid = waitpid(pids[i], &status, 0);
+
+        CU_ASSERT_EQUAL(wpid, pids[i]);
+        CU_ASSERT_TRUE(WIFEXITED(status));
+        CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
+    }
+
+    CU_ASSERT_EQUAL(pthread_barrier_destroy(barrier), 0);
+
+    CU_ASSERT_EQUAL(shm_unlink(pathname), 0);
+
+    log_fini();
+}
+
 static void test_performance(void)
 {
     int status;
@@ -682,6 +833,9 @@ int main(
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
                     && CU_ADD_TEST(testSuite, test_change_file)
                     && CU_ADD_TEST(testSuite, test_fork)
+                    && CU_ADD_TEST(testSuite, test_random)
+                    && CU_ADD_TEST(testSuite, test_randomThreads)
+                    && CU_ADD_TEST(testSuite, test_randomProcesses)
                     && CU_ADD_TEST(testSuite, test_performance)
                     /*
                     */) {
