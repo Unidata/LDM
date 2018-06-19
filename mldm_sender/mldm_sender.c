@@ -1248,7 +1248,7 @@ main(
         }
 
         cidrAddr_delete(fmtpSubnet);
-        mi_delete(groupInfo);
+        mi_free(groupInfo);
         log_notice_q("Terminating");
     } // `groupInfo` allocated
 

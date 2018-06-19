@@ -56,7 +56,7 @@ mi_destroy(
  *                           by `mgi_new()`.
  */
 void
-mi_delete(
+mi_free(
     McastInfo* const mcastInfo);
 
 /**

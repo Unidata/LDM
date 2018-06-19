@@ -809,7 +809,7 @@ sender_start(
     cidrAddr_delete(fmtpSubnet);
     vcEndPoint_free(vcEnd);
 
-    mi_delete(mcastInfo);
+    mi_free(mcastInfo);
 }
 
 /**

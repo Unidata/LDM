@@ -1908,7 +1908,7 @@ downlet_run(Downlet* const downlet)
                 (void)downlet_destroyTasks(downlet);
             } // Subtasks started
 
-            mi_delete(downlet->mcastInfo); // NULL safe
+            mi_free(downlet->mcastInfo); // NULL safe
         } // `downlet->mcastInfo` set
 
         downlet_destroyClient(downlet);

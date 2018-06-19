@@ -142,7 +142,7 @@ mi_destroy(
  *                           by `mi_new()`.
  */
 void
-mi_delete(
+mi_free(
     McastInfo* const mcastInfo)
 {
     if (mcastInfo) {
