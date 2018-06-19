@@ -101,7 +101,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
     /*cst_lstr ( g2lev.unit, &ilen, &ier );*/
     cst_rmbl ( g2lev.unit, unit, &ilen, &ier );
     if ( ( strcmp(unit,"Pa") == 0 ) && ( g2lev.scale == -2 ) )
-       sprintf ( unit, "hPa\0" );
+       sprintf ( unit, "hPa" );
     /*else
        strncat( unit, g2lev.unit, ilen);*/
 

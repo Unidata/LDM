@@ -134,7 +134,7 @@ if ( ccb->len > blen ) /* A rouge product missing its CCB, reported to NWS DM 3/
    if ( wmolen > 0 )
       strncat(psh->pname,buf,wmolen);
    else
-      sprintf(psh->pname,"Unidentifiable product\0");
+      sprintf(psh->pname,"Unidentifiable product");
    ccb->len = 0;
    return(-1);
    }
@@ -179,7 +179,7 @@ else
    if ( wmolen > 0 )
       strncat(psh->pname,buf+ccb->len,wmolen);
    else
-      sprintf(psh->pname,"Unidentifiable product\0");
+      sprintf(psh->pname,"Unidentifiable product");
 
    log_notice_q("Non-wmo product type %s ccbmode %d ccbsubmode %d\0",
 	psh->pname, psh->ccbmode, psh->ccbsubmode);
@@ -196,7 +196,7 @@ if((psh->ccbmode == 2)&&(psh->ccbsubmode == 0))
       (memcmp(buf+ccb->len,"SDUS8",5) == 0) )
       {
       /* uncompressed nids check */
-      if(ccb->user1 != 'F') sprintf(psh->ccbdtype,"nids/\0");
+      if(ccb->user1 != 'F') sprintf(psh->ccbdtype,"nids/");
       psh->pcat = PROD_CAT_NIDS;
       }
    }
@@ -212,15 +212,15 @@ else if (psh->pcat == PROD_CAT_GRAPHIC)
    /* see if this is recognizeable as a redbook graphic */
    redbook_header(buf+ccb->len,blen - ccb->len, redbook_title);
    if(strlen(redbook_title) > 0)
-      sprintf(psh->ccbdtype,"redbook %d_%d/\0", ccb->user1, ccb->user2);
+      sprintf(psh->ccbdtype,"redbook %d_%d/", ccb->user1, ccb->user2);
    else
-      sprintf(psh->ccbdtype,"graph %d_%d/\0",  ccb->user1, ccb->user2);
+      sprintf(psh->ccbdtype,"graph %d_%d/",  ccb->user1, ccb->user2);
    }
 
 
 
 /* create metadata */
-sprintf(psh->metadata," !\0");
+sprintf(psh->metadata," !");
 
 if ( psh->ccbdtype[0] != '\0')
    strcat ( psh->metadata, psh->ccbdtype);

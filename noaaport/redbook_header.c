@@ -92,7 +92,7 @@ iret = read_char1(buf+i,&chvalue); i++;
 hour = chvalue;
 iret = read_char1(buf+i,&chvalue); i++;
 minute = chvalue;
-sprintf(dstr,"%04d%02d%02d %02d%02d\0",
+sprintf(dstr,"%04d%02d%02d %02d%02d",
         year,month,day,hour,minute);
 }
 void block_2_2(buf,len)
@@ -195,6 +195,6 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    start = start + blen*2; 
    }
 
-if(bstart > 0) sprintf(tstr,"%s/%s/%s/%s\0",cpilid,cstr2,cstr1,dstr);
+if(bstart > 0) sprintf(tstr,"%s/%s/%s/%s",cpilid,cstr2,cstr1,dstr);
 
 }

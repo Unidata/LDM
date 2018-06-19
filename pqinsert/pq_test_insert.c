@@ -47,7 +47,7 @@ static product        prod;
 static unsigned       seq_start = 0;
 static const long     ONE_MILLION = 1000000;
 static unsigned long  max_prod_size = 200000;
-static unsigned       num_prods = 50000;
+static unsigned long  num_prods = 50000;
 static unsigned long  inter_prod_gap = 5000000; // 5 ms
 static unsigned short seed[3];
 

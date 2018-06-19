@@ -529,7 +529,7 @@ decodeReceiveEntry(
 
         if (0 == status) {
             unsigned short vlanId;
-            if (1 != sscanf(vlanSpec, "%uh", &vlanId)) {
+            if (1 != sscanf(vlanSpec, "%hu", &vlanId)) {
                 log_add("Invalid VLAN ID: \"%s\"", vlanSpec);
                 status = EINVAL;
             }

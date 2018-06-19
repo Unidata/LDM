@@ -174,11 +174,11 @@ else
                 (char *)k5toa((unsigned char *)cpos+8),
                 levels((int)vcordid,(int)level[0],(int)level[1]));
 
-            sprintf(hdr.model,"/m%s\0",(char *)s_pds_model(center_id,model_id));
+            sprintf(hdr.model,"/m%s",(char *)s_pds_model(center_id,model_id));
 	    break;
         case 2:
 	    *metaoff = (int)(cpos - prod_name);
-	    sprintf(wmometa,"grib2/\0");
+	    sprintf(wmometa,"grib2/");
             /*else
                {
                b1 = (unsigned char) cpos[12];
@@ -191,7 +191,7 @@ else
                }*/
 	    break;
          default:
-	    sprintf(wmometa,"gribx/\0");
+	    sprintf(wmometa,"gribx/");
 	    break;
          }
       }
@@ -233,16 +233,16 @@ else
    }
 
 
-sprintf(wmoid+strlen(wmoid),"%s%s%02d %s %s\0",hdr.TT,hdr.AA,hdr.ii,hdr.CCCC,hdr.DDHHMM);
+sprintf(wmoid+strlen(wmoid),"%s%s%02d %s %s",hdr.TT,hdr.AA,hdr.ii,hdr.CCCC,hdr.DDHHMM);
 
 if(hdr.BBB[0] != '\0')
-   sprintf(wmoid+strlen(wmoid)," %s\0",hdr.BBB);
+   sprintf(wmoid+strlen(wmoid)," %s",hdr.BBB);
 
 if(hdr.PIL[0] != '\0')
-   sprintf(wmoid+strlen(wmoid)," /p%s\0",hdr.PIL);
+   sprintf(wmoid+strlen(wmoid)," /p%s",hdr.PIL);
 
 if(hdr.model[0] != '\0')
-   sprintf(wmoid+strlen(wmoid)," %s\0",hdr.model);
+   sprintf(wmoid+strlen(wmoid)," %s",hdr.model);
 
 if((strlen(wmoid) > 128)||(strlen(wmoid) < 1)) 
    {

@@ -54,7 +54,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
          pdb->hour = 0; pdb->minute = 0;
          pdb->sector = 0;
          pdb->res = 0;
-         sprintf(ldmname,"satz/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s\0",
+         sprintf(ldmname,"satz/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
                  psh->ptype,
                  (char *)platform_id((unsigned char)pdb->platform),
                  (char *)channel_id((unsigned char)pdb->channel),
@@ -144,15 +144,15 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
    */
 
    if ( zflag ) {
-      sprintf(ldmname,"satz\0");
+      sprintf(ldmname,"satz");
    }
    else {
-      sprintf(ldmname,"sat\0");
+      sprintf(ldmname,"sat");
       /* set Octet 43 to "128" since we will encode the data block with png */
       wbuf[42] = 128;
    }
 
-   sprintf(ldmname,"%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s\0", ldmname,
+   sprintf(ldmname,"%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s", ldmname,
          psh->ptype,
          (char *)platform_id((unsigned char)pdb->platform),
          (char *)channel_id((unsigned char)pdb->channel),

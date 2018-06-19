@@ -17,7 +17,7 @@ if ( intdtf[0] == 0 && intdtf[1] == 0 && intdtf[2] == 0 )
    return;
    }
 
-sprintf(gtemp,"%08d/%04d\0",intdtf[0],intdtf[1]);
+sprintf(gtemp,"%08d/%04d",intdtf[0],intdtf[1]);
 
 /*itime[2] = iafgi * 100000 + ihhh * 100 + imm;*/
 
@@ -44,9 +44,9 @@ if ( intdtf[2] > 0 ) /* don't encode negative forecast times! */
 
    iftime = intdtf[2] % 100000;
    if ( intdtf[2] % 100 != 0 ) /*encode minutes*/
-      sprintf(fstr,"%c%05d\0", ftype, iftime);
+      sprintf(fstr,"%c%05d", ftype, iftime);
    else
-      sprintf(fstr,"%c%03d\0", ftype, iftime / 100);
+      sprintf(fstr,"%c%03d", ftype, iftime / 100);
    strcat(gtemp,fstr);
    strncat(gdattim, gtemp, len);
    }
