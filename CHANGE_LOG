@@ -1,4 +1,4 @@
-6.13.7.14
+6.13.7.14	2018-06-19T12:22:58-0600
     Eliminated random and performance tests from log_test to eliminate Travis
     hanging.
 
