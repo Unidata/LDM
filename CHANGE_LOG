@@ -1,3 +1,7 @@
+6.13.7.14
+    Eliminated random and performance tests from log_test to eliminate Travis
+    hanging.
+
 6.13.7.13	2018-06-19T11:49:09-0600
     Modified log_test to 
       - Close /dev/random

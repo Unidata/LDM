@@ -837,11 +837,11 @@ int main(
                     && CU_ADD_TEST(testSuite, test_sighup_prog)
                     && CU_ADD_TEST(testSuite, test_change_file)
                     && CU_ADD_TEST(testSuite, test_fork)
+                    /*
                     && CU_ADD_TEST(testSuite, test_random)
                     && CU_ADD_TEST(testSuite, test_randomThreads)
                     && CU_ADD_TEST(testSuite, test_randomProcesses)
                     && CU_ADD_TEST(testSuite, test_performance)
-                    /*
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
