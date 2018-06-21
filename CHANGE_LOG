@@ -1,14 +1,11 @@
-6.13.7.18
-    Enable Coverity Scan.
-
 6.13.7.17	2018-06-19T16:02:04-0600
     Remove warnings/lint revealed by Travis build. Including updating Doxyfile.
-    
+
     Back to "make distclean" in Travis build.
 
 6.13.7.16	2018-06-19T15:13:11-0600
     vcEndPoint_delete() -> vcEndPoint_free() in parser.y.
-    
+
     mi_delete() -> mi_free().
 
 6.13.7.15	2018-06-19T13:43:04-0600
@@ -19,14 +16,14 @@
 
 6.13.7.14	2018-06-19T12:22:58-0600
     Eliminated random and performance tests from log_test to eliminate Travis
-    hanging. It worked.
+    hanging. It worked. Sigh.
 
 6.13.7.13	2018-06-19T11:49:09-0600
     Modified log_test to 
       - Close /dev/random
       - Explicitly set sleep seconds to 0
       - Use fewer random messages
-    
+
     Modified .travis.yml to test /dev/random.
 
 6.13.7.12	2018-06-19T11:24:06-0600
