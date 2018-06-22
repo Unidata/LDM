@@ -2,7 +2,7 @@ env:
   global:
      # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
      #   via the "travis encrypt" command using the project repo's public key
-     - secure: "OAtz9NT19jb1/mvQ1v3Hyfasy5RQFryBtKK4wQUKtb2eP4KkqzO6TduqrAf+EZDck3LMf2VfqJxlEG7sBFVDz0KWDRzmGFc4J5j/iWpo4rA/2oWjGxzpgH8Sj8M2duLmYb1q4b3GLb04XJ3evtNVk0ATQqDYA9aiezZdAPdl5EHgXV6dBCFuH2lU2UQCNE5zVnTmeKneVevDDLuihVr0FoGU0NpabdadY6WlKzFHhyJWYLvsYfsUFe6VoqeqdoiE+Pm074bkVr3b0v5Yln48HOLc14TwqHT/3nGEwwzfPEMSWKQvcUMBCoykp/PXBklIwZmA4c+eD0NeFXal2RibSfSaUePjJ3l49KLLhgDB67qK4clBPkdX4a01bELVEzlM8tc7a+Zn36vplHeMD9ECeK07MTCtSRC+0/rWSS7nlkWRjlH6veP3SRtnRehjgnx3wZ6xcoThnfkvKcUrOvKgVsdbcTAU6A4u487Quox/1EsZq5bcaqCaHKsr/8yOfPbLS378JbgtEREjR37GbEafD/th+jX8A90ZcNZ1VjDlAjEjb2SYO4tHH+aKEBv7iM8aM6i2afvyQ79paLCKT//eaqhqAYt3ZJCeKJPqGI1CNqBL9WUNgPaB7Pe9KriRgrVZi+zVSIpYXnPWKOsB1PuxpiYcplfE4tkXbxxMHle/jk4="
+   - secure: "W0cXfQm1Z59U29HRGEBFyLJlGvvUphTva9RgmU31jr1mbC6r/mcdsP/pZN+RUPwY33Y1Fo3Q8M73RcAssuoO3pOXRxf+1pWJxoyK6S9VyjGGvvzZSptPD5+6achinHtVeOhgT/Xk48liwVAXM2I2XyHywzFl7qnOdnhSIQvWxMw="
 
 dist: trusty
 sudo: required
@@ -10,7 +10,7 @@ sudo: required
 language: cpp
 
 before_install:
-  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+  - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
   - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - sudo iptables -F
   - mkdir m4
@@ -20,8 +20,8 @@ before_install:
 addons:
   coverity_scan:
     project:
-      name: "LDM"
-      description: "Build submitted via Travis CI"
+      name: "Unidata/LDM"
+      description: "Event-driven data-distribution package"
     notification_email: emmerson@ucar.edu
     build_command_prepend: true
     build_command:  "make"
