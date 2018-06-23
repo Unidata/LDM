@@ -37,27 +37,35 @@ protected:
 
     /**
      * Returns the local address of the socket.
-     * @return          Local address of socket
-     * @exceptionsafety Strong guarantee
-     * @threadsafety    Safe
+     * @return                   Local address of socket. Will be all zeros if
+     *                           the socket is unbound.
+     * @exceptionsafety          Strong guarantee
+     * @threadsafety             Safe
      */
     struct sockaddr_in localAddr() const
     {
         struct sockaddr_in addr = {};
-        socklen_t len = sizeof(addr);
-        ::getsockname(sd, reinterpret_cast<struct sockaddr*>(&addr), &len);
+        socklen_t          len = sizeof(addr);
+
+        (void)::getsockname(sd,
+                reinterpret_cast<struct sockaddr*>(&addr), &len);
+
         return addr;
     }
 
     /**
      * Returns the remote address of the socket.
-     * @return Remote address of socket
+     * @return  Remote address of socket. Will be all zeros if the socket is
+     *          unconnected.
      */
     struct sockaddr_in remoteAddr() const
     {
         struct sockaddr_in addr = {};
-        socklen_t len = sizeof(addr);
-        ::getpeername(sd, reinterpret_cast<struct sockaddr*>(&addr), &len);
+        socklen_t          len = sizeof(addr);
+
+        (void)::getpeername(sd,
+                reinterpret_cast<struct sockaddr*>(&addr), &len);
+
         return addr;
     }
 

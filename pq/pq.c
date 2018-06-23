@@ -3060,16 +3060,11 @@ riul_add(
          */
         end = &rl->rp[rl->nelems];
 
-#if !defined(NDEBUG)
         {
-            int found =
-#endif
-            riul_r_find(rl, offset, &rp);
+            int found = riul_r_find(rl, offset, &rp);
 
-#if !defined(NDEBUG)
             log_assert(found == 0);
         }
-#endif
 
         if(rp < end)
         {
@@ -3930,7 +3925,11 @@ f_ftom(
  *                                         elsewhere
  *                        - RGN_MODIFIED   Region was modified
  * @retval        0       Success
- * @retval        EINVAL  Region with given offset isn't in use
+ * @retval        EBADF   Product-queue isn't open for writing. `log_add()`
+ *                        called.
+ * @retval        EINVAL  Region with given offset isn't in use. `log_add()`
+ *                        called.
+ * @retval        EIO     I/O error. `log_add()` called.
  * @see `mm_ftom()`
  */
 static int
@@ -3962,7 +3961,10 @@ f_mtof( pqueue *const pq,
         size_t extent = rp->extent;
         void*  vp = rp->vp;
 
-        if (fIsSet(rflags, RGN_MODIFIED)) {
+        if (!fIsSet(rflags, RGN_MODIFIED)) {
+            status = 0;
+        }
+        else {
             log_assert(!fIsSet(pq->pflags, PQ_READONLY));
 
             ssize_t nwrote = pwrite(pq->fd, vp, extent, offset);
@@ -5763,7 +5765,7 @@ pq_new(
  * @param[in,out]  Product queue
  */
 static void
-pq_delete(pqueue *const pq)
+pq_free(pqueue *const pq)
 {
         if(pq == NULL)
                 return;
@@ -5868,7 +5870,7 @@ unwind_open:
         (void)unlink(path);
         /*FALLTHROUGH*/
 unwind_new:
-        pq_delete(pq);
+        pq_free(pq);
         return status;
 }
 
@@ -5993,7 +5995,7 @@ pq_open(
         }                                       /* pq->fd >= 0 */
 
         if (status) {
-            pq_delete(pq);
+            pq_free(pq);
         }
         else {
             *pqp = pq;
@@ -6009,22 +6011,24 @@ pq_open(
  *
  * @param[in] pq  The product-queue.
  * @return        The flags: a bitwise OR of
- *                    PQ_MAPRGNS    Map region by region, default whole file.
- *                    PQ_NOCLOBBER  Don't replace an existing product-queue.
- *                    PQ_NOLOCK     Disable locking.
- *                    PQ_NOMAP      Use `malloc/read/write/free` instead of
- *                                  `mmap()`
- *                    PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`. Default is
- *                                  `MAP_SHARED`
- *                    PQ_READONLY   Default is read/write.
+ *                    PQ_MAPRGNS     Map region by region, default whole file.
+ *                    PQ_NOCLOBBER   Don't replace an existing product-queue.
+ *                    PQ_NOLOCK      Disable locking.
+ *                    PQ_NOMAP       Use `malloc/read/write/free` instead of
+ *                                   `mmap()`
+ *                    PQ_PRIVATE     `mmap()` the file `MAP_PRIVATE`. Default is
+ *                                   `MAP_SHARED`
+ *                    PQ_READONLY    Default is read/write.
+ *                    PQ_THREADSAFE  Product-queue access is thread-safe
  */
 int
 pq_getFlags(
         pqueue* const pq)
 {
     pq_lockIf(pq);
-    int pflags = pq->pflags;
+        int pflags = pq->pflags;
     pq_unlockIf(pq);
+
     return pflags;
 }
 
@@ -6040,14 +6044,13 @@ pq_getFlags(
 int
 pq_close(pqueue *pq)
 {
-        int status = ENOERR;                    /* success */
-        int fd = -1;
+    int status = ENOERR;                    /* success */
+    int fd = -1;
 
-        if (pq == NULL)
-                return 0;
+    if (pq == NULL)
+            return 0;
 
-        pq_lockIf(pq);
-
+    pq_lockIf(pq);
         fd = pq->fd;
 
         if(pq->riulp != NULL)
@@ -6103,13 +6106,13 @@ pq_close(pqueue *pq)
         }
 #endif
 
-        pq_unlockIf(pq);
-        pq_delete(pq);
+    pq_unlockIf(pq);
+    pq_free(pq);
 
-        if(fd > -1 && close(fd) < 0 && !status)
-                status = errno;
+    if(fd > -1 && close(fd) < 0 && !status)
+            status = errno;
 
-        return status;
+    return status;
 }
 
 
@@ -6137,18 +6140,19 @@ const char* pq_getPathname(
 int
 pq_pagesize(pqueue *pq)
 {
-        pq_lockIf(pq);
-        /*
-         * Allow 'em to figure out what the default
-         *      would be, prior to pq_create().
-         */
-        if(pq == NULL)
-                return (int)pagesize();
+    /*
+     * Allow the caller to figure out what the default would be prior to
+     * calling `pq_create()`.
+     */
+    if(pq == NULL)
+        return (int)pagesize();
 
-       /* else, tell'em what it is */
+    // Else, tell the caller what it is
+    pq_lockIf(pq);
         int pagesz = (int) pq->pagesz;
-        pq_unlockIf(pq);
-        return pagesz;
+    pq_unlockIf(pq);
+
+    return pagesz;
 }
 
 
@@ -6163,8 +6167,9 @@ pq_getDataSize(
     pqueue* const       pq)
 {
     pq_lockIf(pq);
-    size_t size = pq->ixo - pq->datao;
+        size_t size = pq->ixo - pq->datao;
     pq_unlockIf(pq);
+
     return size;
 }
 
@@ -6279,8 +6284,9 @@ vetCreationTime(
 int
 pq_insertNoSig(pqueue *pq, const product *prod)
 {
-        pq_lockIf(pq);
-        int status = ENOERR;
+    int status = ENOERR;
+
+    pq_lockIf(pq);
         size_t extent;
         void *vp = NULL;
         sxelem *sxep;
@@ -6339,21 +6345,24 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         set_timestamp(&pq->ctlp->mostRecent);
         // log_debug_1("Vetting creation time");
         vetCreationTime(&prod->info);
-
         /*FALLTHROUGH*/
+
 unwind_rgn:
         // log_debug_1("Releasing region");
         (void) rgn_rel(pq, sxep->offset, status == ENOERR ? RGN_MODIFIED : 0);
-
         /*FALLTHROUGH*/
+
 unwind_ctl:
         // log_debug_1("Releasing control header");
         (void) ctl_rel(pq, RGN_MODIFIED);
+        /*FALLTHROUGH*/
+
 unwind_lock:
         // log_debug_1("Unlocking");
         // log_debug_1("Returning %d", status);
-        pq_unlockIf(pq);
-        return status;
+    pq_unlockIf(pq);
+
+    return status;
 }
 
 
@@ -6405,9 +6414,10 @@ pq_insert(pqueue *pq, const product *prod)
 int
 pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         /* Read lock pq->xctl. */
         int status = ctl_get(pq, 0);
+
         if(status == ENOERR) {
             if(highwaterp)
                     *highwaterp = pq->ctlp->highwater;
@@ -6415,9 +6425,9 @@ pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp)
                     *maxproductsp = pq->ctlp->maxproducts;
             (void) ctl_rel(pq, 0);
         }
+    pq_unlockIf(pq);
 
-        pq_unlockIf(pq);
-        return status;
+    return status;
 }
 
 
@@ -6666,45 +6676,45 @@ pq_stats(pqueue *pq,
      size_t* const      maxextentp)
 {
     pq_lockIf(pq);
+        /* Read lock pq->ctl. */
+        int status = ctl_get(pq, 0);
 
-    /* Read lock pq->ctl. */
-    int status = ctl_get(pq, 0);
-    if(status == ENOERR) {
-        if(nprodsp)
-            *nprodsp = pq->rlp->nelems;
-        if(nfreep)
-            *nfreep = pq->rlp->nfree;
-        if(maxextentp)
-            *maxextentp = pq->rlp->maxfextent;
-        if(nemptyp)
-            *nemptyp = pq->rlp->nempty;
-        if(nbytesp)
-            *nbytesp = pq->rlp->nbytes;
-        if(maxprodsp)
-            *maxprodsp = pq->rlp->maxelems;
-        if(maxfreep)
-            *maxfreep = pq->rlp->maxfree;
-        if(minemptyp)
-            *minemptyp = pq->rlp->minempty;
-        if(maxbytesp)
-            *maxbytesp = pq->rlp->maxbytes;
-        if(age_oldestp) {
-            timestampt ts0;
-            tqelem *tqep;
+        if(status == ENOERR) {
+            if(nprodsp)
+                *nprodsp = pq->rlp->nelems;
+            if(nfreep)
+                *nfreep = pq->rlp->nfree;
+            if(maxextentp)
+                *maxextentp = pq->rlp->maxfextent;
+            if(nemptyp)
+                *nemptyp = pq->rlp->nempty;
+            if(nbytesp)
+                *nbytesp = pq->rlp->nbytes;
+            if(maxprodsp)
+                *maxprodsp = pq->rlp->maxelems;
+            if(maxfreep)
+                *maxfreep = pq->rlp->maxfree;
+            if(minemptyp)
+                *minemptyp = pq->rlp->minempty;
+            if(maxbytesp)
+                *maxbytesp = pq->rlp->maxbytes;
+            if(age_oldestp) {
+                timestampt ts0;
+                tqelem *tqep;
 
-            tqep = tqe_first(pq->tqp); /* get oldest */
-            if(tqep != NULL) {
-              set_timestamp(&ts0);
-              *age_oldestp = d_diff_timestamp(&ts0, &tqep->tv);
-            } else {
-              *age_oldestp = 0;
+                tqep = tqe_first(pq->tqp); /* get oldest */
+                if(tqep != NULL) {
+                  set_timestamp(&ts0);
+                  *age_oldestp = d_diff_timestamp(&ts0, &tqep->tv);
+                } else {
+                  *age_oldestp = 0;
+                }
             }
+
+            (void) ctl_rel(pq, 0);
         }
-
-        (void) ctl_rel(pq, 0);
-    }
-
     pq_unlockIf(pq);
+
     return status;
 }
 
@@ -6884,46 +6894,48 @@ pq_clear_write_count(const char* const path)
 int
 pq_fext_dump(pqueue *const pq)
 {
+    int status;
+
     pq_lockIf(pq);
-    regionl *rl;
-    region *rlrp;
-    size_t spix;
-    size_t sqix;
-    const region *spp;
-    fb *fbp;
+        regionl *rl;
+        region *rlrp;
+        size_t spix;
+        size_t sqix;
+        const region *spp;
+        fb *fbp;
 #if !defined(NDEBUG)
-    size_t prev_extent = 0;
+        size_t prev_extent = 0;
 #endif
 
-    /* Read lock pq->ctl. */
-    int status = ctl_get(pq, 0);
-    if(status == ENOERR) {
-        rl = pq->rlp;
-        rlrp = rl->rp;
-        fbp = pq->fbp;
+        /* Read lock pq->ctl. */
+        status = ctl_get(pq, 0);
+        if(status == ENOERR) {
+            rl = pq->rlp;
+            rlrp = rl->rp;
+            fbp = pq->fbp;
 
-        /* p = l->header; */
-        spix = rl->fext;    /* head of skip list by extent */
-        spp = rlrp + spix;
-        /* q = p->forward[0]; */
-        sqix = fbp->fblks[spp->prev];
-        log_debug_1("** Free list extents:\t");                  /* debugging */
-        while(sqix != RL_FEXT_TL) {
-            /* p = q */
-            spix = sqix;
+            /* p = l->header; */
+            spix = rl->fext;    /* head of skip list by extent */
             spp = rlrp + spix;
-            log_debug_1("%u ", spp->extent);             /* debugging */
-#if !defined(NDEBUG)
-            log_assert(spp->extent >= prev_extent);
-            prev_extent = spp->extent;
-#endif
             /* q = p->forward[0]; */
             sqix = fbp->fblks[spp->prev];
+            log_debug_1("** Free list extents:\t");                  /* debugging */
+            while(sqix != RL_FEXT_TL) {
+                /* p = q */
+                spix = sqix;
+                spp = rlrp + spix;
+                log_debug_1("%u ", spp->extent);             /* debugging */
+#if !defined(NDEBUG)
+                log_assert(spp->extent >= prev_extent);
+                prev_extent = spp->extent;
+#endif
+                /* q = p->forward[0]; */
+                sqix = fbp->fblks[spp->prev];
+            }
+            (void) ctl_rel(pq, 0);
         }
-        (void) ctl_rel(pq, 0);
-    }
-
     pq_unlockIf(pq);
+
     return status;
 }
 
@@ -6935,7 +6947,7 @@ pq_fext_dump(pqueue *const pq)
 void
 pq_cset(pqueue *pq, const timestampt *tvp)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         log_assert(    tvp->tv_sec  >= TS_ZERO.tv_sec
                 && tvp->tv_usec >= TS_ZERO.tv_usec
                 && tvp->tv_sec  <= TS_ENDT.tv_sec
@@ -6946,7 +6958,7 @@ pq_cset(pqueue *pq, const timestampt *tvp)
         } else if (tvEqual(*tvp, TS_ZERO)) {
             pq->cursor_offset = 0;
         }
-        pq_unlockIf(pq);
+    pq_unlockIf(pq);
 }
 
 
@@ -6958,9 +6970,9 @@ pq_cset(pqueue *pq, const timestampt *tvp)
 void
 pq_coffset(pqueue *pq, off_t c_offset)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         pq->cursor_offset = c_offset;
-        pq_unlockIf(pq);
+    pq_unlockIf(pq);
 }
 
 
@@ -6985,7 +6997,7 @@ pq_ctimestamp(pqueue *pq, timestampt *tvp)
 int
 pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         int status = ENOERR;
         pq_match otherway = TV_LT;
         tqelem *tqep;
@@ -7038,8 +7050,8 @@ pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp)
                     *mtp = otherway == TV_LT ? TV_GT : TV_LT;
             (void) ctl_rel(pq, 0);
         }
-        pq_unlockIf(pq);
-        return status;
+    pq_unlockIf(pq);
+    return status;
 }
 
 
@@ -7388,32 +7400,35 @@ pq_setCursorFromSignature(
     pqueue* const       pq,
     const signaturet    signature)
 {
+    int status;
+
     pq_lockIf(pq);
-    int                 status = 0;     /* success */
-
-    /*
-     * Read-lock the control-region of the product-queue.
-     */
-    status = ctl_get(pq, 0);
-    if (ENOERR != status) {
-        log_syserr_q("Couldn't lock control-region "
-            "of product-queue");
-    }
-    else {
-        tqelem* timeEntry;
-        status = pq_findTimeEntryBySignature(pq, signature, &timeEntry);
-        if (status == 0) {
-            pq_cset(pq, &timeEntry->tv);
-            pq_coffset(pq, timeEntry->offset);
-        }
-
         /*
-         * Release control-region of product-queue.
+         * Read-lock the control-region of the product-queue.
          */
-        (void)ctl_rel(pq, 0);
-    }                                   /* control region locked */
+        status = ctl_get(pq, 0);
+
+        if (ENOERR != status) {
+            log_syserr_q("Couldn't lock control-region of product-queue");
+        }
+        else {
+            tqelem* timeEntry;
+
+            status = pq_findTimeEntryBySignature(pq, signature, &timeEntry);
+
+            if (status == 0) {
+                pq_cset(pq, &timeEntry->tv);
+                pq_coffset(pq, timeEntry->offset);
+            }
+
+            /*
+             * Release control-region of product-queue.
+             */
+            (void)ctl_rel(pq, 0);
+        }                                   /* control region locked */
 
     pq_unlockIf(pq);
+
     return status;
 }
 
@@ -7637,34 +7652,33 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         void* restrict               otherargs,
         off_t* const restrict        off)
 {
-        int status = ENOERR;
-        tqelem *tqep;
-        region *rp = NULL;
-        off_t  offset = OFF_NONE;
-        size_t extent = 0;
-        void *vp = NULL;
-        struct infobuf
-        {
-                prod_info b_i;
-                char b_origin[HOSTNAMESIZE + 1];
-                char b_ident[KEYSIZE + 1];
-        } buf;
-        prod_info *info ;
-        void *datap;
-        XDR xdrs;
-        timestampt pq_time;
+    int status = ENOERR;
+    tqelem *tqep;
+    region *rp = NULL;
+    off_t  offset = OFF_NONE;
+    size_t extent = 0;
+    void *vp = NULL;
+    struct infobuf
+    {
+            prod_info b_i;
+            char b_origin[HOSTNAMESIZE + 1];
+            char b_ident[KEYSIZE + 1];
+    } buf;
+    prod_info *info ;
+    void *datap;
+    XDR xdrs;
+    timestampt pq_time;
 
-        if(pq == NULL)
-                return EINVAL;  
+    if(pq == NULL)
+            return EINVAL;
 
-        /* all this to avoid malloc in the xdr calls */
-        (void) memset(&buf, 0, sizeof(buf));
-        info = &buf.b_i;
-        info->origin = &buf.b_origin[0];
-        info->ident = &buf.b_ident[0];
+    /* all this to avoid malloc in the xdr calls */
+    (void) memset(&buf, 0, sizeof(buf));
+    info = &buf.b_i;
+    info->origin = &buf.b_origin[0];
+    info->ident = &buf.b_ident[0];
 
-        pq_lockIf(pq);
-        
+    pq_lockIf(pq);
         /* if necessary, initialize cursor */
         if(tvIsNone(pq->cursor))
         {
@@ -7680,7 +7694,6 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         /* Read lock pq->xctl.  */
         status = ctl_get(pq, 0);
         if(status != ENOERR) {
-            pq_unlockIf(pq);
             goto unwind_lock;
         }
 
@@ -7751,84 +7764,89 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         status = ctl_rel(pq, 0);
         log_assert(status == 0);
 
-        pq_unlockIf(pq);
+    pq_unlockIf(pq);
 
-        /*
-         * Decode it
-         */
-        xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
+    /*
+     * Decode it
+     */
+    xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
 
-        if(!xdr_prod_info(&xdrs, info))
-        {
-                log_error_q("xdr_prod_info() failed") ;
-                status = EIO;
-                goto unwind_rgn;
-        }
+    if(!xdr_prod_info(&xdrs, info))
+    {
+            log_error_q("xdr_prod_info() failed") ;
+            status = EIO;
+            goto unwind_rgn;
+    }
 
-        log_assert(info->sz <= xdrs.x_handy);
-        /* rather than copy the data, just use the existing buffer */
-        datap = xdrs.x_private;
+    log_assert(info->sz <= xdrs.x_handy);
+    /* rather than copy the data, just use the existing buffer */
+    datap = xdrs.x_private;
 
 #if PQ_SEQ_TRACE
-        log_debug_1("%s %u",
-                s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
+    log_debug_1("%s %u",
+            s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
 #endif
 
-        /*
-         * Log time-interval from product-creation to queue-insertion.
-         */
-        if(log_is_enabled_debug) {
-            double latency = d_diff_timestamp(&pq_time, &info->arrival);
-            log_debug_1("time(insert)-time(create): %.4f s", latency);
-        }
+    /*
+     * Log time-interval from product-creation to queue-insertion.
+     */
+    if(log_is_enabled_debug) {
+        double latency = d_diff_timestamp(&pq_time, &info->arrival);
+        log_debug_1("time(insert)-time(create): %.4f s", latency);
+    }
 
-        /*
-         * Do the work.
-         */
-        log_assert(clss != NULL);
-        if(clss == PQ_CLASS_ALL || prodInClass(clss, info))
-        {
-                /* do the ifMatch function */
-                log_assert(ifMatch != NULL);
-                {
-                        /* change extent into xlen_product */
-                        const size_t xsz = _RNDUP(info->sz, 4);
-                        if(xdrs.x_handy > xsz)
-                        {
-                                extent -= (xdrs.x_handy - xsz);
-                        }
-                }
-                if (off)
-                    *off = offset;
-                /*
-                 * Because calling a foreign function with an acquired lock
-                 * might result in deadlock:
-                 */
-                status =  (*ifMatch)(info, datap, vp, extent, otherargs);
-                if(status)
-                  {             /* back up, presumes clock tick > usec
-                                   (not always true) */
-                        if(mt == TV_GT) {
-                                timestamp_decr(&pq->cursor);
-                                pq_coffset(pq, OFF_NONE);
-                        }
-                        else if(mt == TV_LT) {
-                                pq_coffset(pq, offset + 1);
-                        }
-                  }
-        }
+    /*
+     * Do the work.
+     */
+    log_assert(clss != NULL);
+    if(clss == PQ_CLASS_ALL || prodInClass(clss, info))
+    {
+            /* do the ifMatch function */
+            log_assert(ifMatch != NULL);
+            {
+                    /* change extent into xlen_product */
+                    const size_t xsz = _RNDUP(info->sz, 4);
+                    if(xdrs.x_handy > xsz)
+                    {
+                            extent -= (xdrs.x_handy - xsz);
+                    }
+            }
+            if (off)
+                *off = offset;
+            /*
+             * Because calling a foreign function with an acquired lock
+             * might result in deadlock:
+             */
+            status =  (*ifMatch)(info, datap, vp, extent, otherargs);
+            if(status)
+              {             /* back up, presumes clock tick > usec
+                               (not always true) */
+                    if(mt == TV_GT) {
+                            timestamp_decr(&pq->cursor);
+                            pq_coffset(pq, OFF_NONE);
+                    }
+                    else if(mt == TV_LT) {
+                            pq_coffset(pq, offset + 1);
+                    }
+              }
+    }
 
-        /*FALLTHROUGH*/
-unwind_rgn:
-        xdr_destroy(&xdrs);
-        if (off == NULL)
-            (void) rgn_rel(pq, offset, 0); // release the data segment
-        return status;
-unwind_ctl:
+    /*FALLTHROUGH*/
+    unwind_rgn:
+            xdr_destroy(&xdrs);
+            if (off == NULL)
+                (void) rgn_rel(pq, offset, 0); // release the data segment
+
+    return status;
+
+    unwind_ctl:
         (void) ctl_rel(pq, 0);
-        pq_unlockIf(pq);
+        /*FALLTHROUGH*/
+
 unwind_lock:
-        return status;
+    pq_unlockIf(pq);
+
+    return status;
 }
 
 /**
@@ -8021,7 +8039,6 @@ pq_next(
         const bool                         keep_locked,
         void* const restrict               app_par)
 {
-    pq_lockIf(pq);
     int status;
 
     if (pq == NULL || clss == NULL || func==NULL) {
@@ -8029,6 +8046,8 @@ pq_next(
         status = PQ_INVAL;
     }
     else {
+        pq_lockIf(pq);
+
         // If necessary, initialize product-queue time-cursor
         if (tvIsNone(pq->cursor))
             pq->cursor = reverse ? TS_ENDT : TS_ZERO;
@@ -8180,8 +8199,10 @@ pq_next(
             if (ctl_locked)
                 (void)ctl_rel(pq, 0);
         } // ctl_get() succeeded
+
+        pq_unlockIf(pq);
     } // Valid arguments
-    pq_unlockIf(pq);
+
     return status;
 }
 
@@ -8263,66 +8284,65 @@ pq_ctimeck(pqueue *pq, pq_match mt, const prod_class_t *clssp,
 /* TODO: add class filter */
 /*ARGSUSED*/
 int
-pq_seqdel(pqueue *pq, pq_match mt,
-        const prod_class_t *clss, int wait,
-        size_t *extentp, timestampt *timestampp) 
+pq_seqdel(
+        pqueue* const       pq,
+        pq_match            mt,
+        const prod_class_t* clss,
+        const int           wait,
+        size_t* const       extentp,
+        timestampt* const   timestampp)
 {
-        pq_lockIf(pq);
-        int status = ENOERR;
-        tqelem *tqep;
-        region *rp = NULL;
-        off_t  offset = OFF_NONE;
-        size_t extent = 0;
-        void *vp = NULL;
-        struct infobuf
-        {
-                prod_info b_i;
-                char b_origin[HOSTNAMESIZE + 1];
-                char b_ident[KEYSIZE + 1];
-        } buf; /* static ??? */
-        prod_info *info ;
-        XDR xdrs;
-        int const rflags = wait ? RGN_WRITE : (RGN_WRITE | RGN_NOWAIT);
-        size_t rlix;
+    if(pq == NULL)
+        return EINVAL;
 
-        if(pq == NULL) {
-                pq_unlockIf(pq);
-                return EINVAL;  
-        }
+    pq_lockIf(pq);
+        int        status = ENOERR;
+        tqelem*    tqep;
+        region*    rp = NULL;
+        off_t      offset = OFF_NONE;
+        size_t     extent = 0;
+        void*      vp = NULL;
+        prod_info* info ;
+        XDR        xdrs;
+        int const  rflags = wait ? RGN_WRITE : (RGN_WRITE | RGN_NOWAIT);
+        size_t     rlix;
+        struct infobuf {
+            prod_info b_i;
+            char b_origin[HOSTNAMESIZE + 1];
+            char b_ident[KEYSIZE + 1];
+        } buf; /* static ??? */
 
         /* all this to avoid malloc in the xdr calls */
         info = &buf.b_i;
         info->origin = &buf.b_origin[0];
         info->ident = &buf.b_ident[0];
-        
+
         /* if necessary, initialize cursor */
         /* We don't need to worry about disambiguating products with
            identical timestamps using offsets here (as in
            pq_sequence), because after a product is deleted, it won't
            be found again */
-        if(tvIsNone(pq->cursor))
-        {
-                if(mt == TV_LT) {
-                        pq->cursor = TS_ENDT;
-                        pq->cursor_offset = OFF_NONE;
-                }
-                else {
-                        pq->cursor = TS_ZERO;
-                        pq->cursor_offset = 0;
-                }
+        if(tvIsNone(pq->cursor)) {
+            if(mt == TV_LT) {
+                pq->cursor = TS_ENDT;
+                pq->cursor_offset = OFF_NONE;
+            }
+            else {
+                pq->cursor = TS_ZERO;
+                pq->cursor_offset = 0;
+            }
         }
 
         /* write lock pq->ctl.  */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR)
-                goto unwind_lock;
+            goto unwind_lock;
 
         /* find the specified que element */
         tqep = tqe_find(pq->tqp, &pq->cursor, mt);
-        if(tqep == NULL)
-        {
-                status = PQUEUE_END;
-                goto unwind_ctl;
+        if(tqep == NULL) {
+            status = PQUEUE_END;
+            goto unwind_ctl;
         }
         /* update cursor below, after we get the data */
 
@@ -8330,13 +8350,15 @@ pq_seqdel(pqueue *pq, pq_match mt,
         /* get the actual data region */
         rlix = rl_find(pq->rlp, tqep->offset);
         log_assert(rlix != RL_NONE);
+
         rp = pq->rlp->rp + rlix;
         log_assert(rp->offset == tqep->offset);
         log_assert(Extent(rp) <= pq_getDataSize(pq));
+
         status = rgn_get(pq, rp->offset, Extent(rp), rflags, &vp);
-        if(status != ENOERR)
-        {
-                goto unwind_ctl;
+
+        if(status != ENOERR) {
+            goto unwind_ctl;
         }
         log_assert(vp != NULL);
 
@@ -8347,71 +8369,68 @@ pq_seqdel(pqueue *pq, pq_match mt,
 
         offset = rp->offset;
         extent = Extent(rp);
-        
-/*** */
+
         /*
          * Decode it
          */
         xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
 
-        if(!xdr_prod_info(&xdrs, info))
-        {
-                log_error_q("xdr_prod_info() failed") ;
-                status = EIO;
-                goto unwind_rgn;
+        if(!xdr_prod_info(&xdrs, info)) {
+            log_error_q("xdr_prod_info() failed") ;
+            status = EIO;
+            goto unwind_rgn;
         }
         log_assert(info->sz <= xdrs.x_handy);
-                
+
         /* return timestamp value even if we don't delete it */
         if(timestampp)
-                *timestampp = info->arrival;
-/*** */
+            *timestampp = info->arrival;
 
 
         log_assert(clss != NULL);
-        if(clss != PQ_CLASS_ALL && !prodInClass(clss, info))
-        {
-                /* skip this one */
-                if(log_is_enabled_debug)
-                        log_debug_1("skip %s", s_prod_info(NULL, 0, info, 1));
-                goto unwind_rgn;
+        if(clss != PQ_CLASS_ALL && !prodInClass(clss, info)) {
+            /* skip this one */
+            if(log_is_enabled_debug)
+                    log_debug_1("skip %s", s_prod_info(NULL, 0, info, 1));
+            goto unwind_rgn;
         }
 
         /*
          * else, Doit
          */
         if(log_is_enabled_info)
-                log_info_q(" del %s", s_prod_info(NULL, 0, info, 1));
+            log_info_q(" del %s", s_prod_info(NULL, 0, info, 1));
 
         /* return extent value */
         if(extentp)
-                *extentp = extent;
+            *extentp = extent;
 
-        tq_delete(pq->tqp, tqep);
-        {
-                const int found = sx_find_delete(pq->sxp, info->signature);
-                if(found == 0)
-                {
-                        char ts[20];
-                        (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                        log_error_q("Queue corrupt: pq_seqdel: %s no signature at %ld",
-                                ts, tqep->offset);
-                }
+        tq_delete(pq->tqp, tqep); {
+            const int found = sx_find_delete(pq->sxp, info->signature);
+            if(found == 0) {
+                char ts[20];
+                (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
+                log_error_q("Queue corrupt: pq_seqdel: %s no signature at %ld",
+                        ts, tqep->offset);
+            }
         }
         rl_free(pq->rlp, rlix);
 
         /*FALLTHROUGH*/
-unwind_rgn:
+    unwind_rgn:
         xdr_destroy(&xdrs);
         /* release the data segment */
         (void) rgn_rel(pq, offset, 0);
-
         /*FALLTHROUGH*/
-unwind_ctl:
+
+    unwind_ctl:
         (void) ctl_rel(pq, 0);
+        /*FALLTHROUGH*/
+
 unwind_lock:
-        pq_unlockIf(pq);
-        return status;
+    pq_unlockIf(pq);
+
+    return status;
 }
 
 
@@ -8525,43 +8544,39 @@ didmatch(const prod_info *infop, const void *datap,
  *      else    Failure.  <errno.h> error-code.
  */
 int
-pq_last(pqueue *pq,
-        const prod_class_t *clssp,
-        timestampt *tsp) /* modified upon return */
+pq_last(pqueue* const       pq,
+        const prod_class_t* clssp,
+        timestampt const*   tsp)
 {
-        pq_lockIf(pq);
-        int status = ENOERR;
+    int status = ENOERR;
 
+    pq_lockIf(pq);
         pq_cset(pq, &clssp->to); /* Start at the end and work backwards */
-        while((status = pq_sequence(pq, TV_LT, clssp, didmatch, tsp))
-                        == ENOERR) 
-        {
-           if((tsp != NULL)&&(pq->cursor.tv_sec < tsp->tv_sec))
-           {
-                log_debug_1("cursor reset: stop searching\0");
+
+        while ((status = pq_sequence(pq, TV_LT, clssp, didmatch, tsp))
+                        == ENOERR) {
+           if ((tsp != NULL) && (pq->cursor.tv_sec < tsp->tv_sec)) {
+                log_debug_1("cursor reset: stop searching");
                 pq_unlockIf(pq);
                 return status;
            }
         }
 
-        if(status != PQUEUE_END)
-        {
-                log_error_q("seq:%s (errno = %d)", strerror(status), status);
+        if (status != PQUEUE_END) {
+            log_error_q("seq:%s (errno = %d)", strerror(status), status);
         }
-        else
-        {
-                status = ENOERR;
+        else {
+            status = ENOERR;
         }
 
-        if(tvEqual(pq->cursor, TS_ENDT))
-        {
-                /* clssp->to is TS_ENDT and queue is empty */
-                pq->cursor = TS_NONE; /* clear cursor */
-                pq->cursor_offset = OFF_NONE;
+        if (tvEqual(pq->cursor, TS_ENDT)) {
+            /* clssp->to is TS_ENDT and queue is empty */
+            pq->cursor = TS_NONE; /* clear cursor */
+            pq->cursor_offset = OFF_NONE;
         }
+    pq_unlockIf(pq);
 
-        pq_unlockIf(pq);
-        return status;
+    return status;
 }
 
 
@@ -8581,23 +8596,28 @@ pq_last(pqueue *pq,
  *      else            <errno.h> error-code.
  */
 int
-pq_clss_setfrom(pqueue *pq,
-         prod_class_t *clssp)     /* modified upon return */
+pq_clss_setfrom(
+        pqueue* const       pq,
+        prod_class_t* const clssp)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         timestampt ts = clssp->from;
-        int status = pq_last(pq, clssp, &ts);
-        if(status == ENOERR)
-        {
-                if(tvEqual(ts, clssp->from))
-                        status = PQUEUE_END;
-                else
-                        clssp->from = ts;
+        int        status = pq_last(pq, clssp, &ts);
+
+        if(status == ENOERR) {
+            if (tvEqual(ts, clssp->from)) {
+                status = PQUEUE_END;
+            }
+            else {
+                clssp->from = ts;
+            }
         }
+
         pq->cursor = TS_NONE; /* clear cursor */
         pq->cursor_offset = OFF_NONE;
-        pq_unlockIf(pq);
-        return status;
+    pq_unlockIf(pq);
+
+    return status;
 }
 
 /*** ? TODO, move this to another file. Doesn't use internal knowlege **/
@@ -8736,31 +8756,31 @@ pq_strerror(
     const int error)
 {
     pq_lockIf(pq);
-    const char* msg;
+        const char* msg;
 
-    if (0 == error) {
-        msg = "Success";
-    }
-    else if (0 < error) {
-        msg = strerror(error);
-    }
-    else {
-        switch (error) {
-            case PQ_END:
-                msg = "End of product-queue reached";
-                break;
-            case PQ_NOTFOUND:
-                msg = "Desired data-product not found";
-                break;
-            case PQ_CORRUPT:
-                msg = "Product-queue is corrupt";
-                break;
-            default:
-                msg = "Unknown error-code";
+        if (0 == error) {
+            msg = "Success";
         }
-    }
-
+        else if (0 < error) {
+            msg = strerror(error);
+        }
+        else {
+            switch (error) {
+                case PQ_END:
+                    msg = "End of product-queue reached";
+                    break;
+                case PQ_NOTFOUND:
+                    msg = "Desired data-product not found";
+                    break;
+                case PQ_CORRUPT:
+                    msg = "Product-queue is corrupt";
+                    break;
+                default:
+                    msg = "Unknown error-code";
+            }
+        }
     pq_unlockIf(pq);
+
     return msg;
 }
 
@@ -8797,28 +8817,29 @@ pqe_new(pqueue *pq,
         const prod_info *infop,
         void **ptrp, pqe_index *indexp)
 {
-        pq_lockIf(pq);
-        int status = ENOERR;
+    int status = ENOERR;
+
+    log_assert(pq != NULL);
+    log_assert(infop != NULL);
+    log_assert(ptrp != NULL);
+    log_assert(indexp != NULL);
+
+    pq_lockIf(pq);
         size_t extent;
         void *vp = NULL;
         sxelem *sxep;
 
-        log_assert(pq != NULL);
-        log_assert(infop != NULL);
-        log_assert(ptrp != NULL);
-        log_assert(indexp != NULL);
-
         if(infop->sz == 0) {
                 log_error_q("zero product size");
-                pq_unlockIf(pq);
-                return EINVAL;
+                status = EINVAL;
+                goto unwind_lock;
         }
 
         if (infop->sz > pq_getDataSize(pq)) {
                 log_error_q("Product too big: product=%u bytes; queue=%lu bytes",
                     infop->sz, (unsigned long)pq_getDataSize(pq));
-                pq_unlockIf(pq);
-                return PQ_BIG;
+                status = PQ_BIG;
+                goto unwind_lock;
         }
 
         if(fIsSet(pq->pflags, PQ_READONLY)) {
@@ -8856,13 +8877,16 @@ pqe_new(pqueue *pq,
         indexp->offset = sxep->offset;
         memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
         pq->pqe_count++;
-
         /*FALLTHROUGH*/
+
 unwind_ctl:
         (void) ctl_rel(pq, RGN_MODIFIED);
+        /*FALLTHROUGH*/
+
 unwind_lock:
-        pq_unlockIf(pq);
-        return status;
+    pq_unlockIf(pq);
+
+    return status;
 }
 
 
@@ -8901,8 +8925,7 @@ pqe_newDirect(
     char** const      ptrp,
     pqe_index* const  indexp)
 {
-    pq_lockIf(pq);
-    int               status;
+    int status;
 
     /*
      * Vet arguments.
@@ -8911,52 +8934,57 @@ pqe_newDirect(
         log_add("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
         status = EINVAL;
     }
-    else if (size > pq_getDataSize(pq)) {
-        log_add("Product too big: product=%lu bytes; queue=%lu bytes",
-                (unsigned long)size, (unsigned long)pq_getDataSize(pq));
-        status = PQ_BIG;
-    }
     else {
-        if (fIsSet(pq->pflags, PQ_READONLY)) {
-            log_add("Product-queue is read-only");
-            status = EACCES;
+        pq_lockIf(pq);
+
+        if (size > pq_getDataSize(pq)) {
+            log_add("Product too big: product=%lu bytes; queue=%lu bytes",
+                    (unsigned long)size, (unsigned long)pq_getDataSize(pq));
+            status = PQ_BIG;
         }
         else {
-            /*
-             * Write-lock the product-queue control-section.
-             */
-            if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
-                log_add("ctl_get() failure");
+            if (fIsSet(pq->pflags, PQ_READONLY)) {
+                log_add("Product-queue is read-only");
+                status = EACCES;
             }
             else {
-                sxelem* sxep;
-
                 /*
-                 * Obtain a new region.
+                 * Write-lock the product-queue control-section.
                  */
-                status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
-                if (status) {
-                    if (status != PQ_DUP)
-                        log_add("rpqe_new() failure");
+                if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
+                    log_add("ctl_get() failure");
                 }
                 else {
+                    sxelem* sxep;
+
                     /*
-                     * Save the region information in the caller-supplied index
-                     * structure.
+                     * Obtain a new region.
                      */
-                    indexp->offset = sxep->offset;
-                    (void)memcpy(indexp->signature, sxep->sxi,
-                            sizeof(signaturet));
-                    indexp->sig_is_set = true;
-                    pq->pqe_count++;
-                }
+                    status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
+                    if (status) {
+                        if (status != PQ_DUP)
+                            log_add("rpqe_new() failure");
+                    }
+                    else {
+                        /*
+                         * Save the region information in the caller-supplied index
+                         * structure.
+                         */
+                        indexp->offset = sxep->offset;
+                        (void)memcpy(indexp->signature, sxep->sxi,
+                                sizeof(signaturet));
+                        indexp->sig_is_set = true;
+                        pq->pqe_count++;
+                    }
 
-                (void)ctl_rel(pq, RGN_MODIFIED);
-            } /* product-queue control-section locked */
-        } // product-queue is writable
-    } /* arguments vetted */
+                    (void)ctl_rel(pq, RGN_MODIFIED);
+                } /* product-queue control-section locked */
+            } // product-queue is writable
+        } /* arguments vetted */
 
-    pq_unlockIf(pq);
+        pq_unlockIf(pq);
+    } // `pq` is valid
+
     return status;
 }
 
@@ -8973,7 +9001,7 @@ pqe_newDirect(
 int
 pqe_discard(pqueue *pq, pqe_index index)
 {
-        pq_lockIf(pq);
+    pq_lockIf(pq);
         int   status;
         off_t offset = pqeOffset(index);
 
@@ -8989,9 +9017,9 @@ pqe_discard(pqueue *pq, pqe_index index)
                 pq->pqe_count--;
             }
         }
+    pq_unlockIf(pq);
 
-        pq_unlockIf(pq);
-        return status;
+    return status;
 }
 
 
@@ -9103,62 +9131,66 @@ unwind_lock:
 int
 pqe_insert(pqueue *pq, pqe_index index)
 {
-    pq_lockIf(pq);
     int  status;
-    riu* rp;
-    if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
-        log_error_q("riul_r_find() failed");
-        status = PQ_NOTFOUND;
-    }
-    else {
-        InfoBuf    infoBuf;
-        prod_info* info = ib_init(&infoBuf);
-        XDR        xdrs;
-        xdrmem_create(&xdrs, rp->vp, rp->extent, XDR_DECODE);
-        if (!xdr_prod_info(&xdrs, info)) {
-            log_error_q("xdr_prod_info() failed; "
-                    "product-queue might now be corrupt");
-            status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
-        }
-        else if (xlen_prod_i(info) > rp->extent) {
-            log_error_q("Product larger than allocated space; "
-                    "product-queue now likely corrupted: "
-                    "info->sz=%lu, rp->extent=%lu",
-                    (unsigned long)info->sz, (unsigned long)rp->extent);
-            status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
-        }
-        else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
-            log_error_q("pq->mtof() failed");
-            status = PQ_SYSTEM;
-        }
-        else if (ctl_get(pq, RGN_WRITE)) {
-            log_error_q("ctl_get() failed");
-            status = PQ_SYSTEM;
+
+#if 1
+    pq_lockIf(pq);
+        riu* rp;
+
+        if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
+            log_error_q("riul_r_find() failed");
+            status = PQ_NOTFOUND;
         }
         else {
-            log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
-            if (tq_add(pq->tqp, index.offset)) {
-                log_error_q("tq_add() failed");
+            InfoBuf    infoBuf;
+            prod_info* info = ib_init(&infoBuf);
+            XDR        xdrs;
+            xdrmem_create(&xdrs, rp->vp, rp->extent, XDR_DECODE);
+            if (!xdr_prod_info(&xdrs, info)) {
+                log_error_q("xdr_prod_info() failed; "
+                        "product-queue might now be corrupt");
+                status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
+            }
+            else if (xlen_prod_i(info) > rp->extent) {
+                log_error_q("Product larger than allocated space; "
+                        "product-queue now likely corrupted: "
+                        "info->sz=%lu, rp->extent=%lu",
+                        (unsigned long)info->sz, (unsigned long)rp->extent);
+                status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
+            }
+            else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
+                log_error_q("pq->mtof() failed");
+                status = PQ_SYSTEM;
+            }
+            else if (ctl_get(pq, RGN_WRITE)) {
+                log_error_q("ctl_get() failed");
                 status = PQ_SYSTEM;
             }
             else {
-                (void)set_timestamp(&pq->ctlp->mostRecent);
-                pq->pqe_count--;
-                /*
-                 * Inform our process group that there is new data available
-                 * (see pq_suspend() below). SIGCONT is ignored by default.
-                 */
-                (void)kill(0, SIGCONT);
-                status = 0;
-            } // entry made in time-queue
-            (void)ctl_rel(pq, RGN_MODIFIED);
-        } // `ctl_get()` succeeded
-        xdr_destroy(&xdrs);
-    } // data-product was found in region-in-use list
+                log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
+                if (tq_add(pq->tqp, index.offset)) {
+                    log_error_q("tq_add() failed");
+                    status = PQ_SYSTEM;
+                }
+                else {
+                    (void)set_timestamp(&pq->ctlp->mostRecent);
+                    pq->pqe_count--;
+                    /*
+                     * Inform our process group that there is new data available
+                     * (see pq_suspend() below). SIGCONT is ignored by default.
+                     */
+                    (void)kill(0, SIGCONT);
+                    status = 0;
+                } // entry made in time-queue
+                (void)ctl_rel(pq, RGN_MODIFIED);
+            } // `ctl_get()` succeeded
+            xdr_destroy(&xdrs);
+        } // data-product was found in region-in-use list
 
     pq_unlockIf(pq);
+
     return status;
-#if 0
+#else
         int   status = ENOERR;
         off_t offset = pqeOffset(index);
 

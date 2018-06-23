@@ -638,7 +638,10 @@ mls_openProdIndexMap(
         const size_t    maxSigs)
 {
     char pathname[_XOPEN_PATH_MAX];
+
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
+    pathname[sizeof(pathname)-1] = 0;
+
     return pim_openForWriting(dirname(pathname), feed, maxSigs);
 }
 
@@ -1204,8 +1207,7 @@ mls_execute(
  * @retval    4     Multicast layer error. ERROR-level message logged.
  */
 int
-main(
-        const int    argc,
+main(   const int    argc,
         char** const argv)
 {
     /*

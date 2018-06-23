@@ -405,8 +405,8 @@ init(
     return 0;
 }
 
-static int
-deinit(Mlr* const mlr)
+static void
+destroy(Mlr* const mlr)
 {
     fmtpReceiver_free(mlr->receiver);
 }
@@ -458,7 +458,7 @@ void
 mlr_delete(
         Mlr* const  mlr)
 {
-    deinit(mlr);
+    destroy(mlr);
     free(mlr);
 }
 

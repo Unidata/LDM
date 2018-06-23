@@ -174,16 +174,20 @@ msm_setSmoPathname(void)
     static const char format[] = "/mldmSenderMap-%s";
     int               status;
     const char*       userName = getenv("LOGNAME");
+
     if (userName == NULL) {
         userName = getenv("USER");
+
         if (userName == NULL) {
             log_add("Couldn't get value of environment variables "
                     "\"LOGNAME\" or \"USER\"");
             status = LDM7_SYSTEM;
         }
     }
+
     if (userName) {
         int nbytes = snprintf(NULL, 0, format, userName);
+
         if (nbytes < 0) {
             log_add_syserr("Couldn't get size of pathname of shared-memory "
                     "object");
@@ -193,6 +197,7 @@ msm_setSmoPathname(void)
             nbytes += 1; // for NUL-terminator
             smo_pathname = log_malloc(nbytes,
                     "pathname of shared-memory object");
+
             if (smo_pathname == NULL) {
                 status = LDM7_SYSTEM;
             }
@@ -202,6 +207,7 @@ msm_setSmoPathname(void)
             }
         }
     }
+
     return status;
 }
 
@@ -216,13 +222,17 @@ Ldm7Status
 msm_init(void)
 {
     log_debug_1("Entered");
+
     int status;
+
     if (smo_pathname) {
         log_add("Multicast sender map is already initialized");
         status = LDM7_INVAL;
     }
     else {
+        // `smo_pathname == NULL`
         status = msm_setSmoPathname();
+
         if (status) {
             log_add("Couldn't initialize pathname of shared-memory object");
         }

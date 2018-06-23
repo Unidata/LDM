@@ -458,7 +458,6 @@ whatami(const char *av0)
 int
 main(int ac, char *av[])
 {
-        int logfd;
         int width;
         int ready;
         unsigned long idle;
@@ -640,7 +639,7 @@ main(int ac, char *av[])
         /*
          * open the feed
          */
-        if(!(*feedfname == '-' && feedfname[1] == 0) && logfd != 0)
+        if(!(*feedfname == '-' && feedfname[1] == 0))
                 (void) close(0);
 
         if(open_feed(feedfname, &ifd, maxProductSize) != ENOERR)

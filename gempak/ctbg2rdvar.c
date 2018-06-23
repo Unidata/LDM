@@ -4,6 +4,8 @@
 #include "gemprm.h"
 #include "ctbcmn.h"
 
+#include <stdbool.h>
+
 
 void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret ) 
 /************************************************************************
@@ -65,7 +67,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
             return;
         }
 
-        vartbl->info = malloc((size_t)nr*sizeof(G2Vinfo));
+        vartbl->info = calloc((size_t)nr, sizeof(G2Vinfo));
         if (vartbl->info == NULL) {
             *iret = -1;
             cfl_clos(fp, &ier);
@@ -84,38 +86,56 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
 
 	    cst_lstr (  buffer, &blen, &ier );
 
+	    bool success = true;
+
             if ( blen > ncoln ) {
-                sscanf( buffer,
+                int numAssigned = sscanf( buffer,
                         "%12d %12d %12d %12d %32c %20c %12s %12d %20f %12d %12d",
                             &disc, &cat, &parm, &pdtn,
                             name, unts, gname,
                             &scl, &msng, &ihzrmp, &idrct );
+
+                if (numAssigned != 11) {
+                    log_add("Couldn't decode 11 fields from entry %d", n);
+                    success = false;
+                    *iret = -2;
+                }
             }
             else {
-                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %12s %12d %20f",
+                int numAssigned = sscanf( buffer,
+                        "%12d %12d %12d %12d %32c %20c %12s %12d %20f",
                             &disc, &cat, &parm, &pdtn,
                             name, unts, gname,
                             &scl, &msng);
-                ihzrmp = 0;
-                idrct = 0;
+
+                if (numAssigned != 9) {
+                    log_add("Couldn't decode 9 fields from entry %d", n);
+                    success = false;
+                    *iret = -2;
+                }
+                else {
+                    ihzrmp = 0;
+                    idrct = 0;
+                }
             }
 
+            if (success) {
+                name[32] = '\0';
+                unts[20] = '\0';
+                gname[12] = '\0';
 
-	    name[32] = '\0';
-	    unts[20] = '\0';
-	    gname[12] = '\0';
-
-            vartbl->info[n].discpln=disc;
-            vartbl->info[n].categry=cat;
-            vartbl->info[n].paramtr=parm;
-            vartbl->info[n].pdtnmbr=pdtn;
-            strcpy(vartbl->info[n].name,    name);
-            strcpy(vartbl->info[n].units,   unts);
-            strcpy(vartbl->info[n].gemname, gname);
-            vartbl->info[n].scale=scl;
-            vartbl->info[n].missing=msng;
-            vartbl->info[n].hzremap = ihzrmp;
-            vartbl->info[n].direction = idrct;
+                vartbl->info[n].discpln=disc;
+                vartbl->info[n].categry=cat;
+                vartbl->info[n].paramtr=parm;
+                vartbl->info[n].pdtnmbr=pdtn;
+                strcpy(vartbl->info[n].name,    name);
+                strcpy(vartbl->info[n].units,   unts);
+                strcpy(vartbl->info[n].gemname, gname);
+                vartbl->info[n].scale=scl;
+                vartbl->info[n].missing=msng;
+                vartbl->info[n].hzremap = ihzrmp;
+                vartbl->info[n].direction = idrct;
+            }
 
             n++;
         }

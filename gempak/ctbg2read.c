@@ -4,6 +4,8 @@
 #include "gemprm.h"
 #include "ctbcmn.h"
 
+#include <stdbool.h>
+
 #define 	NCOLN		110 
 
 G2vars_t	Gr2Tbl;
@@ -59,7 +61,7 @@ float    msng;
             return;
         }
 
-        Gr2Tbl.info = (G2Vinfo *)malloc((size_t)nr*sizeof(G2Vinfo));
+        Gr2Tbl.info = (G2Vinfo *)calloc((size_t)nr, sizeof(G2Vinfo));
 
         n  = 0;
         while ( n < nr ) {
@@ -69,36 +71,54 @@ float    msng;
 
 	    cst_lstr (  buffer, &blen, &ier );
 
+	    bool success = true;
+
 	    if ( blen > NCOLN ) { 
-                sscanf( buffer, "%12d %12d %12d %12d %32c %20c %s %12d %f %12d %12d",
-                            &disc, &cat, &parm, &pdtn,
-                            name, unts, gname,
-                            &scl, &msng, &ihzrmp, &idrct );
+		int numAssigned = sscanf( buffer, "%12d %12d %12d %12d %32c "
+		        "%20c %s %12d %f %12d %12d",
+		        &disc, &cat, &parm, &pdtn, name, unts, gname, &scl,
+		        &msng, &ihzrmp, &idrct );
+
+		if (numAssigned != 11) {
+		    log_add("Couldn't decode 11 fields from entry %d", n);
+                    success = false;
+		    *iret = -2;
+		}
 	    }
 	    else {
-		sscanf( buffer, "%12d %12d %12d %12d %32c %20c %s %12d %20f",
-                            &disc, &cat, &parm, &pdtn,
-                            name, unts, gname,
-                            &scl, &msng);
-		ihzrmp = 0;
-		idrct = 0;
+		int numAssigned = sscanf( buffer, "%12d %12d %12d %12d %32c "
+		        "%20c %s %12d %20f",
+		        &disc, &cat, &parm, &pdtn, name, unts, gname, &scl,
+		        &msng);
+
+		if (numAssigned != 9) {
+		    log_add("Couldn't decode 9 fields from entry %d", n);
+                    success = false;
+		    *iret = -2;
+		}
+		else {
+                    ihzrmp = 0;
+                    idrct = 0;
+		}
 	    }
 
-	    name[32] = '\0';
-	    unts[20] = '\0';
+	    if (success) {
+                name[32] = '\0';
+                unts[20] = '\0';
 
-            Gr2Tbl.info[n].discpln=disc;
-            Gr2Tbl.info[n].categry=cat;
-            Gr2Tbl.info[n].paramtr=parm;
-            Gr2Tbl.info[n].pdtnmbr=pdtn;
-            strcpy(Gr2Tbl.info[n].name,    name);
-            strcpy(Gr2Tbl.info[n].units,   unts);
-            strcpy(Gr2Tbl.info[n].gemname, gname);
+                Gr2Tbl.info[n].discpln=disc;
+                Gr2Tbl.info[n].categry=cat;
+                Gr2Tbl.info[n].paramtr=parm;
+                Gr2Tbl.info[n].pdtnmbr=pdtn;
+                strcpy(Gr2Tbl.info[n].name,    name);
+                strcpy(Gr2Tbl.info[n].units,   unts);
+                strcpy(Gr2Tbl.info[n].gemname, gname);
 
-            Gr2Tbl.info[n].scale=scl;
-            Gr2Tbl.info[n].missing=msng;
-	    Gr2Tbl.info[n].hzremap = ihzrmp;
-	    Gr2Tbl.info[n].direction = idrct;
+                Gr2Tbl.info[n].scale=scl;
+                Gr2Tbl.info[n].missing=msng;
+                Gr2Tbl.info[n].hzremap = ihzrmp;
+                Gr2Tbl.info[n].direction = idrct;
+	    }
 
             n++;
         }

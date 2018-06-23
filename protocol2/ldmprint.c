@@ -366,7 +366,7 @@ feedtypet_format(feedtypet feed)
 {
     size_t bufSize = FDTT_SBUF_SIZE + 1;
     char*  buf = malloc(bufSize);
-    int    nbytes = ft_format(feed, buf, sizeof(buf));
+    int    nbytes = ft_format(feed, buf, bufSize);
     if (nbytes >= bufSize) {
         log_syserr_q("Couldn't format binary feed specification");
         free(buf);

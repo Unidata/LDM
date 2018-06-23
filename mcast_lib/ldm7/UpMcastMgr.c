@@ -323,14 +323,16 @@ failure:
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
-mldm_terminateSenderAndWait()
+mldm_terminateSenderAndReap()
 {
     int status;
+
     if (childPid == 0) {
         status = LDM7_OK;
     }
     else {
-        int status = kill(childPid, SIGTERM);
+        status = kill(childPid, SIGTERM);
+
         if (status) {
             log_add_syserr("Couldn't send SIGTERM to multicast LDM sender "
                     "process %d", childPid);
@@ -338,7 +340,9 @@ mldm_terminateSenderAndWait()
         }
         else {
             int procStatus;
+
             status = waitpid(childPid, &procStatus, 0);
+
             if (status) {
                 log_add_syserr("Couldn't wait for multicast LDM sender process "
                         "%d to terminate", childPid);
@@ -355,11 +359,13 @@ mldm_terminateSenderAndWait()
                             "abnormally due to signal %d", childPid,
                             WTERMSIG(procStatus));
                 }
+
                 mldm_reset();
                 status = LDM7_OK;
-            }
-        }
-    }
+            } // Couldn't reap multicast LDM sender process
+        } // Multicast LDM sender was successfully signaled
+    } // Multicast LDM sender process hasn't been started
+
     return status;
 }
 
@@ -392,7 +398,7 @@ mldm_handleExecedChild(
         log_add("Couldn't get port numbers from multicast LDM sender "
                 "%s. Terminating that process.", id);
         free(id);
-        (void)mldm_terminateSenderAndWait(); // Uses `childPid`
+        (void)mldm_terminateSenderAndReap(); // Uses `childPid`
     }
     else {
         status = msm_put(info->feed, pid, fmtpSrvrPort, mldmCmdPort);
@@ -403,7 +409,7 @@ mldm_handleExecedChild(
             log_add("Couldn't save information on multicast LDM sender "
                     "%s. Terminating that process.", id);
             free(id);
-            (void)mldm_terminateSenderAndWait(); // Uses `childPid`
+            (void)mldm_terminateSenderAndReap(); // Uses `childPid`
         } // Information saved in multicast sender map
     } // FMTP server port and mldm_sender command port set
 

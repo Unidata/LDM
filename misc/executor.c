@@ -94,16 +94,15 @@ static int mutex_init(
 }
 
 /**
- * Verifies that a mutex is locked. Aborts if it isn't. The mutex must not be
- * recursive.
+ * Verifies that a non-recursive mutex is locked. Aborts if it isn't. The mutex
+ * must not be recursive.
  *
  * @param[in] mutex  The non-recursive mutex.
  */
-static void verifyLocked(
+inline static void assertLocked(
         pthread_mutex_t* const mutex)
 {
-    if (pthread_mutex_trylock(mutex) == 0)
-        log_assert(false);
+    log_assert(pthread_mutex_trylock(mutex));
 }
 
 /**
@@ -168,7 +167,7 @@ static int exe_enqueueCompleted(
 {
     Executor* const exe = job->exe;
 
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
 
     int status = q_enqueue(exe->completed, job);
     if (status) {
@@ -599,21 +598,20 @@ static int exe_addToList(
 {
     int status;
 
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
 
     job_lock(job);
-    log_assert(job->state == JOB_PENDING);
+        log_assert(job->state == JOB_PENDING);
 
-    DllElt* const elt = dll_add(exe->jobs, job);
+        DllElt* const elt = dll_add(exe->jobs, job);
 
-    if (elt == NULL) {
-        status = ENOMEM;
-    }
-    else {
-        job->elt = elt;
-        status = 0;
-    }
-
+        if (elt == NULL) {
+            status = ENOMEM;
+        }
+        else {
+            job->elt = elt;
+            status = 0;
+        }
     job_unlock(job);
 
     return status;
@@ -630,10 +628,11 @@ static void exe_removeFromList(
         Executor* const restrict exe,
         Job* const restrict      job)
 {
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
+
     (void)dll_remove(exe->jobs, job->elt);
     job_lock(job);
-    job->elt = NULL;
+        job->elt = NULL;
     job_unlock(job);
 }
 
@@ -656,7 +655,7 @@ static int exe_submitJob(
         Executor* const restrict exe,
         Job* const restrict      job)
 {
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
 
     int status = exe_addToList(exe, job);
     if (status) {
@@ -690,7 +689,7 @@ static int exe_submitJob(
 static int shutdown(
         Executor* const restrict exe)
 {
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
     log_assert(exe->state == EXE_SHUTTING_DOWN);
     int      status = 0;
     DllIter* iter = dll_iter(exe->jobs);
@@ -730,7 +729,7 @@ static int shutdown(
 static int clear(
         Executor* const restrict exe)
 {
-    verifyLocked(&exe->mutex);
+    assertLocked(&exe->mutex);
     log_assert(exe->state == EXE_SHUTDOWN);
     int status;
 

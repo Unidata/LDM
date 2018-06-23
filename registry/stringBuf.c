@@ -174,7 +174,7 @@ RegStatus sb_new(
         instance->buf = NULL;
         instance->max = 0;
 
-        if (0 != (status = ensure(instance, nchar))) {
+        if ((status = ensure(instance, nchar))) {
             free(instance);
         }
         else {

@@ -167,7 +167,6 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       /*  Check if a previous defined bitmap exists*/
         if (isecnum == 6) {
           gbit(cgrib,&ibmprev,iofst,8);
-          iofst+=8;
           if ((ibmprev >= 0) && (ibmprev <= 253)) isprevbmap=1;
         }
         len=len+ilen;

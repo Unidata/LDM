@@ -127,6 +127,7 @@ up7_openProdIndexMap(
     char pathname[_XOPEN_PATH_MAX];
 
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
+    pathname[sizeof(pathname)-1] = 0;
 
     int status = pim_openForReading(dirname(pathname), feed);
 
@@ -561,7 +562,7 @@ up7_setCursorFromSignature(
     case 0:
         return 0;
     case PQ_NOTFOUND:
-        log_info_q("Data-product with signature %s wasn't found in product-queue",
+        log_info_1("Data-product with signature %s wasn't found in product-queue",
                 s_signaturet(NULL, 0, after));
         return LDM7_NOENT;
     default:

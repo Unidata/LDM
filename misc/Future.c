@@ -377,7 +377,10 @@ future_free(Future* future)
 
     int status;
 
-    if (future != NULL) {
+    if (future == NULL) {
+        status = 0;
+    }
+    else {
         future_assertValid(future);
 
         if (future_cas(future, STATE_RUNNING, STATE_RUNNING)) {

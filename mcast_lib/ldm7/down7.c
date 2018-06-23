@@ -2162,7 +2162,7 @@ down7_init(
      *   - FMTP unicast receiver
      *   - LDM7 data-product receiver.
      */
-    if (!(pq_getFlags(pq) | PQ_THREADSAFE)) {
+    if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
         log_add("Product-queue %s isn't thread-safe: %0x",
                 pq_getPathname(pq), pq_getFlags(pq));
         status = LDM7_INVAL;

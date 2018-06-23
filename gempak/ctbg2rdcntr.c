@@ -65,7 +65,7 @@ void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret )
             return;
         }
 
-        cntrtbl->info = (G2wmocenter *)malloc((size_t)nr*sizeof(G2wmocenter));
+        cntrtbl->info = (G2wmocenter *)calloc((size_t)nr, sizeof(G2wmocenter));
         cntrtbl->nlines = nr;
 
         n  = 0;
@@ -76,15 +76,21 @@ void ctb_g2rdcntr ( char *tbname, G2wmocntrs *cntrtbl, int *iret )
 
 	    cst_lstr (  buffer, &blen, &ier );
 
-            sscanf( buffer, "%10d %64c %8s",
+            int numAssigned = sscanf( buffer, "%10d %64c %8s",
                             &id, name, abbrev);
 
-	    name[64] = '\0';
-	    abbrev[8] = '\0';
+            if (numAssigned != 3) {
+                log_add("Couldn't decode 3 fields from entry %d", n);
+                *iret = -2;
+            }
+            else {
+                name[64] = '\0';
+                abbrev[8] = '\0';
 
-            cntrtbl->info[n].id=id;
-            strcpy(cntrtbl->info[n].name,    name);
-            strcpy(cntrtbl->info[n].abbrev,  abbrev);
+                cntrtbl->info[n].id=id;
+                strcpy(cntrtbl->info[n].name,    name);
+                strcpy(cntrtbl->info[n].abbrev,  abbrev);
+            }
 
             n++;
         }
