@@ -35,9 +35,9 @@ The LDM supports flexible, site-specific configuration.
 	    <li><a href="known-problems.html">Known Problems</a>
 	    <li><a href="compatibility.html">Compatibility with Previous
 		Versions</a>
-            <li><a href="https://scan.coverity.com/projects/4645">
+            <li><a href="https://scan.coverity.com/projects/unidata-ldm">
                 <img alt="Coverity Scan Build Status"
-               src="https://scan.coverity.com/projects/4645/badge.svg"/></a>
+                src="https://scan.coverity.com/projects/16072/badge.svg"/></a>
 	</ul>
     <li><p>Legal Notices
 	<ul>

@@ -1,10 +1,11 @@
-6.13.7.20
-    Squashed another Coverity bug and pushed FMTP.
-
-6.13.7.19       2018-06-23T16:56:32-0600
+6.13.7.19
     Squashed bugs found by Coverity Scan.
 
     Added some error-checking to grib2/ and gempak/.
+
+    New FMTP.
+    
+    Updated Coverity Scan badge.
 
 6.13.7.18	2018-06-22T13:18:45-0600
     Fix project in Coverity Scan and configure .travis.yml.
