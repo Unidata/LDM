@@ -3949,8 +3949,8 @@ f_mtof( pqueue *const pq,
                     !fIsSet(pq->pflags, PQ_READONLY)));
 
     int  status;
-
     riu* rp;
+
     if (riul_r_find(pq->riulp, offset, &rp) == 0) {
         log_add("Region with offset %ld isn't in use", (long)offset);
         status = EINVAL;
@@ -3980,6 +3980,9 @@ f_mtof( pqueue *const pq,
                         "expected to write %lu", nwrote, (long)offset,
                         (unsigned long)extent);
                 status = EIO;
+            }
+            else {
+                status = 0;
             }
         }
 
@@ -6128,8 +6131,9 @@ const char* pq_getPathname(
         pqueue* pq)
 {
     pq_lockIf(pq);
-    const char* pathname = pq->pathname;
+        const char* pathname = pq->pathname;
     pq_unlockIf(pq);
+
     return pathname;
 }
 
@@ -7917,8 +7921,12 @@ unwind_lock:
  *                    file descriptor.
  */
 int
-pq_sequence(pqueue *pq, pq_match mt,
-        const prod_class_t *clss, pq_seqfunc *ifMatch, void *otherargs)
+pq_sequence(
+        pqueue* const             pq,
+        pq_match                  mt,
+        const prod_class_t* const clss,
+        pq_seqfunc* const         ifMatch,
+        void* const               otherargs)
 {
     return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, NULL);
 }
@@ -8514,10 +8522,15 @@ pq_deleteBySignature(
  */
 /*ARGSUSED*/
 static inline int
-didmatch(const prod_info *infop, const void *datap,
-                void *xprod, size_t size,  void *vp)
+didmatch(
+        const prod_info* const infop,
+        const void* const      datap,
+        void* const            xprod,
+        const size_t           size,
+        void* const            vp)
 {
-        timestampt *tsp = (timestampt *)vp;
+        timestampt* tsp = (timestampt *)vp;
+
         if(tsp != NULL)
                 *tsp = infop->arrival;
 
@@ -8544,9 +8557,9 @@ didmatch(const prod_info *infop, const void *datap,
  *      else    Failure.  <errno.h> error-code.
  */
 int
-pq_last(pqueue* const       pq,
-        const prod_class_t* clssp,
-        timestampt const*   tsp)
+pq_last(pqueue* const             pq,
+        const prod_class_t* const clssp,
+        timestampt* const         tsp)
 {
     int status = ENOERR;
 

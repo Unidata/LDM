@@ -1,4 +1,7 @@
-6.13.7.19
+6.13.7.20
+    Squashed another Coverity bug and pushed FMTP.
+
+6.13.7.19       2018-06-23T16:56:32-0600
     Squashed bugs found by Coverity Scan.
 
     Added some error-checking to grib2/ and gempak/.
