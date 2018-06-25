@@ -107,7 +107,7 @@ test_trivialExecution()
     log_flush_error();
     OP_ASSERT_TRUE(mlr != NULL);
     mcastReceiver_free_ExpectAndReturn(NULL, NULL);
-    mlr_delete(mlr);
+    mlr_free(mlr);
     OP_VERIFY();
 }
 
@@ -125,7 +125,7 @@ test_mdl_createAndExecute()
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);
 
     fmtpReceiver_free_ExpectAndReturn(NULL, NULL);
-    mlr_delete(mdl);
+    mlr_free(mdl);
     log_flush_info();
 
     OP_VERIFY();

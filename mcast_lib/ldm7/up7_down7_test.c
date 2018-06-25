@@ -1063,6 +1063,7 @@ receiver_init(
      * - Multicast data-block insertion
      * - Unicast missed data-block insertion
      * - Unicast missed or backlog product insertion
+     * - "Backstop" simulation product-deletion
      */
     CU_ASSERT_EQUAL_FATAL(
             pq_open(DOWN7_PQ_PATHNAME, PQ_THREADSAFE, &receiverPq), 0);
@@ -1155,7 +1156,7 @@ receiver_haltDown7(
 }
 
 /**
- * Starts the receiver on a new thread.
+ * Starts an asynchronous receiver. Doesn't block.
  *
  * This implementation access the product-queue on 4 threads:
  * - Multicast data-block receiver thread

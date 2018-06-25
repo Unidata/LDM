@@ -267,7 +267,7 @@ up7Proxy_free(
  *                            to `feed`.
  * @param[out] fmtpAddr       IP address to be used by FMTP layer
  * @retval     0              If and only if success. `*mcastInfo` is set. The
- *                            caller should call `mi_delete(*mcastInfo)` when
+ *                            caller should call `mi_free(*mcastInfo)` when
  *                            it's no longer needed.
  * @retval     LDM7_NOENT     The upstream LDM7 doesn't multicast `feed`.
  *                            `log_add()` called.
@@ -856,7 +856,7 @@ ucastRcvr_destroy(UcastRcvr* const ucastRcvr)
  * @retval        NULL         Failure. `log_add()` called.
  * @return                     Allocated and initialized one-time, LDM7 unicast
  *                             receiver
- * @see          `ucastRcvr_delete()`
+ * @see          `ucastRcvr_free()`
  */
 static UcastRcvr*
 ucastRcvr_new(
@@ -921,7 +921,7 @@ mcastRcvr_init(
 inline static void
 mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
-    mlr_delete(mcastRcvr->mlr);
+    mlr_free(mcastRcvr->mlr);
 }
 
 static McastRcvr*
@@ -2128,7 +2128,7 @@ down7_createThreadKey(void)
  *                          `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  * @param[in]  mrm          Persistent multicast receiver memory. Must exist
  *                          until `down7_destroy()` returns.
- * @param[in]  vcEnd        Local virtual-circuit endpoint
+ * @param[in]  vcEnd        Local virtual-circuit endpoint. Caller may free.
  * @retval     0            Success
  * @retval     LDM7_INVAL   Product-queue isn't thread-safe. `log_add()` called.
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
@@ -2363,21 +2363,20 @@ down7_haltDownlet(
  *
  * @param[in] servAddr    Pointer to the address of the server from which to
  *                        obtain multicast information, backlog products, and
- *                        products missed by the FMTP layer. Caller may free
- *                        upon return.
+ *                        products missed by the FMTP layer. Caller may free.
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
- *                        packets. Caller may free upon return.
- * @param[in] vcEnd       Local virtual-circuit endpoint
+ *                        packets. Caller may free.
+ * @param[in] vcEnd       Local virtual-circuit endpoint. Caller may free.
  * @param[in] pq          The product-queue. Must be thread-safe (i.e.,
  *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  * @param[in] mrm         Persistent multicast receiver memory. Must exist until
- *                        `down7_delete()` returns.
+ *                        `down7_free()` returns.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to the new downstream LDM7. Caller should call
- *                        `down7_delete()` when it's no longer needed.
+ *                        `down7_free()` when it's no longer needed.
  * @see `down7_run()`
- * @see `down7_delete()`
+ * @see `down7_free()`
  */
 Down7*
 down7_new(

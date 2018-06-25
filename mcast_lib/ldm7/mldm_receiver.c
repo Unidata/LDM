@@ -455,7 +455,7 @@ mlr_new(
  * @param[in,out] mlr   The multicast LDM receiver object.
  */
 void
-mlr_delete(
+mlr_free(
         Mlr* const  mlr)
 {
     destroy(mlr);

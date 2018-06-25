@@ -2,6 +2,10 @@
     Added Coverity modeling file.
     
     Added verification test for unsigned arithmetic.
+    
+    Some `_delete()` -> `_free()`.
+    
+    Improved commentary.
 
 6.13.7.19	2018-06-24T10:32:15-0600
     Squashed bugs found by Coverity Scan.
