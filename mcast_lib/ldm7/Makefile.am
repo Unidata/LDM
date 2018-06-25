@@ -175,6 +175,12 @@ endif
 
 if HAVE_CUNIT
 
+unsigned_test_SOURCES		= unsigned_test.c
+unsigned_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+				  @LIBS_CUNIT@
+check_PROGRAMS			+= unsigned_test
+TESTS				+= unsigned_test
+
 cond_wait_test_SOURCES		= cond_wait_test.c
 cond_wait_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
 				  @LIBS_CUNIT@
