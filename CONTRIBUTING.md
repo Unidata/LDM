@@ -4,7 +4,7 @@
 
 1. Clone the repository:
 
-        git clone https://github.com/Unidata/LDM.git src
+        git clone --recursive https://github.com/Unidata/LDM.git src
     
 2. Change to the source-directory:
 
@@ -12,11 +12,12 @@
 
 3. Create the autotools(1) infrastructure:
 
+        mkdir -p m4
         autoreconf -f -i
 
 4. Create the build infrastructure:
 
-        ./configure --enable-debug --disable-root-actions ... >&configure.log
+        ./configure --enable-debug --disable-root-actions ... |& tee configure.log
 
 5. Edit the package to add your feature. Start by adding a test of the feature to `make check`. Feature additions lacking this verification will not be accepted.
 
