@@ -201,9 +201,10 @@ elt_start(
             exit(0);
         }
 
+        log_add("executeDown7() failure: status=%d", status);
         log_flush_error();
         log_free();
-        abort(); // Should never happen
+        exit(1); // Should never happen
     }
     else {
         /* Parent process */
