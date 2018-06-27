@@ -1,3 +1,7 @@
+6.13.7.22
+    Removed OESS from .git/config and changed OESS URL in .gitmodules from
+    `git@` to `htpps://` form.
+
 6.13.7.21	2018-06-26T16:53:59-0600
     Added OESS submodule.
 
