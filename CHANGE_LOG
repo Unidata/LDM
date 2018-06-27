@@ -1,4 +1,4 @@
-6.13.7.22
+6.13.7.22	2018-06-27T09:03:08-0600
     Removed OESS from .git/config and changed OESS URL in .gitmodules from
     `git@` to `htpps://` form.
 
