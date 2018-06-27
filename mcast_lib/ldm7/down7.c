@@ -2361,9 +2361,9 @@ down7_haltDownlet(
  * Returns a new downstream LDM7. The instance doesn't receive anything until
  * `down7_run()` is called.
  *
- * @param[in] servAddr    Pointer to the address of the server from which to
- *                        obtain multicast information, backlog products, and
- *                        products missed by the FMTP layer. Caller may free.
+ * @param[in] servAddr    Address of the server from which to obtain multicast
+ *                        information, backlog products, and products missed by
+ *                        the FMTP layer. Caller may free.
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
  *                        packets. Caller may free.
@@ -2585,7 +2585,7 @@ down7_getPqeCount(
 }
 
 /******************************************************************************
- * LDM7 RPC server functions
+ * Downstream LDM7 RPC server functions
  ******************************************************************************/
 
 /**

@@ -38,8 +38,8 @@
  * @param[in] iface          IP address of FMTP interface
  * @param[in] vcEnd          Local virtual-circuit endpoint
  * @param[in] pqPathname     Pathname of the product-queue.
+ * @retval    0              Success
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
- * @retval    LDM7_SHUTDOWN  Process termination requested.
  * @retval    LDM7_SYSTEM    System error occurred. `log_add()` called.
  */
 static int
@@ -73,7 +73,7 @@ executeDown7(
                 status = down7_run(down7); // Blocks until error
 
                 if (status == LDM7_INTR)
-                    status = 0;
+                    status = 0; // Success
 
                 (void)down7_free(down7);
             } // `down7` allocated
@@ -195,16 +195,16 @@ elt_start(
         status = executeDown7(elt->ul7, elt->ft, elt->iface, &elt->vcEnd,
                 getQueuePath());
 
-        if (status == LDM7_SHUTDOWN) {
-            log_flush_notice();
+        if (status) {
+            log_add("executeDown7() failure: status=%d", status);
+            log_flush_error();
             log_free();
-            exit(0);
+            exit(1); // Should never happen
         }
 
-        log_add("executeDown7() failure: status=%d", status);
-        log_flush_error();
+        log_flush_notice();
         log_free();
-        exit(1); // Should never happen
+        exit(0);
     }
     else {
         /* Parent process */
