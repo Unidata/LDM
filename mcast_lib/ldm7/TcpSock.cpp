@@ -139,14 +139,15 @@ public:
      * @exceptionsafety          Strong guarantee
      * @threadsafety             Compatible but not safe
      */
-    void connect(const struct InetSockAddr rmtSockAddr)
+    void connect(const InetSockAddr& rmtSockAddr)
     {
         try {
             rmtSockAddr.connect(sd);
         }
         catch (const std::exception& ex) {
             std::throw_with_nested(std::runtime_error(
-                    "Couldn't connect TCP socket " + toString()));
+                    "Couldn't connect TCP socket " + toString() + " to " +
+                    rmtSockAddr.to_string()));
         }
     }
 
@@ -290,7 +291,7 @@ TcpSock::TcpSock(const InetSockAddr localAddr)
     : pImpl{new Impl(localAddr)}
 {}
 
-void TcpSock::connect(const InetSockAddr rmtSockAddr) const
+void TcpSock::connect(const InetSockAddr& rmtSockAddr) const
 {
     pImpl->connect(rmtSockAddr);
 }

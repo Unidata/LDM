@@ -67,7 +67,7 @@ public:
      * @exceptionsafety          Strong guarantee
      * @threadsafety             Compatible but not safe
      */
-    void connect(const InetSockAddr rmtSockAddr) const;
+    void connect(const InetSockAddr& rmtSockAddr) const;
 
     /**
      * Returns the Internet socket address of the local endpoint.
