@@ -63,7 +63,7 @@ Ldm7Status mldmClnt_release(
  * @param[in] mldmClnt  Multicast LDM RPC client
  * @see mldmClnt_new()
  */
-void mldmClnt_delete(void* mldmClnt);
+void mldmClnt_free(void* mldmClnt);
 
 /**
  * Creates.
@@ -124,7 +124,7 @@ Ldm7Status mldmSrvr_stop(void* mldmSrvr);
  * @param[in] mldmClnt  Multicast LDM RPC server
  * @see mldmSrvr_new()
  */
-void mldmSrvr_delete(void* mldmSrvr);
+void mldmSrvr_free(void* mldmSrvr);
 
 #ifdef __cplusplus
 } // `extern "C"`

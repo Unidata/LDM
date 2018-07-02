@@ -198,7 +198,7 @@ Ldm7Status mldmClnt_release(
     return LDM7_OK;
 }
 
-void mldmClnt_delete(void* mldmClnt)
+void mldmClnt_free(void* mldmClnt)
 {
     delete static_cast<MldmClnt*>(mldmClnt);
 }
@@ -504,6 +504,9 @@ public:
      */
     void operator()()
     {
+        log_notice_1(("Multicast LDM sender command-server starting up: "
+                "srvrSock=" + srvrSock.getLocalSockAddr().to_string()).data());
+
         while (!done()) {
             try {
                 // Performs authentication/authorization
@@ -613,7 +616,7 @@ Ldm7Status mldmSrvr_stop(void* mldmSrvr)
     return LDM7_OK;
 }
 
-void mldmSrvr_delete(void* mldmSrvr)
+void mldmSrvr_free(void* mldmSrvr)
 {
     delete static_cast<MldmSrvr*>(mldmSrvr);
 }

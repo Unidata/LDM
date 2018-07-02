@@ -45,7 +45,7 @@ static void test_construction(void)
     void* mldmSrvr = mldmSrvr_new(inAddrPool);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmSrvr);
     CU_ASSERT_TRUE(0 < mldmSrvr_getPort(mldmSrvr));
-    mldmSrvr_delete(mldmSrvr);
+    mldmSrvr_free(mldmSrvr);
     inAddrPool_delete(inAddrPool);
     cidrAddr_delete(subnet);
 }
@@ -80,13 +80,13 @@ static void test_reserveAndRelease(void)
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), 0);
     CU_ASSERT_FALSE(inAddrPool_isReserved(inAddrPool, fmtpAddr));
 
-    mldmClnt_delete(mldmClnt);
+    mldmClnt_free(mldmClnt);
     status = mldmSrvr_stop(mldmSrvr);
     CU_ASSERT_EQUAL(status, 0);
     void* ptr;
     status = pthread_join(mldmSrvrThread, &ptr);
     CU_ASSERT_EQUAL(status, 0);
-    mldmSrvr_delete(mldmSrvr);
+    mldmSrvr_free(mldmSrvr);
     inAddrPool_delete(inAddrPool);
     cidrAddr_delete(subnet);
 }
@@ -111,13 +111,13 @@ static void test_releaseUnreserved(void)
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), LDM7_NOENT);
     log_notice_q("");
 
-    mldmClnt_delete(mldmClnt);
+    mldmClnt_free(mldmClnt);
     status = mldmSrvr_stop(mldmSrvr);
     CU_ASSERT_EQUAL(status, 0);
     void* ptr;
     status = pthread_join(thread, &ptr);
     CU_ASSERT_EQUAL(status, 0);
-    mldmSrvr_delete(mldmSrvr);
+    mldmSrvr_free(mldmSrvr);
     inAddrPool_delete(inAddrPool);
     cidrAddr_delete(subnet);
 }
