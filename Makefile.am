@@ -94,6 +94,7 @@ SUBDIRS 	+= regutil \
                    scripts \
                    uldbutil \
                    ulogger
+SUBDIRS		+= delayQueue
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif

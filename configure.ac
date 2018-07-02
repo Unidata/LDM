@@ -55,8 +55,6 @@ AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
 #fi
 
 AC_PROG_CXX
-# Ensure a reference to the C++ library, if necessary
-LIBS="${LIBS:+ $LIBS }-lstdc++"
 
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++11])
@@ -694,6 +692,7 @@ AC_CONFIG_FILES([
     fauxPq/Makefile
     feedme/Makefile
     fileIngest/Makefile
+    delayQueue/Makefile
     gempak/Makefile
     gempak/tables/Makefile
     grib2/Makefile

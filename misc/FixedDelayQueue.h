@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <thread>
 
 /**
  * @tparam Value     Type of value being stored in the queue. Must support
@@ -55,11 +56,10 @@ private:
          */
         Element(const Value&    value,
                 const Duration& delay)
-            : value{}
-            , when{Clock::now() + delay}
-        {
-            this->value = value;
-        }
+            : value{value}
+            , when{Clock::now() +
+                std::chrono::duration_cast<Clock::duration>(delay)}
+        {}
 
         /**
          * Returns the value.
@@ -113,8 +113,7 @@ public:
      * and assignment are disallowed to obviate having to think about them. This
      * decision can be revisited if necessary.
      */
-    FixedDelayQueue(const FixedDelayQueue& that) =delete;
-    FixedDelayQueue(FixedDelayQueue&& that) =delete;
+    //FixedDelayQueue(const FixedDelayQueue& that) =delete;
     FixedDelayQueue& operator=(const FixedDelayQueue& rhs) =delete;
     FixedDelayQueue& operator=(const FixedDelayQueue&& rhs) =delete;
 
@@ -127,7 +126,7 @@ public:
     void push(const Value& value)
     {
         LockGuard lock{mutex};
-        queue.emplace(value, delay);
+        queue.push(Element{value, delay});
         cond.notify_one();
     }
 
@@ -142,14 +141,20 @@ public:
      */
     Value pop()
     {
-        std::unique_lock<Mutex> lock(mutex);
-        while (queue.size() == 0)
-            cond.wait(lock);
-        const auto time = queue.front().getTime();
-        while (time > Clock::now())
-            cond.wait_until(lock, time);
-        const auto value = queue.front().getValue();
+        TimePoint time;
+
+        {
+            std::unique_lock<Mutex> lock(mutex);
+            while (queue.size() == 0)
+                cond.wait(lock);
+            time = queue.front().getTime();
+        }
+
+        std::this_thread::sleep_until(time);
+
+        Value value = queue.front().getValue();
         queue.pop(); // Not empty => nothrow
+
         return value;
     }
 
