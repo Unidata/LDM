@@ -49,6 +49,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <poll.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <time.h>
@@ -519,6 +520,7 @@ static void
 backstop_free(Backstop* const backstop)
 {
     log_debug_1("Entered");
+
     free(backstop);
 }
 
@@ -881,8 +883,106 @@ static void
 ucastRcvr_free(UcastRcvr* const ucastRcvr)
 {
     log_debug_1("Entered");
-    ucastRcvr_destroy(ucastRcvr);
-    free(ucastRcvr);
+
+    if (ucastRcvr) {
+        ucastRcvr_destroy(ucastRcvr);
+        free(ucastRcvr);
+    }
+}
+
+/******************************************************************************
+ * Virtual interface for a VLAN
+ ******************************************************************************/
+
+static int command(const char* const cmd)
+{
+    int status = system(cmd);
+
+    if (status == -1) {
+        log_add_errno(status, "system() failure");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = WEXITSTATUS(status);
+
+        if (status) {
+            if (status == 127) {
+                log_add("Couldn't execute command-language interpreter");
+            }
+            else {
+                log_add("Error executing command");
+            }
+
+            status = LDM7_SYSTEM;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Creates a virtual interface for a VLAN.
+ *
+ * @param[in] interface    Virtual interface to be created
+ * @param[in] cidrAddr     Address and subnet to be assigned to interface
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+static int vlanUtil_create(
+        const char* const restrict     interface,
+        const CidrAddr* const restrict cidrAddr)
+{
+    int       status;
+    in_addr_t addr;
+    char      addrStr[INET_ADDRSTRLEN];
+    char      subnetStr[INET_ADDRSTRLEN];
+
+    addr = cidrAddr_getAddr(cidrAddr);
+    (void)inet_ntop(AF_INET, &addr, addrStr, sizeof(addrStr)); // Can't fail
+
+    addr = cidrAddr_getSubnet(cidrAddr);
+    (void)inet_ntop(AF_INET, &addr, subnetStr, sizeof(subnetStr)); // Can't fail
+
+    char* const cmd = ldm_format(128, "vlanUtil create -n %s %s %s",
+            subnetStr, interface, addrStr);
+
+    if (cmd == NULL) {
+        log_add("Couldn't construct command to create VLAN virtual interface");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = command(cmd);
+
+        if (status)
+            log_add("Couldn't create VLAN virtual interface via command \"%s\"",
+                    cmd);
+
+        free(cmd);
+    } // `cmd` allocated
+
+    return status;
+}
+
+/**
+ * Destroys a virtual interface for a VLAN.
+ *
+ * @param[in] interface  Interface to be destroyed
+ */
+static void vlanUtil_destroy(const char* const interface)
+{
+    int         status;
+    char* const cmd = ldm_format(128, "vlanUtil destroy %s", interface);
+
+    if (cmd == NULL) {
+        log_add("Couldn't construct command to destroy VLAN virtual interface");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        if (command(cmd))
+            log_add("Couldn't destroy VLAN virtual interface via command "
+                    "\"%s\"", cmd);
+        free(cmd);
+    } // `cmd` allocated
 }
 
 /******************************************************************************
@@ -890,30 +990,55 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
  ******************************************************************************/
 
 typedef struct mcastRcvr {
-    Mlr*            mlr;     ///< Multicast LDM receiver
-    struct downlet* downlet; ///< Parent one-time, downstream LDM7
+    Mlr*            mlr;       ///< Multicast LDM receiver
+    const char*     interface; ///< VLAN interface to create
+    struct downlet* downlet;   ///< Parent one-time, downstream LDM7
 } McastRcvr;
 
+/**
+ * Initializes a multicast receiver.
+ *
+ * @param[in] mcastRcvr    Multicast receiver to be initialized
+ * @param[in] mcastInfo    Information on multicast group
+ * @param[in] iface        VLAN interface to be created. Must exist for
+ *                         duration of initialized instance.
+ * @param[in] fmtpAddr     VLAN address to be assigned to interface
+ * @param[in] pq           Product queue
+ * @param[in] downlet      Parent, one-time, downstream LDM7
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ */
 static int
 mcastRcvr_init(
-        McastRcvr* const restrict  mcastRcvr,
-        McastInfo* const restrict  mcastInfo,
-        const char* const restrict iface,
-        pqueue* const restrict     pq,
-        Downlet* const restrict    downlet)
+        McastRcvr* const restrict      mcastRcvr,
+        McastInfo* const restrict      mcastInfo,
+        const char* const restrict     iface,
+        const CidrAddr* const restrict fmtpAddr,
+        pqueue* const restrict         pq,
+        Downlet* const restrict        downlet)
 {
-    int  status;
-    Mlr* mlr = mlr_new(mcastInfo, iface, pq, downlet);
+    int status = vlanUtil_create(iface, fmtpAddr);
 
-    if (mlr == NULL) {
-        log_add("Couldn't create multicast LDM receiver");
-        status = LDM7_SYSTEM;
+    if (status) {
+        log_add("Couldn't create virtual interface for FMTP VLAN");
     }
     else {
-        mcastRcvr->mlr = mlr;
-        mcastRcvr->downlet = downlet;
-        status = 0;
-    }
+        Mlr* mlr = mlr_new(mcastInfo, iface, pq, downlet);
+
+        if (mlr == NULL) {
+            log_add("Couldn't create multicast LDM receiver");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            mcastRcvr->mlr = mlr;
+            mcastRcvr->interface = iface;
+            mcastRcvr->downlet = downlet;
+            status = 0;
+        } // `mlr` allocated
+
+        if (status)
+            vlanUtil_destroy(iface);
+    } // FMTP VLAN interface created
 
     return status;
 }
@@ -922,20 +1047,23 @@ inline static void
 mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
     mlr_free(mcastRcvr->mlr);
+    vlanUtil_destroy(mcastRcvr->interface);
 }
 
 static McastRcvr*
 mcastRcvr_new(
-        McastInfo* const restrict  mcastInfo,
-        const char* const restrict iface,
-        pqueue* const restrict     pq,
-        Downlet* const restrict    downlet)
+        McastInfo* const restrict      mcastInfo,
+        const char* const restrict     iface,
+        const CidrAddr* const restrict fmtpAddr,
+        pqueue* const restrict         pq,
+        Downlet* const restrict        downlet)
 {
     McastRcvr* mcastRcvr = log_malloc(sizeof(McastRcvr),
             "a one-time, LDM7 multicast receiver");
 
     if (mcastRcvr) {
-        if (mcastRcvr_init(mcastRcvr, mcastInfo, iface, pq, downlet)) {
+        if (mcastRcvr_init(mcastRcvr, mcastInfo, iface, fmtpAddr, pq,
+                downlet)) {
             free(mcastRcvr);
             mcastRcvr = NULL;
         }
@@ -948,8 +1076,11 @@ inline static void
 mcastRcvr_free(McastRcvr* const mcastRcvr)
 {
     log_debug_1("Entered");
-    mcastRcvr_destroy(mcastRcvr);
-    free(mcastRcvr);
+
+    if (mcastRcvr) {
+        mcastRcvr_destroy(mcastRcvr);
+        free(mcastRcvr);
+    }
 }
 
 /**
@@ -1057,6 +1188,7 @@ inline static void
 backlogger_free(Backlogger* const backlogger)
 {
     log_debug_1("Entered");
+
     if (backlogger) {
         backlogger_destroy(backlogger);
         free(backlogger);
@@ -1435,21 +1567,16 @@ downlet_init(
 {
     int status;
 
+    (void)memset(downlet, 0, sizeof(downlet));
+
     downlet->down7 = down7;
     downlet->servAddr = servAddr;
     downlet->iface = mcastIface;
     downlet->vcEnd = vcEnd;
     downlet->pq = pq;
     downlet->feedtype = feed;
-    downlet->up7Proxy = NULL;
     downlet->sock = -1;
-    downlet->mcastInfo = NULL;
-    downlet->mcastWorking = false;
-    downlet->ucastRcvr = NULL;
-    downlet->backlogger = NULL;
     downlet->mrm = mrm;
-    downlet->backloggerFuture = NULL;
-
     downlet->upId = sa_format(servAddr);
 
     if (downlet->upId == NULL) {
@@ -1680,7 +1807,7 @@ downlet_createMcastRcvr(
     int         status;
 
     McastRcvr* const mcastRcvr = mcastRcvr_new(downlet->mcastInfo,
-            downlet->iface, downlet->pq, downlet);
+            downlet->iface, &downlet->fmtpAddr, downlet->pq, downlet);
 
     if (mcastRcvr == NULL) {
         log_add("Couldn't create %s", id);
@@ -1692,13 +1819,15 @@ downlet_createMcastRcvr(
         if (completer_submit(downlet->completer, downlet, downlet_runMcastRcvr,
                 downlet_haltMcastRcvr) == NULL) {
             log_add("Couldn't submit %s for execution", id);
-            mcastRcvr_free(mcastRcvr);
             status = LDM7_SYSTEM;
         }
         else {
             status = 0;
         }
-    } // `mcastRcvr` created
+
+        if (status)
+            mcastRcvr_free(mcastRcvr);
+    } // `mcastRcvr_new()` success
 
     return status;
 }
@@ -1781,10 +1910,10 @@ downlet_destroyTasks(Downlet* const downlet)
             // The backogger future is freed elsewhere
             if (future != downlet->backloggerFuture) {
                 /*
-                 * Each asynchronous task doesn't allocate a result object;
-                 * therefore, no memory leak can occur. Also, each executing
-                 * task has been canceled; therefore, it has completed and its
-                 * future may be safely freed.
+                 * The task didn't allocate a result object; therefore, no
+                 * memory leak can occur. Also, the task was canceled;
+                 * therefore, it has completed and its future may be safely
+                 * freed.
                  */
                 status = future_free(future);
                 log_assert(status == 0);
@@ -1801,7 +1930,13 @@ downlet_destroyTasks(Downlet* const downlet)
 
 /**
  * Starts the asynchronous subtasks of a downstream LDM7 that collectively
- * receive data-products. Blocks until all subtasks have started.
+ * receive data-products. Blocks until all subtasks have started. The tasks are:
+ * - Multicast data-product receiver
+ * - Missed data-product (i.e., "backstop") requester
+ * - Unicast data-product receiver
+ *
+ * NB: The task to received data-products missed since the end of the previous
+ * session (i.e., "backlogger") is created elsewhere
  *
  * @param[in]  down7          Pointer to the downstream LDM7.
  * @retval     0              Success.
@@ -1811,30 +1946,16 @@ downlet_destroyTasks(Downlet* const downlet)
 static int
 downlet_createTasks(Downlet* const downlet)
 {
-    // NB: The backlogger task is created elsewhere
-
     int status = downlet_createUcastRcvr(downlet);
 
-    if (status) {
-        log_add("Couldn't create one-time, LDM7 unicast receiver task");
-    }
-    else {
+    if (status == 0)
         status = downlet_createBackstop(downlet);
 
-        if (status) {
-            log_add("Couldn't create one-time, LDM7 backstop task");
-        }
-        else {
-            status = downlet_createMcastRcvr(downlet);
+    if (status == 0)
+        status = downlet_createMcastRcvr(downlet);
 
-            if (status)
-                log_add("Couldn't create one-time, LDM7 multicast receiver "
-                        "task");
-        } // One-time LDM7 backstop task created
-
-        if (status)
-            (void)downlet_destroyTasks(downlet);
-    } // One-time LDM7 unicast receiver task created
+    if (status)
+        (void)downlet_destroyTasks(downlet);
 
     return status;
 }
@@ -2251,7 +2372,7 @@ down7_init(
     return status;
 }
 
-static Ldm7Status
+static void
 down7_destroy(Down7* const down7)
 {
     executor_free(down7->executor);
@@ -2264,8 +2385,6 @@ down7_destroy(Down7* const down7)
     vcEndPoint_destroy(&down7->vcEnd);
     free(down7->iface);
     sa_free(down7->servAddr);
-
-    return 0;
 }
 
 /**
@@ -2410,13 +2529,15 @@ down7_new(
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @see `down7_new()`
  */
-int
+void
 down7_free(Down7* const down7)
 {
     log_debug_1("Entered");
-    int status = down7_destroy(down7);
-    free(down7);
-    return status;
+
+    if (down7) {
+        down7_destroy(down7);
+        free(down7);
+    }
 }
 
 /**
