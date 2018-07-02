@@ -343,7 +343,7 @@ mldm_terminateSenderAndReap()
 
             status = waitpid(childPid, &procStatus, 0);
 
-            if (status) {
+            if (status == -1) {
                 log_add_syserr("Couldn't wait for multicast LDM sender process "
                         "%d to terminate", childPid);
                 status = LDM7_SYSTEM;
@@ -477,9 +477,6 @@ mldm_spawn(
         else {
             /* Parent process */
             status = mldm_handleExecedChild(info, pid, fds);
-
-            if (status)
-                log_add("Couldn't handle multicast LDM sender process");
         } // Parent process
     } // Pipe created
 
@@ -893,7 +890,7 @@ me_reserve(
         if (status)
             log_add("Couldn't reserve IP address for remote FMTP layer");
 
-        mldmClnt_delete(mldmClnt);
+        mldmClnt_free(mldmClnt);
     }
 
     return status;
@@ -913,16 +910,20 @@ me_release(
 {
     Ldm7Status  status;
     void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
+
     if (mldmClnt == NULL) {
         log_add("Couldn't create new command-client to multicast LDM sender");
         status = LDM7_SYSTEM;
     }
     else {
         status = mldmClnt_release(mldmClnt, fmtpAddr);
+
         if (status)
             log_add("Couldn't release IP address for remote FMTP layer");
-        mldmClnt_delete(mldmClnt);
+
+        mldmClnt_free(mldmClnt);
     }
+
     return status;
 }
 
