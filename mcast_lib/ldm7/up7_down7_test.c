@@ -122,7 +122,6 @@ static const char        LOCAL_HOST[] = "127.0.0.1";
 static const int         UP7_PORT = 38800;
 static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
 static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
-static McastProdIndex    initialProdIndex;
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
 static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
@@ -265,6 +264,7 @@ teardown(void)
     return 0;
 }
 
+#if 0
 /*
  * The following might be called multiple times.
  */
@@ -290,6 +290,7 @@ unblockSigCont(
     int status = pthread_sigmask(SIG_UNBLOCK, &newSigSet, oldSigSet);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
+#endif
 
 static int
 createEmptyProductQueue(
@@ -1080,7 +1081,7 @@ receiver_init(
 
     VcEndPoint* const vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    receiver->down7 = down7_new(servAddr, feedtype, LOCAL_HOST, vcEnd,
+    receiver->down7 = down7_new(servAddr, feedtype, "lo:1", vcEnd,
             receiverPq, receiver->mrm);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
     vcEndPoint_free(vcEnd);
@@ -1089,12 +1090,12 @@ receiver_init(
 }
 
 /**
- * De-initializes a receiver.
+ * Destroys a receiver.
  */
 static void
 receiver_destroy(Receiver* const recvr)
 {
-    CU_ASSERT_EQUAL(down7_free(recvr->down7), 0);
+    down7_free(recvr->down7);
 
     CU_ASSERT_TRUE(mrm_close(recvr->mrm));
 
