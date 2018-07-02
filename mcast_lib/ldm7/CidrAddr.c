@@ -55,15 +55,6 @@ cidrAddr_delete(CidrAddr* cidrAddr)
     free(cidrAddr);
 }
 
-bool
-cidrAddr_isMember(
-        const CidrAddr* cidrAddr,
-        const in_addr_t addr)
-{
-    in_addr_t mask = htonl(~((1 << (32 - cidrAddr->prefixLen)) - 1));
-    return (mask & addr) == (mask & cidrAddr->addr);
-}
-
 in_addr_t
 cidrAddr_getAddr(const CidrAddr* cidrAddr)
 {
@@ -74,6 +65,21 @@ SubnetLen
 cidrAddr_getPrefixLen(const CidrAddr* cidrAddr)
 {
     return cidrAddr->prefixLen;
+}
+
+in_addr_t
+cidrAddr_getSubnet(const CidrAddr* cidrAddr)
+{
+    return htonl(~((1 << (32 - cidrAddr->prefixLen)) - 1));
+}
+
+bool
+cidrAddr_isMember(
+        const CidrAddr* cidrAddr,
+        const in_addr_t addr)
+{
+    in_addr_t mask = cidrAddr_getSubnet(cidrAddr);
+    return (mask & addr) == (mask & cidrAddr->addr);
 }
 
 CidrAddr*

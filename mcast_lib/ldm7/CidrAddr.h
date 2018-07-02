@@ -56,6 +56,14 @@ void
 cidrAddr_delete(CidrAddr* cidrAddr);
 
 /**
+ * Returns the network mask of a CIDR address.
+ * @param[in] cidrAddr  CIDR address
+ * @return              Network mask in network byte order
+ */
+in_addr_t
+cidrAddr_getSubnet(const CidrAddr* cidrAddr);
+
+/**
  * Indicates if an address is a valid member of a CIDR address.
  * @param[in] cidrAddr  CIDR address
  * @param[in] addr      Possible address in network byte order
