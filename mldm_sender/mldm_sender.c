@@ -1038,7 +1038,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
                 if (status) {
                     log_add_syserr("Couldn't create multicast LDM RPC "
                             "command-server thread");
-                    mldmSrvr_delete(mldmCmdSrvr);
+                    mldmSrvr_free(mldmCmdSrvr);
                     mldmCmdSrvr = NULL;
                     status = LDM7_SYSTEM;
                 }
@@ -1072,7 +1072,7 @@ stopAuthorization()
                     "thread");
         }
         else {
-            mldmSrvr_delete(mldmCmdSrvr);
+            mldmSrvr_free(mldmCmdSrvr);
             auth_delete(authorizer);
             inAddrPool_delete(inAddrPool);
         }
