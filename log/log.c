@@ -795,9 +795,9 @@ int logl_add(
  */
 int logl_add_errno(
         const log_loc_t* const loc,
-        const int                errnum,
-        const char* const        fmt,
-                                 ...)
+        const int              errnum,
+        const char* const      fmt,
+                               ...)
 {
     sigset_t sigset;
     blockSigs(&sigset);
