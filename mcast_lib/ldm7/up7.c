@@ -354,7 +354,7 @@ up7_subscribe(
                     (void)umm_unsubscribe(request->feed, addr);
                     up7_ensureFree(xdr_SubscriptionReply, &rep);
                 }
-            } // `rep` is initialized
+            } // Multicast LDM sender exists & `rep` is initialized
 
             if (status)
                 up7_removeFromMcastCircuit();
