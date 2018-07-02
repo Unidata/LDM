@@ -1,9 +1,0 @@
-mldm_receiver_test
-up7_down7_test
-server_test
-*.map
-*.pq
-send_test
-recv_test
-cond_wait_test
-*.pim
