@@ -263,6 +263,25 @@ msm_init(void)
 }
 
 /**
+ * Destroys this module. Should be called only once per LDM session.
+ *
+ * @retval 0            Success.
+ */
+void
+msm_destroy(void)
+{
+    log_debug_1("Entered");
+
+    if (smo_pathname) {
+        smo_close(fileDes, smo_pathname);
+        free(smo_pathname);
+        smo_pathname = NULL;
+    }
+
+    log_debug_1("Returning");
+}
+
+/**
  * Locks the map. Idempotent. Blocks until the lock is acquired or an error
  * occurs. Locking the map is explicit because the map is shared by multiple
  * processes and a transaction might require several function calls.
@@ -426,21 +445,4 @@ msm_clear(void)
 {
     if (smo_pathname)
         (void)memset(procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
-}
-
-/**
- * Destroys this module. Should be called only once per LDM session.
- *
- * @retval 0            Success.
- */
-void
-msm_destroy(void)
-{
-    log_debug_1("Entered");
-    if (smo_pathname) {
-        smo_close(fileDes, smo_pathname);
-        free(smo_pathname);
-        smo_pathname = NULL;
-    }
-    log_debug_1("Returning");
 }
