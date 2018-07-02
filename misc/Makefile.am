@@ -38,6 +38,7 @@ lib_la_SOURCES	= \
 	error.c \
 	executor.c executor.h \
 	fdnb.c \
+        FixedDelayQueue.h \
 	fsStats.c \
 	inetutil.c \
 	mkdirs_open.c \

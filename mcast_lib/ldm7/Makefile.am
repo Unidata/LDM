@@ -35,7 +35,6 @@ lib_la_SOURCES		= \
 			  fmtp.cpp fmtp.h \
 			  PerProdNotifier.cpp PerProdNotifier.h \
 			  PerProdSendingNotifier.cpp PerProdSendingNotifier.h \
-			  FixedDelayQueue.h \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \

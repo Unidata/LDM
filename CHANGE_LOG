@@ -4,6 +4,8 @@
     Some *_delete() -> *_free().
 
     Made "--enable-debug" set CFLAGS & CXXFLAGS.
+    
+    Move "mcast_lib/ldm7/FixedDelayQueue.h" to "misc/".
 
 6.13.7.22	2018-06-27T09:03:08-0600
     Removed OESS from .git/config and changed OESS URL in .gitmodules from
