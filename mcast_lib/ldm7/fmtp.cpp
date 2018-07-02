@@ -87,7 +87,7 @@ struct fmtp_receiver {
  */
 static void
 fmtpReceiver_init(
-    FmtpReceiver* const        receiver,
+    FmtpReceiver* const         receiver,
     const char* const           tcpAddr,
     const unsigned short        tcpPort,
     RecvProxy* const            notifier,
