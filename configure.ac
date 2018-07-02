@@ -55,6 +55,9 @@ AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
 #fi
 
 AC_PROG_CXX
+# Ensure a reference to the C++ library, if necessary
+LIBS="${LIBS:+ $LIBS }-lstdc++"
+
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++11])
     case `$CXX -dumpversion` in
@@ -628,9 +631,6 @@ AC_CHECK_HEADER([zlib.h], , [AC_MSG_ERROR([Header-file not found])])
 AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 
 AM_COND_IF([WANT_MULTICAST], [
-    # Ensure a reference to the C++ library, if necessary
-    LIBS="-lstdc++ ${LIBS:+ $LIBS}"
-
     # Ensure references to the YAML package, which is used by the LDM-7
     # multicast module.
     AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
