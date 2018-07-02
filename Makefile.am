@@ -191,22 +191,27 @@ ROOT_ACTIONS	+= ensure-syslog-entry
 endif
 root-actions:	$(ROOT_ACTIONS)
 
+# NB: chmod(1) must follow chown(1); otherwise, the setuid bit is disabled
 install_setuids:
 	chown root $(DESTDIR)$(bindir)/ldmd
-	chmod 4755 $(DESTDIR)$(bindir)/ldmd
+	chmod 4754 $(DESTDIR)$(bindir)/ldmd
 	chown root $(DESTDIR)$(bindir)/hupsyslog
-	chmod 4755 $(DESTDIR)$(bindir)/hupsyslog
+	chmod 4754 $(DESTDIR)$(bindir)/hupsyslog
 	-if test -f $(DESTDIR)$(bindir)/noaaportIngester; then \
 	    chown root $(DESTDIR)$(bindir)/noaaportIngester; \
-	    chmod 4755 $(DESTDIR)$(bindir)/noaaportIngester; \
+	    chmod 4754 $(DESTDIR)$(bindir)/noaaportIngester; \
 	fi
 	-if test -f $(DESTDIR)$(bindir)/fileIngester; then \
 	    chown root $(DESTDIR)$(bindir)/fileIngester; \
-	    chmod 4755 $(DESTDIR)$(bindir)/fileIngester; \
+	    chmod 4754 $(DESTDIR)$(bindir)/fileIngester; \
 	fi
 	-if test -f $(DESTDIR)$(bindir)/dvbs_multicast; then \
 	    chown root $(DESTDIR)$(bindir)/dvbs_multicast; \
-	    chmod 4755 $(DESTDIR)$(bindir)/dvbs_multicast; \
+	    chmod 4754 $(DESTDIR)$(bindir)/dvbs_multicast; \
+	fi
+	-if test -f $(DESTDIR)$(bindir)/vlanUtil; then \
+	    chown root $(DESTDIR)$(bindir)/vlanUtil; \
+	    chmod 4754 $(DESTDIR)$(bindir)/vlanUtil; \
 	fi
 	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null && \
 	    ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null && \
