@@ -54,11 +54,10 @@ private:
          * @param[in] value  Value
          * @param[in] delay  Delay for element until reveal-time
          */
-        Element(const Value&    value,
-                const Duration& delay)
+        Element(const Value&           value,
+                const Clock::duration& delay)
             : value{value}
-            , when{Clock::now() +
-                std::chrono::duration_cast<Clock::duration>(delay)}
+            , when{Clock::now() + delay}
         {}
 
         /**
@@ -88,10 +87,11 @@ private:
     typedef std::lock_guard<Mutex> LockGuard;
 
     mutable Mutex           mutex;
+    bool                    disabled;
     std::condition_variable cond;
     std::queue<Element>     queue;
     /// Minimum residence-time (i.e., delay-time) for element in queue
-    Duration                delay;
+    Clock::duration         delay;
 
 public:
     /**
@@ -103,9 +103,10 @@ public:
      */
     explicit FixedDelayQueue(const Duration delay)
         : mutex{}
+        , disabled{false}
         , cond{}
         , queue{}
-        , delay{delay}
+        , delay{std::chrono::duration_cast<Clock::duration>(delay)}
     {}
 
     /**
@@ -119,13 +120,18 @@ public:
 
     /**
      * Adds a value to the queue.
-     * @param[in] value  Value to be added
-     * @exceptionsafety  Strong guarantee
-     * @threadsafety     Safe
+     * @param[in] value           Value to be added
+     * @throw std::runtime_error  Queue is disabled
+     * @exceptionsafety           Strong guarantee
+     * @threadsafety              Safe
      */
     void push(const Value& value)
     {
         LockGuard lock{mutex};
+
+        if (disabled)
+            throw std::runtime_error("Delay-queue is disabled");
+
         queue.push(Element{value, delay});
         cond.notify_one();
     }
@@ -134,10 +140,11 @@ public:
      * Returns the value whose reveal-time is the earliest and not later
      * than the current time and removes it from the queue. Blocks until
      * such a value is available.
-     * @return          Value with earliest reveal-time that's not later
-     *                  than current time
-     * @exceptionsafety Strong guarantee
-     * @threadsafety    Safe
+     * @return                    Value with earliest reveal-time that's not
+     *                            later than current time
+     * @throw std::runtime_error  Queue is disabled
+     * @exceptionsafety           Strong guarantee
+     * @threadsafety              Safe
      */
     Value pop()
     {
@@ -145,8 +152,10 @@ public:
 
         {
             std::unique_lock<Mutex> lock(mutex);
-            while (queue.size() == 0)
+            while (queue.size() == 0 && !disabled)
                 cond.wait(lock);
+            if (disabled)
+                throw std::runtime_error("Delay-queue is disabled");
             time = queue.front().getTime();
         }
 
@@ -156,6 +165,13 @@ public:
         queue.pop(); // Not empty => nothrow
 
         return value;
+    }
+
+    void disable() noexcept
+    {
+        LockGuard lock(mutex);
+        disabled = true;
+        cond.notify_one();
     }
 
     /**
