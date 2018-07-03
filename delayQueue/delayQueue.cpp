@@ -33,6 +33,16 @@ static void decodeCommand(
         char**       argv,
         double&      seconds)
 {
+    extern char* optarg;
+    extern int   opterr;
+    extern int   optind;
+    extern int   optopt;
+
+    opterr = 0; // Prevent `getopt()` from printing error-message
+
+    if (getopt(argc, argv, "") != -1)
+        throw std::runtime_error("Invalid option");
+
     argc -= optind;
     argv += optind;
 
@@ -50,7 +60,20 @@ static void decodeCommand(
         throw std::runtime_error("Too many arguments");
 }
 
-static void writeStrings(DelayQ* const delayQ)
+static void usage()
+{
+    log_notice_1("Usage: %s <seconds>", log_get_id());
+    log_notice_1("where: <seconds>  Number of seconds to delay each line. "
+            "May be floating-point.", log_get_id());
+}
+
+/**
+ * Retrieves lines from the delay-queue and writes them to standard output.
+ *
+ * @param[in] delayQ          Delay-queue
+ * @throw std::runtime_error  Queue is disabled
+ */
+static void writeLines(DelayQ* const delayQ)
 {
     for (;;) {
         std::string line{delayQ->pop()};
@@ -59,6 +82,9 @@ static void writeStrings(DelayQ* const delayQ)
             break;
 
         std::cout << line << '\n';
+
+        if (std::cout.eof() || std::cout.bad())
+            delayQ->disable();
     }
 }
 
@@ -78,10 +104,16 @@ int main(
     try {
         double seconds;
 
-        decodeCommand(argc, argv, seconds);
+        try {
+            decodeCommand(argc, argv, seconds);
+        }
+        catch (const std::exception& ex) {
+            usage();
+            throw;
+        }
 
         DelayQ            delayQ{Duration{seconds}};
-        std::future<void> fut = std::async(std::launch::async, writeStrings,
+        std::future<void> fut = std::async(std::launch::async, writeLines,
                 &delayQ);
 
         try {
