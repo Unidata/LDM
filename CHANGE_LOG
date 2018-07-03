@@ -8,6 +8,8 @@
     Moved "mcast_lib/ldm7/FixedDelayQueue.h" to "misc/".
     
     Created delayQueue(1) for Tom to use with GOES-16 ingest.
+    
+    Added "-lstdc++" to shared-library creation.
 
 6.13.7.22	2018-06-27T09:03:08-0600
     Removed OESS from .git/config and changed OESS URL in .gitmodules from
