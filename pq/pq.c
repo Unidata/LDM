@@ -6801,7 +6801,6 @@ pq_get_write_count(
     const char* const   path,
     unsigned* const     count)
 {
-    pq_lockIf(pq);
     int status;
 
     if (NULL == path || NULL == count) {
@@ -6835,7 +6834,6 @@ pq_get_write_count(
         }
     }
 
-    pq_unlockIf(pq);
     return status;
 }
 
@@ -6857,7 +6855,6 @@ pq_get_write_count(
 int
 pq_clear_write_count(const char* const path)
 {
-    pq_lockIf(pq);
     int status;
 
     if (NULL == path) {
@@ -6887,7 +6884,6 @@ pq_clear_write_count(const char* const path)
         }
     }
 
-    pq_unlockIf(pq);
     return status;
 }
 
