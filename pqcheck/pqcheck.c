@@ -1,8 +1,8 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ *   Copyright 2018, University Corporation for Atmospheric Research
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
-/* $Id: pqcheck.c,v 1.2.4.1.4.3.2.2 2004/11/09 18:01:56 steve Exp $ */
 
 /* 
  *  Check a product-queue.
