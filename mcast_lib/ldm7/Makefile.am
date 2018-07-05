@@ -9,19 +9,19 @@
 EXTRA_DIST              = down7.hin \
 			  mldm_receiver.hin \
 			  mldm_receiver_memory.hin \
-                          prod_index_queue.hin \
-                          sock_funcs.c sock_funcs.hin \
-                          up7.hin
+			  prod_index_queue.hin \
+			  sock_funcs.c sock_funcs.hin \
+			  up7.hin
 BUILT_SOURCES           = down7.h \
 			  mldm_receiver.h \
 			  mldm_receiver_memory.h \
-                          prod_index_queue.h \
-                          sock_funcs.h \
-                          up7.h
+			  prod_index_queue.h \
+			  sock_funcs.h \
+			  up7.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
 			  down7.c \
-                          down7_manager.c down7_manager.h \
+			  down7_manager.c down7_manager.h \
 			  up7.c \
 			  prod_index_map.c prod_index_map.h \
 			  mcast_info.c mcast_info.h \
@@ -42,16 +42,16 @@ lib_la_SOURCES		= \
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(top_builddir) -I$(top_srcdir) \
-                          -I$(top_builddir)/pq -I$(top_srcdir)/pq \
-                          -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
-                          -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
-                          -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-                          -I$(top_builddir)/log -I$(top_srcdir)/log \
-                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3 \
-                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/receiver \
-                          -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
-                          -I$(top_builddir)/misc -I$(top_srcdir)/misc \
-                          -I$(top_srcdir)/rpc
+			  -I$(top_builddir)/pq -I$(top_srcdir)/pq \
+			  -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+			  -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
+			  -I$(top_builddir)/registry -I$(top_srcdir)/registry \
+			  -I$(top_builddir)/log -I$(top_srcdir)/log \
+			  -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3 \
+			  -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/receiver \
+			  -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
+			  -I$(top_builddir)/misc -I$(top_srcdir)/misc \
+			  -I$(top_srcdir)/rpc
 dist_bin_SCRIPTS	= vlanUtil
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
@@ -101,18 +101,18 @@ globals_stubs		= globals_stub.c globals_stub.h
 mldm_sender_map_stubs	= mldm_sender_map_stub.c mldm_sender_map_stub.h
 down7_stubs		= down7_stub.c down7_stub.h
 all_stubs		= $(FMTPReceiver_stubs) \
-                          $(mcast_stubs) \
-                          $(pq_stubs) \
-                          $(globals_stubs) \
-                          $(mldm_sender_map_stubs) \
-                          $(down7_stubs)
+			  $(mcast_stubs) \
+			  $(pq_stubs) \
+			  $(globals_stubs) \
+			  $(mldm_sender_map_stubs) \
+			  $(down7_stubs)
 BUILT_SOURCES		+= $(all_stubs)
 DISTCLEANFILES		+= $(all_stubs)
 CLEANFILES		+= TEST-test.xml
 OPMOCK_INCLUDES 	= -I/usr/lib/gcc/x86_64-redhat-linux/4.8.3/include \
 			  -I/usr/include/c++/4.8.3 \
-                          -I/usr/local/include \
-                          -I/usr/include
+			  -I/usr/local/include \
+			  -I/usr/include
 $(FMTPReceiver_stubs):		../FMTP/FMTPv3/receiver/fmtpRecvv3.h
 	opmock2 -cpp -i $? -o . $(AM_CPPFLAGS) $(CPPFLAGS) $(OPMOCK_INCLUDES)
 $(mcast_stubs):			../C++/fmtp.h
@@ -143,7 +143,7 @@ nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
 mldm_receiver_test_CPPFLAGS		= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
 mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
-                                          @OPMOCK_LDADD@
+					  @OPMOCK_LDADD@
 check_PROGRAMS				+= mldm_receiver_test
 TESTS					+= mldm_receiver_test
 
@@ -152,7 +152,7 @@ nodist_mldm_receiver_memory_test_SOURCES = $(globals_stubs)
 mldm_receiver_memory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
 mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
 mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
-                                          @OPMOCK_LDADD@
+					  @OPMOCK_LDADD@
 check_PROGRAMS				+= mldm_receiver_memory_test
 TESTS					+= mldm_receiver_memory_test
 endif
@@ -190,21 +190,21 @@ TESTS				+= cond_wait_test
 mldm_sender_map_test_SOURCES	= mldm_sender_map_test.c mldm_sender_map.c
 mldm_sender_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 mldm_sender_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
-                                  @LIBS_CUNIT@
+				  @LIBS_CUNIT@
 check_PROGRAMS			+= mldm_sender_map_test
 TESTS				+= mldm_sender_map_test
 
 prod_index_map_test_SOURCES	= prod_index_map_test.c prod_index_map.c
 prod_index_map_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_map_test_LDADD	= $(top_builddir)/lib/libldm.la \
-                                  @LIBS_CUNIT@
+				  @LIBS_CUNIT@
 check_PROGRAMS			+= prod_index_map_test
 TESTS				+= prod_index_map_test
 
 prod_index_queue_test_SOURCES	= prod_index_queue_test.c prod_index_queue.c
 prod_index_queue_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 prod_index_queue_test_LDADD	= $(top_builddir)/lib/libldm.la \
-                                  @LIBS_CUNIT@
+				  @LIBS_CUNIT@
 check_PROGRAMS			+= prod_index_queue_test
 TESTS				+= prod_index_queue_test
 
@@ -216,7 +216,7 @@ TESTS				+= MldmRpc_test
 up7_down7_test_SOURCES		= up7_down7_test.c
 up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
-                                  @LIBS_CUNIT@
+				  @LIBS_CUNIT@
 check_PROGRAMS			+= up7_down7_test
 TESTS				+= up7_down7_test
 
