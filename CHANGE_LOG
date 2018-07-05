@@ -12,6 +12,10 @@
     Added "-lstdc++" to shared-library creation.
     
     Removed inappropriate pq_lockIf() calls.
+    
+    Don't have "make distcheck" check multicast because it's impossible to test.
+    
+    Created vlanUtil(1).
 
 6.13.7.22	2018-06-27T09:03:08-0600
     Removed OESS from .git/config and changed OESS URL in .gitmodules from
