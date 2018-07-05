@@ -16,6 +16,9 @@
     Don't have "make distcheck" check multicast because it's impossible to test.
     
     Created vlanUtil(1).
+    
+    Modified down7.c to use an `in_addr_t` for the VLAN virtual interface
+    address instead of a `CidrAddr`.
 
 6.13.7.22	2018-06-27T09:03:08-0600
     Removed OESS from .git/config and changed OESS URL in .gitmodules from

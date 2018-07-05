@@ -266,7 +266,7 @@ up7Proxy_free(
  * @param[in]  vcEnd          Local virtual-circuit endpoint
  * @param[out] mcastInfo      Information on the multicast group corresponding
  *                            to `feed`.
- * @param[out] fmtpAddr       IP address to be used by FMTP layer
+ * @param[out] ifaceAddr      IP address of VLAN virtual interface
  * @retval     0              If and only if success. `*mcastInfo` is set. The
  *                            caller should call `mi_free(*mcastInfo)` when
  *                            it's no longer needed.
@@ -287,7 +287,7 @@ up7Proxy_subscribe(
         feedtypet                        feed,
         const VcEndPoint* const restrict vcEnd,
         McastInfo** const restrict       mcastInfo,
-        CidrAddr* const restrict         fmtpAddr)
+        in_addr_t* const restrict        ifaceAddr)
 {
     int status;
 
@@ -329,7 +329,8 @@ up7Proxy_subscribe(
         }
         else {
             *mcastInfo = mi_clone(&reply->SubscriptionReply_u.info.mcastInfo);
-            *fmtpAddr = reply->SubscriptionReply_u.info.fmtpAddr;
+            *ifaceAddr = cidrAddr_getAddr(
+                    &reply->SubscriptionReply_u.info.fmtpAddr);
         }
         xdr_free(xdr_SubscriptionReply, (char*)reply);
     }
@@ -894,68 +895,127 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
  * Virtual interface for a VLAN
  ******************************************************************************/
 
-static int command(const char* const cmd)
+/**
+ * Executes a command. Logs the command's standard output and standard error
+ * streams. Waits for the command to terminate.
+ *
+ * @param[in] file         Filename of process image
+ * @param[in] cmd          Command to execute
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System or command failure. `log_add()` called.
+ */
+static int command(
+        char* const restrict file,
+        char* const restrict cmd)
 {
-    int status = system(cmd);
+    int   fds[2];
+    int   status = pipe(fds);
 
-    if (status == -1) {
-        log_add_errno(status, "system() failure");
+    if (status) {
+        log_add_syserr("pipe() failure");
         status = LDM7_SYSTEM;
     }
     else {
-        status = WEXITSTATUS(status);
+        const pid_t pid = fork();
 
-        if (status) {
-            if (status == 127) {
-                log_add("Couldn't execute command-language interpreter");
-            }
-            else {
-                log_add("Error executing command");
-            }
-
+        if (pid == -1) {
+            log_add_syserr("fork() failure");
             status = LDM7_SYSTEM;
         }
-    }
+        else if (pid == 0) {
+            /* Child process */
+            (void)close(fds[0]); // Read end of pipe unneeded
+            (void)dup2(fds[1], STDOUT_FILENO);
+            (void)dup2(fds[1], STDERR_FILENO);
+
+            (void)execlp(file, cmd, NULL);
+
+            log_add_syserr("execlp() failure");
+            log_flush_error();
+            exit(1);
+        }
+        else {
+            /* Parent process */
+            (void)close(fds[1]); // Write end of pipe unneeded
+            fds[1] = -1;
+
+            FILE* input = fdopen(fds[0], "r");
+
+            if (input == NULL) {
+                log_add_syserr("fdopen() failure");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                char line[_POSIX_MAX_INPUT+1];
+
+                while ((fgets(input, line, sizeof(line))) != NULL)
+                    log_notice_1(line);
+
+                (void)fclose(input);
+                fds[0] = -1;
+            } // `input` open
+
+            int exitStatus;
+            status = waitpid(pid, &exitStatus, 0);
+
+            if (status == -1) {
+                log_add_syserr("waitpid() failure for process %d", pid);
+                status = LDM7_SYSTEM;
+            }
+            else {
+                status = WEXITSTATUS(exitStatus);
+
+                if (status) {
+                    log_add("Command exited with status %d", status);
+                    status = LDM7_SYSTEM;
+                }
+            }
+        } // Parent process. `pid` set.
+
+        if (fds[0] != -1)
+            (void)close(fds[0]);
+        if (fds[1] != -1)
+            (void)close(fds[1]);
+    } // Pipe opened in `fds`
 
     return status;
 }
 
+static const char vlanUtil[] = "vlanUtil";
+
 /**
- * Creates a virtual interface for a VLAN.
+ * Creates an FMTP VLAN. Destroys any previously-existing VLAN.
  *
- * @param[in] interface    Virtual interface to be created
- * @param[in] cidrAddr     Address and subnet to be assigned to interface
+ * @param[in] srvrAddrStr  Address of sending FMTP server in dotted-decimal form
+ * @param[in] ifaceName    Name of virtual interface to be created
+ * @param[in] ifaceAddr    IP address of virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  */
 static int vlanUtil_create(
-        const char* const restrict     interface,
-        const CidrAddr* const restrict cidrAddr)
+        const char* const restrict srvrAddrStr,
+        const char* const restrict ifaceName,
+        const in_addr_t            ifaceAddr)
 {
-    int       status;
-    in_addr_t addr;
-    char      addrStr[INET_ADDRSTRLEN];
-    char      subnetStr[INET_ADDRSTRLEN];
+    int  status;
+    char ifaceAddrStr[INET_ADDRSTRLEN];
 
-    addr = cidrAddr_getAddr(cidrAddr);
-    (void)inet_ntop(AF_INET, &addr, addrStr, sizeof(addrStr)); // Can't fail
+    // Can't fail
+    (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-    addr = cidrAddr_getSubnet(cidrAddr);
-    (void)inet_ntop(AF_INET, &addr, subnetStr, sizeof(subnetStr)); // Can't fail
-
-    char* const cmd = ldm_format(128, "vlanUtil create -n %s %s %s",
-            subnetStr, interface, addrStr);
+    char* const cmd = ldm_format(128, "%s create %s %s %s", vlanUtil,
+            srvrAddrStr, ifaceName, ifaceAddrStr);
 
     if (cmd == NULL) {
-        log_add("Couldn't construct command to create VLAN virtual interface");
+        log_add("Couldn't construct command to create FMTP VLAN");
         status = LDM7_SYSTEM;
     }
     else {
-        status = command(cmd);
+        status = command(vlanUtil, cmd);
 
         if (status)
-            log_add("Couldn't create VLAN virtual interface via command \"%s\"",
-                    cmd);
+            log_add("Couldn't create FMTP VLAN via command \"%s\"", cmd);
 
         free(cmd);
     } // `cmd` allocated
@@ -964,23 +1024,30 @@ static int vlanUtil_create(
 }
 
 /**
- * Destroys a virtual interface for a VLAN.
+ * Destroys an FMTP VLAN.
  *
- * @param[in] interface  Interface to be destroyed
+ * @param[in] srvrAddrStr  IP address of sending FMTP server in dotted-decimal
+ *                         form
+ * @param[in] ifaceName    Name of virtual interface to be destroyed
  */
-static void vlanUtil_destroy(const char* const interface)
+static void vlanUtil_destroy(
+        const char* const restrict srvrAddrStr,
+        const char* const restrict ifaceName)
 {
     int         status;
-    char* const cmd = ldm_format(128, "vlanUtil destroy %s", interface);
+    char* const cmd = ldm_format(128, "%s destroy %s %s", vlanUtil, srvrAddrStr,
+            ifaceName);
 
     if (cmd == NULL) {
-        log_add("Couldn't construct command to destroy VLAN virtual interface");
+        log_add("Couldn't construct command to destroy FMTP VLAN");
         status = LDM7_SYSTEM;
     }
     else {
-        if (command(cmd))
-            log_add("Couldn't destroy VLAN virtual interface via command "
-                    "\"%s\"", cmd);
+        status = command(vlanUtil, cmd);
+
+        if (status)
+            log_add("Couldn't destroy FMTP VLAN via command \"%s\"", cmd);
+
         free(cmd);
     } // `cmd` allocated
 }
@@ -990,9 +1057,11 @@ static void vlanUtil_destroy(const char* const interface)
  ******************************************************************************/
 
 typedef struct mcastRcvr {
-    Mlr*            mlr;       ///< Multicast LDM receiver
-    const char*     interface; ///< VLAN interface to create
-    struct downlet* downlet;   ///< Parent one-time, downstream LDM7
+    Mlr*            mlr;          ///< Multicast LDM receiver
+    /// Dotted decimal form of sending FMTP server
+    const char      fmtpSrvrAddr[INET_ADDRSTRLEN];
+    const char*     ifaceName;    ///< VLAN interface to create
+    struct downlet* downlet;      ///< Parent one-time, downstream LDM7
 } McastRcvr;
 
 /**
@@ -1000,45 +1069,56 @@ typedef struct mcastRcvr {
  *
  * @param[in] mcastRcvr    Multicast receiver to be initialized
  * @param[in] mcastInfo    Information on multicast group
- * @param[in] iface        VLAN interface to be created. Must exist for
- *                         duration of initialized instance.
- * @param[in] fmtpAddr     VLAN address to be assigned to interface
+ * @param[in] ifaceName    Name of VLAN virtual interface to be created. Must
+ *                         exist for duration of initialized instance.
+ * @param[in] ifaceAddr    Address to be assigned to VLAN interface
  * @param[in] pq           Product queue
  * @param[in] downlet      Parent, one-time, downstream LDM7
  * @retval    0            Success
+ * @retval    LDM7_INVAL   Invalid address of sending FMTP server. `log_add()`
+ *                         called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static int
 mcastRcvr_init(
-        McastRcvr* const restrict      mcastRcvr,
-        McastInfo* const restrict      mcastInfo,
-        const char* const restrict     iface,
-        const CidrAddr* const restrict fmtpAddr,
-        pqueue* const restrict         pq,
-        Downlet* const restrict        downlet)
+        McastRcvr* const restrict  mcastRcvr,
+        McastInfo* const restrict  mcastInfo,
+        const char* const restrict ifaceName,
+        const in_addr_t            ifaceAddr,
+        pqueue* const restrict     pq,
+        Downlet* const restrict    downlet)
 {
-    int status = vlanUtil_create(iface, fmtpAddr);
+    const char* fmtpSrvrId = mcastInfo->server.inetId;
+    int         status = getDottedDecimal(fmtpSrvrId, mcastRcvr->fmtpSrvrAddr);
 
     if (status) {
-        log_add("Couldn't create virtual interface for FMTP VLAN");
+        log_add("Invalid address of sending FMTP server: \"%s\"", fmtpSrvrId);
+        status = LDM7_INVAL;
     }
     else {
-        Mlr* mlr = mlr_new(mcastInfo, iface, pq, downlet);
+        status = vlanUtil_create(mcastRcvr->fmtpSrvrAddr, ifaceName, ifaceAddr);
 
-        if (mlr == NULL) {
-            log_add("Couldn't create multicast LDM receiver");
-            status = LDM7_SYSTEM;
+        if (status) {
+            log_add("Couldn't create FMTP VLAN");
         }
         else {
-            mcastRcvr->mlr = mlr;
-            mcastRcvr->interface = iface;
-            mcastRcvr->downlet = downlet;
-            status = 0;
-        } // `mlr` allocated
+            Mlr* mlr = mlr_new(mcastInfo, ifaceName, pq, downlet);
 
-        if (status)
-            vlanUtil_destroy(iface);
-    } // FMTP VLAN interface created
+            if (mlr == NULL) {
+                log_add("Couldn't create multicast LDM receiver");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                mcastRcvr->mlr = mlr;
+                mcastRcvr->ifaceName = ifaceName;
+                mcastRcvr->downlet = downlet;
+                status = 0;
+            } // `mlr` allocated
+
+            if (status)
+                vlanUtil_destroy(mcastRcvr->fmtpSrvrAddr, ifaceName);
+        } // FMTP VLAN interface created
+    }
 
     return status;
 }
@@ -1047,14 +1127,14 @@ inline static void
 mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
     mlr_free(mcastRcvr->mlr);
-    vlanUtil_destroy(mcastRcvr->interface);
+    vlanUtil_destroy(mcastRcvr->fmtpSrvrAddr, mcastRcvr->ifaceName);
 }
 
 static McastRcvr*
 mcastRcvr_new(
         McastInfo* const restrict      mcastInfo,
-        const char* const restrict     iface,
-        const CidrAddr* const restrict fmtpAddr,
+        const char* const restrict     ifaceName,
+        const in_addr_t                ifaceAddr,
         pqueue* const restrict         pq,
         Downlet* const restrict        downlet)
 {
@@ -1062,8 +1142,9 @@ mcastRcvr_new(
             "a one-time, LDM7 multicast receiver");
 
     if (mcastRcvr) {
-        if (mcastRcvr_init(mcastRcvr, mcastInfo, iface, fmtpAddr, pq,
-                downlet)) {
+        if (mcastRcvr_init(mcastRcvr, mcastInfo, ifaceName, ifaceAddr, pq,
+                downlet))
+        {
             free(mcastRcvr);
             mcastRcvr = NULL;
         }
@@ -1255,12 +1336,12 @@ typedef struct downlet {
     pqueue*              pq;         ///< pointer to the product-queue
     const ServiceAddr*   servAddr;   ///< socket address of remote LDM7
     McastInfo*           mcastInfo;  ///< information on multicast group
-    CidrAddr             fmtpAddr;   ///< IP address to be used by FMTP layer
+    in_addr_t            ifaceAddr;  ///< IP address of VLAN virtual interface
     /**
      * IP address of interface to use for receiving multicast and unicast
      * packets
      */
-    const char*          iface;
+    const char*          ifaceName;
     McastRcvr*           mcastRcvr;
     char*                upId;          ///< ID of upstream LDM7
     char*                feedId;        ///< Desired feed specification
@@ -1571,7 +1652,7 @@ downlet_init(
 
     downlet->down7 = down7;
     downlet->servAddr = servAddr;
-    downlet->iface = mcastIface;
+    downlet->ifaceName = mcastIface;
     downlet->vcEnd = vcEnd;
     downlet->pq = pq;
     downlet->feedtype = feed;
@@ -1807,7 +1888,7 @@ downlet_createMcastRcvr(
     int         status;
 
     McastRcvr* const mcastRcvr = mcastRcvr_new(downlet->mcastInfo,
-            downlet->iface, &downlet->fmtpAddr, downlet->pq, downlet);
+            downlet->ifaceName, downlet->ifaceAddr, downlet->pq, downlet);
 
     if (mcastRcvr == NULL) {
         log_add("Couldn't create %s", id);
@@ -2003,7 +2084,7 @@ downlet_run(Downlet* const downlet)
          * `downlet->fmtpAddr`.
          */
         status = up7Proxy_subscribe(downlet->up7Proxy, downlet->feedtype,
-                downlet->vcEnd, &downlet->mcastInfo, &downlet->fmtpAddr);
+                downlet->vcEnd, &downlet->mcastInfo, &downlet->ifaceAddr);
 
         if (status) {
             log_add("Couldn't subscribe to feed %s from %s", downlet->feedId,
@@ -2011,10 +2092,12 @@ downlet_run(Downlet* const downlet)
         }
         else {
             char* const miStr = mi_format(downlet->mcastInfo);
-            char* const fmtpAddrStr = cidrAddr_format(&downlet->fmtpAddr);
+            const char  ifaceAddrStr[INET_ADDRSTRLEN];
+
+            (void)inet_ntop(AF_INET, &downlet->ifaceAddr, ifaceAddrStr,
+                    sizeof(ifaceAddrStr));
             log_notice_q("Subscription reply from %s: mcastGroup=%s, "
-                    "fmtpAddr=%s", downlet->upId, miStr, fmtpAddrStr);
-            free(fmtpAddrStr);
+                    "ifaceAddr=%s", downlet->upId, miStr, ifaceAddrStr);
             free(miStr);
 
             status = downlet_createTasks(downlet);
