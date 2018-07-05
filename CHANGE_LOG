@@ -1,4 +1,4 @@
-6.13.7.23
+6.13.7.23	2018-07-05T17:19:18-0600
     Start on creating virtual interface (vlanUtil(1)).
 
     Some *_delete() -> *_free().
