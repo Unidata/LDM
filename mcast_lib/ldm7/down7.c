@@ -956,18 +956,20 @@ static int command(
             } // `input` open
 
             int exitStatus;
-            status = waitpid(pid, &exitStatus, 0);
+            int status2 = waitpid(pid, &exitStatus, 0);
 
-            if (status == -1) {
+            if (status2 == -1) {
                 log_add_syserr("waitpid() failure for process %d", pid);
-                status = LDM7_SYSTEM;
+                if (status == 0)
+                    status = LDM7_SYSTEM;
             }
             else {
-                status = WEXITSTATUS(exitStatus);
+                status2 = WEXITSTATUS(exitStatus);
 
-                if (status) {
-                    log_add("Command exited with status %d", status);
-                    status = LDM7_SYSTEM;
+                if (status2) {
+                    log_add("Command exited with status %d", status2);
+                    if (status == 0)
+                        status = LDM7_SYSTEM;
                 }
             }
         } // Parent process. `pid` set.
@@ -1648,7 +1650,7 @@ downlet_init(
 {
     int status;
 
-    (void)memset(downlet, 0, sizeof(downlet));
+    (void)memset(downlet, 0, sizeof(*downlet));
 
     downlet->down7 = down7;
     downlet->servAddr = servAddr;
