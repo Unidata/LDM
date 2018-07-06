@@ -939,19 +939,19 @@ static int command(
             (void)close(fds[1]); // Write end of pipe unneeded
             fds[1] = -1;
 
-            FILE* input = fdopen(fds[0], "r");
+            FILE* inputStream = fdopen(fds[0], "r");
 
-            if (input == NULL) {
+            if (inputStream == NULL) {
                 log_add_syserr("fdopen() failure");
                 status = LDM7_SYSTEM;
             }
             else {
                 char line[_POSIX_MAX_INPUT+1];
 
-                while ((fgets(input, line, sizeof(line))) != NULL)
+                while ((fgets(line, sizeof(line), inputStream)) != NULL)
                     log_notice_1(line);
 
-                (void)fclose(input);
+                (void)fclose(inputStream);
                 fds[0] = -1;
             } // `input` open
 
@@ -1081,7 +1081,7 @@ typedef struct mcastRcvr {
  */
 static int
 mcastRcvr_init(
-        McastRcvr* const restrict  mcastRcvr,
+        McastRcvr* restrict        mcastRcvr,
         McastInfo* const restrict  mcastInfo,
         const char* const restrict ifaceName,
         const in_addr_t            ifaceAddr,
