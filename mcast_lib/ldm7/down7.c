@@ -899,14 +899,11 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
  * Executes a command. Logs the command's standard output and standard error
  * streams. Waits for the command to terminate.
  *
- * @param[in] file         Filename of process image
- * @param[in] cmd          Command to execute
+ * @param[in] cmdVec       Command vector
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
-static int command(
-        char* const restrict file,
-        char* const restrict cmd)
+static int command(const char* const cmdVec[])
 {
     int   fds[2];
     int   status = pipe(fds);
@@ -928,9 +925,9 @@ static int command(
             (void)dup2(fds[1], STDOUT_FILENO);
             (void)dup2(fds[1], STDERR_FILENO);
 
-            (void)execlp(file, cmd, NULL);
+            (void)execvp(cmdVec[0], (char* const*)cmdVec);
 
-            log_add_syserr("execlp() failure");
+            log_add_syserr("execvp() failure");
             log_flush_error();
             exit(1);
         }
@@ -1006,21 +1003,14 @@ static int vlanUtil_create(
     // Can't fail
     (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-    char* const cmd = ldm_format(128, "%s create %s %s %s", vlanUtil,
-            srvrAddrStr, ifaceName, ifaceAddrStr);
+    const char* const cmdVec[] = {vlanUtil, "create", srvrAddrStr, ifaceName,
+            ifaceAddrStr, NULL };
 
-    if (cmd == NULL) {
-        log_add("Couldn't construct command to create FMTP VLAN");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = command(vlanUtil, cmd);
+    status = command(cmdVec);
 
-        if (status)
-            log_add("Couldn't create FMTP VLAN via command \"%s\"", cmd);
-
-        free(cmd);
-    } // `cmd` allocated
+    if (status)
+        log_add("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
 
     return status;
 }
@@ -1036,22 +1026,12 @@ static void vlanUtil_destroy(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName)
 {
-    int         status;
-    char* const cmd = ldm_format(128, "%s destroy %s %s", vlanUtil, srvrAddrStr,
-            ifaceName);
+    const char* const cmdVec[] = {vlanUtil, "destroy", srvrAddrStr, ifaceName,
+            NULL};
 
-    if (cmd == NULL) {
-        log_add("Couldn't construct command to destroy FMTP VLAN");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = command(vlanUtil, cmd);
-
-        if (status)
-            log_add("Couldn't destroy FMTP VLAN via command \"%s\"", cmd);
-
-        free(cmd);
-    } // `cmd` allocated
+    if (command(cmdVec))
+        log_add("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
 }
 
 /******************************************************************************
@@ -1061,7 +1041,7 @@ static void vlanUtil_destroy(
 typedef struct mcastRcvr {
     Mlr*            mlr;          ///< Multicast LDM receiver
     /// Dotted decimal form of sending FMTP server
-    const char      fmtpSrvrAddr[INET_ADDRSTRLEN];
+    char            fmtpSrvrAddr[INET_ADDRSTRLEN];
     const char*     ifaceName;    ///< VLAN interface to create
     struct downlet* downlet;      ///< Parent one-time, downstream LDM7
 } McastRcvr;
@@ -2094,7 +2074,7 @@ downlet_run(Downlet* const downlet)
         }
         else {
             char* const miStr = mi_format(downlet->mcastInfo);
-            const char  ifaceAddrStr[INET_ADDRSTRLEN];
+            char        ifaceAddrStr[INET_ADDRSTRLEN];
 
             (void)inet_ntop(AF_INET, &downlet->ifaceAddr, ifaceAddrStr,
                     sizeof(ifaceAddrStr));
