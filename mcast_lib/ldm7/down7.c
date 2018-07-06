@@ -949,7 +949,7 @@ static int command(
                 char line[_POSIX_MAX_INPUT+1];
 
                 while ((fgets(line, sizeof(line), inputStream)) != NULL)
-                    log_notice_1(line);
+                    log_notice_1("%s", line);
 
                 (void)fclose(inputStream);
                 fds[0] = -1;
