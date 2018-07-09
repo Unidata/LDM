@@ -1176,7 +1176,7 @@ mls_execute(
                  */
                 char* miStr = mi_format(&mcastInfo);
                 char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-                log_notice_q("Multicast LDM sender starting up: mcastIface=%s,"
+                log_notice_q("Multicast LDM sender starting up: mcastIface=%s, "
                         "mcastInfo=%s, ttl=%u, " "fmtpSubnet=%s, "
                         "pq=\"%s\", mldmCmdPort=%hu", mcastIface, miStr, ttl,
                         fmtpSubnetStr, pqPathname,
