@@ -237,4 +237,4 @@ SUFFIXES:	.vg .sup .supp
 
 endif
 
-AM_TESTS_ENVIRONMENT	= PATH=$(top_builddir)/mldm_sender:$$PATH:
+AM_TESTS_ENVIRONMENT	= PATH=.:$(top_builddir)/mldm_sender:$$PATH:
