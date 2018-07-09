@@ -68,7 +68,8 @@ struct fmtp_receiver {
  *                                    May be groupname or IPv4 address.
  * @param[in]  mcastPort              Port number of the multicast group.
  * @param[in]  iface                  IPv4 address of interface for receiving
- *                                    multicast and unicast packets.
+ *                                    multicast and unicast packets. Caller may
+ *                                    free.
  * @throws     std::invalid_argument  if @code{0==buf_func || 0==eof_func ||
  *                                    0==missed_prod_func || 0==addr}.
  * @throws     std::invalid_argument  if the multicast group address couldn't be
@@ -120,7 +121,8 @@ fmtpReceiver_init(
  *                               be group name or formatted IP address.
  * @param[in]  mcastPort         Port number of the multicast group.
  * @param[in]  iface             IPv4 address of interface for receiving
- *                               multicast and unicast  packets.
+ *                               multicast and unicast  packets. Caller may
+ *                               free.
  * @retval     0                 Success. The client should call
  *                               `fmtpReceiver_free(*receiver)` when the
  *                               receiver is no longer needed.

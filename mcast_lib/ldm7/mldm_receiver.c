@@ -333,7 +333,7 @@ missed_prod_func(
  * @param[out] mlr            The multicast LDM receiver to initialize.
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  iface          IPv4 address of interface to use for receiving
- *                            multicast and unicast packets.
+ *                            multicast and unicast packets. Caller may free.
  * @param[in]  pq             Product queue. Must exist until `deinit()`
  *                            returns.
  * @param[in]  downlet        Pointer to associated one-time downstream LDM-7
@@ -420,7 +420,7 @@ destroy(Mlr* const mlr)
  *
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  iface          IP address of interface to use for receiving
- *                            multicast and unicast packets.
+ *                            multicast and unicast packets. Caller may free.
  * @param[in]  pq             Product queue. Must exist until `deinit()`
  *                            returns.
  * @param[in]  downlet        Pointer to associated one-time downstream LDM-7
