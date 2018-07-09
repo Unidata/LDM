@@ -980,7 +980,8 @@ static int command(const char* const cmdVec[])
     return status;
 }
 
-static const char vlanUtil[] = "vlanUtil";
+static volatile bool ignoreVlanUtil = false; ///< Ignore vlanUtil(1) status?
+static const char    vlanUtil[] = "vlanUtil";
 
 /**
  * Creates an FMTP VLAN. Destroys any previously-existing VLAN.
@@ -1008,9 +1009,17 @@ static int vlanUtil_create(
 
     status = command(cmdVec);
 
-    if (status)
-        log_add("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
-                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+    if (status) {
+        if (ignoreVlanUtil) {
+            log_error_1("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
+                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+            status = 0;
+        }
+        else {
+            log_add("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
+                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+        }
+    }
 
     return status;
 }
@@ -1029,9 +1038,16 @@ static void vlanUtil_destroy(
     const char* const cmdVec[] = {vlanUtil, "destroy", srvrAddrStr, ifaceName,
             NULL};
 
-    if (command(cmdVec))
-        log_add("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
-                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
+    if (command(cmdVec)) {
+        if (ignoreVlanUtil) {
+            log_error_1("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
+                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
+        }
+        else {
+            log_add("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
+                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
+        }
+    }
 }
 
 /******************************************************************************
@@ -1084,7 +1100,13 @@ mcastRcvr_init(
             log_add("Couldn't create FMTP VLAN");
         }
         else {
-            Mlr* mlr = mlr_new(mcastInfo, ifaceName, pq, downlet);
+            char ifaceAddrStr[INET_ADDRSTRLEN];
+
+            // Can't fail
+            (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr,
+                    sizeof(ifaceAddrStr));
+
+            Mlr* mlr = mlr_new(mcastInfo, ifaceAddrStr, pq, downlet);
 
             if (mlr == NULL) {
                 log_add("Couldn't create multicast LDM receiver");
@@ -2768,6 +2790,16 @@ down7_getPqeCount(
         Down7* const down7)
 {
     return pqe_get_count(down7->pq);
+}
+
+/**
+ * Causes the `down7` module to ignore the exit status of the vlanUtil(1)
+ * program.
+ */
+void
+down7_ignoreVlanUtil(void)
+{
+    ignoreVlanUtil = true;
 }
 
 /******************************************************************************
