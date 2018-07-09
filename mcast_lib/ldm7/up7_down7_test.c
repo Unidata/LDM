@@ -1081,7 +1081,8 @@ receiver_init(
 
     VcEndPoint* const vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    receiver->down7 = down7_new(servAddr, feedtype, "lo:1", vcEnd,
+    down7_ignoreVlanUtil();
+    receiver->down7 = down7_new(servAddr, feedtype, "lo", vcEnd,
             receiverPq, receiver->mrm);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
     vcEndPoint_free(vcEnd);
