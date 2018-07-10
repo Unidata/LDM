@@ -57,7 +57,7 @@ if WANT_GRIBINSERT
 endif
 endif
 if WANT_MULTICAST
-    SUBDIRS	+= mcast_lib
+    SUBDIRS	+= mcast_lib OESS
 endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
