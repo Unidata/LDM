@@ -725,6 +725,8 @@ AC_CONFIG_FILES([
     noaaport/Makefile
     noaaport/retrans/Makefile
     notifyme/Makefile
+    OESS/Makefile
+    OESS/OESS-Client-V2/Makefile
     pqact/Makefile
     pqcat/Makefile
     pqcheck/Makefile
