@@ -1,5 +1,8 @@
 6.13.7.28
     Added OESS makefiles.
+    
+    Modified the isrunning() function in ldmadmin(1): replaced use of kill(1)
+    with ps(1) because some systems misreported success.
 
 6.13.7.27	2018-07-09T16:24:41-0600
     Added ability to ignore vlanUtil(1) exit status and got up7_down7_test
