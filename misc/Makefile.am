@@ -33,6 +33,7 @@ include_HEADERS		= \
 	statsMath.h
 lib_la_SOURCES	= \
 	child_map.c child_map.h \
+	ChildCommand.c ChildCommand.h \
         doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
@@ -153,6 +154,12 @@ testSemRWLock_LDADD	= \
     $(top_builddir)/lib/libldm.la \
     @LIBS_CUNIT@
 check_PROGRAMS		+= testSemRWLock
+
+ChildCommand_test_SOURCES	= ChildCommand_test.c
+ChildCommand_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+ChildCommand_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+                                  @LIBS_CUNIT@
+check_PROGRAMS    		+= ChildCommand_test
 
 queue_test_SOURCES	= queue_test.c
 queue_test_LDADD	= $(top_builddir)/lib/libldm.la @LIBS_CUNIT@

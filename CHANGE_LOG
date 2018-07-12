@@ -1,8 +1,13 @@
 6.13.7.28
     Added OESS makefiles.
-    
+
     Modified the isrunning() function in ldmadmin(1): replaced use of kill(1)
     with ps(1) because some systems misreported success.
+
+    Created ChildCommand for executing a command in a child process and 
+    enabling the parent process to write to the child's standard input stream
+    and read from the child's standard output stream while automatically logging
+    the child's standard error stream
 
 6.13.7.27	2018-07-09T16:24:41-0600
     Added ability to ignore vlanUtil(1) exit status and got up7_down7_test
