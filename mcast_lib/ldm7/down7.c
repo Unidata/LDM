@@ -16,6 +16,7 @@
 
 #include "config.h"
 
+#include "ChildCommand.h"
 #include "CidrAddr.h"
 #include "Completer.h"
 #include "down7.h"
@@ -892,108 +893,61 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
 }
 
 /******************************************************************************
- * Virtual interface for a VLAN
+ * Submodule for local VLAN interface
  ******************************************************************************/
 
 /**
- * Executes a command. Logs the command's standard output and standard error
- * streams. Waits for the command to terminate.
+ * Executes a command in a child process. Logs the child's standard error
+ * stream. Waits for the child to terminate.
  *
- * @param[in] cmdVec       Command vector
- * @retval    0            Success
- * @retval    LDM7_SYSTEM  System or command failure. `log_add()` called.
+ * @param[in]  cmdVec       Command vector. Last element must be `NULL`.
+ * @retval     0            Success
+ * @retval     LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
 static int command(const char* const cmdVec[])
 {
-    int   fds[2];
-    int   status = pipe(fds);
+    int       status;
+    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
-    if (status) {
-        log_add_syserr("pipe() failure");
+    if (cmd == NULL) {
         status = LDM7_SYSTEM;
     }
     else {
-        const pid_t pid = fork();
+        int exitStatus;
 
-        if (pid == -1) {
-            log_add_syserr("fork() failure");
+        status = childCmd_reap(cmd, &exitStatus);
+
+        if (status) {
             status = LDM7_SYSTEM;
         }
-        else if (pid == 0) {
-            /* Child process */
-            (void)close(fds[0]); // Read end of pipe unneeded
-            (void)dup2(fds[1], STDOUT_FILENO);
-            (void)dup2(fds[1], STDERR_FILENO);
-
-            (void)execvp(cmdVec[0], (char* const*)cmdVec);
-
-            log_add_syserr("execvp() failure");
-            log_flush_error();
-            exit(1);
-        }
         else {
-            /* Parent process */
-            (void)close(fds[1]); // Write end of pipe unneeded
-            fds[1] = -1;
+            if (exitStatus) {
+                log_add("Command exited with status %d", exitStatus);
 
-            FILE* inputStream = fdopen(fds[0], "r");
-
-            if (inputStream == NULL) {
-                log_add_syserr("fdopen() failure");
                 status = LDM7_SYSTEM;
             }
-            else {
-                char line[_POSIX_MAX_INPUT+1];
-
-                while ((fgets(line, sizeof(line), inputStream)) != NULL)
-                    log_notice_1("%s", line);
-
-                (void)fclose(inputStream);
-                fds[0] = -1;
-            } // `input` open
-
-            int exitStatus;
-            int status2 = waitpid(pid, &exitStatus, 0);
-
-            if (status2 == -1) {
-                log_add_syserr("waitpid() failure for process %d", pid);
-                if (status == 0)
-                    status = LDM7_SYSTEM;
-            }
-            else {
-                status2 = WEXITSTATUS(exitStatus);
-
-                if (status2) {
-                    log_add("Command exited with status %d", status2);
-                    if (status == 0)
-                        status = LDM7_SYSTEM;
-                }
-            }
-        } // Parent process. `pid` set.
-
-        if (fds[0] != -1)
-            (void)close(fds[0]);
-        if (fds[1] != -1)
-            (void)close(fds[1]);
-    } // Pipe opened in `fds`
+        }
+    }
 
     return status;
 }
 
-static volatile bool ignoreVlanUtil = false; ///< Ignore vlanUtil(1) status?
+static volatile bool ignoreVlan = false; ///< Ignore VLAN setup/teardown errors?
 static const char    vlanUtil[] = "vlanUtil";
 
 /**
- * Creates an FMTP VLAN. Destroys any previously-existing VLAN.
+ * Creates a local VLAN interface. Replaces the relevant routing, address, and
+ * link information.
  *
- * @param[in] srvrAddrStr  Address of sending FMTP server in dotted-decimal form
- * @param[in] ifaceName    Name of virtual interface to be created
- * @param[in] ifaceAddr    IP address of virtual interface
+ * @param[in] srvrAddrStr  Dotted-decimal IP address of sending FMTP server
+ * @param[in] ifaceName    Name of virtual interface to be created (e.g.,
+ *                         "eth0.1")
+ * @param[in] ifaceAddr    IP address to be assigned to virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  */
-static int vlanUtil_create(
+static int vlanIface_create(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName,
         const in_addr_t            ifaceAddr)
@@ -1010,14 +964,13 @@ static int vlanUtil_create(
     status = command(cmdVec);
 
     if (status) {
-        if (ignoreVlanUtil) {
-            log_error_1("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
-                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+        log_add("Couldn't create local VLAN interface via command "
+                "\"%s %s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+
+        if (ignoreVlan) {
+            log_flush_error();
             status = 0;
-        }
-        else {
-            log_add("Couldn't create FMTP VLAN via command \"%s %s %s %s %s\"",
-                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
         }
     }
 
@@ -1025,13 +978,13 @@ static int vlanUtil_create(
 }
 
 /**
- * Destroys an FMTP VLAN.
+ * Destroys a local VLAN interface.
  *
  * @param[in] srvrAddrStr  IP address of sending FMTP server in dotted-decimal
  *                         form
  * @param[in] ifaceName    Name of virtual interface to be destroyed
  */
-static void vlanUtil_destroy(
+static void vlanIface_destroy(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName)
 {
@@ -1039,14 +992,12 @@ static void vlanUtil_destroy(
             NULL};
 
     if (command(cmdVec)) {
-        if (ignoreVlanUtil) {
-            log_error_1("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
-                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
-        }
-        else {
-            log_add("Couldn't destroy FMTP VLAN via command \"%s %s %s %s\"",
-                    cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[4]);
-        }
+        log_error_1("Couldn't destroy local VLAN interface via command "
+                "\"%s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
+
+        if (ignoreVlan)
+            log_flush_error();
     }
 }
 
@@ -1094,7 +1045,7 @@ mcastRcvr_init(
         status = LDM7_INVAL;
     }
     else {
-        status = vlanUtil_create(mcastRcvr->fmtpSrvrAddr, ifaceName, ifaceAddr);
+        status = vlanIface_create(mcastRcvr->fmtpSrvrAddr, ifaceName, ifaceAddr);
 
         if (status) {
             log_add("Couldn't create FMTP VLAN");
@@ -1116,11 +1067,10 @@ mcastRcvr_init(
                 mcastRcvr->mlr = mlr;
                 mcastRcvr->ifaceName = ifaceName;
                 mcastRcvr->downlet = downlet;
-                status = 0;
             } // `mlr` allocated
 
             if (status)
-                vlanUtil_destroy(mcastRcvr->fmtpSrvrAddr, ifaceName);
+                vlanIface_destroy(mcastRcvr->fmtpSrvrAddr, ifaceName);
         } // FMTP VLAN interface created
     }
 
@@ -1131,7 +1081,7 @@ inline static void
 mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
     mlr_free(mcastRcvr->mlr);
-    vlanUtil_destroy(mcastRcvr->fmtpSrvrAddr, mcastRcvr->ifaceName);
+    vlanIface_destroy(mcastRcvr->fmtpSrvrAddr, mcastRcvr->ifaceName);
 }
 
 static McastRcvr*
@@ -2793,13 +2743,13 @@ down7_getPqeCount(
 }
 
 /**
- * Causes the `down7` module to ignore the exit status of the vlanUtil(1)
- * program.
+ * Causes the `down7` module to ignore errors during VLAN setup and teardown.
+ * Used for testing.
  */
 void
-down7_ignoreVlanUtil(void)
+down7_ignoreVlanErrors(void)
 {
-    ignoreVlanUtil = true;
+    ignoreVlan = true;
 }
 
 /******************************************************************************
