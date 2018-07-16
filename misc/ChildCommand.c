@@ -293,6 +293,7 @@ childCmd_execvp(
             childCmd_free(cmd);
             cmd = NULL;
             errno = status;
+            log_add("Couldn't execute child-command");
         }
     }
 
@@ -314,6 +315,7 @@ childCmd_reap(
 
         if (status != cmd->pid) {
             status = errno;
+            log_add_syserr("Couldn't reap child-command");
         }
         else {
             (void)pthread_join(cmd->stdErrThread, NULL);
@@ -340,6 +342,10 @@ childCmd_putline(
     }
     else {
         status = fputs(line, cmd->stdIn);
+
+        if (status == EOF)
+            log_add_syserr("Couldn't write to child-command's standard input "
+                    "stream");
     }
 
     return status;
@@ -359,6 +365,10 @@ childCmd_getline(
     }
     else {
         status = getline(line, size, cmd->stdOut);
+
+        if (status == -1 && ferror(cmd->stdOut))
+            log_add_syserr("Couldn't read child-command's standard output "
+                    "stream");
     }
 
     return status;
