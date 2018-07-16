@@ -71,7 +71,10 @@ void vcEndPoint_destroy(VcEndPoint* const end)
 {
     if (end) {
         free(end->portId);
+        end->portId = NULL;
+
         free(end->switchId);
+        end->switchId = NULL;
     }
 }
 
