@@ -10,6 +10,8 @@
 
 #include "config.h"
 
+#include "log.h"
+
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <limits.h>
