@@ -9,6 +9,11 @@
     and read from the child's standard output stream while automatically logging
     the child's standard error stream
 
+    Reverted gempak/ctbg2rdvar.c to version that doesn't check the return value
+    of sscanf(3) to handle "missing" entries like this (in g2varswmo.tbl):
+
+        010 191 255 000 Missing                                                                0  -9999.00
+
 6.13.7.27	2018-07-09T16:24:41-0600
     Added ability to ignore vlanUtil(1) exit status and got up7_down7_test
     working again. Added multicast back into "make distcheck".
