@@ -406,6 +406,10 @@ myUp7_run(
     fds.fd = sock;
     fds.events = POLLRDNORM;
 
+    status = up7_init("UCAR LDM7", localVcEnd);
+    CU_ASSERT_EQUAL(status, 0);
+    up7_ignoreVlanErrors();
+
     /**
      * The `up7.c` module needs to tell this function to return when a error
      * occurs that prevents continuation. The following mechanisms were
@@ -448,7 +452,7 @@ myUp7_run(
         }
     } // While not done loop
 
-    up7_reset();
+    up7_destroy();
 }
 
 static void

@@ -194,7 +194,7 @@ static void cleanup(
     clr_pip_5(); // Release COMINGSOON-reserved space in product-queue.
     down6_destroy();
 #if WANT_MULTICAST
-    up7_reset();
+    up7_destroy();
 #endif
 
     /*

@@ -23,6 +23,7 @@
 
 #include "config.h"
 
+#include "ChildCommand.h"
 #include "CidrAddr.h"
 #include "globals.h"
 #include "inetutil.h"
@@ -50,6 +51,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -59,30 +61,178 @@
 #   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
 #endif
 
+/******************************************************************************
+ * OESS-based submodule for creating an AL2S virtual circuit
+ ******************************************************************************/
+
+static volatile bool ignoreVlan = false;  ///< Ignore VLAN errors?
+static const char    python[] = "python"; ///< Name of python executable
+
+/**
+ * Creates an AL2S virtual circuit between two end-points.
+ *
+ * @param[in]  wrkGrpName   Name of the AL2S workgroup
+ * @param[in]  desc         Description of virtual circuit
+ * @param[in]  end1         One end of the virtual circuit
+ * @param[in]  end2         Other end of the virtual circuit
+ * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
+ *                          call `free(*circuitId)` when the identifier is no
+ *                          longer needed.
+ * @retval     0            Success
+ * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
+ */
+static int oess_provision(
+        const char* const restrict       wrkGrpName,
+        const char* const restrict       desc,
+        const VcEndPoint* const restrict end1,
+        const VcEndPoint* const restrict end2,
+        char** const restrict            circuitId)
+{
+    int  status;
+    char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
+    char vlanId2[12];
+
+    (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
+    (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
+
+    const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
+            end1->switchId, end1->portId, vlanId1,
+            end2->switchId, end2->portId, vlanId2, NULL};
+
+    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+    if (cmd == NULL) {
+        status = LDM7_SYSTEM;
+    }
+    else {
+        char*   line = NULL;
+        size_t  size = 0;
+        ssize_t nbytes = childCmd_getline(cmd, &line, &size);
+
+        if (nbytes <= 0) {
+            log_add("Couldn't get AL2S virtual-circuit ID");
+
+            status = LDM7_SYSTEM;
+        }
+        else {
+            if (line[nbytes-1] == '\n')
+                line[nbytes-1] = 0;
+
+            int exitStatus;
+
+            status = childCmd_reap(cmd, &exitStatus);
+
+            if (status) {
+                status = LDM7_SYSTEM;
+            }
+            else {
+                if (exitStatus) {
+                    log_add("Child-process terminated with status %d",
+                            exitStatus);
+
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    *circuitId = line;
+                }
+            }
+        }
+    }
+
+    if (status) {
+        log_add("Couldn't create AL2S virtual-circuit via command "
+                "\"%s %s %s %s %s %s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4],
+                cmdVec[5], cmdVec[6], cmdVec[7], cmdVec[8]);
+
+        if (ignoreVlan) {
+            log_flush_error();
+            *circuitId = strdup("circuitId");
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Destroys an Al2S virtual circuit.
+ *
+ * @param[in] wrkGrpName   Name of the AL2S workgroup
+ * @param[in] circuitId    Virtual-circuit identifier
+ */
+static void oess_remove(
+        const char* const restrict wrkGrpName,
+        const char* const restrict circuitId)
+{
+    int               status;
+    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
+            NULL};
+    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+    if (cmd == NULL) {
+        status = errno;
+    }
+    else {
+        int exitStatus;
+
+        status = childCmd_reap(cmd, &exitStatus);
+
+        if (status == 0 && exitStatus)
+            log_add("Child-process terminated with status %d", exitStatus);
+    }
+
+    if (status) {
+        log_add_errno(status,
+                "Couldn't destroy AL2S virtual-circuit via command "
+                "\"%s %s %s %s\"",
+                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
+
+        if (ignoreVlan)
+            log_flush_error();
+    }
+}
+
+/******************************************************************************
+ * Upstream LDM7:
+ ******************************************************************************/
+
+/**
+ * Module is initialized?
+ */
+static bool        isInitialized = FALSE;
+/**
+ * Name of AL2S workgroup
+ */
+static char*       wrkGrpName = NULL;
+/**
+ * Local AL2S end-point for virtual circuits
+ */
+static VcEndPoint* localVcEndPoint = NULL;
+/**
+ * Identifier of AL2S virtual circuit
+ */
+static char*       circuitId = NULL;
 /**
  * The RPC client-side transport to the downstream LDM-7
  */
-static CLIENT*   clnt;
+static CLIENT*     clnt = NULL;
 /**
  * The feedtype of the subscription.
  */
-static feedtypet feedtype;
+static feedtypet   feedtype = NONE;
 /**
  * The IP address of the downstream FMTP layer's TCP connection.
  */
-static in_addr_t downFmtpAddr = INADDR_ANY;
-/**
- * Identifier of OSI Level 2 multicast circuit
- */
-static char*     circuitId = NULL;
+static in_addr_t   downFmtpAddr = INADDR_ANY;
 /**
  * Whether or not the product-index map is open.
  */
-static bool pimIsOpen = false;
+static bool        pimIsOpen = false;
 /**
  * Whether or not this component is done.
  */
-static bool isDone = false;
+static bool        isDone = false;
 
 /**
  * Idempotent.
@@ -98,16 +248,64 @@ releaseDownFmtpAddr()
     }
 }
 
+/**
+ * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
+ *
+ * @param[in]  feed              LDM feed
+ * @param[in]  remoteVcEndPoint  Remote end of virtual circuit
+ * @retval     0                 Success
+ * @retval     LDM7_SYSTEM       Failure. `log_add()` called.
+ */
 static Ldm7Status
-up7_addToMcastCircuit()
+up7_createVirtCirc(
+        const feedtypet                  feed,
+        const VcEndPoint* const restrict remoteVcEndPoint)
 {
-    return 0; // TODO
+    int  status;
+    char feedStr[128];
+
+    (void)ft_format(feed, feedStr, sizeof(feedStr));
+    feedStr[sizeof(feedStr)-1] = 0;
+
+    char* const desc = ldm_format(128, "%s feed", feedStr);
+
+    if (desc == NULL) {
+        log_add("Couldn't format description for AL2S virtual-circuit for "
+                "feed %s", feedStr);
+        status = LDM7_SYSTEM;
+    }
+    else {
+        char* id;
+
+        status = oess_provision(wrkGrpName, desc, localVcEndPoint,
+                remoteVcEndPoint, &id);
+
+        if (status) {
+            log_add("Couldn't create AL2S virtual circuit for feed %s",
+                    feedStr);
+        }
+        else {
+            free(circuitId);
+            circuitId = id;
+        }
+
+        free(desc);
+    } // `desc` allocated
+
+    return status;
 }
 
+/**
+ * Destroys the virtual circuit if it exists.
+ */
 static void
-up7_removeFromMcastCircuit()
+up7_destroyVirtCirc()
 {
-    // TODO
+    if (circuitId) {
+        oess_remove(wrkGrpName, circuitId);
+        free(circuitId);
+        circuitId = NULL;
+    }
 }
 
 /**
@@ -167,20 +365,9 @@ up7_closeProdIndexMap()
 static void up7_destroyClient(void)
 {
     if (clnt) {
-        clnt_destroy(clnt);
+        clnt_destroy(clnt); // Frees `clnt`. Doesn't check for `NULL`.
         clnt = NULL;
     }
-}
-
-/**
- * Resets this module. Idempotent.
- */
-void up7_reset(void)
-{
-    releaseDownFmtpAddr();
-    up7_destroyClient();
-    up7_closeProdIndexMap();
-    isDone = false;
 }
 
 /**
@@ -210,29 +397,38 @@ up7_createClientTransport(
     /*
      * Create a client-side RPC transport on the TCP connection.
      */
-    up7_destroyClient(); // `up7_down7_test` calls this function more than once
     log_assert(xprt->xp_raddr.sin_port != 0);
     log_assert(xprt->xp_sock >= 0);
+
     // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
     // TODO: adjust sending buffer size
-    clnt = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN, &xprt->xp_sock,
-            MAX_RPC_BUF_NEEDED, 0);
-    if (clnt == NULL) {
+    CLIENT* client = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
+            &xprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
+
+    if (client == NULL) {
         log_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
         log_add("Couldn't create client-side transport to downstream LDM-7 on "
                 "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
+
         success = false;
     }
     else {
         if (atexit(up7_destroyClient)) {
             log_add_syserr("Couldn't register upstream LDM-7 cleanup function");
-            up7_destroyClient();
+
             success = false;
         }
         else {
+            // `up7_down7_test` calls this function more than once
+            up7_destroyClient();
+            clnt = client;
+
             success = true;
         }
-    }
+
+        if (!success)
+            clnt_destroy(client); // Frees `client`
+    } // `client` allocated
 
     return success;
 }
@@ -246,7 +442,7 @@ up7_createClientTransport(
  * @param[in] inAddr  Address of the host
  * @return            Reduced feed. Might be `NONE`.
  */
-static feedtypet reduceToAllowed(
+static feedtypet up7_reduceToAllowed(
         feedtypet                            feed,
         const char* const restrict           hostId,
         const struct in_addr* const restrict inAddr)
@@ -301,7 +497,7 @@ up7_subscribe(
     struct sockaddr_in* sockAddr = svc_getcaller(xprt);
     struct in_addr*     inAddr = &sockAddr->sin_addr;
     const char*         hostId = hostbyaddr(sockAddr);
-    feedtypet           reducedFeed = reduceToAllowed(request->feed, hostId,
+    feedtypet           reducedFeed = up7_reduceToAllowed(request->feed, hostId,
             inAddr);
 
     if (reducedFeed == NONE) {
@@ -311,26 +507,27 @@ up7_subscribe(
         replySet = true;
     }
     else {
-        Ldm7Status status = up7_addToMcastCircuit();
+        Ldm7Status status = up7_createVirtCirc(reducedFeed,
+                &request->vcEnd);
 
         if (status != LDM7_OK) {
-            log_add("Couldn't add host %s to multicast circuit", hostId);
+            log_add("Couldn't create virtual circuit to host %s", hostId);
         }
         else {
             SubscriptionReply rep = {};
 
-            status = umm_subscribe(request->feed, &rep);
+            status = umm_subscribe(reducedFeed, &rep);
 
             if (status) {
                 if (LDM7_NOENT == status) {
-                    log_notice_q("Requested feed %s isn't multicasted",
-                            s_feedtypet(request->feed));
+                    log_notice_q("Allowed feed %s isn't multicasted",
+                            s_feedtypet(reducedFeed));
                     reply->status = LDM7_NOENT;
                     replySet = true;
                 }
                 else {
                     log_add("Couldn't subscribe host %s to feed %s",
-                            hostId, s_feedtypet(request->feed));
+                            hostId, s_feedtypet(reducedFeed));
                 }
             }
             else {
@@ -351,14 +548,14 @@ up7_subscribe(
                 }
 
                 if (status) {
-                    (void)umm_unsubscribe(request->feed, addr);
+                    (void)umm_unsubscribe(reducedFeed, addr);
                     up7_ensureFree(xdr_SubscriptionReply, &rep);
                 }
             } // Multicast LDM sender exists & `rep` is initialized
 
             if (status)
-                up7_removeFromMcastCircuit();
-        } // Downstream client added to multicast virtual circuit
+                up7_destroyVirtCirc();
+        } // Downstream client added to multi-point VLAN
     } // All or part of subscription is allowed by configuration-file
 
     return replySet;
@@ -743,9 +940,90 @@ up7_sendBacklog(
     return LDM7_SYSTEM != up7_sendUpToSignature(&backlog->before);
 }
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
+/**
+ * Initializes this module.
+ *
+ * @param[in] workGroup    Name of AL2S workgroup
+ * @param[in] endPoint     Local end-point for AL2S virtual circuits
+ * @retval    0            Success
+ * @retval    LDM7_LOGIC   Module is already initialized. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+int
+up7_init(
+        const char* const restrict       workGroup,
+        const VcEndPoint* const restrict endPoint)
+{
+    int status;
+
+    if (isInitialized) {
+        log_add("Upstream LDM7 module is already initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        char* const name = strdup(workGroup);
+
+        if (name == NULL) {
+            log_add("Couldn't duplicate AL2S work-group name");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            free(wrkGrpName);
+            wrkGrpName = name;
+
+            VcEndPoint* end = vcEndPoint_clone(endPoint);
+
+            if (end == NULL) {
+                log_add("Couldn't copy local end-point of AL2S "
+                        "virtual-circuit");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                free(localVcEndPoint);
+                localVcEndPoint = end;
+
+                isInitialized = true;
+                status = 0;
+            } // `localVcEndPoint` allocated
+        } // `wrkGrpName` allocated
+    }
+
+    return status;
+}
+
+/**
+ * Destroys this module.
+ */
+void
+up7_destroy(void)
+{
+    if (isInitialized) {
+        releaseDownFmtpAddr();
+        up7_destroyClient();
+        up7_closeProdIndexMap();
+
+        up7_destroyVirtCirc();
+
+        vcEndPoint_free(localVcEndPoint);
+        localVcEndPoint = NULL;
+
+        free(wrkGrpName);
+        wrkGrpName = NULL;
+
+        isDone = false;
+        ignoreVlan = false;
+        isInitialized = false;
+    }
+}
+
+/**
+ * Causes this module to ignore errors in VLAN setup and teardown.
+ */
+void
+up7_ignoreVlanErrors()
+{
+    ignoreVlan = true;
+}
 
 /**
  * Synchronously subscribes a downstream LDM-7 to a feed. Called by the RPC
