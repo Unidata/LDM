@@ -1340,7 +1340,7 @@ downlet_waitForStatusChange(Downlet* const downlet)
                 status = 0;
             }
             else if (status == EPERM) {
-                status = future_runFuncStatus(future);
+                status = future_getRunStatus(future);
             }
             else if (status) {
                 log_add("Couldn't get result of task");
@@ -2623,7 +2623,7 @@ down7_run(Down7* const down7)
             }
             else if (status == EPERM) {
                 // One-time, downstream LDM7 returned non-zero status
-                status = future_runFuncStatus(future);
+                status = future_getRunStatus(future);
 
                 if (status == LDM7_TIMEDOUT) {
                     status = 0; // Try again immediately
