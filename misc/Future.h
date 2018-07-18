@@ -1,5 +1,5 @@
 /**
- * This file defines the future of an asynchronous task.
+ * This file defines the future of an asynchronous job.
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
@@ -24,47 +24,43 @@ typedef struct future Future;
 #endif
 
 /**
- * Returns a new future for an asynchronous task.
+ * Returns a new future for an asynchronous job.
  *
- * @param[in] obj       Executable object. Not freed by `future_free()`.
- * @param[in] run       Function to start execution. Must return 0 on success.
- * @param[in] halt      Function to cancel execution or `NULL`. Parameters are
- *                      `obj` and thread on which `run` is executing. Must
- *                      return 0 on success and non-zero on failure. If `NULL`,
- *                      then `future_cancel()` will send a SIGTERM to the thread
- *                      on which `run` is executing. NB: `pthread_cond_wait()`
- *                      doesn't return when interrupted, so a task that uses it
- *                      -- including via `StopFlag` --  should explicitly
- *                      specify a halt function that doesn't use
- *                      `pthread_kill()`.
+ * @return              New future
  * @retval    `NULL`    Out of memory. `log_add()` called.
  * @threadsafety        Safe
- * @see `future_cancel()`
  */
 Future*
-future_new(
-        void*   obj,
-        int   (*run)(void* obj, void** result),
-        int   (*halt)(void* obj, pthread_t thread));
+future_new();
 
 /**
  * Frees a future. Doesn't free the object given to `future_new()` unless
- * `future_addFree()` was called.
+ * `future_addFree()` was called. Doesn't free the future's job.
  *
  * NB: Undefined behavior will result if any of the other future functions are
  * called after this function on the same future.
  *
- * NB: A memory-leak will occur if the task allocated a result object which was
+ * NB: A memory-leak will occur if the job allocated a result object which was
  * not retrieved by a call to `future_getResult()`.
  *
  * @param[in] future     Future to be freed
  * @retval    0          Success
- * @retval    EINVAL     Future is being executed. Future wasn't freed.
+ * @retval    EINVAL     Associated job is being executed. Future wasn't freed.
  *                       `log_add()` called.
  * @threadsafety         Thread-compatible but not thread-safe
  */
 int
 future_free(Future* future);
+
+typedef struct job Job;
+
+/**
+ * Sets the job associated with a future.
+ */
+void
+future_setJob(
+        Future* const future,
+        Job* const    job);
 
 /**
  * Sets the function for freeing a future's object.
@@ -88,7 +84,7 @@ void*
 future_getObj(Future* const future);
 
 /**
- * Executes a future's task on the current thread.
+ * Executes a future's job on the current thread.
  *
  * @param[in,out] future     Future
  * @retval        0          Success
@@ -99,9 +95,8 @@ int
 future_run(Future* future);
 
 /**
- * Synchronously cancels a future. If the task hasn't started, then it should
- * never start. Does nothing if the task has already completed. Will block until
- * the task completes.
+ * Asynchronously cancels a future. If the associated job hasn't started, then
+ * it should never start. Does nothing if the job has already completed.
  *
  * @param[in,out] future           Future to be canceled
  * @retval        0                Success
@@ -115,14 +110,28 @@ int
 future_cancel(Future* future);
 
 /**
- * Returns the result of a future's task. Blocks until the task has completed
- * and any executing thread is joined.
+ * Sets the result of execution.
  *
- * NB: A memory leak will occur if the task allocated a result object and the
+ * @param[in,out] future  Future
+ * @param[in]     status  Return-value of run function
+ * @param[in]     result  Result pointer or `NULL`
+ */
+void
+future_setResult(
+        Future* const restrict future,
+        int                    status,
+        void* const restrict   result,
+        const bool             wasCanceled);
+
+/**
+ * Returns the result of a future's job. Blocks until the job has completed --
+ * either normally or because `future_cancel()` was called.
+ *
+ * NB: A memory leak will occur if the job allocated a result object and the
  * given result pointer is `NULL`.
  *
  * @param[in,out] future           Future
- * @param[out]    result           Result of task execution or `NULL`. NB:
+ * @param[out]    result           Result of job execution or `NULL`. NB:
  *                                 Potential for memory-leak if `NULL`.
  * @retval        0                Success. Task's run function returned zero.
  *                                 `*result` is set if `result != NULL`.
@@ -138,12 +147,12 @@ future_getResult(
         void** const restrict  result);
 
 /**
- * Returns the result of a future's task and frees the future. Blocks until the
- * task has completed. The future should not be dereferenced upon return.
+ * Returns the result of a future's job and frees the future. Blocks until the
+ * job has completed. The future should not be dereferenced upon return.
  *
  * @param[in,out] future     Future
- * @param[out]    result     Result of task execution or `NULL`. A memory-leak
- *                           will occur if the task allocated a result object
+ * @param[out]    result     Result of job execution or `NULL`. A memory-leak
+ *                           will occur if the job allocated a result object
  *                           and `result` is NULL.
  * @retval        0          Success. `*result` is set if `result != NULL`.
  * @retval        EDEADLK    Deadlock detected
@@ -157,14 +166,14 @@ future_getAndFree(
         void** const restrict  result);
 
 /**
- * Returns the return-value of the task's run function. Must be called after
+ * Returns the return-value of the job's run function. Must be called after
  * `future_getResult()`.
  *
  * @param[in] future   Task's future
- * @return             Return value of task's run-function
+ * @return             Return value of job's run-function
  */
 int
-future_runFuncStatus(Future* future);
+future_getRunStatus(Future* future);
 
 /**
  * Indicates if two futures are considered equal.

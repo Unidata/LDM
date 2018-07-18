@@ -12,12 +12,29 @@
 
 #include "Executor.h"
 #include "log.h"
+#include "StopFlag.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <unistd.h>
+
+typedef struct {
+    StopFlag stopFlag;
+    bool     ran;
+} Obj;
+
+static void obj_init(Obj* const obj)
+{
+    obj->ran = false;
+    CU_ASSERT_EQUAL(stopFlag_init(&obj->stopFlag), 0);
+}
+
+static void obj_destroy(Obj* const obj)
+{
+    stopFlag_destroy(&obj->stopFlag);
+}
 
 static void sigTermHandler(int sig)
 {
@@ -60,13 +77,6 @@ static int teardown(void)
     return 0;
 }
 
-static void test_construction(void)
-{
-    Executor* executor = executor_new();
-    CU_ASSERT_PTR_NOT_NULL(executor);
-    executor_free(executor);
-}
-
 static int retNoResult(
         void* const restrict  arg,
         void** const restrict result)
@@ -100,6 +110,64 @@ static int noRet(
     return 0;
 }
 
+static int runObj(
+        void* const restrict  arg,
+        void** const restrict result)
+{
+    Obj* obj = (Obj*)arg;
+
+    obj->ran = true;
+
+    return 0;
+}
+
+static int badRun(
+        void* const restrict  arg,
+        void** const restrict result)
+{
+    Obj* obj = (Obj*)arg;
+
+    obj->ran = true;
+
+    return 1;
+}
+
+static int
+waitCondRetObj(
+        void* const restrict  arg,
+        void** const restrict result)
+{
+    Obj* const obj = (Obj*)arg;
+
+    stopFlag_wait(&obj->stopFlag);
+
+    *result = obj;
+
+    return 0;
+}
+
+static int
+cancelCondWait(
+        void* const     arg,
+        const pthread_t thread)
+{
+    Obj* const obj = (Obj*)arg;
+
+    stopFlag_set(&obj->stopFlag);
+
+    return 0;
+}
+
+static void test_construction(void)
+{
+    Executor* executor = executor_new();
+    CU_ASSERT_PTR_NOT_NULL(executor);
+
+    CU_ASSERT_EQUAL(executor_size(executor), 0);
+
+    executor_free(executor);
+}
+
 static void test_nullJob(void)
 {
     Executor* executor = executor_new();
@@ -125,9 +193,9 @@ static void test_returnOne(void)
     Future* future = executor_submit(executor, NULL, retOne, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
-    void* result;
+    void* result = NULL;
     CU_ASSERT_EQUAL(future_getAndFree(future, &result), 0);
-    CU_ASSERT_PTR_NOT_NULL(result);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(result);
     CU_ASSERT_EQUAL(*(int*)result, 1);
 
     CU_ASSERT_EQUAL(executor_size(executor), 0);
@@ -154,18 +222,71 @@ static void test_returnObj(void)
     executor_free(executor);
 }
 
-static void test_cancel(void)
+static void test_runObj(void)
+{
+    Obj obj;
+    obj_init(&obj);
+
+    Executor* executor = executor_new();
+    Future*   future = executor_submit(executor, &obj, runObj, NULL);
+
+    CU_ASSERT_EQUAL(future_getAndFree(future, NULL), 0);
+
+    CU_ASSERT_TRUE(obj.ran);
+
+    executor_free(executor);
+    obj_destroy(&obj);
+}
+
+static void test_badRunStatus(void)
+{
+    Obj obj;
+    obj_init(&obj);
+
+    Executor* executor = executor_new();
+    Future*   future = executor_submit(executor, &obj, badRun, NULL);
+
+    CU_ASSERT_EQUAL(future_getResult(future, NULL), EPERM);
+    CU_ASSERT_EQUAL(future_getRunStatus(future), 1);
+    CU_ASSERT_EQUAL(future_free(future), 0);
+
+    CU_ASSERT_TRUE(obj.ran);
+
+    executor_free(executor);
+    obj_destroy(&obj);
+}
+
+static void test_defaultCancel(void)
 {
     Executor* executor = executor_new();
-    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL);
+    Future*   future = executor_submit(executor, NULL, noRet, NULL);
 
-    CU_ASSERT_EQUAL(future_cancel(noRetFuture), 0);
+    CU_ASSERT_EQUAL(future_cancel(future), 0);
 
-    CU_ASSERT_EQUAL(future_getAndFree(noRetFuture, NULL), ECANCELED);
+    CU_ASSERT_EQUAL(future_getAndFree(future, NULL), ECANCELED);
 
     CU_ASSERT_EQUAL(executor_size(executor), 0);
 
     executor_free(executor);
+}
+
+static void test_haltCancel(void)
+{
+    Obj obj;
+    obj_init(&obj);
+
+    Executor* executor = executor_new();
+    Future*   future = executor_submit(executor, &obj, waitCondRetObj,
+            cancelCondWait);
+
+    CU_ASSERT_EQUAL(future_cancel(future), 0);
+
+    CU_ASSERT_EQUAL(future_getAndFree(future, NULL), ECANCELED);
+
+    CU_ASSERT_EQUAL(executor_size(executor), 0);
+
+    executor_free(executor);
+    obj_destroy(&obj);
 }
 
 static void test_shutdown(void)
@@ -207,19 +328,19 @@ static void test_shutdownNow(void)
     executor_free(executor);
 }
 
-static int submitObj = 3;
+static int afterCompObj = 3;
 
 static int
 afterComp(
         void* const restrict   arg,
         Future* const restrict future)
 {
-    CU_ASSERT_PTR_NULL(arg);
+    CU_ASSERT_PTR_EQUAL(arg, &afterCompObj);
     CU_ASSERT_PTR_NOT_NULL(future);
 
-    int* value = (int*)future_getObj(future);
-    CU_ASSERT_PTR_NOT_NULL(value);
-    CU_ASSERT_PTR_EQUAL(value, &submitObj);
+    void* result;
+    CU_ASSERT_EQUAL(future_getResult(future, &result), 0);
+    CU_ASSERT_PTR_EQUAL(result, &afterCompObj);
 
     return 0;
 }
@@ -227,14 +348,14 @@ afterComp(
 static void test_afterCompletion(void)
 {
     Executor* executor = executor_new();
-    executor_setAfterCompletion(executor, NULL, afterComp);
+    executor_setAfterCompletion(executor, &afterCompObj, afterComp);
 
-    Future*   future = executor_submit(executor, &submitObj, retObj, NULL);
+    Future*   future = executor_submit(executor, &afterCompObj, retObj, NULL);
     CU_ASSERT_PTR_NOT_NULL(future);
 
     void* result;
     CU_ASSERT_EQUAL(future_getAndFree(future, &result), 0);
-    CU_ASSERT_PTR_EQUAL(result, &submitObj);
+    CU_ASSERT_PTR_EQUAL(result, &afterCompObj);
 
     CU_ASSERT_EQUAL(executor_size(executor), 0);
 
@@ -260,7 +381,10 @@ int main(
                         && CU_ADD_TEST(testSuite, test_nullJob)
                         && CU_ADD_TEST(testSuite, test_returnOne)
                         && CU_ADD_TEST(testSuite, test_returnObj)
-                        && CU_ADD_TEST(testSuite, test_cancel)
+                        && CU_ADD_TEST(testSuite, test_runObj)
+                        && CU_ADD_TEST(testSuite, test_badRunStatus)
+                        && CU_ADD_TEST(testSuite, test_defaultCancel)
+                        && CU_ADD_TEST(testSuite, test_haltCancel)
                         && CU_ADD_TEST(testSuite, test_shutdown)
                         && CU_ADD_TEST(testSuite, test_shutdownNow)
                         && CU_ADD_TEST(testSuite, test_afterCompletion)
