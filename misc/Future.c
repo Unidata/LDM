@@ -309,9 +309,11 @@ future_setResult(
     future_assertValid(future);
 
     future_lock(future);
-        future->runStatus = runStatus;
-        future->result = result;
         future->wasCanceled = wasCanceled;
+        if (!wasCanceled) {
+            future->runStatus = runStatus;
+            future->result = result;
+        }
         future->haveResults = true;
 
         int status = pthread_cond_broadcast(&future->cond);

@@ -215,8 +215,8 @@ executor_unlock(Executor* const executor);
 static void
 job_run(Job* const job)
 {
-    void* result;
-    int   status;
+    void* result = NULL;
+    int   status = 0;
 
     job_lock(job);
         if (!job->canceled) {
