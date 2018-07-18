@@ -1,0 +1,46 @@
+start=20170401
+stop=20190901
+datafile=/tmp/burndown.txt
+
+cat >$datafile <<'EOF'
+20170431 0
+20170531 0
+20170630 0
+20170731 0
+20170831 0
+20170901 0
+20171031 8
+20180131 169
+20180228 169
+20180331 339.75
+20180531 556.25
+20180630 556.25
+EOF
+
+if gnuplot -persist <<EOF
+    set grid
+    set key below
+    #set nokey
+    set xdata time
+    set timefmt "%Y%m%d"
+    set format x "%m/%d"
+    set format y "%5g"
+    set xlabel "Time"
+    set tics out
+
+    set terminal x11 1 title "LDM7 Project Burndown"
+    #set terminal png medium
+    set title "Hours vs. Time"
+    set ylabel "Hours"
+
+    plot '-' u 1:2 title "Budgeted" with lines, \
+         '$datafile' u 1:2 title "Actual" with lines
+    20170401 0
+    20190401 990
+    e
+EOF
+then
+    rm $datafile
+else
+    echo 1>&2 "Verify the format of temporary data-file $datafile"
+fi
