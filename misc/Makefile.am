@@ -95,12 +95,6 @@ if HAVE_CUNIT
 #CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \
 #                                  @LIBS_CUNIT@
 
-Future_test_SOURCES		= Future_test.c
-Future_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Future_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS    		+= Future_test
-
 Executor_test_SOURCES		= Executor_test.c
 Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
