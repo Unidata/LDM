@@ -115,17 +115,19 @@ childCmd_new(void)
                     cmd->stdErr = NULL;
                     cmd->magic = &MAGIC;
                 }
-            } // `proc->stdOutPipe` open
+            } // `cmd->stdOutPipe` open
 
             if (status) {
                 (void)close(cmd->stdInPipe[0]);
                 (void)close(cmd->stdInPipe[1]);
             }
-        } // `proc->stdInPipe` open
+        } // `cmd->stdInPipe` open
 
-        if (status)
+        if (status) {
             free(cmd);
-    } // `proc` allocated
+            cmd = NULL;
+        }
+    } // `cmd` allocated
 
     return cmd;
 }
