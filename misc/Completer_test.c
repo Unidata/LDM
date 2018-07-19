@@ -265,6 +265,7 @@ static void test_shutdownNow(void)
     log_clear();
 
     Future* takeFuture = completer_take(completer);
+    CU_ASSERT_PTR_NOT_NULL(takeFuture);
     CU_ASSERT_PTR_EQUAL(takeFuture, noRetFuture);
 
     CU_ASSERT_EQUAL(future_getAndFree(takeFuture, NULL), ECANCELED);

@@ -190,6 +190,7 @@ struct completer {
     pthread_cond_t  cond;
     Executor*       exec;
     DoneQ*          doneQ;
+    unsigned        numFutures;
     bool            isShutdown;
 };
 
@@ -239,6 +240,8 @@ completer_add(
             log_add("Couldn't add completed future to queue");
         }
         else {
+            --comp->numFutures;
+
             // Notify `completer_take()`
             (void)pthread_cond_broadcast(&comp->cond);
         }
@@ -262,6 +265,7 @@ completer_init(Completer* const comp)
     int status;
 
     comp->isShutdown = false;
+    comp->numFutures = 0;
     comp->doneQ = doneQ_new();
 
     if (comp->doneQ == NULL) {
@@ -355,7 +359,11 @@ completer_submit(
 
     if (future == NULL) {
         log_add("Couldn't submit task to execution service");
-        future_free(future);
+    }
+    else {
+        completer_lock(comp);
+            ++comp->numFutures;
+        completer_unlock(comp);
     }
 
     return future;
@@ -368,7 +376,7 @@ completer_take(Completer* const comp)
 
     completer_lock(comp);
         while ((future = doneQ_take(comp->doneQ)) == NULL &&
-                executor_size(comp->exec)) {
+                comp->numFutures > 0) {
             int status = pthread_cond_wait(&comp->cond, &comp->mutex);
             log_assert(status == 0);
         }

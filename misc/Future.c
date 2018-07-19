@@ -302,7 +302,7 @@ future_getAndFree(
 
     int status = future_getResult(future, result);
 
-    (void)future_free(future); // Doesn't free future's job
+    (void)future_free(future); // Frees future's job
 
     return status;
 }

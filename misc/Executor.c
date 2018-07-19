@@ -56,7 +56,7 @@ typedef struct job {
 typedef struct executor Executor;
 
 static void
-executor_remove(
+executor_afterCompletion(
         Executor* const restrict executor,
         Job* const restrict      job);
 
@@ -186,36 +186,29 @@ job_free(Job* const job)
     }
 }
 
-static void
-job_run(Job* const job)
+static int
+job_run(Job* const restrict   job,
+        void** const restrict result)
 {
-    void* result = NULL;
-    int   status = 0;
+    int   status;
 
     job_lock(job);
         log_assert(job->state == JOB_EXECUTING);
 
-        if (!job->canceled) {
+        if (job->canceled) {
+            status = 0;
+        }
+        else {
             job_unlock(job);
-            // Potentially lengthy operation
-            status = job->run(job->obj, &result);
+                // Potentially lengthy operation
+                status = job->run(job->obj, result);
             job_lock(job);
         }
 
-        Executor* const executor = job->executor;
-
-        /*
-         * The call to `executor_remove()` must happen before `future_setResult()`
-         * to ensure that the job has been removed from the job-list before
-         * `future_getResult()` returns
-         */
-        executor_remove(executor, job);
-
-        // Allows `future_getResult()` to return
-        future_setResult(job->future, status, result, job->canceled);
-
         job->state = JOB_COMPLETED;
     job_unlock(job);
+
+    return status;
 }
 
 /**
@@ -481,16 +474,27 @@ executor_setAfterCompletion(
 }
 
 static void*
-executor_run(void* const arg)
+executor_runJob(void* const arg)
 {
     Job* const      job = (Job*)arg;
+    void*           result;
+    int             status = job_run(job, &result);
     Executor* const executor = job->executor;
 
-    job_run(job);
+    /*
+     * In order for the number of executing jobs to be valid, the job must be
+     * removed from the job-list before the job's future can return a result.
+     */
+    executor_lock(executor);
+        jobList_remove(executor->jobList, job);
+
+        // Allows `future_getResult()` to return
+        future_setResult(job->future, status, result, job->canceled);
+    executor_unlock(executor);
 
     if (executor->afterCompletion &&
             executor->afterCompletion(executor->completer, job->future))
-        log_add("Couldn't process job's future after completion");
+        log_add("Couldn't post-process completed job's future");
 
     log_free(); // Because end-of-thread
 
@@ -524,7 +528,7 @@ executor_submitJob(
                 jobList_add(executor->jobList, job);
 
                 pthread_t thread;
-                status = pthread_create(&thread, NULL, executor_run, job);
+                status = pthread_create(&thread, NULL, executor_runJob, job);
 
                 if (status) {
                     log_add_errno(status, "Couldn't create job's thread");
@@ -582,22 +586,6 @@ executor_submit(
     } // `job` created
 
     return future;
-}
-
-/**
- * Removes a job from the list of executing jobs.
- *
- * @param[in,out] executor  Execution service
- * @param[in]     job       Job to be removed
- */
-static void
-executor_remove(
-        Executor* const restrict executor,
-        Job* const restrict      job)
-{
-    executor_lock(executor);
-        jobList_remove(executor->jobList, job);
-    executor_unlock(executor);
 }
 
 size_t
