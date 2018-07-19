@@ -811,8 +811,10 @@ job_free(Job* const job)
     if (job != NULL) {
         // Because pthread_mutex_destroy() may return 0 for a locked mutex
         verifyUnlocked(&job->mutex);
+
         int status = pthread_mutex_destroy(&job->mutex);
         log_assert(status == 0);
+
         free(job);
     }
 }
