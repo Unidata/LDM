@@ -52,11 +52,9 @@ result = handler.read()
 jsonData = json.loads(result)
 searchResults = jsonData['results']
 if (searchResults == None):
-	print jsonData['error_text']
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Provision.py:"+jsonData['error_text']])
 else:
 	circuit_id = jsonData['results']['circuit_id']
-	print circuit_id
 	file_name = str('circuit_id.log')
 	f = open (file_name, 'w')
 	f.write(circuit_id)
