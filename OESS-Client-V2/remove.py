@@ -41,7 +41,6 @@ result = handler.read()
 jsonData = json.loads(result)
 searchResults = jsonData['results']
 if (searchResults == None):
-    print jsonData['error_text']
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log",jsonData['error_text']])
 else:
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Remove.py: Success"])
