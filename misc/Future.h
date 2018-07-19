@@ -18,6 +18,7 @@
 #define MCAST_LIB_LDM7_FUTURE_H_
 
 typedef struct future Future;
+typedef struct job    Job;
 
 #ifdef __cplusplus
     extern "C" {
@@ -26,84 +27,51 @@ typedef struct future Future;
 /**
  * Returns a new future for an asynchronous job.
  *
+ * @param[in] job       Future's job. Will be deleted by `future_free()`.
  * @return              New future
  * @retval    `NULL`    Out of memory. `log_add()` called.
  * @threadsafety        Safe
+ * @see `future_free()`
  */
 Future*
-future_new();
+future_new(Job* const job);
 
 /**
- * Frees a future. Doesn't free the object given to `future_new()` unless
- * `future_addFree()` was called. Doesn't free the future's job.
+ * Frees a future. Doesn't free the object given to `future_new()`. Cancels the
+ * future's job if necessary. Must not be called if `future_getResult()` is
+ * executing on another thread. If the future's job hasn't started, then it
+ * should never start. Blocks until the future's job completes -- either
+ * normally or by being canceled. Frees the future's job.
  *
- * NB: Undefined behavior will result if any of the other future functions are
- * called after this function on the same future.
+ * NB: Undefined behavior will result if the future object is dereferenced after
+ * this function returns.
  *
- * NB: A memory-leak will occur if the job allocated a result object which was
- * not retrieved by a call to `future_getResult()`.
+ * NB: A memory-leak will occur if the future's job allocated a result object
+ * which was not retrieved by a call to `future_getResult()`.
  *
- * @param[in] future     Future to be freed
- * @retval    0          Success
- * @retval    EINVAL     Associated job is being executed. Future wasn't freed.
- *                       `log_add()` called.
- * @threadsafety         Thread-compatible but not thread-safe
+ * @param[in] future           Future to be freed
+ * @retval    0                Success
+ * @retval    ENOTRECOVERABLE  State protected by mutex is not recoverable.
+ *                             `log_add()` called.
+ * @retval    ENOTSUP          Job's halt function returned non-zero value.
+ *                             `'log_add()` called.
+ * @threadsafety               Thread-compatible but not thread-safe
  */
 int
 future_free(Future* future);
 
-typedef struct job Job;
-
 /**
- * Sets the job associated with a future.
- */
-void
-future_setJob(
-        Future* const future,
-        Job* const    job);
-
-/**
- * Sets the function for freeing a future's object.
- *
- * @param[in] future  Future
- * @param[in] free    Function to free the object given to `future_new()` or
- *                    NULL for no such freeing
- */
-void
-future_setFree(
-        Future* const future,
-        void        (*free)(void* obj));
-
-/**
- * Returns the object given to `future_new()`.
- *
- * @param[in] future  Future
- * @return            Object given to `future_new()`
- */
-void*
-future_getObj(Future* const future);
-
-/**
- * Executes a future's job on the current thread.
- *
- * @param[in,out] future     Future
- * @retval        0          Success
- * @retval        EINVAL     Future isn't in appropriate state
- * @threadsafety             Safe
- */
-int
-future_run(Future* future);
-
-/**
- * Asynchronously cancels a future. If the associated job hasn't started, then
+ * Synchronously cancels a future. If the associated job hasn't started, then
  * it should never start. Does nothing if the job has already completed.
+ *
+ * Idempotent.
  *
  * @param[in,out] future           Future to be canceled
  * @retval        0                Success
  * @retval        ENOTRECOVERABLE  State protected by mutex is not recoverable.
  *                                 `log_add()` called.
- * @return                         Error code from cancellation function given
- *                                 to `future_new()`. `log_add()` called.
+ * @retval        ENOTSUP          Job's halt function returned non-zero value.
+ *                                 `'log_add()` called.
  * @threadsafety                   Safe
  */
 int
@@ -127,18 +95,20 @@ future_setResult(
  * Returns the result of a future's job. Blocks until the job has completed --
  * either normally or because `future_cancel()` was called.
  *
- * NB: A memory leak will occur if the job allocated a result object and the
- * given result pointer is `NULL`.
+ * NB: A memory leak will occur if the future's job allocated a result object
+ * and the `result` argument is `NULL`.
  *
  * @param[in,out] future           Future
  * @param[out]    result           Result of job execution or `NULL`. NB:
- *                                 Potential for memory-leak if `NULL`.
- * @retval        0                Success. Task's run function returned zero.
+ *                                 Potential for memory-leak if `NULL` and run
+ *                                 function allocates memory.
+ * @retval        0                Success. Job's run function returned zero.
  *                                 `*result` is set if `result != NULL`.
- * @retval        ECANCELED        Task was canceled
+ * @retval        ECANCELED        Job was canceled. `*result` is not set.
  * @retval        ENOTRECOVERABLE  State protected by mutex is not recoverable.
- *                                 `log_add()` called.
- * @retval        EPERM            Task's run function returned non-zero value
+ *                                 `log_add()` called. `*result` is not set.
+ * @retval        EPERM            Job's run function returned non-zero value.
+ *                                 `*result` is not set.
  * @threadsafety                   Safe
  */
 int
@@ -156,7 +126,7 @@ future_getResult(
  *                           and `result` is NULL.
  * @retval        0          Success. `*result` is set if `result != NULL`.
  * @retval        EDEADLK    Deadlock detected
- * @retval        ECANCELED  Task was canceled
+ * @retval        ECANCELED  Job was canceled
  * @return                   Return value of `future_new()`'s `runFunc` argument
  * @threadsafety             Safe
  */
@@ -166,10 +136,10 @@ future_getAndFree(
         void** const restrict  result);
 
 /**
- * Returns the return-value of the job's run function. Must be called after
+ * Returns the return-value of the job's run function. Should be called after
  * `future_getResult()`.
  *
- * @param[in] future   Task's future
+ * @param[in] future   Job's future
  * @return             Return value of job's run-function
  */
 int

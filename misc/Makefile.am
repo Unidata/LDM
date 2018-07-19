@@ -37,7 +37,6 @@ lib_la_SOURCES	= \
         doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
 	error.c \
-	executor.c executor.h \
 	fdnb.c \
         FixedDelayQueue.h \
 	fsStats.c \

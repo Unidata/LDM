@@ -1,3 +1,6 @@
+6.13.7.30
+    Improved implemenation of Future and Executor.
+
 6.13.7.29	2018-07-18T16:15:31-0600
     Eliminate Coverity Scan lint.
 

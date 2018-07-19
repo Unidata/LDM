@@ -24,8 +24,12 @@
  ******************************************************************************/
 
 typedef enum {
+    // Job is not in job-list and not being executed
     JOB_INITIALIZED,
+    // Job is in job-list and being executed
     JOB_EXECUTING,
+    // Job is not in job-list, not being executed, and `future_setResult()` has
+    // been called
     JOB_COMPLETED
 } JobState;
 
@@ -48,8 +52,13 @@ typedef struct job {
     bool             canceled;   ///< Job was canceled?
 } Job;
 
-// Forward declaration
+// Forward declarations:
 typedef struct executor Executor;
+
+static void
+executor_remove(
+        Executor* const restrict executor,
+        Job* const restrict      job);
 
 inline static void
 job_lock(Job* const job)
@@ -112,7 +121,6 @@ job_defaultHaltFunc(
  * Allocates and initializes a new job.
  *
  * @param[in]  executor  Associated executor
- * @param[in]  future    Associated future
  * @param[in]  obj       Optional object to be executed or `NULL`
  * @param[in]  run       Function to execute
  * @param[in]  halt      Optional function to stop execution or `NULL`
@@ -120,7 +128,6 @@ job_defaultHaltFunc(
 static Job*
 job_new(
         Executor* const restrict executor,
-        Future* const restrict   future,
         void* const              obj,
         int                    (*run)(void* obj, void** result),
         int                    (*halt)(void* obj, pthread_t thread))
@@ -133,11 +140,9 @@ job_new(
         job->halt = halt ? halt : job_defaultHaltFunc;
         job->executor = executor;
         job->prev = job->next = NULL;
-        job->future = future;
+        job->future = NULL;
         job->canceled = false;
         job->state = JOB_INITIALIZED;
-
-        future_setJob(future, job);
 
         int status = mutex_init(&job->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
@@ -169,48 +174,17 @@ job_new(
  * @param[in,out] job     Job to be freed
  * @retval        0       Success
  */
-static void
+void
 job_free(Job* const job)
 {
-    log_assert(job->state != JOB_EXECUTING);
-    (void)pthread_cond_destroy(&job->cond);
-    (void)pthread_mutex_destroy(&job->mutex);
-    free(job);
+    if (job) {
+        log_assert(job->state != JOB_EXECUTING);
+
+        (void)pthread_cond_destroy(&job->cond);
+        (void)pthread_mutex_destroy(&job->mutex);
+        free(job);
+    }
 }
-
-/**
- * Sets the state of a job and signals the job's condition-variable.
- *
- * @pre                  Job is locked
- * @param[in,out] job    Job
- * @param[in]     state  New state
- * @post                 Job is locked
- */
-static void
-job_setState(
-        Job* const     job,
-        const JobState state)
-{
-    job_assertLocked(job);
-
-    job->state = state;
-
-    int status = pthread_cond_broadcast(&job->cond);
-    log_assert(status == 0);
-}
-
-typedef struct executor Executor;
-
-static void
-executor_remove(
-        Executor* const restrict executor,
-        Job* const restrict      job);
-
-static void
-executor_lock(Executor* const executor);
-
-static void
-executor_unlock(Executor* const executor);
 
 static void
 job_run(Job* const job)
@@ -219,41 +193,44 @@ job_run(Job* const job)
     int   status = 0;
 
     job_lock(job);
-        if (!job->canceled) {
-            job->thread = pthread_self();
-            job->state = JOB_EXECUTING;
+        log_assert(job->state == JOB_EXECUTING);
 
+        if (!job->canceled) {
             job_unlock(job);
             // Potentially lengthy operation
             status = job->run(job->obj, &result);
             job_lock(job);
-
-            job->state = JOB_COMPLETED;
         }
+
+        Executor* const executor = job->executor;
+
+        /*
+         * The call to `executor_remove()` must happen before `future_setResult()`
+         * to ensure that the job has been removed from the job-list before
+         * `future_getResult()` returns
+         */
+        executor_remove(executor, job);
+
+        // Allows `future_getResult()` to return
+        future_setResult(job->future, status, result, job->canceled);
+
+        job->state = JOB_COMPLETED;
     job_unlock(job);
-
-    Executor* const executor = job->executor;
-
-    /*
-     * The call to `executor_remove()` must happen before `future_setResult()`
-     * to ensure that the job has been removed from the job-list before
-     * `future_getResult()` returns
-     */
-    executor_remove(executor, job);
-
-    // Allows `future_getResult()` to return
-    future_setResult(job->future, status, result, job->canceled);
 }
 
 /**
  * Asynchronously cancels a job. If the job hasn't started executing, then it
  * never should.
  *
+ * Idempotent.
+ *
  * @param[in] job              Job
  * @retval    0                Success. Job completed or was successfully
  *                             canceled.
  * @retval    ENOTRECOVERABLE  State protected by mutex is not recoverable.
  *                             `log_add()` called.
+ * @retval    ENOTSUP          Job's halt function returned non-zero value.
+ *                             `'log_add()` called.
  */
 int
 job_cancel(Job* const job)
@@ -269,7 +246,12 @@ job_cancel(Job* const job)
             job->canceled = true;
 
             if (job->state == JOB_INITIALIZED) {
+                future_setResult(job->future, 0, NULL, true);
+
+                job->state = JOB_COMPLETED;
+
                 job_unlock(job);
+
                 status = 0;
             }
             else {
@@ -279,8 +261,10 @@ job_cancel(Job* const job)
 
                 status = job->halt(job->obj, job->thread);
 
-                if (status)
-                    log_error_1("Job's halt function returned %d", status);
+                if (status) {
+                    log_add("Job's halt function returned %d", status);
+                    status = ENOTSUP;
+                }
             } // Job is executing
         } // Job hasn't completed
 
@@ -320,7 +304,6 @@ jobList_free(JobList* const jobList)
 
     while (job != NULL) {
         Job* next = job->next;
-        job_free(job);
         job = next;
     }
 
@@ -388,7 +371,7 @@ jobList_cancelAll(JobList* const jobList)
 
     for (Job* job = jobList->head; job != NULL; ) {
         Job* next = job->next;
-        int  stat = future_cancel(job->future);
+        int  stat = job_cancel(job);
 
         if (stat) {
             log_add("Couldn't cancel job");
@@ -509,8 +492,6 @@ executor_run(void* const arg)
             executor->afterCompletion(executor->completer, job->future))
         log_add("Couldn't process job's future after completion");
 
-    job_free(job); // Doesn't free the job's future
-
     log_free(); // Because end-of-thread
 
     return NULL;
@@ -531,34 +512,40 @@ executor_submitJob(
 {
     int        status;
 
-    executor_lock(executor);
-        if (executor->isShutdown) {
-            log_add("Executor is shut down");
-            status = EPERM;
-        }
-        else {
-            jobList_add(executor->jobList, job);
+    job_lock(job);
+        log_assert(job->state == JOB_INITIALIZED);
 
-            pthread_t thread;
-            status = pthread_create(&thread, NULL, executor_run, job);
-
-            if (status) {
-                log_add_errno(status, "Couldn't create job's thread");
-                jobList_remove(executor->jobList, job);
+        executor_lock(executor);
+            if (executor->isShutdown) {
+                log_add("Executor is shut down");
+                status = EPERM;
             }
             else {
-                /*
-                 * The thread is detached because it can't be joined:
-                 *   - `job_free()` can't join it because it's executing on
-                 *     the same thread; and
-                 *   - `future_getResult()` can't join it without precluding
-                 *     an execution service implementation that uses a
-                 *     thread pool.
-                 */
-                (void)pthread_detach(thread);
-            } // Thread created
-        } // Executor is not shut down
-    executor_unlock(executor);
+                jobList_add(executor->jobList, job);
+
+                pthread_t thread;
+                status = pthread_create(&thread, NULL, executor_run, job);
+
+                if (status) {
+                    log_add_errno(status, "Couldn't create job's thread");
+                    jobList_remove(executor->jobList, job);
+                }
+                else {
+                    job->thread = thread;
+                    job->state = JOB_EXECUTING;
+                    /*
+                     * The thread is detached because it can't be joined:
+                     *   - `job_free()` can't join it because it's executing on
+                     *     the same thread; and
+                     *   - `future_getResult()` can't join it without precluding
+                     *     an execution service implementation that uses a
+                     *     thread pool.
+                     */
+                    (void)pthread_detach(thread);
+                } // Thread created
+            } // Executor is not shut down
+        executor_unlock(executor);
+    job_unlock(job);
 
     return status;
 }
@@ -570,31 +557,29 @@ executor_submit(
         int           (*run)(void* obj, void** result),
         int           (*halt)(void* obj, pthread_t thread))
 {
-    Future* future = future_new();
+    Future*    future;
+    Job* const job = job_new(executor, obj, run, halt);
 
-    if (future == NULL) {
-        log_add("Couldn't create new future");
+    if (job == NULL) {
+        log_add("Couldn't create new job");
+        future = NULL;
     }
     else {
-        int        status;
-        Job* const job = job_new(executor, future, obj, run, halt);
+        future = future_new(job);
 
-        if (job == NULL) {
-            log_add("Couldn't create new job");
-            status = -1;
+        if (future == NULL) {
+            log_add("Couldn't create new future");
+            job_free(job);
         }
         else {
-            status = executor_submitJob(executor, job);
+            job->future = future;
 
-            if (status)
-                job_free(job); // Doesn't free job's future
-        } // `job` created
-
-        if (status) {
-            future_free(future); // Doesn't free future's job
-            future = NULL;
-        }
-    } // `future` created
+            if (executor_submitJob(executor, job)) {
+                future_free(future); // Frees future's job
+                future = NULL;
+            }
+        } // `future` created
+    } // `job` created
 
     return future;
 }
@@ -634,15 +619,23 @@ executor_shutdown(
 
     executor_lock(executor);
         if (executor->isShutdown) {
+            executor_unlock(executor);
             status = 0;
         }
         else {
             executor->isShutdown = true;
+
+            executor_unlock(executor);
+
+            /*
+             * The execution service must be unlocked because the following
+             * calls `future_cancel()`, which calls `job_cancel()`, which calls
+             * `executor_remove()`, which calls `executor_lock()`.
+             */
             status = now
                     ? jobList_cancelAll(executor->jobList)
                     : 0;
         }
-    executor_unlock(executor);
 
     return status;
 }

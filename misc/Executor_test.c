@@ -292,17 +292,17 @@ static void test_haltCancel(void)
 static void test_shutdown(void)
 {
     Executor* executor = executor_new();
-    Future*   noRetFuture = executor_submit(executor, NULL, noRet, NULL);
+    Future*   future1 = executor_submit(executor, NULL, noRet, NULL);
 
     executor_shutdown(executor, false);
 
     int     obj = 3;
-    Future* retObjFuture = executor_submit(executor, &obj, retObj, NULL);
-    CU_ASSERT_PTR_NULL(retObjFuture);
+    Future* future2 = executor_submit(executor, &obj, retObj, NULL);
+    CU_ASSERT_PTR_NULL(future2);
     log_clear();
 
-    future_cancel(noRetFuture);
-    CU_ASSERT_EQUAL(future_getAndFree(noRetFuture, NULL), ECANCELED);
+    future_cancel(future1);
+    CU_ASSERT_EQUAL(future_getAndFree(future1, NULL), ECANCELED);
 
     CU_ASSERT_EQUAL(executor_size(executor), 0);
 
