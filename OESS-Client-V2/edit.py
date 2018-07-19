@@ -51,35 +51,71 @@ for er in searchResults2:
 for er in searchResults3:
     if er['name'] != None:
         link.append(er['name'])
-print node
-print interface
-print tag
-print link
-
-values3 = {'method' : 'get_shortest_path', 'node' : [node[0], sys.argv[3]], 'type' : 'mpls'}
-data3 = urllib.urlencode(values3, doseq=True)
-req3 = urllib2.Request(gh_url, data3)
-password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url, 'username', 'passwd')
-auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
-opener = urllib2.build_opener(auth_manager)
-urllib2.install_opener(opener)
-handler3 = urllib2.urlopen(req3)
-result3 = handler3.read()
-jsonData3 = json.loads(result3)
-searchResults4 =  jsonData3['results']
-
-for er in searchResults4:
-	if er['link'] != None:
-		if er['link'] not in link:
-			link.append(er['link'])
-if sys.argv[3] not in node:
-	node.append(sys.argv[3])
-if sys.argv[4] not in interface:
-	interface.append(sys.argv[4])
-if sys.argv[5] not in tag:
-	tag.append(sys.argv[5])
-
+if sys.argv[3] == 'add':
+	values3 = {'method' : 'get_shortest_path', 'node' : [node[0], sys.argv[4]], 'type' : 'mpls'}
+	data3 = urllib.urlencode(values3, doseq=True)
+	req3 = urllib2.Request(gh_url, data3)
+	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+	password_manager.add_password(None, gh_url, 'username', 'passwd')
+	auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
+	opener = urllib2.build_opener(auth_manager)
+	urllib2.install_opener(opener)
+	handler3 = urllib2.urlopen(req3)
+	result3 = handler3.read()
+	jsonData3 = json.loads(result3)
+	searchResults4 =  jsonData3['results']
+	for er in searchResults4:
+		if er['link'] != None:
+			if er['link'] not in link:
+				link.append(er['link'])
+	if sys.argv[4] not in node:
+		node.append(sys.argv[4])
+	if sys.argv[5] not in interface:
+		interface.append(sys.argv[5])
+	if sys.argv[6] not in tag:
+		tag.append(sys.argv[6])
+if sys.argv[3] == 'del':
+	values3 = {'method' : 'get_shortest_path', 'node' : [node[0], sys.argv[4]], 'type' : 'mpls'}
+	data3 = urllib.urlencode(values3, doseq=True)
+	req3 = urllib2.Request(gh_url, data3)
+	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+	password_manager.add_password(None, gh_url, 'username', 'passwd')
+	auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
+	opener = urllib2.build_opener(auth_manager)
+	urllib2.install_opener(opener)
+	handler3 = urllib2.urlopen(req3)
+	result3 = handler3.read()
+	jsonData3 = json.loads(result3)
+	searchResults4 =  jsonData3['results']
+	for er in searchResults4:
+		if er['link'] != None:
+			if er['link'] in link:
+				link.remove(er['link'])
+	if sys.argv[4] in node:
+		node.remove(sys.argv[4])
+	if sys.argv[5] in interface:
+		interface.remove(sys.argv[5])
+	if sys.argv[6] in tag:
+		tag.remove(sys.argv[6])
+	index = 1
+	while index < len(node):
+		values3 = {'method' : 'get_shortest_path', 'node' : [node[0], node[index]], 'type' : 'mpls'}
+		data3 = urllib.urlencode(values3, doseq=True)
+		req3 = urllib2.Request(gh_url, data3)
+		password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+		password_manager.add_password(None, gh_url, 'username', 'passwd')
+		auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
+		opener = urllib2.build_opener(auth_manager)
+		urllib2.install_opener(opener)
+		handler3 = urllib2.urlopen(req3)
+		result3 = handler3.read()
+		jsonData3 = json.loads(result3)
+		searchResults4 =  jsonData3['results']
+		for er in searchResults4:
+			if er['link'] != None:
+				if er['link'] not in link:
+					link.append(er['link'])
+		index += 1
 values4 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : sys.argv[2], 'provision_time' : -1, 'remove_time' : -1, 'description' : description, 'link' : link, 'node' : node, 'interface' : interface, 'tag' : tag}
 data = urllib.urlencode(values4, doseq=True)
 gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
