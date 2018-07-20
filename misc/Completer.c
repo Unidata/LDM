@@ -360,6 +360,7 @@ completer_submit(
     completer_lock(comp);
         if (comp->numFutures + 1 < comp->numFutures) {
             log_add("Too many submitted jobs: %u", comp->numFutures);
+            future = NULL;
         }
         else {
             future = executor_submit(comp->exec, obj, run, halt);
