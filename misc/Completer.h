@@ -53,6 +53,7 @@ completer_free(Completer* const comp);
  * @return                  Future of the submitted task. *NB: `future_free()`
  *                          must not be called on this future until it has been
  *                          returned by `completer_take()`.*
+ * @see `completer_take()`
  */
 Future*
 completer_submit(
@@ -76,7 +77,7 @@ completer_take(Completer* const comp);
 
 /**
  * Shuts down a completion service. Doesn't block. Caller should repeatedly call
- * `completer_take()` (and deal with each future) until the completion service
+ * `completer_take()` and deal with each future until the completion service
  * is empty.
  *
  * NB: This function won't return if an uncompleted future is canceled but its

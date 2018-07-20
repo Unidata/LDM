@@ -1,5 +1,5 @@
 /**
- * This file defines an execution service for asynchronous tasks.
+ * This file defines an execution service for asynchronous jobs.
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
@@ -44,13 +44,13 @@ void
 executor_free(Executor* const executor);
 
 /**
- * Sets the object to call after a task has completed.
+ * Sets the object to call after a job has completed.
  *
  * @param[in] executor         Execution service
  * @param[in] completer        Object to pass to `afterCompletion()` as first
  *                             argument or `NULL`
- * @param[in] afterCompletion  Function to call after task has completed or
- *                             `NULL`. Must return `0` on success.
+ * @param[in] afterCompletion  Function to call after job has completed or
+ *                             `NULL`. Should return `0` on success.
  */
 void
 executor_setAfterCompletion(
@@ -61,17 +61,17 @@ executor_setAfterCompletion(
                                      Future* restrict future));
 
 /**
- * Submits a task to be executed asynchronously.
+ * Submits a job to be executed asynchronously.
  *
  * @param[in,out] exec      Execution service
  * @param[in,out] obj       Job object or `NULL`
- * @param[in]     run       Function to run task. Must return 0 on success.
- * @param[in]     halt      Function to cancel task or `NULL` to obtain default
+ * @param[in]     run       Function to run job. Must return 0 on success.
+ * @param[in]     halt      Function to cancel job or `NULL` to obtain default
  *                          cancellation. Must return 0 on success.
- * @param[in]     get       Function to return result of task or `NULL` if no
+ * @param[in]     get       Function to return result of job or `NULL` if no
  *                          result will be return
  * @retval        `NULL`    Failure. `log_add()` called.
- * @return                  Future of task. Caller should call `future_free()`
+ * @return                  Future of job. Caller should pass to `future_free()`
  *                          when it's no longer needed.
  */
 Future*
@@ -82,24 +82,21 @@ executor_submit(
         int         (*halt)(void* obj, pthread_t thread));
 
 /**
- * Returns the number of uncompleted task.
+ * Returns the number of uncompleted job.
  *
  * @param[in] executor  Execution service
- * @return              Number of uncompleted task
+ * @return              Number of uncompleted job
  */
 size_t
 executor_size(Executor* const executor);
 
 /**
- * Shuts down an execution service by canceling all submitted but not completed
- * tasks. Upon return, the execution service will no longer accept task
- * submissions. Waits for tasks to complete.
- *
- * NB: This function won't return if a future is canceled but its task doesn't
- * complete.
+ * Shuts down an execution service and, optionally, asynchronously cancels all
+ * submitted but not yet completed jobs. Upon return, the execution service will
+ * no longer accept job submissions.
  *
  * @param[in,out] exec    Execution service
- * @param[in]     now     Whether or not to cancel uncompleted tasks
+ * @param[in]     now     Whether or not to cancel uncompleted jobs
  * @retval        0       Success
  * @return                Error code. `log_add()` called.
  */

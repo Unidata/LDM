@@ -27,7 +27,8 @@ typedef struct job    Job;
 /**
  * Returns a new future for an asynchronous job.
  *
- * @param[in] job       Future's job. Will be deleted by `future_free()`.
+ * @param[in] job       Future's job. Should eventually be passed to
+ *                      `future_free()`.
  * @return              New future
  * @retval    `NULL`    Out of memory. `log_add()` called.
  * @threadsafety        Safe
@@ -73,6 +74,7 @@ future_free(Future* future);
  * @retval        ENOTSUP          Job's halt function returned non-zero value.
  *                                 `'log_add()` called.
  * @threadsafety                   Safe
+ * @see `future_getResult()`
  */
 int
 future_cancel(Future* future);
@@ -80,9 +82,10 @@ future_cancel(Future* future);
 /**
  * Sets the result of execution.
  *
- * @param[in,out] future  Future
- * @param[in]     status  Return-value of run function
- * @param[in]     result  Result pointer or `NULL`
+ * @param[in,out] future       Future
+ * @param[in]     status       Return-value of run function of future's job
+ * @param[in]     result       Result pointer or `NULL`
+ * @param[in]     wasCanceled  Was the future's job canceled?
  */
 void
 future_setResult(
@@ -93,15 +96,15 @@ future_setResult(
 
 /**
  * Returns the result of a future's job. Blocks until the job has completed --
- * either normally or because `future_cancel()` was called.
+ * either normally or because it was canceled.
  *
  * NB: A memory leak will occur if the future's job allocated a result object
  * and the `result` argument is `NULL`.
  *
  * @param[in,out] future           Future
  * @param[out]    result           Result of job execution or `NULL`. NB:
- *                                 Potential for memory-leak if `NULL` and run
- *                                 function allocates memory.
+ *                                 Potential for memory-leak if `NULL` and job's
+ *                                 run function allocates memory for a result.
  * @retval        0                Success. Job's run function returned zero.
  *                                 `*result` is set if `result != NULL`.
  * @retval        ECANCELED        Job was canceled. `*result` is not set.
@@ -110,6 +113,7 @@ future_setResult(
  * @retval        EPERM            Job's run function returned non-zero value.
  *                                 `*result` is not set.
  * @threadsafety                   Safe
+ * @see `future_cancel()`
  */
 int
 future_getResult(
@@ -123,12 +127,17 @@ future_getResult(
  * @param[in,out] future     Future
  * @param[out]    result     Result of job execution or `NULL`. A memory-leak
  *                           will occur if the job allocated a result object
- *                           and `result` is NULL.
+ *                           and `result` is `NULL`.
  * @retval        0          Success. `*result` is set if `result != NULL`.
- * @retval        EDEADLK    Deadlock detected
  * @retval        ECANCELED  Job was canceled
- * @return                   Return value of `future_new()`'s `runFunc` argument
+ * @retval        ENOTSUP    Job's halt function returned non-zero value.
+ *                           `'log_add()` called.
+ * @retval        EPERM      Job's run function returned non-zero value.
+ *                           `*result` is not set.
  * @threadsafety             Safe
+ * @see `future_cancel()`
+ * @see `future_getResult()`
+ * @see `future_free()`
  */
 int
 future_getAndFree(
@@ -141,6 +150,7 @@ future_getAndFree(
  *
  * @param[in] future   Job's future
  * @return             Return value of job's run-function
+ * @see `future_getResult()`
  */
 int
 future_getRunStatus(Future* future);
