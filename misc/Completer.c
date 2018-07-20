@@ -355,16 +355,23 @@ completer_submit(
         int            (*run)(void* obj, void** result),
         int            (*halt)(void* obj, pthread_t thread))
 {
-    Future* future = executor_submit(comp->exec, obj, run, halt);
+    Future* future;
 
-    if (future == NULL) {
-        log_add("Couldn't submit task to execution service");
-    }
-    else {
-        completer_lock(comp);
-            ++comp->numFutures;
-        completer_unlock(comp);
-    }
+    completer_lock(comp);
+        if (comp->numFutures + 1 < comp->numFutures) {
+            log_add("Too many submitted jobs: %u", comp->numFutures);
+        }
+        else {
+            future = executor_submit(comp->exec, obj, run, halt);
+
+            if (future == NULL) {
+                log_add("Couldn't submit task to execution service");
+            }
+            else {
+                ++comp->numFutures;
+            }
+        }
+    completer_unlock(comp);
 
     return future;
 }

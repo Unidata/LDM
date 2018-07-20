@@ -1,3 +1,6 @@
+6.13.7.31
+    Added checking of number of submitted jobs to Completer.
+
 6.13.7.30	2018-07-19T17:25:54-0600
     Improved implemenation of Future and Executor.
 
