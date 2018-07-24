@@ -1,4 +1,4 @@
-6.13.7.33
+6.13.7.33	2018-07-24T09:44:27-0600
     In order to allow unit testing, up7.c and down7.c were modified to ignore
     VLAN-creation errors if the switch or port identifiers of the AL2S
     end-points start with "dummy".
