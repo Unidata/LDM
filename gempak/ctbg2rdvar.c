@@ -5,6 +5,7 @@
 #include "ctbcmn.h"
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 
 void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret ) 
@@ -14,7 +15,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
  * This routine will read a GRIB2 Parameter                             *
  * table into an array of structures.	                                *
  * The table is allocated locally and a pointer to the new table is     *
- * passed back to the user in argument vartbl.  The user is resposible  *
+ * passed back to the user in argument vartbl.  The user is responsible *
  * for freeing this memory, when the table is no longer needed, by      *
  * free(vartbl.info)                                                    *
  *									*
@@ -67,7 +68,7 @@ void ctb_g2rdvar ( char *tbname, G2vars_t *vartbl, int *iret )
             return;
         }
 
-        vartbl->info = calloc((size_t)nr, sizeof(G2Vinfo));
+        vartbl->info = calloc(nr, sizeof(G2Vinfo));
         if (vartbl->info == NULL) {
             *iret = -1;
             cfl_clos(fp, &ier);
