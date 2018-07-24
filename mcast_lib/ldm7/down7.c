@@ -932,8 +932,7 @@ static int command(const char* const cmdVec[])
     return status;
 }
 
-static volatile bool ignoreVlan = false; ///< Ignore VLAN setup/teardown errors?
-static const char    vlanUtil[] = "vlanUtil";
+static const char vlanUtil[] = "vlanUtil";
 
 /**
  * Creates a local VLAN interface. Replaces the relevant routing, address, and
@@ -941,7 +940,7 @@ static const char    vlanUtil[] = "vlanUtil";
  *
  * @param[in] srvrAddrStr  Dotted-decimal IP address of sending FMTP server
  * @param[in] ifaceName    Name of virtual interface to be created (e.g.,
- *                         "eth0.1")
+ *                         "eth0.0")
  * @param[in] ifaceAddr    IP address to be assigned to virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
@@ -967,11 +966,6 @@ static int vlanIface_create(
         log_add("Couldn't create local VLAN interface via command "
                 "\"%s %s %s %s %s\"",
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
-
-        if (ignoreVlan) {
-            log_flush_error();
-            status = 0;
-        }
     }
 
     return status;
@@ -980,25 +974,27 @@ static int vlanIface_create(
 /**
  * Destroys a local VLAN interface.
  *
- * @param[in] srvrAddrStr  IP address of sending FMTP server in dotted-decimal
- *                         form
- * @param[in] ifaceName    Name of virtual interface to be destroyed
+ * @param[in] srvrAddrStr   IP address of sending FMTP server in dotted-decimal
+ *                          form
+ * @param[in] ifaceName     Name of virtual interface to be destroyed
+ * @retval     0            Success
+ * @retval     LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
-static void vlanIface_destroy(
+static int
+vlanIface_destroy(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName)
 {
     const char* const cmdVec[] = {vlanUtil, "destroy", srvrAddrStr, ifaceName,
             NULL};
+    int               status = command(cmdVec);
 
-    if (command(cmdVec)) {
-        log_error_1("Couldn't destroy local VLAN interface via command "
+    if (status)
+        log_add("Couldn't destroy local VLAN interface via command "
                 "\"%s %s %s %s\"",
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
 
-        if (ignoreVlan)
-            log_flush_error();
-    }
+    return status;
 }
 
 /******************************************************************************
@@ -1013,20 +1009,25 @@ typedef struct mcastRcvr {
     struct downlet* downlet;      ///< Parent one-time, downstream LDM7
 } McastRcvr;
 
+/// Forward declaration
+static bool downlet_ignoreVlanError(Downlet* const downlet);
+
 /**
  * Initializes a multicast receiver.
  *
- * @param[in] mcastRcvr    Multicast receiver to be initialized
- * @param[in] mcastInfo    Information on multicast group
- * @param[in] ifaceName    Name of VLAN virtual interface to be created. Must
- *                         exist for duration of initialized instance.
- * @param[in] ifaceAddr    Address to be assigned to VLAN interface
- * @param[in] pq           Product queue
- * @param[in] downlet      Parent, one-time, downstream LDM7
- * @retval    0            Success
- * @retval    LDM7_INVAL   Invalid address of sending FMTP server. `log_add()`
- *                         called.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @param[in] mcastRcvr        Multicast receiver to be initialized
+ * @param[in] mcastInfo        Information on multicast group
+ * @param[in] ifaceName        Name of VLAN virtual interface to be created.
+ *                             Must exist for duration of initialized instance.
+ * @param[in] ifaceAddr        Address to be assigned to VLAN interface
+ * @param[in] pq               Product queue
+ * @param[in] downlet          Parent, one-time, downstream LDM7
+ * @retval    0                Success or `downlet_ignoreVlanError(downlet)` is
+ *                             true and the VLAN virtual interface couldn't be
+ *                             created
+ * @retval    LDM7_INVAL       Invalid address of sending FMTP server.
+ *                             `log_add()` called.
+ * @retval    LDM7_SYSTEM      System failure. `log_add()` called.
  */
 static int
 mcastRcvr_init(
@@ -1048,9 +1049,16 @@ mcastRcvr_init(
         status = vlanIface_create(mcastRcvr->fmtpSrvrAddr, ifaceName, ifaceAddr);
 
         if (status) {
-            log_add("Couldn't create FMTP VLAN");
+            log_add("Couldn't create VLAN virtual interface");
+
+            if (downlet_ignoreVlanError(downlet)) {
+                log_add("Ignoring failure to create VLAN virtual interface");
+                log_flush_notice();
+                status = 0;
+            }
         }
-        else {
+
+        if (status == 0) {
             char ifaceAddrStr[INET_ADDRSTRLEN];
 
             // Can't fail
@@ -1081,7 +1089,14 @@ inline static void
 mcastRcvr_destroy(McastRcvr* const mcastRcvr)
 {
     mlr_free(mcastRcvr->mlr);
-    vlanIface_destroy(mcastRcvr->fmtpSrvrAddr, mcastRcvr->ifaceName);
+
+    int status = vlanIface_destroy(mcastRcvr->fmtpSrvrAddr,
+            mcastRcvr->ifaceName);
+
+    if (status && downlet_ignoreVlanError(mcastRcvr->downlet)) {
+        log_add("Ignoring failure to destroy VLAN virtual interface");
+        log_flush_notice();
+    }
 }
 
 static McastRcvr*
@@ -1297,18 +1312,19 @@ typedef struct downlet {
      */
     const char*          ifaceName;
     McastRcvr*           mcastRcvr;
-    char*                upId;          ///< ID of upstream LDM7
-    char*                feedId;        ///< Desired feed specification
+    char*                upId;            ///< ID of upstream LDM7
+    char*                feedId;          ///< Desired feed specification
     /// Server-side transport for missing products
     SVCXPRT*             xprt;
     ///< Persistent multicast receiver memory
     McastReceiverMemory* mrm;
-    const VcEndPoint*    vcEnd;         ///< Local virtual-circuit endpoint
-    Completer*           completer;     ///< Async.-task completion service
+    const VcEndPoint*    vcEnd;           ///< Local virtual-circuit endpoint
+    Completer*           completer;       ///< Async.-task completion service
     pthread_t            thread;
-    feedtypet            feedtype;      ///< Feed of multicast group
-    int                  sock;          ///< Socket with remote LDM7
-    volatile bool        mcastWorking;  ///< Product received via multicast?
+    feedtypet            feedtype;        ///< Feed of multicast group
+    int                  sock;            ///< Socket with remote LDM7
+    bool                 ignoreVlanError; ///< Ignore VLAN-creation failure?
+    volatile bool        mcastWorking;    ///< Product received via multicast?
 } Downlet;
 
 /**
@@ -1579,7 +1595,10 @@ downlet_destroyClient(Downlet* const downlet)
  *                            multicast packets. Must exist until
  *                            `downlet_destroy()` returns.
  * @param[in]  vcEnd          Local virtual-circuit endpoint. Must exist until
- *                            `downlet_destroy()` returns.
+ *                            `downlet_destroy()` returns. If the switch or
+ *                            port identifier starts with "dummy", then failure
+ *                            to create the VLAN virtual interface will be
+ *                            ignored.
  * @param[in]  pq             The product-queue. Must be thread-safe (i.e.,
  *                            `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  *                            Must exist until `downlet_destroy()` returns.
@@ -1608,6 +1627,8 @@ downlet_init(
     downlet->servAddr = servAddr;
     downlet->ifaceName = mcastIface;
     downlet->vcEnd = vcEnd;
+    downlet->ignoreVlanError = strncmp(vcEnd->switchId, "dummy", 5) == 0 ||
+            strncmp(vcEnd->portId, "dummy", 5) == 0;
     downlet->pq = pq;
     downlet->feedtype = feed;
     downlet->sock = -1;
@@ -1865,6 +1886,12 @@ downlet_createMcastRcvr(
     } // `mcastRcvr_new()` success
 
     return status;
+}
+
+static bool
+downlet_ignoreVlanError(Downlet* const downlet)
+{
+    return downlet->ignoreVlanError;
 }
 
 static int
@@ -2287,6 +2314,9 @@ down7_createThreadKey(void)
  * @param[in]  mrm          Persistent multicast receiver memory. Must exist
  *                          until `down7_destroy()` returns.
  * @param[in]  vcEnd        Local virtual-circuit endpoint. Caller may free.
+ *                          If the switch or port identifier starts with
+ *                          "dummy", then failure to create the VLAN virtual
+ *                          interface will be ignored.
  * @retval     0            Success
  * @retval     LDM7_INVAL   Product-queue isn't thread-safe. `log_add()` called.
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
@@ -2523,7 +2553,10 @@ down7_haltDownlet(
  * @param[in] feedtype    Feedtype of multicast group to receive.
  * @param[in] mcastIface  IP address of interface to use for receiving multicast
  *                        packets. Caller may free.
- * @param[in] vcEnd       Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd       Local virtual-circuit endpoint. Caller may free. If
+ *                        the switch or port identifier starts with "dummy",
+ *                        then failure to create the VLAN virtual interface will
+ *                        be ignored.
  * @param[in] pq          The product-queue. Must be thread-safe (i.e.,
  *                        `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  * @param[in] mrm         Persistent multicast receiver memory. Must exist until
@@ -2740,16 +2773,6 @@ down7_getPqeCount(
         Down7* const down7)
 {
     return pqe_get_count(down7->pq);
-}
-
-/**
- * Causes the `down7` module to ignore errors during VLAN setup and teardown.
- * Used for testing.
- */
-void
-down7_ignoreVlanErrors(void)
-{
-    ignoreVlan = true;
 }
 
 /******************************************************************************

@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -212,7 +212,8 @@ setup(void)
                         "Couldn't construct upstream LDM7 service address");
             }
             else {
-                localVcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
+                localVcEnd = vcEndPoint_new(1, "dummy_sender_switch_ID",
+                        "dummy_sender_port_ID");
 
                 if (localVcEnd == NULL) {
                     log_add("Couldn't construct local virtual-circuit endpoint");
@@ -408,7 +409,6 @@ myUp7_run(
 
     status = up7_init("UCAR LDM7", localVcEnd);
     CU_ASSERT_EQUAL(status, 0);
-    up7_ignoreVlanErrors();
 
     /**
      * The `up7.c` module needs to tell this function to return when a error
@@ -1083,9 +1083,9 @@ receiver_init(
 
     numDeletedProds = 0;
 
-    VcEndPoint* const vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
+    VcEndPoint* const vcEnd = vcEndPoint_new(1, "dummy_receiver_switch_ID",
+            "dummy_receiver_port_ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    down7_ignoreVlanErrors();
     receiver->down7 = down7_new(servAddr, feedtype, "lo", vcEnd,
             receiverPq, receiver->mrm);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
@@ -1350,7 +1350,7 @@ test_up7_down7(
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
-    unsigned remaining = sleep(2);
+    unsigned remaining = sleep(3);
     CU_ASSERT_EQUAL(remaining, 0);
 
     log_debug_1("Stopping receiver");

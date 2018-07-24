@@ -65,7 +65,6 @@
  * OESS-based submodule for creating an AL2S virtual circuit
  ******************************************************************************/
 
-static volatile bool ignoreVlan = false;  ///< Ignore VLAN errors?
 static const char    python[] = "python"; ///< Name of python executable
 
 /**
@@ -77,8 +76,11 @@ static const char    python[] = "python"; ///< Name of python executable
  * @param[in]  end2         Other end of the virtual circuit
  * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
  *                          call `free(*circuitId)` when the identifier is no
- *                          longer needed.
- * @retval     0            Success
+ *                          longer needed. Will start with "dummy" if a switch
+ *                          or port identifier of `end1` or `end2` starts with
+ *                          "dummy".
+ * @retval     0            Success or a switch or port identifier of `end1` or
+ *                          `end2` starts with "dummy"
  * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
  */
 static int oess_provision(
@@ -145,9 +147,13 @@ static int oess_provision(
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4],
                 cmdVec[5], cmdVec[6], cmdVec[7], cmdVec[8]);
 
-        if (ignoreVlan) {
-            log_flush_error();
-            *circuitId = strdup("circuitId");
+        if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
+                strncmp(end2->switchId, "dummy", 5) == 0 ||
+                strncmp(end1->portId, "dummy", 5) == 0 ||
+                strncmp(end2->portId, "dummy", 5) == 0) {
+            log_add("Ignoring failure to create AL2S virtual-circuit");
+            log_flush_notice();
+            *circuitId = strdup("dummy_circuitId");
             status = 0;
         }
     }
@@ -188,8 +194,10 @@ static void oess_remove(
                 "\"%s %s %s %s\"",
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
 
-        if (ignoreVlan)
-            log_flush_error();
+        if (strncmp(circuitId, "dummy", 5) == 0) {
+            log_add("Ignoring failure to destroy AL2S virtual-circuit");
+            log_flush_notice();
+        }
     }
 }
 
@@ -1011,18 +1019,8 @@ up7_destroy(void)
         wrkGrpName = NULL;
 
         isDone = false;
-        ignoreVlan = false;
         isInitialized = false;
     }
-}
-
-/**
- * Causes this module to ignore errors in VLAN setup and teardown.
- */
-void
-up7_ignoreVlanErrors()
-{
-    ignoreVlan = true;
 }
 
 /**
