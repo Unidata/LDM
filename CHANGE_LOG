@@ -1,3 +1,6 @@
+6.13.7.34
+    Added g2varswmo0.tbl and g2vcrdwmo0.tbl symbolic links during installation.
+
 6.13.7.33	2018-07-24T09:44:27-0600
     In order to allow unit testing, up7.c and down7.c were modified to ignore
     VLAN-creation errors if the switch or port identifiers of the AL2S
