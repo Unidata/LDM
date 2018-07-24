@@ -1,4 +1,4 @@
-# Copyright 2011 University Corporation for Atmospheric Research
+# Copyright 2018 University Corporation for Atmospheric Research
 #
 # This file is part of the Unidata NOAAPORT package.  See the file COPYRIGHT in
 # the top-level source-directory of the package for copying and redistribution
@@ -8,10 +8,11 @@
 
 G2VARSNCEP_s	= g2varsncep0.tbl g2varsncep1.tbl
 G2VARSNSSL_s	= g2varsnssl1.tbl
-G2VARSWMO_s	= g2varswmo1.tbl g2varswmo2.tbl g2varswmo3.tbl g2varswmo6.tbl
+G2VARSWMO_s	= g2varswmo0.tbl g2varswmo1.tbl g2varswmo2.tbl g2varswmo3.tbl \
+		  g2varswmo6.tbl
 G2VCRDNCEP_s	= g2vcrdncep0.tbl g2vcrdncep1.tbl
-G2VCRDWMO_s	= g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl g2vcrdwmo6.tbl \
-		  g2vcrdwmo255.tbl 
+G2VCRDWMO_s	= g2vcrdwmo0.tbl g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl \
+		  g2vcrdwmo6.tbl g2vcrdwmo255.tbl 
 LINKS		= $(G2VARSNCEP_s) \
 		  $(G2VARSNSSL_s) \
 		  $(G2VARSWMO_s) \
