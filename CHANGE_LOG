@@ -1,5 +1,8 @@
 6.13.7.34
     Added g2varswmo0.tbl and g2vcrdwmo0.tbl symbolic links during installation.
+    
+    Replaced log_notice_q() with log_add() in gb2param.c because calling
+    function logs at error level.
 
 6.13.7.33	2018-07-24T09:44:27-0600
     In order to allow unit testing, up7.c and down7.c were modified to ignore
