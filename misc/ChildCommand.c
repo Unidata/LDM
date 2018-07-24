@@ -58,10 +58,11 @@ childCmd_logStdErr(void* const arg)
     while ((nbytes = getline(&line, &size, cmd->stdErr)) > 0) {
         if (line[nbytes-1] == '\n')
             line[nbytes-1] = 0;
-        log_error_1("%s", line);
+        log_add("%s", line);
     }
 
     free(line);
+    log_flush_error();
     log_free();
 
     return NULL;
