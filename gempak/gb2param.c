@@ -74,9 +74,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
      *     (32768-65534)
      *   - Local Table version number is zero
      *
-     * We've seen GRIB2 messages from NCEP with a Master Table version number of
-     * zero (indicating use of the WMO Master Table) and a Local Table version
-     * number that is non-zero (indicating use of a Local Table). Sigh.
+     * We've seen many GRIB2 messages from NCEP that violate these conditions.
      *
      * Steve Emmerson 2018-07-26
      */
@@ -110,13 +108,20 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     */
     gb2_skvar(disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
 
-    if (ier != 0) {
-        log_add("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, id=%d, "
-                "pdtn=%d, center=%.*s, lclver=%d, file=%s", iver, disc, cat, id,
-                pdtn, (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver,
-                filename);
+    if (ier == -1) {
+        log_error_1("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, "
+                "id=%d, pdtn=%d, center=%.*s, lclver=%d, file=%s",
+                iver, disc, cat, id, pdtn, (int)sizeof(cmsg->origcntr),
+                cmsg->origcntr, lclver, filename);
         *iret = 1;
         return;
+    }
+    if (ier) {
+        log_error_1("Using parameter with different PDTN: "
+                "iver=%d, disc=%d, cat=%d, id=%d, desired pdtn=%d, "
+                "used pdtn=%d, center=%.*s, lclver=%d, file=%s",
+                iver, disc, cat, id, pdtn, g2var.pdtnmbr,
+                (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver, filename);
     }
     
     /* 
