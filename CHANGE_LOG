@@ -1,4 +1,4 @@
-6.13.7.34
+6.13.7.34	2018-07-26T13:56:17-0600
     Added g2varswmo0.tbl and g2vcrdwmo0.tbl symbolic links during installation.
 
     Replaced log_notice_q() with log_add() in gb2param.c because calling
