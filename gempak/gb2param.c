@@ -61,27 +61,31 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     id=cmsg->gfld->ipdtmpl[1];
     pdtn=cmsg->gfld->ipdtnum;
 
-#if 0
     /*
-     * Some GRIB2 messages from NCEP *don't* have the Master Table Version
-     * number set to 255 (which is wrong). Consequently, the following hack sets
-     * things right.
+     * According to the GRIB2 documentation,
+     * <http://www.wmo.int/pages/prog/www/WMOCodes/Guides/GRIB/GRIB2_062006.pdf>,
+     * all the following conditions are true for a GRIB2 message that uses the
+     * GRIB Master Table, which is maintained by the WMO Secretariat:
+     *   - Master Table version number isn't missing (255)
+     *   - Discipline number isn't reserved for local use (192-254)
+     *   - Category number isn't reserved for local use (192-254)
+     *   - Parameter number isn't reserved for local use (192-254)
+     *   - Product definition template number isn't reserved for local use
+     *     (32768-65534)
+     *   - Local Table version number is zero
+     *
+     * We've seen GRIB2 messages from NCEP with a Master Table version number of
+     * zero (indicating use of the WMO Master Table) and a Local Table version
+     * number that is non-zero (indicating use of a Local Table). Sigh.
+     *
+     * Steve Emmerson 2018-07-26
      */
-    if (iver != 255 && strcmp(cmsg->origcntr, "wmo")) {
-        log_notice_q("Setting Master Table Version to 255 for non-WMO originating center: "
-                    "iver=%d, disc=%d, cat=%d, id=%d, pdtn=%d, "
-                    "center=%.*s, lclver=%d",
-                iver, disc, cat, id, pdtn,
-                (int)sizeof(cmsg->origcntr), cmsg->origcntr, lclver);
-        cmsg->gfld->idsect[2] = iver = 255;
-    }
-#endif
-
     if ((iver != 255) &&
-        ((disc < 192   || disc == 255  ) && 
+        ((disc < 192   || disc == 255  ) &&
          (cat  < 192   || cat  == 255  ) &&
          (id   < 192   || id   == 255  ) &&
-         (pdtn < 32768 || pdtn == 65535))) {
+         (pdtn < 32768 || pdtn == 65535) &&
+         (lclver == 0  || lclver == 255))) { // Allow missing value
        /* 
         *  Get WMO Parameter table.
         */
