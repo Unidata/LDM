@@ -30,6 +30,7 @@
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 000 001 000 000 Specific Humidity                kg kg**-1            SPFH             0  -9999.00
 000 001 001 000 Relative Humidity                %                    RH               0  -9999.00
+000 001 001 002 Relative Humidity                %                    RH               0  -9999.00
 000 001 003 000 Precipitable Water               kg m**-2             PWAT             0  -9999.00
 000 001 003 002 Precipitable Water               kg m**-2             PWAT             0  -9999.00
 000 001 003 005 Precipitable Water               kg m**-2             PWAT             0  -9999.00
@@ -135,6 +136,7 @@
 000 002 003 000 V-Component of Wind              m s**-1              VGRD             0  -9999.00
 000 002 003 002 V-Component of Wind              m s**-1              VGRD             0  -9999.00
 000 002 008 000 Vertical Velocity (Pressure)     Pa s**-1             VVEL             0  -9999.00
+000 002 008 002 Vertical Velocity (Pressure)     Pa s**-1             VVEL             0  -9999.00
 000 002 009 008 Vertical Velocity (Geometric)    m s**-1              DZDT             0  -9999.00
 000 002 010 000 Absolute Vorticity               s**-1                ABSV             0  -9999.00
 000 002 015 000 Vertical U-Component Shear       s**-1                VUCSH            0  -9999.00
@@ -290,8 +292,10 @@
 000 007 004 000 Total Totals Index               K                    TOTALX           0  -9999.00
 000 007 005 000 Sweat Index                      Numeric              SX               0  -9999.00
 000 007 006 000 Convective Available Pot Energy  J kg**-1             CAPE             0  -9999.00
+000 007 006 002 Convective Available Pot Energy  J kg**-1             CAPE             0  -9999.00
 000 007 006 005 Convective Available Pot Energy  J kg**-1             CAPE             0  -9999.00
 000 007 007 000 Convective Inhibition            J kg**-1             CIN              0  -9999.00
+000 007 007 002 Convective Inhibition            J kg**-1             CIN              0  -9999.00
 000 007 007 005 Convective Inhibition            J kg**-1             CIN              0  -9999.00
 000 007 008 000 Storm Relative Helicity          m**2 s**-2           HLCY             0  -9999.00
 000 007 008 002 Storm Relative Helicity          m**2 s**-2           HLCY             0  -9999.00
