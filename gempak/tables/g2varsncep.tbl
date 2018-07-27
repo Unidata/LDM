@@ -509,6 +509,7 @@
 002 003 202 000 Effective radiative skin temp    K                    RADT             0  -9999.00
 002 003 203 000 Field Capacity                   %                    FLDCP            0  -9999.00
 002 003 203 001 Field Capacity                   %                    FLDCP            0  -9999.00
+002 004 002 000 Haines Index                     -                    HINDEX           0  -9999.00
 002 004 002 002 Haines Index                     -                    HINDEX           0  -9999.00
 002 004 002 005 Haines Index                     -                    HINDEX           0  -9999.00
 !
