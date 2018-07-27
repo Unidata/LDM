@@ -35,6 +35,7 @@
 000 001 007 000 Precipitation Rate               kg m**-2 s**-1       PRATE            0  -9999.00
 000 001 008 008 Total Precipitation              kg m**-2             APCP             0  -9999.00
 000 001 008 009 Total Precipitation              kg m**-2             APCP             0  -9999.00
+000 001 008 010 Total Precipitation              kg m**-2             APCP             0  -9999.00
 000 001 008 011 Total Precipitation              kg m**-2             APCP             0  -9999.00
 000 001 008 012 Total Precipitation              kg m**-2             APCP             0  -9999.00
 000 001 009 008 Large-Scale Precip (non-conv)    kg m**-2             NCPCP            0  -9999.00
@@ -379,6 +380,7 @@
 000 019 001 000 Albedo                           %                    ALBDO            0  -9999.00
 000 019 002 000 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 002 008 Thunderstorm Probability         %                    TSTM             0  -9999.00
+000 019 002 009 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 003 000 Mixed Layer Depth                m                    MIXHT            0  -9999.00
 !
 000 019 192 000 Maximum snow albedo              %                    MXSALB           0  -9999.00
@@ -567,6 +569,7 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 010 003 000 000 Water Temperature                K                    WTMP             0  -9999.00
+010 003 001 000 Deviation of Sea Level from Mean m                    DSLM             0  -9999.00
 !
 010 003 192 000 Storm Surge                      m                    SURGE            0  -9999.00
 010 003 192 010 Storm Surge                      m                    SURGE            0  -9999.00
@@ -603,3 +606,4 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 010 004 003 000 Main Transient Thermocline Depth m                    TTHDP            0  -9999.00
+010 004 014 000 Water Depth                      m                    WDEPTH           0  -9999.00
