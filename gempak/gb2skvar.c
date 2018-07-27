@@ -7,30 +7,52 @@
 
 #define MAKE_KEY(disc, cat, id) ((((disc << 8) | cat) << 8) | id)
 
+static const G2Vinfo* lastHit;
+
 /**
- * Compares a parameter-table entry with a target key value. Ignores the product
- * definition template number.
+ * Compares a parameter-table entry with a target key value.
  *
- * @param[in] target  Target
- * @param[in] entry   Entry
+ * @param[in] arg1    Target
+ * @param[in] arg2    Entry
  * @retval    -1      Target is less than entry
  * @retval     0      Target is equal to entry
  * @retval     1      Target is greater than entry
  */
 static int
-compare(const void* const target,
-        const void* const entry)
+compare(const void* const arg1,
+        const void* const arg2)
 {
-    const G2Vinfo* const info = (G2Vinfo*)entry;
-    const uint32_t       entryKey = MAKE_KEY(info->discpln, info->categry,
-            info->paramtr);
-    const uint32_t       targetKey = *(uint32_t*)target;
+    const G2Vinfo* const key = (G2Vinfo*)arg1;
+    const G2Vinfo* const elt = (G2Vinfo*)arg2;
 
-    return targetKey < entryKey
-            ? -1
-            : targetKey == entryKey
-              ? 0
-              : 1;
+    if (key->discpln < elt->discpln) {
+        return -1;
+    }
+    else if (key->discpln > elt->discpln) {
+        return 1;
+    }
+    else if (key->categry < elt->categry) {
+        return -1;
+    }
+    else if (key->categry > elt->categry) {
+        return 1;
+    }
+    else if (key->paramtr < elt->paramtr) {
+        return -1;
+    }
+    else if (key->paramtr > elt->paramtr) {
+        return 1;
+    }
+    else {
+        // Found (discipline, category, parameter)
+        lastHit = elt;
+
+        return (key->pdtnmbr < elt->pdtnmbr)
+                ? -1
+                : (key->pdtnmbr > elt->pdtnmbr)
+                  ? 1
+                  : 0;
+    }
 }
 
 void  gb2_skvar( int disc, int cat, int id, int pdtn, G2vars_t *vartbl,
@@ -81,104 +103,44 @@ void  gb2_skvar( int disc, int cat, int id, int pdtn, G2vars_t *vartbl,
      * most rapidly varying keys in that order.
      */
 
-    const uint32_t target = MAKE_KEY(disc, cat, id);
-    const G2Vinfo* info = bsearch(&target, vartbl->info, vartbl->nlines,
+    G2Vinfo key;
+    key.discpln = disc;
+    key.categry = cat;
+    key.paramtr = id;
+    key.pdtnmbr = pdtn;
+
+    lastHit = NULL;
+
+    const G2Vinfo* entry = bsearch(&key, vartbl->info, vartbl->nlines,
             sizeof(*vartbl->info), compare);
 
-    if (info == NULL) {
+    if (lastHit == NULL) {
+        // Didn't find (discipline, category, parameter)
         *iret = -1; // No match
     }
     else {
-        /*
-         * Found parameter with same discipline, category, and name, but
-         * possibly different parameter definition template number (PDTN)
-         */
-        int delta = pdtn - info->pdtnmbr;
-
-        if (delta == 0) {
-            *iret = 0; // Exact match
-        }
-        else if (delta < 0) {
-            for (const G2Vinfo* entry = info - 1;; --entry) {
-                if (entry < vartbl->info ||
-                        MAKE_KEY(entry->discpln, entry->categry, entry->paramtr)
-                        < target) {
-                    // Too far
-                    *iret = -3; // Entry with greater PDTN
-                    break;
-                }
-                if (entry->pdtnmbr == pdtn) {
-                    info = entry;
-                    *iret = 0; // Exact match
-                    break;
-                }
-                if (entry->pdtnmbr < pdtn) {
-                    info = entry;
-                    *iret = -2; // Entry with smaller PDTN
-                    break;
-                }
-                info = entry;
-            }
+        // Found (discipline, category, parameter), at least
+        if (entry) {
+            *iret = 0; // Found exact match
         }
         else {
-            for (const G2Vinfo* entry = info + 1;; ++entry) {
-                if (entry >= vartbl->info + vartbl->nlines ||
-                        MAKE_KEY(entry->discpln, entry->categry, entry->paramtr)
-                        > target) {
-                    // Too far
-                    *iret = -2; // Entry with smaller PDTN
-                    break;
-                }
-                if (entry->pdtnmbr == pdtn) {
-                    info = entry;
-                    *iret = 0; // Exact match
-                    break;
-                }
-                if (entry->pdtnmbr > pdtn) {
-                    *iret = -2; // Entry with smaller PDTN
-                    break;
-                }
-                info = entry;
-            }
+            // Found entry with different PDTN
+            *iret = (lastHit->pdtnmbr < key.pdtnmbr)
+                    ? -2
+                    : -3;
+            entry = lastHit;
         }
 
-        g2var->discpln = info->discpln;
-        g2var->categry = info->categry;
-        g2var->paramtr = info->paramtr;
-        g2var->pdtnmbr = info->pdtnmbr;
-        g2var->scale = info->scale;
-        g2var->missing = info->missing;
-        g2var->hzremap = info->hzremap;
-        g2var->direction = info->direction;
-        strcpy(g2var->name, info->name);
-        strcpy(g2var->units, info->units);
-        strcpy(g2var->gemname, info->gemname);
+        g2var->discpln = entry->discpln;
+        g2var->categry = entry->categry;
+        g2var->paramtr = entry->paramtr;
+        g2var->pdtnmbr = entry->pdtnmbr;
+        g2var->scale = entry->scale;
+        g2var->missing = entry->missing;
+        g2var->hzremap = entry->hzremap;
+        g2var->direction = entry->direction;
+        strcpy(g2var->name, entry->name);
+        strcpy(g2var->units, entry->units);
+        strcpy(g2var->gemname, entry->gemname);
     }
-
-#if 0
-    for (int n = 0; n < vartbl->nlines; ++n) {
-
-        if ( disc == vartbl->info[n].discpln  &&
-             cat  == vartbl->info[n].categry  &&
-             id   == vartbl->info[n].paramtr  &&
-             pdtn == vartbl->info[n].pdtnmbr ) {
-
-            g2var->discpln=vartbl->info[n].discpln;
-            g2var->categry=vartbl->info[n].categry;
-            g2var->paramtr=vartbl->info[n].paramtr;
-            g2var->pdtnmbr=vartbl->info[n].pdtnmbr;
-            strcpy( g2var->name, vartbl->info[n].name );
-            strcpy( g2var->units, vartbl->info[n].units );
-            strcpy( g2var->gemname, vartbl->info[n].gemname );
-            g2var->scale=vartbl->info[n].scale;
-            g2var->missing=vartbl->info[n].missing;
-            g2var->hzremap=vartbl->info[n].hzremap;
-            g2var->direction=vartbl->info[n].direction;
-            *iret=0;
-            break;
-        }
-        n++;
-    }
-#endif
-
 }
