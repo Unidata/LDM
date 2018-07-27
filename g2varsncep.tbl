@@ -408,7 +408,7 @@
 000 019 203 008 Cat. Thunderstorm (1-yes, 0-no)  categorical          CTSTM            0  -9999.00
 000 019 204 000 Num mixed layers next to surface integer              MIXLY            0  -9999.00
 000 019 205 000 Flight Category                  NA                   FLGHT            0  -9999.00
-000 019 205 005 Flight Category                                       FLGHT            0  -9999.00
+000 019 205 005 Flight Category                  NA                   FLGHT            0  -9999.00
 !
 000 019 215 000 Total Prob of Severe Tstorms     %                    PRSVR            0  -9999.00
 000 019 215 009 Total Prob of Severe Tstorms     %                    PRSVR            0  -9999.00
