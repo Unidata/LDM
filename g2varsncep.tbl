@@ -8,6 +8,7 @@
 000 000 000 002 Temperature                      K                    TMP              0  -9999.00
 000 000 000 005 Temperature                      K                    TMP              0  -9999.00
 000 000 002 000 Virtual Temperature              K                    VTMP             0  -9999.00
+000 000 003 000 Pseudo-Adiabat or Equiv Pot Temp K                    VTMP             0  -9999.00
 000 000 004 000 Maximum Temperature              K                    TMAX             0  -9999.00
 000 000 004 008 Maximum Temperature              K                    TMAX             0  -9999.00
 000 000 005 000 Minimum Temperature              K                    TMIN             0  -9999.00
@@ -382,6 +383,8 @@
 000 019 002 008 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 002 009 Thunderstorm Probability         %                    TSTM             0  -9999.00
 000 019 003 000 Mixed Layer Depth                m                    MIXHT            0  -9999.00
+000 019 022 000 Clear Air Turbulence (CAT)       %                    CAT              0  -9999.00
+000 019 028 000 Mnt Wave Turb (Eddy Dissip Rate) m^(2/3) s-1          MWTURB           0  -9999.00
 !
 000 019 192 000 Maximum snow albedo              %                    MXSALB           0  -9999.00
 000 019 193 000 Snow-free albedo                 %                    SNFALB           0  -9999.00
