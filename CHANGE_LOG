@@ -1,5 +1,8 @@
 6.13.7.37
     Added entries to GEMPAK's NCEP parameter table.
+    
+    Changed default logging level of noaaportIngester(1) from ERROR to WARN and
+    changed logging level of missed-parameter messages from ERROR to WARN.
 
 6.13.7.36	2018-07-27T10:35:41-0600
     Added entries to GEMPAK's NCEP parameter table.

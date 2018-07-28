@@ -1275,7 +1275,7 @@ int main(
      */
     const char* const progname = basename(argv[0]);
     (void)log_init(progname);
-    (void)log_set_level(LOG_LEVEL_ERROR);
+    (void)log_set_level(LOG_LEVEL_WARNING);
 
     enableSigUsr1(false);  // ignore SIGUSR1 initially
 

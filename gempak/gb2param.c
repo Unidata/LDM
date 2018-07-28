@@ -109,7 +109,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     gb2_skvar(disc, cat, id, pdtn, g2vartbl, &g2var, &ier);
 
     if (ier == -1) {
-        log_error_1("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, "
+        log_warning_1("Couldn't get parameter info: iver=%d, disc=%d, cat=%d, "
                 "id=%d, pdtn=%d, center=%.*s, lclver=%d, file=%s",
                 iver, disc, cat, id, pdtn, (int)sizeof(cmsg->origcntr),
                 cmsg->origcntr, lclver, filename);
@@ -117,7 +117,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
         return;
     }
     if (ier) {
-        log_error_1("Using parameter with different PDTN: "
+        log_warning_1("Using parameter with different PDTN: "
                 "iver=%d, disc=%d, cat=%d, id=%d, desired pdtn=%d, "
                 "used pdtn=%d, center=%.*s, lclver=%d, file=%s",
                 iver, disc, cat, id, pdtn, g2var.pdtnmbr,
