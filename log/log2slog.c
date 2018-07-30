@@ -243,7 +243,7 @@ static void stream_log(
         nbytes += fprintf(dest->stream, "%*s%s:%d ", MIN0(57-nbytes), "",
                 logl_basename(loc->file), loc->line);
 
-        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(91-nbytes), "",
+        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(69-nbytes), "",
                 level_to_string(level), msglen, msg);
     (void)dest->unlock(dest);
 }
