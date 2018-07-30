@@ -177,7 +177,7 @@ if WANT_ULOG
 READNOAAPORT_LOG                = readnoaaport.ulog
 NOAAPORTINGESTER_LOG            = noaaportIngester.ulog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.ulog
-CUT_FIELDS                      = 5,7-
+CUT_FIELDS                      = 5-
 endif
 
 installcheck-local:
@@ -200,7 +200,7 @@ check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	    -q /tmp/readnoaaport-test.pq \
 	    $(srcdir)/nwstgdump.data >readnoaaport.out 2>&1
 	rm /tmp/readnoaaport-test.pq
-	fgrep 'process_prod()' readnoaaport.out | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) \
+	fgrep 'process_prod.c' readnoaaport.out | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) \
 		>readnoaaport.log
 	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
 
