@@ -232,23 +232,19 @@ static void stream_log(
         msglen--;
 
     (void)dest->lock(dest);
-        (void)fprintf(dest->stream,
-                "%04d%02d%02dT%02d%02d%02d.%06ldZ",
+        int nbytes = fprintf(dest->stream,
+                "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
                 tm.tm_sec, (long)now.tv_usec);
 
-        static const char padding[] =
-                "                                                    ";
+        nbytes += fprintf(dest->stream, "%s[%d] ", ident, getpid());
 
-        int nbytes = fprintf(dest->stream, " %s[%d]", ident, getpid());
-        (void)fprintf(dest->stream, "%.*s", MAX(26-nbytes, 0), padding);
+#define MIN0(x) ((x) < 0 ? 0 : (x))
+        nbytes += fprintf(dest->stream, "%*s%s:%d ", MIN0(57-nbytes), "",
+                logl_basename(loc->file), loc->line);
 
-        nbytes = fprintf(dest->stream, " %s:%d:%s()", logl_basename(loc->file),
-                loc->line, loc->func);
-        (void)fprintf(dest->stream, "%.*s", MAX(51-nbytes, 0), padding);
-
-        (void)fprintf(dest->stream, "%-5s %.*s\n", level_to_string(level),
-                msglen, msg);
+        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(91-nbytes), "",
+                level_to_string(level), msglen, msg);
     (void)dest->unlock(dest);
 }
 
