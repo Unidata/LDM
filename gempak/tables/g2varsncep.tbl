@@ -62,6 +62,7 @@
 000 001 035 000 Categorical Ice Pellets          0,1                  CICEP            0  -9999.00
 000 001 036 000 Categorical Snow                 0,1                  CSNOW            0  -9999.00
 000 001 039 000 Percent frozen precipitation     %                    CPOFP            0  -9999.00
+000 001 053 009 Total Snowfall Rate Water Equiv  kg m**-2 s-1         TSRWE            0  -9999.00
 000 001 074 000 Total Colun Integrate Graupel    kg m**-2             TCOLG            0  -9999.00
 000 001 074 008 Total Colun Integrate Graupel    kg m**-2             TCOLG            0  -9999.00
 !
