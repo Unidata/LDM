@@ -211,7 +211,7 @@ noaaportIngester.out:           noaaportIngester
 	    <$(srcdir)/nwstgdump.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq
 noaaportIngester.log:           noaaportIngester.out
-	fgrep 'process_prod()' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
+	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester:         noaaportIngester.log \
 	                        $(srcdir)/$(NOAAPORTINGESTER_LOG)
 	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
@@ -229,7 +229,7 @@ noaaportIngester-nssl.out:      noaaportIngester
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
 	    g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:      noaaportIngester-nssl.out
-	fgrep 'process_prod()' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
+	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
