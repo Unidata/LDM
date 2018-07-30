@@ -1,5 +1,19 @@
 6.13.7.38
+    Logging:
+        Made location and message canonically start at explicit positions
+        rather than have fixed widths for process ID, and location fields.
+        
+        Eliminated function name from location field because the benefit of
+        seeing the name wasn't worth the cost of longer log messages.
+
+        Unconditionally log missing time-off parameter at warning level.
+
+        Simplified log messages about missing registry parameters and changed
+        logging level from error to warning.
+
     Added missing parameter to GEMPAK's NCEP parameter table.
+
+    Adapted NOAAPort checks to logging changes.
 
 6.13.7.37	2018-07-28T11:00:00-0600
     Added entries to GEMPAK's NCEP parameter table.
