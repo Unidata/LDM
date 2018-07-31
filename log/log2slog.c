@@ -237,13 +237,17 @@ static void stream_log(
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
                 tm.tm_sec, (long)now.tv_usec);
 
+        // Process ID
         nbytes += fprintf(dest->stream, "%s[%d] ", ident, getpid());
 
 #define MIN0(x) ((x) < 0 ? 0 : (x))
+
+        // Location
         nbytes += fprintf(dest->stream, "%*s%s:%d ", MIN0(57-nbytes), "",
                 logl_basename(loc->file), loc->line);
 
-        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(69-nbytes), "",
+        // Error level and message
+        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(79-nbytes), "",
                 level_to_string(level), msglen, msg);
     (void)dest->unlock(dest);
 }
