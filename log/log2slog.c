@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 
 #ifndef _XOPEN_PATH_MAX
@@ -222,8 +223,9 @@ static void stream_log(
         const log_loc_t* restrict loc,
         const char* restrict      msg)
 {
-    struct timeval now;
-    (void)gettimeofday(&now, NULL);
+    struct timespec now;
+    (void)clock_gettime(CLOCK_REALTIME, &now);
+
     struct tm tm;
     (void)gmtime_r(&now.tv_sec, &tm);
 
@@ -236,7 +238,7 @@ static void stream_log(
         int nbytes = fprintf(dest->stream,
                 "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                tm.tm_sec, (long)now.tv_usec);
+                tm.tm_sec, (long)(now.tv_nsec/1000));
 
         // Process ID
         nbytes += fprintf(dest->stream, "%s[%d] ", ident, getpid());
