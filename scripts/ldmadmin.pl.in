@@ -1,5 +1,6 @@
 #!@PERL@
 use POSIX;
+use Fcntl qw(:flock); # import LOCK_* constants
 #
 # File:         ldmadmin
 #
@@ -332,7 +333,27 @@ elsif ($command eq "printmetrics") {
     $status = printMetrics();
 }
 elsif ($command eq "addmetrics") {
-    $status = system("ldmadmin printmetrics >>$metrics_file");
+    if (!open(METRICS_FILE,">$metrics_file")) {
+        errmsg("getLock(): Cannot create/open metrics-file \"$metrics_file\"");
+        $status = 1;
+    }
+    else {
+        if (!flock(METRICS_FILE, LOCK_EX | LOCK_NB)) {
+            errmsg("addmetrics(): Couldn't lock metrics-file \"$metrics_file\". ".
+                    "Another \"ldmadmin addmetrics\" is likely running.");
+            $status = 1;
+        }
+        else {
+            $status = system("ldmadmin printmetrics >>$metrics_file");
+
+            if (!flock(METRICS_FILE, LOCK_UN)) {
+                errmsg("addmetrics(): Couldn't unlock metrics-file \"$metrics_file\"");
+                $status = 1;
+            }
+        }
+
+        close(METRICS_FILE);
+    } # METRICS_FILE is open
 }
 elsif ($command eq "plotmetrics") {
     while ($_ = $ARGV[0]) {
@@ -464,8 +485,6 @@ sub resetRegistry
 
     return $status;
 }
-
-use Fcntl qw(:flock); # import LOCK_* constants
 
 ###############################################################################
 # Lock the lock-file.
