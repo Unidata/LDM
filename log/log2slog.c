@@ -232,6 +232,7 @@ static void stream_log(
         msglen--;
 
     (void)dest->lock(dest);
+        // Timestamp
         int nbytes = fprintf(dest->stream,
                 "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
                 tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
