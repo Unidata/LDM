@@ -241,7 +241,7 @@ static void stream_log(
         // Process ID
         nbytes += fprintf(dest->stream, "%s[%d] ", ident, getpid());
 
-#define MIN0(x) ((x) < 0 ? 0 : (x))
+#define MIN0(x) ((x) >= 0 ? (x) : 0)
 
         // Location
         nbytes += fprintf(dest->stream, "%*s%s:%d ", MIN0(57-nbytes), "",
