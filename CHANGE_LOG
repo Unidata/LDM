@@ -1,4 +1,4 @@
-6.13.7.39
+6.13.7.39	2018-08-02T09:57:11-0600
     Added non-blocking locking of metrics file to eliminate concurrent writes by
     multiple "ldmadmin addmetrics" when under severe load.
     
