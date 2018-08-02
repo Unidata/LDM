@@ -259,7 +259,7 @@ static void stream_log(
 
             // Error level and message
             nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
-                    MIN0(LOC_OFFSET+22-nbytes), "", levelId, msglen, msg);
+                    MIN0(LOC_OFFSET+22-nbytes), "", levelId, (int)msglen, msg);
 
             if (newline) {
                 msg = newline + 1;
