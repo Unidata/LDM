@@ -229,29 +229,44 @@ static void stream_log(
     struct tm tm;
     (void)gmtime_r(&now.tv_sec, &tm);
 
-    int msglen = strlen(msg);
-    if (msg[msglen-1] == '\n')
-        msglen--;
+    const int         year = tm.tm_year + 1900;
+    const int         month = tm.tm_mon + 1;
+    const long        microseconds = now.tv_nsec/1000;
+    const int         pid = getpid();
+    const char* const basename = logl_basename(loc->file);
+    const char* const levelId = level_to_string(level);
 
     (void)dest->lock(dest);
-        // Timestamp
-        int nbytes = fprintf(dest->stream,
-                "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
-                tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                tm.tm_sec, (long)(now.tv_nsec/1000));
+        for (;;) {
+            const char* const newline = strchr(msg, '\n');
+            const size_t      msglen = newline ? newline - msg : strlen(msg);
 
-        // Process ID
-        nbytes += fprintf(dest->stream, "%s[%d] ", ident, getpid());
+            // Timestamp
+            int nbytes = fprintf(dest->stream,
+                    "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
+                    year, month, tm.tm_mday, tm.tm_hour,
+                    tm.tm_min, tm.tm_sec, microseconds);
 
-#define MIN0(x) ((x) >= 0 ? (x) : 0)
+            // Process
+            nbytes += fprintf(dest->stream, "%s[%d] ", ident, pid);
 
-        // Location
-        nbytes += fprintf(dest->stream, "%*s%s:%d ", MIN0(57-nbytes), "",
-                logl_basename(loc->file), loc->line);
+            #define LOC_OFFSET 57
+            #define MIN0(x)    ((x) >= 0 ? (x) : 0)
 
-        // Error level and message
-        nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n", MIN0(79-nbytes), "",
-                level_to_string(level), msglen, msg);
+            // Location
+            nbytes += fprintf(dest->stream, "%*s%s:%d ",
+                    MIN0(LOC_OFFSET-nbytes), "", basename, loc->line);
+
+            // Error level and message
+            nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
+                    MIN0(LOC_OFFSET+22-nbytes), "", levelId, msglen, msg);
+
+            if (newline) {
+                msg = newline + 1;
+                continue;
+            }
+            break;
+        }
     (void)dest->unlock(dest);
 }
 
