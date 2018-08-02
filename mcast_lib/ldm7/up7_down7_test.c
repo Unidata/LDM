@@ -891,7 +891,7 @@ requester_subDecide(
     }
 }
 
-static inline int // inline because only called in one place
+static int
 requester_decide(
         const prod_info* const restrict info,
         const void* const restrict      data,
@@ -1335,11 +1335,11 @@ test_up7_down7(
     receiver_start(&receiver);
     log_flush_error();
 
-    (void)sleep(2);
+    CU_ASSERT_EQUAL(sleep(2), 0);
 
     sender_insertProducts();
 
-    //(void)sleep(180);
+    (void)sleep(2);
     log_notice_q("%lu sender product-queue insertions",
             (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
@@ -1350,8 +1350,7 @@ test_up7_down7(
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
-    unsigned remaining = sleep(4);
-    CU_ASSERT_EQUAL(remaining, 0);
+    CU_ASSERT_EQUAL(sleep(2), 0);
 
     log_debug_1("Stopping receiver");
     receiver_stop(&receiver);
