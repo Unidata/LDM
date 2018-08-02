@@ -1,3 +1,10 @@
+6.13.7.39
+    Added non-blocking locking of metrics file to eliminate concurrent writes by
+    multiple "ldmadmin addmetrics" when under severe load.
+    
+    Changed printing of multi-line log messages: each line will have the same
+    timestamp, process ID, location, and logging level.
+
 6.13.7.38	2018-07-30T11:11:19-0600
     Logging:
         Made location and message canonically start at explicit positions
