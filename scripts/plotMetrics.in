@@ -86,19 +86,19 @@ else
 
         set terminal png medium
         if ($fileOutput) set output "${outputFileTemplate}Queue_Size.png"; \
-        else set terminal x11 1 title "Queue Size"
+            else set terminal x11 1 title "Queue Size"
         set title "Amount of Data in Queue vs. Time\n$host LDM: $version"
         set ylabel "Bytes / 1 GB"
         plot "$datafile" u 1:(\$9/1e9) title "Bytes Used" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Product_Count.png"; \
-        else set terminal x11 2 title "Product Count"
+            else set terminal x11 2 title "Product Count"
         set title "Number of Products in Queue vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot "$datafile" u 1:(\$8) title "Number of Products" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}LDM_Connections.png"; \
-        else set terminal x11 3 title "LDM Connections"
+            else set terminal x11 3 title "LDM Connections"
         set title "LDM Connections vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot \
@@ -107,7 +107,7 @@ else
              "$datafile" u 1:(\$5+\$6) title "Total" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Space.png"; \
-        else set terminal x11 4 title "Space"
+            else set terminal x11 4 title "Space"
         set title "Space vs. Time\n$host LDM: $version"
         set ylabel "Space / 1 GB"
         plot \
@@ -124,7 +124,7 @@ else
                 title "Used (Memory+Swap)" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}CPU_Modes.png"; \
-        else set terminal x11 5 title "CPU_Modes"
+            else set terminal x11 5 title "CPU_Modes"
         set title "CPU Modes vs. Time\n$host LDM: $version"
         set ylabel "%"
         plot \
@@ -138,13 +138,13 @@ else
                  title "I/O Wait" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Context_Switches.png"; \
-        else set terminal x11 6 title "Context Switches"
+            else set terminal x11 6 title "Context Switches"
         set title "CPU Context Switch Rate vs. Time\n$host LDM: $version"
         set ylabel "1/s"
         plot "$datafile" u 1:18 title "CPU Context Switches" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Load-Average.png"; \
-        else set terminal x11 7 title "Load-Average"
+            else set terminal x11 7 title "Load-Average"
         set title "Load-Average vs. Time\n$host LDM: $version"
         set ylabel "Process Count"
         plot \
@@ -156,7 +156,7 @@ else
                  title "15 m" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Age.png"; \
-        else set terminal x11 8 title "Age"
+            else set terminal x11 8 title "Age"
         set title "Age of Oldest Product in Queue vs. Time\n$host LDM: $version"
         set ylabel "Age / 1 h"
         plot "$datafile" u 1:(\$7/3600) title "Age" with lines
