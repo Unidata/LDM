@@ -333,7 +333,7 @@ elsif ($command eq "printmetrics") {
     $status = printMetrics();
 }
 elsif ($command eq "addmetrics") {
-    if (!open(METRICS_FILE,">$metrics_file")) {
+    if (!open(METRICS_FILE,">>$metrics_file")) {
         errmsg("getLock(): Cannot create/open metrics-file \"$metrics_file\"");
         $status = 1;
     }
