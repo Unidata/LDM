@@ -1,14 +1,18 @@
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: $0 [-b start] [-e stop] [file ...]
+Usage: $0 [-b <start>] [-e <stop>] [-o <template>] [<file> ...]
 Options:
-    -b start    UTC start-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
-                start of data.
-    -e stop     UTC stop-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
-                end of data.
+    -b <start>    UTC start-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
+                  start of data.
+    -e <stop>     UTC stop-time of data as YYYYMMDD[.hh[mm[ss]]].  Default is
+                  end of data.
+    -o <template> Output file template (e.g., "/tmp/foo"). Pathname of output
+                  files will be "<template><plot_name>.png" (NB: no character
+                  separates the template and the plot name). Default is to use
+                  the X display instead of output files.
 Arguments:
-    file ...    Pathnames of data-files.  Default is "$files".
+    <file> ...    Pathnames of data-files.  Default is "$files".
 EOF
 }
 
@@ -17,12 +21,16 @@ start=19700101
 stop=30000101
 files=`regutil /metrics/files`
 version=@VERSION@
+fileOutput=0
+outputFileTemplate=''
 
 # Dynamic initialization:
-while getopts b:e: id; do
+while getopts b:e:o: id; do
     case $id in
         b)      start="$OPTARG";;
         e)      stop="$OPTARG";;
+        o)      fileOutput=1
+                outputFileTemplate="$OPTARG";;
         *)      printUsage
                 exit 1;;
     esac
@@ -76,20 +84,21 @@ else
         set xlabel "UTC Time"
         set tics out
 
-        set terminal x11 1 title "Queue Size"
-        #set terminal png medium
+        set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Queue_Size.png"; \
+        else set terminal x11 1 title "Queue Size"
         set title "Amount of Data in Queue vs. Time\n$host LDM: $version"
         set ylabel "Bytes / 1 GB"
         plot "$datafile" u 1:(\$9/1e9) title "Bytes Used" with lines
 
-        set terminal x11 2 title "Product Count"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Product_Count.png"; \
+        else set terminal x11 2 title "Product Count"
         set title "Number of Products in Queue vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot "$datafile" u 1:(\$8) title "Number of Products" with lines
 
-        set terminal x11 3 title "LDM Connections"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}LDM_Connections.png"; \
+        else set terminal x11 3 title "LDM Connections"
         set title "LDM Connections vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot \
@@ -97,8 +106,8 @@ else
              "$datafile" u 1:6 title "Remote LDM Port" with lines, \
              "$datafile" u 1:(\$5+\$6) title "Total" with lines
 
-        set terminal x11 4 title "Space"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Space.png"; \
+        else set terminal x11 4 title "Space"
         set title "Space vs. Time\n$host LDM: $version"
         set ylabel "Space / 1 GB"
         plot \
@@ -114,9 +123,9 @@ else
                 (\$16 < 0)) ? 1/0 : (\$16+\$14)/1e9) \
                 title "Used (Memory+Swap)" with lines
 
-        set terminal x11 5 title "CPU-Modes"
-        #set terminal png medium
-        set title "CPU-Modes vs. Time\n$host LDM: $version"
+        if ($fileOutput) set output "${outputFileTemplate}CPU_Modes.png"; \
+        else set terminal x11 5 title "CPU_Modes"
+        set title "CPU Modes vs. Time\n$host LDM: $version"
         set ylabel "%"
         plot \
              "$datafile" u 1:((\$12 < 0 || \$12 > 100) ? 1/0 : \$12) \
@@ -128,14 +137,14 @@ else
              "$datafile" u 1:((\$13 < 0 || \$13 > 100) ? 1/0 : \$13) \
                  title "I/O Wait" with lines
 
-        set terminal x11 6 title "Context Switches"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Context_Switches.png"; \
+        else set terminal x11 6 title "Context Switches"
         set title "CPU Context Switch Rate vs. Time\n$host LDM: $version"
         set ylabel "1/s"
         plot "$datafile" u 1:18 title "CPU Context Switches" with lines
 
-        set terminal x11 7 title "Load-Average"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Load-Average.png"; \
+        else set terminal x11 7 title "Load-Average"
         set title "Load-Average vs. Time\n$host LDM: $version"
         set ylabel "Process Count"
         plot \
@@ -146,8 +155,8 @@ else
              "$datafile" u 1:(\$4 < 1e7 ? \$4 : 1/0) \
                  title "15 m" with lines
 
-        set terminal x11 8 title "Age"
-        #set terminal png medium
+        if ($fileOutput) set output "${outputFileTemplate}Age.png"; \
+        else set terminal x11 8 title "Age"
         set title "Age of Oldest Product in Queue vs. Time\n$host LDM: $version"
         set ylabel "Age / 1 h"
         plot "$datafile" u 1:(\$7/3600) title "Age" with lines
