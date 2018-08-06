@@ -1861,7 +1861,7 @@ sub getCpu
     # If unsuccessful getting memory and swap usage from top(1), try using
     # free(1)
     if (!$haveMem || !$haveSwap) {
-        if (open(FH, "free |")) {
+        if (open(FH, "free -b |")) {
             while (<FH>) {
                 if (/^Mem:/i) {
                     my(@fields) = split(/\s+/);
