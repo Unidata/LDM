@@ -1,4 +1,4 @@
-6.13.7.41
+6.13.7.41	2018-08-07T11:06:33-0600
     Corrected "ldmadmin addmetrics":
         - Corrected bug in appending to metrics file introduced in 6.13.7.39;
         - Corrected space-usage numbers on CentOS 7 from free(1).
