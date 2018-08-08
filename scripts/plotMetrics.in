@@ -63,7 +63,7 @@ host=`regutil /hostname`
 #       17      amount of free swap space in bytes
 #       18      number of CPU context switches per second
 
-files=`ls -rt $files`
+files=`eval ls -rt $files`
 if test -z "$files"; then
     exit 2;
 fi
