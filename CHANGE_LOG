@@ -1,4 +1,4 @@
-6.13.7.42
+6.13.7.42	2018-08-09T17:47:41-0600
     Added "eval" to pathname expansion in plotMetrics(1) to accomodate patterns
     containing things like "metrics.txt{,.[1-4]}".
     
