@@ -18,6 +18,7 @@ cat >$datafile <<'EOF'
 20180430 438.5
 20180531 556.25
 20180630 644.75
+20180731 699.75
 EOF
 
 if gnuplot -persist <<EOF
