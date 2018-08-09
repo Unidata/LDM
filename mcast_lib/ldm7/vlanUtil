@@ -7,10 +7,11 @@ set -e
 
 printUsage()
 {
+    name=`basename $0`
     cat 1>&2 <<EOF
 Usage:
-    $0 create <srvrAddr> <virtIface> <ifaceAddr>
-    $0 destroy <srvrAddr> <virtIface>
+    $name create <srvrAddr> <virtIface> <ifaceAddr>
+    $name destroy <srvrAddr> <virtIface>
 Operands:
     <srvrAddr>    IP address of sending FMTP server (e.g., "192.168.0.1")
     <virtIface>   Specification of virtual interface (e.g., "eth0.0")
