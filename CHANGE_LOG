@@ -1,3 +1,9 @@
+6.13.7.42
+    Added "eval" to pathname expansion in plotMetrics(1) to accomodate patterns
+    containing things like "metrics.txt{,.[1-4]}".
+    
+    Modify usage message of vlanUtil(1) to use basename of program.
+
 6.13.7.41	2018-08-07T11:06:33-0600
     Corrected "ldmadmin addmetrics":
         - Corrected bug in appending to metrics file introduced in 6.13.7.39;
