@@ -10,66 +10,73 @@ printUsage()
     name=`basename $0`
     cat 1>&2 <<EOF
 Usage:
-    $name create <srvrAddr> <virtIface> <ifaceAddr>
-    $name destroy <srvrAddr> <virtIface>
+    $name create <virtIface> <ifaceAddr> [<srvrAddr>]
+    $name destroy <virtIface> [<srvrAddr>]
 Operands:
-    <srvrAddr>    IP address of sending FMTP server (e.g., "192.168.0.1")
     <virtIface>   Specification of virtual interface (e.g., "eth0.0")
     <ifaceAddr>   IP address of virtual interface (e.g., "192.168.0.2")
+    <srvrAddr>    IP address of sending FMTP server (e.g., "192.168.0.1").
+                  Only receiver should specify.
 EOF
 }
 
 # Destroys an existing VLAN if it exists
 destroy() {
-    srvrAddr="${1:?Sending FMTP server\'s address not specified}"
-    virtIface=${2:?Virtual interface not specified}
+    virtIface="${1:?Virtual interface not specified}"
+    srvrAddr="${2}"
 
-    # Delete route if it exists
-    if ip route show $srvrAddr | fgrep $virtIface >/dev/null 2>&1; then
-        ip route del $srvrAddr/32 dev $virtIface
+    # Delete route if receiver and route exists
+    if test "$srvrAddr"; then
+        if ip route show "$srvrAddr" | fgrep "$virtIface" >/dev/null 2>&1; then
+            ip route del "$srvrAddr/32" dev "$virtIface"
+        fi
     fi
 
     # Delete address of virtual interface if it exists
-    ifaceAddr=$(ip addr show dev $virtIface 2>/dev/null | 
+    ifaceAddr=$(ip addr show dev "$virtIface" 2>/dev/null | 
             awk '/ *inet / {print $2;}' | sed 's;/.*;;')
     if test "$ifaceAddr"; then
-        ip addr del $ifaceAddr/32 dev $virtIface
+        ip addr del "$ifaceAddr/32" dev "$virtIface"
     fi
 
     # Delete virtual interface if it exists
-    if ip link show dev $virtIface >/dev/null 2>&1; then
-        ip link set dev $virtIface down
-        ip link del dev $virtIface
+    if ip link show dev "$virtIface" >/dev/null 2>&1; then
+        ip link set dev "$virtIface" down
+        ip link del dev "$virtIface"
     fi
 }
 
 # Creates a VLAN. Destroys any previously-existing one.
 create() {
-    srvrAddr="${1:?Sending FMTP server\'s address not specified}"
-    virtIface=${2:?Virtual interface not specified}
-    ifaceAddr="${3:?Virtual interface\'s address not specified}"
-    
-    # Ensure that VLAN doesn't exist
-    (destroy $srvrAddr $virtIface) # In subshell so parameters not overwritten
+    virtIface="${1:?Virtual interface not specified}"
+    ifaceAddr="${2:?Virtual interface\'s address not specified}"
+    srvrAddr="${3}"
+
+    # If this is receiver, then ensure that VLAN doesn't exist
+    if test "$srvrAddr"; then
+        (destroy "$virtIface" "$srvrAddr") # In subshell so parameters not overwritten
+    fi
 
     # Obtain name of physical interface and VLAN ID
-    IFS=. read phyIface vlanId << EOF
-$virtIface
-EOF
-    phyIface=${phyIface:?Physical interface not specified}
-    vlanId=${vlanId:?VLAN ID not specified}
+    set `echo $virtIface | tr . ' '`
+    phyIface="${1:?Physical interface not specified}"
+    vlanId="${2:?VLAN ID not specified}"
 
-    # Create VLAN to sending FMTP server
-    ip link add link $phyIface name $virtIface type vlan id $vlanId
-    ip link set dev $virtIface up            # Must be before route is added
-    ip addr add $ifaceAddr/32 dev $virtIface    
-    ip route add $srvrAddr/32 dev $virtIface # Must be after interface is up
+    # Create VLAN
+    ip link add link "$phyIface" name "$virtIface" type vlan id "$vlanId"
+    ip link set dev "$virtIface" up            # Must be before route is added
+    ip addr add "$ifaceAddr/32" dev "$virtIface"    
+
+    # If this is receiver, then add route to sending FMTP server
+    if test "$srvrAddr"; then
+        ip route add "$srvrAddr/32" dev "$virtIface" # Must be after interface is up
+    fi
 }
 
-action=${1:?Action not specified}
+action="${1:?Action not specified}"
 shift
 
-case $action in
+case "$action" in
     create)
         create "$@";;
     destroy)
