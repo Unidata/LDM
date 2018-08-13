@@ -581,6 +581,7 @@
 010 003 001 000 Deviation of Sea Level from Mean m                    DSLM             0  -9999.00
 !
 010 003 192 000 Storm Surge                      m                    SURGE            0  -9999.00
+010 003 192 009 Storm Surge                      m                    SURGE            0  -9999.00
 010 003 192 010 Storm Surge                      m                    SURGE            0  -9999.00
 010 003 193 000 Extra Tropical Storm Surge       m                    ETSRG            0  -9999.00
 010 003 194 000 Ocean Sfc Elev Relative to Geoid m                    OELEV            0  -9999.00
