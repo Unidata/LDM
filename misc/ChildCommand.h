@@ -33,7 +33,8 @@ typedef struct child_cmd ChildCmd;
  *
  * @param[in] pathname  Pathname of file to execute
  * @param[in] cmdVec    Command vector. Last element must be `NULL`.
- * @return              Resulting child command
+ * @return              Resulting child command. Caller should call
+ *                      `childCmd_reap()` on it to free resources.
  * @retval    NULL      Failure. `log_add()` called. `errno` is set:
  *                      - EAGAIN  The system lacked the necessary resources to
  *                                create another process, or the system-imposed
