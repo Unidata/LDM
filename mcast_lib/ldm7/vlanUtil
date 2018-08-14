@@ -5,6 +5,8 @@
 # Exit on error
 set -e
 
+export PATH=/usr/bin:/bin:/usr/sbin
+
 printUsage()
 {
     name=`basename $0`
@@ -116,13 +118,12 @@ create()
     return $status
 }
 
-action="${1:?Action not specified}"
-shift
-
-case "$action" in
+case "$1" in
     create)
+        shift
         create "$@";;
     destroy)
+        shift
         destroy "$@";;
     *)  printUsage
         exit 1;;

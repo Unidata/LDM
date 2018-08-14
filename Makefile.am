@@ -210,10 +210,6 @@ install_setuids:
 	    chown root $(DESTDIR)$(bindir)/dvbs_multicast; \
 	    chmod 4754 $(DESTDIR)$(bindir)/dvbs_multicast; \
 	fi
-	-if test -f $(DESTDIR)$(bindir)/vlanUtil; then \
-	    chown root $(DESTDIR)$(bindir)/vlanUtil; \
-	    chmod 4754 $(DESTDIR)$(bindir)/vlanUtil; \
-	fi
 	@if ls -l $(DESTDIR)$(bindir)/ldmd | grep root >/dev/null && \
 	    ls -l $(DESTDIR)$(bindir)/ldmd | grep rws >/dev/null && \
 	    ls -l $(DESTDIR)$(bindir)/hupsyslog | grep root >/dev/null && \
