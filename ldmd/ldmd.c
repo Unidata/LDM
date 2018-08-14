@@ -674,7 +674,6 @@ static void handle_connection(
     }
     /* else */
 
-    endpriv();
     portIsMapped = 0; /* don't call pmap_unset() from child */
 
     (void) close(sock);
