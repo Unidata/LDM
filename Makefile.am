@@ -236,6 +236,9 @@ ensure-rpc-entry:
 ensure-services-entry:
 	$(srcdir)/ensureServicesEntry
 
+install-exec-hook:
+	chmod g-w,o-w $(DESTDIR)$(bindir)
+
 install-data-hook:		$(DESTDIR)$(mandir)/$(WHATIS)
 $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	@if test "$(MAKEWHATIS_CMD)"; then \
