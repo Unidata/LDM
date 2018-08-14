@@ -1,3 +1,11 @@
+6.13.7.43	2018-08-14T10:53:29-0600
+    Modified push(1) to take a commit message so that GitHub things like "Fixes
+    #70" are possible.
+    
+    Made vlanUtil(1) usable by the sender as well as the receiver.
+    
+    Added missing GRIB2 parameter 10.3.192.9 (storm surge).
+
 6.13.7.42	2018-08-09T17:47:41-0600
     Added "eval" to pathname expansion in plotMetrics(1) to accomodate patterns
     containing things like "metrics.txt{,.[1-4]}".
