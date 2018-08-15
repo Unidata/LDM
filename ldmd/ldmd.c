@@ -226,15 +226,13 @@ static void cleanup(
              * port on which the LDM is listening.
              */
             rootpriv();
-
-            for (vers = MIN_LDM_VERSION; vers <= MAX_LDM_VERSION; vers++) {
-                if (!pmap_unset(LDMPROG, vers))
-                    log_error_q("pmap_unset(LDMPROG %lu, LDMVERS %lu) "
-                            "failed", LDMPROG, vers);
-                else
-                    portIsMapped = 0;
-            }
-
+                for (vers = MIN_LDM_VERSION; vers <= MAX_LDM_VERSION; vers++) {
+                    if (!pmap_unset(LDMPROG, vers))
+                        log_error_q("pmap_unset(LDMPROG %lu, LDMVERS %lu) "
+                                "failed", LDMPROG, vers);
+                    else
+                        portIsMapped = 0;
+                }
             unpriv();
         }
 
@@ -489,84 +487,82 @@ static int create_ldm_tcp_svc(
          */
         log_debug_1("create_ldm_tcp_svc(): Getting root privs");
         rootpriv();
-
-        log_debug_1("create_ldm_tcp_svc(): Binding socket");
-        if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
-            error = errno;
-
-            log_syserr_q("Couldn't obtain local address %s:%u for server",
-                    inet_ntoa(addr.sin_addr), (unsigned) port);
-
-            if (error == EACCES) {
-                error = 0;
-                addr.sin_port = 0; /* let system assign port */
-
-                if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
-                    error = errno;
-
-                    log_syserr_q("Couldn't obtain local address %s:* for server",
-                            inet_ntoa(addr.sin_addr));
-                }
-            } /* requested port is reserved */
-        } /* couldn't bind to requested port */
-
-        if (!error) {
-            /*
-             * Get the local address associated with the bound socket.
-             */
-            log_debug_1("create_ldm_tcp_svc(): Calling getsockname()");
-            if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
+            log_debug_1("create_ldm_tcp_svc(): Binding socket");
+            if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;
 
-                log_syserr_q("Couldn't get local address of server's socket");
-            }
-            else {
-                port = (short) ntohs((short) addr.sin_port);
+                log_syserr_q("Couldn't obtain local address %s:%u for server",
+                        inet_ntoa(addr.sin_addr), (unsigned) port);
 
-                log_notice_q("Using local address %s:%u", inet_ntoa(addr.sin_addr),
-                        (unsigned) port);
+                if (error == EACCES) {
+                    error = 0;
+                    addr.sin_port = 0; /* let system assign port */
 
-                log_debug_1("create_ldm_tcp_svc(): Calling listen()");
-                if (listen(sock, 32) != 0) {
+                    if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
+                        error = errno;
+
+                        log_syserr_q("Couldn't obtain local address %s for "
+                                "server", inet_ntoa(addr.sin_addr));
+                    }
+                } /* requested port is reserved */
+            } /* couldn't bind to requested port */
+
+            if (!error) {
+                /*
+                 * Get the local address associated with the bound socket.
+                 */
+                log_debug_1("create_ldm_tcp_svc(): Calling getsockname()");
+                if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
                     error = errno;
 
-                    log_syserr_q("Couldn't listen() on server's socket");
+                    log_syserr_q("Couldn't get local address of server's socket");
                 }
                 else {
-                    /*
-                     * Register with the portmapper if it's running.  The
-                     * check to see if it's running is made because on a
-                     * FreeBSD 4.7-STABLE system, a pmap_set() call takes
-                     * one minute even if the portmapper isn't running.
-                     */
-                    log_debug_1("create_ldm_tcp_svc(): Checking portmapper");
-                    if (local_portmapper_running()) {
-                        log_debug_1("create_ldm_tcp_svc(): Registering");
+                    port = (short) ntohs((short) addr.sin_port);
 
-                        if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
-                            log_warning_q("Can't register TCP service %lu on "
-                                    "port %u", LDMPROG, (unsigned) port);
-                            log_warning_q("Downstream LDMs won't be able to "
-                                    "connect via the RPC portmapper daemon "
-                                    "(rpcbind(8), portmap(8), etc.)");
-                        }
-                        else {
-                            portIsMapped = 1;
+                    log_notice_q("Using local address %s:%u",
+                            inet_ntoa(addr.sin_addr), (unsigned) port);
 
-                            (void) pmap_set(LDMPROG, 5, IPPROTO_TCP, port);
-                        }
-                    } /* a local portmapper is running */
+                    log_debug_1("create_ldm_tcp_svc(): Calling listen()");
+                    if (listen(sock, 32) != 0) {
+                        error = errno;
 
-                    /*
-                     * Done with the need for privilege.
-                     */
-                    log_debug_1("create_ldm_tcp_svc(): Releasing root privs");
-                    unpriv();
+                        log_syserr_q("Couldn't listen() on server's socket");
+                    }
+                    else {
+                        /*
+                         * Register with the portmapper if it's running.  The
+                         * check to see if it's running is made because on a
+                         * FreeBSD 4.7-STABLE system, a pmap_set() call takes
+                         * one minute even if the portmapper isn't running.
+                         */
+                        log_debug_1("create_ldm_tcp_svc(): Checking portmapper");
+                        if (local_portmapper_running()) {
+                            log_debug_1("create_ldm_tcp_svc(): Registering");
 
-                    *sockp = sock;
-                } /* listen() success */
-            } /* getsockname() success */
-        } /* "sock" is bound to local address */
+                            if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
+                                log_warning_q("Can't register TCP service %lu "
+                                        "on port %u", LDMPROG, (unsigned) port);
+                                log_warning_q("Downstream LDMs won't be able to "
+                                        "connect via the RPC portmapper daemon "
+                                        "(rpcbind(8), portmap(8), etc.)");
+                            }
+                            else {
+                                portIsMapped = 1;
+
+                                (void) pmap_set(LDMPROG, 5, IPPROTO_TCP, port);
+                            }
+                        } /* a local portmapper is running */
+
+                        *sockp = sock;
+                    } /* listen() success */
+                } /* getsockname() success */
+            } /* "sock" is bound to local address */
+        /*
+         * Done with the need for privilege.
+         */
+        log_debug_1("create_ldm_tcp_svc(): Releasing root privs");
+        unpriv();
 
         if (error)
             (void) close(sock);
