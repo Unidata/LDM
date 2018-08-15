@@ -1,3 +1,11 @@
+6.13.7.45
+    Stopped making vlanUtil(1) setuid root because such scripts no longer work
+    on Linux systems. Instead, made down7.c execute vlanUtil(1) with root
+    privileges.
+
+    Made binary installation directory writable by LDM user only to obviate
+    execution of malicious binary with root privileges.
+
 6.13.7.44	2018-08-14T11:43:45-0600
     Made vlanUtil(1) more robust. Added error messages.
 
