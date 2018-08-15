@@ -30,6 +30,7 @@
 #include "mldm_receiver.h"
 #include "mldm_receiver_memory.h"
 #include "pq.h"
+#include "priv.h"
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
@@ -897,37 +898,39 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
  ******************************************************************************/
 
 /**
- * Executes a command in a child process. Logs the child's standard error
- * stream. Waits for the child to terminate.
+ * Executes a command in a child process with superuser privileges. Logs the
+ * child's standard error stream. Waits for the child to terminate.
  *
  * @param[in]  cmdVec       Command vector. Last element must be `NULL`.
  * @retval     0            Success
  * @retval     LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
-static int command(const char* const cmdVec[])
+static int sudo(const char* const cmdVec[])
 {
-    int       status;
-    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+    rootpriv();
+        int       status;
+        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
-    if (cmd == NULL) {
-        status = LDM7_SYSTEM;
-    }
-    else {
-        int exitStatus;
-
-        status = childCmd_reap(cmd, &exitStatus);
-
-        if (status) {
+        if (cmd == NULL) {
             status = LDM7_SYSTEM;
         }
         else {
-            if (exitStatus) {
-                log_add("Command exited with status %d", exitStatus);
+            int childStatus;
 
+            status = childCmd_reap(cmd, &childStatus);
+
+            if (status) {
                 status = LDM7_SYSTEM;
             }
+            else {
+                if (childStatus) {
+                    log_add("Command exited with status %d", childStatus);
+
+                    status = LDM7_SYSTEM;
+                }
+            }
         }
-    }
+    unpriv();
 
     return status;
 }
@@ -957,10 +960,10 @@ static int vlanIface_create(
     // Can't fail
     (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-    const char* const cmdVec[] = {vlanUtil, "create", srvrAddrStr, ifaceName,
-            ifaceAddrStr, NULL };
+    const char* const cmdVec[] = {vlanUtil, "create", ifaceName, ifaceAddrStr,
+            srvrAddrStr, NULL };
 
-    status = command(cmdVec);
+    status = sudo(cmdVec);
 
     if (status) {
         log_add("Couldn't create local VLAN interface via command "
@@ -985,9 +988,9 @@ vlanIface_destroy(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName)
 {
-    const char* const cmdVec[] = {vlanUtil, "destroy", srvrAddrStr, ifaceName,
-            NULL};
-    int               status = command(cmdVec);
+    const char* const cmdVec[] = {vlanUtil, "destroy", ifaceName,
+            srvrAddrStr, NULL};
+    int               status = sudo(cmdVec);
 
     if (status)
         log_add("Couldn't destroy local VLAN interface via command "
