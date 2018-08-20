@@ -164,10 +164,10 @@ hndlr_noop(int sig)
 #ifndef NDEBUG
         switch(sig) {
         case SIGALRM :
-                log_debug_1("SIGALRM") ;
+                log_debug("SIGALRM") ;
                 return ;
         }
-        log_debug_1("hndlr_noop: unhandled signal: %d", sig) ;
+        log_debug("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */
         return;

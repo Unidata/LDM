@@ -316,13 +316,13 @@ static void signal_handler(
         log_roll_level();
         return;
     case SIGPIPE:
-        log_debug_1("SIGPIPE received");
+        log_notice("SIGPIPE received");
         return;
     case SIGCHLD:
-        log_debug_1("SIGCHLD received");
+        log_notice("SIGCHLD received");
         return;
     case SIGALRM:
-        log_debug_1("SIGALRM received");
+        log_debug("SIGALRM received");
         return;
     }
 }
@@ -450,7 +450,7 @@ static int create_ldm_tcp_svc(
     /*
      * Get a TCP socket.
      */
-    log_debug_1("create_ldm_tcp_svc(): Getting TCP socket");
+    log_debug("create_ldm_tcp_svc(): Getting TCP socket");
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
         error = errno;
@@ -468,7 +468,7 @@ static int create_ldm_tcp_svc(
          * We get this if an upstream data source hasn't tried to
          * write on the other end and we are in FIN_WAIT_2
          */
-        log_debug_1("create_ldm_tcp_svc(): Eliminating EADDRINUSE problem.");
+        log_debug("create_ldm_tcp_svc(): Eliminating EADDRINUSE problem.");
         {
             int on = 1;
 
@@ -485,9 +485,9 @@ static int create_ldm_tcp_svc(
          * If privilege available, set it so we can bind to the port for LDM
          * services.  Also needed for the pmap_set() call.
          */
-        log_debug_1("create_ldm_tcp_svc(): Getting root privs");
+        log_debug("create_ldm_tcp_svc(): Getting root privs");
         rootpriv();
-            log_debug_1("create_ldm_tcp_svc(): Binding socket");
+            log_debug("create_ldm_tcp_svc(): Binding socket");
             if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;
 
@@ -511,7 +511,7 @@ static int create_ldm_tcp_svc(
                 /*
                  * Get the local address associated with the bound socket.
                  */
-                log_debug_1("create_ldm_tcp_svc(): Calling getsockname()");
+                log_debug("create_ldm_tcp_svc(): Calling getsockname()");
                 if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
                     error = errno;
 
@@ -523,7 +523,7 @@ static int create_ldm_tcp_svc(
                     log_notice_q("Using local address %s:%u",
                             inet_ntoa(addr.sin_addr), (unsigned) port);
 
-                    log_debug_1("create_ldm_tcp_svc(): Calling listen()");
+                    log_debug("create_ldm_tcp_svc(): Calling listen()");
                     if (listen(sock, 32) != 0) {
                         error = errno;
 
@@ -536,9 +536,9 @@ static int create_ldm_tcp_svc(
                          * FreeBSD 4.7-STABLE system, a pmap_set() call takes
                          * one minute even if the portmapper isn't running.
                          */
-                        log_debug_1("create_ldm_tcp_svc(): Checking portmapper");
+                        log_debug("create_ldm_tcp_svc(): Checking portmapper");
                         if (local_portmapper_running()) {
-                            log_debug_1("create_ldm_tcp_svc(): Registering");
+                            log_debug("create_ldm_tcp_svc(): Registering");
 
                             if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
                                 log_warning_q("Can't register TCP service %lu "
@@ -561,7 +561,7 @@ static int create_ldm_tcp_svc(
         /*
          * Done with the need for privilege.
          */
-        log_debug_1("create_ldm_tcp_svc(): Releasing root privs");
+        log_debug("create_ldm_tcp_svc(): Releasing root privs");
         unpriv();
 
         if (error)
@@ -912,7 +912,7 @@ int main(
     /*
      * Vet the configuration file.
      */
-    log_debug_1("main(): Vetting configuration-file");
+    log_debug("main(): Vetting configuration-file");
     if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
         log_flush_error();
         exit(1);
@@ -994,18 +994,18 @@ int main(
              * created because this is the function that relinquishes superuser
              * privileges.
              */
-            log_debug_1("main(): Creating service portal");
+            log_debug("main(): Creating service portal");
             if (create_ldm_tcp_svc(&sock, ldmIpAddr, ldmPort) != ENOERR) {
                 /* error reports are emitted from create_ldm_tcp_svc() */
                 exit(1);
             }
-            log_debug_1("tcp sock: %d", sock);
+            log_debug("tcp sock: %d", sock);
         }
 
         /*
          * Verify that the product-queue can be open for writing.
          */
-        log_debug_1("main(): Opening product-queue");
+        log_debug("main(): Opening product-queue");
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
                 log_error_q("The product-queue \"%s\" is inconsistent", pqfname);
@@ -1021,7 +1021,7 @@ int main(
         /*
          * Create the sharable database of upstream LDM metadata.
          */
-        log_debug_1("main(): Creating shared upstream LDM database");
+        log_debug("main(): Creating shared upstream LDM database");
         if ((status = uldb_delete(NULL))) {
             if (ULDB_EXIST == status) {
                 log_clear();
@@ -1052,7 +1052,7 @@ int main(
          * started).
          */
         lcf_free(); // Prevent duplicates
-        log_debug_1("main(): Reading configuration-file");
+        log_debug("main(): Reading configuration-file");
         if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
             log_flush_error();
             exit(1);
@@ -1062,7 +1062,7 @@ int main(
             /*
              * Serve
              */
-            log_debug_1("main(): Serving socket");
+            log_debug("main(): Serving socket");
             sock_svc(sock);
         }
         else {

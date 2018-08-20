@@ -144,14 +144,14 @@ b1 = (unsigned char)buf[10];
 b2 = (unsigned char)buf[11];
 psh->ccbmode = b1;
 psh->ccbsubmode = b2;
-log_debug_1("ccb mode %d ccb submode %d\0",psh->ccbmode,psh->ccbsubmode);
+log_debug("ccb mode %d ccb submode %d\0",psh->ccbmode,psh->ccbsubmode);
 psh->hasccb = 1;
 
 b1 = (unsigned char)buf[12];
 b2 = (unsigned char)buf[13];
 ccb->user1 = b1;
 ccb->user2 = b1;
-log_debug_1("ccb user1 %d ccb user2 %d\0",ccb->user1,ccb->user2);
+log_debug("ccb user1 %d ccb user2 %d\0",ccb->user1,ccb->user2);
 psh->ccbdtype[0] = '\0';     /* Initialize ccbdtype...eventually used to identify data type */
 
 /* see if this looks like a WMO header, if so canonicalize */

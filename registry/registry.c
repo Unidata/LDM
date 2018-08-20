@@ -1197,7 +1197,7 @@ RegStatus reg_putBool(
     const char* const   path,
     const int           value)
 {
-    log_debug_1("Putting boolean %s into \"%s\"", value ? "TRUE" : "FALSE", path);
+    log_debug("Putting boolean %s into \"%s\"", value ? "TRUE" : "FALSE", path);
 
     return putValue(path, &value, &boolStruct);
 }
@@ -1223,7 +1223,7 @@ RegStatus reg_putUint(
     const char* const   path,
     const unsigned      value)
 {
-    log_debug_1("Putting unsigned int %lu into \"%s\"", value, path);
+    log_debug("Putting unsigned int %lu into \"%s\"", value, path);
 
     return putValue(path, &value, &uintStruct);
 }
@@ -1252,7 +1252,7 @@ RegStatus reg_putString(
 {
     RegStatus   status;
 
-    log_debug_1("Putting string \"%s\" into \"%s\"", value, path);
+    log_debug("Putting string \"%s\" into \"%s\"", value, path);
 
     status = putValue(path, value, &stringStruct);
 
@@ -1289,7 +1289,7 @@ RegStatus reg_putTime(
     static char buf[80];
 
     (void)sprint_timestampt(buf, sizeof(buf), value);
-    log_debug_1("Putting time %s into \"%s\"", value, path);
+    log_debug("Putting time %s into \"%s\"", value, path);
 
     return putValue(path, value, &timeStruct);
 }
@@ -1316,7 +1316,7 @@ RegStatus reg_putSignature(
     const char* const   path,
     const signaturet    value)
 {
-    log_debug_1("Putting signature %s into \"%s\"", s_signaturet(NULL, 0, value),
+    log_debug("Putting signature %s into \"%s\"", s_signaturet(NULL, 0, value),
             path);
 
     return putValue(path, value, &signatureStruct);

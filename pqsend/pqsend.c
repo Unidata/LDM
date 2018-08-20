@@ -82,7 +82,7 @@ static void update_last_downtime(const timestampt *nowp) {
      * Update last_downtime
      */
     stats.last_downtime = d_diff_timestamp(nowp, &stats.last_disco);
-    log_debug_1("last_downtime %10.3f", stats.last_downtime);
+    log_debug("last_downtime %10.3f", stats.last_downtime);
 }
 
 static void dump_stats(const sendstats *stp) {
@@ -557,7 +557,7 @@ static int executeConnection(void) {
                 else if (0 != status) {
                     /* pq_sequence() encountered a problem */
                     if (PQUEUE_END == status) {
-                        log_debug_1("End of Queue");
+                        log_debug("End of Queue");
 
                         /* Flush the connection. */
                         status = lp_flush(ldmProxy);
@@ -576,7 +576,7 @@ static int executeConnection(void) {
                         exitIfDone(INTERRUPTED);
                         pq_suspend(interval);
                     } else if (EAGAIN == status || EACCES == status) {
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                     } else if (EIO == status) {
                         log_syserr_q("Product-queue I/O error");
                         status = PQ_ERROR;

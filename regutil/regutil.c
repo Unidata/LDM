@@ -160,7 +160,7 @@ static Status printPath(
     RegStatus   regStatus;
     char*       value;
 
-    log_debug_1("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    log_debug("%s printing path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     /*
      * The path name is first assumed to reference an existing value;
@@ -222,7 +222,7 @@ static Status createRegistry(void)
 {
     RegNode*    rootNode;
 
-    log_debug_1("Creating registry");
+    log_debug("Creating registry");
 
     if (0 != reg_getNode("/", &rootNode, 1)) {
         log_error_q("Couldn't create registry");
@@ -241,7 +241,7 @@ static Status createRegistry(void)
  */
 static Status resetRegistry(void)
 {
-    log_debug_1("Resetting registry");
+    log_debug("Resetting registry");
 
     if (0 != reg_reset()) {
         log_error_q("Couldn't reset registry");
@@ -270,7 +270,7 @@ static Status deletePath(
     const char* const   path,
     const int           quiet)
 {
-    log_debug_1("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
+    log_debug("%s deleting path \"%s\"", quiet ? "Quietly" : "Non-quietly", path);
 
     switch (reg_deleteValue(path)) {
         case 0:
@@ -580,14 +580,14 @@ int main(
                         status = COMMAND_SYNTAX;
                     }
                     else {
-                        log_debug_1("Removing registry");
+                        log_debug("Removing registry");
                         status = actUponPathList(argv + optind, deletePath,
                             quiet);
                     }
                     break;
                 }
                 case PRINT: {
-                    log_debug_1("Printing registry");
+                    log_debug("Printing registry");
                     status = (0 == argCount)
                         ? printPath("/", quiet)
                         : actUponPathList(argv + optind, printPath, quiet);

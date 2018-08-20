@@ -425,11 +425,11 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug_1("End of Queue");
+                        log_debug("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                         break;
                 default:
                         log_error_q("pq_sequence failed: %s (errno = %d)",

@@ -862,7 +862,7 @@ requester_exec(
                             rpctimeo, inactive_timeo, ldmprog_5);
                         (void)exitIfDone(0);
 
-                        log_debug_1("forn5(...) = %d", feedCode);
+                        log_debug("forn5(...) = %d", feedCode);
 
                         if (feedCode == ECONNABORTED) {
                             log_notice_q("Connection aborted");
@@ -2721,11 +2721,11 @@ lcf_reduceByFeeds(
         ft = desiredFeed & allowedFeeds[i];
         sprint_feedtypet(s3, sizeof(s3), ft);
         if (ft) {
-            log_debug_1("hit %s = %s & %s", s3, s1, s2);
+            log_debug("hit %s = %s & %s", s3, s1, s2);
             return ft; // First match determines outcome
         }
     }
-    log_debug_1("miss %s", s1);
+    log_debug("miss %s", s1);
     return NONE;
 }
 
@@ -3226,7 +3226,7 @@ lcf_reduceToAcceptable(
                 (void)sprint_feedtypet(s1, sizeof(s1), hits[ii]->ft);
 
             if (NONE == fi) {
-                log_debug_1("miss %s", s1);
+                log_debug("miss %s", s1);
             }
             else {
                 if (log_is_enabled_debug) {
@@ -3235,8 +3235,8 @@ lcf_reduceToAcceptable(
                     (void)sprint_feedtypet(s2, sizeof(s2),
                         offerd->psa.psa_val[jj].feedtype);
                     (void)sprint_feedtypet(s3, sizeof(s3), fi);
-                    log_debug_1("hit %s = %s & %s", s3, s1, s2);
-                    log_debug_1("    %s was %s", hits[ii]->pattern,
+                    log_debug("hit %s = %s & %s", s3, s1, s2);
+                    log_debug("    %s was %s", hits[ii]->pattern,
                          offerd->psa.psa_val[jj].pattern);
                 }
 

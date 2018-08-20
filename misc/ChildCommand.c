@@ -193,7 +193,7 @@ static int
 childCmd_execute(
         ChildCmd* const restrict   cmd,
         const char* const restrict pathname,
-        const char* const          cmdVec[])
+        const char* const restrict cmdVec[])
 {
     int         status;
     const pid_t pid = fork();
@@ -284,8 +284,8 @@ childCmd_execute(
 
 ChildCmd*
 childCmd_execvp(
-        const char* const pathname,
-        const char* const cmdVec[])
+        const char* const restrict pathname,
+        const char* const restrict cmdVec[])
 {
     ChildCmd* cmd = childCmd_new();
 

@@ -294,7 +294,7 @@ shmfifo_printmemstatus(
         struct shmprefix* p = (struct shmprefix*)shm->mem;
 
         (void)checkLocked(shm);
-        log_debug_1
+        log_debug
           ("<%d> c: %d sz: %d, r: %d, w: %d, used: %d, free: %d, maxblock: %d",
            getpid (), p->counter, shm->sz, p->read, p->write,
            shmfifo_ll_memused (shm), shmfifo_ll_memfree (shm),
@@ -636,8 +636,8 @@ shmfifo_print (const struct shmhandle* const shm)
 	{
 	  struct shmbh *h = (struct shmbh *) ptr;
 	  count++;
-	  log_debug_1("block: %d ", count);
-	  log_debug_1("size: %d ", h->sz);
+	  log_debug("block: %d ", count);
+	  log_debug("size: %d ", h->sz);
 /*           printf("data: \"%s\" ",(char*)ptr + sizeof(struct shmbh)); */
 /*           printf("\n"); */
 	  /*(char*)ptr += h->sz + sizeof(struct shmbh); */
@@ -759,7 +759,7 @@ int shmfifo_shm_from_key(
                     shm->privsz = p->privsz;
                     shm->sz = p->sz;
 
-                    log_debug_1("look sizes %d %d\n", shm->privsz, shm->sz);
+                    log_debug("look sizes %d %d\n", shm->privsz, shm->sz);
 
                     status = 0;           /* success */
                 }                         /* got shared-memory FIFO */
@@ -849,7 +849,7 @@ struct shmhandle* shmfifo_create(
                 unsigned short      values[SI_SEM_COUNT];
                 union semun         arg;
 
-                log_debug_1("shmfifo_create(): Got semaphore: pid=%d, semid=%d",
+                log_debug("shmfifo_create(): Got semaphore: pid=%d, semid=%d",
                     getpid(), semid);
 
                 values[SI_LOCK] = 1;

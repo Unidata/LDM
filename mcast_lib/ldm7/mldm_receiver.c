@@ -64,7 +64,7 @@ allocateSpace(
         char** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
-    log_debug_1("Entered: prodSize=%zu", prodSize);
+    log_debug("Entered: prodSize=%zu", prodSize);
 
     char sigStr[sizeof(signaturet)*2 + 1];
     int  status = pqe_newDirect(mlr->pq, prodSize, signature, prodStart,
@@ -89,12 +89,12 @@ allocateSpace(
     else {
         if (log_is_enabled_debug) {
             (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-            log_debug_1("Allocated queue-space for product: "
+            log_debug("Allocated queue-space for product: "
                     "sig=%s, size=%zu", sigStr, prodSize);
         }
     } /* region allocated in product-queue */
 
-    log_debug_1("Returning: prodStart=%p, prodSize=%zu", *prodStart,
+    log_debug("Returning: prodStart=%p, prodSize=%zu", *prodStart,
             prodSize);
 
     return status;
@@ -131,7 +131,7 @@ bop_func(
      */
     int  status;
 
-    log_debug_1("prodSize=%zu, metaSize=%u, prod=%p",
+    log_debug("prodSize=%zu, metaSize=%u, prod=%p",
             prodSize, metaSize, prod);
 
     if (sizeof(signaturet) > metaSize) {
@@ -150,7 +150,7 @@ bop_func(
     if (status)
         log_flush_error(); // because called by FMTP layer
 
-    log_debug_1("Returning: prod=%p, prodSize=%zu",
+    log_debug("Returning: prod=%p, prodSize=%zu",
             *prod, prodSize);
 
     return status;
@@ -230,7 +230,7 @@ finishInsertion(
         if (log_is_enabled_info) {
             char infoStr[LDM_INFO_MAX];
 
-            log_info_1("Received: %s",
+            log_info("Received: %s",
                     s_prod_info(infoStr, sizeof(infoStr), info, 1));
         }
         lastReceived(mlr, info);

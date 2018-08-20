@@ -239,7 +239,7 @@ hereis(
         _flushNeeded = 1;
 
         if (log_is_enabled_debug)
-            log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
+            log_debug("%s", s_prod_info(NULL, 0, infop, 1));
     }
 
     return errObj;
@@ -310,7 +310,7 @@ csbd(
                 _flushNeeded = 1; /* because asynchronous RPC call */
 
                 if (log_is_enabled_debug)
-                    log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
+                    log_debug("%s", s_prod_info(NULL, 0, infop, 1));
             }
         }
 
@@ -399,7 +399,7 @@ flushConnection(
 #endif
         _lastSendTime = time(NULL );
         _flushNeeded = 0;
-        log_debug_1("flushConnection() success");
+        log_debug("flushConnection() success");
         return NULL;
     }
 
@@ -514,7 +514,7 @@ static up6_error_t up6_run(
                             time_t timeSinceLastSend = time(NULL)
                                     - _lastSendTime;
 
-                            log_debug_1(err == PQUEUE_END
+                            log_debug(err == PQUEUE_END
                                     ? "End of product-queue"
                                     : "Hit a lock");
 

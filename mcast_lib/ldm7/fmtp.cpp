@@ -99,7 +99,7 @@ fmtpReceiver_init(
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
-    log_debug_1("Creating FMTP receiver: sendHost=%s, sendPort=%hu, "
+    log_debug("Creating FMTP receiver: sendHost=%s, sendPort=%hu, "
             "groupId=%s, groupPort=%hu, iface=%s", tcpAddr, tcpPort, mcastAddr,
             mcastPort, iface);
     receiver->fmtpReceiver = new fmtpRecvv3(hostId, tcpPort, groupId,
@@ -439,7 +439,7 @@ fmtpSender_start(
 {
     int status;
 
-    log_debug_1("Starting FMTP sender");
+    log_debug("Starting FMTP sender");
     try {
         sender->fmtpSender->Start(); // Doesn't block
 

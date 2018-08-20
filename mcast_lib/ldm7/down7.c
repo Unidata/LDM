@@ -110,7 +110,7 @@ static void
 up7Proxy_lock(
     Up7Proxy* const proxy)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     int status = pthread_mutex_lock(&proxy->mutex);
     log_assert(status == 0);
 }
@@ -124,7 +124,7 @@ static void
 up7Proxy_unlock(
     Up7Proxy* const proxy)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     int status = pthread_mutex_unlock(&proxy->mutex);
     log_assert(status == 0);
 }
@@ -251,7 +251,7 @@ static void
 up7Proxy_free(
         Up7Proxy* const proxy)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (proxy) {
         up7Proxy_assertValid(proxy);
@@ -408,7 +408,7 @@ up7Proxy_requestProduct(
     up7Proxy_lock(proxy);
         CLIENT* clnt = proxy->clnt;
 
-        log_debug_1("iProd=%lu", (unsigned long)iProd);
+        log_debug("iProd=%lu", (unsigned long)iProd);
 
         // Asynchronous send => no reply
         McastProdIndex index = iProd;
@@ -522,7 +522,7 @@ backstop_new(
 static void
 backstop_free(Backstop* const backstop)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     free(backstop);
 }
@@ -558,7 +558,7 @@ backstop_run(Backstop* const backstop)
         FmtpProdIndex iProd;
 
         if (!mrm_peekMissedFileWait(backstop->mrm, &iProd)) {
-            log_debug_1("The queue of missed data-products has been shutdown");
+            log_debug("The queue of missed data-products has been shutdown");
             status = 0;
             break;
         }
@@ -590,7 +590,7 @@ backstop_halt(
         Backstop* const backstop,
         const pthread_t thread)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     mrm_shutDownMissedFiles(backstop->mrm);
 
     return 0;
@@ -628,7 +628,7 @@ ucastRcvr_runSvc(UcastRcvr* const ucastRcvr)
     pfd.fd = sock;
     pfd.events = POLLIN;
 
-    log_info_1("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
+    log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
             timeout);
 
     while (!stopFlag_isSet(&ucastRcvr->stopFlag)) {
@@ -649,16 +649,12 @@ ucastRcvr_runSvc(UcastRcvr* const ucastRcvr)
         }
 
         if (status < 0) {
-            if (errno == EINTR) {
-                log_add("poll() on socket %d to upstream LDM7 %s was "
-                        "interrupted", sock, ucastRcvr->remoteStr);
-                status = LDM7_INTR;
-            }
-            else {
-                log_add_syserr("poll() failed on socket %d to upstream LDM7 "
-                        "%s", sock, ucastRcvr->remoteStr);
-                status = LDM7_SYSTEM;
-            }
+            if (errno == EINTR)
+                continue;
+
+            log_add_syserr("poll() failure on socket %d to upstream LDM7 "
+                    "%s", sock, ucastRcvr->remoteStr);
+            status = LDM7_SYSTEM;
             break;
         }
 
@@ -750,7 +746,7 @@ ucastRcvr_halt(
         UcastRcvr* const ucastRcvr,
         const pthread_t  thread)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     stopFlag_set(&ucastRcvr->stopFlag);
     pthread_kill(thread, SIGTERM);
 }
@@ -885,7 +881,7 @@ ucastRcvr_new(
 static void
 ucastRcvr_free(UcastRcvr* const ucastRcvr)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (ucastRcvr) {
         ucastRcvr_destroy(ucastRcvr);
@@ -902,10 +898,15 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
  * child's standard error stream. Waits for the child to terminate.
  *
  * @param[in]  cmdVec       Command vector. Last element must be `NULL`.
- * @retval     0            Success
+ * @param[out] childStatus  Exit status of the child process iff return value is
+ *                          0
+ * @retval     0            Success. `*childStatus` is set to the exit status
+ *                          of the child process.
  * @retval     LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
-static int sudo(const char* const cmdVec[])
+static int sudo(
+        const char* const restrict cmdVec[],
+        int* const restrict        childStatus)
 {
     rootpriv();
         int       status;
@@ -915,19 +916,13 @@ static int sudo(const char* const cmdVec[])
             status = LDM7_SYSTEM;
         }
         else {
-            int childStatus;
-
-            status = childCmd_reap(cmd, &childStatus);
+            status = childCmd_reap(cmd, childStatus);
 
             if (status) {
                 status = LDM7_SYSTEM;
             }
-            else {
-                if (childStatus) {
-                    log_add("Command exited with status %d", childStatus);
-
-                    status = LDM7_SYSTEM;
-                }
+            else if (*childStatus) {
+                log_add("Command exited with status %d", *childStatus);
             }
         }
     unpriv();
@@ -963,12 +958,15 @@ static int vlanIface_create(
     const char* const cmdVec[] = {vlanUtil, "create", ifaceName, ifaceAddrStr,
             srvrAddrStr, NULL };
 
-    status = sudo(cmdVec);
+    int childStatus;
 
-    if (status) {
+    status = sudo(cmdVec, &childStatus);
+
+    if (status || childStatus) {
         log_add("Couldn't create local VLAN interface via command "
                 "\"%s %s %s %s %s\"",
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4]);
+        status = LDM7_SYSTEM;
     }
 
     return status;
@@ -990,12 +988,15 @@ vlanIface_destroy(
 {
     const char* const cmdVec[] = {vlanUtil, "destroy", ifaceName,
             srvrAddrStr, NULL};
-    int               status = sudo(cmdVec);
+    int               childStatus;
+    int               status = sudo(cmdVec, &childStatus);
 
-    if (status)
+    if (status || childStatus) {
         log_add("Couldn't destroy local VLAN interface via command "
                 "\"%s %s %s %s\"",
                 cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
+        status = LDM7_SYSTEM;
+    }
 
     return status;
 }
@@ -1052,9 +1053,10 @@ mcastRcvr_init(
         status = vlanIface_create(mcastRcvr->fmtpSrvrAddr, ifaceName, ifaceAddr);
 
         if (status) {
-            log_add("Couldn't create VLAN virtual interface");
-
-            if (downlet_ignoreVlanError(downlet)) {
+            if (!downlet_ignoreVlanError(downlet)) {
+                log_add("Couldn't create VLAN virtual interface");
+            }
+            else {
                 log_add("Ignoring failure to create VLAN virtual interface");
                 log_flush_notice();
                 status = 0;
@@ -1128,7 +1130,7 @@ mcastRcvr_new(
 inline static void
 mcastRcvr_free(McastRcvr* const mcastRcvr)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (mcastRcvr) {
         mcastRcvr_destroy(mcastRcvr);
@@ -1151,14 +1153,9 @@ mcastRcvr_free(McastRcvr* const mcastRcvr)
 static int
 mcastRcvr_run(McastRcvr* const mcastRcvr)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
-    int status = mlr_run(mcastRcvr->mlr); // Blocks
-
-    if (status)
-        log_add("Error in multicast receiver");
-
-    return status;
+    return mlr_run(mcastRcvr->mlr); // Blocks
 }
 
 inline static int
@@ -1166,7 +1163,7 @@ mcastRcvr_halt(
         McastRcvr* const mcastRcvr,
         const pthread_t  thread)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     mlr_halt(mcastRcvr->mlr);
 
     return 0;
@@ -1240,7 +1237,7 @@ backlogger_new(
 inline static void
 backlogger_free(Backlogger* const backlogger)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (backlogger) {
         backlogger_destroy(backlogger);
@@ -1283,7 +1280,7 @@ backlogger_halt(
         Backlogger* const backlogger,
         const pthread_t   thread)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     stopFlag_set(&backlogger->stopFlag);
     pthread_kill(thread, SIGTERM);
 
@@ -2203,7 +2200,7 @@ downlet_missedProduct(
     Downlet* const      downlet,
     const FmtpProdIndex iProd)
 {
-    log_debug_1("Entered: iProd=%lu", (unsigned long)iProd);
+    log_debug("Entered: iProd=%lu", (unsigned long)iProd);
 
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
@@ -2605,7 +2602,7 @@ down7_new(
 void
 down7_free(Down7* const down7)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (down7) {
         down7_destroy(down7);
@@ -2723,7 +2720,7 @@ down7_requestProduct(
     Down7* const        down7,
     const FmtpProdIndex iProd)
 {
-    log_debug_1("Entered: iProd=%lu", (unsigned long)iProd);
+    log_debug("Entered: iProd=%lu", (unsigned long)iProd);
 
     /*
      * Cancellation of the operation of the missed-but-not-requested queue is
@@ -2799,7 +2796,7 @@ deliver_missed_product_7_svc(
     MissedProduct* const restrict  missedProd,
     struct svc_req* const restrict rqstp)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     prod_info* const info = &missedProd->prod.info;
     Downlet* const   downlet = pthread_getspecific(down7Key);

@@ -267,7 +267,7 @@ nbs_status_t nbsp_send_gini(
             }
             break;
         }
-        log_debug_1("Sending %u-byte block %u", nbytes, iblock);
+        log_debug("Sending %u-byte block %u", nbytes, iblock);
         status = nbst_send_block(nbsp->nbst, block, nbytes);
         if (status) {
             log_add("Couldn't send %u-byte block %u of GINI image", nbytes,

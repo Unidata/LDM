@@ -67,11 +67,11 @@ static int numLines(
 
 static void logMessages(void)
 {
-    log_error_1("Error");
-    log_warning_1("Warning");
-    log_notice_1("Notice");
-    log_info_1("Information");
-    log_debug_1("Debug");
+    log_error("Error");
+    log_warning("Warning");
+    log_notice("Notice");
+    log_info("Information");
+    log_debug("Debug");
 }
 
 static void vlogMessage(
@@ -210,13 +210,13 @@ static void test_log_open_default(void)
     const char* actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, "-"); // default is standard error stream
-    log_error_1("Standard error stream");
+    log_error("Standard error stream");
 
     status = log_set_destination(tmpPathname);
     actual = log_get_destination();
     CU_ASSERT_PTR_NOT_NULL(actual);
     CU_ASSERT_STRING_EQUAL(actual, tmpPathname);
-    log_error_1("File \"%s\"", tmpPathname);
+    log_error("File \"%s\"", tmpPathname);
 
     log_fini();
 }
@@ -778,7 +778,7 @@ static void test_performance(void)
 
     const long num_messages = 100000;
     for (long i = 0; i < num_messages; i++)
-        log_error_1("Error message %ld", i);
+        log_error("Error message %ld", i);
 
     struct timeval stop;
     (void)gettimeofday(&stop, NULL);
@@ -786,7 +786,7 @@ static void test_performance(void)
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice_1("%ld printed messages in %g seconds = %g/s", num_messages, dur,
+    log_notice("%ld printed messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     status = log_set_destination("/dev/null");
@@ -795,14 +795,14 @@ static void test_performance(void)
     (void)gettimeofday(&start, NULL);
 
     for (long i = 0; i < num_messages; i++)
-        log_debug_1("Debug message %ld", i);
+        log_debug("Debug message %ld", i);
 
     (void)gettimeofday(&stop, NULL);
     dur = duration(&stop, &start);
 
     status = log_set_destination("-");
     CU_ASSERT_EQUAL(status, 0);
-    log_notice_1("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
+    log_notice("%ld unprinted messages in %g seconds = %g/s", num_messages, dur,
             num_messages/dur);
 
     log_fini();

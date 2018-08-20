@@ -568,7 +568,7 @@ int main(
                       (unsigned char) msg[9]) << 8) +
                       (unsigned char) msg[10]) << 8) + (unsigned char) msg[11];
 
-                log_debug_1("received %d bytes", n);
+                log_debug("received %d bytes", n);
 
                 if (sbnnum <= lastnum) {
                     log_notice_q("Retrograde packet number: previous=%lu, "
@@ -601,7 +601,7 @@ int main(
         char            msg[MAX_MSG];
         unsigned long   sbnnum, lastnum = 0;
 
-        log_debug_1("I am the child");
+        log_debug("I am the child");
 
         if (shmfifo_attach(shm) == -1) {
             log_error_q("child cannot attach");
@@ -626,7 +626,7 @@ int main(
                   (unsigned char) msg[10]) << 8) + (unsigned char) msg[11];
 
             if (log_is_enabled_debug)
-                log_debug_1("child received %d bytes", n);
+                log_debug("child received %d bytes", n);
             if ((lastnum != 0) && (lastnum + 1 != sbnnum))
                 log_error_q("Gap in SBN last %lu, this %lu, gap %lu", lastnum,
                     sbnnum, sbnnum - lastnum);

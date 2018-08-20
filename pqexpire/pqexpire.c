@@ -421,7 +421,7 @@ char *av[];
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                log_debug_1("max_latency %.3f", max_latency);
+                                log_debug("max_latency %.3f", max_latency);
                         }
 
                         if(nr != 0)
@@ -449,16 +449,16 @@ char *av[];
                                  * product-queue is periodically scanned.
                                  */
                                 diff = d_diff_timestamp(&cursor, &clss.to);
-                                log_debug_1("diff %.3f", diff);
+                                log_debug("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        log_debug_1("heuristic depth break");
+                                        log_debug("heuristic depth break");
                                         break;
                                 }
                         }
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug_1("End of Queue");
+                        log_debug("End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
@@ -466,7 +466,7 @@ char *av[];
                          * The next data-product was locked.  The product-queue
                          * cursor was not advanced to it.
                          */
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                         /* N.B.: peculiar logic ahead */
                         if(interval != 0)
                         {

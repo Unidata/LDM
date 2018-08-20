@@ -111,7 +111,7 @@ public:
         tcpSock.write(&action, sizeof(action));
         struct in_addr inAddr;
         tcpSock.read(&inAddr, sizeof(inAddr));
-        log_debug_1((std::string("Obtained reserved address ") +
+        log_debug((std::string("Obtained reserved address ") +
                 inet_ntoa(inAddr)).c_str());
         return inAddr.s_addr;
     }
@@ -220,19 +220,19 @@ class InAddrPool::Impl final
 public:
     /**
      * Constructs.
-     * @param[in] subnet             Subnet specification
+     * @param[in] cidr               Subnet specification
      */
-    Impl(const CidrAddr& subnet)
+    Impl(const CidrAddr& cidr)
         // Parentheses are needed to obtain correct construction
-        : available(cidrAddr_getNumHostAddrs(&subnet),
-                cidrAddr_getAddr(&subnet))
+        : available(cidrAddr_getNumHostAddrs(&cidr), cidrAddr_getSubnet(&cidr))
         , allocated{}
         , mutex{}
     {
-        log_debug_1(("subnet= " + to_string(subnet)).c_str());
+        log_debug(("cidr= " + to_string(cidr)).c_str());
         auto size = available.size();
+        // Doesn't include network or broadcast address
         for (in_addr_t i = 1; i <= size; ++i)
-            available[i] |= htonl(i);
+            available[i-1] |= htonl(i);
     }
 
     /**
@@ -248,7 +248,7 @@ public:
         in_addr_t addr = {available.at(0)};
         available.pop_front();
         allocated.insert(addr);
-        log_debug_1(("Reserved address " + to_string(addr)).c_str());
+        log_debug(("Reserved address " + to_string(addr)).c_str());
         return addr;
     }
 
@@ -265,7 +265,7 @@ public:
         LockGuard lock{mutex};
         bool found = allocated.find(addr) != allocated.end();
         if (!found)
-            log_debug_1((std::string("Address ") + to_string(addr) +
+            log_debug((std::string("Address ") + to_string(addr) +
                     " not found").c_str());
         return found;
     }
@@ -421,7 +421,7 @@ class MldmSrvr::Impl final
         struct in_addr fmtpAddr = {inAddrPool.reserve()};
         try {
             connSock.write(&fmtpAddr.s_addr, sizeof(fmtpAddr));
-            log_debug_1((std::string("Reserved address ") +
+            log_debug((std::string("Reserved address ") +
                     ::inet_ntoa(fmtpAddr)).c_str());
         }
         catch (const std::exception& ex) {
@@ -504,7 +504,7 @@ public:
      */
     void operator()()
     {
-        log_notice_1(("Multicast LDM sender command-server starting up: "
+        log_notice(("Multicast LDM sender command-server starting up: "
                 "srvrSock=" + srvrSock.getLocalSockAddr().to_string()).data());
 
         while (!done()) {

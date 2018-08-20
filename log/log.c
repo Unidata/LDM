@@ -39,7 +39,6 @@
 #undef NDEBUG
 #include "log.h"
 #include "StrBuf.h"
-#include "Thread.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -447,32 +446,93 @@ static const char* get_default_destination(void)
             : "-";
 }
 
+#ifdef NDEBUG
+    #define LOGL_ASSERT(expr)
+#else
+    #define LOGL_ASSERT(expr) do { \
+        if (!(expr)) { \
+            logl_internal(LOG_LEVEL_ERROR, "Assertion failure: %s", #expr); \
+            abort(); \
+        } \
+    } while (false)
+#endif
+
+static void acquire_mutex()
+{
+    int status = pthread_mutex_lock(&log_mutex);
+
+    LOGL_ASSERT(status == 0);
+}
+
+static void release_mutex()
+{
+    int status = pthread_mutex_unlock(&log_mutex);
+
+    LOGL_ASSERT(status == 0);
+}
+
+static void register_atfork_funcs(void)
+{
+    int status = pthread_atfork(acquire_mutex, release_mutex, release_mutex);
+
+    LOGL_ASSERT(status == 0);
+}
+
 /**
  * Initializes this logging module. Called by log_init().
  *
- * @retval    -1  Failure
- * @retval     0  Success
+ * @retval     0            Success
+ * @retval     ENOMEM       Out-of-memory.
+ * @retval     EINVAL       `log_mutex` is invalid.
+ * @retval     EPERM        Module is already initialized.
  */
 static int init(void)
 {
     int status;
+
     if (isInitialized) {
         logl_internal(LOG_LEVEL_ERROR, "Logging module already initialized");
-        status = -1;
+        status = EPERM;
     }
     else {
         (void)sigfillset(&all_sigset);
         (void)sigemptyset(&usr1_sigset);
         (void)sigaddset(&usr1_sigset, SIGUSR1);
+
         usr1_sigaction.sa_mask = usr1_sigset;
         usr1_sigaction.sa_flags = SA_RESTART;
         usr1_sigaction.sa_handler = handle_sigusr1;
+
         (void)sigaction(SIGUSR1, &usr1_sigaction, &prev_usr1_sigaction);
-        status = mutex_init(&log_mutex, PTHREAD_MUTEX_ERRORCHECK, true);
-        if (status)
+
+        /*
+         * The following mutex isn't error-checking or recursive because a
+         * glibc-created child process can't release such mutexes because the
+         * thread in the child isn't the same as the thread in the parent. See
+         * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
+         * As a consequence, failure to lock or unlock the mutex must not
+         * result in a call to a logging function that attempts to lock or
+         * unlock the mutex.
+         */
+        status = pthread_mutex_init(&log_mutex, NULL);
+
+        if (status) {
             logl_internal(LOG_LEVEL_ERROR, "Couldn't initialize mutex: %s",
                     strerror(status));
-    }
+        }
+        else {
+            static pthread_once_t atfork_control = PTHREAD_ONCE_INIT;
+
+            status = pthread_once(&atfork_control, register_atfork_funcs);
+
+            if (status) {
+                logl_internal(LOG_LEVEL_ERROR, "pthread_once() failure: %s",
+                        strerror(status));
+                (void)pthread_mutex_destroy(&log_mutex);
+            }
+        } // `log_mutex` initialized
+    } // Module isn't initialized
+
     return status;
 }
 
@@ -597,8 +657,10 @@ void logl_lock(void)
      * signal-catching function.
      */
     blockSigs(&prevSigs);
-    int status = mutex_lock(&log_mutex);
-    logl_assert(status == 0);
+
+    int status = pthread_mutex_lock(&log_mutex);
+
+    LOGL_ASSERT(status == 0);
 }
 
 /**
@@ -610,8 +672,10 @@ void logl_lock(void)
  */
 void logl_unlock(void)
 {
-    int status = mutex_unlock(&log_mutex);
-    logl_assert(status == 0);
+    int status = pthread_mutex_unlock(&log_mutex);
+
+    LOGL_ASSERT(status == 0);
+
     restoreSigs(&prevSigs);
 }
 
@@ -1096,7 +1160,7 @@ int log_init(
             isInitialized = status == 0;
         }
     }
-    return status;
+    return status == 0 ? 0 : -1;
 }
 
 /**
@@ -1106,16 +1170,16 @@ int log_init(
 void log_avoid_stderr(void)
 {
     logl_lock();
-    avoid_stderr = true;
-    if (LOG_IS_STDERR_SPEC(log_dest)) { // Don't change if unnecessary
-        /*
-         * log_get_default_daemon_destination() doesn't lock and the string it
-         * returns doesn't overlap `log_dest`.
-         */
-        const char* const dest = log_get_default_daemon_destination();
-        strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
-        (void)logi_set_destination();
-    }
+        avoid_stderr = true;
+        if (LOG_IS_STDERR_SPEC(log_dest)) { // Don't change if unnecessary
+            /*
+             * log_get_default_daemon_destination() doesn't lock and the string
+             * it returns doesn't overlap `log_dest`.
+             */
+            const char* const dest = log_get_default_daemon_destination();
+            strncpy(log_dest, dest, sizeof(log_dest))[sizeof(log_dest)-1] = 0;
+            (void)logi_set_destination();
+        }
     logl_unlock();
 }
 
@@ -1149,7 +1213,7 @@ int log_set_id(
     }
     else {
         logl_lock();
-        status = logi_set_id(id);
+            status = logi_set_id(id);
         logl_unlock();
     }
     return status;
@@ -1179,7 +1243,7 @@ int log_set_upstream_id(
                 isFeeder ? "feed" : "noti");
         id[sizeof(id)-1] = 0;
         logl_lock();
-        status = logi_set_id(id);
+            status = logi_set_id(id);
         logl_unlock();
     }
     return status;
@@ -1198,7 +1262,7 @@ int log_set_upstream_id(
 const char* log_get_default_destination(void)
 {
     logl_lock();
-    const char* dest = get_default_destination();
+        const char* dest = get_default_destination();
     logl_unlock();
     return dest;
 }
@@ -1231,9 +1295,9 @@ int log_set_destination(
         if (nbytes > sizeof(log_dest)-1)
             nbytes = sizeof(log_dest)-1;
         logl_lock();
-        (void)memmove(log_dest, dest, nbytes);
-        log_dest[nbytes] = 0;
-        status = logi_set_destination();
+            (void)memmove(log_dest, dest, nbytes);
+            log_dest[nbytes] = 0;
+            status = logi_set_destination();
         logl_unlock();
     }
     return status;
@@ -1252,7 +1316,7 @@ int log_set_destination(
 const char* log_get_destination(void)
 {
     logl_lock();
-    const char* path = log_dest;
+        const char* path = log_dest;
     logl_unlock();
     return path;
 }
@@ -1273,8 +1337,8 @@ int log_set_level(
     }
     else {
         logl_lock();
-        log_level = level;
-        logi_set_level();
+            log_level = level;
+            logi_set_level();
         logl_unlock();
         status = 0;
     }
@@ -1287,10 +1351,10 @@ int log_set_level(
 void log_roll_level(void)
 {
     logl_lock();
-    log_level = (log_level == LOG_LEVEL_DEBUG)
-            ? LOG_LEVEL_ERROR
-            : log_level - 1;
-    logi_set_level();
+        log_level = (log_level == LOG_LEVEL_DEBUG)
+                ? LOG_LEVEL_ERROR
+                : log_level - 1;
+        logi_set_level();
     logl_unlock();
 }
 
@@ -1302,7 +1366,7 @@ void log_roll_level(void)
 log_level_t log_get_level(void)
 {
     logl_lock(); // For visibility of changes
-    log_level_t level = log_level;
+        log_level_t level = log_level;
     logl_unlock();
     return level;
 }
@@ -1317,7 +1381,7 @@ bool log_is_level_enabled(
         const log_level_t level)
 {
     logl_lock();
-    bool enabled = is_level_enabled(level);
+        bool enabled = is_level_enabled(level);
     logl_unlock();
     return enabled;
 }
@@ -1354,12 +1418,15 @@ int log_fini_located(
         const log_loc_t* const loc)
 {
     int status = logl_fini(loc);
+
     if (status == 0) {
-        status = mutex_destroy(&log_mutex);
+        status = pthread_mutex_destroy(&log_mutex);
+
         if (status == 0) {
             (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
             isInitialized = false;
         }
     }
+
     return status ? -1 : 0;
 }

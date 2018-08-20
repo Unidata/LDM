@@ -196,7 +196,7 @@ run_service(
                 else {
                     as_init(isPrimary);
 
-                    log_debug_1("Downstream LDM initialized");
+                    log_debug("Downstream LDM initialized");
 
                     for (;;) {
                         /*
@@ -295,7 +295,7 @@ make_request(
         while (!errObj && !finished && exitIfDone(0)) {
             fornme_reply_t*     feedmeReply;
 
-            log_debug_1("Calling feedme_6(...)");
+            log_debug("Calling feedme_6(...)");
 
             feedmeReply = feedme_6(&feedpar, clnt);
 
@@ -625,7 +625,7 @@ req6_new(
             errObj = make_request(upName, prodClass, isPrimary, clnt, &id);
 
             if (!errObj) {
-                log_debug_1("Calling run_service()");
+                log_debug("Calling run_service()");
 
                 errObj = run_service(dataSocket, inactiveTimeout, upName,
                         &upAddr, id, pqPathname, prodClass, pq, isPrimary);

@@ -506,7 +506,7 @@ gm_strftime(char *str, size_t maxsize, char *format, time_t arrival)
     struct tm atm;
 
     if (gmtime_r(&arrival, &atm) == NULL) {
-        log_debug_1("gmtime_r() returns NULL");
+        log_debug("gmtime_r() returns NULL");
         /* you should never really execute this */
         strncpy(str, format, maxsize-1);
         return strlen(str);

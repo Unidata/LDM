@@ -1954,12 +1954,12 @@ rl_foff_dump(regionl *const rl)
     /* q = p->forward[0]; */
     sqix = fbp->fblks[spp->next];
     sqp = rlrp + sqix;
-    log_debug_1("** Offsets:\t");                    /* debugging */
+    log_debug("** Offsets:\t");                    /* debugging */
     while(sqix != RL_FOFF_TL) {
         /* p = q */
         spix = sqix;
         spp = rlrp + spix;
-        log_debug_1("%u ", spp->offset);             /* debugging */
+        log_debug("%u ", spp->offset);             /* debugging */
         log_assert(spp->offset > prev_offset);
         prev_offset = spp->offset;
         /* q = p->forward[0]; */
@@ -3533,7 +3533,7 @@ mapwrap(const int fd,
                 return status;
         }
 #if TRACE_MMAP
-        log_debug_1("%p = mmap: %p %ld %lu", mm, *ptrp,
+        log_debug("%p = mmap: %p %ld %lu", mm, *ptrp,
                 (long)offset, (unsigned long)extent );
 #endif
 
@@ -3571,7 +3571,7 @@ unmapwrap(void *const ptr,
 #endif /* USE_MSYNC */
 
 #if TRACE_MMAP
-        log_debug_1("unmap: %p %ld %lu", ptr, (long)offset, (unsigned long)extent);
+        log_debug("unmap: %p %ld %lu", ptr, (long)offset, (unsigned long)extent);
 #endif
         if(munmap(ptr, extent) == -1)
         {
@@ -3651,7 +3651,7 @@ rgn2_lock(pqueue *const pq,
                 int status =  fd_lock(pq->fd, cmd, l_type,
                                 offset, SEEK_SET, extent);
 #if TRACE_LOCK
-        log_debug_1("%s (%ld, %lu)",
+        log_debug("%s (%ld, %lu)",
                 s_ltype(l_type),
                 (long)offset, (unsigned long)extent);
 #endif
@@ -3688,7 +3688,7 @@ rgn2_unlock(
                 return ENOERR;
         /* else */
 #if TRACE_LOCK
-        log_debug_1("F_UNLCK (%ld, %lu)",
+        log_debug("F_UNLCK (%ld, %lu)",
                 (long)offset, (unsigned long)extent);
 #endif
         return fd_lock(pq->fd, F_SETLK, F_UNLCK,
@@ -4222,7 +4222,7 @@ mm0_map(pqueue *const pq)
         }
         if(vp != NULL)
                 fSet(mflags, MAP_FIXED);
-        log_debug_1("Mapping %ld", (long)st_size);
+        log_debug("Mapping %ld", (long)st_size);
         if (~(size_t)0 < st_size) {
             log_error_q("File is too big to memory-map");
             pq->base = NULL;
@@ -4901,7 +4901,7 @@ rpqe_mkspace(pqueue *const pq, size_t const extent, size_t *rixp)
 {
         size_t rlix;
 
-        log_debug_1("%s:rpqe_mkspace(): Deleting oldest to make space for %ld bytes",
+        log_debug("%s:rpqe_mkspace(): Deleting oldest to make space for %ld bytes",
                 __FILE__, (long)extent);
 
         do {
@@ -5013,7 +5013,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
      */
     // log_debug_1("Checking for duplicate");
     if (sxi && sx_find(pq->sxp, sxi, sxepp) != 0) {
-        log_debug_1("PQ_DUP");
+        log_debug("PQ_DUP");
         return PQ_DUP;
     }
 
@@ -6299,7 +6299,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         log_assert(prod != NULL);
 
         if(fIsSet(pq->pflags, PQ_READONLY)) {
-                log_debug_1("pq_insertNoSig(): queue is read-only");
+                log_debug("pq_insertNoSig(): queue is read-only");
                 status = EACCES;
                 goto unwind_lock;
         }
@@ -6307,7 +6307,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         // log_debug_1("Getting product size");
         extent = xlen_product(prod);
         if (extent > pq_getDataSize(pq)) {
-                log_debug_1("pq_insertNoSig(): product is too big");
+                log_debug("pq_insertNoSig(): product is too big");
                 status = PQ_BIG;
                 goto unwind_lock;
         }
@@ -6318,14 +6318,14 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         // log_debug_1("Getting control header");
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
-                log_debug_1("pq_insertNoSig(): ctl_get() failure");
+                log_debug("pq_insertNoSig(): ctl_get() failure");
                 goto unwind_lock;
         }
 
         // log_debug_1("Getting space for product");
         status = rpqe_new(pq, extent, prod->info.signature, &vp, &sxep);
         if(status != ENOERR) {
-                log_debug_1("pq_insertNoSig(): rpqe_new() failure");
+                log_debug("pq_insertNoSig(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
@@ -6333,7 +6333,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
                                                 /* cast away const'ness */
         if(xproduct(vp, extent, XDR_ENCODE, (product *)prod) == 0)
         {
-                log_debug_1("pq_insertNoSig(): xproduct() failure");
+                log_debug("pq_insertNoSig(): xproduct() failure");
                 status = EIO;
                 goto unwind_rgn;
         }
@@ -6341,7 +6341,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
         status = tq_add(pq->tqp, sxep->offset);
         if(status != ENOERR) {
-                log_debug_1("pq_insertNoSig(): tq_add() failure");
+                log_debug("pq_insertNoSig(): tq_add() failure");
                 goto unwind_rgn;
         }
 
@@ -6919,12 +6919,12 @@ pq_fext_dump(pqueue *const pq)
             spp = rlrp + spix;
             /* q = p->forward[0]; */
             sqix = fbp->fblks[spp->prev];
-            log_debug_1("** Free list extents:\t");                  /* debugging */
+            log_debug("** Free list extents:\t");                  /* debugging */
             while(sqix != RL_FEXT_TL) {
                 /* p = q */
                 spix = sqix;
                 spp = rlrp + spix;
-                log_debug_1("%u ", spp->extent);             /* debugging */
+                log_debug("%u ", spp->extent);             /* debugging */
 #if !defined(NDEBUG)
                 log_assert(spp->extent >= prev_extent);
                 prev_extent = spp->extent;
@@ -7716,7 +7716,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
          */
         if(clss == NULL || ifMatch == NULL)
         {
-                log_debug_1("NOOP");
+                log_debug("NOOP");
                 goto unwind_ctl;
         }
         /* else */
@@ -7756,7 +7756,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
           pq_time = tqep->tv;
           if(gettimeofday(&now, 0) == 0) {
             double delay = d_diff_timestamp(&now, &tqep->tv);
-            log_debug_1("Delay: %.4f sec", delay);
+            log_debug("Delay: %.4f sec", delay);
           }
         }
 
@@ -7783,7 +7783,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
     datap = xdrs.x_private;
 
 #if PQ_SEQ_TRACE
-    log_debug_1("%s %u",
+    log_debug("%s %u",
             s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
 #endif
 
@@ -7792,7 +7792,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
      */
     if(log_is_enabled_debug) {
         double latency = d_diff_timestamp(&pq_time, &info->arrival);
-        log_debug_1("time(insert)-time(create): %.4f s", latency);
+        log_debug("time(insert)-time(create): %.4f s", latency);
     }
 
     /*
@@ -8136,7 +8136,7 @@ pq_next(
                             if (gettimeofday(&now, 0) == 0) {
                                 double delay = d_diff_timestamp(&now,
                                         &queue_par.inserted);
-                                log_debug_1("Delay: %.4f sec", delay);
+                                log_debug("Delay: %.4f sec", delay);
                             }
                         }
 
@@ -8152,7 +8152,7 @@ pq_next(
                             log_assert(prod_par.info.sz <= xdrs.x_handy);
 
                             #if PQ_SEQ_TRACE
-                                log_debug_1("%s %u",
+                                log_debug("%s %u",
                                         s_prod_info(NULL, 0, &prod_par.info, 1),
                                         xdrs.x_handy) ;
                             #endif
@@ -8165,7 +8165,7 @@ pq_next(
                                 double latency =
                                         d_diff_timestamp(&queue_par.inserted,
                                                 &prod_par.info.arrival);
-                                log_debug_1("time(insert)-time(create): %.4f s",
+                                log_debug("time(insert)-time(create): %.4f s",
                                         latency);
                             }
 
@@ -8395,7 +8395,7 @@ pq_seqdel(
         if(clss != PQ_CLASS_ALL && !prodInClass(clss, info)) {
             /* skip this one */
             if(log_is_enabled_debug)
-                    log_debug_1("skip %s", s_prod_info(NULL, 0, info, 1));
+                    log_debug("skip %s", s_prod_info(NULL, 0, info, 1));
             goto unwind_rgn;
         }
 
@@ -8530,7 +8530,7 @@ didmatch(
         if(tsp != NULL)
                 *tsp = infop->arrival;
 
-        log_debug_1("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
+        log_debug("lastmatch: %s", s_prod_info(NULL, 0, infop, 1));
 
         return PQUEUE_END; /* done with scan on the first hit */
 }
@@ -8565,7 +8565,7 @@ pq_last(pqueue* const             pq,
         while ((status = pq_sequence(pq, TV_LT, clssp, didmatch, tsp))
                         == ENOERR) {
            if ((tsp != NULL) && (pq->cursor.tv_sec < tsp->tv_sec)) {
-                log_debug_1("cursor reset: stop searching");
+                log_debug("cursor reset: stop searching");
                 pq_unlockIf(pq);
                 return status;
            }
@@ -8641,18 +8641,18 @@ hndlr_noop(int sig)
         switch(sig) {
         case SIGALRM :
 #ifndef NDEBUG
-                log_debug_1("SIGALRM") ;
+                log_debug("SIGALRM") ;
 #endif
                 sigalrm_received = 1;
                 return ;
         case SIGCONT :
 #ifndef NDEBUG
-                log_debug_1("SIGCONT") ;
+                log_debug("SIGCONT") ;
 #endif
                 return;
         }
 #ifndef NDEBUG
-        log_debug_1("hndlr_noop: unhandled signal: %d", sig) ;
+        log_debug("hndlr_noop: unhandled signal: %d", sig) ;
 #endif
         /* nothing to do, just wake up */
         return;
@@ -8861,14 +8861,14 @@ pqe_new(pqueue *pq,
          */
         status = ctl_get(pq, RGN_WRITE);
         if(status != ENOERR) {
-                log_debug_1("pqe_new(): ctl_get() failure");
+                log_debug("pqe_new(): ctl_get() failure");
                 goto unwind_lock;
         }
 
         extent = xlen_prod_i(infop);
         status = rpqe_new(pq, extent, infop->signature, &vp, &sxep);
         if(status != ENOERR) {
-                log_debug_1("pqe_new(): rpqe_new() failure");
+                log_debug("pqe_new(): rpqe_new() failure");
                 goto unwind_ctl;
         }
 
@@ -8876,7 +8876,7 @@ pqe_new(pqueue *pq,
         *ptrp = xinfo_i(vp, extent, XDR_ENCODE, (prod_info *)infop);
         if(*ptrp == NULL)
         {
-                log_debug_1("pqe_new(): xinfo_i() failure");
+                log_debug("pqe_new(): xinfo_i() failure");
                 status = EIO;
                 goto unwind_ctl;
         }
@@ -9077,7 +9077,7 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
            */
           if(sx_find(pq->sxp, realsignature, &sxep) != 0)
             {
-              log_debug_1("PQ_DUP");
+              log_debug("PQ_DUP");
               status = PQ_DUP;
               (void) rpqe_free(pq, offset, index.signature);
               goto unwind_ctl;

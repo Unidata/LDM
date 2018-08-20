@@ -415,7 +415,7 @@ int *is_alive_6_svc(
     alive = cps_contains((pid_t) *id);
 
     if (log_is_enabled_debug) {
-        log_debug_1("LDM %u is %s", *id, alive ? "alive" : "dead");
+        log_debug("LDM %u is %s", *id, alive ? "alive" : "dead");
     }
 
     if (!svc_sendreply(xprt, (xdrproc_t) xdr_bool, (caddr_t) &alive)) {
@@ -510,7 +510,7 @@ hiya_6_svc(
     }
     else {
         if (log_is_enabled_debug)
-            log_debug_1("intersection: %s", s_prod_class(NULL, 0, accept));
+            log_debug("intersection: %s", s_prod_class(NULL, 0, accept));
 
         if (accept->psa.psa_len == 0) {
             log_warning_q("Empty intersection of HIYA offer from %s (%s) and ACCEPT "

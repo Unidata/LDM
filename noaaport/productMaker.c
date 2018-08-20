@@ -243,7 +243,7 @@ int    nnnxxx_offset;
 
         /*** For Retranmission Purpose  ***/
 #ifdef RETRANS_SUPPORT
-    log_debug_1(" retrans_xmit_enable [%d]   transfer_type [%s] sbn_channel_name [%s] "
+    log_debug(" retrans_xmit_enable [%d]   transfer_type [%s] sbn_channel_name [%s] "
             " unCompress [%d] fillScan [%d]\n", retrans_xmit_enable,
             transfer_type, sbn_channel_name, unCompress, fillScan);
 
@@ -252,7 +252,7 @@ int    nnnxxx_offset;
                 if( idx >= 0 && idx < NUM_CPIO_ENTRIES){
                     global_cpio_fd = cpio_tbl[idx].cpio_fd;
                     global_cpio_addr = cpio_tbl[idx].cpio_addr;
-                    log_debug_1("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",
+                    log_debug("Global cpio_addr  = 0x%x Global cpio_fd = %d \n",
                             global_cpio_addr,global_cpio_fd);
                 }
                 else{
@@ -295,10 +295,10 @@ int    nnnxxx_offset;
 
        GET_SHMPTR(global_acq_tbl,ACQ_TABLE,ACQ_TABLE_SHMKEY,DEBUGGETSHM);
 
-        log_debug_1("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
+        log_debug("Global acquisition table = 0x%x cpio_fd = %d \n",global_acq_tbl,global_cpio_fd);
         acq_tbl = &global_acq_tbl[global_cpio_fd];
 
-        log_debug_1("Obtained acquisition table = 0x%x \n",acq_tbl);
+        log_debug("Obtained acquisition table = 0x%x \n",acq_tbl);
         
          buff_hdr = (BUFF_HDR *) malloc(sizeof(BUFF_HDR));
          if(init_buff_hdr(buff_hdr) < 0){
@@ -361,12 +361,12 @@ int    nnnxxx_offset;
         logResync = 1;
 
         if (fifo_getBytes(fifo, buf + 1, 15) != 0) {
-            log_debug_1("couldn't read 16 bytes for sbn");
+            log_debug("couldn't read 16 bytes for sbn");
             continue;
         }
 
         while ((status = readsbn(buf, sbn)) != 0) {
-            log_debug_1("Not SBN start");
+            log_debug("Not SBN start");
 
             IOFF = 1;
 
@@ -384,21 +384,21 @@ int    nnnxxx_offset;
                     buf[ch - IOFF] = buf[ch];
 
                 if (fifo_getBytes(fifo, buf + 16 - IOFF, IOFF) != 0) {
-                    log_debug_1("Couldn't read bytes for SBN, resync");
+                    log_debug("Couldn't read bytes for SBN, resync");
                     break;
                 }
             }
         }
 
         if (status != 0) {
-            log_debug_1("SBN status continue");
+            log_debug("SBN status continue");
             continue;
         }
 
         IOFF = 0;
 
         if (fifo_getBytes(fifo, buf + 16, 16) != 0) {
-            log_debug_1("error reading Product Definition Header");
+            log_debug("error reading Product Definition Header");
             continue;
         }
 
@@ -410,7 +410,7 @@ int    nnnxxx_offset;
                 /* Update acq table stats - End */
 #endif
 
-        log_debug_1("***********************************************");
+        log_debug("***********************************************");
         if (last_sbn_runno != sbn->runno) {
             last_sbn_runno = sbn->runno;
         }
@@ -449,7 +449,7 @@ int    nnnxxx_offset;
 
         log_info_q("SBN seqnumber %ld", sbn->seqno);
         log_info_q("SBN datastream %d command %d", sbn->datastream, sbn->command);
-        log_debug_1("SBN version %d length offset %d", sbn->version, sbn->len);
+        log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
 
         if (((sbn->command != SBN_CMD_DATA) && (sbn->command != SBN_CMD_TIME)) ||
                 (sbn->version != 1)) {
@@ -496,7 +496,7 @@ int    nnnxxx_offset;
                 continue;
         }
 
-        log_debug_1("Product definition header version %d pdhlen %d",
+        log_debug("Product definition header version %d pdhlen %d",
                 pdh->version, pdh->len);
 
         if (pdh->version != 1) {
@@ -504,7 +504,7 @@ int    nnnxxx_offset;
             continue;
         }
 
-        log_debug_1("PDH transfer type %u", pdh->transtype);
+        log_debug("PDH transfer type %u", pdh->transtype);
 
         if ((pdh->transtype & 8) > 0)
             log_error_q("Product transfer flag error %u", pdh->transtype);
@@ -514,16 +514,16 @@ int    nnnxxx_offset;
         if ((pdh->transtype & 16) > 0) {
             PROD_COMPRESSED = 1;
 
-            log_debug_1("Product transfer flag compressed %u", pdh->transtype);
+            log_debug("Product transfer flag compressed %u", pdh->transtype);
         }
         else {
             PROD_COMPRESSED = 0;
         }
 
-        log_debug_1("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
-        log_debug_1("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
+        log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
+        log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
                 pdh->records_per_block);
-        log_debug_1("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
+        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
@@ -543,11 +543,11 @@ int    nnnxxx_offset;
                         log_error_q("problem reading psh");
                 continue;
             }
-            log_debug_1("read psh %d", pdh->pshlen);
+            log_debug("read psh %d", pdh->pshlen);
 
             /* Timing block */
             if (sbn->command == SBN_CMD_TIME) {
-                log_debug_1("Timing block recieved %ld %ld\0", psh->olen,
+                log_debug("Timing block recieved %ld %ld\0", psh->olen,
                         pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
@@ -565,22 +565,22 @@ int    nnnxxx_offset;
                     pdh->len);
                 continue;
             }
-            log_debug_1("len %ld", psh->olen);
-            log_debug_1("product header flag %d, version %d", psh->hflag, psh->version);
-            log_debug_1("prodspecific data length %ld", psh->psdl);
-            log_debug_1("bytes per record %ld", psh->bytes_per_record);
-            log_debug_1("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
+            log_debug("len %ld", psh->olen);
+            log_debug("product header flag %d, version %d", psh->hflag, psh->version);
+            log_debug("prodspecific data length %ld", psh->psdl);
+            log_debug("bytes per record %ld", psh->bytes_per_record);
+            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
                     psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error_q("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
                 log_error_q("original runid %d", psh->origrunid);
-            log_debug_1("next header offset %ld", psh->nhoff);
-            log_debug_1("original seq number %ld", psh->seqno);
-            log_debug_1("receive time %ld", psh->rectime);
-            log_debug_1("transmit time %ld", psh->transtime);
-            log_debug_1("run ID %ld", psh->runid);
-            log_debug_1("original run id %ld", psh->origrunid);
+            log_debug("next header offset %ld", psh->nhoff);
+            log_debug("original seq number %ld", psh->seqno);
+            log_debug("receive time %ld", psh->rectime);
+            log_debug("transmit time %ld", psh->transtime);
+            log_debug("run ID %ld", psh->runid);
+            log_debug("original run id %ld", psh->origrunid);
 
 #ifdef RETRANS_SUPPORT
                                 /* Update acq table stats - Begin */
@@ -597,7 +597,7 @@ int    nnnxxx_offset;
                                         if(psh->hflag & XFR_PROD_RETRANSMIT){
                                            acq_tbl->proc_orig_prod_seqno_last = psh->seqno;
                                            acq_tbl->proc_orig_prod_run_id = psh->origrunid;
-                        log_debug_1("ORIG SEQ# = %ld CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
+                        log_debug("ORIG SEQ# = %ld CURR SEQ#: %ld \n",acq_tbl->proc_orig_prod_seqno_last,pdh->seqno);
                                                 }else{
                                                    acq_tbl->proc_orig_prod_seqno_last = 0;
                                                    acq_tbl->proc_orig_prod_run_id = 0;
@@ -677,8 +677,8 @@ int    nnnxxx_offset;
 
                         log_notice_q("Fragments filled %d scanlines [%d] size (%d each) prod seq %ld ",
                                 frags_left, n_scanlines, GOES_BLNK_FRM_LEN, prod.seqno);
-                        log_debug_1("prev prod seqno %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
-                        log_debug_1("Balance frames left %d ", frags_left);
+                        log_debug("prev prod seqno %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
+                        log_debug("Balance frames left %d ", frags_left);
                         if (unCompress) {
                             /** Use uncompressed blank frames for scanlines **/
                             for(int cnt = 0; cnt < frags_left; cnt++){
@@ -843,7 +843,7 @@ int    nnnxxx_offset;
 
                 (void)memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
-                log_debug_1("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
+                log_debug("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
                         pdh->pshlen, sbn->len + pdh->len + pdh->pshlen,
                         pdb->len);
 
@@ -858,7 +858,7 @@ int    nnnxxx_offset;
                         ccb, psh, pdh->dbsize) == -1)
                     log_error_q("Error reading ccb, using default name");
 
-                log_debug_1("look at ccb start %d %d", ccb->b1, ccb->len);
+                log_debug("look at ccb start %d %d", ccb->b1, ccb->len);
                 log_info_q("%s", psh->pname);
 
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
@@ -887,7 +887,7 @@ int    nnnxxx_offset;
 
             ccb->len = 0;
 
-            log_debug_1("continuation record");
+            log_debug("continuation record");
 
 #ifdef RETRANS_SUPPORT
                         if(retrans_xmit_enable == OPTION_ENABLE){
@@ -927,7 +927,7 @@ int    nnnxxx_offset;
         dataoff = IOFF + sbn->len + pdh->len + pdh->pshlen + ccb->len;
         datalen = pdh->dbsize - ccb->len;
 
-        log_debug_1("look at datalen %d", datalen);
+        log_debug("look at datalen %d", datalen);
 
         pfrag = ds_alloc();
         pfrag->seqno = pdh->seqno;
@@ -975,7 +975,7 @@ int    nnnxxx_offset;
                                             (unsigned char *) (memheap + heapcount),
                                             (GOES_BLNK_FRM_LEN * n_scanlines));
                                     heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                                    log_debug_1("GOES uncompressed blank frames added "
+                                    log_debug("GOES uncompressed blank frames added "
                                             "[tot/this] [%d/%d] heapcount = %ld "
                                             "blank_frame_len = %d scanlines %d",
                                              frags_left, cnt, heapcount,
@@ -1064,7 +1064,7 @@ int    nnnxxx_offset;
                                          (unsigned char *) (memheap + heapcount),
                                         (GOES_BLNK_FRM_LEN * n_scanlines));
                                  heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
-                                 log_debug_1("GOES blank frames added [tot/this] "
+                                 log_debug("GOES blank frames added [tot/this] "
                                          "[%d/%d] heapcount [%ld] blank_frame_len "
                                          "[%d] scanlines [%d]",
                                          frags_left, cnt, heapcount,
@@ -1090,7 +1090,7 @@ int    nnnxxx_offset;
                                 memcpy(memheap + heapcount, comprBuf, comprLen);
                                 MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount), comprLen);
                                 heapcount += comprLen;
-                                log_debug_1("GOES compressed blank frames added "
+                                log_debug("GOES compressed blank frames added "
                                         "heapcount = %ld blank frame size = %ld ",
                                         heapcount, comprLen );
                             }
@@ -1129,7 +1129,7 @@ int    nnnxxx_offset;
                 }
                 if (!PROD_COMPRESSED) {
                     for (nscan = 0; (nscan * pdb->nx) < pdh->dbsize; nscan++) {
-                        log_debug_1("png write nscan %d", nscan);
+                        log_debug("png write nscan %d", nscan);
                         if (nscan >= pdh->records_per_block) {
                             log_error_q("nscan exceeding records per block %d [%d "
                                 "%d %d]", pdh->records_per_block, nscan,
@@ -1225,7 +1225,7 @@ int    nnnxxx_offset;
 #ifdef RETRANS_SUPPORT
                                       if(retrans_xmit_enable == OPTION_ENABLE){
                                          acq_tbl->proc_acqtab_prodseq_errs++;
-                        log_debug_1("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
+                        log_debug("do_prod_mismatch() proc_base_prod_seqno_last = %d \n",
                                                                             acq_tbl->proc_base_prod_seqno_last);
                                             do_prod_mismatch(acq_tbl,buff_hdr);
                                             acq_tbl->proc_base_prod_seqno_last = buff_hdr->proc_prod_seqno;
@@ -1253,7 +1253,7 @@ int    nnnxxx_offset;
                     if (memcmp(testme, FOS_TRAILER, 4) == 0) {
                         datalen -= 4;
 
-                        log_debug_1("removing FOS trailer from %s", PROD_NAME);
+                        log_debug("removing FOS trailer from %s", PROD_NAME);
                     }
                     else {
                         break;
@@ -1294,7 +1294,7 @@ int    nnnxxx_offset;
              **  and frame is compressed then uncompress
              **  the frame and add to the heap
              **/
-            log_debug_1(" unCompress = %d   PROD_COMPRESSED = %d seqno=%ld\n",
+            log_debug(" unCompress = %d   PROD_COMPRESSED = %d seqno=%ld\n",
                     unCompress, PROD_COMPRESSED, prod.seqno);
 
              /***
@@ -1319,7 +1319,7 @@ int    nnnxxx_offset;
 
             if(unCompress) {
                 if(pdh->dbno == 0){
-                    log_debug_1("First Blk, initializing inflate prod %ld",
+                    log_debug("First Blk, initializing inflate prod %ld",
                             prod.seqno);
                     inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
                 }
@@ -1334,10 +1334,10 @@ int    nnnxxx_offset;
                     wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, &wmolen);
                     nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
 
-                    log_debug_1(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
+                    log_debug(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
                             pdh->dbno, wmo_offset, wmolen);
-                    log_debug_1(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
-                    log_debug_1("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
+                    log_debug(" Block# %d  nnnxxx_offset [%d] nnxxlen [%d] ", pdh->dbno, nnnxxx_offset, nxlen);
+                    log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
                     if((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
                         /** Product does not contain NNNXXX **/
                         inflateData(buf + dataoff + wmolen, datalen - wmolen, uncomprBuf, &uncomprLen, ANY_BLK );
@@ -1352,13 +1352,13 @@ int    nnnxxx_offset;
                     }
                 }
                 else{ /** Continuation block **/
-                    log_debug_1(" Block# %d  contd block", pdh->dbno);
+                    log_debug(" Block# %d  contd block", pdh->dbno);
                     inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, ANY_BLK );
-                    log_debug_1("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
+                    log_debug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
                 }
                 memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
                 deflen = uncomprLen;
-                log_debug_1(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
+                log_debug(" Block# %d inflated uncomprLen [%ld]", pdh->dbno, uncomprLen);
             }
             else{
                 /** executed by default (when unCompress is not enabled
@@ -1402,7 +1402,7 @@ int    nnnxxx_offset;
 #endif
         if ((prod.nfrag == 0) || (prod.nfrag == (pfrag->fragnum + 1))) {
             if(unCompress){
-                log_debug_1("uncompress ==> %d Last Blk, call inflateEnd prod %ld", unCompress,  prod.seqno);
+                log_debug("uncompress ==> %d Last Blk, call inflateEnd prod %ld", unCompress,  prod.seqno);
                 inflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
             }
             if (GOES == 1) {
@@ -1411,10 +1411,10 @@ int    nnnxxx_offset;
                     heapcount = png_get_prodlen();
                 }
                 else {
-                    log_debug_1("GOES product already compressed %d", heapcount);
+                    log_debug("GOES product already compressed %d", heapcount);
                 }
                 if(fillScan || !unCompress) {
-                    log_debug_1("Last Blk, call deflateEnd prod %ld", prod.seqno);
+                    log_debug("Last Blk, call deflateEnd prod %ld", prod.seqno);
                     deflateData(NULL, 0, NULL, &uncomprLen, END_BLK );
                 }
             }
@@ -1489,7 +1489,7 @@ int    nnnxxx_offset;
 #endif
         } // Multiple products in frame or last fragment
         else {
-            log_debug_1("processing record %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
+            log_debug("processing record %ld [%ld %ld]", prod.seqno, prod.nfrag, pfrag->fragnum);
             if ((pdh->transtype & 4) > 0) {
                 log_error_q("Hmmm....should call completed product %ld [%ld %ld]",
                         prod.seqno, prod.nfrag, pfrag->fragnum);
@@ -1524,7 +1524,7 @@ int    nnnxxx_offset;
 #endif
         IOFF += (sbn->len + pdh->len + pdh->pshlen + pdh->dbsize);
 
-        log_debug_1("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen, deflen);
+        log_debug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen, deflen);
 #ifdef RETRANS_SUPPORT
                 if(retrans_xmit_enable == OPTION_ENABLE){
                   total_prods_retrans_rcvd = acq_tbl->proc_tot_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
@@ -1643,14 +1643,14 @@ static int inflateData(
       return (ret);
     }
    isStreamSet = NO;
-   log_debug_1("inflateEnd called ......ret=%d", ret);
+   log_debug("inflateEnd called ......ret=%d", ret);
    return 0;
   }
 
 
 
   if(blk == BEGIN_BLK && !isStreamSet){
-     log_debug_1("Received first Blk");
+     log_debug("Received first Blk");
         memset(&i_zstrm, '\0', sizeof(z_stream));
         i_zstrm.zalloc = Z_NULL;
         i_zstrm.zfree = Z_NULL;
@@ -1666,7 +1666,7 @@ static int inflateData(
 
   dstBuf = (unsigned char *) outBuf;
 
-    log_debug_1("inflating now.. inlen[%ld] ", inLen);
+    log_debug("inflating now.. inlen[%ld] ", inLen);
 /**************** NEW CODE FROM JAVA *******************/
 
     while(totalBytesIn < inLen ) {
@@ -1755,7 +1755,7 @@ static int deflateData(
     unsigned char *dstBuf;
     static int isStreamSet = NO;
 
-  log_debug_1(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ", blk, inLen, isStreamSet );
+  log_debug(" Block [%d] deflating now.. inlen[%ld] isStreamSet %d ", blk, inLen, isStreamSet );
   if(blk == BEGIN_BLK && !isStreamSet){
 
         memset(&d_zstrm, '\0', sizeof(z_stream));
@@ -1777,7 +1777,7 @@ static int deflateData(
                 return -1;
         }
      isStreamSet = NO;
-     log_debug_1(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
+     log_debug(" Calling deflateEnd to close deflate stream zerr = %d", zerr);
    }
 
     dstBuf = (unsigned char *) outBuf;
@@ -1812,7 +1812,7 @@ static int deflateData(
 
          compressedBytes = CHUNK_SZ - d_zstrm.avail_out;
          if(compressedBytes == 0) {
-              log_debug_1("\n Unable to compress data - truncated");
+              log_debug("\n Unable to compress data - truncated");
               break;
          }
 
@@ -1820,7 +1820,7 @@ static int deflateData(
 
           memcpy(dstBuf + savedByteCntr, out, compressedBytes);
           savedByteCntr = compressedByteCounter;
-          log_debug_1(" aval_in [%ld] after deflate.. inlen[%ld] compBytes [%ld]", d_zstrm.avail_in, inLen, compressedBytes);
+          log_debug(" aval_in [%ld] after deflate.. inlen[%ld] compBytes [%ld]", d_zstrm.avail_in, inLen, compressedBytes);
          if(d_zstrm.avail_in > 0){
           int ret1;
             memmove(in, d_zstrm.next_in, d_zstrm.avail_in);

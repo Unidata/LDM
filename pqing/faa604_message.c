@@ -161,15 +161,15 @@ get_faa604_message(xbuf *buf, faa604_message *mess)
 	/* DEBUG */
 	if(mess->msg == NULL || mess->msg[0] != SOH)
 	{
-		log_debug_1("new_faa604_message: Missing SOH");
+		log_debug("new_faa604_message: Missing SOH");
 	}
 	else if(mess->len < MIN_FAA604_MSG_LEN)
 	{
-		log_debug_1("new_faa604_message: length %d too short", mess->len);
+		log_debug("new_faa604_message: length %d too short", mess->len);
 	}
 	else if(mess->msg[mess->len-1] != ETX )
 	{
-		log_debug_1("new_faa604_message: Missing ETX");
+		log_debug("new_faa604_message: Missing ETX");
 	}
 
 	if( get_wnum(clone, &mess->seqno, 3) == EOB || mess->seqno < 1)
@@ -301,7 +301,7 @@ scan_faa604_parity (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug_1("Resync skipped %05ld bytes",
+				log_debug("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 			case HEADER_SEEN:
@@ -394,7 +394,7 @@ scan_faa604 (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug_1("Resync skipped %05ld bytes",
+				log_debug("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 			case HEADER_SEEN:

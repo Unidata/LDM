@@ -134,7 +134,7 @@ process_prod(
              lengrib = (((((b1 << 8) + b2) << 8) + b3 ) << 8 ) + b4;
              (void)grib2name(cpos, lengrib, PROD_NAME, &psh->metadata[2],
                      sizeof(psh->metadata)-2);
-             log_debug_1("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata);
+             log_debug("%d PRODname %s meta %s",psh->metaoff,PROD_NAME,psh->metadata);
         }
     }
 
@@ -238,12 +238,12 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
     nfrags = 1;
   bsize = (nfrags * dbsize) + 32;
 
-  log_debug_1("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
+  log_debug("heap allocate %ld  [%ld %ld] bytes\0", bsize, nfrags, dbsize);
   if (*heap == NULL)
     {
       newheap = (char *) malloc (bsize);
       largestsiz = bsize;
-      log_debug_1("malloc new\0");
+      log_debug("malloc new\0");
     }
   else
     {
@@ -251,7 +251,7 @@ prodalloc (long int nfrags, long int dbsize, char **heap)
 	{
 	  newheap = (char *) realloc (*heap, bsize);
 	  largestsiz = bsize;
-	  log_debug_1("remalloc\0");
+	  log_debug("remalloc\0");
 	}
       else
 	newheap = *heap;

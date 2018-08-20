@@ -105,11 +105,11 @@ nbs_status_t nbsl_recv(
     else {
         stats_io_returned(&nbsl->stats, nbytes);
         static unsigned long iframe;
-        log_debug_1("Read %zd-byte frame %lu", nbytes, iframe++);
+        log_debug("Read %zd-byte frame %lu", nbytes, iframe++);
         status = nbst_recv(nbsl->nbst, nbsl->frame_buf, nbytes);
         if (status == NBS_STATUS_INVAL || status == NBS_STATUS_UNSUPP ||
                 status == NBS_STATUS_NOSTART) {
-            log_debug_1("Discarding frame");
+            log_debug("Discarding frame");
             status = 0;
         }
     }
@@ -305,7 +305,7 @@ nbs_status_t nbsl_send(
         static unsigned long iframe = 0;
         for (int i = 0; i < iocnt; i++)
             nbytes += iovec[i].iov_len;
-        log_debug_1("Writing %zd-byte frame %lu", nbytes, iframe++);
+        log_debug("Writing %zd-byte frame %lu", nbytes, iframe++);
         status = writev(nbsl->fd_send, iovec, iocnt);
         if (status == nbytes) {
             stats_io_returned(&nbsl->stats, nbytes);

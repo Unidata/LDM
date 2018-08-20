@@ -131,7 +131,7 @@ mldm_getServerPorts(const int pipe)
             status = LDM7_LOGIC;
         }
         else {
-            log_debug_1("Port numbers read from pipe");
+            log_debug("Port numbers read from pipe");
             status = LDM7_OK;
         }
     }
@@ -148,7 +148,7 @@ mldm_getServerPorts(const int pipe)
             status = LDM7_LOGIC;
         }
         else {
-            log_debug_1("Port numbers read from pipe");
+            log_debug("Port numbers read from pipe");
             status = LDM7_OK;
         }
     }
@@ -207,7 +207,7 @@ mldm_exec(
         args[i++] = arg;
     }
 
-    if (log_is_enabled_info)
+    //if (log_is_enabled_info)
         args[i++] = "-v";
     if (log_is_enabled_debug)
         args[i++] = "-x";
@@ -319,6 +319,8 @@ failure:
  * Terminates the multicast LDM sender process and waits for it to terminate.
  *
  * Idempotent.
+ *
+ * @pre                 `childPid` is set
  * @retval LDM7_OK      Success
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
@@ -371,8 +373,9 @@ mldm_terminateSenderAndReap()
 
 /**
  * Handles a just-executed multicast LDM child process.
+ *
+ * @pre                     `childPid` is set
  * @param[in] info          Multicast information
- * @param[in] pid           Process identifier of child process.
  * @param[in] fds           Pipe to child process
  * @retval    0             Success
  * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
@@ -381,12 +384,10 @@ mldm_terminateSenderAndReap()
 static Ldm7Status
 mldm_handleExecedChild(
         McastInfo* const restrict info,
-        const pid_t               pid,
         const int* restrict       fds)
 {
     int status;
 
-    childPid = pid;
     (void)close(fds[1]);                // write end of pipe unneeded
 
     // Sets `fmtpSrvrPort` and `mldmCmdPort`
@@ -398,10 +399,9 @@ mldm_handleExecedChild(
         log_add("Couldn't get port numbers from multicast LDM sender "
                 "%s. Terminating that process.", id);
         free(id);
-        (void)mldm_terminateSenderAndReap(); // Uses `childPid`
     }
     else {
-        status = msm_put(info->feed, pid, fmtpSrvrPort, mldmCmdPort);
+        status = msm_put(info->feed, childPid, fmtpSrvrPort, mldmCmdPort);
 
         if (status) {
             // preconditions => LDM7_DUP can't be returned
@@ -409,12 +409,8 @@ mldm_handleExecedChild(
             log_add("Couldn't save information on multicast LDM sender "
                     "%s. Terminating that process.", id);
             free(id);
-            (void)mldm_terminateSenderAndReap(); // Uses `childPid`
         } // Information saved in multicast sender map
     } // FMTP server port and mldm_sender command port set
-
-    if (status)
-        childPid = 0;
 
     return status;
 }
@@ -436,6 +432,7 @@ mldm_handleExecedChild(
  * @param[in]     pqPathname     Pathname of product-queue. Caller may free.
  * @retval        0              Success. `childPid`, `fmtpSrvrPort`, and
  *                               `mldmCmdPort` are set.
+ * @retval        LDM7_LOGIC     Logic error. `log_add()` called.
  * @retval        LDM7_SYSTEM    System error. `log_add()` called.
  */
 static Ldm7Status
@@ -476,7 +473,13 @@ mldm_spawn(
         }
         else {
             /* Parent process */
-            status = mldm_handleExecedChild(info, pid, fds);
+            childPid = pid;
+            status = mldm_handleExecedChild(info, fds); // Uses `childPid`
+
+            if (status) {
+                (void)mldm_terminateSenderAndReap(); // Uses `childPid`
+                childPid = 0;
+            }
         } // Parent process
     } // Pipe created
 
@@ -501,6 +504,7 @@ mldm_spawn(
  *                          `mldm_getFmtpSrvrPort()` will return the port number
  *                          of the FMTP server of the multicast LDM sender
  *                          process.
+ * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
@@ -526,7 +530,7 @@ mldm_ensureRunning(
             if (msm_get(info->feed, &childPid, &fmtpSrvrPort, &mldmCmdPort) ==
                     0) {
                 if (kill(childPid, 0)) {
-                    log_warning_1("Multicast LDM sender process %d should "
+                    log_warning("Multicast LDM sender process %d should "
                             "exist but doesn't. Re-executing...", childPid);
                     childPid = 0;
                 }
@@ -848,6 +852,7 @@ me_compareOrConflict(
  *                              successfully started. `entry->info.server.port`
  *                              is set to the port number of the FMTP TCP
  *                              server.
+ * @retval         LDM7_LOGIC   Logic error. `log_add()` called.
  * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
@@ -887,8 +892,14 @@ me_reserve(
     else {
         status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
 
-        if (status)
+        if (status) {
             log_add("Couldn't reserve IP address for remote FMTP layer");
+        }
+        else {
+            char buf[80];
+            log_notice("Reserved IP address %s for remote FMTP",
+                    inet_ntop(AF_INET, downFmtpAddr, buf, sizeof(buf)));
+        }
 
         mldmClnt_free(mldmClnt);
     }

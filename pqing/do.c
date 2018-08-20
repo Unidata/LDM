@@ -50,7 +50,7 @@ for(i=j;i>=0;i--)
          log_error_q("Error in peek_ahead unnext: %d %d\0",ic[i],k);
       }
    if(isstart == 0)
-      log_debug_1("Peek_ahead check %d %d\0",i,ic[i]);
+      log_debug("Peek_ahead check %d %d\0",i,ic[i]);
    }
 
 if(isstart)
@@ -145,7 +145,7 @@ int peek_ahead(xbuf *buf);
 		state	= SOH_;
 	    } else {
 		if (CR != ch && NL != ch) {
-		    log_debug_1("garbage encountered while searching for header");
+		    log_debug("garbage encountered while searching for header");
 		}
 		state	= SEARCH;
 	    }
@@ -319,12 +319,12 @@ scan_wmo_parity (xbuf * buf)
 		case SOH:	
 			switch (state) {
 			case SKIP:
-				log_debug_1("Resync skipped %05ld bytes",
+				log_debug("Resync skipped %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 #if 0
 			case SEARCH:
-				log_debug_1("Search %05ld bytes",
+				log_debug("Search %05ld bytes",
 					(long) (buf->get - buf->base) - 1);
 				break;
 #endif

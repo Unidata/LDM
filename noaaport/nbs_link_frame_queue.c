@@ -49,7 +49,7 @@ nbs_status_t nbsl_recv(
     else {
         status = nbst_recv(nbsl->nbst, buf, nbytes);
         if (status == NBS_STATUS_INVAL || status == NBS_STATUS_UNSUPP) {
-            log_debug_1("Discarding frame");
+            log_debug("Discarding frame");
             status = 0;
         }
         (void)fq_remove(nbsl->fq_up);

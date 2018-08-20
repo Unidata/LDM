@@ -801,7 +801,7 @@ read_file(pqueue *pq,
 /* how we handle this depends on the size */
 
         (void)fstat(fd, &f_stat);
-        log_debug_1("read_file: File size is %d", f_stat.st_size);
+        log_debug("read_file: File size is %d", f_stat.st_size);
 
         if (f_stat.st_size <= DBUFMAX) {                    /* small product */
             prodrec->info.sz = f_stat.st_size;
@@ -1013,7 +1013,7 @@ big_product(pqueue      *pq,
             }
 
             (void)fstat(fd, &f_stat); /* we need the file size */
-            log_debug_1("big_product: File size is %d", f_stat.st_size);
+            log_debug("big_product: File size is %d", f_stat.st_size);
 
             if ((prod_cnt + f_stat.st_size) > prod_sz) {  /* file is too big */
                 log_error_q("Product exceeds allocated size: input aborted");
@@ -1153,7 +1153,7 @@ display_product(pqueue          *pq,
             break;
 
         case PQUEUE_END:
-            log_debug_1("End of queue");
+            log_debug("End of queue");
             return;
             break;
 
@@ -1246,7 +1246,7 @@ watch_queue(pqueue      *pq,
                         if (status == 0)
                             continue;
                         else if (status == PQUEUE_END){
-                            log_debug_1("End of queue");
+                            log_debug("End of queue");
                             break;
                         }
                         else {
@@ -1268,7 +1268,7 @@ watch_queue(pqueue      *pq,
                 if (status == 0)
                     continue;
                 else if (status == PQUEUE_END){
-                    log_debug_1("End of queue");
+                    log_debug("End of queue");
                     break;
                 }
                 else {
@@ -1312,7 +1312,7 @@ rm_prod(pqueue          *pq,
             break;
 
         case PQUEUE_END:
-            log_debug_1("End of queue");
+            log_debug("End of queue");
             return;
             break;
 
@@ -1505,7 +1505,7 @@ main(int argc, char *argv[])
             }
             exit(EXIT_FAILURE);
         }
-        log_debug_1("pq_open: %s: Success\n", path);
+        log_debug("pq_open: %s: Success\n", path);
     }
 
     else {                                               /* create new queue */
@@ -1515,7 +1515,7 @@ main(int argc, char *argv[])
             log_error_q("pq_create: %s: %s\n", path, strerror(status));
             exit(EXIT_FAILURE);
         }
-        log_debug_1("pq_create: %s: Success\n", path);
+        log_debug("pq_create: %s: Success\n", path);
     }
 
 /* initialize options */

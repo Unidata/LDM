@@ -62,8 +62,8 @@ static void decodeCommand(
 
 static void usage()
 {
-    log_notice_1("Usage: %s <seconds>", log_get_id());
-    log_notice_1("where: <seconds>  Number of seconds to delay each line. "
+    log_notice("Usage: %s <seconds>", log_get_id());
+    log_notice("where: <seconds>  Number of seconds to delay each line. "
             "May be floating-point.", log_get_id());
 }
 

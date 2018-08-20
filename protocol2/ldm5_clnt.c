@@ -238,7 +238,7 @@ retry:
         case RPC_SUCCESS:
                 /* call succeeded, can use the reply */
                 if (log_is_enabled_debug)
-                    log_debug_1("%s(%s) returns %s",
+                    log_debug("%s(%s) returns %s",
                              s_ldmproc(proc), remote, s_ldm_errt(reply.code));
                 break;
 

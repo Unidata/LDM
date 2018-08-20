@@ -347,13 +347,13 @@ int main(
         case 0: /* no error */
             continue;                   /* N.B., other cases sleep */
         case PQUEUE_END:
-            log_debug_1("End of Queue");
+            log_debug("End of Queue");
             done = 1;
             status = 0;
             break;
         case EAGAIN:
         case EACCES:
-            log_debug_1("Hit a lock");
+            log_debug("Hit a lock");
             return 1;
             break;
         default:

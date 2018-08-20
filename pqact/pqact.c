@@ -649,7 +649,7 @@ main(int ac, char *av[])
                  * No data-product was processed.
                  */
                 if (status == PQUEUE_END) {
-                    log_debug_1("End of Queue");
+                    log_debug("End of Queue");
 
                     if (interval == 0)
                         break;
@@ -660,7 +660,7 @@ main(int ac, char *av[])
                     fl_sync(FALSE);
                 }
                 else if (status == EAGAIN || status == EACCES) {
-                    log_debug_1("Hit a lock");
+                    log_debug("Hit a lock");
                     /*
                      * Close the least recently used file descriptor.
                      */

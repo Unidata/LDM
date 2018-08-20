@@ -207,9 +207,9 @@ int log_set_facility(
         const int facility)
 {
     logl_lock();
-    const char* const id = getulogident();
-    const unsigned    options = ulog_get_options();
-    int               status = openulog(id, options, facility, log_dest);
+        const char* const id = getulogident();
+        const unsigned    options = ulog_get_options();
+        int               status = openulog(id, options, facility, log_dest);
     logl_unlock();
     return status == -1 ? -1 : 0;
 }
@@ -224,7 +224,7 @@ int log_set_facility(
 int log_get_facility(void)
 {
     logl_lock();
-    int facility = getulogfacility();
+        int facility = getulogfacility();
     logl_unlock();
     return facility;
 }
@@ -237,7 +237,7 @@ int log_get_facility(void)
 const char* log_get_id(void)
 {
     logl_lock();
-    const char* const id = getulogident();
+        const char* const id = getulogident();
     logl_unlock();
     return id;
 }
@@ -257,7 +257,7 @@ void log_set_options(
         const unsigned options)
 {
     logl_lock();
-    ulog_set_options(~0u, options);
+        ulog_set_options(~0u, options);
     logl_unlock();
 }
 
@@ -276,7 +276,7 @@ void log_set_options(
 unsigned log_get_options(void)
 {
     logl_lock();
-    const unsigned opts = ulog_get_options();
+        const unsigned opts = ulog_get_options();
     logl_unlock();
     return opts;
 }

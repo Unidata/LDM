@@ -110,7 +110,7 @@ run_child(int argc, char *argv[])
                         nbytes = strlen(argv[ii]);
                         left -= (nbytes <= left) ? nbytes : left;
                 }
-                log_debug_1("exec'ing: \"%s\"", command);
+                log_debug("exec'ing: \"%s\"", command);
         }
 
         pid = ldmfork();
@@ -166,7 +166,7 @@ doOne(const prod_info *infop, const void *datap)
         int status = ENOERR;
 
         if(log_is_enabled_debug)
-                log_debug_1("%s", s_prod_info(NULL, 0, infop, 1));
+                log_debug("%s", s_prod_info(NULL, 0, infop, 1));
         
         prod.info = *infop;
         prod.data = (void *)datap; /* cast away const */
@@ -340,7 +340,7 @@ reap_act(int options)
                                     log_notice_q("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             else
-                                    log_debug_1("child %d exited with status %d",
+                                    log_debug("child %d exited with status %d",
                                             wpid, WEXITSTATUS(status));
                             act_pid = -1;
                             exit(WEXITSTATUS(status));
@@ -497,7 +497,7 @@ expire(pqueue *epq, const unsigned interval, const double age)
         if(d_diff_timestamp(&now, &eclss.to) < interval + age)
         {
                 /* only run this routine every interval seconds */
-                log_debug_1("not yet");
+                log_debug("not yet");
                 return ENOERR;
         }
         /* else */
@@ -508,7 +508,7 @@ expire(pqueue *epq, const unsigned interval, const double age)
         {
                 char cp[64];
                 sprint_timestampt(cp, sizeof(cp), &eclss.to);
-                log_debug_1("to %s", cp);
+                log_debug("to %s", cp);
         }
 
         pq_cset(epq, &TS_ZERO);
@@ -525,27 +525,27 @@ expire(pqueue *epq, const unsigned interval, const double age)
                         if(diff > max_latency)
                         {
                                 max_latency = diff;
-                                log_debug_1("max_latency %.3f", max_latency);
+                                log_debug("max_latency %.3f", max_latency);
                         }
                         
                         if(nr == 0)
                         {
                                 diff = d_diff_timestamp(&cursor, &eclss.to);
-                                log_debug_1("diff %.3f", diff);
+                                log_debug("diff %.3f", diff);
                                 if(diff > interval + max_latency)
                                 {
-                                        log_debug_1("heuristic depth break");
+                                        log_debug("heuristic depth break");
                                         break;
                                 }
 
                         }
                         continue; /* N.B., other cases break and return */
                 case PQUEUE_END:
-                        log_debug_1("expire: End of Queue");
+                        log_debug("expire: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                         break;
 #if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
                 case EDEADLOCK:
@@ -823,11 +823,11 @@ int main(int ac, char *av[])
                 case 0: /* no error */
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug_1("surf: End of Queue");
+                        log_debug("surf: End of Queue");
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                         break;
                 default:
                         log_errno_q(status, "pq_sequence failed");

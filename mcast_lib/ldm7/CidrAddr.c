@@ -25,7 +25,7 @@ cidrAddr_init(
         const in_addr_t addr,
         const SubnetLen subnetLen)
 {
-    if (subnetLen >= 32) {
+    if (subnetLen > 32) {
         log_add("Too many bits in network prefix: %u", subnetLen);
         return false;
     }
@@ -68,9 +68,15 @@ cidrAddr_getPrefixLen(const CidrAddr* cidrAddr)
 }
 
 in_addr_t
-cidrAddr_getSubnet(const CidrAddr* cidrAddr)
+cidrAddr_getSubnetMask(const CidrAddr* cidrAddr)
 {
     return htonl(~((1 << (32 - cidrAddr->prefixLen)) - 1));
+}
+
+in_addr_t
+cidrAddr_getSubnet(const CidrAddr* cidrAddr)
+{
+    return cidrAddr_getSubnetMask(cidrAddr) & cidrAddr->addr;
 }
 
 bool
@@ -78,7 +84,7 @@ cidrAddr_isMember(
         const CidrAddr* cidrAddr,
         const in_addr_t addr)
 {
-    in_addr_t mask = cidrAddr_getSubnet(cidrAddr);
+    in_addr_t mask = cidrAddr_getSubnetMask(cidrAddr);
     return (mask & addr) == (mask & cidrAddr->addr);
 }
 
@@ -93,7 +99,10 @@ cidrAddr_copy(
 
 uint32_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr)
 {
-    return (1 << (32 - cidrAddr->prefixLen)) - 2;
+    // Don't count network address or broadcast address
+    long count = (1 << (32 - cidrAddr->prefixLen)) - 2;
+
+    return count > 0 ? count : 0;
 }
 
 CidrAddr*

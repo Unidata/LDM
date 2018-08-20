@@ -161,7 +161,7 @@ while ( ( DONE == 0 ) && ( start < ( nbytes - 4 ) ) ) /* ensure that get_block w
    {
    get_block(buf+start,&FF,&blen,&mode,&submode); 
 
-   log_debug_1("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
+   log_debug("redbook: get_block start %d FF %d blen %d mode %d submode %d\0",start,FF,blen,mode,submode);
 
    if ( ( FF != 1 ) || ( blen <= 0 ) || ( nbytes < (start + blen*2) ) )
       {

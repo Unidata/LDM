@@ -514,7 +514,7 @@ static nbs_status_t pdh_deserialize(
             status = NBS_STATUS_INVAL;
         }
         else {
-            log_debug_1("bin->pdh_length=%"PRIuFAST32, bin->pdh_length);
+            log_debug("bin->pdh_length=%"PRIuFAST32, bin->pdh_length);
             bin->trans_type = buf[1];
             bin->psh_length = decode_uint16(buf+2) - bin->pdh_length;
             bin->block_num = decode_uint16(buf+4);
@@ -539,7 +539,7 @@ static nbs_status_t pdh_deserialize(
             }
             if (status == 0) {
                 if (log_is_enabled_debug)
-                    log_debug_1("pdh=%s", pdh_format(pdh));
+                    log_debug("pdh=%s", pdh_format(pdh));
                 *nscanned = bin->pdh_length;
             }
         }
@@ -931,7 +931,7 @@ static nbs_status_t psh_deserialize(
                 char string[512];
                 (void)psh_format(psh, string, sizeof(string));
                 string[sizeof(string)-1] = 0;
-                log_debug_1("psh=%s", string);
+                log_debug("psh=%s", string);
             }
             *nscanned = n;
             status = 0;

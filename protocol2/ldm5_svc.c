@@ -40,7 +40,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
 
         switch (rqstp->rq_proc) {
         case NULLPROC:
-                log_debug_1("NULLPROC");
+                log_debug("NULLPROC");
                 (void)svc_sendreply(transp, (xdrproc_t) xdr_void, (char *)NULL);
                 return;
 
@@ -98,7 +98,7 @@ ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp)
                 return;
          }
 
-        log_debug_1("%s", procName);
+        log_debug("%s", procName);
         (void) memset((void *)&argument, 0, sizeof (argument));
         if (!svc_getargs(transp, xdr_argument, (void*) &argument)) {
                 log_notice_q("%s: Couldn't decode RPC-request arguments",

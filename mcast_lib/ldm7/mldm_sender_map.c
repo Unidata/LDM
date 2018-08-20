@@ -221,7 +221,7 @@ msm_setSmoPathname(void)
 Ldm7Status
 msm_init(void)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     int status;
 
@@ -258,7 +258,7 @@ msm_init(void)
         } // `smo_pathname` set
     } // module not initialized
 
-    log_debug_1("Returning");
+    log_debug("Returning");
     return status;
 }
 
@@ -270,7 +270,7 @@ msm_init(void)
 void
 msm_destroy(void)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
 
     if (smo_pathname) {
         smo_close(fileDes, smo_pathname);
@@ -278,7 +278,7 @@ msm_destroy(void)
         smo_pathname = NULL;
     }
 
-    log_debug_1("Returning");
+    log_debug("Returning");
 }
 
 /**

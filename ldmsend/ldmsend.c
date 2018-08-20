@@ -449,7 +449,7 @@ main(
             : CONNECTION_ABORTED;
     }
     else {
-        log_debug_1("version %u", lp_version(ldmProxy));
+        log_debug("version %u", lp_version(ldmProxy));
 
         status = ldmsend(ldmProxy, &clss, myname, seq_start, ac, av);
 

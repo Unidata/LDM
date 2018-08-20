@@ -226,7 +226,7 @@ scan_afos(xbuf *buf)
 				{
 	      				/* missing trailer */
 					nnnn_missed++;
-					log_debug_1("Missing NNNN trailer");
+					log_debug("Missing NNNN trailer");
 					afos_send_buf(buf, 4);
 					sent = 1;
 	     			}
@@ -243,7 +243,7 @@ scan_afos(xbuf *buf)
 				{
 					/* missing header */
 					zczc_missed++;
-					log_debug_1("Missing ZCZC header");
+					log_debug("Missing ZCZC header");
 				}
 				afos_send_buf(buf, 0);
 				sent = 1;

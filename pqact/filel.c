@@ -345,7 +345,7 @@ dump_fl(void)
     fl_entry *entry;
     int fd;
 
-    log_debug_1("thefl->size %d", thefl->size);
+    log_debug("thefl->size %d", thefl->size);
     for(entry = thefl->head; entry != NULL;
             entry = entry->next )
     {
@@ -370,7 +370,7 @@ dump_fl(void)
         default :
             fd = -2;
         }
-        log_debug_1("%d %s", fd, entry->path);
+        log_debug("%d %s", fd, entry->path);
     }
 }
 #endif
@@ -924,17 +924,17 @@ static void *stripHeaders (const void *data, size_t *sz) {
 	    !memcmp (&dptr[7], "\040\015\015\012", 4))) {
 		dptr += SIZE_SBN_HDR;
 		*sz -= (SIZE_SBN_HDR + SIZE_SBN_TLR);
-		log_debug_1("Stripping LDM header/trailer");
+		log_debug("Stripping LDM header/trailer");
 	}
 
 	if ((wmo_offset = getWmoOffset (dptr, slen, &wmo_len)) >= 0) {
 		dptr += (wmo_offset + wmo_len);
 		*sz -= (wmo_offset + wmo_len);
 
-		log_debug_1("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
+		log_debug("Stripping WMO header at offset %d, length %d with initial product size %d and final product size %d",
 			wmo_offset, wmo_len, isz, *sz);
 	} else {
-		log_debug_1("WMO header not found in product with length %d", *sz);
+		log_debug("WMO header not found in product with length %d", *sz);
 	}
 
 	return (void *) dptr;
@@ -1028,7 +1028,7 @@ static int unio_open(
             strncpy(entry->path, path, PATH_MAX);
             entry->path[PATH_MAX - 1] = 0; /* just in case */
 
-            log_debug_1("%d %s", entry->handle.fd, entry->path);
+            log_debug("%d %s", entry->handle.fd, entry->path);
         } /* output-file set to close_on_exec */
 
         if (status) {
@@ -1043,7 +1043,7 @@ static int unio_open(
 static void unio_close(
         fl_entry *entry)
 {
-    log_debug_1("%d", entry->handle.fd);
+    log_debug("%d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
             log_syserr_q("close: %s", entry->path);
@@ -1057,7 +1057,7 @@ static int unio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug_1("%d %s", entry->handle.fd, block ? "" : "non-block");
+    log_debug("%d %s", entry->handle.fd, block ? "" : "non-block");
 
     if (0 == fsync(entry->handle.fd)) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -1084,7 +1084,7 @@ static int unio_put(
 {
     if (sz) {
         TO_HEAD(entry);
-        log_debug_1("handle: %d size: %d", entry->handle.fd, sz);
+        log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
@@ -1282,7 +1282,7 @@ int unio_prodput(
     fl_entry	*entry = fl_getEntry(UNIXIO, argc, argv, NULL);
     char	must_free_data = 0;
 
-    log_debug_1("%d %s", entry == NULL ? -1 : entry->handle.fd,
+    log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
     prodp->info.ident);
 
     if (entry == NULL ) {
@@ -1462,7 +1462,7 @@ static int stdio_open(
 
                 strncpy(entry->path, path, PATH_MAX);
                 entry->path[PATH_MAX - 1] = 0; /* just in case */
-                log_debug_1("%d", fileno(entry->handle.stream));
+                log_debug("%d", fileno(entry->handle.stream));
                 status = 0;
             } /* entry->handle.stream allocated */
         } /* output-file set to close-on-exec */
@@ -1479,7 +1479,7 @@ static int stdio_open(
 static void stdio_close(
         fl_entry *entry)
 {
-    log_debug_1("%d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
@@ -1494,7 +1494,7 @@ static int stdio_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug_1("%d",
+    log_debug("%d",
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
 
     if (fflush(entry->handle.stream) == EOF) {
@@ -1519,7 +1519,7 @@ static int stdio_put(
         const void *data,
         size_t sz)
 {
-    log_debug_1("%d", fileno(entry->handle.stream));
+    log_debug("%d", fileno(entry->handle.stream));
     TO_HEAD(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
@@ -1553,7 +1553,7 @@ int stdio_prodput(
     fl_entry*	entry = fl_getEntry(STDIO, argc, argv, NULL);
     char	must_free_data = 0;
 
-    log_debug_1("%d %s",
+    log_debug("%d %s",
             entry == NULL ? -1 : fileno(entry->handle.stream), prodp->info.ident);
 
     if (entry != NULL ) {
@@ -1832,7 +1832,7 @@ static int pipe_open(
                         writeFd = pfd[1]; /* success */
 
                         argcat(entry->path, PATH_MAX - 1, argc, argv);
-                        log_debug_1("%d %d", writeFd, pid);
+                        log_debug("%d %d", writeFd, pid);
                     }
                 } /* parent process */
             } /* fork() success */
@@ -1851,7 +1851,7 @@ static int pipe_sync(
         fl_entry *entry,
         int block)
 {
-    log_debug_1("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
+    log_debug("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
 
     int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
 
@@ -1878,7 +1878,7 @@ static void pipe_close(
     pid_t pid = (pid_t) entry->private;
     int pfd = -1;
 
-    log_debug_1("%d, %d",
+    log_debug("%d, %d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1, pid);
     if (entry->handle.pbuf != NULL ) {
         if (pid >= 0 && entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
@@ -1913,7 +1913,7 @@ static int pipe_put(
 {
     int status;
 
-    log_debug_1("%d",
+    log_debug("%d",
             entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
@@ -2152,7 +2152,7 @@ int pipe_prodput(
         status = -1;
     }
     else {
-        log_debug_1("%d %s",
+        log_debug("%d %s",
                 entry->handle.pbuf ? entry->handle.pbuf->pfd : -1,
                 prodp->info.ident);
 
@@ -2243,7 +2243,7 @@ int spipe_prodput(
     conv sync;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug_1("%d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2315,7 +2315,7 @@ int spipe_prodput(
     buffer[len - 2] = SPIPE_ETX;
     buffer[len - 1] = SPIPE_RS;
 
-    log_debug_1("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
+    log_debug("size = %d\t%d %d %d", prod->info.sz, buffer[len - 3],
             buffer[len - 2], buffer[len - 1]);
 
     /*---------------------------------------------------------
@@ -2356,7 +2356,7 @@ int xpipe_prodput(
     fl_entry *entry;
 
     entry = fl_getEntry(PIPE, argc, argv, NULL);
-    log_debug_1("%d %s",
+    log_debug("%d %s",
             (entry != NULL && entry->handle.pbuf) ? entry->handle.pbuf->pfd : -1,
                     prod->info.ident);
     if (entry == NULL )
@@ -2460,14 +2460,14 @@ static int ldmdb_open(
     entry->private = read_write;
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX - 1] = 0; /* just in case */
-    log_debug_1("%s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void ldmdb_close(
         fl_entry *entry)
 {
-    log_debug_1("%s", entry->path);
+    log_debug("%s", entry->path);
     if (entry->handle.db != NULL )
         gdbm_close(entry->handle.db);
     entry->private = 0;
@@ -2510,7 +2510,7 @@ static int ldmdb_sync(
         int block)
 {
     /* there is no gdbm_sync */
-    log_debug_1("%s", entry->handle.db ? entry->path : "");
+    log_debug("%s", entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return (0);
 }
@@ -2545,7 +2545,7 @@ static int ldmdb_put(
         int size;
         datum old_stuff, new_stuff;
         old_stuff = gdbm_fetch(entry->handle.db, key);
-        log_debug_1("\tConcatenating data under key %s", key.dptr);
+        log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr) {
             log_syserr_q("Inconsistent Duplicate Key storage");
             return -1;
@@ -2628,14 +2628,14 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     }
     strncpy(entry->path, path, PATH_MAX);
     entry->path[PATH_MAX-1] = 0; /* just in case */
-    log_debug_1("%s", entry->path);
+    log_debug("%s", entry->path);
     return 0;
 }
 
 static void
 ldmdb_close(fl_entry *entry)
 {
-    log_debug_1("%s", entry->path);
+    log_debug("%s", entry->path);
     if(entry->handle.db != NULL)
         dbm_close(entry->handle.db);
     entry->private = 0;
@@ -2653,7 +2653,7 @@ static int
 ldmdb_sync(fl_entry *entry, int block)
 {
     /* there is no dbm_sync */
-    log_debug_1("%s",
+    log_debug("%s",
             entry->handle.db ? entry->path : "");
     entry_unsetFlag(entry, FL_NEEDS_SYNC);
     return(0);
@@ -2688,7 +2688,7 @@ ldmdb_put(fl_entry *entry, const char *keystr,
         int size;
         datum old_stuff, new_stuff;
         old_stuff = dbm_fetch(entry->handle.db, key);
-        log_debug_1("\tConcatenating data under key %s", key.dptr);
+        log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr)
         {
             log_syserr_q("Inconsistent Duplicate Key storage");
@@ -2760,7 +2760,7 @@ int ldmdb_prodput(
             argv[argc++] = dblocksizep;
         argv[argc] = NULL;
         entry = fl_getEntry(FT_DB, argc, argv, NULL);
-        log_debug_1("%s %s", entry == NULL ? "" : entry->path,
+        log_debug("%s %s", entry == NULL ? "" : entry->path,
                 prod->info.ident);
         if (entry == NULL )
             return -1;

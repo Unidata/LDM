@@ -165,18 +165,18 @@ readerStart(
         if (status) {
             if (3 == status) {
                 // FIFO was closed
-                log_debug_1("FIFO was closed");
+                log_debug("FIFO was closed");
                 log_clear();
                 status = 1;
             }
             else {
-                log_debug_1("fifo_readFd() failure");
+                log_debug("fifo_readFd() failure");
                 status = 2;
             }
             break;
         }
         if (0 == nbytes) {
-            log_debug_1("FIFO EOF");
+            log_debug("FIFO EOF");
             break; // EOF
         }
 

@@ -674,12 +674,12 @@ int log_set_facility(
     }
     else {
         logl_lock();
-        syslog_facility = facility;
-        /*
-         * The destination is re-initialized in case it's the system logging
-         * daemon.
-         */
-        status = dest_set();
+            syslog_facility = facility;
+            /*
+             * The destination is re-initialized in case it's the system logging
+             * daemon.
+             */
+            status = dest_set();
         logl_unlock();
     }
     return status;
@@ -695,7 +695,7 @@ int log_set_facility(
 int log_get_facility(void)
 {
     logl_lock();
-    int facility = syslog_facility;
+        int facility = syslog_facility;
     logl_unlock();
     return facility;
 }
@@ -708,7 +708,7 @@ int log_get_facility(void)
 const char* log_get_id(void)
 {
     logl_lock(); // For visibility of changes
-    const char* const id = ident;
+        const char* const id = ident;
     logl_unlock();
     return id;
 }
@@ -729,10 +729,10 @@ void log_set_options(
         const unsigned options)
 {
     logl_lock();
-    syslog_options = options;
-    // The destination is re-initialized in case it's the system logging daemon.
-    int status = dest_set();
-    logl_assert(status == 0);
+        syslog_options = options;
+        // The destination is re-initialized in case it's the system logging daemon.
+        int status = dest_set();
+        logl_assert(status == 0);
     logl_unlock();
 }
 
@@ -751,7 +751,7 @@ void log_set_options(
 unsigned log_get_options(void)
 {
     logl_lock(); // For visibility of changes
-    const int opts = syslog_options;
+        const int opts = syslog_options;
     logl_unlock();
     return opts;
 }

@@ -46,7 +46,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
       log_info_q("%s %d\0",psh->pname, bufsz);
 
    if ( zflag ) {
-      log_debug_1("compressed file %d\0",wmocnt+1);
+      log_debug("compressed file %d\0",wmocnt+1);
       if( npunz ( buf + wmocnt + 1, &i, &ioff ) != 0) {
          pdb->platform = 0;
          pdb->channel = 0;
@@ -119,7 +119,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
    b1 = (unsigned char)wbuf[14];
    pdb->sechunds = b1;
 
-   log_debug_1("look time %04d%02d%02d %02d%02d %02d.%02d\0",
+   log_debug("look time %04d%02d%02d %02d%02d %02d.%02d\0",
       pdb->year,pdb->month,pdb->day,pdb->hour,pdb->minute,pdb->second,pdb->sechunds);
 
    b1 = (unsigned char)wbuf[16];

@@ -92,7 +92,7 @@ typedef struct {
 #define                  NUM_TIMES 2
 // Duration, in nanoseconds, before the next product is inserted (i.e., gap
 // duration)
-#define                  INTER_PRODUCT_INTERVAL 50000000 // 50 ms
+#define                  INTER_PRODUCT_INTERVAL 500000000 // 500 ms
 /*
  * Mean residence-time, in seconds, of a data-product. Also used to compute the
  * FMTP retransmission timeout.
@@ -432,7 +432,7 @@ myUp7_run(
      * - Creating and using the function `up7_isDone()`. This was chosen.
      */
     for (;;) {
-        log_debug_1("myUp7_run(): Calling poll()");
+        log_debug("myUp7_run(): Calling poll()");
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
         if (0 > status) {
@@ -442,7 +442,7 @@ myUp7_run(
 
         CU_ASSERT_TRUE_FATAL(fds.revents & POLLRDNORM)
 
-        log_debug_1("myUp7_run(): Calling svc_getreqsock()");
+        log_debug("myUp7_run(): Calling svc_getreqsock()");
         svc_getreqsock(sock); // Calls `ldmprog_7()`. *Might* destroy `xprt`.
 
         if (!FD_ISSET(sock, &svc_fdset)) {
@@ -473,14 +473,14 @@ terminateMcastSender(void)
     pid_t pid = umm_getMldmSenderPid();
 
     if (pid) {
-        log_debug_1("Sending SIGTERM to multicast LDM sender process");
+        log_debug("Sending SIGTERM to multicast LDM sender process");
         CU_ASSERT_EQUAL_FATAL(kill(pid, SIGTERM), 0);
 
         /* Reap the terminated multicast sender. */
         {
             int status;
 
-            log_debug_1("Reaping multicast sender child process");
+            log_debug("Reaping multicast sender child process");
             const pid_t wpid = waitpid(pid, &status, 0);
 
             CU_ASSERT_EQUAL(wpid, pid);
@@ -555,7 +555,7 @@ sender_run(
     }
 
     log_flush_error();
-    log_debug_1("sender_run(): Returning &%d", status);
+    log_debug("sender_run(): Returning &%d", status);
 
     return 0;
 }
@@ -573,7 +573,7 @@ sender_halt(
 {
     Sender* const sender = (Sender*)arg;
 
-    log_debug_1("Terminating multicast LDM sender");
+    log_debug("Terminating multicast LDM sender");
     terminateMcastSender();
 
     sender_lock(sender);
@@ -771,7 +771,7 @@ sender_start(
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
-    VcEndPoint* vcEnd = vcEndPoint_new(1, "Switch ID", "Port ID");
+    VcEndPoint* vcEnd = vcEndPoint_new(1, "dummy switch ID", "dummy port ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
 
     in_addr_t subnet;
@@ -830,7 +830,7 @@ sender_stop(Sender* const sender)
 
     CU_ASSERT_EQUAL_FATAL(close(sender->sock), 0);
 
-    log_debug_1("Clearing upstream multicast manager");
+    log_debug("Clearing upstream multicast manager");
     CU_ASSERT_EQUAL(umm_clear(), 0);
 
     CU_ASSERT_EQUAL(pq_close(pq), 0);
@@ -900,7 +900,7 @@ requester_decide(
         void* const restrict            arg)
 {
     char infoStr[LDM_INFO_MAX];
-    log_debug_1("Entered: info=\"%s\"",
+    log_debug("Entered: info=\"%s\"",
             s_prod_info(infoStr, sizeof(infoStr), info, 1));
     static FmtpProdIndex maxProdIndex;
     static bool          maxProdIndexSet = false;
@@ -925,7 +925,7 @@ requester_decide(
 
     char buf[2*sizeof(signaturet)+1];
     sprint_signaturet(buf, sizeof(buf), info->signature);
-    log_debug_1("Returning %s: prodIndex=%lu",
+    log_debug("Returning %s: prodIndex=%lu",
             reqArg->delete ? "delete" : "don't delete",
             (unsigned long)prodIndex);
     return 0; // necessary for `pq_sequence()`
@@ -982,7 +982,7 @@ requester_deleteAndRequest(
 static void
 requester_run(Requester* const requester)
 {
-    log_debug_1("requester_run(): Entered");
+    log_debug("requester_run(): Entered");
 
     thread_blockSigTerm();
 
@@ -1015,7 +1015,7 @@ requester_run(Requester* const requester)
 
     // Because end-of-thread
     log_flush_error();
-    log_debug_1("requester_run(): Returning");
+    log_debug("requester_run(): Returning");
 }
 
 static void
@@ -1292,7 +1292,7 @@ test_bad_subscription(
     receiver_stop(&receiver);
     receiver_destroy(&receiver);
 
-    log_debug_1("Terminating sender");
+    log_debug("Terminating sender");
     sender_stop(&sender);
     log_clear();
 }
@@ -1352,11 +1352,11 @@ test_up7_down7(
 
     CU_ASSERT_EQUAL(sleep(2), 0);
 
-    log_debug_1("Stopping receiver");
+    log_debug("Stopping receiver");
     receiver_stop(&receiver);
     receiver_destroy(&receiver);
 
-    log_debug_1("Stopping sender");
+    log_debug("Stopping sender");
     sender_stop(&sender);
 
     lcf_free();

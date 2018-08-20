@@ -222,7 +222,7 @@ static int _shm_bufread(
     else {
         int     got;                    /* count of "buf" bytes */
 
-        log_debug_1("shm_bufread %d", want);
+        log_debug("shm_bufread %d", want);
 
         status = 0;                     /* success */
 
@@ -317,7 +317,7 @@ static int _fd_bufread(
                 idle = 0;
             }
             else {
-                log_debug_1("Idle for %d seconds", idle);
+                log_debug("Idle for %d seconds", idle);
             }
 
             continue;		/* was return(-1) */
@@ -622,17 +622,17 @@ int main(
         if ((b1 = (unsigned char)prodmmap[0]) != 255) {
             if (log_is_enabled_info)
                 log_info_q("trying to resync %u", b1);
-            log_debug_1("bufread loop");
+            log_debug("bufread loop");
             continue;
         }
 
         if (bufread(fd, prodmmap + 1, 15) != 0) {
-            log_debug_1("couldn't read 16 bytes for sbn");
+            log_debug("couldn't read 16 bytes for sbn");
             continue;
         }
 
         while ((status = readsbn(prodmmap, sbn)) != 0) {
-            log_debug_1("Not SBN start");
+            log_debug("Not SBN start");
 
             IOFF = 1;
 
@@ -648,25 +648,25 @@ int main(
                     prodmmap[ch - IOFF] = prodmmap[ch];
 
                 if (bufread(fd, prodmmap + 16 - IOFF, IOFF) != 0) {
-                    log_debug_1("Couldn't read bytes for SBN, resync");
+                    log_debug("Couldn't read bytes for SBN, resync");
                     break;
                 }
             }
         }
 
         if (status != 0) {
-            log_debug_1("SBN status continue");
+            log_debug("SBN status continue");
             continue;
         }
 
         IOFF = 0;
 
         if (bufread(fd, prodmmap + 16, 16) != 0) {
-            log_debug_1("error reading Product Definition Header");
+            log_debug("error reading Product Definition Header");
             continue;
         }
 
-        log_debug_1("***********************************************");
+        log_debug("***********************************************");
         if (last_sbn_seqno != -1) {
             if (sbn->seqno != last_sbn_seqno + 1) {
                 log_notice_q("Gap in SBN sequence number %ld to %ld [skipped %ld]",
@@ -685,7 +685,7 @@ int main(
         if (log_is_enabled_info)
             log_info_q("SBN datastream %d command %d", sbn->datastream,
                 sbn->command);
-        log_debug_1("SBN version %d length offset %d", sbn->version, sbn->len);
+        log_debug("SBN version %d length offset %d", sbn->version, sbn->len);
         if (((sbn->command != 3) && (sbn->command != 5)) || 
                 (sbn->version != 1)) {
             log_error_q("Unknown sbn command/version %d PUNT", sbn->command);
@@ -727,14 +727,14 @@ int main(
             bufread(fd, prodmmap + sbn->len + 16, pdh->len - 16);
         }
 
-        log_debug_1("Product definition header version %d pdhlen %d",
+        log_debug("Product definition header version %d pdhlen %d",
                 pdh->version, pdh->len);
 
         if (pdh->version != 1) {
             log_error_q("Error: PDH transfer type %u, PUNT", pdh->transtype);
             continue;
         }
-        log_debug_1("PDH transfer type %u", pdh->transtype);
+        log_debug("PDH transfer type %u", pdh->transtype);
 
         if ((pdh->transtype & 8) > 0)
             log_error_q("Product transfer flag error %u", pdh->transtype);
@@ -744,17 +744,17 @@ int main(
         if ((pdh->transtype & 16) > 0) {
             PROD_COMPRESSED = 1;
 
-            log_debug_1("Product transfer flag compressed %u", pdh->transtype);
+            log_debug("Product transfer flag compressed %u", pdh->transtype);
         }
         else {
             PROD_COMPRESSED = 0;
         }
 
-        log_debug_1("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen,
+        log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen,
                 pdh->pshlen);
-        log_debug_1("blocks per record %ld records per block %ld\n",
+        log_debug("blocks per record %ld records per block %ld\n",
                 pdh->blocks_per_record, pdh->records_per_block);
-        log_debug_1("product seqnumber %ld block number %ld data block size "
+        log_debug("product seqnumber %ld block number %ld data block size "
                 "%ld", pdh->seqno, pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
@@ -769,12 +769,12 @@ int main(
                 continue;
             }
             else {
-                log_debug_1("read psh %d", pdh->pshlen);
+                log_debug("read psh %d", pdh->pshlen);
             }
 
             /* Timing block */
             if (sbn->command == 5) {
-                log_debug_1("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
+                log_debug("Timing block recieved %ld %ld\0", psh->olen, pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
                  * progress.
@@ -791,23 +791,23 @@ int main(
                     pdh->len);
                 continue;
             }
-            log_debug_1("len %ld", psh->olen);
-            log_debug_1("product header flag %d, version %d", psh->hflag,
+            log_debug("len %ld", psh->olen);
+            log_debug("product header flag %d, version %d", psh->hflag,
                     psh->version);
-            log_debug_1("prodspecific data length %ld", psh->psdl);
-            log_debug_1("bytes per record %ld", psh->bytes_per_record);
-            log_debug_1("Fragments = %ld category %d ptype %d code %d",
+            log_debug("prodspecific data length %ld", psh->psdl);
+            log_debug("bytes per record %ld", psh->bytes_per_record);
+            log_debug("Fragments = %ld category %d ptype %d code %d",
                     psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error_q("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
                 log_error_q("original runid %d", psh->origrunid);
-            log_debug_1("next header offset %ld", psh->nhoff);
-            log_debug_1("original seq number %ld", psh->seqno);
-            log_debug_1("receive time %ld", psh->rectime);
-            log_debug_1("transmit time %ld", psh->transtime);
-            log_debug_1("run ID %ld", psh->runid);
-            log_debug_1("original run id %ld", psh->origrunid);
+            log_debug("next header offset %ld", psh->nhoff);
+            log_debug("original seq number %ld", psh->seqno);
+            log_debug("receive time %ld", psh->rectime);
+            log_debug("transmit time %ld", psh->transtime);
+            log_debug("run ID %ld", psh->runid);
+            log_debug("original run id %ld", psh->origrunid);
             if (prod.head != NULL) {
                 log_error_q("OOPS, start of new product [%ld ] with unfinished "
                     "product %ld", pdh->seqno, prod.seqno);
@@ -887,7 +887,7 @@ int main(
 
                 memcpy(PROD_NAME, psh->pname, sizeof(PROD_NAME));
 
-                log_debug_1("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
+                log_debug("Read GOES %d %d %d [%d] %d", sbn->len, pdh->len,
                         pdh->pshlen, sbn->len + pdh->len + pdh->pshlen,
                         pdb->len);
 
@@ -901,7 +901,7 @@ int main(
                 if (readccb(prodmmap + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         ccb, psh, pdh->dbsize) == -1)
                     log_error_q("Error reading ccb, using default name");
-                log_debug_1("look at ccb start %d %d", ccb->b1, ccb->len);
+                log_debug("look at ccb start %d %d", ccb->b1, ccb->len);
 
                 /*
                    cnt = 0;
@@ -948,7 +948,7 @@ int main(
 
             ccb->len = 0;
 
-            log_debug_1("continuation record");
+            log_debug("continuation record");
             if ((pdh->transtype & 4) > 0) {
                 psh->frags = 0;
             }
@@ -969,7 +969,7 @@ int main(
         dataoff = IOFF + sbn->len + pdh->len + pdh->pshlen + ccb->len;
         datalen = pdh->dbsize - ccb->len;
 
-        log_debug_1("look at datalen %d", datalen);
+        log_debug("look at datalen %d", datalen);
 
         pfrag = ds_alloc();
         pfrag->seqno = pdh->seqno;
@@ -1017,7 +1017,7 @@ int main(
                 }
                 if (!PROD_COMPRESSED) {
                     for (nscan = 0; (nscan * pdb->nx) < pdh->dbsize; nscan++) {
-                        log_debug_1("png write nscan %d", nscan);
+                        log_debug("png write nscan %d", nscan);
                         if (nscan >= pdh->records_per_block) {
                             log_error_q("nscan exceeding records per block %d [%d "
                                 "%d %d]", pdh->records_per_block, nscan,
@@ -1097,7 +1097,7 @@ int main(
                     if (memcmp(testme, FOS_TRAILER, 4) == 0) {
                         datalen -= 4;
 
-                        log_debug_1("removing FOS trailer from %s", PROD_NAME);
+                        log_debug("removing FOS trailer from %s", PROD_NAME);
                     }
                     else {
                         break;
@@ -1142,7 +1142,7 @@ int main(
                     heapcount = png_get_prodlen();
                 }
                 else {
-                    log_debug_1("GOES product already compressed %d", heapcount);
+                    log_debug("GOES product already compressed %d", heapcount);
                 }
             }
             if (log_is_enabled_info)
@@ -1192,7 +1192,7 @@ int main(
             PNGINIT = 0;
         }
         else {
-            log_debug_1("processing record %ld [%ld %ld]", prod.seqno,
+            log_debug("processing record %ld [%ld %ld]", prod.seqno,
                     prod.nfrag, pfrag->fragnum);
             if ((pdh->transtype & 4) > 0) {
                 log_error_q("Hmmm....should call completed product %ld [%ld %ld]",
@@ -1202,7 +1202,7 @@ int main(
 
         IOFF += (sbn->len + pdh->len + pdh->pshlen + pdh->dbsize);
 
-        log_debug_1("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
+        log_debug("look IOFF %ld datalen %ld (deflate %ld)", IOFF, datalen,
                 deflen);
     }
 

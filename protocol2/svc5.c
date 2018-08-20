@@ -99,7 +99,7 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
     int         status;
     ldm_replyt* replyPtr = &reply;
 
-    log_debug_1("hereis_5_svc()");
+    log_debug("hereis_5_svc()");
 
     (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -166,7 +166,7 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
 ldm_replyt * 
 feedme_5_svc(prod_class_t *want, struct svc_req *rqstp)
 {
-    log_debug_1("feedme_5_svc()");
+    log_debug("feedme_5_svc()");
 
     if(log_is_enabled_info) {
         if(remote_name() == NULL)
@@ -185,7 +185,7 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         const char* const       pqfname = getQueuePath();
         peer_info*              remote = get_remote();
 
-        log_debug_1("hiya_5_svc()");
+        log_debug("hiya_5_svc()");
 
         (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -298,7 +298,7 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
 ldm_replyt * 
 notification_5_svc(prod_info *infop, struct svc_req *rqstp)
 {
-        log_debug_1("notification_5_svc()");
+        log_debug("notification_5_svc()");
 
         /* This should never be called here */
 #if 0
@@ -325,7 +325,7 @@ notification_5_svc(prod_info *infop, struct svc_req *rqstp)
 ldm_replyt * 
 notifyme_5_svc(prod_class_t *want, struct svc_req *rqstp)
 {
-    log_debug_1("notifyme_5_svc()");
+    log_debug("notifyme_5_svc()");
 
     if(log_is_enabled_info) {
         if(remote_name() == NULL)
@@ -357,7 +357,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         prod_info*      infop = argsp->infop;
         peer_info*      remote = get_remote();
 
-        log_debug_1("comingsoon_5_svc()");
+        log_debug("comingsoon_5_svc()");
 
         (void)memset((char*)&reply, 0, sizeof(reply));
 
@@ -506,7 +506,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         datap = xd_getBuffer(remaining);        /* completely allocate buffer */
 
         if (log_is_enabled_debug)
-            log_debug_1("comings: %s (pktsz %u)",
+            log_debug("comings: %s (pktsz %u)",
                 s_prod_info(NULL, 0, infop,
                         log_is_enabled_debug),
                         argsp->pktsz);
@@ -524,12 +524,12 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
     char        expectedSig[2*sizeof(signaturet)+1];
     ldm_replyt* result = &reply;
 
-    log_debug_1("blkdata_5_svc()");
+    log_debug("blkdata_5_svc()");
 
     (void)memset((char*)&reply, 0, sizeof(reply));
 
     if(log_is_enabled_debug) {
-        log_debug_1("blkdata5: %s %8u %5u",
+        log_debug("blkdata5: %s %8u %5u",
                 s_signaturet(gotSig, sizeof(gotSig), *dpkp->signaturep),
                 dpkp->data.dbuf_len,
                 dpkp->pktnum);

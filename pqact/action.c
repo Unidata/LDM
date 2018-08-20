@@ -116,10 +116,10 @@ exec_prodput(
             (void)cm_add_argv(execMap, pid, argv);
 
             if (!waitOnChild) {
-                log_debug_1("exec %s[%d]", argv[0], pid);
+                log_debug("exec %s[%d]", argv[0], pid);
             }
             else {
-                log_debug_1("exec -wait %s[%d]", argv[0], pid);
+                log_debug("exec -wait %s[%d]", argv[0], pid);
                 (void)reap(pid, 0);
             }
         }
@@ -174,7 +174,7 @@ atoaction(
 
         if(str == NULL || *str == 0)
         {
-                log_debug_1("atoaction: Invalid string argument");
+                log_debug("atoaction: Invalid string argument");
                 return -1;
         }
 

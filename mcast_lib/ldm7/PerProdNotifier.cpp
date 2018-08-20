@@ -111,7 +111,7 @@ void PerProdNotifier::notify_of_bop(
     char sigStr[2*sizeof(signaturet)+1];
     (void)sprint_signaturet(sigStr, sizeof(sigStr),
             (const unsigned char*)metadata);
-    log_debug_1("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
+    log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
             "metadata=%s", (unsigned long)iProd, prodSize, metaSize, sigStr);
 
     if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex)) {
@@ -121,7 +121,7 @@ void PerProdNotifier::notify_of_bop(
     }
 
     if (*prodStart == nullptr) {
-        log_info_1("Duplicate product: prodIndex=%lu, prodSize=%zu, "
+        log_info("Duplicate product: prodIndex=%lu, prodSize=%zu, "
                 "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
                 metaSize, sigStr);
     }
@@ -129,7 +129,7 @@ void PerProdNotifier::notify_of_bop(
         std::unique_lock<std::mutex> lock(mutex);
         if (prodInfos.count(iProd)) {
             // Exists
-            log_info_1("Duplicate BOP: prodIndex=%lu, prodSize=%u",
+            log_info("Duplicate BOP: prodIndex=%lu, prodSize=%u",
                     (unsigned long)iProd, prodSize);
         }
         else {
@@ -151,7 +151,7 @@ void PerProdNotifier::notify_of_bop(
 void PerProdNotifier::notify_of_eop(
         const FmtpProdIndex prodIndex)
 {
-    log_debug_1("Entered: prodIndex=%lu", (unsigned long)prodIndex);
+    log_debug("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
     std::unique_lock<std::mutex> lock(mutex);
     try {
@@ -164,7 +164,7 @@ void PerProdNotifier::notify_of_eop(
         (void)prodInfos.erase(prodIndex);
     }
     catch (const std::out_of_range& e) {
-        log_warning_1("Unknown product-index: %lu", (unsigned long)prodIndex);
+        log_warning("Unknown product-index: %lu", (unsigned long)prodIndex);
     }
 
     log_free(); // to prevent memory leak by FMTP thread
@@ -179,7 +179,7 @@ void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].start;
 
-    log_info_1("Missed product: prodIndex=%lu, prodStart=%p",
+    log_info("Missed product: prodIndex=%lu, prodStart=%p",
             (unsigned long)prodIndex, prodStart);
 
     missed_prod_func(mlr, prodIndex,

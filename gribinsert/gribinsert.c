@@ -103,10 +103,10 @@ signal_handler (int sig)
     case SIGTERM:
       exit (1);
     case SIGPIPE:
-      log_debug_1("SIGPIPE");
+      log_debug("SIGPIPE");
       exit (1);
     }
-  log_debug_1("signal_handler: unhandled signal: %d", sig);
+  log_debug("signal_handler: unhandled signal: %d", sig);
 }
 
 
@@ -350,7 +350,7 @@ main (int ac, char *av[])
 
 	    while (!GRIBDONE)
 	      {
-		log_debug_1("griboff %d\0", (int) griboff);
+		log_debug("griboff %d\0", (int) griboff);
 		/* get offset of next grib product */
 		status =
 		  get_grib_info (prodmmap, statb.st_size, &griboff, &griblen,

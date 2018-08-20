@@ -208,7 +208,7 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
         }
 
         if (!error)
-            log_debug_1("max_hereis = %u", max_hereis);
+            log_debug("max_hereis = %u", max_hereis);
     }
 
     return error;
@@ -323,7 +323,7 @@ send_product_6(
          */
         product product;
 
-        log_debug_1("Sending file via HEREIS");
+        log_debug("Sending file via HEREIS");
 
         product.info = *infop;
         product.data = (void*)statsdata;
@@ -344,7 +344,7 @@ send_product_6(
         comingsoon_reply_t* reply;
         comingsoon_args     soonArg;
 
-        log_debug_1("Sending file via COMINGSOON/BLKDATA");
+        log_debug("Sending file via COMINGSOON/BLKDATA");
 
         soonArg.infop = (prod_info*)infop;              /* remove "const" */
         soonArg.pktsz = size;
@@ -461,7 +461,7 @@ ldmsend(
     }
     else {
         if(signed_on_hiya) {
-           log_debug_1("already signed on");
+           log_debug("already signed on");
         }
         else {
             status = (*hiya)(clnt, &clssp);
@@ -571,7 +571,7 @@ int ldmsend_main(
         if (!error) {
             signed_on_hiya = 0;
 
-            log_debug_1("version = %u", version);
+            log_debug("version = %u", version);
         }
         else {
             err_log_and_free(error, ERR_WARNING);

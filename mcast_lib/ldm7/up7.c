@@ -509,7 +509,7 @@ up7_subscribe(
             inAddr);
 
     if (reducedFeed == NONE) {
-        log_notice_1("Host %s isn't allowed to receive any part of feed %s",
+        log_notice("Host %s isn't allowed to receive any part of feed %s",
                 hostId, s_feedtypet(request->feed));
         reply->status = LDM7_UNAUTH;
         replySet = true;
@@ -596,7 +596,7 @@ up7_deliverProduct(
     missedProd.prod.info = *info;
     missedProd.prod.data = (void*)data; // cast away `const`
 
-    log_debug_1("Delivering: iProd=%lu, ident=\"%s\"", missedProd.iProd,
+    log_debug("Delivering: iProd=%lu, ident=\"%s\"", missedProd.iProd,
             info->ident);
     (void)deliver_missed_product_7(&missedProd, clnt);
 
@@ -767,7 +767,7 @@ up7_setCursorFromSignature(
     case 0:
         return 0;
     case PQ_NOTFOUND:
-        log_info_1("Data-product with signature %s wasn't found in product-queue",
+        log_info("Data-product with signature %s wasn't found in product-queue",
                 s_signaturet(NULL, 0, after));
         return LDM7_NOENT;
     default:
@@ -912,7 +912,7 @@ up7_sendUpToSignature(
             break;
         }
         if (status == PQUEUE_END) {
-            log_info_1("End-of-backlog product not found before end-of-queue");
+            log_info("End-of-backlog product not found before end-of-queue");
             status = LDM7_NOENT;
             break;
         }
@@ -1041,7 +1041,7 @@ subscribe_7_svc(
         McastSubReq* const restrict    request,
         struct svc_req* const restrict rqstp)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -1124,7 +1124,7 @@ request_product_7_svc(
     FmtpProdIndex* const iProd,
     struct svc_req* const rqstp)
 {
-    log_debug_1("Entered: iProd=%lu", (unsigned long)*iProd);
+    log_debug("Entered: iProd=%lu", (unsigned long)*iProd);
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
@@ -1154,7 +1154,7 @@ request_backlog_7_svc(
     BacklogSpec* const    backlog,
     struct svc_req* const rqstp)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
@@ -1181,6 +1181,6 @@ test_connection_7_svc(
     void* const           no_op,
     struct svc_req* const rqstp)
 {
-    log_debug_1("Entered");
+    log_debug("Entered");
     return NULL;                // don't reply
 }

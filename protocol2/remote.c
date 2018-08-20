@@ -66,7 +66,7 @@ so_buf(int sock, int optname)
                  * MAX_RPC_BUF_NEEDED for all systems?
                  */
 
-                log_debug_1("%s %d, setting to %d",
+                log_debug("%s %d, setting to %d",
                          s_optname(optname), optval, MAX_RPC_BUF_NEEDED);
                 optval = MAX_RPC_BUF_NEEDED;
                 if(setsockopt(sock, SOL_SOCKET, optname,
@@ -84,7 +84,7 @@ so_buf(int sock, int optname)
                 }
 #endif
         }
-        log_debug_1("%s %d", s_optname(optname), optval);
+        log_debug("%s %d", s_optname(optname), optval);
         return optval;
 }
 

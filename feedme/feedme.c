@@ -221,7 +221,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         (void) s_prod_info(infostr, sizeof(infostr), infop, 0);
         if(log_is_enabled_debug)
         {
-                log_debug_1("comingsoon5: %s %s (pktsz %u)",
+                log_debug("comingsoon5: %s %s (pktsz %u)",
                         s_signaturet(NULL, 0, infop->signature),
                         infostr, argsp->pktsz);
         }
@@ -243,7 +243,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
 
         if(log_is_enabled_debug)
         {
-                log_debug_1("   blkdata5: %s %8u %5u",
+                log_debug("   blkdata5: %s %8u %5u",
                         s_signaturet(NULL, 0, *dpkp->signaturep),
                         dpkp->data.dbuf_len,
                         dpkp->pktnum);

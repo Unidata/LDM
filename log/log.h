@@ -299,7 +299,7 @@ bool log_is_level_enabled(
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_debug_1(...) do {\
+#define log_debug(...) do {\
     if (LOG_LEVEL_DEBUG >= log_level) {\
         LOG_LOC_DECL(loc);\
         logl_log_1(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
@@ -312,7 +312,7 @@ bool log_is_level_enabled(
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_info_1(...) do {\
+#define log_info(...) do {\
     if (LOG_LEVEL_INFO >= log_level) {\
         LOG_LOC_DECL(loc);\
         logl_log_1(&loc, LOG_LEVEL_INFO, __VA_ARGS__);\
@@ -325,7 +325,7 @@ bool log_is_level_enabled(
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_notice_1(...) do {\
+#define log_notice(...) do {\
     if (LOG_LEVEL_NOTICE >= log_level) {\
         LOG_LOC_DECL(loc);\
         logl_log_1(&loc, LOG_LEVEL_NOTICE, __VA_ARGS__);\
@@ -338,7 +338,7 @@ bool log_is_level_enabled(
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_warning_1(...) do {\
+#define log_warning(...) do {\
     if (LOG_LEVEL_WARNING >= log_level) {\
         LOG_LOC_DECL(loc);\
         logl_log_1(&loc, LOG_LEVEL_WARNING, __VA_ARGS__);\
@@ -351,7 +351,7 @@ bool log_is_level_enabled(
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
  */
-#define log_error_1(...) do {\
+#define log_error(...) do {\
     if (LOG_LEVEL_ERROR >= log_level) {\
         LOG_LOC_DECL(loc);\
         logl_log_1(&loc, LOG_LEVEL_ERROR, __VA_ARGS__);\

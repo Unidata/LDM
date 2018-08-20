@@ -2266,7 +2266,7 @@ gini_status_t gini_unpack(
         else {
             *out_nbytes = d_stream.total_out;
             *nscanned = d_stream.next_in - in_buf;
-            log_debug_1("Inflated %u bytes to %u bytes", *nscanned, *out_nbytes);
+            log_debug("Inflated %u bytes to %u bytes", *nscanned, *out_nbytes);
             status = 0;
         }
         (void)inflateEnd(&d_stream);

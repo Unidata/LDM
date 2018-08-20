@@ -83,6 +83,7 @@ umm_addPotentialSender(
  *                          destroy when it's no longer needed.
  * @retval     0            Success. The group is being multicast and
  *                          `*reply` is set.
+ * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
  *                          `mlsm_addPotentialSender()`. `log_add() called`.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.

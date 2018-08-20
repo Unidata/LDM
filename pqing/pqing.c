@@ -595,7 +595,7 @@ main(int ac, char *av[])
         pqpath = getQueuePath();
 
         log_notice_q("Starting Up");
-        log_debug_1(PACKAGE_VERSION);
+        log_debug(PACKAGE_VERSION);
 
         /*
          * register exit handler

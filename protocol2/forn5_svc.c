@@ -168,7 +168,7 @@ s_xhereis(h_clnt *hcp, const prod_info *infop, const void *datap,
         rpc_stat = xhereis5(hcp, xprod, size, rpctimeo, &reply);        
         if(rpc_stat == RPC_PROCUNAVAIL)
         {
-                log_debug_1("RPC_PROCUNAVAIL");
+                log_debug("RPC_PROCUNAVAIL");
                 nohereis = 1;
                 return s_csbd(hcp, infop, datap);
         }
@@ -501,7 +501,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         feed_pktsz = remote->sendsz - DATAPKT_RPC_OVERHEAD;
         if(feed_pktsz > DBUFMAX)
                 feed_pktsz = DBUFMAX;
-        log_debug_1("feed_pktsz %u", feed_pktsz);
+        log_debug("feed_pktsz %u", feed_pktsz);
 
         status =  pq_cClassSet(pq,  &mt, remote->clssp);
         if(status)
@@ -523,7 +523,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         lastsent = timestamp_add(&hc.begin, &hc.elapsed);
                         continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug_1("End of Queue");
+                        log_debug("End of Queue");
                         if(!pq_ctimeck(pq, mt, remote->clssp, &maxlatency))
                         {
                                 log_notice_q("Request Satisfied");
@@ -547,7 +547,7 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
                         break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug_1("Hit a lock");
+                        log_debug("Hit a lock");
                         break;
                 default:
                         log_error_q("pq_sequence failed: %s (errno = %d)",

@@ -53,8 +53,8 @@ typedef struct child_cmd ChildCmd;
  *                      - ENOMEM  Insufficient space to allocate a buffer.
  */
 ChildCmd* childCmd_execvp(
-        const char* const pathname,
-        const char* const cmdVec[]);
+        const char* const restrict pathname,
+        const char* const restrict cmdVec[]);
 
 /**
  * Waits for a child command to terminate. Releases all resources associated
