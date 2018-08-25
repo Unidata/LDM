@@ -239,12 +239,12 @@ fb_stats_dump(fb *fbp)
 {
     int level;
     log_assert(fbp != NULL);
-    log_error_q("maxsize = %d\n", fbp->maxsize);
-    log_error_q("arena_sz = %d\n", fbp->arena_sz);
-    log_error_q("avail = %d\n", fbp->avail);
-    log_error_q("allocated = %d\n", fbp->allocated);
+    log_error_q("maxsize = %d", fbp->maxsize);
+    log_error_q("arena_sz = %d", fbp->arena_sz);
+    log_error_q("avail = %d", fbp->avail);
+    log_error_q("allocated = %d", fbp->allocated);
     for(level = 0; level <= fbp->maxsize; level++) {
-        log_error_q("nfree[%d]:\t%d\t%d\n", level, fbp->nfree[level],
+        log_error_q("nfree[%d]:\t%d\t%d", level, fbp->nfree[level],
                fbp->free[level]);
     }
 }
@@ -2626,7 +2626,7 @@ sx_add(sx *const sx, const signaturet sig, off_t const offset)
     /* get a new sxelem from the front of free list */
     sxix = sxelem_new(sx);
     if (sxix == SX_NONE) {
-        log_error_q("sx_add: no slots for signatures, too many products?\n");
+        log_error_q("sx_add: no slots for signatures, too many products?");
         return 0;
     }
     sxep = &sx->sxep[sxix];
@@ -3069,7 +3069,7 @@ riul_add(
         if(rp < end)
         {
                 /* shuffle right */
-                /* LOG_DEBUG("riul_add memmove: %ld\n", (char* )end - (char *)rp); */
+                /* LOG_DEBUG("riul_add memmove: %ld", (char* )end - (char *)rp); */
                 memmove(rp +1, rp, (char *)end - (char *)rp);
         }
         
@@ -3108,7 +3108,7 @@ riul_delete(
         if(rght < end)
         {
                 /* shuffle left */
-                /* LOG_DEBUG("riul_delete memmove: %ld\n", (char* )end - (char *)rght); */
+                /* LOG_DEBUG("riul_delete memmove: %ld", (char* )end - (char *)rght); */
                 memmove(rp, rght, (char *)end - (char *)rght);
         }
         end--;
@@ -4508,7 +4508,7 @@ xinfo_i(void *buf, size_t size, enum xdr_op op,
 
         if(!xdr_prod_info(xdrs, infop))
         {
-                log_error_q("xinfo:%s xdr_prod_info() failed\n",
+                log_error_q("xinfo:%s xdr_prod_info() failed",
                         infop->ident) ;
                 return NULL;
         }
@@ -4528,7 +4528,7 @@ xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
 
         if (!xdr_product(xdrs, prod))
         {
-                log_error_q("%s xdr_product() failed\n",
+                log_error_q("%s xdr_product() failed",
                         prod->info.ident);
                 return 0;
         }
@@ -4819,7 +4819,7 @@ pq2_del_oldest(
         signature = infoBuf.info.signature;
 
         if (sx_find_delete(pq->sxp, signature) == 0) {
-            log_error_q("signature %s: Not Found\n",
+            log_error_q("signature %s: Not Found",
                     s_signaturet(NULL, 0, signature));
             status = EINVAL;
         }
@@ -5196,7 +5196,7 @@ ctl_init(pqueue *const pq, size_t const align)
 #ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
-                log_notice_q("EIO => remote file system\n");
+                log_notice_q("EIO => remote file system");
                 /* try again */
                 pq->ftom = f_ftom;
                 pq->mtof = f_mtof;
@@ -5367,13 +5367,13 @@ remap:
         if(ctlp->magic != PQ_MAGIC)
         {
                 /* Not a product queue */
-                log_error_q("%s: Not a product queue\n", path);
+                log_error_q("%s: Not a product queue", path);
                 status = EINVAL;
                 goto unwind_map;
         }
         if (PQ_VERSION != ctlp->version && 7 != ctlp->version)
         {
-                log_error_q("%s: Product queue is version %d instead of expected version %d\n",
+                log_error_q("%s: Product queue is version %d instead of expected version %d",
                        path, ctlp->version, PQ_VERSION);
                 status = EINVAL;
                 goto unwind_map;
@@ -5382,7 +5382,7 @@ remap:
         {
                 /* Can't align */
                 /* TODO: If we use read()/write() not fatal ??? */
-                log_error_q("%s: Can't align\n", path);
+                log_error_q("%s: Can't align", path);
                 status = EINVAL;
                 goto unwind_map;
         }
