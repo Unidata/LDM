@@ -29,6 +29,7 @@
 
 struct child_cmd {
     const void*  magic;         ///< Verifies validity
+    char*        cmdStr;        ///< Command string
     FILE*        stdIn;         ///< Child's standard input stream
     FILE*        stdOut;        ///< Child's standard output stream
     FILE*        stdErr;        ///< Child's standard error stream
@@ -111,6 +112,7 @@ childCmd_new(void)
                     (void)memset(&cmd->stdErrThread, 0,
                             sizeof(cmd->stdErrThread));
 
+                    cmd->cmdStr = NULL;
                     cmd->stdIn = NULL;
                     cmd->stdOut = NULL;
                     cmd->stdErr = NULL;
@@ -133,6 +135,54 @@ childCmd_new(void)
     return cmd;
 }
 
+/**
+ * Catenates a command vector into a command string.
+ *
+ * @param[in] cmdVec  Command vector. Last element must be `NULL`.
+ * @retval    NULL    Failure. `log_add()` called.
+ * @return            Command string. Caller should free when it's no longer
+ *                    needed.
+ */
+static char*
+catCmdVec(const char* const cmdVec[])
+{
+    int    numArgs;
+    size_t nbytes = 0;
+    static const char whiteSpace[] = " \t";
+
+    for (numArgs = 0; cmdVec[numArgs] != NULL; ++numArgs) {
+        const char* const arg = cmdVec[numArgs];
+
+        nbytes += strlen(arg) + 1; // Plus space separator
+
+        if (strpbrk(arg, whiteSpace) != NULL)
+            nbytes += 2; // For quotes
+    }
+
+    ++nbytes; // Trailing NUL byte
+
+    char* cmd = log_malloc(nbytes, "Command buffer");
+
+    if (cmd) {
+        char* cp = cmd;
+
+        for (int i = 0; i < numArgs; ++i) {
+            const char* const arg = cmdVec[i];
+            const bool        needsQuotes = strpbrk(arg, whiteSpace) != NULL;
+            const char* const fmt = needsQuotes ? "'%s' " : "%s ";
+
+            cp += sprintf(cp, fmt, arg);
+        }
+
+        if (cp != cmd)
+            --cp; // To stomp trailing space
+
+        *cp = 0; // Stomp trailing space or create empty string
+    }
+
+    return cmd;
+}
+
 static void
 childCmd_free(ChildCmd* const cmd)
 {
@@ -150,6 +200,7 @@ childCmd_free(ChildCmd* const cmd)
         if (cmd->stdInPipe[1] >= 0)
             (void)close(cmd->stdInPipe[1]);
         cmd->magic = NULL;
+        free(cmd->cmdStr);
         free(cmd);
     }
 }
@@ -290,15 +341,29 @@ childCmd_execvp(
     ChildCmd* cmd = childCmd_new();
 
     if (cmd) {
-        int status = childCmd_execute(cmd, pathname, cmdVec);
+        int status;
+
+        cmd->cmdStr = catCmdVec(cmdVec);
+
+        if (cmd->cmdStr == NULL) {
+            log_add("Couldn't concatenate command arguments");
+
+            status = -1;
+        }
+        else {
+            status = childCmd_execute(cmd, pathname, cmdVec);
+
+            if (status) {
+                errno = status;
+                log_add("Couldn't execute command \"%s\"", cmd->cmdStr);
+            }
+        } // `cmd->cmdStr` allocated
 
         if (status) {
             childCmd_free(cmd);
             cmd = NULL;
-            errno = status;
-            log_add("Couldn't execute child-command");
         }
-    }
+    } // `cmd` allocated
 
     return cmd;
 }
@@ -318,7 +383,7 @@ childCmd_reap(
 
         if (status != cmd->pid) {
             status = errno;
-            log_add_syserr("Couldn't reap child-command");
+            log_add_syserr("Couldn't reap command \"%s\"", cmd->cmdStr);
         }
         else {
             (void)pthread_join(cmd->stdErrThread, NULL);
@@ -347,8 +412,7 @@ childCmd_putline(
         status = fputs(line, cmd->stdIn);
 
         if (status == EOF)
-            log_add_syserr("Couldn't write to child-command's standard input "
-                    "stream");
+            log_add_syserr("Couldn't write to command \"%s\"", cmd->cmdStr);
     }
 
     return status;
@@ -370,8 +434,7 @@ childCmd_getline(
         status = getline(line, size, cmd->stdOut);
 
         if (status == -1 && ferror(cmd->stdOut))
-            log_add_syserr("Couldn't read child-command's standard output "
-                    "stream");
+            log_add_syserr("Couldn't read from command \"%s\"", cmd->cmdStr);
     }
 
     return status;
