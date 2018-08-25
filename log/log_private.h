@@ -165,6 +165,22 @@ void logl_log_1(
                                ...);
 
 /**
+ * Logs a single message based on a system error code, bypassing the message
+ * queue.
+ *
+ * @param[in] loc     The location where the error occurred. `loc->file` must
+ *                    persist.
+ * @param[in] errnum  The system error code (e.g., `errno`).
+ * @param[in] fmt     Format of the user's message or NULL.
+ * @param[in] ...     Optional format arguments.
+ */
+void logl_errno_1(
+        const log_loc_t* const loc,
+        const int              errnum,
+        const char* const      fmt,
+                               ...);
+
+/**
  * Adds a variadic message to the current thread's queue of messages. Emits and
  * then clears the queue.
  *

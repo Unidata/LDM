@@ -990,6 +990,19 @@ void logl_log_1(
     va_end(args);
 }
 
+void logl_errno_1(
+        const log_loc_t* const     loc,
+        const int                  errnum,
+        const char* const restrict fmt,
+                                   ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    logl_log_1(loc, LOG_LEVEL_ERROR, "%s", strerror(errnum));
+    logl_vlog_1(loc, LOG_LEVEL_ERROR, fmt, args);
+    va_end(args);
+}
+
 /**
  * Adds a message to the current thread's queue of messages. Logs and then
  * clears the queue.

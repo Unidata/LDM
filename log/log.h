@@ -359,6 +359,17 @@ bool log_is_level_enabled(
 } while (0)
 
 /**
+ * Logs a single message at the ERROR level based on a system error code (i.e.,
+ * `errno`), bypassing the message queue.
+ *
+ * @param[in] ...  Optional arguments of the message.
+ */
+#define log_syserr(...) do {\
+    LOG_LOC_DECL(loc);\
+    logl_errno_1(&loc, errno, __VA_ARGS__);\
+} while (0)
+
+/**
  * Adds a message to the current thread's queue of messages:
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format

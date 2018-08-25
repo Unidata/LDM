@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +74,20 @@ static int           syslog_facility = LOG_LDM;
  * The destination of log messages:
  */
 static dest_t        dest;
+
+static void blockSigs(sigset_t* const prevSigs)
+{
+    sigset_t sigs;
+
+    sigfillset(&sigs);
+
+    (void)pthread_sigmask(SIG_BLOCK, &sigs, prevSigs);
+}
+
+static void unblockSigs(sigset_t* const prevSigs)
+{
+    (void)pthread_sigmask(SIG_SETMASK, prevSigs, NULL);
+}
 
 /**
  * Returns the pathname of the LDM log file.
@@ -236,38 +251,43 @@ static void stream_log(
     const char* const basename = logl_basename(loc->file);
     const char* const levelId = level_to_string(level);
 
-    (void)dest->lock(dest);
-        for (;;) {
-            const char* const newline = strchr(msg, '\n');
-            const size_t      msglen = newline ? newline - msg : strlen(msg);
+    sigset_t prevSigs;
+    blockSigs(&prevSigs);
+        (void)dest->lock(dest);
+            for (;;) {
+                const char* const newline = strchr(msg, '\n');
+                const size_t      msglen =
+                        newline ? newline - msg : strlen(msg);
 
-            // Timestamp
-            int nbytes = fprintf(dest->stream,
-                    "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
-                    year, month, tm.tm_mday, tm.tm_hour,
-                    tm.tm_min, tm.tm_sec, microseconds);
+                // Timestamp
+                int nbytes = fprintf(dest->stream,
+                        "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
+                        year, month, tm.tm_mday, tm.tm_hour,
+                        tm.tm_min, tm.tm_sec, microseconds);
 
-            // Process
-            nbytes += fprintf(dest->stream, "%s[%d] ", ident, pid);
+                // Process
+                nbytes += fprintf(dest->stream, "%s[%d] ", ident, pid);
 
-            #define LOC_OFFSET 57
-            #define MIN0(x)    ((x) >= 0 ? (x) : 0)
+                #define LOC_OFFSET 57
+                #define MIN0(x)    ((x) >= 0 ? (x) : 0)
 
-            // Location
-            nbytes += fprintf(dest->stream, "%*s%s:%d ",
-                    MIN0(LOC_OFFSET-nbytes), "", basename, loc->line);
+                // Location
+                nbytes += fprintf(dest->stream, "%*s%s:%d ",
+                        MIN0(LOC_OFFSET-nbytes), "", basename, loc->line);
 
-            // Error level and message
-            nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
-                    MIN0(LOC_OFFSET+22-nbytes), "", levelId, (int)msglen, msg);
+                // Error level and message
+                nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
+                        MIN0(LOC_OFFSET+23-nbytes), "", levelId,
+                        (int)msglen, msg);
 
-            if (newline) {
-                msg = newline + 1;
-                continue;
+                if (newline) {
+                    msg = newline + 1;
+                    continue;
+                }
+                break;
             }
-            break;
-        }
-    (void)dest->unlock(dest);
+        (void)dest->unlock(dest);
+    unblockSigs(&prevSigs);
 }
 
 /**
