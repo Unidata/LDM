@@ -56,12 +56,15 @@ static int teardown(void)
 static int numLines(
         const char* const pathname)
 {
-    char cmd[_POSIX_MAX_INPUT];
-    (void)snprintf(cmd, sizeof(cmd), "wc -l %s", pathname);
-    FILE* pipe = popen(cmd, "r");
-    int n = -1;
-    (void)fscanf(pipe, "%d", &n);
-    (void)fclose(pipe);
+    FILE* stream = fopen(pathname, "r");
+    CU_ASSERT_PTR_NOT_NULL_FATAL(stream);
+    int n = 0;
+    char line[_POSIX_MAX_INPUT];
+    for (; fgets(line, sizeof(line), stream) != NULL; ++n)
+        ;
+    CU_ASSERT_TRUE_FATAL(feof(stream));
+    CU_ASSERT_FALSE_FATAL(ferror(stream));
+    CU_ASSERT_EQUAL_FATAL(fclose(stream), 0);
     return n;
 }
 
