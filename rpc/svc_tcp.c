@@ -235,7 +235,7 @@ makefd_xprt(
 	xprt->xp_p1 = (char*)cd;
 	xprt->xp_verf.oa_base = cd->verf_body;
 	xprt->xp_addrlen = 0;
-	xprt->xp_ops = &svctcp_op;  /* truely deals with calls */
+	xprt->xp_ops = &svctcp_op;  /* truly deals with calls */
 	xprt->xp_port = 0;  /* this is a connection, not a rendezvouser */
 	xprt->xp_sock = fd;
 	xprt_register(xprt);
@@ -341,7 +341,7 @@ readtcp(
 			    if (errno == EINTR)
 				    continue;
 
-			    log_syserr_q("select() error on socket %d", sock);
+			    log_syserr("select() error on socket %d", sock);
 			}
 
 			goto fatal_err;
