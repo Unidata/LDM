@@ -209,7 +209,7 @@ mldm_exec(
 
     //if (log_is_enabled_info)
         args[i++] = "-v";
-    if (log_is_enabled_debug)
+    //if (log_is_enabled_debug)
         args[i++] = "-x";
 
     char mcastIfaceBuf[INET_ADDRSTRLEN];
@@ -929,8 +929,14 @@ me_release(
     else {
         status = mldmClnt_release(mldmClnt, fmtpAddr);
 
-        if (status)
+        if (status) {
             log_add("Couldn't release IP address for remote FMTP layer");
+        }
+        else {
+            char ipStr[INET_ADDRSTRLEN];
+            log_debug("Address %s released", inet_ntop(AF_INET, &fmtpAddr,
+                    ipStr, sizeof(ipStr)));
+        }
 
         mldmClnt_free(mldmClnt);
     }
@@ -1111,10 +1117,24 @@ umm_unsubscribe(
         const feedtypet feed,
         const in_addr_t downFmtpAddr)
 {
+    int status;
+
     McastEntry* entry = umm_getMcastEntry(feed);
-    return (entry == NULL)
-        ? LDM7_INVAL
-        : me_release(entry, downFmtpAddr);
+
+    if (entry == NULL) {
+        status = LDM7_INVAL;
+    }
+    else  {
+        status = me_release(entry, downFmtpAddr);
+
+        if (status == 0) {
+            char ipStr[INET_ADDRSTRLEN];
+            log_debug("Address %s released", inet_ntop(AF_INET, &downFmtpAddr,
+                    ipStr, sizeof(ipStr)));
+        }
+    }
+
+    return status;
 }
 
 Ldm7Status

@@ -35,7 +35,8 @@
  *                           products missed by the FMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
- * @param[in] iface          IP address of FMTP interface
+ * @param[in] iface          Name of interface to use to receive multicast
+ *                           packets or "dummy". Caller may free.
  * @param[in] vcEnd          Local virtual-circuit endpoint
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    0              Success

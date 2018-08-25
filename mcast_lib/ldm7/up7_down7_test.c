@@ -31,6 +31,7 @@
 #include "VirtualCircuit.h"
 
 #include <arpa/inet.h>
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -97,7 +98,7 @@ typedef struct {
  * Mean residence-time, in seconds, of a data-product. Also used to compute the
  * FMTP retransmission timeout.
  */
-#define                  MEAN_RESIDENCE_TIME 4
+#define                  MEAN_RESIDENCE_TIME 10
 
 // Derived values:
 
@@ -128,44 +129,80 @@ static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
 static ServiceAddr*      up7Addr;
 static VcEndPoint*       localVcEnd;
 static Executor*         executor;
+static sigset_t          mostSigMask;
 
 static void signal_handler(
         int sig)
 {
     switch (sig) {
-    case SIGUSR1:
-        log_notice_q("SIGUSR1");
-        log_refresh();
+    case SIGALRM:
+        log_notice("signal_handler(): SIGALRM");
         return;
+    case SIGCHLD:
+        log_notice("signal_handler(): SIGCHLD");
+        return;
+    case SIGCONT:
+        log_notice("signal_handler(): SIGCONT");
+        return;
+    case SIGIO:
+        log_notice("signal_handler(): SIGIO");
+        return;
+    case SIGPIPE:
+        log_notice("signal_handler(): SIGPIPE");
+        return;
+
     case SIGINT:
-        log_notice_q("SIGINT");
+        log_notice("signal_handler(): SIGINT");
         return;
     case SIGTERM:
-        log_notice_q("SIGTERM");
+        log_notice("signal_handler(): SIGTERM");
+        return;
+    case SIGUSR1:
+        log_notice("signal_handler(): SIGUSR1");
+        log_refresh();
         return;
     default:
-        log_notice_q("Signal %d", sig);
+        log_notice("signal_handler(): Signal %d", sig);
         return;
     }
 }
 
 static int
-setTermSigHandler(void)
+setSignalHandling(void)
 {
-    struct sigaction sigact;
-    int              status = sigemptyset(&sigact.sa_mask);
-    if (status == 0) {
-        sigact.sa_flags = 0;
-        sigact.sa_handler = signal_handler;
-        status = sigaction(SIGINT, &sigact, NULL);
-        if (status == 0) {
-            status = sigaction(SIGTERM, &sigact, NULL);
-            if (status == 0) {
-                sigact.sa_flags = SA_RESTART;
-                status = sigaction(SIGUSR1, &sigact, NULL);
-            }
-        }
+    static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1 };
+    int              status;
+    struct sigaction sigact = {}; // Zero initialization
+
+    /*
+     * While handling a signal, block all signals except ones that would cause
+     * undefined behavior
+     */
+    sigact.sa_mask = mostSigMask;
+
+    /*
+     * Ignore these signals because their associated phenomena will be handled
+     * by the code
+    sigact.sa_handler = SIG_IGN;
+     */
+
+    // Catch all following signals
+    sigact.sa_handler = signal_handler;
+
+    // Catch these signals and allow them to interrupt system calls
+    for (int i = 1; i < _NSIG; ++i) {
+        status = sigaction(i, &sigact, NULL);
+        // `errno == EINVAL` for `SIGKILL` & `SIGSTOP`, at least
+        assert(status == 0 || errno == EINVAL);
     }
+
+    // Catch these signals invisibly by restarting the system call
+    sigact.sa_flags = SA_RESTART;
+    for (int i = 0; i < sizeof(restartSigs)/sizeof(restartSigs[0]); ++i) {
+        status = sigaction(restartSigs[i], &sigact, NULL);
+        assert(status == 0);
+    }
+
     return status;
 }
 
@@ -200,7 +237,19 @@ setup(void)
         (void)setpgrp();
          */
 
-        status = setTermSigHandler();
+        /*
+         * Create a signal mask that would block all signals except those that
+         * would cause undefined behavior
+         */
+        const int undefSigs[] = { SIGFPE, SIGILL, SIGSEGV, SIGBUS };
+        status = sigfillset(&mostSigMask);
+        assert(status == 0);
+        for (int i = 0; i < sizeof(undefSigs)/sizeof(undefSigs[0]); ++i) {
+            status = sigdelset(&mostSigMask, undefSigs[i]);
+            assert(status == 0);
+        }
+
+        status = setSignalHandling();
         if (status) {
             log_add("Couldn't set termination signal handler");
         }
@@ -433,10 +482,25 @@ myUp7_run(
      */
     for (;;) {
         log_debug("myUp7_run(): Calling poll()");
+
+        sigset_t prevSigMask;
+        CU_ASSERT_EQUAL_FATAL(pthread_sigmask(SIG_SETMASK, &mostSigMask,
+                &prevSigMask), 0);
+
+        errno = 0;
         status = poll(&fds, 1, -1); // `-1` => indefinite timeout
 
+        CU_ASSERT_EQUAL_FATAL(pthread_sigmask(SIG_SETMASK, &prevSigMask, NULL),
+                0);
+
         if (0 > status) {
-            CU_ASSERT_EQUAL_FATAL(errno, EINTR);
+            if (errno == EINTR) {
+                log_debug("poll() interrupted");
+            }
+            else {
+                log_debug("poll() failure");
+                CU_ASSERT_EQUAL_FATAL(errno, EINTR);
+            }
             break;
         }
 
@@ -446,6 +510,7 @@ myUp7_run(
         svc_getreqsock(sock); // Calls `ldmprog_7()`. *Might* destroy `xprt`.
 
         if (!FD_ISSET(sock, &svc_fdset)) {
+            log_debug("Socket was closed by RPC layer");
             // RPC layer called `svc_destroy()` on `myUp7->xprt`
             myUp7->xprt = NULL; // Let others know
             break;
@@ -1086,7 +1151,7 @@ receiver_init(
     VcEndPoint* const vcEnd = vcEndPoint_new(1, "dummy_receiver_switch_ID",
             "dummy_receiver_port_ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    receiver->down7 = down7_new(servAddr, feedtype, "lo", vcEnd,
+    receiver->down7 = down7_new(servAddr, feedtype, "dummy", vcEnd,
             receiverPq, receiver->mrm);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
     vcEndPoint_free(vcEnd);
@@ -1301,6 +1366,10 @@ static void
 test_up7_down7(
         void)
 {
+    log_set_level(LOG_LEVEL_DEBUG);
+
+    setSignalHandling();
+
     Sender   sender;
     Receiver receiver;
     int      status;

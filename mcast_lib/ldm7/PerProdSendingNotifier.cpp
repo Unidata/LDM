@@ -12,6 +12,7 @@
  */
 
 #include "fmtp.h"
+#include "Internet.h"
 #include "log.h"
 #include "PerProdSendingNotifier.h"
 
@@ -63,5 +64,16 @@ bool PerProdSendingNotifier::verify_new_recv(int newsock)
     }
     const struct sockaddr_in* addr =
             reinterpret_cast<struct sockaddr_in*>(&sockaddr);
-    return authorizer.isAuthorized(addr->sin_addr);
+    const bool isAuthorized = authorizer.isAuthorized(addr->sin_addr);
+
+    if (isAuthorized) {
+        log_notice("Host %s is authorized to connect",
+                to_string(*addr).c_str());
+    }
+    else {
+        log_warning("Host %s is not authorized to connect",
+                to_string(*addr).c_str());
+    }
+
+    return isAuthorized;
 }

@@ -72,8 +72,12 @@ static const char    python[] = "python"; ///< Name of python executable
  *
  * @param[in]  wrkGrpName   Name of the AL2S workgroup
  * @param[in]  desc         Description of virtual circuit
- * @param[in]  end1         One end of the virtual circuit
- * @param[in]  end2         Other end of the virtual circuit
+ * @param[in]  end1         One end of the virtual circuit. Switch or port ID
+ *                          may start with "dummy", in which case the circuit
+ *                          will not be created.
+ * @param[in]  end2         Other end of the virtual circuit. Switch or port ID
+ *                          may start with "dummy", in which case the circuit
+ *                          will not be created.
  * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
  *                          call `free(*circuitId)` when the identifier is no
  *                          longer needed. Will start with "dummy" if a switch
@@ -91,72 +95,76 @@ static int oess_provision(
         char** const restrict            circuitId)
 {
     int  status;
-    char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
-    char vlanId2[12];
 
-    (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
-    (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
-
-    const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
-            end1->switchId, end1->portId, vlanId1,
-            end2->switchId, end2->portId, vlanId2, NULL};
-
-    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-
-    if (cmd == NULL) {
-        status = LDM7_SYSTEM;
+    if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
+            strncmp(end2->switchId, "dummy", 5) == 0 ||
+            strncmp(end1->portId, "dummy", 5) == 0 ||
+            strncmp(end2->portId, "dummy", 5) == 0) {
+        log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
+        *circuitId = strdup("dummy_circuitId");
+        status = 0;
     }
     else {
-        char*   line = NULL;
-        size_t  size = 0;
-        ssize_t nbytes = childCmd_getline(cmd, &line, &size);
+        char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
+        char vlanId2[12];
 
-        if (nbytes <= 0) {
-            log_add("Couldn't get AL2S virtual-circuit ID");
+        (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
+        (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
 
+        const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
+                end1->switchId, end1->portId, vlanId1,
+                end2->switchId, end2->portId, vlanId2, NULL};
+        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+        if (cmd == NULL) {
             status = LDM7_SYSTEM;
         }
         else {
-            if (line[nbytes-1] == '\n')
-                line[nbytes-1] = 0;
+            char*   line = NULL;
+            size_t  size = 0;
+            ssize_t nbytes = childCmd_getline(cmd, &line, &size);
+            int     circuitIdStatus;
 
-            int exitStatus;
+            if (nbytes <= 0) {
+                log_add("Couldn't get AL2S virtual-circuit ID");
 
-            status = childCmd_reap(cmd, &exitStatus);
+                circuitIdStatus = LDM7_SYSTEM;
+            }
+            else {
+                circuitIdStatus = 0;
+
+                if (line[nbytes-1] == '\n')
+                    line[nbytes-1] = 0;
+            }
+
+            int childExitStatus;
+
+            status = childCmd_reap(cmd, &childExitStatus);
 
             if (status) {
                 status = LDM7_SYSTEM;
             }
             else {
-                if (exitStatus) {
-                    log_add("Child-process terminated with status %d",
-                            exitStatus);
+                if (childExitStatus) {
+                    log_add("OESS provisioning process terminated with status "
+                            "%d", childExitStatus);
 
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    *circuitId = line;
-                }
-            }
-        }
-    }
+                    if (circuitIdStatus) {
+                        status = circuitIdStatus;
+                    }
+                    else {
+                        *circuitId = line;
+                    }
+                } // Child process terminated unsuccessfully
+            } // Child-command was reaped
+        } // Couldn't execute child-command
 
-    if (status) {
-        log_add("Couldn't create AL2S virtual-circuit via command "
-                "\"%s %s %s %s %s %s %s %s %s\"",
-                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3], cmdVec[4],
-                cmdVec[5], cmdVec[6], cmdVec[7], cmdVec[8]);
-
-        if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
-                strncmp(end2->switchId, "dummy", 5) == 0 ||
-                strncmp(end1->portId, "dummy", 5) == 0 ||
-                strncmp(end2->portId, "dummy", 5) == 0) {
-            log_add("Ignoring failure to create AL2S virtual-circuit");
-            log_flush_notice();
-            *circuitId = strdup("dummy_circuitId");
-            status = 0;
-        }
-    }
+        if (status)
+            log_add("Couldn't create AL2S virtual-circuit");
+    } // Actual AL2S virtual-circuit
 
     return status;
 }
@@ -171,34 +179,32 @@ static void oess_remove(
         const char* const restrict wrkGrpName,
         const char* const restrict circuitId)
 {
-    int               status;
-    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
-            NULL};
-    ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-
-    if (cmd == NULL) {
-        status = errno;
+    if (strncmp(circuitId, "dummy", 5) == 0) {
+        log_notice("Ignoring call to remove a dummy AL2S virtual-circuit");
     }
     else {
-        int exitStatus;
+        int               status;
+        const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
+                NULL};
+        ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
-        status = childCmd_reap(cmd, &exitStatus);
-
-        if (status == 0 && exitStatus)
-            log_add("Child-process terminated with status %d", exitStatus);
-    }
-
-    if (status) {
-        log_add_errno(status,
-                "Couldn't destroy AL2S virtual-circuit via command "
-                "\"%s %s %s %s\"",
-                cmdVec[0], cmdVec[1], cmdVec[2], cmdVec[3]);
-
-        if (strncmp(circuitId, "dummy", 5) == 0) {
-            log_add("Ignoring failure to destroy AL2S virtual-circuit");
-            log_flush_notice();
+        if (cmd == NULL) {
+            status = errno;
         }
-    }
+        else {
+            int exitStatus;
+
+            status = childCmd_reap(cmd, &exitStatus);
+
+            if (status == 0 && exitStatus)
+                log_add("Child-process terminated with status %d", exitStatus);
+        } // Child-command executing
+
+        if (status) {
+            log_add_errno(status, "Couldn't destroy AL2S virtual-circuit");
+            log_flush_error();
+        }
+    } // Not a dummy AL2S virtual-circuit
 }
 
 /******************************************************************************
@@ -249,8 +255,14 @@ static void
 releaseDownFmtpAddr()
 {
     if (feedtype != NONE && downFmtpAddr != INADDR_ANY) {
-        if (umm_unsubscribe(feedtype, downFmtpAddr))
+        if (umm_unsubscribe(feedtype, downFmtpAddr)) {
             log_flush_error();
+        }
+        else {
+            char ipStr[INET_ADDRSTRLEN];
+            log_debug("Address %s released", inet_ntop(AF_INET, &downFmtpAddr,
+                    ipStr, sizeof(ipStr)));
+        }
         downFmtpAddr = INADDR_ANY;
         feedtype = NONE;
     }
@@ -1005,6 +1017,8 @@ up7_init(
 void
 up7_destroy(void)
 {
+    log_debug("up7_destroy() entered");
+
     if (isInitialized) {
         releaseDownFmtpAddr();
         up7_destroyClient();
@@ -1041,7 +1055,7 @@ subscribe_7_svc(
         McastSubReq* const restrict    request,
         struct svc_req* const restrict rqstp)
 {
-    log_debug("Entered");
+    log_debug("subscribe_7_svc() entered");
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;

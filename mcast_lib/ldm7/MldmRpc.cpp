@@ -195,6 +195,7 @@ Ldm7Status mldmClnt_release(
         log_add(ex.what());
         return LDM7_SYSTEM;
     }
+    log_debug("Address %s released", to_string(fmtpAddr).c_str());
     return LDM7_OK;
 }
 
@@ -248,7 +249,6 @@ public:
         in_addr_t addr = {available.at(0)};
         available.pop_front();
         allocated.insert(addr);
-        log_debug(("Reserved address " + to_string(addr)).c_str());
         return addr;
     }
 
@@ -287,6 +287,8 @@ public:
                     " wasn't previously reserved");
         available.push_back(addr);
         allocated.erase(iter);
+        log_debug((std::string("Address ") + to_string(addr) + " released")
+                .c_str());
     }
 }; // class InAddrPool::Impl
 

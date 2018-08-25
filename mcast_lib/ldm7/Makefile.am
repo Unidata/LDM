@@ -57,7 +57,7 @@ dist_bin_SCRIPTS	= vlanUtil
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory
 CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg *.supp \
-			  *_test
+			  *_test *.i
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
 LDADD			=  $(top_builddir)/lib/libldm.la
@@ -219,6 +219,11 @@ up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
 check_PROGRAMS			+= up7_down7_test
 TESTS				+= up7_down7_test
+
+SUFFIXES:	.i .c
+
+.c.i:
+	$(COMPILE) -E $< >$@
 
 SUFFIXES:	.vg .sup .supp
 
