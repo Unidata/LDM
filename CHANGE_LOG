@@ -1,3 +1,8 @@
+6.13.7.47
+    Moved sudo() from down7.c to ChildCommand.c
+
+    Execute OESS provisioning script with root privileges.
+
 6.13.7.46	2018-08-25T11:26:11-0600
     Added command-string to ChildCommand.
 
