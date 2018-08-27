@@ -33,6 +33,7 @@
 #include "log.h"
 #include "mcast_info.h"
 #include "pq.h"
+#include "priv.h"
 #include "prod_class.h"
 #include "prod_index_map.h"
 #include "prod_info.h"
@@ -114,7 +115,10 @@ static int oess_provision(
         const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
                 end1->switchId, end1->portId, vlanId1,
                 end2->switchId, end2->portId, vlanId2, NULL};
-        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+        rootpriv();
+            ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+        unpriv();
 
         if (cmd == NULL) {
             status = LDM7_SYSTEM;
