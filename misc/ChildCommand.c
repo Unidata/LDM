@@ -18,6 +18,7 @@
 
 #include "ChildCommand.h"
 #include "log.h"
+#include "priv.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -139,7 +140,7 @@ childCmd_new(void)
  * Concatenates a command vector into a command string.
  *
  * @param[in] cmdVec  Command vector. Last element must be `NULL`.
- * @retval    NULL    Failure. `log_add()` called.
+ * @retval    NULL    Failure. `log_add()` called. `errno` is set.
  * @return            Command string. Caller should free when it's no longer
  *                    needed.
  */
@@ -436,6 +437,34 @@ childCmd_getline(
         if (status == -1 && ferror(cmd->stdOut))
             log_add_syserr("Couldn't read from command \"%s\"", cmd->cmdStr);
     }
+
+    return status;
+}
+
+int sudo(
+        const char* const restrict cmdVec[],
+        int* const restrict        childStatus)
+{
+    rootpriv();
+        int       status;
+        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+        if (cmd == NULL) {
+            log_add("Couldn't execute command in child process");
+            status = errno;
+        }
+        else {
+            status = childCmd_reap(cmd, childStatus);
+
+            if (status) {
+                log_add("Couldn't reap command's child process");
+                status = errno;
+            }
+            else if (*childStatus) {
+                log_add("Command exited with status %d", *childStatus);
+            }
+        }
+    unpriv();
 
     return status;
 }

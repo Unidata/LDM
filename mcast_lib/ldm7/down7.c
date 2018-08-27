@@ -30,7 +30,6 @@
 #include "mldm_receiver.h"
 #include "mldm_receiver_memory.h"
 #include "pq.h"
-#include "priv.h"
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
 #include "rpcutil.h"
@@ -892,43 +891,6 @@ ucastRcvr_free(UcastRcvr* const ucastRcvr)
 /******************************************************************************
  * Submodule for local VLAN interface
  ******************************************************************************/
-
-/**
- * Executes a command in a child process with superuser privileges. Logs the
- * child's standard error stream. Waits for the child to terminate.
- *
- * @param[in]  cmdVec       Command vector. Last element must be `NULL`.
- * @param[out] childStatus  Exit status of the child process iff return value is
- *                          0
- * @retval     0            Success. `*childStatus` is set to the exit status
- *                          of the child process.
- * @retval     LDM7_SYSTEM  System or command failure. `log_add()` called.
- */
-static int sudo(
-        const char* const restrict cmdVec[],
-        int* const restrict        childStatus)
-{
-    rootpriv();
-        int       status;
-        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-
-        if (cmd == NULL) {
-            status = LDM7_SYSTEM;
-        }
-        else {
-            status = childCmd_reap(cmd, childStatus);
-
-            if (status) {
-                status = LDM7_SYSTEM;
-            }
-            else if (*childStatus) {
-                log_add("Command exited with status %d", *childStatus);
-            }
-        }
-    unpriv();
-
-    return status;
-}
 
 static const char vlanUtil[] = "vlanUtil";
 

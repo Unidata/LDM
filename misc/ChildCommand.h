@@ -63,7 +63,6 @@ ChildCmd* childCmd_execvp(
  * @param[in]  cmd         Child command
  * @param[out] exitStatus  Exit status of the child command
  * @return     0           Success. `*exitStatus` is set.
- * @retval     EINVAL      Invalid child command. `log_add()` called.
  * @retval     EINTR       The function was interrupted by a signal. The value
  *                         of the location pointed to by `exitStatus` is
  *                         undefined.
@@ -101,6 +100,38 @@ ssize_t childCmd_getline(
         ChildCmd*     cmd,
         char** const  line,
         size_t* const nbytes);
+
+/**
+ * Executes a command in a child process with superuser privileges. Logs the
+ * child's standard error stream. Waits for the child to terminate.
+ *
+ * @param[in]  cmdVec       Command vector. Last element must be `NULL`.
+ * @param[out] childStatus  Exit status of the child process iff return value is
+ *                          0
+ * @retval     EAGAIN       The system lacked the necessary resources to create
+ *                          another process, or the system-imposed on the total
+ *                          number of processes under execution system-wide or
+ *                          by a single user {CHILD_MAX} would be exceeded.
+ *                          `log_add()` called.
+ * @retval     EAGAIN       The system lacked the necessary resources to create
+ *                          another thread, or the system-imposed limit on the
+ *                          total number of threads in a process
+ *                          {PTHREAD_THREADS_MAX} would be exceeded. `log_add()`
+ *                          called.
+ * @retval     EINTR        The function was interrupted by a signal that was
+ *                          caught.  `log_add()` called.
+ * @retval     EMFILE       {STREAM_MAX} streams are currently open in the
+ *                          calling process. `log_add()` called.
+ * @retval     EMFILE       {FOPEN_MAX} streams are currently open in the
+ *                          calling process. `log_add()` called.
+ * @retval     ENOMEM       Insufficient space to allocate a buffer. `log_add()`
+ *                          called.
+ * @retval     0            Success. `*childStatus` is set to the exit status
+ *                          of the child process.
+ */
+int sudo(
+        const char* const restrict cmdVec[],
+        int* const restrict        childStatus);
 
 #ifdef __cplusplus
     }
