@@ -413,7 +413,8 @@ childCmd_putline(
         status = fputs(line, cmd->stdIn);
 
         if (status == EOF)
-            log_add_syserr("Couldn't write to command \"%s\"", cmd->cmdStr);
+            log_add_syserr("Couldn't write to standard input of command \"%s\"",
+                    cmd->cmdStr);
     }
 
     return status;
@@ -435,7 +436,8 @@ childCmd_getline(
         status = getline(line, size, cmd->stdOut);
 
         if (status == -1 && ferror(cmd->stdOut))
-            log_add_syserr("Couldn't read from command \"%s\"", cmd->cmdStr);
+            log_add_syserr("Couldn't read from standard output of command \"%s\"",
+                    cmd->cmdStr);
     }
 
     return status;
