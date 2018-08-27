@@ -1,4 +1,4 @@
-6.13.7.47
+6.13.7.47	2018-08-27T14:48:09-0600
     Moved sudo() from down7.c to ChildCommand.c
 
     Execute OESS provisioning script with root privileges.
