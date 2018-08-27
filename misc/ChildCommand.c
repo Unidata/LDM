@@ -144,7 +144,7 @@ childCmd_new(void)
  *                    needed.
  */
 static char*
-catCmdVec(const char* const cmdVec[])
+catCmdVec(const char* const restrict cmdVec[])
 {
     int    numArgs;
     size_t nbytes = 0;
