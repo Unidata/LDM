@@ -557,7 +557,7 @@ bool log_is_level_enabled(
  * @param[in] nbytes    Number of bytes to allocate.
  * @param[in] msg       Message to print on error. Should complete the sentence
  *                      "Couldn't allocate <n> bytes for ...".
- * @retval    NULL      Out of memory. Log message added.
+ * @retval    NULL      Out of memory. `log_add()` called.
  * @return              Pointer to the allocated memory.
  */
 #define log_malloc(nbytes, msg) logl_malloc(__FILE__, __func__, __LINE__, \
