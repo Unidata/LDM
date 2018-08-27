@@ -136,7 +136,7 @@ childCmd_new(void)
 }
 
 /**
- * Catenates a command vector into a command string.
+ * Concatenates a command vector into a command string.
  *
  * @param[in] cmdVec  Command vector. Last element must be `NULL`.
  * @retval    NULL    Failure. `log_add()` called.
