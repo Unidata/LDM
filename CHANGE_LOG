@@ -6,6 +6,9 @@
         - Added reception-time to LDM7 EOP function and logging of duration of
           transmission.
 
+    Converted mcast_lib/FMTP_LDM7/ and OESS/ from git submodules into git
+    subtrees.
+
 6.13.7.47	2018-08-27T14:48:09-0600
     Moved sudo() from down7.c to ChildCommand.c
 
