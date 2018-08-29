@@ -1,6 +1,0 @@
-[submodule "FMTP"]
-	path = mcast_lib/FMTP-LDM7
-	url = https://github.com/UVA-High-Speed-Networks/FMTP-LDM7.git
-[submodule "OESS"]
-	path = OESS
-	url = https://github.com/UVA-High-Speed-Networks/OESS-Client.git

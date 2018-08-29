@@ -1,3 +1,11 @@
+6.13.7.48
+    Modified LDM7 to log duration of multicast product transmission for
+    throughput calculation:
+        - Added start-of-transmission time to beginning-of-product packet and
+          to LDM7 BOP function;
+        - Added reception-time to LDM7 EOP function and logging of duration of
+          transmission.
+
 6.13.7.47	2018-08-27T14:48:09-0600
     Moved sudo() from down7.c to ChildCommand.c
 

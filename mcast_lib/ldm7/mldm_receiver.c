@@ -211,6 +211,8 @@ lastReceived(
  *                         data-product in bytes.
  * @param[in] pqeIndex     Pointer to the reference to the allocated space in
  *                         the product-queue.
+ * @param[in] duration     Amount of time, in seconds, it took to transmit the
+ *                         product
  * @retval    0            Success.
  * @retval    -1           Error. `log_add()` called. The allocated region in
  *                         the product-queue was released.
@@ -219,7 +221,8 @@ static int
 finishInsertion(
         Mlr* const restrict             mlr,
         const prod_info* const restrict info,
-        pqe_index* const restrict       pqeIndex)
+        pqe_index* const restrict       pqeIndex,
+        const double                    duration)
 {
     int status = tryToInsert(mlr, pqeIndex);
     if (status) {
@@ -227,12 +230,11 @@ finishInsertion(
                 info->ident);
     }
     else {
-        if (log_is_enabled_info) {
-            char infoStr[LDM_INFO_MAX];
+        char infoStr[LDM_INFO_MAX];
 
-            log_info("Received: %s",
-                    s_prod_info(infoStr, sizeof(infoStr), info, 1));
-        }
+        log_info("Received in %.7f s: %s", duration,
+                s_prod_info(infoStr, sizeof(infoStr), info, 1));
+
         lastReceived(mlr, info);
     }
     return status;
@@ -251,6 +253,8 @@ finishInsertion(
  *                           Ignored if `prodStart == NULL`.
  * @param[in]      pqeIndex  Reference to the reserved space in the product-
  *                           queue. Ignored if `prodStart == NULL`.
+ * @param[in]      duration  Amount of time, in seconds, it took to transmit the
+ *                           product
  * @retval         0         Success.
  * @retval         -1        Error. `log_add()` called. The allocated space
  *                           in the LDM product-queue was released.
@@ -260,7 +264,8 @@ eop_func(
         Mlr* const restrict  mlr,
         void* const restrict prodStart,
         const size_t         prodSize,
-        pqe_index* const     pqeIndex)
+        pqe_index* const     pqeIndex,
+        const double         duration)
 {
     /*
      * This function is called on both the FMTP multicast and unicast threads.
@@ -286,7 +291,7 @@ eop_func(
             pqe_discard(mlr->pq, *pqeIndex);
         }
         else {
-            status = finishInsertion(mlr, info, pqeIndex);
+            status = finishInsertion(mlr, info, pqeIndex, duration);
         }                                       // "info" allocated
 
         xdr_destroy(&xdrs);

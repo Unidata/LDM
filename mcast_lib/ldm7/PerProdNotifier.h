@@ -23,7 +23,7 @@
 typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
                         unsigned metaSize, void** data, pqe_index* pqeIndex);
 typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
-                        pqe_index* pqeIndex);
+                        pqe_index* pqeIndex, const double duration);
 typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
                         pqe_index* pqeIndex);
 
@@ -38,10 +38,10 @@ public:
     /**
      * Constructs from the notification functions.
      *
-     * @param[in] bof_func              Function to call when the beginning of
+     * @param[in] bop_func              Function to call when the beginning of
      *                                  a product has been seen by the FMTP
      *                                  layer.
-     * @param[in] eof_func              Function to call when a product has been
+     * @param[in] eop_func              Function to call when a product has been
      *                                  completely received by the FMTP layer.
      * @param[in] missed_prod_func      Function to call when a product is
      *                                  missed by the FMTP layer.
@@ -50,19 +50,26 @@ public:
      *                                  !missed_prod_func}
      */
     PerProdNotifier(
-            BopFunc         bof_func,
-            EopFunc         eof_func,
+            BopFunc         bop_func,
+            EopFunc         eop_func,
             MissedProdFunc  missed_prod_func,
             Mlr*            mlr);
 
     ~PerProdNotifier() {}
-    void notify_of_bop(const FmtpProdIndex iProd, size_t prodSize, void*
-            metadata, unsigned metaSize, void** data);
+    void notify_of_bop(
+            const struct timespec& startTime,
+            const FmtpProdIndex    iProd,
+            size_t                 prodSize,
+            void*                  metadata,
+            unsigned               metaSize,
+            void**                 data);
     /**
      * @param[in] prodIndex        The FMTP index of the product.
      * @throws std::runtime_error  Receiving application error.
      */
-    void notify_of_eop(FmtpProdIndex prodIndex);
+    void notify_of_eop(
+            const struct timespec& stopTime,
+            const FmtpProdIndex    prodIndex);
     void notify_of_missed_prod(FmtpProdIndex prodIndex);
 
 private:
@@ -96,10 +103,14 @@ private:
         ProdInfo();
         ~ProdInfo();
 
-        void*     start; /**< Pointer to start of XDR-encoded product in
-                              product-queue */
-        size_t    size;  /**< Size of XDR-encoded product in bytes */
-        pqe_index index; /**< Reference to allocated space in product-queue */
+        /// Pointer to start of XDR-encoded product in product-queue
+        void*           pqRegion;
+        /// Time of start-of-transmission
+        struct timespec startTime;
+        /// Size of XDR-encoded product in bytes
+        size_t          size;
+        /// Reference to allocated space in product-queue
+        pqe_index       index;
     };
     std::unordered_map<FmtpProdIndex, ProdInfo> prodInfos;
 };

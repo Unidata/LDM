@@ -27,14 +27,14 @@
 
 PerProdNotifier::ProdInfo::ProdInfo()
 :
-    start(nullptr),
+    pqRegion(nullptr),
     size(0),
     index()
 {}
 
 PerProdNotifier::ProdInfo::~ProdInfo()
 {
-    start = nullptr;
+    pqRegion = nullptr;
 }
 
 int ppn_new(
@@ -87,6 +87,7 @@ PerProdNotifier::PerProdNotifier(
  * Notifies the receiving application about a product that is about to be
  * received by the FMTP layer.
  *
+ * @param[in]   start                 Time of start-of-transmission
  * @param[in]   iProd                 FMTP product-index.
  * @param[in]   prodSize              The size of the product in bytes.
  * @param[in]   metadata              The product's metadata. Ignored if
@@ -100,11 +101,12 @@ PerProdNotifier::PerProdNotifier(
  *                                    an error.
  */
 void PerProdNotifier::notify_of_bop(
-        const FmtpProdIndex iProd,
-        const size_t         prodSize,
-        void* const          metadata,
-        const unsigned       metaSize,
-        void** const         prodStart)
+        const struct timespec& startTime,
+        const FmtpProdIndex    iProd,
+        const size_t           prodSize,
+        void* const            metadata,
+        const unsigned         metaSize,
+        void** const           pqRegion)
 {
     pqe_index pqeIndex;
 
@@ -114,13 +116,14 @@ void PerProdNotifier::notify_of_bop(
     log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
             "metadata=%s", (unsigned long)iProd, prodSize, metaSize, sigStr);
 
-    if (bop_func(mlr, prodSize, metadata, metaSize, prodStart, &pqeIndex)) {
+    if (bop_func(mlr, prodSize, metadata, metaSize, pqRegion,
+            &pqeIndex)) {
         log_free(); // to prevent memory leak by FMTP thread
         throw std::runtime_error(
                 "Error notifying receiving application about beginning-of-product");
     }
 
-    if (*prodStart == nullptr) {
+    if (*pqRegion == nullptr) {
         log_info("Duplicate product: prodIndex=%lu, prodSize=%zu, "
                 "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
                 metaSize, sigStr);
@@ -135,7 +138,8 @@ void PerProdNotifier::notify_of_bop(
         else {
             // Doesn't exist
             ProdInfo& prodInfo = prodInfos[iProd];
-            prodInfo.start = *prodStart; // can't be nullptr
+            prodInfo.pqRegion = *pqRegion; // can't be nullptr
+            prodInfo.startTime = startTime;
             prodInfo.size = prodSize;
             prodInfo.index = pqeIndex;
         }
@@ -149,14 +153,18 @@ void PerProdNotifier::notify_of_bop(
  * @throws std::runtime_error  Receiving application error.
  */
 void PerProdNotifier::notify_of_eop(
-        const FmtpProdIndex prodIndex)
+        const struct timespec& stopTime,
+        const FmtpProdIndex    prodIndex)
 {
     log_debug("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
     std::unique_lock<std::mutex> lock(mutex);
     try {
         ProdInfo& prodInfo = prodInfos.at(prodIndex);
-        if (eop_func(mlr, prodInfo.start, prodInfo.size, &prodInfo.index)) {
+        double    duration = (stopTime.tv_sec - prodInfo.startTime.tv_sec) +
+                (stopTime.tv_nsec - prodInfo.startTime.tv_nsec)/1e9;
+        if (eop_func(mlr, prodInfo.pqRegion, prodInfo.size, &prodInfo.index,
+                duration)) {
             log_free(); // to prevent memory leak by FMTP thread
             throw std::runtime_error(
                     "Error notifying receiving application about end-of-product");
@@ -177,7 +185,7 @@ void PerProdNotifier::notify_of_eop(
 void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    void* const                  prodStart = prodInfos[prodIndex].start;
+    void* const                  prodStart = prodInfos[prodIndex].pqRegion;
 
     log_info("Missed product: prodIndex=%lu, prodStart=%p",
             (unsigned long)prodIndex, prodStart);
