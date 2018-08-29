@@ -341,12 +341,12 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
  * Parse BOP message and call notifier to notify receiving application.
  *
  * @param[in] header           Header associated with the packet.
- * @param[in] FmtpPacketData  Pointer to payload of FMTP packet.
+ * @param[in] FmtpPacketData   Pointer to payload of FMTP packet.
  * @throw std::runtime_error   if the payload is too small.
  * @throw std::runtime_error   if the amount of metadata is invalid.
  */
 void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
-                            const char* const  FmtpPacketData)
+                            const char* const FmtpPacketData)
 {
     void*    prodptr = NULL;
     BOPMsg   BOPmsg;
@@ -354,15 +354,25 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    size_t BOPCONST = sizeof(BOPmsg.prodsize) + sizeof(BOPmsg.metasize);
+    const size_t BOPCONST = sizeof(BOPmsg.start.wire) + sizeof(BOPmsg.prodsize)
+            + sizeof(BOPmsg.metasize);
     if (header.payloadlen < BOPCONST) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): packet too small");
     }
     const unsigned char* wire = (unsigned char*)FmtpPacketData;
+
+    uint32_t* uint32 = (uint32_t*)wire;
+    BOPmsg.start.host.tv_sec = (time_t)ntohl(*uint32++) << 32;
+    BOPmsg.start.host.tv_sec |= ntohl(*uint32++);
+    BOPmsg.start.host.tv_nsec = ntohl(*uint32++);
+    wire = (unsigned char*)uint32;
+
     BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
     wire += sizeof(BOPmsg.prodsize);
+
     BOPmsg.metasize = ntohs(*(uint16_t*)wire);
     wire += sizeof(BOPmsg.metasize);
+
     if ((header.payloadlen - BOPCONST) != BOPmsg.metasize) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): metasize "
                 "mismatched payload indicated by header");
@@ -385,8 +395,9 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     }
     if (insertion && !inTracker) {
         if(notifier) {
-            notifier->notify_of_bop(header.prodindex, BOPmsg.prodsize,
-                    BOPmsg.metadata, BOPmsg.metasize, &prodptr);
+            notifier->notify_of_bop(BOPmsg.start.host, header.prodindex,
+                    BOPmsg.prodsize, BOPmsg.metadata, BOPmsg.metasize,
+                    &prodptr);
         }
 
         /* Atomic insertion for BOP of new product */
@@ -541,6 +552,13 @@ void fmtpRecvv3::decodeHeader(char* const  packet, FmtpHeader& header)
  */
 void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
 {
+    /*
+     * The time-of-arrival of the end-of-product packets is set as soon as
+     * possible in order to be as correct as possible.
+     */
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+
     /**
      * if segmap check tells everything is completed, then sends the
      * RETX_END message back to sender. Meanwhile notify receiving
@@ -554,7 +572,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
             inTracker = trackermap.count(header.prodindex);
         }
         if (notifier && inTracker) {
-            notifier->notify_of_eop(header.prodindex);
+            notifier->notify_of_eop(now, header.prodindex);
         }
         else if (inTracker) {
             /**
@@ -915,9 +933,9 @@ void fmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
 void fmtpRecvv3::retxHandler()
 {
     FmtpHeader header;
-    char        pktHead[FMTP_HEADER_LEN];
-    int         initState;
-    int         ignoredState;
+    char       pktHead[FMTP_HEADER_LEN];
+    int        initState;
+    int        ignoredState;
 
     (void)memset(pktHead, 0, sizeof(pktHead));
     /*
@@ -936,6 +954,10 @@ void fmtpRecvv3::retxHandler()
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
         size_t nbytes = tcprecv->recvData(pktHead, FMTP_HEADER_LEN, NULL, 0);
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
+
+        struct timespec now;
+        clock_gettime(CLOCK_REALTIME, &now);
+
         /*
          * recvData returning 0 indicates an unexpected socket close, thus
          * FMTP receiver should stop right away and throw an exception.
@@ -1134,7 +1156,7 @@ void fmtpRecvv3::retxHandler()
                     inTracker = trackermap.count(header.prodindex);
                 }
                 if (notifier && inTracker) {
-                    notifier->notify_of_eop(header.prodindex);
+                    notifier->notify_of_eop(now, header.prodindex);
                 }
                 else if (inTracker) {
                     /**

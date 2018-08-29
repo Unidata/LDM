@@ -31,6 +31,7 @@
 #define FMTP_FMTPV3_FMTPBASE_H_
 
 
+#include <ctime>
 #include <stdint.h>
 #include <string.h>
 #include <strings.h>
@@ -65,18 +66,26 @@ const int MIN_MTU         = 1500;
 const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
 const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
 
+/// Most significant seconds, least significant seconds, nanoseconds
+typedef uint32_t SerialTime[3];
+
 /* non-constants, could change with MTU */
 const int MTU                 = MIN_MTU;
-const int MAX_FMTP_PACKET_LEN = MTU - 20 - 20; /* exclude IP and TCP header */
-const int FMTP_DATA_LEN       = MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN;
+const int MAX_FMTP_PACKET_LEN = (MTU - 20 - 20); /* exclude IP and TCP header */
+const int FMTP_DATA_LEN       = (MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN);
 /* sizeof(uint32_t) for BOPMsg.prodsize, sizeof(uint16_t) for BOPMsg.metasize */
-const int AVAIL_BOP_LEN       = FMTP_DATA_LEN - sizeof(uint32_t) - sizeof(uint16_t);
+const int AVAIL_BOP_LEN       = (FMTP_DATA_LEN - sizeof(SerialTime) -
+        sizeof(uint32_t) - sizeof(uint16_t));
 
 
 /**
  * structure of Begin-Of-Product message
  */
 typedef struct FmtpBOPMessage {
+    union {
+        SerialTime      wire;
+        struct timespec host;
+    }          start;        ///< Start of transmission of product
     uint32_t   prodsize;     /*!< support 4GB maximum */
     uint16_t   metasize;
     char       metadata[AVAIL_BOP_LEN];

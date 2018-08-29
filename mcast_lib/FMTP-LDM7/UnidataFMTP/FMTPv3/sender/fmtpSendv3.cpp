@@ -36,6 +36,7 @@
 #include <iostream>
 #include <math.h>
 #include <stdexcept>
+#include <cstdint>
 #include <system_error>
 
 
@@ -993,9 +994,9 @@ void fmtpSendv3::retransEOP(
 void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const uint16_t metaSize)
 {
-    FmtpHeader   header;
+    FmtpHeader    header;
     BOPMsg        bopMsg;
-    struct iovec  ioVec[4];
+    struct iovec  ioVec[5];
 
     /* Set the FMTP packet header. */
     header.prodindex  = htonl(prodIndex);
@@ -1007,16 +1008,20 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     ioVec[0].iov_base = &header;
     ioVec[0].iov_len  = sizeof(FmtpHeader);
 
+    // Start-of-transmission time is set later
+    ioVec[1].iov_base = &bopMsg.start.wire;
+    ioVec[1].iov_len = sizeof(bopMsg.start.wire);
+
     bopMsg.prodsize = htonl(prodSize);
-    ioVec[1].iov_base = &bopMsg.prodsize;
-    ioVec[1].iov_len  = sizeof(bopMsg.prodsize);
+    ioVec[2].iov_base = &bopMsg.prodsize;
+    ioVec[2].iov_len  = sizeof(bopMsg.prodsize);
 
     bopMsg.metasize = htons(metaSize);
-    ioVec[2].iov_base = &bopMsg.metasize;
-    ioVec[2].iov_len  = sizeof(bopMsg.metasize);
+    ioVec[3].iov_base = &bopMsg.metasize;
+    ioVec[3].iov_len  = sizeof(bopMsg.metasize);
 
-    ioVec[3].iov_base = metadata;
-    ioVec[3].iov_len  = metaSize;
+    ioVec[4].iov_base = metadata;
+    ioVec[4].iov_len  = metaSize;
 
     #ifdef MODBASE
         uint32_t tmpidx = prodIndex % MODBASE;
@@ -1044,8 +1049,18 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
         WriteToLog(measuremsg);
     #endif
 
+    /*
+     * Start-of-transmission time is set as late as possible in order to be as
+     * accurate as possible
+     */
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    bopMsg.start.wire[0] = htonl(now.tv_sec >> 32);
+    bopMsg.start.wire[1] = htonl(now.tv_sec & UINT32_MAX);
+    bopMsg.start.wire[2] = htonl(now.tv_nsec);
+
     /* Send the BOP message on multicast socket */
-    udpsend->SendTo(ioVec, 4);
+    udpsend->SendTo(ioVec, 5);
 
     #ifdef DEBUG2
         std::string debugmsg = "Product #" + std::to_string(tmpidx);

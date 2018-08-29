@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <ctime>
 
 
 /**
@@ -30,6 +31,7 @@ public:
      * Notifies the receiving application about the beginning of a product. This
      * method is thread-safe.
      *
+     * @param[in]  start     Time of start-of-transmission
      * @param[in]  iProd     FMTP product-index.
      * @param[in]  prodSize  Size of the product in bytes.
      * @param[in]  metadata  Application-level product metadata.
@@ -38,14 +40,24 @@ public:
      *                       data. If `*data == nullptr`, then the data-product
      *                       should be ignored.
      */
-    virtual void notify_of_bop(const uint32_t iProd, size_t prodSize,
-            void* metadata, unsigned metaSize, void** data) = 0;
+    virtual void notify_of_bop(
+            const struct timespec& start,
+            uint32_t               iProd,
+            size_t                 prodSize,
+            void*                  metadata,
+            unsigned               metaSize,
+            void**                 data) = 0;
 
     /**
      * Notifies the receiving application about the complete reception of the
      * previous product. This method is thread-safe.
+     *
+     * @param[in] stop   Time of arrival of end-of-product packet
+     * @param[in] iProd  FMTP product-index
      */
-    virtual void notify_of_eop(uint32_t iProd) = 0;
+    virtual void notify_of_eop(
+            const struct timespec& stop,
+            uint32_t               iProd) = 0;
 
     /**
      * Notifies the receiving application about a product that the FMTP layer
