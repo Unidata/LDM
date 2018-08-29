@@ -1,0 +1,10 @@
+FmtpPacket.cpp
+FmtpPacket.h
+size.txt
+*.log
+.deps/
+.idea/
+size.txt-bak
+*.csv
+config.status
+.libs

@@ -1,0 +1,20 @@
+CTCP Module README June 2008
+
+Purpose
+====================
+The CTCP kernel module is a circuit-oriented congestion control algorithm. Starting with Linux 2.6.13, congestion control algorithms can be dynamically loaded in as kernel modules. This change eliminated the need to patch the kernel to make changes to congestion control. A congestion algorithm structure is maintainable for each algorithm which is referenced by TCP when it accesses congestion control functions for a given socket. CTCP has been implemented as one such module. In CTCP, a configurable parameter sets the congestion window value, which remains unchanged for the duration of the connection. Congestion control is effectively eliminated when using CTCP.
+
+
+Installation
+====================
+No root access is required to make the module, but root acess is required insert the module using 'insmod ./tcp_ctcp.ko' once 'make' is run (there is no installation into any specific directory, just a 'make' and 'insmod').  
+
+Once the module is inserted, for it to be instantiated, a 'sudo sysctl -w net.ipv4.tcp_congestion_control="ctcp" ' command must be used, which can be immediately followed by a 'sudo sysctl -w net.ipv4.tcp_congestion_control="bic" ' to return to the default algorithm.   
+
+None of this will have any affect on anything else on the system (except for the seconds between those two sysctl commands, during which time any new sockets created with use ctcp, not bic).  
+
+Once the module is installed, run the command 'echo XXXX > /sys/module/tcp_ctcp/parameters/intial' where XXXX is the number of packets to which cwnd will initially be set.
+
+echo XXXX > /sys/module/tcp_ctcp/parameters/bw  to set the bandwidth in Mbps for the link.
+
+echo XXXX > /sys/module/tcp_ctcp/parameters/scale to scale the cwnd. scale = 100 would mean the cwnd is equal to the BDP (RTT * bw). It can be helpful to scale this number to handle end-system timing issues. Default is 120, so the cwnd = 1.2*BDP.
