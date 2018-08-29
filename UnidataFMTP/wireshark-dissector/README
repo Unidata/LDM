@@ -1,0 +1,43 @@
+Derived from the remarkable dissector template by Reinhold Kainhofer
+<reinhold@kainhofer.com> and further developed by Shawn Chen
+<sc7cq@virginia.edu>, this plugin is made possible to dissect a protocol
+named Virtual-Circuit Multicast Transportation Protocol (FMTP).
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+To install:
+This wireshark plugin is built with cmake (in a separate build/ directory):
+  mkdir build
+  cd build
+  cmake ..
+  make
+  make install
+
+This will build the .so plugin for wireshark and install it into the user's 
+~/.wireshark/plugins/ directory, which wireshark will load plugins from.
+
+For developers:
+This dissector is allowed to be further modified and improved. Regarding any
+potential technical issues, please refer to Wireshark documentations.

@@ -1,0 +1,17 @@
+CC = g++
+#CC = clang++
+INCLUDE = ../
+LIB =
+ELFFILE = testRecvApp
+#DEBUG_FLAG = DEBUG1
+DEBUG_FLAG = DEBUG2
+MEASURE_FLAG = MEASURE
+
+$(ELFFILE): *.cpp *.h
+	$(CC) -D$(DEBUG_FLAG) -D$(MEASURE_FLAG) \
+		-g -std=c++11 -I$(INCLUDE) -pthread -o $(ELFFILE) testRecvApp.cpp \
+		../TcpBase.cpp TcpRecv.cpp fmtpRecvv3.cpp ProdSegMNG.cpp Measure.cpp
+
+.PHONY : clean
+clean:
+	rm $(ELFFILE)
