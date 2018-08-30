@@ -1,4 +1,4 @@
-6.13.7.50	2018-08-30T10:31:27-0600
+6.13.7.50	2018-08-30T10:34:45-0600
     Stopped passing error messages from check of file "ldmd.conf" by
     "ldmadmin start" to fmt(1).
 
