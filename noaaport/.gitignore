@@ -46,3 +46,4 @@ Grib2Decoder.h
 /pipe_test
 /socketpair_test
 /nbs_ingest
+/g2vcrdnssl1.tbl

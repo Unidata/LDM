@@ -11,6 +11,7 @@ G2VARSNSSL_s	= g2varsnssl1.tbl
 G2VARSWMO_s	= g2varswmo0.tbl g2varswmo1.tbl g2varswmo2.tbl g2varswmo3.tbl \
 		  g2varswmo6.tbl
 G2VCRDNCEP_s	= g2vcrdncep0.tbl g2vcrdncep1.tbl
+G2VCRDNSSL_s	= g2vcrdnssl1.tbl
 G2VCRDWMO_s	= g2vcrdwmo0.tbl g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl \
 		  g2vcrdwmo6.tbl g2vcrdwmo255.tbl 
 LINKS		= $(G2VARSNCEP_s) \
@@ -25,6 +26,7 @@ dist_sysconf_DATA	= \
 	g2varsnssl.tbl \
 	g2varswmo.tbl \
 	g2vcrdncep.tbl \
+	g2vcrdnssl.tbl \
 	g2vcrdwmo.tbl \
 	grdnav.tbl \
 	wmocenter.tbl

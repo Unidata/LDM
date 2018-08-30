@@ -1,3 +1,16 @@
+6.13.7.51
+    Added missing vertical coordinates to WMO and NCEP GEMPAK tables.
+    
+    Added requirement that the GRIB2 version number not be missing (255) and the
+    local version number be 0 or missing (255) in order to obtain the WMO GEMPAK
+    vertical coordinate table.
+    
+    Created a GEMPAK table for GRIB2 vertical coordinates from NSSL, 
+    "g2vcrdnssl.tbl". This table is installed and linked-to from
+    "g2vcrdnssl1.tbl". As a consequence of this and the previous change. 
+    noaaportIngester(1) might now miss some vertical coordinates from NSSL GRIB2
+    products.
+
 6.13.7.50	2018-08-30T10:37:27-0600
     Stopped passing error messages from check of file "ldmd.conf" by
     "ldmadmin start" to fmt(1).

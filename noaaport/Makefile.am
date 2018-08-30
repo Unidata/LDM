@@ -222,12 +222,13 @@ noaaportIngester-nssl.out:      noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
 	ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
+	ln -s $(top_srcdir)/gempak/tables/g2vcrdnssl.tbl g2vcrdnssl1.tbl
 	ln -s $(top_srcdir)/gempak/tables/g2vcrdwmo.tbl g2vcrdwmo255.tbl
 	LDM_REGISTRY_DIR=../regutil ./noaaportIngester -nl- \
 	    -q /tmp/noaaportIngester-test.pq \
 	    <$(srcdir)/mrms1.data >$@ 2>&1
 	rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
-	    g2vcrdwmo255.tbl
+	    g2vcrdnssl1.tbl g2vcrdwmo255.tbl
 noaaportIngester-nssl.log:      noaaportIngester-nssl.out
 	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
