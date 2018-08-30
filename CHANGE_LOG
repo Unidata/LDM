@@ -1,3 +1,9 @@
+6.13.7.50	2018-08-30T10:31:27-0600
+    Stopped passing error messages from check of file "ldmd.conf" by
+    "ldmadmin start" to fmt(1).
+
+    Told git(1) to ignore file "delayQueue/delayQueue".
+
 6.13.7.49	2018-08-30T09:25:27-0600
     Removed Coverity Scan lint: initialized startTime in default constructor of
     PerProdNotifier::ProdInfo.
