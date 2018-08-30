@@ -4,6 +4,21 @@
 !ID1 ID2  NAME                             UNITS                GNAM SCALE
 !23|123|123456789012345678901234567890123|12345678901234567890|1234|12345678
 !
+001 255 Ground or water surface           -                    NONE     0 
+002 255 Cloud base level                  -                    CLDL     0
+003 255 Level of cloud tops               -                    CLDT     0
+004 255 Level of 0 deg C isotherm         -                    FRZL     0
+005 255 Adiabatic condensation level      -                    LCLV     0
+006 255 Maximum wind level                -                    MWSL     0
+007 255 Tropopause                        -                    TROP     0
+010 255 Entire atmosphere                 -                    EATM     0
+100 100 Layer between two isobaric sfcs   Pa                   PRES    -2
+100 255 Isobaric surface                  Pa                   PRES    -2
+101 255 Mean sea level                    -                    NONE     0
+103 103 Layer between two spec alts (gnd) m                    HGHT     0
+103 255 Specified height level above gnd  m                    HGHT     0
+104 104 Layer between two sigma levels    sigma values         SGMA     4
+108 108 Pressure difference layer         Pa                   PDLY    -2
 200   0 Entire atmosphere as a layer      -                    NONE     0
 200   1 Entire atmosphere as a layer      -                    NONE     0
 200 255 Entire atmosphere as a layer      -                    NONE     0
