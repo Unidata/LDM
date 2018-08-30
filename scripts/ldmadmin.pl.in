@@ -688,8 +688,8 @@ sub start
     $line_prefix .= "    ";
     ( @output ) = `$cmd_line -nvl- $ldmd_conf 2>&1` ;
     if ($?) {
-        errmsg("start(): Problem with LDM configuration-file:\n".
-            "@output");
+        print "start(): Problem with LDM configuration-file:\n".
+            "@output";
         $status = 1;
     }
     else {
