@@ -1,4 +1,4 @@
-6.13.7.51
+6.13.7.51	2018-08-30T16:16:51-0600
     Added missing vertical coordinates to WMO and NCEP GEMPAK tables.
     
     Added requirement that the GRIB2 version number not be missing (255) and the
