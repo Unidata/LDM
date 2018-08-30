@@ -29,7 +29,8 @@ PerProdNotifier::ProdInfo::ProdInfo()
 :
     pqRegion(nullptr),
     size(0),
-    index()
+    index(),
+    startTime{}
 {}
 
 PerProdNotifier::ProdInfo::~ProdInfo()
