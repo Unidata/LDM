@@ -18,26 +18,26 @@
 011 255 Cumulonimbus Base Level           m                    CBBL     0
 012 255 Cumulonimbus Top Level            m                    CBTL     0
 020 255 Isothermal level                  K                    TMPL     0
-100 255 Isobaric surface                  Pa                   PRES    -2
 100 100 Layer between two isobaric sfcs   Pa                   PRES    -2
+100 255 Isobaric surface                  Pa                   PRES    -2
 101 255 Mean sea level                    -                    NONE     0
-102 255 Specific altitude above msl       m                    HGHT     0
 102 102 Layer between two spec alts (msl) m                    HGHT     0
-103 255 Specified height level above gnd  m                    HGHT     0
+102 255 Specific altitude above msl       m                    HGHT     0
 103 103 Layer between two spec alts (gnd) m                    HGHT     0
-104 255 Sigma level                       sigma  value         SGMA     4
+103 255 Specified height level above gnd  m                    HGHT     0
 104 104 Layer between two sigma levels    sigma values         SGMA     4
-105 255 Hybrid level                      -                    HYBL     0
+104 255 Sigma level                       sigma  value         SGMA     4
 105 105 Layer between two hybrid levels   -                    HYBL     0
-106 255 Depth below land surface          m                    DPTH     0
+105 255 Hybrid level                      -                    HYBL     0
 !106 106 Layer btwn 2 dpths below lnd sfc  m                    DPTH     0
 106 106 Layer btwn 2 dpths below lnd sfc  m                    DPTH     2
-107 255 Isentropic (theta) level          K                    THTA     0
+106 255 Depth below land surface          m                    DPTH     0
 107 107 Layer between two isent levels    K                    THTA     0
-108 255 Level at press diff from ground   Pa                   PDLV    -2
+107 255 Isentropic (theta) level          K                    THTA     0
 108 108 Pressure difference layer         Pa                   PDLY    -2
+108 255 Level at press diff from ground   Pa                   PDLV    -2
 109 255 Potential vorticity surface       K*m**2*kg-1*s-1      POTV     6
-111 255 ETA level                         -                    ELVL     0
 111 111 ETA layer                         -                    ELYR     0
+111 255 ETA level                         -                    ELVL     0
 !117 255 Mixed layer depth                 m  
 160 255 Depth below sea-level             m                    DPTH     0
