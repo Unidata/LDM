@@ -91,7 +91,7 @@ void gb2_param ( char *wmovartbl, char *lclvartbl, Gribmsg *cmsg,
     }
     else {
        /* 
-        *  Get Local Parameter table.
+        *  Get local Parameter table.
         */
         gb2_gtvartbl(lclvartbl, cmsg->origcntr, lclver, &g2vartbl, &filename,
                 &ier);
