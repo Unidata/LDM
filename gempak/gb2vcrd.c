@@ -34,7 +34,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
  * S. Gilbert/NCEP      10/05           Use new routines to read tables *
  ***********************************************************************/
 {
-    int     ret, ier, lvl1, lvl2, iver, lclver, ilen;
+    int     ret, ier, lvl1, lvl2, iver, lclver, ilen, disc, cat, id, pdtn;
     G2level g2lev;
     G2lvls  *g2lvltbl;
     char    vparm[12], ctemp[20];
@@ -47,15 +47,44 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
     *iret = 0;
 
     /* 
-     *  Get Level into from vertical coordinate table(s).
+     *  Get Level info from vertical coordinate table(s).
      */
     iver=cmsg->gfld->idsect[2];
     lclver=cmsg->gfld->idsect[3];
+    disc=cmsg->gfld->discipline;
+    cat=cmsg->gfld->ipdtmpl[0];
+    id=cmsg->gfld->ipdtmpl[1];
+    pdtn=cmsg->gfld->ipdtnum;
     lvl1=cmsg->gfld->ipdtmpl[9];
     lvl2=cmsg->gfld->ipdtmpl[12];
 
-    if ( ( lvl1 < 192 || lvl1 == 255 ) && 
-         ( lvl2 < 192 || lvl2 == 255 ) ) {
+    /*
+     * According to the GRIB2 documentation,
+     * <http://www.wmo.int/pages/prog/www/WMOCodes/Guides/GRIB/GRIB2_062006.pdf>,
+     * all the following conditions are true for a GRIB2 message that uses the
+     * GRIB Master Table, which is maintained by the WMO Secretariat:
+     *   - Master Table version number isn't missing (255)
+     *   - Discipline number isn't reserved for local use (192-254)
+     *   - Category number isn't reserved for local use (192-254)
+     *   - Parameter number isn't reserved for local use (192-254)
+     *   - Product definition template number isn't reserved for local use
+     *     (32768-65534)
+     *   - Local Table version number is zero
+     *
+     * We've seen many GRIB2 messages from NCEP that violate these conditions.
+     *
+     * Steve Emmerson 2018-08-30
+     */
+    if ((iver != 255) && (
+#if 0
+         (disc < 192   || disc == 255  ) &&
+         (cat  < 192   || cat  == 255  ) &&
+         (id   < 192   || id   == 255  ) &&
+         (pdtn < 32768 || pdtn == 65535) &&
+#endif
+         (lclver == 0  || lclver == 255) &&  // Allow missing value
+         (lvl1 < 192   || lvl1 == 255  ) &&  // Allow missing value
+         (lvl2 < 192   || lvl2 == 255  ))) { // Allow missing value
        /* 
         *  Get WMO vertical coordinate table.
         */
@@ -63,7 +92,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
     }
     else {
        /* 
-        *  Get Local vertical coordinate table.
+        *  Get local vertical coordinate table.
         */
         gb2_gtlcllvltbl( lcllvltbl, cmsg->origcntr, lclver, &g2lvltbl,
                 &filename, &ier);
