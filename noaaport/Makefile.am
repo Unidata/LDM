@@ -218,7 +218,7 @@ check-noaaportIngester:         noaaportIngester.log \
 
 noaaportIngester-nssl.out:      noaaportIngester
 	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
-	    g2vcrdwmo255.tbl
+	    g2vcrdnssl1.tbl g2vcrdwmo255.tbl
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
 	ln -s $(top_srcdir)/gempak/tables/g2varsnssl.tbl g2varsnssl1.tbl
