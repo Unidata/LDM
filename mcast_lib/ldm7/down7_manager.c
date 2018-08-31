@@ -68,6 +68,7 @@ executeDown7(
             Down7* down7 = down7_new(servAddr, feedtype, iface, vcEnd, pq, mrm);
 
             if (NULL == down7) {
+                log_add("Couldn't create new downstream LDM 7");
                 status = LDM7_SYSTEM;
             }
             else {
@@ -129,6 +130,7 @@ elt_new(
 
         if (elt->ul7) {
             elt->iface = strdup(iface);
+
             if (elt->iface == NULL) {
                 log_add_syserr("Couldn't duplicate interface specification");
             }
@@ -139,13 +141,17 @@ elt_new(
                 else {
                     elt->ft = ft;
                     elt->pid = -1;
+                    failure = false;
                 } // `elt->vcEnd` initialized
+
                 if (failure)
                     free(elt->iface);
             } // `elt->iface` allocated
+
             if (failure)
                 sa_free(elt->ul7);
         } // `elt->ul7` allocated
+
         if (failure) {
             free(elt);
             elt = NULL;
