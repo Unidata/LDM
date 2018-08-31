@@ -1,4 +1,4 @@
-6.13.7.52
+6.13.7.52	2018-08-31T08:31:35-0600
     Added creation of missing symbolic link, g2vcrdnssl1.tbl -> g2vcrdnssl.tbl,
     to "make install".
 
