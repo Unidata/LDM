@@ -2018,7 +2018,7 @@ downlet_run(Downlet* const downlet)
 {
     int status;
 
-    log_notice_q("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
+    log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
             "pq=\"%s\"", downlet->upId, downlet->feedId,
             pq_getPathname(downlet->pq));
 
@@ -2130,7 +2130,7 @@ downlet_recvProd(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info_q("Inserted: %s", buf);
+            log_info("Inserted: %s", buf);
         }
         down7_incNumProds(downlet->down7);
     }
@@ -2146,10 +2146,10 @@ downlet_recvProd(
                     log_is_enabled_debug);
 
             if (status == PQUEUE_DUP) {
-                log_info_q("Duplicate data-product: %s", buf);
+                log_info("Duplicate data-product: %s", buf);
             }
             else {
-                log_warning_q("Product too big for queue: %s", buf);
+                log_warning("Product too big for queue: %s", buf);
             }
 
             status = 0; // either too big or duplicate data-product
@@ -2824,7 +2824,7 @@ no_such_product_7_svc(
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(downlet->mrm, &iProd);
 
-        log_warning_q("Requested product %lu doesn't exist",
+        log_warning("Requested product %lu doesn't exist",
                 (unsigned long)*missingIprod);
     }
 
@@ -2874,7 +2874,7 @@ end_backlog_7_svc(
     char           saStr[512];
     Downlet* const downlet = pthread_getspecific(down7Key);
 
-    log_notice_q("All backlog data-products received: feed=%s, server=%s",
+    log_notice("All backlog data-products received: feed=%s, server=%s",
             s_feedtypet(downlet->feedtype),
             sa_snprint(downlet->servAddr, saStr, sizeof(saStr)));
 
