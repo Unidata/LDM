@@ -768,6 +768,7 @@ void logl_vlog_1(
             (void)refresh_if_necessary();
             logl_lock();
                 logi_log(level, loc, msg);
+                logi_flush();
             logl_unlock();
             free(msg);
         }
