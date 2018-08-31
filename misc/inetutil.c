@@ -1243,7 +1243,8 @@ sa_new(
             char* id = strdup(addr);
 
             if (id == NULL) {
-                log_syserr_q("Couldn't duplicate service address \"%s\"", addr);
+                log_add_syserr("Couldn't duplicate service address \"%s\"",
+                        addr);
                 free(sa);
                 status = ENOMEM;
             }
@@ -1463,9 +1464,6 @@ sa_parse(
                 break;
             }
         }
-
-        if (EINVAL == status)
-            log_add("Invalid Internet service address: \"%s\"", spec);
     }
 
     return status;

@@ -510,7 +510,7 @@ decodeMulticastEntry(
  * @retval    ENOMEM         Out-of-memory. `log_add()` called.
  */
 static int
-decodeReceiveEntry(
+processReceiveEntry(
         const char* const restrict feedtypeSpec,
         const char* const restrict ldmServerSpec,
         const char* const restrict switchId,
@@ -527,7 +527,10 @@ decodeReceiveEntry(
         status = sa_parseWithDefaults(&ldmSvcAddr, ldmServerSpec, NULL,
                 ldmPort);       // Internet ID must exist; port is optional
 
-        if (0 == status) {
+        if (status) {
+            log_add("Couldn't parse receive entry");
+        }
+        else {
             unsigned short vlanId;
             if (1 != sscanf(vlanSpec, "%hu", &vlanId)) {
                 log_add("Invalid VLAN ID: \"%s\"", vlanSpec);
@@ -536,6 +539,9 @@ decodeReceiveEntry(
             else {
                 status = lcf_addReceive(feedtype, ldmSvcAddr, iface, switchId,
                         portId, vlanId);
+
+                if (status)
+                    log_add("Couldn't add RECEIVE entry");
             } // `vlanId` set
             sa_free(ldmSvcAddr);
         } // `ldmSvcAddr` allocated
@@ -699,11 +705,11 @@ include_stmt:   INCLUDE_K STRING
 receive_entry:  RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6,
+                    int errCode = processReceiveEntry($2, $3, $4, $5, $6,
                             "0.0.0.0");
 
                     if (errCode) {
-                        log_add("Couldn't decode receive entry "
+                        log_add("Couldn't process receive entry "
                                 "\"RECEIVE %s %s %s %s %s\"", $2, $3, $4, $5,
                                 $6);
                         return errCode;
@@ -713,10 +719,10 @@ receive_entry:  RECEIVE_K STRING STRING STRING STRING STRING
                 | RECEIVE_K STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6, $7);
+                    int errCode = processReceiveEntry($2, $3, $4, $5, $6, $7);
 
                     if (errCode) {
-                        log_add("Couldn't decode receive entry "
+                        log_add("Couldn't process receive entry "
                                 "\"RECEIVE %s %s %s %s %s %s\"", $2, $3, $4, $5,
                                 $6, $7);
                         return errCode;

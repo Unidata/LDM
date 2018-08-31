@@ -3068,20 +3068,24 @@ lcf_addReceive(
 {
     int        status;
     VcEndPoint vcEnd;
+
     if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
         log_add("Couldn't construct virtual-circuit endpoint");
         status = ENOMEM;
     }
     else {
         if (d7mgr_add(feedtype, ldmSvcAddr, iface, &vcEnd)) {
+            log_add("Couldn't add downstream LDM7");
             status = ENOMEM;
         }
         else {
             somethingToDo = true;
             status = 0;
         }
+
         vcEndPoint_destroy(&vcEnd);
     } // `vcEnd` constructed
+
     return status;
 }
 
