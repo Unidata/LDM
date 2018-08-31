@@ -18,6 +18,7 @@ LINKS		= $(G2VARSNCEP_s) \
 		  $(G2VARSNSSL_s) \
 		  $(G2VARSWMO_s) \
 		  $(G2VCRDNCEP_s) \
+		  $(G2VCRDNSSL_s) \
 		  $(G2VCRDWMO_s)
 
 dist_sysconf_DATA	= \
