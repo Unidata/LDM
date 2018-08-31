@@ -110,6 +110,7 @@ local_portmapper_running()
         struct sockaddr_in addr;
 
         if (local_sockaddr_in(&addr)) {
+            log_warning("Couldn't get IP address of local host");
             status = -1;
         }
         else {
@@ -118,13 +119,10 @@ local_portmapper_running()
 
             addr.sin_port = (short)htons((short)PMAPPORT);
 
-            if ((client = clnttcp_create(&addr, PMAPPROG,
-                    PMAPVERS, &socket, 50, 500)) == NULL) {
+            if ((client = clnttcp_create(&addr, PMAPPROG, PMAPVERS, &socket, 50,
+                    500)) == NULL) {
                 status = 0;
-
-                log_notice_q("clnttcp_create() failure: %s",
-                        clnt_spcreateerror(""));
-                log_info_q("Portmapper daemon is not running on local host");
+                log_info("Portmapper daemon is not available on local host");
             }
             else {
                 status = 1;

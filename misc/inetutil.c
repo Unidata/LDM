@@ -717,12 +717,11 @@ isMe(
 }
 
 
-/*
+/**
  * Sets the socket Internet address of the local host.
  *
- * Returns:
- *   0      Success
- *  !0      Failure.  errno set.
+ * Retval 0      Success
+ * Retval !0     Failure.  errno set. `log_add()` called.
  */
 int
 local_sockaddr_in(struct sockaddr_in* addr)
@@ -733,7 +732,6 @@ local_sockaddr_in(struct sockaddr_in* addr)
 
     if (cached) {
         (void)memcpy(addr, &cachedAddr, sizeof(cachedAddr));
-
         error = 0;
     }
     else {
@@ -742,18 +740,20 @@ local_sockaddr_in(struct sockaddr_in* addr)
         (void)memset(&cachedAddr, 0, sizeof(cachedAddr));
 
         if (gethostname(name, sizeof(name))) {
-            log_syserr_q("gethostname()");
-
+            log_add_syserr("gethostname()");
             error = errno;
         }
         else {
             error = 0;
 
             if (addrbyhost(name, &cachedAddr)) {
-                if (addrbyhost("localhost", &cachedAddr)) {
-                    if (addrbyhost("0.0.0.0", &cachedAddr)) {
-                        log_syserr_q("addrbyhost()");
+                log_add("Couldn't get IP address of %s", name);
 
+                if (addrbyhost("localhost", &cachedAddr)) {
+                    log_add("Couldn't get IP address of localhost");
+
+                    if (addrbyhost("0.0.0.0", &cachedAddr)) {
+                        log_add("Couldn't get IP address of 0.0.0.0");
                         error = errno;
                     }
                 }
@@ -762,7 +762,10 @@ local_sockaddr_in(struct sockaddr_in* addr)
             if (!error)
                 (void)memcpy(addr, &cachedAddr, sizeof(cachedAddr));
         }
-    }
+
+        if (!error)
+            cached = true;
+    } // Not cached
 
     return error;
 }
