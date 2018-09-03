@@ -110,7 +110,7 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
     */
     gb2_sklvl( lvl1, lvl2, g2lvltbl, &g2lev, &ier);
     if ( ier != 0 ) {
-        log_add("Couldn't get vertical coordinate info: iver=%d,"
+        log_add("Couldn't get vertical coordinate info: iver=%d, "
                 "lvl1=%d, lvl2=%d, center=%.*s, lclver=%d, file=%s",
                 iver, lvl1, lvl2, (int)sizeof(cmsg->origcntr),
                 cmsg->origcntr, lclver, filename);
