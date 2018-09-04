@@ -254,7 +254,7 @@ static void stream_log(
     (void)dest->lock(dest);
         sigset_t prevSigs;
         blockSigs(&prevSigs);
-            for (;;) {
+            while (*msg) {
                 const char* const newline = strchr(msg, '\n');
                 const size_t      msglen =
                         newline ? newline - msg : strlen(msg);
