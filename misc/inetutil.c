@@ -1543,9 +1543,7 @@ sa_parseWithDefaults(
  * @retval     0             Success. `inetSockAddr` and `sockLen` are set.
  * @retval     EAGAIN        A necessary resource is temporarily unavailable.
  *                           `log_add()` called.
- * @retval     EINVAL        Invalid port number or the Internet identifier
- *                           cannot be resolved to an IP address. `log_add()`
- *                           called.
+ * @retval     EINVAL        Invalid argument. `log_add()` called.
  * @retval     ENOENT        The service address doesn't resolve into an IP
  *                           address.
  * @retval     ENOMEM        Out-of-memory. `log_add()` called.
@@ -1554,49 +1552,57 @@ sa_parseWithDefaults(
  */
 int
 sa_getInetSockAddr(
-    const ServiceAddr* const       servAddr,
-    const int                      family,
-    const bool                     serverSide,
-    struct sockaddr_storage* const inetSockAddr,
-    socklen_t* const               sockLen)
+    const ServiceAddr* const servAddr,
+    const int                family,
+    const bool               serverSide,
+    struct sockaddr* const   inetSockAddr,
+    socklen_t* const         sockLen)
 {
-    int            status;
-    char           servName[6];
-    unsigned short port = sa_getPort(servAddr);
+    int status;
 
-    if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
-            sizeof(servName)) {
-        log_add("Invalid port number: %u", port);
+    if (servAddr == NULL || (family != AF_UNSPEC && family != AF_INET &&
+            family != AF_INET6) || inetSockAddr == NULL || sockLen == 0) {
+        log_add("Invalid argument");
         status = EINVAL;
     }
     else {
-        struct addrinfo   hints;
-        struct addrinfo*  addrInfo;
-        const char* const inetId = sa_getInetId(servAddr);
+        char           servName[6];
+        unsigned short port = sa_getPort(servAddr);
 
-        (void)memset(&hints, 0, sizeof(hints));
-        hints.ai_family = family;
-        hints.ai_protocol = IPPROTO_TCP;
-        hints.ai_socktype = SOCK_STREAM;
-        /*
-         * AI_NUMERICSERV  `servName` is a port number.
-         * AI_PASSIVE      The returned socket address is suitable for a
-         *                 `bind()` operation.
-         * AI_ADDRCONFIG   The local system must be configured with an
-         *                 IP address of the specified family.
-         */
-        hints.ai_flags = serverSide
-            ? AI_NUMERICSERV | AI_PASSIVE
-            : AI_NUMERICSERV | AI_ADDRCONFIG;
+        if (port == 0 || snprintf(servName, sizeof(servName), "%u", port) >=
+                sizeof(servName)) {
+            log_add("Invalid port number: %u", port);
+            status = EINVAL;
+        }
+        else {
+            struct addrinfo   hints;
+            struct addrinfo*  addrInfo;
+            const char* const inetId = sa_getInetId(servAddr);
 
-        status = getAddrInfo(inetId, servName, &hints, &addrInfo);
+            (void)memset(&hints, 0, sizeof(hints));
+            hints.ai_family = family;
+            hints.ai_protocol = IPPROTO_TCP;
+            hints.ai_socktype = SOCK_STREAM;
+            /*
+             * AI_NUMERICSERV  `servName` is a port number.
+             * AI_PASSIVE      The returned socket address is suitable for a
+             *                 `bind()` operation.
+             * AI_ADDRCONFIG   The local system must be configured with an
+             *                 IP address of the specified family.
+             */
+            hints.ai_flags = serverSide
+                ? AI_NUMERICSERV | AI_PASSIVE
+                : AI_NUMERICSERV | AI_ADDRCONFIG;
 
-        if (status == 0) {
-            *sockLen = addrInfo->ai_addrlen;
-            (void)memcpy(inetSockAddr, addrInfo->ai_addr, *sockLen);
-            freeaddrinfo(addrInfo);
-        } /* "addrInfo" allocated */
-    } /* valid port number */
+            status = getAddrInfo(inetId, servName, &hints, &addrInfo);
+
+            if (status == 0) {
+                *sockLen = addrInfo->ai_addrlen;
+                (void)memcpy(inetSockAddr, addrInfo->ai_addr, *sockLen);
+                freeaddrinfo(addrInfo);
+            } /* "addrInfo" allocated */
+        } /* valid port number */
+    } // Valid arguments
 
     return status;
 }
@@ -1628,4 +1634,67 @@ sa_compare(
                       : 1;
 
     return cmp;
+}
+
+static int
+sockaddr_in_format(
+        char* const                     buf,
+        const size_t                    bufSize,
+        const struct sockaddr_in* const sockAddr)
+{
+    char addrStr[INET_ADDRSTRLEN];
+
+    // Can't fail
+    (void)inet_ntop(AF_INET, &sockAddr->sin_addr, addrStr, sizeof(addrStr));
+
+    return snprintf(buf, bufSize, "%s:%u", addrStr, ntohs(sockAddr->sin_port));
+}
+
+static int
+sockaddr_in6_format(
+        char* const                      buf,
+        const size_t                     bufSize,
+        const struct sockaddr_in6* const sockAddr)
+{
+    char addrStr[INET6_ADDRSTRLEN];
+
+    // Can't fail
+    (void)inet_ntop(AF_INET6, &sockAddr->sin6_addr, addrStr, sizeof(addrStr));
+
+    return snprintf(buf, bufSize, "[%s]:%u", addrStr,
+            ntohs(sockAddr->sin6_port));
+}
+
+int
+sockaddr_format(
+        const struct sockaddr* const sockAddr,
+        char* const                  buf,
+        const size_t                 bufSize)
+{
+    int nbytes;
+
+    if (sockAddr == NULL || (buf == NULL && bufSize > 0)) {
+        log_add("Invalid argument");
+        nbytes = -1;
+    }
+    else {
+        unsigned family = sockAddr->sa_family;
+
+        if (family != AF_INET && family != AF_INET6) {
+            log_add("Unknown address family: %u", family);
+            nbytes = -1;
+        }
+        else {
+            nbytes = (family == AF_INET)
+                    ? sockaddr_in_format(buf, bufSize,
+                            (struct sockaddr_in*)sockAddr)
+                    : sockaddr_in6_format(buf, bufSize,
+                            (struct sockaddr_in6*)sockAddr);
+
+            if (bufSize && buf)
+                buf[bufSize-1] = 0;
+        }
+    } // Valid arguments
+
+    return nbytes;
 }

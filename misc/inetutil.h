@@ -335,11 +335,11 @@ sa_parseWithDefaults(
  */
 int
 sa_getInetSockAddr(
-    const ServiceAddr* const       servAddr,
-    const int                      family,
-    const bool                     serverSide,
-    struct sockaddr_storage* const inetSockAddr,
-    socklen_t* const               sockLen);
+    const ServiceAddr* const servAddr,
+    const int                family,
+    const bool               serverSide,
+    struct sockaddr* const   inetSockAddr,
+    socklen_t* const         sockLen);
 
 /**
  * Compares two service address objects. Returns a value less than, equal to, or
@@ -357,6 +357,27 @@ int
 sa_compare(
     const ServiceAddr* const sa1,
     const ServiceAddr* const sa2);
+
+/**
+ * Returns the formatted representation of a socket address.
+ *
+ * @param[in]  sockAddr  Socket address
+ * @param[out] buf       Buffer for formatted representation. Always
+ *                       NUL-terminated if `bufSize > 0`.
+ * @param[in]  bufSize   Size of buffer in bytes or `0`, in which case `buf` may
+ *                       be `NULL`
+ * @retval     -1        Invalid argument. `log_add()` called.
+ * @return               Number of bytes in representation (excluding
+ *                       terminating NUL) had `bufSize` been sufficiently large.
+ *                       If greater than or equal to `bufSize`, then `buf` was
+ *                       too small.
+ */
+int
+sockaddr_format(
+        const struct sockaddr* const sockAddr,
+        char* const                  buf,
+        const size_t                 bufSize);
+
 #endif // WANT_MULTICAST
 
 #endif /* !_INETUTIL_H_ */
