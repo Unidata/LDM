@@ -140,7 +140,8 @@ up7Proxy_init(
 {
     int status;
 
-    if (proxy == NULL || socket <= 0 || sockAddr == NULL) {
+    if (proxy == NULL || socket < 0 || sockAddr == NULL ||
+            sockAddr->sin_family != AF_INET) {
         status = LDM7_INVAL;
     }
     else {
@@ -1409,20 +1410,20 @@ downlet_requestBacklog(
  */
 static int
 downlet_getSock(
-    const ServiceAddr* const restrict       servAddr,
-    const int                               family,
-    int* const restrict                     sock,
-    struct sockaddr_storage* const restrict sockAddr)
+    const ServiceAddr* const restrict servAddr,
+    const int                         family,
+    int* const restrict               sock,
+    struct sockaddr* const restrict   sockAddr)
 {
-    struct sockaddr_storage addr;
-    socklen_t               sockLen;
-    int                     status = sa_getInetSockAddr(servAddr, family, false,
-            &addr, &sockLen);
+    struct sockaddr addr;
+    socklen_t       sockLen;
+    int             status = sa_getInetSockAddr(servAddr, family, false, &addr,
+            &sockLen);
 
     if (status == 0) {
-        const int         useIPv6 = addr.ss_family == AF_INET6;
+        const int         useIPv6 = addr.sa_family == AF_INET6;
         const char* const addrFamilyId = useIPv6 ? "IPv6" : "IPv4";
-        const int         fd = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
+        const int         fd = socket(addr.sa_family, SOCK_STREAM, IPPROTO_TCP);
 
         if (fd == -1) {
             log_add_syserr("Couldn't create %s TCP socket", addrFamilyId);
@@ -1431,11 +1432,12 @@ downlet_getSock(
                     : LDM7_SYSTEM;
         }
         else {
-            if (connect(fd, (struct sockaddr*)&addr, sockLen)) {
-                char* sockSpec = sa_format(servAddr);
-                log_add_syserr("Couldn't connect %s TCP socket to \"%s\"",
-                        addrFamilyId, sockSpec);
-                free(sockSpec);
+            if (connect(fd, &addr, sockLen)) {
+                char sockAddrStr[128];
+
+                (void)sockaddr_format(&addr, sockAddrStr, sizeof(sockAddrStr));
+                log_add_syserr("Couldn't connect TCP socket to %s",
+                        sockAddrStr);
 
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
@@ -1478,15 +1480,14 @@ downlet_getSock(
  */
 static int
 downlet_getSocket(
-    const ServiceAddr* const restrict       servAddr,
-    int* const restrict                     sock,
-    struct sockaddr_storage* const restrict sockAddr)
+    const ServiceAddr* const restrict servAddr,
+    int* const restrict               sock,
+    struct sockaddr* const restrict   sockAddr)
 {
-    struct sockaddr_storage addr;
-    socklen_t               sockLen;
-    int                     fd;
-    int                     status = downlet_getSock(servAddr, AF_UNSPEC, &fd,
-            &addr);
+    struct sockaddr addr;
+    socklen_t       sockLen;
+    int             fd;
+    int             status = downlet_getSock(servAddr, AF_UNSPEC, &fd, &addr);
 
     if (status == LDM7_IPV6 || status == LDM7_REFUSED ||
             status == LDM7_TIMEDOUT) {
@@ -1524,9 +1525,9 @@ downlet_getSocket(
 static int
 downlet_initClient(Downlet* const downlet)
 {
-    int                     sock;
-    struct sockaddr_storage sockAddr;
-    int                     status = downlet_getSocket(downlet->servAddr, &sock,
+    int             sock;
+    struct sockaddr sockAddr;
+    int             status = downlet_getSocket(downlet->servAddr, &sock,
             &sockAddr);
 
     if (status == LDM7_OK) {
