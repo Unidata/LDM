@@ -1,3 +1,10 @@
+6.13.7.54
+    Modified logging to not emit empty last line.
+
+    Created sockaddr_format().
+
+    Modified down7.c to use sockaddr_format and perform more argument checking.
+
 6.13.7.53	2018-09-04T08:43:06-0600
     Improved error-messaging.
     
