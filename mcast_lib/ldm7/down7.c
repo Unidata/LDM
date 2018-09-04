@@ -1436,6 +1436,7 @@ downlet_getSock(
                 log_add_syserr("Couldn't connect %s TCP socket to \"%s\"",
                         addrFamilyId, sockSpec);
                 free(sockSpec);
+
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
                         : (errno == ECONNREFUSED)
@@ -1443,6 +1444,7 @@ downlet_getSock(
                           : (errno == EINTR)
                             ? LDM7_INTR
                             : LDM7_SYSTEM;
+
                 (void)close(fd);
             }
             else {

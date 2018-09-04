@@ -1,3 +1,17 @@
+6.13.7.53	2018-09-04T08:43:06-0600
+    Improved error-messaging.
+    
+    Corrected return code from downstream LDM7 manager.
+    
+    Added flushing to single log messages.
+    
+    Added missing vertical coordinates to GEMPAK's NCEP table to accomodate
+    invalid GRIB2 messages (i.e., WMO version number != 255 yet local version
+    number != 0).
+    
+    Moved blocking of signals to after locking of stream in simple logging
+    module.
+
 6.13.7.52	2018-08-31T08:31:35-0600
     Added creation of missing symbolic link, g2vcrdnssl1.tbl -> g2vcrdnssl.tbl,
     to "make install".
