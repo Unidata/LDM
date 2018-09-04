@@ -251,9 +251,9 @@ static void stream_log(
     const char* const basename = logl_basename(loc->file);
     const char* const levelId = level_to_string(level);
 
-    sigset_t prevSigs;
-    blockSigs(&prevSigs);
-        (void)dest->lock(dest);
+    (void)dest->lock(dest);
+        sigset_t prevSigs;
+        blockSigs(&prevSigs);
             for (;;) {
                 const char* const newline = strchr(msg, '\n');
                 const size_t      msglen =
@@ -285,9 +285,11 @@ static void stream_log(
                     continue;
                 }
                 break;
-            }
-        (void)dest->unlock(dest);
-    unblockSigs(&prevSigs);
+            } // Output-line loop
+
+            dest->flush(dest);
+        unblockSigs(&prevSigs);
+    (void)dest->unlock(dest);
 }
 
 /**
