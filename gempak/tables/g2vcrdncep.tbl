@@ -13,6 +13,7 @@
 006 255 Maximum wind level                -                    MWSL     0
 007 255 Tropopause                        -                    TROP     0
 008 255 Nominal top of the atmosphere     -                    TOPA     0
+009 255 Sea bottom                        -                    SEAB     0
 010 255 Entire atmosphere                 -                    EATM     0
 100 100 Layer between two isobaric sfcs   Pa                   PRES    -2
 100 255 Isobaric surface                  Pa                   PRES    -2
@@ -24,7 +25,7 @@
 105 255 Hybrid level                      -                    HYBL     0
 106 106 Layer btwn 2 dpths below lnd sfc  m                    DPTH     2
 108 108 Pressure difference layer         Pa                   PDLY    -2
-009 255 Sea bottom                        -                    SEAB     0
+109 255 Potential vorticity surface       K*m**2*kg-1*s-1      POTV     6
 200   0 Entire atmosphere as a layer      -                    NONE     0
 200   1 Entire atmosphere as a layer      -                    NONE     0
 200 255 Entire atmosphere as a layer      -                    NONE     0
