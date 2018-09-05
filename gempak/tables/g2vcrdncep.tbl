@@ -26,6 +26,7 @@
 106 106 Layer btwn 2 dpths below lnd sfc  m                    DPTH     2
 108 108 Pressure difference layer         Pa                   PDLY    -2
 109 255 Potential vorticity surface       K*m**2*kg-1*s-1      POTV     6
+160 255 Depth below sea-level             m                    DPTH     0
 200   0 Entire atmosphere as a layer      -                    NONE     0
 200   1 Entire atmosphere as a layer      -                    NONE     0
 200 255 Entire atmosphere as a layer      -                    NONE     0
