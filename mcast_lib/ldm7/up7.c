@@ -97,78 +97,84 @@ static int oess_provision(
 {
     int  status;
 
-    if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
-            strncmp(end2->switchId, "dummy", 5) == 0 ||
-            strncmp(end1->portId, "dummy", 5) == 0 ||
-            strncmp(end2->portId, "dummy", 5) == 0) {
-        log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
-        *circuitId = strdup("dummy_circuitId");
-        status = 0;
+    if (wrkGrpName == NULL || desc == NULL || end1 == NULL || end2 == NULL ||
+            circuitId == NULL) {
+        log_add("NULL argument");
     }
     else {
-        char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
-        char vlanId2[12];
-
-        (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
-        (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
-
-        const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
-                end1->switchId, end1->portId, vlanId1,
-                end2->switchId, end2->portId, vlanId2, NULL};
-
-        rootpriv();
-            ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-        unpriv();
-
-        if (cmd == NULL) {
-            status = LDM7_SYSTEM;
+        if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
+                strncmp(end2->switchId, "dummy", 5) == 0 ||
+                strncmp(end1->portId, "dummy", 5) == 0 ||
+                strncmp(end2->portId, "dummy", 5) == 0) {
+            log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
+            *circuitId = strdup("dummy_circuitId");
+            status = 0;
         }
         else {
-            char*   line = NULL;
-            size_t  size = 0;
-            ssize_t nbytes = childCmd_getline(cmd, &line, &size);
-            int     circuitIdStatus;
+            char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
+            char vlanId2[12];
 
-            if (nbytes <= 0) {
-                log_add("Couldn't get AL2S virtual-circuit ID");
+            (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
+            (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
 
-                circuitIdStatus = LDM7_SYSTEM;
-            }
-            else {
-                circuitIdStatus = 0;
+            const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
+                    end1->switchId, end1->portId, vlanId1,
+                    end2->switchId, end2->portId, vlanId2, NULL};
 
-                if (line[nbytes-1] == '\n')
-                    line[nbytes-1] = 0;
-            }
+            rootpriv();
+                ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+            unpriv();
 
-            int childExitStatus;
-
-            status = childCmd_reap(cmd, &childExitStatus);
-
-            if (status) {
+            if (cmd == NULL) {
                 status = LDM7_SYSTEM;
             }
             else {
-                if (childExitStatus) {
-                    log_add("OESS provisioning process terminated with status "
-                            "%d", childExitStatus);
+                char*   line = NULL;
+                size_t  size = 0;
+                ssize_t nbytes = childCmd_getline(cmd, &line, &size);
+                int     circuitIdStatus;
 
+                if (nbytes <= 0) {
+                    log_add("Couldn't get AL2S virtual-circuit ID");
+
+                    circuitIdStatus = LDM7_SYSTEM;
+                }
+                else {
+                    circuitIdStatus = 0;
+
+                    if (line[nbytes-1] == '\n')
+                        line[nbytes-1] = 0;
+                }
+
+                int childExitStatus;
+
+                status = childCmd_reap(cmd, &childExitStatus);
+
+                if (status) {
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    if (circuitIdStatus) {
-                        status = circuitIdStatus;
+                    if (childExitStatus) {
+                        log_add("OESS provisioning process terminated with status "
+                                "%d", childExitStatus);
+
+                        status = LDM7_SYSTEM;
                     }
                     else {
-                        *circuitId = line;
-                    }
-                } // Child process terminated unsuccessfully
-            } // Child-command was reaped
-        } // Couldn't execute child-command
+                        if (circuitIdStatus) {
+                            status = circuitIdStatus;
+                        }
+                        else {
+                            *circuitId = line;
+                        }
+                    } // Child process terminated unsuccessfully
+                } // Child-command was reaped
+            } // Couldn't execute child-command
 
-        if (status)
-            log_add("Couldn't create AL2S virtual-circuit");
-    } // Actual AL2S virtual-circuit
+            if (status)
+                log_add("Couldn't create AL2S virtual-circuit");
+        } // Actual AL2S virtual-circuit
+    }
 
     return status;
 }
@@ -575,11 +581,11 @@ up7_subscribe(
                     (void)umm_unsubscribe(reducedFeed, addr);
                     up7_ensureFree(xdr_SubscriptionReply, &rep);
                 }
-            } // Multicast LDM sender exists & `rep` is initialized
+            } // Multicast LDM sender exists & reply is initialized
 
             if (status)
                 up7_destroyVirtCirc();
-        } // Downstream client added to multi-point VLAN
+        } // Virtual circuit with downstream client created
     } // All or part of subscription is allowed by configuration-file
 
     return replySet;
@@ -1003,7 +1009,7 @@ up7_init(
                 status = LDM7_SYSTEM;
             }
             else {
-                free(localVcEndPoint);
+                vcEndPoint_free(localVcEndPoint);
                 localVcEndPoint = end;
 
                 isInitialized = true;
@@ -1070,7 +1076,7 @@ subscribe_7_svc(
     log_notice_q("Incoming subscription request from %s[%s]:%u for feed %s",
             ipv4spec, hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
     if (reply) {
-        up7_ensureFree(xdr_SubscriptionReply, reply); // free prior use
+        up7_ensureFree(xdr_SubscriptionReply, reply); // free possible prior use
         reply = NULL;
     }
 
