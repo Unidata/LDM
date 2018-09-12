@@ -1,3 +1,15 @@
+6.13.7.55
+    Added depth below sea level, (160,255), to GEMPAK NCEP vertical coordinate
+    table.
+    
+    up7:
+        - Added some argument-checking
+        - Added use of vcEndPoint_free()
+        - Improved commentary
+        
+    PerProdNotifier:
+        - Document `stopTime` in notify_of_eop()
+
 6.13.7.54	2018-09-04T13:49:02-0600
     Modified logging to not emit empty last line.
 
