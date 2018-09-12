@@ -150,6 +150,7 @@ void PerProdNotifier::notify_of_bop(
 }
 
 /**
+ * @param[in] stopTime         When end-of-product message arrived
  * @param[in] prodIndex        The FMTP index of the product.
  * @throws std::runtime_error  Receiving application error.
  */

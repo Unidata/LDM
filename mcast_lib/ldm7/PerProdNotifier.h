@@ -64,6 +64,7 @@ public:
             unsigned               metaSize,
             void**                 data);
     /**
+     * @param[in] stopTime         When end-of-product message arrived
      * @param[in] prodIndex        The FMTP index of the product.
      * @throws std::runtime_error  Receiving application error.
      */
