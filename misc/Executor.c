@@ -431,6 +431,7 @@ executor_init(Executor* const executor)
 static void
 executor_destroy(Executor* const executor)
 {
+    executor_shutdown(executor, true);
     executor_lock(executor);
         jobList_free(executor->jobList);
     executor_unlock(executor);

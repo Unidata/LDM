@@ -36,7 +36,7 @@ Executor*
 executor_new(void);
 
 /**
- * Deletes an execution service.
+ * Deletes an execution service. Cancels all submitted but uncompleted jobs.
  *
  * @param[in,out] executor  Execution service to be deleted
  */
