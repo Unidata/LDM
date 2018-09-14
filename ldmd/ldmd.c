@@ -530,6 +530,7 @@ static int create_ldm_tcp_svc(
                         log_syserr_q("Couldn't listen() on server's socket");
                     }
                     else {
+#if 0
                         /*
                          * Register with the portmapper if it's running.  The
                          * check to see if it's running is made because on a
@@ -541,11 +542,12 @@ static int create_ldm_tcp_svc(
                             log_debug("create_ldm_tcp_svc(): Registering");
 
                             if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
-                                log_warning_q("Can't register TCP service %lu "
-                                        "on port %u", LDMPROG, (unsigned) port);
-                                log_warning_q("Downstream LDMs won't be able to "
+                                log_add("Can't register TCP service %lu on "
+                                        "port %u", LDMPROG, (unsigned) port);
+                                log_add("Downstream LDMs won't be able to "
                                         "connect via the RPC portmapper daemon "
                                         "(rpcbind(8), portmap(8), etc.)");
+                                log_flush_warning();
                             }
                             else {
                                 portIsMapped = 1;
@@ -553,6 +555,7 @@ static int create_ldm_tcp_svc(
                                 (void) pmap_set(LDMPROG, 5, IPPROTO_TCP, port);
                             }
                         } /* a local portmapper is running */
+#endif
 
                         *sockp = sock;
                     } /* listen() success */
