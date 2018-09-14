@@ -39,9 +39,12 @@ condBroadcast(StopFlag* const stopFlag)
     log_assert(status == 0);
 }
 
-int stopFlag_init(StopFlag* const stopFlag)
+int stopFlag_init(
+        StopFlag* const        stopFlag,
+        bool                 (*done)(void))
 {
     stopFlag->isSet = false;
+    stopFlag->done = done;
 
     int status = mutex_init(&stopFlag->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
@@ -83,18 +86,23 @@ void stopFlag_set(StopFlag* const stopFlag)
     unlock(stopFlag);
 }
 
-bool stopFlag_isSet(StopFlag* const stopFlag)
+static bool isDone(StopFlag* const stopFlag)
+{
+    return stopFlag->isSet || (stopFlag->done && stopFlag->done());
+}
+
+bool stopFlag_shouldStop(StopFlag* const stopFlag)
 {
     lock(stopFlag);
-        bool isSet = stopFlag->isSet;
+        bool shouldStop = isDone(stopFlag);
     unlock(stopFlag);
-    return isSet;
+    return shouldStop;
 }
 
 void stopFlag_wait(StopFlag* const stopFlag)
 {
     lock(stopFlag);
-        while (!stopFlag->isSet) {
+        while (!isDone(stopFlag)) {
             int status = pthread_cond_wait(&stopFlag->cond, &stopFlag->mutex);
             log_assert(status == 0);
         }
@@ -106,7 +114,7 @@ void stopFlag_timedWait(
         const struct timespec* const restrict when)
 {
     lock(stopFlag);
-        while (!stopFlag->isSet) {
+        while (!isDone(stopFlag)) {
             int status = pthread_cond_timedwait(&stopFlag->cond,
                     &stopFlag->mutex, when);
 
