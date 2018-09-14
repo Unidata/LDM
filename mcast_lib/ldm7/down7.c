@@ -12,6 +12,9 @@
  *
  *   @file: down7.c
  * @author: Steven R. Emmerson
+ *
+ * Requirements:
+ *     - SIGTERM must terminate the process in which this runs
  */
 
 #include "config.h"
@@ -59,6 +62,15 @@
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 #endif
+
+/******************************************************************************
+ * "Done" function
+ ******************************************************************************/
+
+static bool isDone(void)
+{
+    return done; // External variable in "globals.c"
+}
 
 /******************************************************************************
  * Thread-dependent context-pointer for RPC service functions
@@ -631,13 +643,13 @@ ucastRcvr_runSvc(UcastRcvr* const ucastRcvr)
     log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
             timeout);
 
-    while (!stopFlag_isSet(&ucastRcvr->stopFlag)) {
+    while (!stopFlag_shouldStop(&ucastRcvr->stopFlag)) {
         // log_debug_1("Calling poll(): socket=%d", sock); // Excessive output
         status = poll(&pfd, 1, timeout);
 
         if (0 == status) {
             // Timeout
-            if (!stopFlag_isSet(&ucastRcvr->stopFlag)) {
+            if (!stopFlag_shouldStop(&ucastRcvr->stopFlag)) {
                 status = downlet_testConnection(ucastRcvr->downlet);
 
                 if (status) {
@@ -694,7 +706,7 @@ ucastRcvr_runSvc(UcastRcvr* const ucastRcvr)
     } // `poll()` loop
 
     // Eclipse IDE wants to see a return
-    return stopFlag_isSet(&ucastRcvr->stopFlag) ? 0 : status;
+    return stopFlag_shouldStop(&ucastRcvr->stopFlag) ? 0 : status;
 }
 
 /**
@@ -818,7 +830,7 @@ ucastRcvr_init(
             status = LDM7_RPC;
         }
         else {
-            status = stopFlag_init(&ucastRcvr->stopFlag);
+            status = stopFlag_init(&ucastRcvr->stopFlag, isDone);
             log_assert(status == 0);
 
             ucastRcvr->downlet = downlet;
@@ -1174,7 +1186,7 @@ backlogger_init(
         const signaturet  before,
         Downlet* const    downlet)
 {
-    int status = stopFlag_init(&backlogger->stopFlag);
+    int status = stopFlag_init(&backlogger->stopFlag, isDone);
 
     if (status) {
         log_add("Couldn't initialize stop flag");
@@ -1244,7 +1256,7 @@ backlogger_run(Backlogger* const backlogger)
     int status = downlet_requestBacklog(backlogger->downlet,
                 backlogger->before);
 
-    if (stopFlag_isSet(&backlogger->stopFlag)) {
+    if (stopFlag_shouldStop(&backlogger->stopFlag)) {
         status = 0;
     }
     else if (status) {
@@ -1433,7 +1445,7 @@ downlet_getSock(
         }
         else {
             if (connect(fd, &addr, sockLen)) {
-                char sockAddrStr[128];
+                char sockAddrStr[128] = {};
 
                 (void)sockaddr_format(&addr, sockAddrStr, sizeof(sockAddrStr));
                 log_add_syserr("Couldn't connect TCP socket to %s",
@@ -1441,7 +1453,7 @@ downlet_getSock(
 
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
-                        : (errno == ECONNREFUSED)
+                        : (errno == ECONNREFUSED || errno == EHOSTUNREACH)
                           ? LDM7_REFUSED
                           : (errno == EINTR)
                             ? LDM7_INTR
@@ -2368,7 +2380,7 @@ down7_init(
                             status = LDM7_SYSTEM;
                         }
                         else {
-                            status = stopFlag_init(&down7->stopFlag);
+                            status = stopFlag_init(&down7->stopFlag, isDone);
 
                             if (status) {
                                 log_add("Couldn't initialize stop flag");
@@ -2614,7 +2626,7 @@ down7_run(Down7* const down7)
 {
     int status = 0;
 
-    while (!stopFlag_isSet(&down7->stopFlag) && status == 0) {
+    while (!stopFlag_shouldStop(&down7->stopFlag) && status == 0) {
         Future* const future = executor_submit(down7->executor, down7,
             down7_runDownlet, down7_haltDownlet);
 
@@ -2638,10 +2650,7 @@ down7_run(Down7* const down7)
                 else if (status == LDM7_REFUSED || status == LDM7_NOENT ||
                         status == LDM7_UNAUTH) {
                     // Problem might be temporary
-                    struct timespec when;
-                    when.tv_sec = time(NULL) + interval;
-                    when.tv_nsec = 0;
-                    stopFlag_timedWait(&down7->stopFlag, &when);
+                    sleep(interval);
                     status = 0; // Try again
                 }
                 else {
@@ -2649,8 +2658,8 @@ down7_run(Down7* const down7)
                 }
             } // One-time, downstream LDM7 returned non-zero status
             else if (status) {
-                log_add("Couldn't get result of executing downstream LDM7 "
-                        "once");
+                log_add("Couldn't get result of executing one-time downstream "
+                        "LDM7");
                 status = LDM7_SYSTEM;
             }
             else {
