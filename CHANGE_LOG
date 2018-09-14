@@ -1,21 +1,35 @@
+6.13.7.56
+    up7:
+        Remove Coverity Scan lint.
+        
+    ldmd:
+        Eliminate use of portmapper because
+            - Lots of places consider it a security hole
+            - It slowed things down significantly
+            - It doesn't appear to be used much
+
+    down7:
+        - Ensured logging by async jobs
+        - Moved "starting up" message from downlet to down7
+
 6.13.7.55	2018-09-14T08:52:53-0600
     Added depth below sea level, (160,255), to GEMPAK NCEP vertical coordinate
     table.
-    
+
     up7:
         - Added some argument-checking
         - Added use of vcEndPoint_free()
         - Improved commentary
-        
+
     down7:
         - Handled EHOSTUNREACH to handle offline upstream LDM7
         - Used "done" variable for SIGTERM termination
         - Replaced stopFlag_timedWait() with sleep() because the former can't be
           async-signal-safe
-        
+
     PerProdNotifier:
         - Document `stopTime` in notify_of_eop()
-        
+
     StopFlag:
         - Added optional external "done" function
 
