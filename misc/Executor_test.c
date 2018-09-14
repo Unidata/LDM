@@ -28,7 +28,7 @@ typedef struct {
 static void obj_init(Obj* const obj)
 {
     obj->ran = false;
-    CU_ASSERT_EQUAL(stopFlag_init(&obj->stopFlag), 0);
+    CU_ASSERT_EQUAL(stopFlag_init(&obj->stopFlag, NULL), 0);
 }
 
 static void obj_destroy(Obj* const obj)
