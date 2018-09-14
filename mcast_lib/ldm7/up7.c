@@ -86,6 +86,7 @@ static const char    python[] = "python"; ///< Name of python executable
  *                          "dummy".
  * @retval     0            Success or a switch or port identifier of `end1` or
  *                          `end2` starts with "dummy"
+ * @retval     LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
  */
 static int oess_provision(
@@ -100,6 +101,7 @@ static int oess_provision(
     if (wrkGrpName == NULL || desc == NULL || end1 == NULL || end2 == NULL ||
             circuitId == NULL) {
         log_add("NULL argument");
+        status = LDM7_INVAL;
     }
     else {
         if (    strncmp(end1->switchId, "dummy", 5) == 0 ||
