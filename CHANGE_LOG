@@ -7,8 +7,17 @@
         - Added use of vcEndPoint_free()
         - Improved commentary
         
+    down7:
+        - Handled EHOSTUNREACH to handle offline upstream LDM7
+        - Used "done" variable for SIGTERM termination
+        - Replaced stopFlag_timedWait() with sleep() because the former can't be
+          async-signal-safe
+        
     PerProdNotifier:
         - Document `stopTime` in notify_of_eop()
+        
+    StopFlag:
+        - Added optional external "done" function
 
 6.13.7.54	2018-09-04T13:49:02-0600
     Modified logging to not emit empty last line.
