@@ -1414,8 +1414,8 @@ downlet_requestBacklog(
  * @retval     LDM7_INVAL     Invalid port number or host identifier.
  *                            `log_add()` called.
  * @retval     LDM7_IPV6      IPv6 not supported. `log_add()` called.
- * @retval     LDM7_REFUSED   Remote host refused connection (server likely
- *                            isn't running). `log_add()` called.
+ * @retval     LDM7_REFUSED   Remote host refused connection (host is offline or
+ *                            server isn't running). `log_add()` called.
  * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_add()`
  *                            called.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
@@ -1448,8 +1448,7 @@ downlet_getSock(
                 char sockAddrStr[128] = {};
 
                 (void)sockaddr_format(&addr, sockAddrStr, sizeof(sockAddrStr));
-                log_add_syserr("Couldn't connect TCP socket to %s",
-                        sockAddrStr);
+                log_add_syserr(NULL);
 
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
@@ -1700,8 +1699,10 @@ downlet_runUcastRcvr(
         log_flush_error();
     }
     else {
-        log_clear();
+        log_flush_notice();
     }
+
+    log_free();
 
     return status;
 }
@@ -1767,8 +1768,10 @@ downlet_runBackstop(
         log_flush_error();
     }
     else {
-        log_clear();
+        log_flush_notice();
     }
+
+    log_free();
 
     return status;
 }
@@ -1823,8 +1826,10 @@ downlet_runMcastRcvr(
         log_flush_error();
     }
     else {
-        log_clear();
+        log_flush_notice();
     }
+
+    log_free();
 
     return status;
 }
@@ -1891,8 +1896,10 @@ downlet_runBacklogger(
         log_flush_error();
     }
     else {
-        log_clear();
+        log_flush_notice();
     }
+
+    log_free();
 
     return status;
 }
@@ -2032,10 +2039,6 @@ static Ldm7Status
 downlet_run(Downlet* const downlet)
 {
     int status;
-
-    log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
-            "pq=\"%s\"", downlet->upId, downlet->feedId,
-            pq_getPathname(downlet->pq));
 
     // Sets `downlet->up7Proxy` and `downlet->sock`
     status = downlet_initClient(downlet);
@@ -2482,14 +2485,15 @@ down7_runDownlet(
     } // `down7->downlet` initialized
 
     /**
-     * Flush all log messages because this is the end of an asynchronous task.
+     * All log messages are flushed because this is the end of an asynchronous
+     * task.
      */
     if (status == LDM7_TIMEDOUT) {
-        log_flush_info();
+        log_flush_notice();
     }
     else if (status == LDM7_INTR) {
         log_add("One-time, downstream LDM7 was interrupted");
-        log_flush_info();
+        log_flush_notice();
     }
     else if (status == LDM7_NOENT || status == LDM7_REFUSED ||
             status == LDM7_UNAUTH) {
@@ -2500,8 +2504,10 @@ down7_runDownlet(
         log_flush_error();
     }
     else {
-        log_clear();
+        log_flush_notice();
     }
+
+    log_free();
 
     return status;
 }
@@ -2626,12 +2632,23 @@ down7_run(Down7* const down7)
 {
     int status = 0;
 
-    while (!stopFlag_shouldStop(&down7->stopFlag) && status == 0) {
+    char* upId = sa_format(down7->servAddr);
+    char* feedId = feedtypet_format(down7->feedtype);
+    char* vcEndId = vcEndPoint_format(&down7->vcEnd);
+    log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
+            "FmtpIface=%s, vcEndPoint=%s, pq=\"%s\"", upId, feedId,
+            down7->iface, vcEndId, pq_getPathname(down7->pq));
+    free(vcEndId);
+    free(feedId);
+    free(upId);
+
+    while (status == 0 && !stopFlag_shouldStop(&down7->stopFlag)) {
+        log_flush_notice();
         Future* const future = executor_submit(down7->executor, down7,
             down7_runDownlet, down7_haltDownlet);
 
         if (future == NULL) {
-            log_add("Can't execute downstream LDM7 once");
+            log_add("Can't execute one-time downstream LDM7");
             status = LDM7_SYSTEM;
         }
         else {
@@ -2645,16 +2662,19 @@ down7_run(Down7* const down7)
                 status = future_getRunStatus(future);
 
                 if (status == LDM7_TIMEDOUT) {
+                    log_flush_notice();
                     status = 0; // Try again immediately
                 }
                 else if (status == LDM7_REFUSED || status == LDM7_NOENT ||
                         status == LDM7_UNAUTH) {
                     // Problem might be temporary
+                    log_flush_notice();
                     sleep(interval);
                     status = 0; // Try again
                 }
                 else {
-                    log_add("Downstream LDM7 failed: status=%d", status);
+                    log_add("One-time downstream LDM7 failed: status=%d",
+                            status);
                 }
             } // One-time, downstream LDM7 returned non-zero status
             else if (status) {
