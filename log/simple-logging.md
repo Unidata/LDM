@@ -27,12 +27,11 @@ implementation rather than the `ulog` implementation, which is documented
 elsewhere.
 
 Both implementations manage a FIFO queue of log messages for each thread in a
-process. `log_add*` functions add to the queue. At some point, one of the
+process. `log_add*()` functions add to the queue. At some point, one of the
 following should occur:
-  - A final message added and the accumulated messages emitted by
-    `log_error()`, for example;
-  - The accumulated messages emitted by `log_flush_error()`, for example;
-    or
+  - A final message optionally added;
+  - The accumulated messages emitted by one of the `log_flush_*()` functions
+    (e.g., "log_flush_error()"); or
   - The queue cleared by `log_clear()`.
 
 By default, log messages are written to
@@ -54,7 +53,7 @@ command-line option `-l` _dest_:
 <em>path</em>   | File whose pathname is _path_
 
 Besides managing thread-specific queues of log messages, the LDM logging
-component also registers a handler for the `HUP` signal. If log messages are
+component also registers a handler for the `USR1` signal. If log messages are
 being written to a regular file (e.g., the LDM log file), then upon receipt of
 the signal, the LDM logging component will refresh (i.e., close and re-open) its
 connection to the file. This allows the log files to be rotated and purged by an
@@ -91,7 +90,7 @@ static pid_t exec_child(const char* const path)
 {
     int pid = fork();
     if (pid < 0) {
-        log_add_syserr("Couldn't fork() process");
+        log_add_syserr("Couldn't fork() process"); // Uses `errno`
     }
     else if (pid > 0) {
         // Child process
@@ -100,7 +99,8 @@ static pid_t exec_child(const char* const path)
          * Adds to empty message queue using `errno`, prints queue at ERROR
          * level, then clears queue:
          */
-        log_syserr("execl(\"%s\") failure", path);
+        log_add_syserr("execl(\"%s\") failure", path); // Uses `errno`
+        log_flush_error();
         log_fini(); // Good form
         exit(1);
     }
@@ -120,7 +120,7 @@ static int daemonize(void)
     int   status;
     pid_t pid = fork();
     if (pid == -1) {
-        log_error("fork() failure");
+        log_add_syserr("fork() failure"); // Uses `errno`
         status = -1;
     }
     else {
@@ -167,24 +167,40 @@ int main(int argc, char* argv)
     }
     ...
     if (func()) {
-        if (log_is_enabled_info)
-            // Adds to message queue, prints queue at INFO level, then clears queue
-            log_info("func() failure: reason = %s", slow_func());
+        if (log_is_enabled_info) { // Test because of `slow_func()`
+            // Adds to message queue, prints queue at INFO level, clears queue
+            log_add("func() failure: reason = %s", slow_func());
+            log_flush_info();
+        }
     }
+
     if (func()) {
-        // Adds to message queue, prints queue at ERROR level, then clears queue
-        log_error("func() failure: reason = %s", fast_func());
+        // Adds to message queue, prints queue at ERROR level, clears queue
+        log_add("func() failure: reason = %s", fast_func());
+        log_flush_error();
     }
-    if (exec_child("program") < 0) {
-        log_error("Couldn't execute program"); // Prints message queue at ERROR level
+
+    const char program[] = "utility";
+    if (exec_child(program) < 0) {
+        // Adds to message queue, prints queue at ERROR level, clears queue
+        log_add("Couldn't execute program %s", program);
+        log_flush_error();
     }
+    
     pthread_t thread_id;
     int       status = pthread_create(&thread_id, NULL, start, NULL);
-    if (status)
-        log_syserr("Couldn't create thread"); // Prints message queue at ERROR level
+    if (status) {
+        // Adds to message queue, prints queue at ERROR level, clears queue
+        log_add("Couldn't create thread");
+        log_flush_error();
+    }
+    
     status = daemonize();
-    if (status)
-        log_syserr("Couldn't daemonize"); // Prints message queue at ERROR level
+    if (status) {
+        // Adds to message queue, prints queue at ERROR level, clears queue
+        log_add("Couldn't daemonize");
+        log_flush_error();
+    }
     ...
     log_fini(); // Good form
     return status ? 1 : 0;
@@ -198,7 +214,7 @@ int main(int argc, char* argv)
 Log messages sent to either the standard error stream or the LDM log file by
 the simple implementation will have the following format:
 
-> _time_ _proc_ _level_ _loc_ _msg_
+> _time_ _proc_ _loc_ _level_ _msg_
 
 where:
 <dl>
@@ -209,13 +225,12 @@ where:
     <em>id</em>[<em>pid</em>], where <em>id</em> is the identifier given to
     log_init(), log_set_id(), or log_set_upstream_id(), and <em>pid</em> is the
     system's numeric process-identifier.
+<dt><em>loc</em> <dd>Is the location where the message was created in the form
+    <em>file</em>:<em>line</em>, where <em>file</em> is the name
+    of the file where the message was generated and <em>line</em> is the line
+    number.
 <dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
     of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
-<dt><em>loc</em> <dd>Is the location where the message was created in the form
-    <em>file</em>:<em>line</em>:<em>func</em>(), where <em>file</em> is the name
-    of the file where the message was generated, <em>line</em> is the line
-    number, and <em>func</em> is the name of the function that generated the
-    message.
 <dt><em>msg</em> <dd>Is the actual message given to one of the logging
     functions.
 </dl>
