@@ -1,7 +1,17 @@
+6.13.7.57
+    uldbutil(1):
+        Reduced number of error messages LDM isn't running.
+
+    up7:
+        Improved invalid argument message from oess_provision().
+
+    Documentation:
+        Updated simple logging documentation regarding SIGUSR1.
+
 6.13.7.56	2018-09-14T14:34:26-0600
     up7:
-        Remove Coverity Scan lint.
-        
+        Removed Coverity Scan lint.
+
     ldmd:
         Eliminate use of portmapper because
             - Lots of places consider it a security hole
