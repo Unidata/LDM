@@ -27,9 +27,10 @@ typedef struct job    Job;
 /**
  * Returns a new future for an asynchronous job.
  *
- * @param[in] job       Future's job. Should eventually be passed to
- *                      `future_free()`.
- * @return              New future
+ * @param[in] job       Future's job. Must exist until `future_free()` is called
+ *                      on the returned pointer.
+ * @return              New future. Caller should call `future_free()` when it's
+ *                      no longer needed.
  * @retval    `NULL`    Out of memory. `log_add()` called.
  * @threadsafety        Safe
  * @see `future_free()`
