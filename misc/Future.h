@@ -11,11 +11,10 @@
  */
 #include "config.h"
 
-#include <pthread.h>
 #include <stdbool.h>
 
-#ifndef MCAST_LIB_LDM7_FUTURE_H_
-#define MCAST_LIB_LDM7_FUTURE_H_
+#ifndef MISC_FUTURE_H_
+#define MISC_FUTURE_H_
 
 typedef struct future Future;
 typedef struct job    Job;
@@ -173,4 +172,4 @@ future_areEqual(
     }
 #endif
 
-#endif /* MCAST_LIB_LDM7_FUTURE_H_ */
+#endif /* MISC_FUTURE_H_ */

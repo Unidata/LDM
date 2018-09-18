@@ -9,12 +9,15 @@
  *  Created on: May 6, 2018
  *      Author: Steven R. Emmerson
  */
-#include "../../misc/Future.h"
 #include "config.h"
 
+#include "Future.h"
 
-#ifndef MCAST_LIB_LDM7_EXECUTOR_H_
-#define MCAST_LIB_LDM7_EXECUTOR_H_
+#include <pthread.h>
+#include <stddef.h>
+
+#ifndef MISC_EXECUTOR_H_
+#define MISC_EXECUTOR_H_
 
 #ifdef __cplusplus
     extern "C" {
@@ -109,4 +112,4 @@ executor_shutdown(
     }
 #endif
 
-#endif /* MCAST_LIB_LDM7_EXECUTOR_H_ */
+#endif /* MISC_EXECUTOR_H_ */

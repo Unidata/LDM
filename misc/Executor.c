@@ -33,7 +33,7 @@ typedef enum {
     JOB_COMPLETED
 } JobState;
 
-typedef struct job {
+struct job {
     pthread_mutex_t  mutex;
     pthread_cond_t   cond;
     pthread_t        thread;
@@ -50,10 +50,7 @@ typedef struct job {
     struct job*      next;       ///< Next job in list
     JobState         state;      ///< State of job
     bool             canceled;   ///< Job was canceled?
-} Job;
-
-// Forward declarations:
-typedef struct executor Executor;
+};
 
 static void
 executor_afterCompletion(
