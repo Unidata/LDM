@@ -9,8 +9,7 @@
 bin_PROGRAMS	= delayQueue
 AM_CPPFLAGS	= \
             -I$(top_builddir)/log       	-I$(top_srcdir)/log \
-            -I$(top_builddir)/misc     		-I$(top_srcdir)/misc \
-            -I$(top_srcdir)
+            -I$(top_builddir)/misc     		-I$(top_srcdir)/misc
 delayQueue_SOURCES	= delayQueue.cpp
 delayQueue_LDADD	= $(top_builddir)/lib/libldm.la -lstdc++
 TAGS_FILES	= \
