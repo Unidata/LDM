@@ -1068,7 +1068,7 @@ static uldb_Status sm_setShmId(
     sm->shmId = shmget(sm->key, 0, read_write);
 
     if (-1 == sm->shmId) {
-        log_add_syserr("Couldn't get shared-memory segment identifier");
+        log_add_syserr(NULL);
         status = (ENOENT == errno) ? ULDB_EXIST : ULDB_SYSTEM;
     }
     else {
@@ -1091,10 +1091,7 @@ static uldb_Status sm_attach(
 {
     int status = sm_setShmId(sm);
 
-    if (status) {
-        log_add("Couldn't get shared-memory segment");
-    }
-    else {
+    if (status == 0) {
         /*
          * Attach the shared-memory segment.
          */
@@ -1172,10 +1169,8 @@ static uldb_Status sm_init(
     sm->key = key;
 
     int status = sm_attach(sm);
-    if (status) {
-        log_add("Couldn't attach shared-memory segment");
-    }
-    else {
+
+    if (status == 0) {
         status = sm_detach(sm);
         if (status)
             log_add("Couldn't detach shared-memory segment");
@@ -1966,15 +1961,15 @@ uldb_Status uldb_open(
     }
     else {
         status = sm_init(&database.sharedMemory, key);
-        if (status) {
-            log_add("Couldn't initialize shared-memory component");
-        }
-        else if (srwl_get(key, &database.lock)) {
-            log_add("Couldn't get existing lock component");
-            status = ULDB_SYSTEM;
-        }
-        else {
-            database.validString = VALID_STRING;
+
+        if (status == 0) {
+            if (srwl_get(key, &database.lock)) {
+                log_add("Couldn't get existing lock component");
+                status = ULDB_SYSTEM;
+            }
+            else {
+                database.validString = VALID_STRING;
+            }
         }
     }
 

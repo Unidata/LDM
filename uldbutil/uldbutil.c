@@ -92,8 +92,9 @@ int main(
             status = uldb_open(NULL);
             if (status) {
                 if (ULDB_EXIST == status) {
-                    log_add("The upstream LDM database doesn't exist");
-                    log_notice_q("Is the LDM running?");
+                    log_add("The upstream LDM database doesn't exist. "
+                            "Is the LDM running?");
+                    log_flush_notice();
                     status = 2;
                 }
                 else {
