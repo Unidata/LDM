@@ -100,7 +100,12 @@ static int oess_provision(
 
     if (wrkGrpName == NULL || desc == NULL || end1 == NULL || end2 == NULL ||
             circuitId == NULL) {
-        log_add("NULL argument");
+        char* end1Id = end1 ? vcEndPoint_format(end1) : NULL;
+        char* end2Id = end2 ? vcEndPoint_format(end2) : NULL;
+        log_add("NULL argument: wrkGrpName=%s, desc=%s, end1=%s, end2=%s,"
+                "circuitId=%p", wrkGrpName, desc, end1Id, end2Id, circuitId);
+        free(end1Id);
+        free(end2Id);
         status = LDM7_INVAL;
     }
     else {
