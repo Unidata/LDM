@@ -1,3 +1,19 @@
+6.13.7.59
+    configure:
+        Added "--with-delayQueue" option.
+
+    Future & Executor:
+        Cleaned-up typedef dependencies.
+
+    mcast_lib/ldm7/Makefile:
+        Reverted -I includes to make "make Distclean" work.
+
+    Completer:
+        Added determination of valid structure.
+
+    down7:
+        Have down7 call downlet direcly (eliminate executor).
+
 6.13.7.58	2018-09-18T13:06:24-0600
     up7:
         Improve argument-logic of oess_provision().
