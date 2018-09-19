@@ -245,6 +245,15 @@ AC_ARG_WITH([gribinsert],
     [with_gribinsert=no])
 AM_CONDITIONAL([WANT_GRIBINSERT], [test "x$with_gribinsert" != xno])
 
+# Whether or not to include the delayQueue(1) utility in the build
+AC_ARG_WITH([delayQueue],
+    AS_HELP_STRING([--with-delayQueue],
+	[enable building the delayQueue(1) utility
+        [default=without]]),
+    [],
+    [with_delayQueue=no])
+AM_CONDITIONAL([WANT_DELAYQUEUE], [test "x$with_delayQueue" != xno])
+
 AC_ARG_ENABLE(faux-pq,
     AS_HELP_STRING([--enable-faux-pq],
 	[use the faux product-queue [[default=disable]]]),
