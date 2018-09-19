@@ -86,8 +86,10 @@ completer_take(Completer* const comp);
  * @param[in,out] comp    Completion service
  * @param[in]     now     Whether or not to cancel uncompleted futures
  * @retval        0       Success
+ * @retval        EINVAL  Invalid argument. `log_add()` called.
  * @retval        ENOMEM  Out of memory
  * @threadsafety          Safe
+ * @asyncsignalsafety     Unsafe
  * @see `completer_submit()`
  * @see `future_cancel()`
  */

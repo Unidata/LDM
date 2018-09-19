@@ -190,6 +190,7 @@ struct completer {
     pthread_cond_t  cond;
     Executor*       exec;
     DoneQ*          doneQ;
+    Completer*      this;
     unsigned        numFutures;
     bool            isShutdown;
 };
@@ -198,6 +199,7 @@ struct completer {
  * Locks a completion service.
  *
  * @param[in,out] comp  Completion service to be locked
+ * @asyncsignalsafety   Unsafe
  */
 static void
 completer_lock(Completer* const comp)
@@ -267,6 +269,7 @@ completer_init(Completer* const comp)
     comp->isShutdown = false;
     comp->numFutures = 0;
     comp->doneQ = doneQ_new();
+    comp->this = NULL;
 
     if (comp->doneQ == NULL) {
         log_add("Couldn't create queue for completed jobs");
@@ -292,6 +295,8 @@ completer_init(Completer* const comp)
                 else {
                     executor_setAfterCompletion(comp->exec, comp,
                             completer_add);
+
+                    comp->this = comp;
                 }
             } // `comp->mutex` initialized
 
@@ -315,6 +320,8 @@ completer_destroy(Completer* const comp)
         (void)pthread_cond_destroy(&comp->cond);
 
         doneQ_free(comp->doneQ);
+
+        comp->this = NULL;
     completer_unlock(comp);
 
     (void)pthread_mutex_destroy(&comp->mutex);
@@ -400,9 +407,15 @@ completer_shutdown(
 {
     int status;
 
-    completer_lock(comp);
-        status = executor_shutdown(comp->exec, now);
-    completer_unlock(comp);
+    if (comp == NULL || comp->this != comp) {
+        log_add("Invalid argument: comp=%p", comp);
+        status = EINVAL;
+    }
+    else {
+        completer_lock(comp);
+            status = executor_shutdown(comp->exec, now);
+        completer_unlock(comp);
+    }
 
     return status;
 }
