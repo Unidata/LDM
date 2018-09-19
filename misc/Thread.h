@@ -53,6 +53,7 @@ mutex_destroy(pthread_mutex_t* const mutex);
  * Locks a mutex. Calls `log_assert()` to assert success.
  *
  * @param[in,out] mutex  Mutex
+ * @asyncsignalsafety    Unsafe
  */
 int
 mutex_lock(pthread_mutex_t* const mutex);
