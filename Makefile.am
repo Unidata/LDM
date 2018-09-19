@@ -26,6 +26,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
 				  --with-retrans \
 				  --with-ingester \
 				  --with-gribinsert \
+				  --with-delayQueue \
 				  LDMHOME=`cd ../_inst && pwd` \
 			  	  @DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST@
 # This works and doesn't result in `redefined` warnings but does rely
@@ -94,7 +95,9 @@ SUBDIRS 	+= regutil \
                    scripts \
                    uldbutil \
                    ulogger
-SUBDIRS		+= delayQueue
+if WANT_DELAYQUEUE
+    SUBDIRS	+= delayQueue
+endif
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif
