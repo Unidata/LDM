@@ -1676,6 +1676,69 @@ downlet_destroy(Downlet* const downlet)
 }
 
 /**
+ * Returns a new, one-time, downstream LDM7.
+ *
+ * @param[in]  down7          Parent downstream LDM7. Must exist until
+ *                            `downlet_destroy()` returns.
+ * @param[in]  servAddr       Pointer to the address of the server from which to
+ *                            obtain multicast information, backlog products,
+ *                            and products missed by the FMTP layer. Must exist
+ *                            until `downlet_destroy()` returns.
+ * @param[in]  feed           Feed of multicast group to be received.
+ * @param[in]  mcastIface     Name of interface to use for receiving multicast
+ *                            packets (e.g., "eth0.0") or "dummy". Must exist
+ *                            until `downlet_destroy()` returns.
+ * @param[in]  vcEnd          Local virtual-circuit endpoint. Must exist until
+ *                            `downlet_destroy()` returns. If the switch or port
+ *                            identifier starts with "dummy", then the VLAN
+ *                            virtual interface will not be created.
+ * @param[in]  pq             The product-queue. Must be thread-safe (i.e.,
+ *                            `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
+ *                            Must exist until `downlet_destroy()` returns.
+ * @param[in]  mrm            Multicast receiver session memory. Must exist
+ *                            until `downlet_destroy()` returns.
+ * @retval     NULL           Failure. `log_add()` called.
+ * @return                    Allocated and initialized one-time, downstream
+ *                            LDM7
+ */
+static Downlet*
+downlet_new(
+        Down7* const restrict               down7,
+        const ServiceAddr* const restrict   servAddr,
+        const feedtypet                     feed,
+        const char* const restrict          mcastIface,
+        const VcEndPoint* const restrict    vcEnd,
+        pqueue* const restrict              pq,
+        McastReceiverMemory* const restrict mrm)
+{
+    Downlet* downlet = log_malloc(sizeof(Downlet), "one-time downstream LDM7");
+
+    if (downlet && downlet_init(downlet, down7, servAddr, feed, mcastIface,
+            vcEnd, pq, mrm)) {
+        log_add("Couldn't initialize one-time downstream LDM7");
+
+        free(downlet);
+        downlet = NULL;
+    }
+
+    return downlet;
+}
+
+/**
+ * Frees a one-time, downstream LDM7.
+ *
+ * @param[in,out] downlet  One-time downstream LDM7 to be freed or NULL
+ */
+static void
+downlet_free(Downlet* const downlet)
+{
+    if (downlet) {
+        downlet_destroy(downlet);
+        free(downlet);
+    }
+}
+
+/**
  * Receives unicast data-products from the associated upstream LDM7 -- either
  * because they were missed by the multicast LDM receiver or because they are
  * part of the backlog. Doesn't return until `downlet_haltUcastRcvr()` is called
@@ -2099,6 +2162,7 @@ downlet_run(Downlet* const downlet)
  * @retval        0        Success
  * @retval        ENOMEM   Out of memory
  * @threadsafety           Safe
+ * @asyncsignalsafety      Unsafe
  */
 static int
 downlet_halt(Downlet* const downlet)
@@ -2243,7 +2307,7 @@ downlet_lastReceived(
  * The data structure of a downstream LDM7:
  */
 struct down7 {
-    Downlet               downlet;       ///< One-time, downstream LDM7
+    Downlet*              downlet;       ///< One-time, downstream LDM7
     pqueue*               pq;            ///< pointer to the product-queue
     ServiceAddr*          servAddr;      ///< socket address of remote LDM7
     McastInfo*            mcastInfo;     ///< information on multicast group
@@ -2264,15 +2328,15 @@ struct down7 {
      * LDM receiver during the previous session.
      */
     signaturet            prevLastMcast;
+    pthread_mutex_t       mutex;            ///< Downsteram LDM7 utex
     pthread_mutex_t       numProdMutex;     ///< Mutex for number of products
-    Executor*             executor;         ///< One-time LDM7 execution-service
     uint64_t              numProds;         ///< Number of inserted products
     feedtypet             feedtype;         ///< Feed of multicast group
     VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
     Ldm7Status            status;           ///< Downstream LDM7 status
     volatile bool         mcastWorking;     ///< Product received via multicast?
     bool                  prevLastMcastSet; ///< `prevLastMcast` set?
-    StopFlag              stopFlag;
+    bool                  terminate;        ///< Temination flag
 };
 
 /**
@@ -2321,6 +2385,7 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
+    down7->downlet = NULL;
     down7->pq = pq;
     down7->feedtype = feed;
     down7->mcastInfo = NULL;
@@ -2328,6 +2393,7 @@ down7_init(
     down7->numProds = 0;
     down7->status = LDM7_OK;
     down7->mrm = mrm;
+    down7->terminate = false;
     (void)memset(down7->firstMcast, 0, sizeof(signaturet));
     (void)memset(down7->prevLastMcast, 0, sizeof(signaturet));
 
@@ -2371,8 +2437,7 @@ down7_init(
                             PTHREAD_MUTEX_ERRORCHECK, true);
 
                     if (status) {
-                        log_add_errno(status,
-                                "Couldn't initialize number-of-products mutex");
+                        log_add("Couldn't initialize number-of-products mutex");
                         status = LDM7_SYSTEM;
                     }
                     else {
@@ -2383,24 +2448,12 @@ down7_init(
                             status = LDM7_SYSTEM;
                         }
                         else {
-                            status = stopFlag_init(&down7->stopFlag, isDone);
+                            status = mutex_init(&down7->mutex,
+                                    PTHREAD_MUTEX_ERRORCHECK, true);
 
-                            if (status) {
-                                log_add("Couldn't initialize stop flag");
-                            }
-                            else {
-                                down7->executor = executor_new();
-
-                                if (down7->executor == NULL) {
-                                    log_add("Couldn't create execution-service"
-                                            "for one-time, downstream LDM7");
-                                    status = LDM7_SYSTEM;
-                                    stopFlag_destroy(&down7->stopFlag);
-                                }
-                                else {
-                                    status = 0; // Success
-                                }
-                            } // Stop flag initialized
+                            if (status)
+                                log_add("Couldn't initialize downstream LDM7 "
+                                        "mutex");
 
                             /*
                              * The Downstream LDM7 thread-key isn't deleted
@@ -2432,8 +2485,7 @@ down7_init(
 static void
 down7_destroy(Down7* const down7)
 {
-    executor_free(down7->executor);
-    stopFlag_destroy(&down7->stopFlag);
+    mutex_destroy(&down7->mutex);
     /*
      * `down7Key` is not deleted because it might not have been created during
      * the creation of `down7`.
@@ -2442,98 +2494,6 @@ down7_destroy(Down7* const down7)
     vcEndPoint_destroy(&down7->vcEnd);
     free(down7->iface);
     sa_free(down7->servAddr);
-}
-
-/**
- * Executes the one-time, downstream LDM7 of a downstream LDM7.
- *
- * @param[in]  arg            Downstream LDM7
- * @param[out] result         Result object. Ignored.
- * @retval     0              Success
- * @retval     LDM7_INTR      Signal caught. `log_add()` called.
- * @retval     LDM7_INVAL     Invalid port number or host identifier.
- *                            `log_add()` called.
- * @retval     LDM7_MCAST     Multicast layer failure. `log_add()` called.
- * @retval     LDM7_NOENT     The upstream LDM7 doesn't multicast `feed`.
- *                            `log_add()` called.
- * @retval     LDM7_RPC       RPC failure (including interrupt). `log_add()`
- *                            called.
- * @retval     LDM7_SYSTEM    System error. `log_add()` called.
- * @retval     LDM7_MCAST     Multicast layer failure. `log_add()` called.
- * @retval     LDM7_REFUSED   Remote host refused connection (server likely
- *                            isn't running). `log_add()` called.
- * @retval     LDM7_TIMEDOUT  Connection attempt timed-out. `log_add()` called.
- * @retval     LDM7_UNAUTH    Not authorized. `log_add()` called.
- */
-static int
-down7_runDownlet(
-        void* const restrict  arg,
-        void** const restrict result)
-{
-    Down7* const down7 = (Down7*)arg;
-    int          status = downlet_init(&down7->downlet, down7, down7->servAddr,
-            down7->feedtype, down7->iface, &down7->vcEnd, down7->pq,
-            down7->mrm);
-
-    if (status) {
-        log_add("Couldn't initialize one-time, downstream LDM7");
-    }
-    else {
-        status = downlet_run(&down7->downlet);
-
-        downlet_destroy(&down7->downlet);
-    } // `down7->downlet` initialized
-
-    /**
-     * All log messages are flushed because this is the end of an asynchronous
-     * task.
-     */
-    if (status == LDM7_TIMEDOUT) {
-        log_flush_notice();
-    }
-    else if (status == LDM7_INTR) {
-        log_add("One-time, downstream LDM7 was interrupted");
-        log_flush_notice();
-    }
-    else if (status == LDM7_NOENT || status == LDM7_REFUSED ||
-            status == LDM7_UNAUTH) {
-        log_flush_warning();
-    }
-    else if (status) {
-        log_add("Error executing one-time, downstream LDM7: status=%d", status);
-        log_flush_error();
-    }
-    else {
-        log_flush_notice();
-    }
-
-    log_free();
-
-    return status;
-}
-
-/**
- * Halts the one-time, downstream LDM7 of a downstream LDM7. The execution
- * service should only call this function if it has already called
- * `down7_runDownlet()`; consequently, we can depend on `down7->downlet` being
- * initialized.
- *
- * @param[in] arg      Downstream LDM7
- * @retval    0        Success
- * @retval    ENOMEM   Out of memory
- */
-static int
-down7_haltDownlet(
-        void* const restrict  arg,
-        pthread_t             thread)
-{
-    Down7* const down7 = (Down7*)arg;
-    int          status = downlet_halt(&down7->downlet);
-
-    if (status)
-        log_add("Couldn't halt one-time, downstream LDM7");
-
-    return status;
 }
 
 /**
@@ -2642,52 +2602,57 @@ down7_run(Down7* const down7)
     free(feedId);
     free(upId);
 
-    while (status == 0 && !stopFlag_shouldStop(&down7->stopFlag)) {
-        log_flush_notice();
-        Future* const future = executor_submit(down7->executor, down7,
-            down7_runDownlet, down7_haltDownlet);
+    for (;;) {
+        mutex_lock(&down7->mutex);
+            if (down7->terminate) {
+                mutex_unlock(&down7->mutex);
+                status = 0; // `down7_halt()` was called
+                break;
+            }
 
-        if (future == NULL) {
-            log_add("Can't execute one-time downstream LDM7");
-            status = LDM7_SYSTEM;
+            down7->downlet = downlet_new(down7, down7->servAddr,
+                    down7->feedtype, down7->iface, &down7->vcEnd, down7->pq,
+                    down7->mrm);
+        mutex_unlock(&down7->mutex);
+
+        if (down7->downlet == NULL) {
+            log_add("Couldn't create one-time downstream LDM7");
+            break;
+        }
+
+        status = downlet_run(down7->downlet);
+
+        mutex_lock(&down7->mutex);
+            downlet_free(down7->downlet);
+            down7->downlet = NULL;
+
+            if (down7->terminate) {
+                mutex_unlock(&down7->mutex);
+                status = 0; // `down7_halt()` was called
+                break;
+            }
+        mutex_unlock(&down7->mutex);
+
+        if (status == 0) {
+            log_flush_notice(); // Just in case
+            break;
+        }
+
+        if (status == LDM7_TIMEDOUT) {
+            log_flush_notice();
+            continue;
+        }
+
+        if (status == LDM7_NOENT || status == LDM7_REFUSED ||
+                status == LDM7_UNAUTH) {
+            log_flush_warning();
         }
         else {
-            status = future_getResult(future, NULL); // No result object
+            log_add("Error executing one-time, downstream LDM7");
+            log_flush_error();
+        }
 
-            if (status == ECANCELED) {
-                status = 0; // `down7_halt()` was called; `down7->stopFlag` set
-            }
-            else if (status == EPERM) {
-                // One-time, downstream LDM7 returned non-zero status
-                status = future_getRunStatus(future);
-
-                if (status == LDM7_TIMEDOUT) {
-                    log_flush_notice();
-                    status = 0; // Try again immediately
-                }
-                else if (status == LDM7_REFUSED || status == LDM7_NOENT ||
-                        status == LDM7_UNAUTH) {
-                    // Problem might be temporary
-                    log_flush_notice();
-                    sleep(interval);
-                    status = 0; // Try again
-                }
-                else {
-                    log_add("One-time downstream LDM7 failed: status=%d",
-                            status);
-                }
-            } // One-time, downstream LDM7 returned non-zero status
-            else if (status) {
-                log_add("Couldn't get result of executing one-time downstream "
-                        "LDM7");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                stopFlag_set(&down7->stopFlag); // Just in case
-            }
-
-            (void)future_free(future); // Can't be being executed
-        } // `future` created
+        sleep(interval); // Problem might be temporary
     } // One-time, downstream LDM7 execution loop
 
     return status;
@@ -2696,18 +2661,21 @@ down7_run(Down7* const down7)
 /**
  * Halts a downstream LDM7 that's executing on another thread.
  *
- * @param[in] down7   Downstream LDM7
- * @param[in] thread  Thread on which downstream LDM7 is executing
+ * @param[in] down7    Downstream LDM7
+ * @param[in] thread   Thread on which downstream LDM7 is executing
+ * @asyncsignalsafety  Unsafe
  */
 void
 down7_halt(
         Down7* const    down7,
         const pthread_t thread)
 {
-    int status = executor_shutdown(down7->executor, true);
-    log_assert(status == 0);
+    mutex_lock(&down7->mutex);
+        down7->terminate = true;
 
-    stopFlag_set(&down7->stopFlag);
+        if (down7->downlet)
+            (void)downlet_halt(down7->downlet);
+    mutex_unlock(&down7->mutex);
 }
 
 /**
