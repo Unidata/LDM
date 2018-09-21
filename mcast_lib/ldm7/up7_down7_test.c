@@ -69,7 +69,6 @@ typedef struct {
 } Sender;
 
 typedef struct {
-    Down7*                down7;
     volatile sig_atomic_t done;
 } Requester;
 
@@ -77,7 +76,6 @@ typedef struct {
     Requester             requester;
     Future*               down7Future;
     Future*               requesterFuture;
-    Down7*                down7;
     McastReceiverMemory*  mrm;
 } Receiver;
 
@@ -135,9 +133,6 @@ static void signal_handler(
         int sig)
 {
     switch (sig) {
-    case SIGALRM:
-        log_notice("signal_handler(): SIGALRM");
-        return;
     case SIGCHLD:
         log_notice("signal_handler(): SIGCHLD");
         return;
@@ -150,7 +145,6 @@ static void signal_handler(
     case SIGPIPE:
         log_notice("signal_handler(): SIGPIPE");
         return;
-
     case SIGINT:
         log_notice("signal_handler(): SIGINT");
         return;
@@ -159,6 +153,10 @@ static void signal_handler(
         return;
     case SIGUSR1:
         log_notice("signal_handler(): SIGUSR1");
+        log_refresh();
+        return;
+    case SIGUSR2:
+        log_notice("signal_handler(): SIGUSR2");
         log_refresh();
         return;
     default:
@@ -170,7 +168,8 @@ static void signal_handler(
 static int
 setSignalHandling(void)
 {
-    static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1 };
+    static const int interuptSigs[] = { SIGIO, SIGPIPE, SIGINT, SIGTERM };
+    static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1, SIGUSR2 };
     int              status;
     struct sigaction sigact = {}; // Zero initialization
 
@@ -180,23 +179,17 @@ setSignalHandling(void)
      */
     sigact.sa_mask = mostSigMask;
 
-    /*
-     * Ignore these signals because their associated phenomena will be handled
-     * by the code
-    sigact.sa_handler = SIG_IGN;
-     */
-
     // Catch all following signals
     sigact.sa_handler = signal_handler;
 
-    // Catch these signals and allow them to interrupt system calls
-    for (int i = 1; i < _NSIG; ++i) {
-        status = sigaction(i, &sigact, NULL);
+    // Interrupt system calls for these signals
+    for (int i = 0; i < sizeof(interuptSigs)/sizeof(interuptSigs[0]); ++i) {
+        status = sigaction(interuptSigs[i], &sigact, NULL);
         // `errno == EINVAL` for `SIGKILL` & `SIGSTOP`, at least
         assert(status == 0 || errno == EINVAL);
     }
 
-    // Catch these signals invisibly by restarting the system call
+    // Restart system calls for these signals
     sigact.sa_flags = SA_RESTART;
     for (int i = 0; i < sizeof(restartSigs)/sizeof(restartSigs[0]); ++i) {
         status = sigaction(restartSigs[i], &sigact, NULL);
@@ -1005,9 +998,7 @@ requester_decide(
  * @retval    PQ_SYSTEM    System error. Error message logged.
  */
 static inline int // inline because only called in one place
-requester_deleteAndRequest(
-        Down7* const     down7,
-        const signaturet sig)
+requester_deleteAndRequest(const signaturet sig)
 {
     FmtpProdIndex  prodIndex;
     (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(FmtpProdIndex),
@@ -1031,7 +1022,7 @@ requester_deleteAndRequest(
 
         numDeletedProds++;
 
-        down7_requestProduct(down7, prodIndex);
+        down7_requestProduct(prodIndex);
     }
 
     return status;
@@ -1072,8 +1063,8 @@ requester_run(Requester* const requester)
                  * product's region is locked, deleting it attempts to lock it
                  * again, and deadlock results.
                  */
-                CU_ASSERT_EQUAL_FATAL(requester_deleteAndRequest(
-                        requester->down7, reqArg.sig), 0);
+                CU_ASSERT_EQUAL_FATAL(requester_deleteAndRequest(reqArg.sig),
+                        0);
             }
         }
     }
@@ -1098,11 +1089,8 @@ requester_halt(
  * upstream LDM.
  */
 static void
-requester_init(
-        Requester* const requester,
-        Down7* const     down7)
+requester_init(Requester* const requester)
 {
-    requester->down7 = down7;
     requester->done = false;
 }
 
@@ -1151,9 +1139,9 @@ receiver_init(
     VcEndPoint* const vcEnd = vcEndPoint_new(1, "dummy_receiver_switch_ID",
             "dummy_receiver_port_ID");
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    receiver->down7 = down7_new(servAddr, feedtype, "dummy", vcEnd,
-            receiverPq, receiver->mrm);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->down7);
+    int status = down7_init(servAddr, feedtype, "dummy", vcEnd, receiverPq,
+            receiver->mrm);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
     vcEndPoint_free(vcEnd);
 
     sa_free(servAddr);
@@ -1165,7 +1153,7 @@ receiver_init(
 static void
 receiver_destroy(Receiver* const recvr)
 {
-    down7_free(recvr->down7);
+    down7_destroy();
 
     CU_ASSERT_TRUE(mrm_close(recvr->mrm));
 
@@ -1205,9 +1193,7 @@ receiver_runDown7(
         void* const restrict  arg,
         void** const restrict result)
 {
-    Receiver* receiver = (Receiver*)arg;
-
-    CU_ASSERT_EQUAL(down7_run(receiver->down7), 0);
+    CU_ASSERT_EQUAL(down7_run(), 0);
 
     log_flush_error();
 
@@ -1219,9 +1205,7 @@ receiver_haltDown7(
         void* const     arg,
         const pthread_t thread)
 {
-    Receiver* receiver = (Receiver*)arg;
-
-    down7_halt(receiver->down7, thread);
+    down7_halt();
 
     return 0;
 }
@@ -1241,7 +1225,7 @@ static void
 receiver_start(
         Receiver* const restrict recvr)
 {
-    requester_init(&recvr->requester, recvr->down7);
+    requester_init(&recvr->requester);
 
     /**
      * Starts a data-product requester on a separate thread to test the
@@ -1279,13 +1263,13 @@ static uint64_t
 receiver_getNumProds(
         Receiver* const receiver)
 {
-    return down7_getNumProds(receiver->down7);
+    return down7_getNumProds();
 }
 
 static long receiver_getPqeCount(
         Receiver* const receiver)
 {
-    return down7_getPqeCount(receiver->down7);
+    return down7_getPqeCount();
 }
 
 static void

@@ -65,20 +65,14 @@ executeDown7(
             status = LDM7_SYSTEM;
         }
         else {
-            Down7* down7 = down7_new(servAddr, feedtype, iface, vcEnd, pq, mrm);
+            down7_init(servAddr, feedtype, iface, vcEnd, pq, mrm);
 
-            if (NULL == down7) {
-                log_add("Couldn't create new downstream LDM 7");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                status = down7_run(down7); // Blocks until error
+            status = down7_run(); // Blocks until error
 
-                if (status == LDM7_INTR)
-                    status = 0; // Success
+            if (status == LDM7_INTR)
+                status = 0; // Success
 
-                down7_free(down7);
-            } // `down7` allocated
+            down7_destroy();
 
             (void)mrm_close(mrm);
         } // `mrm` open
