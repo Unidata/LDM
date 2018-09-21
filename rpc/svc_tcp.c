@@ -338,8 +338,13 @@ readtcp(
 			    log_add("select() timeout on socket %d", sock);
 			}
 			else {
+			    /* The following is commented-out so that reading
+			     * from a socket can be interrupted by a signal,
+			     * which might be necessary in order to terminate
+			     * a concurrent task. Steve Emmerson 2018-09-21
 			    if (errno == EINTR)
 				    continue;
+			     */
 
 			    log_syserr("select() error on socket %d", sock);
 			}
