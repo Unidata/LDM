@@ -578,7 +578,8 @@ void *hereis_6_svc(
     else {
         int error = down6_hereis(prod);
 
-        if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
+        if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error &&
+                DOWN6_PQ_NO_ROOM != error) {
             (void) svcerr_systemerr(rqstp->rq_xprt);
             svc_destroy(rqstp->rq_xprt);
             exit(error);
@@ -628,7 +629,8 @@ void *blkdata_6_svc(
 {
     int error = down6_blkdata(argp);
 
-    if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error) {
+    if (error && DOWN6_UNWANTED != error && DOWN6_PQ_BIG != error &&
+            DOWN6_PQ_NO_ROOM != error) {
         (void) svcerr_systemerr(rqstp->rq_xprt);
         svc_destroy(rqstp->rq_xprt);
         exit(error);

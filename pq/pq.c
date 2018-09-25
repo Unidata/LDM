@@ -4553,7 +4553,7 @@ xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
  * @retval     0           Success. `*info` is set. Caller should
  *                         unconditionally call `xdr_free(xdr_prod_info,
  *                         (char*)info)` when it's no longer needed.
- * @retval     EACCES      Product is locked.
+ * @retval     EACCES      Product is locked (alias "Permission denied")
  * @retval     PQ_CORRUPT  The product-queue is corrupt. Error-messaged logged.
  * @retval     PQ_SYSTEM   System error. Error-message logged.
  */
@@ -6376,6 +6376,7 @@ unwind_lock:
  * @param[in,out]  pq    Product queue
  * @param[in]      prod  Data product
  * @retval 0             Success.
+ * @retval EACCES        Couldn't make room: no unlocked products left to delete
  * @retval EINVAL        Invalid argument.
  * @retval PQ_DUP        Product already exists in the queue.
  * @retval PQ_BIG        Product is too large to insert in the queue.

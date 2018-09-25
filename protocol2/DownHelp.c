@@ -138,7 +138,8 @@ dh_setInfo(
  *      0                       Success.
  *      DOWN6_SYSTEM_ERROR      System failure.
  *      DOWN6_PQ                Fatal product-queue failure.
- *      DOWN6_PQ_BIG            Product is too big to insert into product-queue.
+ *      DOWN6_PQ_BIG            Product is too big to fit in queue
+ *      DOWN6_PQ_NO_ROOM        Can't make room for product
  *      DOWN6_UNWANTED          Data-product already in product-queue.
  */
 int
@@ -215,6 +216,18 @@ dh_saveDataProduct(
             }                       /* "notifyAutoShift" set */
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
+    else if (EACCES == error) {
+        log_error_q("Can't make root for product: all products locked: %s",
+                s_prod_info(NULL, 0, info, log_is_enabled_debug));
+        retCode = DOWN6_PQ_NO_ROOM;
+
+        error = savedInfo_set(info);
+        if (error) {
+            log_error_q("Couldn't save product-information: %s",
+                    savedInfo_strerror(error));
+            retCode = DOWN6_SYSTEM_ERROR;
+        }
+    }
     else {
         log_error_q("pq_insert() failed: %s: %s",
             strerror(error), s_prod_info(NULL, 0, info, log_is_enabled_debug));
