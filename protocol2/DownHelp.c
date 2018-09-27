@@ -217,7 +217,8 @@ dh_saveDataProduct(
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
     else if (EACCES == error) {
-        log_error_q("Can't make root for product: all products locked: %s",
+        log_error_q("All products in %z-byte queue are locked: %s",
+                pq_getDataSize(pq),
                 s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ_NO_ROOM;
 
