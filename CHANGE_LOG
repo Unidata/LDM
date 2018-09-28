@@ -1,3 +1,20 @@
+6.13.7.60
+    down7:
+        - Converted it and subcomponents into singletons.
+        - Fixed termination.
+
+    svc_tcp:
+        Allow signals to interrupt readtcp() so that a concurrent thread can be
+        terminated via pthread_kill().
+        
+    down6:
+        Stopped exiting of downstream LDM6 if room in the product-queue can't be
+        made because all products are locked.
+        
+    g2varsncep.tbl:
+        Added (0,1,29,{9,10,12}), ASNOW, and corrected unit for that parameter
+        from "kg m-3" to "m".
+
 6.13.7.59	2018-09-19T15:43:49-0600
     configure:
         Added "--with-delayQueue" option.
