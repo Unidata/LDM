@@ -67,7 +67,7 @@ bool PerProdSendingNotifier::verify_new_recv(int newsock)
     const bool isAuthorized = authorizer.isAuthorized(addr->sin_addr);
 
     if (isAuthorized) {
-        log_notice("Host %s is authorized to connect",
+        log_info("Host %s is authorized to connect",
                 to_string(*addr).c_str());
     }
     else {
