@@ -163,7 +163,7 @@ addTail(
 static int
 getHead(
     ProdIndexQueue* const restrict fiq,
-    Entry** const restrict      entry)
+    Entry** const restrict         entry)
 {
     int    status;
 
