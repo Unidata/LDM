@@ -532,7 +532,7 @@ terminateMcastSender(void)
 
     if (pid) {
         log_debug("Sending SIGTERM to multicast LDM sender process");
-        CU_ASSERT_EQUAL_FATAL(kill(pid, SIGTERM), 0);
+        CU_ASSERT_EQUAL(kill(pid, SIGTERM), 0);
 
         /* Reap the terminated multicast sender. */
         {
@@ -542,7 +542,7 @@ terminateMcastSender(void)
             const pid_t wpid = waitpid(pid, &status, 0);
 
             CU_ASSERT_EQUAL(wpid, pid);
-            CU_ASSERT_TRUE_FATAL(wpid > 0);
+            CU_ASSERT_TRUE(wpid > 0);
             CU_ASSERT_TRUE(WIFEXITED(status));
             CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
             CU_ASSERT_EQUAL(umm_terminated(wpid), 0);
@@ -635,11 +635,9 @@ sender_halt(
     terminateMcastSender();
 
     sender_lock(sender);
+        sender->done = true;
 
-    sender->done = true;
-
-    CU_ASSERT_EQUAL_FATAL(pthread_kill(thread, SIGTERM), 0);
-
+        CU_ASSERT_EQUAL_FATAL(pthread_kill(thread, SIGTERM), 0);
     sender_unlock(sender);
 
     return 0;
@@ -1350,7 +1348,7 @@ static void
 test_up7_down7(
         void)
 {
-    log_set_level(LOG_LEVEL_DEBUG);
+    //log_set_level(LOG_LEVEL_DEBUG);
 
     setSignalHandling();
 
@@ -1428,22 +1426,25 @@ int main(
         char* const* argv)
 {
     int          status = 1;
-    /*
-    extern int   opterr;
-    extern int   optopt;
-    extern char* optarg;
-    */
 
     (void)log_init(argv[0]);
     log_set_level(LOG_LEVEL_NOTICE);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
-    for (int ch; (ch = getopt(argc, argv, "l:")) != EOF; ) {
+    for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
         switch (ch) {
             case 'l': {
                 (void)log_set_destination(optarg);
                 break;
             }
+            case 'v':
+                if (!log_is_enabled_info)
+                    log_set_level(LOG_LEVEL_INFO);
+                break;
+            case 'x':
+                if (!log_is_enabled_debug)
+                    log_set_level(LOG_LEVEL_DEBUG);
+                break;
             default: {
                 log_add("Unknown option: \"%c\"", optopt);
                 return 1;
