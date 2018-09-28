@@ -44,7 +44,7 @@ mutex_init(
 /**
  * Deinitializes a mutex. Calls `log_assert()` to assert success.
  *
- * @param[in],out] mutex  Mutex.
+ * @param[in,out] mutex  Mutex.
  */
 int
 mutex_destroy(pthread_mutex_t* const mutex);
