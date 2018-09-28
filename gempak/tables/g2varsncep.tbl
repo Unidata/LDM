@@ -55,7 +55,10 @@
 000 001 027 008 Maximum Relative Humidity        %                    MAXRH            0  -9999.00
 000 001 028 000 Maximum Absolute Humidity        kg m**-3             MAXAH            0  -9999.00
 000 001 028 008 Maximum Absolute Humidity        kg m**-3             MAXAH            0  -9999.00
-000 001 029 008 Total Snowfall                   kg m**-3             ASNOW            0  -9999.00
+000 001 029 008 Total Snowfall                   m                    ASNOW            0  -9999.00
+000 001 029 009 Total Snowfall                   m                    ASNOW            0  -9999.00
+000 001 029 010 Total Snowfall                   m                    ASNOW            0  -9999.00
+000 001 029 012 Total Snowfall                   m                    ASNOW            0  -9999.00
 !
 000 001 033 000 Categorical Rain                 0,1                  CRAIN            0  -9999.00
 000 001 034 000 Categorical Freezing Rain        0,1                  CFRZR            0  -9999.00
