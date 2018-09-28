@@ -224,7 +224,8 @@ void fmtpRecvv3::Start()
 /**
  * Stops a running FMTP receiver. Returns immediately. Idempotent.
  *
- * @pre  `fmtpRecvv3::Start()` was previously called.
+ * @pre                `fmtpRecvv3::Start()` was previously called.
+ * @asyncsignalsafety  Unsafe
  */
 void fmtpRecvv3::Stop()
 {
