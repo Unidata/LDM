@@ -229,7 +229,7 @@ public:
         , allocated{}
         , mutex{}
     {
-        log_debug(("cidr= " + to_string(cidr)).c_str());
+        log_debug(("cidr=" + to_string(cidr)).c_str());
         auto size = available.size();
         // Doesn't include network or broadcast address
         for (in_addr_t i = 1; i <= size; ++i)
@@ -506,7 +506,7 @@ public:
      */
     void operator()()
     {
-        log_notice(("Multicast LDM sender command-server starting up: "
+        log_info(("Multicast LDM sender command-server starting up: "
                 "srvrSock=" + srvrSock.getLocalSockAddr().to_string()).data());
 
         while (!done()) {
