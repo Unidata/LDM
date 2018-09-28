@@ -232,7 +232,8 @@ finishInsertion(
         char infoStr[LDM_INFO_MAX];
 
         log_info("Received in %.7f s: %s", duration,
-                s_prod_info(infoStr, sizeof(infoStr), info, 1));
+                s_prod_info(infoStr, sizeof(infoStr), info,
+                        log_is_enabled_debug));
 
         lastReceived(mlr, info);
     }
@@ -450,11 +451,12 @@ mlr_new(
  * @param[in,out] mlr   The multicast LDM receiver object.
  */
 void
-mlr_free(
-        Mlr* const  mlr)
+mlr_free(Mlr* const mlr)
 {
-    destroy(mlr);
-    free(mlr);
+    if (mlr) {
+        destroy(mlr);
+        free(mlr);
+    }
 }
 
 /**
@@ -462,14 +464,13 @@ mlr_free(
  * called or an error occurs.
  *
  * @param[in] mlr            The multicast LDM receiver to execute.
- * @retval    0              `mlr_stop()` was called.
+ * @retval    LDM7_SHUTDOWN  `mlr_stop()` was called.
  * @retval    LDM7_INVAL     `mlr == NULL`. `log_add()` called.
  * @retval    LDM7_MCAST     Multicast error. `log_add()` called.
  * @see `mlr_stop()`
  */
 int
-mlr_run(
-        Mlr* const  mlr)
+mlr_run(Mlr* const mlr)
 {
     int status;
 
@@ -479,10 +480,11 @@ mlr_run(
     }
     else {
         status = fmtpReceiver_execute(mlr->receiver);
-        if (mlr->done) {
-            status = LDM7_OK;
+
+        if (mlr->done || status == 0) {
+            status = LDM7_SHUTDOWN;
         }
-        else if (status) {
+        else {
             log_add("Error executing multicast LDM receiver");
             status = LDM7_MCAST;
         }
@@ -495,11 +497,11 @@ mlr_run(
  * Cleanly stops an executing multicast LDM receiver. Undefined behavior
  * results if called from a signal handler. Returns immediately. Idempotent.
  *
- * @param[in] mlr  Pointer to the multicast LDM receiver to stop.
+ * @param[in] mlr      Pointer to the multicast LDM receiver to stop.
+ * @asyncsignalsafety  Unsafe
  */
 void
-mlr_halt(
-        Mlr* const mlr)
+mlr_halt(Mlr* const mlr)
 {
     mlr->done = 1;
     fmtpReceiver_stop(mlr->receiver);
