@@ -215,13 +215,6 @@ fmtpReceiver_execute(
     return status;
 }
 
-/**
- * Stops an FMTP receiver. Undefined behavior results if called from a
- * signal handler that was invoked by the delivery of a signal during execution
- * of an async-signal-unsafe function. Idempotent.
- *
- * @param[in] receiver  Pointer to the FMTP receiver to be stopped.
- */
 void
 fmtpReceiver_stop(
     FmtpReceiver* const receiver)
