@@ -207,9 +207,9 @@ mldm_exec(
         args[i++] = arg;
     }
 
-    //if (log_is_enabled_info)
+    if (log_is_enabled_info)
         args[i++] = "-v";
-    //if (log_is_enabled_debug)
+    if (log_is_enabled_debug)
         args[i++] = "-x";
 
     char mcastIfaceBuf[INET_ADDRSTRLEN];
@@ -298,7 +298,7 @@ mldm_exec(
     }
 
     StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    log_notice_q("Executing multicast LDM sender: %s", sbString(command));
+    log_info("Executing multicast LDM sender: %s", sbString(command));
     sbFree(command);
 
     execvp(args[0], args);
