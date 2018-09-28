@@ -32,6 +32,8 @@ include_HEADERS		= \
 	setenv.h \
 	statsMath.h
 lib_la_SOURCES	= \
+	AtomicInt.c AtomicInt.h \
+	AtomicFlag.c AtomicFlag.h \
 	child_map.c child_map.h \
 	ChildCommand.c ChildCommand.h \
         doubly_linked_list.c doubly_linked_list.h \
