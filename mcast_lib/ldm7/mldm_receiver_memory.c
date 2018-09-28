@@ -1236,9 +1236,9 @@ mrm_getLastMcastProd(
 {
     vetMrm(mrm);
     lock(mrm);
-    bool sigSet = mrm->sigSet;
-    if (sigSet)
-        (void)memcpy(sig, &mrm->lastMcastProd, sizeof(signaturet));
+        bool sigSet = mrm->sigSet;
+        if (sigSet)
+            (void)memcpy(sig, &mrm->lastMcastProd, sizeof(signaturet));
     unlock(mrm);
 
     return sigSet;
