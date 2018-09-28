@@ -1,4 +1,12 @@
 {
+   svc_register xports
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:my_xprt_register
+   ...
+}
+{
    authnone_create
    Memcheck:Leak
    match-leak-kinds: reachable
@@ -6,23 +14,6 @@
    fun:my_authnone_create
    fun:my_clnttcp_create
    ...
-}
-{
-   RPC svc::xports
-   Memcheck:Leak
-   match-leak-kinds: reachable
-   fun:malloc
-   fun:my_xprt_register
-   fun:makefd_xprt
-   fun:my_svcfd_create
-   fun:myUp7_init
-   fun:myUp7_new
-   fun:sender_run
-   fun:task_run
-   fun:future_run
-   fun:job_run
-   fun:start_thread
-   fun:clone
 }
 {
    deliver_backlog_product_7 xdrrec_putbytes
@@ -34,6 +25,19 @@
    ...
    fun:clnttcp_call
    fun:deliver_backlog_product_7
+   ...
+}
+{
+   deliver_missed_product_7 xdrrec_putbytes
+   Memcheck:Param
+   write(buf)
+   obj:/usr/lib64/libpthread-2.17.so
+   fun:writetcp
+   fun:flush_out
+   fun:xdrrec_putbytes
+   ...
+   fun:clnttcp_call
+   fun:deliver_missed_product_7
    ...
 }
 {
