@@ -20,7 +20,6 @@
 #include <inetutil.h>
 
 typedef struct down7   Down7;
-typedef struct downlet Downlet;
 
 #ifdef __cplusplus
 extern "C" {
