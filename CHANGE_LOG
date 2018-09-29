@@ -1,3 +1,9 @@
+6.13.7.62
+    Removed Coverity Scan lint.
+    
+    down7:
+        Added initial zeroing of component structures during initialization.
+
 6.13.7.61	2018-09-29T10:08:04-0600
     Removed Coverity Scan lint.
 

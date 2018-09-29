@@ -113,6 +113,8 @@ up7Proxy_init(const int           socket,
 {
     int status;
 
+    (void)memset(&up7Proxy, 0, sizeof(up7Proxy));
+
     if (socket < 0 || sockAddr == NULL || sockAddr->sin_family != AF_INET) {
         status = LDM7_INVAL;
     }
@@ -394,6 +396,8 @@ static Backstop backstop;
 static int
 backstop_init(McastReceiverMemory* const mrm)
 {
+    (void)memset(&backstop, 0, sizeof(backstop));
+
     backstop.mrm = mrm;
     backstop.prevLastMcastSet = mrm_getLastMcastProd(backstop.mrm,
             backstop.prevLastMcast);
@@ -579,6 +583,8 @@ ucastRcvr_createXprt(
 static Ldm7Status
 ucastRcvr_init(const int sock)
 {
+    (void)memset(&ucastRcvr, 0, sizeof(ucastRcvr));
+
     ucastRcvr.xprt = NULL;
     ucastRcvr.remoteStr = NULL;
 
@@ -895,7 +901,8 @@ mcastRcvr_init(
         const in_addr_t            ifaceAddr,
         pqueue* const restrict     pq)
 {
-    mcastRcvr.thread = 0;
+    (void)memset(&mcastRcvr, 0, sizeof(mcastRcvr));
+
     mcastRcvr.mlr = NULL;
 
     const char* fmtpSrvrId = mcastInfo->server.inetId;
@@ -1051,6 +1058,8 @@ static Backlogger backlogger;
 static int
 backlogger_init(const signaturet before)
 {
+    (void)memset(&backlogger, 0, sizeof(backlogger));
+
     int status = mutex_init(&backlogger.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
     if (status) {
@@ -1647,9 +1656,10 @@ downlet_init()
 {
     int status;
 
+    (void)memset(&downlet, 0, sizeof(downlet));
+
     downlet.sock = -1;
     downlet.upId = sa_format(down7.servAddr);
-    downlet.taskStatus = 0;
     downlet.ucastRcvrStatus = atomicInt_new(TASK_STOPPED);
     downlet.backstopStatus = atomicInt_new(TASK_STOPPED);
     downlet.mcastRcvrStatus = atomicInt_new(TASK_STOPPED);
@@ -1960,71 +1970,75 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
+    (void)memset(&down7, 0, sizeof(down7));
+
     int status = mutex_init(&down7.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
     if (status) {
         status = LDM7_SYSTEM;
     }
     else {
-        down7.pq = pq;
-        down7.feedtype = feed;
-        down7.numProds = 0;
-        down7.status = LDM7_OK;
-        down7.mrm = mrm;
-        down7.terminate = 0;
-        down7.cancelSig = SIGTERM;
-        sigemptyset(&down7.cancelSigSet);
-        sigaddset(&down7.cancelSigSet, down7.cancelSig);
-        (void)memset(down7.firstMcast, 0, sizeof(signaturet));
-        (void)memset(down7.prevLastMcast, 0, sizeof(signaturet));
+        mutex_lock(&down7.mutex);
+            down7.pq = pq;
+            down7.feedtype = feed;
+            down7.numProds = 0;
+            down7.status = LDM7_OK;
+            down7.mrm = mrm;
+            down7.terminate = 0;
+            down7.cancelSig = SIGTERM;
+            sigemptyset(&down7.cancelSigSet);
+            sigaddset(&down7.cancelSigSet, down7.cancelSig);
+            (void)memset(down7.firstMcast, 0, sizeof(signaturet));
+            (void)memset(down7.prevLastMcast, 0, sizeof(signaturet));
 
-        /*
-         * The product-queue must be thread-safe because this module accesses it
-         * on these threads:
-         *   - FMTP multicast receiver
-         *   - FMTP unicast receiver
-         *   - LDM7 data-product receiver.
-         */
-        if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
-            log_add("Product-queue %s isn't thread-safe: %0x",
-                    pq_getPathname(pq), pq_getFlags(pq));
-            status = LDM7_INVAL;
-        }
-        else {
-            if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
-                char buf[256];
-
-                (void)sa_snprint(servAddr, buf, sizeof(buf));
-                log_add("Couldn't clone server address \"%s\"", buf);
-                status = LDM7_SYSTEM;
+            /*
+             * The product-queue must be thread-safe because this module
+             * accesses it on these threads:
+             *   - FMTP multicast receiver
+             *   - FMTP unicast receiver
+             *   - LDM7 data-product receiver.
+             */
+            if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
+                log_add("Product-queue %s isn't thread-safe: %0x",
+                        pq_getPathname(pq), pq_getFlags(pq));
+                status = LDM7_INVAL;
             }
             else {
-                down7.iface = strdup(mcastIface);
+                if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
+                    char buf[256];
 
-                if (down7.iface == NULL) {
-                    log_add("Couldn't copy multicast interface name");
+                    (void)sa_snprint(servAddr, buf, sizeof(buf));
+                    log_add("Couldn't clone server address \"%s\"", buf);
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
-                        log_add("Couldn't copy receiver-side virtual-circuit "
-                                "endpoint");
+                    down7.iface = strdup(mcastIface);
+
+                    if (down7.iface == NULL) {
+                        log_add("Couldn't copy multicast interface name");
                         status = LDM7_SYSTEM;
                     }
                     else {
-                        down7.initialized = true;
-                    } // `down7.vcEnd` initialized
+                        if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
+                            log_add("Couldn't copy receiver-side "
+                                    "virtual-circuit endpoint");
+                            status = LDM7_SYSTEM;
+                        }
+                        else {
+                            down7.initialized = true;
+                        } // `down7.vcEnd` initialized
 
-                    if (status)
-                        free(down7.iface);
-                } // `down7.iface` initialized
+                        if (status)
+                            free(down7.iface);
+                    } // `down7.iface` initialized
 
-                if (status) {
-                    sa_free(down7.servAddr);
-                    down7.servAddr = NULL;
-                }
-            } // `down7.servAddr` initialized
-        } // Product-queue is thread-safe
+                    if (status) {
+                        sa_free(down7.servAddr);
+                        down7.servAddr = NULL;
+                    }
+                } // `down7.servAddr` initialized
+            } // Product-queue is thread-safe
+        mutex_unlock(&down7.mutex);
 
         if (status)
             mutex_destroy(&down7.mutex);
