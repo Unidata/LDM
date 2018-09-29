@@ -518,7 +518,6 @@ typedef struct {
     pthread_mutex_t       mutex;
     SVCXPRT*              xprt;
     char*                 remoteStr;
-    bool                  haveThread;
 } UcastRcvr;
 static UcastRcvr ucastRcvr;
 
@@ -580,41 +579,47 @@ ucastRcvr_createXprt(
 static Ldm7Status
 ucastRcvr_init(const int sock)
 {
-    SVCXPRT* xprt;
-    int      status = ucastRcvr_createXprt(sock, &xprt);
+    ucastRcvr.xprt = NULL;
+    ucastRcvr.remoteStr = NULL;
+
+    int status = ucastRcvr_createXprt(sock, &ucastRcvr.xprt);
 
     if (status) {
         log_add("Couldn't create server-side transport on socket %d", sock);
     }
     else {
-        char* remoteStr = ipv4Sock_getPeerString(sock);
+        ucastRcvr.remoteStr = ipv4Sock_getPeerString(sock);
 
-        // Last argument == 0 => don't register with portmapper
-        if (!svc_register(ucastRcvr.xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
-            log_add("Couldn't register server for receiving data-products from "
-                    "\"%s\"",  remoteStr);
-            status = LDM7_RPC;
+        if (ucastRcvr.remoteStr == NULL) {
+            log_add("Couldn't get ID of remote peer");
+            status = LDM7_SYSTEM;
         }
         else {
-            status = mutex_init(&ucastRcvr.mutex, PTHREAD_MUTEX_ERRORCHECK,
-                    true);
-
-            if (status) {
-                status = LDM7_SYSTEM;
+            // Last argument == 0 => don't register with portmapper
+            if (!svc_register(ucastRcvr.xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
+                log_add("Couldn't register server for receiving data-products "
+                        "from \"%s\"",  ucastRcvr.remoteStr);
+                status = LDM7_RPC;
             }
             else {
-                ucastRcvr.remoteStr = remoteStr;
-                ucastRcvr.xprt = xprt;
-                ucastRcvr.haveThread = false;
-            } // Mutex initialized
+                status = mutex_init(&ucastRcvr.mutex, PTHREAD_MUTEX_ERRORCHECK,
+                        true);
 
-            if (status)
-                svc_unregister(LDMPROG, SEVEN);
-        } // LDM7 service registered with RPC layer
+                if (status) {
+                    status = LDM7_SYSTEM;
+                    svc_unregister(LDMPROG, SEVEN);
+                }
+            } // LDM7 service registered with RPC layer
+
+            if (status) {
+                free(ucastRcvr.remoteStr);
+                ucastRcvr.remoteStr = NULL;
+            }
+        } // `ucastRcvr.remoteStr` set
 
         if (status) {
             svc_destroy(ucastRcvr.xprt);
-            free(ucastRcvr.remoteStr);
+            ucastRcvr.xprt = NULL;
         }
     } // `ucastRcvr.xprt` initialized
 
@@ -631,7 +636,6 @@ static void
 ucastRcvr_destroy(void)
 {
     mutex_destroy(&ucastRcvr.mutex);
-    ucastRcvr.haveThread = false;
     svc_unregister(LDMPROG, SEVEN);
     free(ucastRcvr.remoteStr);
 
@@ -743,13 +747,11 @@ ucastRcvr_start(const int sock)
         mutex_lock(&ucastRcvr.mutex);
             status = pthread_create(&ucastRcvr.thread, NULL, ucastRcvr_run,
                     NULL);
-            ucastRcvr.haveThread = status == 0;
         mutex_unlock(&ucastRcvr.mutex);
 
         if (status) {
             log_add("Couldn't create thread for unicast receiver");
             status = LDM7_SYSTEM;
-            svc_unregister(LDMPROG, SEVEN);
         }
     }
 
@@ -1023,7 +1025,7 @@ mcastRcvr_stop(void)
 {
     log_debug("Entered");
     mlr_halt(mcastRcvr.mlr);
-    pthread_join(mcastRcvr.thread, NULL);
+    (void)pthread_join(mcastRcvr.thread, NULL);
     mcastRcvr_destroy();
 }
 
@@ -1172,8 +1174,7 @@ struct {
      * LDM receiver during the previous session.
      */
     signaturet            prevLastMcast;
-    pthread_mutex_t       mutex;            ///< Downstream LDM7 utex
-    pthread_mutex_t       numProdMutex;     ///< Mutex for number of products
+    pthread_mutex_t       mutex;            ///< Downstream LDM7 mutex
     uint64_t              numProds;         ///< Number of inserted products
     feedtypet             feedtype;         ///< Feed of multicast group
     VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
@@ -1959,89 +1960,75 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
-    int status = LDM7_SYSTEM; // Default error
+    int status = mutex_init(&down7.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
-    down7.pq = pq;
-    down7.feedtype = feed;
-    down7.numProds = 0;
-    down7.status = LDM7_OK;
-    down7.mrm = mrm;
-    down7.terminate = 0;
-    down7.cancelSig = SIGTERM;
-    sigemptyset(&down7.cancelSigSet);
-    sigaddset(&down7.cancelSigSet, down7.cancelSig);
-    (void)memset(down7.firstMcast, 0, sizeof(signaturet));
-    (void)memset(down7.prevLastMcast, 0, sizeof(signaturet));
-
-    /*
-     * The product-queue must be thread-safe because this module accesses it on
-     * these threads:
-     *   - FMTP multicast receiver
-     *   - FMTP unicast receiver
-     *   - LDM7 data-product receiver.
-     */
-    if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
-        log_add("Product-queue %s isn't thread-safe: %0x",
-                pq_getPathname(pq), pq_getFlags(pq));
-        status = LDM7_INVAL;
+    if (status) {
+        status = LDM7_SYSTEM;
     }
     else {
-        if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
-            char buf[256];
+        down7.pq = pq;
+        down7.feedtype = feed;
+        down7.numProds = 0;
+        down7.status = LDM7_OK;
+        down7.mrm = mrm;
+        down7.terminate = 0;
+        down7.cancelSig = SIGTERM;
+        sigemptyset(&down7.cancelSigSet);
+        sigaddset(&down7.cancelSigSet, down7.cancelSig);
+        (void)memset(down7.firstMcast, 0, sizeof(signaturet));
+        (void)memset(down7.prevLastMcast, 0, sizeof(signaturet));
 
-            (void)sa_snprint(servAddr, buf, sizeof(buf));
-            log_add("Couldn't clone server address \"%s\"", buf);
-            status = LDM7_SYSTEM;
+        /*
+         * The product-queue must be thread-safe because this module accesses it
+         * on these threads:
+         *   - FMTP multicast receiver
+         *   - FMTP unicast receiver
+         *   - LDM7 data-product receiver.
+         */
+        if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
+            log_add("Product-queue %s isn't thread-safe: %0x",
+                    pq_getPathname(pq), pq_getFlags(pq));
+            status = LDM7_INVAL;
         }
         else {
-            down7.iface = strdup(mcastIface);
+            if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
+                char buf[256];
 
-            if (down7.iface == NULL) {
-                log_add("Couldn't copy multicast interface name");
+                (void)sa_snprint(servAddr, buf, sizeof(buf));
+                log_add("Couldn't clone server address \"%s\"", buf);
                 status = LDM7_SYSTEM;
             }
             else {
-                if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
-                    log_add("Couldn't copy receiver-side virtual-circuit "
-                            "endpoint");
+                down7.iface = strdup(mcastIface);
+
+                if (down7.iface == NULL) {
+                    log_add("Couldn't copy multicast interface name");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    status = mutex_init(&down7.numProdMutex,
-                            PTHREAD_MUTEX_ERRORCHECK, true);
-
-                    if (status) {
-                        log_add("Couldn't initialize number-of-products mutex");
+                    if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
+                        log_add("Couldn't copy receiver-side virtual-circuit "
+                                "endpoint");
                         status = LDM7_SYSTEM;
                     }
                     else {
-                        status = mutex_init(&down7.mutex,
-                                PTHREAD_MUTEX_ERRORCHECK, true);
-
-                        if (status) {
-                            log_add("Couldn't initialize downstream LDM7 "
-                                    "mutex");
-                            pthread_mutex_destroy(&down7.numProdMutex);
-                        }
-                        else {
-                            down7.initialized = true;
-                        }
-                    } // `down7.numProdMutex` initialized
+                        down7.initialized = true;
+                    } // `down7.vcEnd` initialized
 
                     if (status)
-                        vcEndPoint_destroy(&down7.vcEnd);
-                } // `down7.vcEnd` initialized
+                        free(down7.iface);
+                } // `down7.iface` initialized
 
-                if (status)
-                    free(down7.iface);
-            } // `down7.iface` initialized
+                if (status) {
+                    sa_free(down7.servAddr);
+                    down7.servAddr = NULL;
+                }
+            } // `down7.servAddr` initialized
+        } // Product-queue is thread-safe
 
-            if (status) {
-                sa_free(down7.servAddr);
-                down7.servAddr = NULL;
-            }
-        } // `down7.servAddr` initialized
-    } // Product-queue is thread-safe
+        if (status)
+            mutex_destroy(&down7.mutex);
+    } // Downstream LDM7 mutex initialized
 
     return status;
 }
@@ -2053,12 +2040,11 @@ void
 down7_destroy(void)
 {
     if (down7.initialized) {
-        mutex_destroy(&down7.mutex);
-        mutex_destroy(&down7.numProdMutex);
         vcEndPoint_destroy(&down7.vcEnd);
         free(down7.iface);
         sa_free(down7.servAddr);
         down7.servAddr = NULL;
+        mutex_destroy(&down7.mutex);
         down7.initialized = false;
     }
 }
@@ -2185,9 +2171,9 @@ down7_requestProduct(const FmtpProdIndex iProd)
 void
 down7_incNumProds(void)
 {
-    (void)mutex_lock(&down7.numProdMutex);
+    (void)mutex_lock(&down7.mutex);
         down7.numProds++;
-    (void)mutex_unlock(&down7.numProdMutex);
+    (void)mutex_unlock(&down7.mutex);
 }
 
 /**
@@ -2199,9 +2185,9 @@ down7_incNumProds(void)
 uint64_t
 down7_getNumProds(void)
 {
-    (void)mutex_lock(&down7.numProdMutex);
+    (void)mutex_lock(&down7.mutex);
         uint64_t num = down7.numProds;
-    (void)mutex_unlock(&down7.numProdMutex);
+    (void)mutex_unlock(&down7.mutex);
 
     return num;
 }

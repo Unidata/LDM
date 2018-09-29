@@ -1,3 +1,6 @@
+6.13.7.61
+    Removed Coverity Scan lint.
+
 6.13.7.60	2018-09-28T16:04:53-0600
     down7:
         - Converted it and subcomponents into singletons.

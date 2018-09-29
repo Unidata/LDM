@@ -108,7 +108,8 @@ ipv4Sock_getPeerString(const int sock)
     struct sockaddr_in addr;
     socklen_t          sockAddrLen = sizeof(addr);
     int                status = getpeername(sock, &addr, &sockAddrLen);
-    return sockAddrIn_format(&addr);
+
+    return status ? NULL : sockAddrIn_format(&addr);
 }
 
 /**
