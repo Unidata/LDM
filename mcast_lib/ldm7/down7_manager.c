@@ -67,7 +67,7 @@ executeDown7(
         else {
             down7_init(servAddr, feedtype, iface, vcEnd, pq, mrm);
 
-            status = down7_run(); // Blocks until error
+            status = down7_run(); // Blocks until error or termination requested
 
             if (status == LDM7_INTR)
                 status = 0; // Success
