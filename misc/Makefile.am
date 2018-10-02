@@ -91,6 +91,12 @@ check_PROGRAMS	=
 
 if HAVE_CUNIT
 
+#done_test_SOURCES		= done_test.c
+#done_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#done_test_LDADD			= $(top_builddir)/lib/libldm.la -lpthread \
+#				  @LIBS_CUNIT@
+#check_PROGRAMS    		+= done_test
+
 #CunitAssertTest_SOURCES		= CunitAssertTest.c
 #CunitAssertTest_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 #CunitAssertTest_LDADD   	= $(top_builddir)/lib/libldm.la \

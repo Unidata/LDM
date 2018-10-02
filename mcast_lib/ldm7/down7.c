@@ -1163,7 +1163,6 @@ backlogger_stop(void)
  * accessed by the one-time, downstream LDM7.
  */
 struct {
-    pthread_t             runThread;     ///< `down7_run()` thread
     pqueue*               pq;            ///< pointer to the product-queue
     ServiceAddr*          servAddr;      ///< socket address of remote LDM7
     /**
@@ -1188,8 +1187,7 @@ struct {
     feedtypet             feedtype;         ///< Feed of multicast group
     VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
     Ldm7Status            status;           ///< Downstream LDM7 status
-    sigset_t              cancelSigSet;     ///< Cancellation signal mask
-    int                   cancelSig;        ///< Cancellation signal
+    int                   pipe[2];          ///< Signaling pipe
     bool                  prevLastMcastSet; ///< `prevLastMcast` set?
     volatile sig_atomic_t terminate;        ///< Termination requested?
     bool                  initialized;      ///< Object is initialized?
@@ -1223,6 +1221,7 @@ typedef struct downlet {
     in_addr_t       ifaceAddr;        ///< VLAN virtual interface IP address
     int             sock;             ///< Socket with remote LDM7
     int             taskStatus;       ///< Concurrent task status
+    bool            taskStatusSet;    ///< `taskStatus` set?
 } Downlet;
 static Downlet downlet;
 
@@ -1377,6 +1376,20 @@ static int
 downlet_wait(void)
 {
 #if 1
+    char byte;
+    int  status = read(down7.pipe[0], &byte, sizeof(byte));
+
+    if (status == -1) {
+        log_add_syserr("Couldn't read from signaling pipe");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = downlet.taskStatus;
+    }
+
+    return status;
+#else
+#if 0
     sigset_t oldsigset;
     sigprocmask(SIG_BLOCK, &down7.cancelSigSet, &oldsigset);
     int sig;
@@ -1390,7 +1403,12 @@ downlet_wait(void)
 #endif
 
     return downlet.taskStatus;
+#endif
 }
+
+// Forward declaration
+static int
+down7_signal();
 
 /**
  * Handles the termination of a concurrent task by saving the status of the
@@ -1406,21 +1424,24 @@ downlet_taskTerminated(const Ldm7Status status)
     mutex_lock(&downlet.mutex);
         bool cancelDownlet;
 
-        if (downlet.taskStatus) {
+        if (downlet.taskStatusSet) {
             cancelDownlet = false;
         }
         else {
             downlet.taskStatus = status;
+            downlet.taskStatusSet = true;
             cancelDownlet = true;
         }
     mutex_unlock(&downlet.mutex);
 
-    if (cancelDownlet)
+    if (cancelDownlet) {
 #if 1
-        down7_halt();
+        if (down7_signal())
+            log_add_syserr("Couldn't write to signaling pipe");
 #else
         pthread_cond_signal(&downlet.cond);
 #endif
+    }
 }
 
 /**
@@ -1978,67 +1999,68 @@ down7_init(
         status = LDM7_SYSTEM;
     }
     else {
-        mutex_lock(&down7.mutex);
-            down7.pq = pq;
-            down7.feedtype = feed;
-            down7.numProds = 0;
-            down7.status = LDM7_OK;
-            down7.mrm = mrm;
-            down7.terminate = 0;
-            down7.cancelSig = SIGTERM;
-            sigemptyset(&down7.cancelSigSet);
-            sigaddset(&down7.cancelSigSet, down7.cancelSig);
-            (void)memset(down7.firstMcast, 0, sizeof(signaturet));
-            (void)memset(down7.prevLastMcast, 0, sizeof(signaturet));
+        down7.pq = pq;
+        down7.feedtype = feed;
+        down7.mrm = mrm;
 
-            /*
-             * The product-queue must be thread-safe because this module
-             * accesses it on these threads:
-             *   - FMTP multicast receiver
-             *   - FMTP unicast receiver
-             *   - LDM7 data-product receiver.
-             */
-            if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
-                log_add("Product-queue %s isn't thread-safe: %0x",
-                        pq_getPathname(pq), pq_getFlags(pq));
-                status = LDM7_INVAL;
+        /*
+         * The product-queue must be thread-safe because this module accesses it
+         * on these threads:
+         *   - FMTP multicast receiver
+         *   - FMTP unicast receiver
+         *   - LDM7 data-product receiver.
+         */
+        if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
+            log_add("Product-queue %s isn't thread-safe: %0x",
+                    pq_getPathname(pq), pq_getFlags(pq));
+            status = LDM7_INVAL;
+        }
+        else {
+            if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
+                char buf[256];
+
+                (void)sa_snprint(servAddr, buf, sizeof(buf));
+                log_add("Couldn't clone server address \"%s\"", buf);
+                status = LDM7_SYSTEM;
             }
             else {
-                if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
-                    char buf[256];
+                down7.iface = strdup(mcastIface);
 
-                    (void)sa_snprint(servAddr, buf, sizeof(buf));
-                    log_add("Couldn't clone server address \"%s\"", buf);
+                if (down7.iface == NULL) {
+                    log_add("Couldn't copy multicast interface name");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    down7.iface = strdup(mcastIface);
-
-                    if (down7.iface == NULL) {
-                        log_add("Couldn't copy multicast interface name");
+                    if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
+                        log_add("Couldn't copy receiver-side virtual-circuit "
+                                "endpoint");
                         status = LDM7_SYSTEM;
                     }
                     else {
-                        if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
-                            log_add("Couldn't copy receiver-side "
-                                    "virtual-circuit endpoint");
+                        status = pipe(down7.pipe);
+
+                        if (status) {
+                            log_add_syserr("Couldn't create signaling pipe");
                             status = LDM7_SYSTEM;
                         }
                         else {
                             down7.initialized = true;
-                        } // `down7.vcEnd` initialized
+                        }
 
                         if (status)
-                            free(down7.iface);
-                    } // `down7.iface` initialized
+                            vcEndPoint_destroy(&down7.vcEnd);
+                    } // `down7.vcEnd` initialized
 
-                    if (status) {
-                        sa_free(down7.servAddr);
-                        down7.servAddr = NULL;
-                    }
-                } // `down7.servAddr` initialized
-            } // Product-queue is thread-safe
-        mutex_unlock(&down7.mutex);
+                    if (status)
+                        free(down7.iface);
+                } // `down7.iface` set
+
+                if (status) {
+                    sa_free(down7.servAddr);
+                    down7.servAddr = NULL;
+                }
+            } // `down7.servAddr` initialized
+        } // Product-queue is thread-safe
 
         if (status)
             mutex_destroy(&down7.mutex);
@@ -2054,6 +2076,8 @@ void
 down7_destroy(void)
 {
     if (down7.initialized) {
+        (void)close(down7.pipe[0]);
+        (void)close(down7.pipe[1]);
         vcEndPoint_destroy(&down7.vcEnd);
         free(down7.iface);
         sa_free(down7.servAddr);
@@ -2090,8 +2114,6 @@ down7_run()
     free(vcEndId);
     free(feedId);
     free(upId);
-
-    down7.runThread = pthread_self();
 
     for (;;) {
         mutex_lock(&down7.mutex);
@@ -2146,8 +2168,19 @@ down7_run()
     return status;
 }
 
+static int
+down7_signal()
+{
+    char byte = 0;
+
+    return write(down7.pipe[1], &byte, sizeof(byte)) == sizeof(byte)
+            ? 0
+            : LDM7_SYSTEM;
+}
+
 /**
- * Halts the downstream LDM7 module that's executing on another thread.
+ * Halts execution of the downstream LDM7 module. May be called by a signal
+ * handler.
  *
  * @see `down7_run()`
  * @asyncsignalsafety  Safe
@@ -2155,9 +2188,11 @@ down7_run()
 void
 down7_halt(void)
 {
-    down7.terminate = 1;
+    if (down7.initialized) {
+        down7.terminate = 1;
 
-    (void)pthread_kill(down7.runThread, down7.cancelSig);
+        (void)down7_signal();
+    }
 }
 
 /**
