@@ -813,7 +813,7 @@ int logl_vadd(
         }
         else {
             Message* msg;
-            status = queue_getNextEntry(queue, &msg);
+            status = queue_getNextEntry(queue, &msg); // `queue != NULL`
             if (status == 0) {
                 loc_init(&msg->loc, loc);
                 status = msg_format(msg, fmt, args);
