@@ -1,9 +1,9 @@
-/*
- *   See file ../COPYRIGHT for copying and redistribution conditions.
- */
-
-/* 
- * ldm server mainline program module
+/**
+ * LDM server mainline program module
+ *
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
  */
 
 #include <config.h>
@@ -30,6 +30,9 @@
     #include <sys/wait.h>
 #endif 
 
+#if WANT_MULTICAST
+    #include "down7.h"
+#endif
 #include "ldm.h"
 #include "ldm4.h"
 #include "ldmfork.h"
@@ -303,9 +306,12 @@ static void signal_handler(
         /*NOTREACHED*/
     case SIGTERM:
         log_notice_q("SIGTERM received");
+        done = 1;
         up6_close();
         req6_close();
-        done = 1;
+#if WANT_MULTICAST
+        down7_halt();
+#endif
         return;
     case SIGUSR1:
         log_info_q("SIGUSR1 received");
