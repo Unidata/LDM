@@ -1,3 +1,10 @@
+6.13.7.63
+    down7:
+        Replaced process termination request and task termination signalling
+        mechanism with one that uses async-signal-safe read/write calls on a
+        pipe. This now works for both regular and signal-handler calls to
+        down7_halt().
+
 6.13.7.62	2018-09-29T12:30:26-0600
     Removed Coverity Scan lint.
     
