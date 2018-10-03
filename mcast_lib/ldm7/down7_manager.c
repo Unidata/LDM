@@ -105,7 +105,7 @@ static Elt* top;
  * @param[in] ul7         Upstream LDM-7 to which to subscribe.
  * @param[in] iface       IP address of FMTP interface. Caller may free upon
  *                        return.
- * @param[in] vcEnd       Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd       Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
  */
@@ -243,7 +243,7 @@ elt_stop(
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return. "0.0.0.0" obtains the system's default
  *                         interface.
- * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd        Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
