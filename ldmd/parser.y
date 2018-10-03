@@ -385,15 +385,15 @@ decodeSubnet(
 
 /**
  * Decodes a MULTICAST entry.
- * @param[in] feedSpec        Specification of feedtype.
- * @param[in] mcastGroupSpec  Specification of multicast group.
- * @param[in] ttlSpec         Specification of time-to-live for multicast
- *                            packets.
- * @param[in] fmtpAddrSpec    Specification of IPv4 address of local FMTP server
- * @param[in] vlanIdSpec      Specification of VLAN identifier
- * @param[in] switchSpec      Specification of layer-2 switch
- * @param[in] switchPortSpec  Specification of port on OSI layer-2 switch
- * @param[in] fmtpSubnetSpec  Specification of IPv4 address-space for clients
+ * @param[in] feedSpec        Feedtype.
+ * @param[in] mcastGroupSpec  Multicast group IP address.
+ * @param[in] ttlSpec         Time-to-live for multicast packets.
+ * @param[in] fmtpAddrSpec    IPv4 address of local FMTP server
+ * @param[in] vlanIdSpec      VLAN identifier/tag
+ * @param[in] switchSpec      Layer-2 switch ID
+ * @param[in] switchPortSpec  Port ID on layer-2 switch
+ * @param[in] fmtpSubnetSpec  IPv4 address-space for clients
+ * @param[in] mcastIfaceSpec  Interface to use for outgoing multicast packets
  * @retval    0               Success.
  * @retval    EINVAL          Invalid specification. `log_add()` called.
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
@@ -751,7 +751,7 @@ multicast_entry: MULTICAST_K STRING STRING STRING STRING STRING STRING STRING ST
                 {
                 #if WANT_MULTICAST
                     int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
-                            $8, $9, "0.0.0.0");
+                            $8, $9, $5);
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
