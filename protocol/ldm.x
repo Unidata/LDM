@@ -991,11 +991,11 @@ struct CidrAddr {
 #endif
 typedef unsigned short VlanId;
 struct VcEndPoint {
-    /* Identifier of OSI layer 2 switch */
+    /* Identifier of nearest OSI layer 2 switch */
     string  switchId<>;
-    /* Identifier of port on OSI layer 2 switch */
+    /* Identifier of port on nearest OSI layer 2 switch */
     string  portId<>;
-    /* Identifier of VLAN to/from OSI layer 2 switch */
+    /* Identifier of VLAN to/from nearest OSI layer 2 switch */
     VlanId  vlanId;
 };
 
