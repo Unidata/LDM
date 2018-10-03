@@ -124,8 +124,9 @@ void UdpSend::Init()
     interfaceIP.s_addr = inet_addr(ifAddr.c_str());
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
                    sizeof(interfaceIP)) < 0) {
-        throw std::runtime_error(
-                "UdpSend::Init() Couldn't set UDP socket default interface");
+        throw std::runtime_error(std::string(
+                "UdpSend::Init() Couldn't set UDP socket multicast interface "
+                "to \"") + ifAddr.c_str() + "\"");
     }
 }
 
