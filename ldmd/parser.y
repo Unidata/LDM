@@ -500,9 +500,9 @@ decodeMulticastEntry(
  *
  * @param[in] feedtypeSpec   Specification of feedtype.
  * @param[in] LdmServerSpec  Specification of upstream LDM server.
- * @param[in] switchId       Receiver-side OSI layer 2 switch ID
- * @param[in] portId         Receiver-side OSI layer 2 switch port ID
- * @param[in] vlanSpec       Receiver-side VLAN specification
+ * @param[in] switchId       Local AL2S switch
+ * @param[in] portId         Port on local AL2S switch
+ * @param[in] vlanSpec       VLAN ID to/from local AL2S switch
  * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
  *                           system's default multicast interface.
  * @retval    0              Success.
