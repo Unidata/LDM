@@ -778,8 +778,8 @@ requester_exec(
             /*
              * Try LDM version 6. Potentially lengthy operation.
              */
-            ErrorObj* errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
-                pq, isPrimary);
+            ErrorObj* errObj = req6_new(source, port, clssp, maxSilence,
+                    getQueuePath(), pq, isPrimary);
             (void)exitIfDone(0);
 
             if (!errObj) {
@@ -3051,9 +3051,9 @@ lcf_addMulticast(
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return. "0.0.0.0" obtains the system's default
  *                         interface.
- * @param[in] switchId     Identifier of local OSI layer 2 switch
- * @param[in] portId       Identifier of port on switch
- * @param[in] vlanId       Receiver-side VLAN ID
+ * @param[in] switchId     Local AL2S switch
+ * @param[in] portId       Port on local AL2S switch
+ * @param[in] vlanId       VLAN ID to/from local AL2S switch
  * @retval    0            Success.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
