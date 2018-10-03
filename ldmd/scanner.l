@@ -71,7 +71,7 @@ qstring		([^"]|{escquote})*
 ^[Mm][Uu][Ll][Tt][Ii][Cc][Aa][Ss][Tt] {
 #if YYDEBUG
     if(yydebug)
-	udebug("SEND");
+	udebug("MULTICAST");
 #endif
     return (MULTICAST_K);
 }
