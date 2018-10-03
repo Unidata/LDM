@@ -33,6 +33,7 @@
 #include "UdpSend.h"
 
 #include <errno.h>
+#include <string>
 #include <string.h>
 #include <stdexcept>
 #include <system_error>
@@ -102,7 +103,7 @@ void UdpSend::Init()
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr,
                    sizeof(reuseaddr)) < 0) {
         throw std::runtime_error(
-                "UdpSend::Init() Couldn't enable Address reuse");
+                "UdpSend::Init() Couldn't enable IP address reuse");
     }
 
 #ifdef SO_REUSEPORT
@@ -110,7 +111,7 @@ void UdpSend::Init()
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport,
                    sizeof(reuseport)) < 0) {
         throw std::runtime_error(
-                "UdpSend::Init() Couldn't enable Port reuse");
+                "UdpSend::Init() Couldn't enable port number reuse");
     }
 #endif
 
@@ -124,8 +125,9 @@ void UdpSend::Init()
     interfaceIP.s_addr = inet_addr(ifAddr.c_str());
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
                    sizeof(interfaceIP)) < 0) {
-        throw std::runtime_error(
-                "UdpSend::Init() Couldn't set UDP socket default interface");
+        throw std::runtime_error(std::string(
+                "UdpSend::Init() Couldn't set UDP socket multicast interface "
+                "to \"") + ifAddr.c_str() + "\"");
     }
 }
 
