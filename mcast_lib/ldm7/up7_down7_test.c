@@ -1428,7 +1428,7 @@ int main(
     int          status = 1;
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_NOTICE);
+    log_set_level(LOG_LEVEL_INFO);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
