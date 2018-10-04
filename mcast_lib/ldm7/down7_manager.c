@@ -35,9 +35,11 @@
  *                           products missed by the FMTP layer. Caller may free
  *                           upon return.
  * @param[in] feedtype       Feedtype of multicast group to receive.
- * @param[in] iface          Name of interface to use to receive multicast
- *                           packets or "dummy". Caller may free.
- * @param[in] vcEnd          Local virtual-circuit endpoint
+ * @param[in] fmtpIface      Name of virtual interface to be created and used by
+ *                           FMTP layer. Caller may free.
+ * @param[in] vcEnd          Local AL2S virtual-circuit endpoint. If the switch
+ *                           or port ID starts with "dummy", then the AL2S
+ *                           virtual circuit will not be created.
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    0              Success
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
@@ -47,7 +49,7 @@ static int
 executeDown7(
     const ServiceAddr* const restrict servAddr,
     const feedtypet                   feedtype,
-    const char* const restrict        iface,
+    const char* const restrict        fmtpIface,
     const VcEndPoint* const restrict  vcEnd,
     const char* const restrict        pqPathname)
 {
@@ -65,7 +67,7 @@ executeDown7(
             status = LDM7_SYSTEM;
         }
         else {
-            down7_init(servAddr, feedtype, iface, vcEnd, pq, mrm);
+            down7_init(servAddr, feedtype, fmtpIface, vcEnd, pq, mrm);
 
             status = down7_run(); // Blocks until error or termination requested
 
@@ -86,7 +88,7 @@ executeDown7(
 typedef struct elt {
     struct elt*    next;
     ServiceAddr*   ul7;
-    char*          iface;
+    char*          fmtpIface;
     /// Local virtual-circuit endpoint
     VcEndPoint     vcEnd;
     feedtypet      ft;
@@ -103,8 +105,8 @@ static Elt* top;
  *
  * @param[in] ft          Feedtype to subscribe to.
  * @param[in] ul7         Upstream LDM-7 to which to subscribe.
- * @param[in] iface       IP address of FMTP interface. Caller may free upon
- *                        return.
+ * @param[in] fmtpIface   Name of virtual interface to be created and used by
+ *                        FMTP layer
  * @param[in] vcEnd       Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
@@ -113,7 +115,7 @@ static Elt*
 elt_new(
         const feedtypet                  ft,
         ServiceAddr* const restrict      ul7,
-        const char* const restrict       iface,
+        const char* const restrict       fmtpIface,
         const VcEndPoint* const restrict vcEnd)
 {
     bool failure = true;
@@ -123,9 +125,9 @@ elt_new(
         elt->ul7 = sa_clone(ul7);
 
         if (elt->ul7) {
-            elt->iface = strdup(iface);
+            elt->fmtpIface = strdup(fmtpIface);
 
-            if (elt->iface == NULL) {
+            if (elt->fmtpIface == NULL) {
                 log_add_syserr("Couldn't duplicate interface specification");
             }
             else {
@@ -139,7 +141,7 @@ elt_new(
                 } // `elt->vcEnd` initialized
 
                 if (failure)
-                    free(elt->iface);
+                    free(elt->fmtpIface);
             } // `elt->iface` allocated
 
             if (failure)
@@ -166,7 +168,7 @@ elt_free(
 {
     if (elt) {
         sa_free(elt->ul7);
-        free(elt->iface);
+        free(elt->fmtpIface);
         free(elt);
     }
 }
@@ -193,7 +195,7 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = executeDown7(elt->ul7, elt->ft, elt->iface, &elt->vcEnd,
+        status = executeDown7(elt->ul7, elt->ft, elt->fmtpIface, &elt->vcEnd,
                 getQueuePath());
 
         if (status) {
@@ -240,9 +242,8 @@ elt_stop(
  *
  * @param[in] ft           Feedtype to subscribe to.
  * @param[in] ul7          Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] iface        IP address of FMTP interface. Caller may free upon
- *                         return. "0.0.0.0" obtains the system's default
- *                         interface.
+ * @param[in] fmtpIface    Name of virtual interface to be created and used by
+ *                         FMTP layer
  * @param[in] vcEnd        Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
@@ -251,11 +252,11 @@ Ldm7Status
 d7mgr_add(
         const feedtypet                  ft,
         ServiceAddr* const restrict      ul7,
-        const char* const restrict       iface,
+        const char* const restrict       fmtpIface,
         const VcEndPoint* const restrict vcEnd)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7, iface, vcEnd);
+    Elt* elt = elt_new(ft, ul7, fmtpIface, vcEnd);
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;
