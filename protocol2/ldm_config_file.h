@@ -321,23 +321,27 @@ lcf_addMulticast(
  *
  * @param[in] feedtype     Feedtype to subscribe to.
  * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] iface        IP address of FMTP interface. Caller may free upon
- *                         return. "0.0.0.0" obtains the system's default
- *                         interface.
- * @param[in] switchId     Identifier of local OSI layer 2 switch
- * @param[in] portId       Identifier of port on switch
- * @param[in] vlanId       Receiver-side VLAN ID
+ * @param[in] fmtpIface    Name of interface to be created and used by FMTP
+ *                         layer (e.g., "eth0.4000")
+ * @param[in] switchId     Local AL2S switch or `NULL`, in which case this host
+ *                         will not be added to an AL2S multipoint VLAN
+ * @param[in] portId       Port on local AL2S switch or `NULL`, in which case
+ *                         this host will not be added to an AL2S multipoint
+ *                         VLAN
+ * @param[in] al2sVlanId   VLAN ID to/from AL2S switch. Default is VLAN ID of
+ *                         `fmtpIface`.
  * @retval    0            Success.
+ * @retval    EINVAL       Invalid argument. `log_add()` called.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
 int
 lcf_addReceive(
         const feedtypet             feedtype,
         ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  iface,
-        const char* const restrict  switchId,
-        const char* const restrict  portId,
-        const unsigned short        vlanId);
+        const char* const restrict  fmtpIface,
+        const char* restrict        switchId,
+        const char* restrict        portId,
+        const char* const restrict  al2sVlanId);
 
 #endif
 

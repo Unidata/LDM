@@ -3043,21 +3043,6 @@ lcf_addMulticast(
     return status;
 }
 
-/**
- * Adds a potential downstream LDM-7.
- *
- * @param[in] feedtype     Feedtype to subscribe to.
- * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] fmtpIface    Name of interface to be created and used by FMTP
- *                         layer (e.g., "eth0.4000")
- * @param[in] switchId     Local AL2S switch or `NULL`
- * @param[in] portId       Port on local AL2S switch or `NULL`
- * @param[in] al2sVlanId   VLAN ID to/from AL2S switch. Default is VLAN ID of
- *                         `fmtpIface`.
- * @retval    0            Success.
- * @retval    EINVAL       Invalid argument. `log_add()` called.
- * @retval    ENOMEM       System failure. `log_add()` called.
- */
 int
 lcf_addReceive(
         const feedtypet             feedtype,
