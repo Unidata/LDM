@@ -3011,7 +3011,7 @@ lcf_addAccept(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd        Local AL2S virtual-circuit endpoint. Caller may free.
  * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
