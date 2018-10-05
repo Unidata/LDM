@@ -1,10 +1,9 @@
-/*
- *   Copyright 2015, University Corporation for Atmospheric Research
- *   See file ../COPYRIGHT for copying and redistribution conditions.
- */
-
-/* 
- * Miscellaneous functions to make dealing with Internet addresses easier.
+/**
+ * This file declares functions to make dealing with Internet addresses easier.
+ *
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
  */
 
 #ifndef _INETUTIL_H_
@@ -20,6 +19,11 @@
 #include <stdbool.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+#ifdef __cplusplus
+extern "C" {
+#define restrict
+#endif
 
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char*    hostbyaddr(
@@ -379,5 +383,9 @@ sockaddr_format(
         const size_t                 bufSize);
 
 #endif // WANT_MULTICAST
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_INETUTIL_H_ */
