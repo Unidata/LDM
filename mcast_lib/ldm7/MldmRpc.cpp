@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <mutex>
 #include <random>
+#include <string>
 #include <system_error>
 #include <unistd.h>
 #include <unordered_set>
