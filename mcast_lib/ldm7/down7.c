@@ -802,21 +802,27 @@ static int vlanIface_create(
         const in_addr_t            ifaceAddr)
 {
     int  status;
-    char ifaceAddrStr[INET_ADDRSTRLEN];
 
-    // Can't fail
-    (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
+    if (strncmp(ifaceName, "dummy", 5) == 0) {
+        status = 0;
+    }
+    else {
+        char ifaceAddrStr[INET_ADDRSTRLEN];
 
-    const char* const cmdVec[] = {vlanUtil, "create", ifaceName, ifaceAddrStr,
-            srvrAddrStr, NULL};
+        // Can't fail
+        (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr,
+                sizeof(ifaceAddrStr));
 
-    int childStatus;
+        const char* const cmdVec[] = {vlanUtil, "create", ifaceName,
+                ifaceAddrStr, srvrAddrStr, NULL};
 
-    status = sudo(cmdVec, &childStatus);
+        int childStatus;
+        status = sudo(cmdVec, &childStatus);
 
-    if (status || childStatus) {
-        log_add("Couldn't create local VLAN interface");
-        status = LDM7_SYSTEM;
+        if (status || childStatus) {
+            log_add("Couldn't create local VLAN interface");
+            status = LDM7_SYSTEM;
+        }
     }
 
     return status;
@@ -837,17 +843,23 @@ vlanIface_destroy(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName)
 {
-    int               status;
-    int               childStatus;
-    const char* const cmdVec[] = {vlanUtil, "destroy", ifaceName, srvrAddrStr,
-            NULL};
+    int status;
 
-    status = sudo(cmdVec, &childStatus);
-
-    if (status || childStatus) {
-        log_add("Couldn't destroy local VLAN interface");
-        status = LDM7_SYSTEM;
+    if (strncmp(ifaceName, "dummy", 5) == 0) {
+        status = 0;
     }
+    else {
+        int               childStatus;
+        const char* const cmdVec[] = {vlanUtil, "destroy", ifaceName,
+                srvrAddrStr, NULL};
+
+        status = sudo(cmdVec, &childStatus);
+
+        if (status || childStatus) {
+            log_add("Couldn't destroy local VLAN interface");
+            status = LDM7_SYSTEM;
+        }
+    } // Not a dummy FMTP virtual interface
 
     return status;
 }

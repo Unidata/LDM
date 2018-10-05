@@ -502,10 +502,9 @@ decodeMulticastEntry(
  * @param[in] LdmServerSpec  Specification of upstream LDM server.
  * @param[in] fmtpIface      Name of interface to be created and used by FMTP
  *                           layer (e.g., "ens33.232")
- * @param[in] switchId       Local AL2S switch ID or `NULL`
- * @param[in] portId         Port on local AL2S switch or `NULL`
- * @param[in] al2sVlanId     VLAN ID to/from local AL2S switch or `NULL`, in
- *                           which case the VLAN ID of `fmtpIface` is used.
+ * @param[in] switchId       Local AL2S switch ID
+ * @param[in] portId         Port on local AL2S switch
+ * @param[in] al2sVlanId     VLAN ID to/from local AL2S switch
  * @retval    0              Success.
  * @retval    EINVAL         Invalid specification. `log_add()` called.
  * @retval    ENOMEM         Out-of-memory. `log_add()` called.
@@ -696,15 +695,15 @@ include_stmt:   INCLUDE_K STRING
                         return -1;
                 }
 
-receive_entry:  RECEIVE_K STRING STRING STRING
+receive_entry:  RECEIVE_K STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = processReceiveEntry($2, $3, $4, NULL, NULL,
-                            NULL);
+                    int errCode = processReceiveEntry($2, $3, "dummy", "dummy",
+                            "dummy", "dummy");
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "
-                                "\"RECEIVE %s %s %s\"", $2, $3, $4);
+                                "\"RECEIVE %s %s %s\"", $2, $3);
                         return errCode;
                     }
                 #endif
@@ -712,7 +711,8 @@ receive_entry:  RECEIVE_K STRING STRING STRING
                 | RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = processReceiveEntry($2, $3, $4, $5, $6, NULL);
+                    int errCode = processReceiveEntry($2, $3, $4, $5, $6,
+                            "dummy");
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "
