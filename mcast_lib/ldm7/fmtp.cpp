@@ -455,9 +455,6 @@ fmtpSender_start(
         log_what(e);
         status = 3;
     }
-    if (status) {
-        log_add("Couldn't start FMTP sender");
-    }
 
     return status;
 }

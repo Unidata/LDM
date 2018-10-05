@@ -778,8 +778,8 @@ requester_exec(
             /*
              * Try LDM version 6. Potentially lengthy operation.
              */
-            ErrorObj* errObj = req6_new(source, port, clssp, maxSilence, getQueuePath(),
-                pq, isPrimary);
+            ErrorObj* errObj = req6_new(source, port, clssp, maxSilence,
+                    getQueuePath(), pq, isPrimary);
             (void)exitIfDone(0);
 
             if (!errObj) {
@@ -3043,48 +3043,52 @@ lcf_addMulticast(
     return status;
 }
 
-/**
- * Adds a potential downstream LDM-7.
- *
- * @param[in] feedtype     Feedtype to subscribe to.
- * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] iface        IP address of FMTP interface. Caller may free upon
- *                         return. "0.0.0.0" obtains the system's default
- *                         interface.
- * @param[in] switchId     Identifier of local OSI layer 2 switch
- * @param[in] portId       Identifier of port on switch
- * @param[in] vlanId       Receiver-side VLAN ID
- * @retval    0            Success.
- * @retval    ENOMEM       System failure. `log_add()` called.
- */
 int
 lcf_addReceive(
         const feedtypet             feedtype,
         ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  iface,
-        const char* const restrict  switchId,
-        const char* const restrict  portId,
-        const unsigned short        vlanId)
+        const char* const restrict  fmtpIface,
+        const char* restrict        switchId,
+        const char* restrict        portId,
+        const char* const restrict  al2sVlanId)
 {
     int        status;
     VcEndPoint vcEnd;
+    VlanId     vlanId;
 
-    if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
-        log_add("Couldn't construct virtual-circuit endpoint");
-        status = ENOMEM;
+    if (switchId == NULL)
+        switchId = "dummy";
+    if (portId == NULL)
+        portId = "dummy";
+
+    if (al2sVlanId == NULL &&
+            sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &vlanId) != 1) {
+        log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
+                fmtpIface);
+        status = EINVAL;
     }
     else {
-        if (d7mgr_add(feedtype, ldmSvcAddr, iface, &vcEnd)) {
-            log_add("Couldn't add downstream LDM7");
+        status = 0;
+    }
+
+    if (status == 0) {
+        if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
+            log_add("Couldn't construct virtual-circuit endpoint");
             status = ENOMEM;
         }
         else {
-            somethingToDo = true;
-            status = 0;
-        }
+            if (d7mgr_add(feedtype, ldmSvcAddr, fmtpIface, &vcEnd)) {
+                log_add("Couldn't add downstream LDM7");
+                status = ENOMEM;
+            }
+            else {
+                somethingToDo = true;
+                status = 0;
+            }
 
-        vcEndPoint_destroy(&vcEnd);
-    } // `vcEnd` constructed
+            vcEndPoint_destroy(&vcEnd);
+        } // `vcEnd` constructed
+    } // VLAN ID extracted
 
     return status;
 }

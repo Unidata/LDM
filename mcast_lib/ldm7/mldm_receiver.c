@@ -381,7 +381,7 @@ init(
                 ppn_free(notifier);
                 return LDM7_SYSTEM;
             }
-            log_info_q("Initializing FMTP receiver with mcastInfo=%s, iface=%s",
+            log_info("Initializing FMTP receiver with mcastInfo=%s, iface=%s",
                     miStr, iface);
             free(miStr);
         }

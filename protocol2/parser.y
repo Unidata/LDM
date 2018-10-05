@@ -500,11 +500,11 @@ decodeMulticastEntry(
  *
  * @param[in] feedtypeSpec   Specification of feedtype.
  * @param[in] LdmServerSpec  Specification of upstream LDM server.
- * @param[in] switchId       Receiver-side OSI layer 2 switch ID
- * @param[in] portId         Receiver-side OSI layer 2 switch port ID
- * @param[in] vlanSpec       Receiver-side VLAN specification
- * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
- *                           system's default multicast interface.
+ * @param[in] fmtpIface      Name of interface to be created and used by FMTP
+ *                           layer (e.g., "ens33.232")
+ * @param[in] switchId       Local AL2S switch ID
+ * @param[in] portId         Port on local AL2S switch
+ * @param[in] al2sVlanId     VLAN ID to/from local AL2S switch
  * @retval    0              Success.
  * @retval    EINVAL         Invalid specification. `log_add()` called.
  * @retval    ENOMEM         Out-of-memory. `log_add()` called.
@@ -513,10 +513,10 @@ static int
 processReceiveEntry(
         const char* const restrict feedtypeSpec,
         const char* const restrict ldmServerSpec,
+        const char* const restrict fmtpIface,
         const char* const restrict switchId,
         const char* const restrict portId,
-        const char* const restrict vlanSpec,
-        const char* const restrict iface)
+        const char* const restrict al2sVlanId)
 {
     feedtypet   feedtype;
     int         status = decodeFeedtype(&feedtype, feedtypeSpec);
@@ -531,18 +531,11 @@ processReceiveEntry(
             log_add("Couldn't parse receive entry");
         }
         else {
-            unsigned short vlanId;
-            if (1 != sscanf(vlanSpec, "%hu", &vlanId)) {
-                log_add("Invalid VLAN ID: \"%s\"", vlanSpec);
-                status = EINVAL;
-            }
-            else {
-                status = lcf_addReceive(feedtype, ldmSvcAddr, iface, switchId,
-                        portId, vlanId);
+            status = lcf_addReceive(feedtype, ldmSvcAddr, fmtpIface,
+                    switchId, portId, al2sVlanId);
 
-                if (status)
-                    log_add("Couldn't add RECEIVE entry");
-            } // `vlanId` set
+            if (status)
+                log_add("Couldn't add RECEIVE entry");
             sa_free(ldmSvcAddr);
         } // `ldmSvcAddr` allocated
     } // `feedtype` set
@@ -702,11 +695,24 @@ include_stmt:   INCLUDE_K STRING
                         return -1;
                 }
 
-receive_entry:  RECEIVE_K STRING STRING STRING STRING STRING
+receive_entry:  RECEIVE_K STRING STRING
+                {
+                #if WANT_MULTICAST
+                    int errCode = processReceiveEntry($2, $3, "dummy", "dummy",
+                            "dummy", "dummy");
+
+                    if (errCode) {
+                        log_add("Couldn't process receive entry "
+                                "\"RECEIVE %s %s %s\"", $2, $3);
+                        return errCode;
+                    }
+                #endif
+                }
+                | RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
                     int errCode = processReceiveEntry($2, $3, $4, $5, $6,
-                            "0.0.0.0");
+                            "dummy");
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "

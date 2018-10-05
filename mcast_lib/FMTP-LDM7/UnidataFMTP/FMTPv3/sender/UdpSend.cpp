@@ -33,6 +33,7 @@
 #include "UdpSend.h"
 
 #include <errno.h>
+#include <string>
 #include <string.h>
 #include <stdexcept>
 #include <system_error>
@@ -102,7 +103,7 @@ void UdpSend::Init()
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr,
                    sizeof(reuseaddr)) < 0) {
         throw std::runtime_error(
-                "UdpSend::Init() Couldn't enable Address reuse");
+                "UdpSend::Init() Couldn't enable IP address reuse");
     }
 
 #ifdef SO_REUSEPORT
@@ -110,7 +111,7 @@ void UdpSend::Init()
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport,
                    sizeof(reuseport)) < 0) {
         throw std::runtime_error(
-                "UdpSend::Init() Couldn't enable Port reuse");
+                "UdpSend::Init() Couldn't enable port number reuse");
     }
 #endif
 

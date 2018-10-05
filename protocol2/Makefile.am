@@ -1,4 +1,4 @@
-# Copyright 2014 University Corporation for Atmospheric Research
+# Copyright 2018 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -6,13 +6,14 @@
 #
 ## Process this file with automake to produce Makefile.in
 
+YACC			= @YACC@
 hinHeaders	        = \
     data_prod.h \
     forn.h \
     LdmProxy.h \
     timer.h \
     uldb.h
-BUILT_SOURCES	        =  $(hinHeaders)
+BUILT_SOURCES           = parser.c scanner.c $(hinHeaders)
 CLEANFILES		= *.i $(hinHeaders)
 EXTRA_DIST		= \
     $(hinHeaders:.h=.hin) \
@@ -23,8 +24,12 @@ EXTRA_DIST		= \
     ldm5.h \
     ldm_config_file.h \
     rsaglobal.h \
+    parser.y \
     prod_info.h \
-    up6.h
+    scanner.c \
+    scanner.l \
+    up6.h \
+    wordexp.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
     abbr.h \
@@ -72,6 +77,7 @@ lib_la_SOURCES		= \
     ldm_config_file.c \
     md5c.c \
     one_svc_run.c \
+    parser.c \
     priv.c \
     prod_info.c \
     prod_class.c \
@@ -84,6 +90,7 @@ lib_la_SOURCES		= \
     up6.c \
     UpFilter.c \
     uldb.c \
+    wordexp.c \
     xdr_data.c
 lib_la_CPPFLAGS		= \
     -I$(top_srcdir) \
@@ -107,6 +114,15 @@ TAGS_FILES		= \
     ../registry/*.c
 dist_man3_MANS		= uldb.3
 
+parser.c:	parser.y
+	status=1; \
+	$(YACC) parser.y && \
+	    mv y.tab.c parser.c && \
+	    status=0; \
+	rm -f y.tab.c conf.tab.c; \
+	test $$status -ne 0 && rm -f $@; \
+	exit $$status
+
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
@@ -115,6 +131,13 @@ forn.h:			forn.hin forn.c
 LdmProxy.h:		LdmProxy.hin LdmProxy.c
 timer.h:		timer.hin timer.c
 uldb.h:			uldb.hin uldb.c
+
+# NOTE: flex(1) is used instead of lex(1) in order to generate a scanner that
+# can process "include" statements.
+#
+scanner.c:	scanner.l parser.c
+	flex scanner.l
+	mv lex.yy.c scanner.c
 
 # The following rule is for completeness only because the target-file must be
 # manually modified to a great extent.

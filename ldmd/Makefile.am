@@ -1,4 +1,4 @@
-# Copyright 2014 University Corporation for Atmospheric Research
+# Copyright 2018 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -6,24 +6,15 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES           = parser.c scanner.c
 CLEANFILES		= ldmd.1 *.i .*.info up7.conf down7.conf *.pq \
 			  *.log *.pid *.yaml *.map *.pim
 LD_GEN			= @LD_GEN@
-YACC			= @YACC@
 EXTRA_DIST		= ldmd.1.in \
                           ldmd.conf \
-			  nexrad3.txt \
-                          parser.y \
-                          scanner.c \
-                          scanner.l \
-                          wordexp.h
+			  nexrad3.txt
 PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS	= ldmd
-ldmd_SOURCES	= \
-    parser.c \
-    ldmd.c \
-    wordexp.c
+ldmd_SOURCES	= ldmd.c
 CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
@@ -52,22 +43,6 @@ TAGS_FILES		= \
 ldmd.1:		$(srcdir)/ldmd.1.in
 	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
-
-parser.c:	parser.y
-	status=1; \
-	$(YACC) parser.y && \
-	    mv y.tab.c parser.c && \
-	    status=0; \
-	rm -f y.tab.c conf.tab.c; \
-	test $$status -ne 0 && rm -f $@; \
-	exit $$status
-
-# NOTE: flex(1) is used instead of lex(1) in order to generate a scanner that
-# can process "include" statements.
-#
-scanner.c:	scanner.l parser.c
-	flex scanner.l
-	mv lex.yy.c scanner.c
 
 SUFFIXES:	.h .hin
 .hin.h:

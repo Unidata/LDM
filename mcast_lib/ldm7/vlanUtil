@@ -15,7 +15,7 @@ Usage:
     $name create <virtIface> <ifaceAddr> [<srvrAddr>]
     $name destroy <virtIface> [<srvrAddr>]
 Operands:
-    <virtIface>   Specification of virtual interface (e.g., "eth0.0")
+    <virtIface>   Specification of virtual interface (e.g., "eth0.4000")
     <ifaceAddr>   IP address of virtual interface (e.g., "192.168.0.2")
     <srvrAddr>    IP address of sending FMTP server (e.g., "192.168.0.1").
                   Only receiver should specify.
@@ -84,7 +84,7 @@ create()
 
     if test $status -eq 0; then
         # Obtain name of physical interface and VLAN ID
-        set `echo $virtIface | tr . ' '`
+        set `echo $virtIface | tr . ' ' | awk '{print $1, $NF}'`
         phyIface="${1:?Physical interface not specified}"
         vlanId="${2:?VLAN ID not specified}"
 

@@ -72,17 +72,15 @@ test_sa_getInetSockAddr(void)
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    struct sockaddr_storage inetSockAddr;
-    socklen_t               sockLen;
+    struct sockaddr_in inetSockAddr;
+    socklen_t          sockLen;
 
-    status = sa_getInetSockAddr(serviceAddr, AF_INET, true, &inetSockAddr,
-            &sockLen);
+    status = sa_getInetSockAddr(serviceAddr, AF_INET, true,
+            (struct sockaddr*)&inetSockAddr, &sockLen);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(((struct sockaddr_in*)&inetSockAddr)->sin_family, AF_INET);
-    CU_ASSERT_EQUAL(((struct sockaddr_in*)&inetSockAddr)->sin_addr.s_addr,
-            inet_addr(IP_ADDR));
-    CU_ASSERT_EQUAL(((struct sockaddr_in*)&inetSockAddr)->sin_port,
-            htons(PORT));
+    CU_ASSERT_EQUAL(inetSockAddr.sin_family, AF_INET);
+    CU_ASSERT_EQUAL(inetSockAddr.sin_addr.s_addr, inet_addr(IP_ADDR));
+    CU_ASSERT_EQUAL(inetSockAddr.sin_port, htons(PORT));
     CU_ASSERT_EQUAL(sockLen, sizeof(struct sockaddr_in));
 }
 
