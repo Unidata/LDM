@@ -12,3 +12,5 @@ uldb.h
 ldmprint_test
 /ldmfork_test
 /timestamp_test
+/parser.c
+/scanner.c
