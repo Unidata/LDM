@@ -1372,13 +1372,13 @@ test_up7_down7(
     const float retxTimeout = (MEAN_RESIDENCE_TIME/2.0) / 60.0;
     umm_setRetxTimeout(retxTimeout);
 
-    sender_start(&sender, ANY); // Blocks until sender is ready
-    log_flush_error();
-
     host_set* hostSet = lcf_newHostSet(HS_DOTTED_QUAD, LOCAL_HOST, NULL);
     CU_ASSERT_PTR_NOT_NULL_FATAL(hostSet);
     ErrorObj* errObj = lcf_addAllow(ANY, hostSet, ".*", NULL);
     CU_ASSERT_PTR_NULL_FATAL(errObj);
+
+    sender_start(&sender, ANY); // Blocks until sender is ready
+    log_flush_error();
 
     receiver_init(&receiver, sender_getAddr(&sender), sender_getPort(&sender),
             ANY);
