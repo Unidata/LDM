@@ -26,8 +26,9 @@ public:
     /**
      * Constructs.
      * @param[in] inAddrPool  Pool of IP addresses
+     * @param[in] feed        Outgoing LDM feed
      */
-    explicit Authorizer(InAddrPool& inAddrPool);
+    Authorizer(InAddrPool& inAddrPool, const feedtypet feed);
 
     /**
      * Indicates if a client is authorized to connect to the server FMTP layer.
@@ -46,7 +47,9 @@ public:
 extern "C" {
 #endif
 
-void* auth_new(void* inAddrPool);
+void* auth_new(
+        void*           inAddrPool,
+        const feedtypet feed);
 
 void auth_delete(void* const authorizer);
 

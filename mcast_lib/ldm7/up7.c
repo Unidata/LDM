@@ -87,6 +87,8 @@ static const char    python[] = "python"; ///< Name of python executable
  * @retval     0            Success or a switch or port identifier of `end1` or
  *                          `end2` starts with "dummy"
  * @retval     LDM7_INVAL   Invalid argument. `log_add()` called.
+ * @retval     LDM7_NOENT   Virtual circuit not created because a dummy
+ *                          end-point was specified
  * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
  */
 static int oess_provision(
@@ -104,7 +106,7 @@ static int oess_provision(
                   strncmp(end2->portId, "dummy", 5) == 0))) {
         log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
         *circuitId = strdup("dummy_circuitId");
-        status = 0;
+        status = LDM7_NOENT;
     }
     else if (wrkGrpName == NULL || desc == NULL || end1 == NULL ||
             end2 == NULL || circuitId == NULL) {
@@ -289,6 +291,8 @@ releaseDownFmtpAddr()
  * @param[in]  feed              LDM feed
  * @param[in]  remoteVcEndPoint  Remote end of virtual circuit
  * @retval     0                 Success
+ * @retval     LDM7_NOENT        Virtual circuit not created because one of the
+ *                               end-points is a dummy
  * @retval     LDM7_SYSTEM       Failure. `log_add()` called.
  */
 static Ldm7Status
@@ -315,7 +319,7 @@ up7_createVirtCirc(
         status = oess_provision(wrkGrpName, desc, localVcEndPoint,
                 remoteVcEndPoint, &id);
 
-        if (status) {
+        if (status && status != LDM7_NOENT) {
             log_add("Couldn't create AL2S virtual circuit for feed %s",
                     feedStr);
         }
@@ -530,10 +534,9 @@ up7_subscribe(
 {
     bool                replySet = false;
     struct sockaddr_in* sockAddr = svc_getcaller(xprt);
-    struct in_addr*     inAddr = &sockAddr->sin_addr;
     const char*         hostId = hostbyaddr(sockAddr);
     feedtypet           reducedFeed = up7_reduceToAllowed(request->feed, hostId,
-            inAddr);
+            &sockAddr->sin_addr);
 
     if (reducedFeed == NONE) {
         log_notice("Host %s isn't allowed to receive any part of feed %s",
@@ -542,16 +545,21 @@ up7_subscribe(
         replySet = true;
     }
     else {
-        Ldm7Status status = up7_createVirtCirc(reducedFeed,
-                &request->vcEnd);
+        Ldm7Status status = up7_createVirtCirc(reducedFeed, &request->vcEnd);
+        const bool noAl2s = status == LDM7_NOENT;
 
-        if (status != LDM7_OK) {
+        if (noAl2s)
+            status = 0;
+
+        if (status) {
             log_add("Couldn't create virtual circuit to host %s", hostId);
         }
         else {
             SubscriptionReply rep = {};
 
-            status = umm_subscribe(reducedFeed, &rep);
+            status = umm_subscribe(reducedFeed,
+                    noAl2s ? sockAddr->sin_addr.s_addr : INADDR_ANY,
+                    &rep);
 
             if (status) {
                 if (LDM7_NOENT == status) {

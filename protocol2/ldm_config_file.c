@@ -32,7 +32,7 @@
 #include "autoshift.h"
 #include "down6.h"
 #if WANT_MULTICAST
-    #include "../mcast_lib/ldm7/down7_manager.h"
+    #include "down7_manager.h"
 #endif
 #include "error.h"
 #include "feedTime.h"
@@ -2688,7 +2688,7 @@ lcf_getAllowedFeeds(
         const char*           name,
         const struct in_addr* addr,
         const size_t          maxFeeds,
-        feedtypet             feeds[maxFeeds])
+        feedtypet*            feeds)
 {
     AllowEntry*     entry;                  /// ACL entry
     char            dotAddr[DOTTEDQUADLEN]; /// dotted-quad IP address
@@ -3357,11 +3357,6 @@ lcf_free(void)
     allowEntries_free();
     acceptEntries_free();
     execEntries_free();
-    #if WANT_MULTICAST
-        if (umm_clear())
-            log_error_q("Couldn't clear multicast LDM sender manager");
-        d7mgr_free();  // Clears multicast receiver manager
-    #endif
     serverNeeded = false;
     somethingToDo = false;
 }

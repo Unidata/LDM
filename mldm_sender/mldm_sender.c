@@ -19,6 +19,7 @@
 #include "globals.h"
 #include "inetutil.h"
 #include "ldm.h"
+#include "ldm_config_file.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
@@ -1012,47 +1013,56 @@ runMldmSrvr(void* mldmSrvr)
 }
 
 static Ldm7Status
-startAuthorization(const CidrAddr* const fmtpSubnet)
+startAuthorization(
+        const CidrAddr* const fmtpSubnet,
+        const feedtypet       feed)
 {
     Ldm7Status status;
-    inAddrPool = inAddrPool_new(fmtpSubnet);
-    if (inAddrPool == NULL) {
-        log_add_syserr("Couldn't create pool of available IP addresses");
-        status = LDM7_SYSTEM;
+
+    if (read_conf(getLdmdConfigPath(), 0, 0, 0) != 0) {
+        log_add("Couldn't read LDM configuration-file");
+        status = LDM7_LOGIC;
     }
     else {
-        authorizer = auth_new(inAddrPool);
-        if (authorizer == NULL) {
-            log_add_syserr("Couldn't create authorizer of remote clients");
+        inAddrPool = inAddrPool_new(fmtpSubnet);
+        if (inAddrPool == NULL) {
+            log_add_syserr("Couldn't create pool of available IP addresses");
+            status = LDM7_SYSTEM;
         }
         else {
-            mldmCmdSrvr = mldmSrvr_new(inAddrPool);
-            if (mldmCmdSrvr == NULL) {
-                log_add_syserr("Couldn't create multicast LDM RPC "
-                        "command-server");
-                status = LDM7_SYSTEM;
+            authorizer = auth_new(inAddrPool, feed);
+            if (authorizer == NULL) {
+                log_add_syserr("Couldn't create authorizer of remote clients");
             }
             else {
-                status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
-                        mldmCmdSrvr);
-                if (status) {
+                mldmCmdSrvr = mldmSrvr_new(inAddrPool);
+                if (mldmCmdSrvr == NULL) {
                     log_add_syserr("Couldn't create multicast LDM RPC "
-                            "command-server thread");
-                    mldmSrvr_free(mldmCmdSrvr);
-                    mldmCmdSrvr = NULL;
+                            "command-server");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    mldmSrvrPort = mldmSrvr_getPort(mldmCmdSrvr);
-                    status = LDM7_OK;
-                }
-            } // `mldmSrvr` set
+                    status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
+                            mldmCmdSrvr);
+                    if (status) {
+                        log_add_syserr("Couldn't create multicast LDM RPC "
+                                "command-server thread");
+                        mldmSrvr_free(mldmCmdSrvr);
+                        mldmCmdSrvr = NULL;
+                        status = LDM7_SYSTEM;
+                    }
+                    else {
+                        mldmSrvrPort = mldmSrvr_getPort(mldmCmdSrvr);
+                        status = LDM7_OK;
+                    }
+                } // `mldmSrvr` set
+                if (status)
+                    auth_delete(authorizer);
+            } // `authorizer` set
             if (status)
-                auth_delete(authorizer);
-        } // `authorizer` set
-        if (status)
-            inAddrPool_delete(inAddrPool);
-    } // `inAddrPool` set
+                inAddrPool_delete(inAddrPool);
+        } // `inAddrPool` set
+    }
     return status;
 }
 
@@ -1075,6 +1085,7 @@ stopAuthorization()
             mldmSrvr_free(mldmCmdSrvr);
             auth_delete(authorizer);
             inAddrPool_delete(inAddrPool);
+            lcf_free();
         }
     }
 }
@@ -1139,7 +1150,7 @@ mls_execute(
      * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
      * `mldmSrvrPort`.
      */
-    status = startAuthorization(fmtpSubnet);
+    status = startAuthorization(fmtpSubnet, info->feed);
     if (status) {
         log_add("Couldn't initialize authorization of remote clients");
     }

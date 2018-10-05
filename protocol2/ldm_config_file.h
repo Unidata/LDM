@@ -151,7 +151,7 @@ lcf_getAllowedFeeds(
         const char*           name,
         const struct in_addr* addr,
         const size_t          maxFeeds,
-        feedtypet             feeds[maxFeeds]);
+        feedtypet*            feeds);
 
 /**
  * Returns the intersection of a desired feed and allowed feeds.
@@ -309,12 +309,12 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
-        const struct in_addr             mcastIface,
-        const McastInfo* const restrict  mcastInfo,
-        const unsigned short             ttl,
-        const VcEndPoint* const restrict vcEnd,
-        const CidrAddr* const restrict   fmtpSubnet,
-        const char* const restrict       pqPathname);
+        const struct in_addr     mcastIface,
+        const McastInfo* const   mcastInfo,
+        const unsigned short     ttl,
+        const VcEndPoint* const  vcEnd,
+        const CidrAddr* const    fmtpSubnet,
+        const char* const        pqPathname);
 
 /**
  * Adds a potential downstream LDM-7.
@@ -332,12 +332,12 @@ lcf_addMulticast(
  */
 int
 lcf_addReceive(
-        const feedtypet             feedtype,
-        ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  iface,
-        const char* const restrict  switchId,
-        const char* const restrict  portId,
-        const unsigned short        vlanId);
+        const feedtypet       feedtype,
+        ServiceAddr* const    ldmSvcAddr,
+        const char* const     iface,
+        const char* const     switchId,
+        const char* const     portId,
+        const unsigned short  vlanId);
 
 #endif
 

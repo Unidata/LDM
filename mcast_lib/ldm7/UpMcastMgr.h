@@ -79,6 +79,11 @@ umm_addPotentialSender(
  * Returns the response to a multicast subscription request. Doesn't block.
  *
  * @param[in]  feedtype     Multicast group feed-type.
+ * @param[in]  downAddr     Address of downstream host or `INADDR_ANY`, in which
+ *                          case the returned reply will contain a dynamically
+ *                          allocated IP address for the downstream FMTP layer
+ *                          on the assumption that it will be made a member of
+ *                          an AL2S multipoint VLAN
  * @param[out] reply        Reply to the subscription-request. Call should
  *                          destroy when it's no longer needed.
  * @retval     0            Success. The group is being multicast and
@@ -91,6 +96,7 @@ umm_addPotentialSender(
 Ldm7Status
 umm_subscribe(
         const feedtypet          feedtype,
+        const in_addr_t          downAddr,
         SubscriptionReply* const reply);
 
 /**

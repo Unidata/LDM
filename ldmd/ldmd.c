@@ -49,8 +49,10 @@
 #include "child_process_set.h"
 #include "inetutil.h"
 #if WANT_MULTICAST
-    #include "../mcast_lib/ldm7/mldm_sender_map.h"
-    #include "../mcast_lib/ldm7/up7.h"
+    #include "down7_manager.h"
+    #include "mldm_sender_map.h"
+    #include "up7.h"
+    #include "UpMcastMgr.h"
 #endif
 #include "registry.h"
 #include "remote.h"
@@ -273,6 +275,12 @@ static void cleanup(
      * Free access-control-list resources.
      */
     lcf_free(); // eventually calls msm_destroy()
+
+#if WANT_MULTICAST
+    if (umm_clear())
+        log_error_q("Couldn't clear multicast LDM sender manager");
+    d7mgr_free();  // Clears multicast receiver manager
+#endif
 
     /*
      * Close registry.

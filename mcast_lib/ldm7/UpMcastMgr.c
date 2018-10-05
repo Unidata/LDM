@@ -13,30 +13,27 @@
  *
  * The functions in this file are thread-compatible but not thread-safe.
  */
-
 #include "config.h"
 
-//#include "AuthClient.h"
-#include "CidrAddr.h"
-#include "fmtp.h"
-#include "globals.h"
-#include "ldmprint.h"
-#include "log.h"
-#include "mcast_info.h"
-#include "MldmRpc.h"
-#include "mldm_sender_map.h"
-#include "StrBuf.h"
 #include "UpMcastMgr.h"
 
+#include "log.h"
+#include "inetutil.h"
+#include "ldmprint.h"
+#include "mcast_info.h"
+#include "mldm_sender_map.h"
+#include "MldmRpc.h"
+#include "StrBuf.h"
+
 #include <arpa/inet.h>
-#include <errno.h>
-#include <signal.h>
+#include <netinet/in.h>
 #include <search.h>
+#include <signal.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -946,17 +943,23 @@ me_release(
 
 /**
  * Sets the response to a subscription request.
- * @param[in]  entry    Multicast entry
- * @param[out] reply    Subscription reply. Caller should destroy when it's no
- *                      longer needed.
- * @retval 0            Success
- * @retval LDM7_NOENT   No associated Internet address-space
- * @retval LDM7_MCAST   All addresses have been reserved
- * @retval LDM7_SYSTEM  System error
+ * @param[in]  entry     Multicast entry
+ * @param[in]  downAddr  Address of downstream host or `INADDR_ANY`, in which
+ *                       case the returned reply will contain a dynamically
+ *                       allocated IP address for the downstream FMTP layer on
+ *                       the assumption that it will be made a member of an AL2S
+ *                       multipoint VLAN
+ * @param[out] reply     Subscription reply. Caller should destroy when it's no
+ *                       longer needed.
+ * @retval 0             Success
+ * @retval LDM7_NOENT    No associated Internet address-space
+ * @retval LDM7_MCAST    All addresses have been reserved
+ * @retval LDM7_SYSTEM   System error
  */
 static Ldm7Status
 me_setSubscriptionReply(
         const McastEntry* const restrict  entry,
+        in_addr_t                         downAddr,
         SubscriptionReply* const restrict reply)
 {
     SubscriptionReply rep;
@@ -964,20 +967,26 @@ me_setSubscriptionReply(
             &entry->info);
 
     if (status == 0) {
-        in_addr_t downFmtpAddr;
+        SubnetLen prefixLen;
 
-        status = me_reserve(entry, &downFmtpAddr);
+        if (downAddr != INADDR_ANY) {
+            prefixLen = 32;
+        }
+        else {
+            prefixLen = cidrAddr_getPrefixLen(&entry->fmtpSubnet);
+            status = me_reserve(entry, &downAddr);
+        }
 
         if (status == 0) {
-            cidrAddr_init(&rep.SubscriptionReply_u.info.fmtpAddr,
-                    downFmtpAddr, cidrAddr_getPrefixLen(&entry->fmtpSubnet));
+            cidrAddr_init(&rep.SubscriptionReply_u.info.fmtpAddr, downAddr,
+                    prefixLen);
             *reply = rep;
             status = LDM7_OK;
-        } // `rep->SubscriptionReply_u.info.clntAddr` set
+        }
 
         if (status)
             mi_destroy(&rep.SubscriptionReply_u.info.mcastInfo);
-    } // `rep->SubscriptionReply_u.info.mcastInfo` allocated
+    } // `rep->SubscriptionReply_u.info.mcastInfo` initialized
 
     reply->status = status;
 
@@ -1059,6 +1068,7 @@ umm_addPotentialSender(
 Ldm7Status
 umm_subscribe(
         const feedtypet          feed,
+        const in_addr_t          downAddr,
         SubscriptionReply* const reply)
 {
     int         status;
@@ -1079,7 +1089,7 @@ umm_subscribe(
                 log_add("Couldn't ensure running multicast sender");
             }
             else {
-                status = me_setSubscriptionReply(entry, reply);
+                status = me_setSubscriptionReply(entry, downAddr, reply);
 
                 if (status)
                     log_add("Couldn't set subscription reply");
