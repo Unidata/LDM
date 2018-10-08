@@ -123,6 +123,11 @@
 000 001 225 009 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
 000 001 225 010 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
 000 001 225 012 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
+000 001 226 000 Pblackominant Weather            -                    PWTHER           0  -9999.00
+000 001 228 008 Flat Ice Accumulation (FRAM)     kg m**-2             FICEAC           0  -9999.00
+000 001 231 008 Precipitation Potential Index    %                    PPINDX           0  -9999.00
+000 001 232 005 Probability Cloud Ice Present    %                    PROBCIP          0  -9999.00
+000 001 233 000 Snow Liquid ratio                kg kg-1              SNOWLR           0  -9999.00
 000 001 242 005 Rel. Hum. wrt Precip. Water      %                    RHPW             0  -9999.00
 000 001 243 008 ?????????????????????????????    ?                    ????             0  -9999.00
 !
@@ -184,6 +189,8 @@
 000 002 223 008 V Comp Hrly Max 10m Wind Speed   m s**-1              MAXVW            0  -9999.00
 000 002 224 000 Ventilation Rate                 m**2 s**-1           VRATE            0  -9999.00
 000 002 224 009 Ventilation Rate                 m**2 s**-1           VRATE            0  -9999.00
+000 002 225 000 Transport Wind Speed             m s-1                TRWSPD           0  -9999.00
+000 002 226 000 Transport Wind Direction         Deg                  TRWDIR           0  -9999.00
 !
 ! mass
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -323,6 +330,8 @@
 000 007 199 002 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
 000 007 199 005 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
 000 007 199 008 Hrly Max Up Helicity 2km-5km AGL m**2 s**-2           MXUPHL           0  -9999.00
+000 007 201 000 Bourgoiun Negative Energy Layer  J kg-1               BNEGLAY          0  -9999.00
+000 007 202 000 Bourgoiun Positive Energy Layer  J kg-1               BPOSELAY         0  -9999.00
 !
 ! Aerosols
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -435,7 +444,8 @@
 000 019 234 000 Icing severity                   non-dim              ICSEV            0  -9999.00
 000 019 235 000 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
 000 019 235 005 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
-
+000 019 236 000 Snow Level                       m                    SNOWLVL          0  -9999.00
+000 019 237 009 Dry Thunderstorm Probability     %                    DRYTPROB         0  -9999.00
 !
 000 019 242 000 Mislabeled RH wrt PW             %                    RHPW             0  -9999.00
 !
