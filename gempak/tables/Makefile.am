@@ -9,7 +9,7 @@
 G2VARSNCEP_s	= g2varsncep0.tbl g2varsncep1.tbl
 G2VARSNSSL_s	= g2varsnssl1.tbl
 G2VARSWMO_s	= g2varswmo0.tbl g2varswmo1.tbl g2varswmo2.tbl g2varswmo3.tbl \
-		  g2varswmo6.tbl
+		  g2varswmo6.tbl g2varswmo19.tbl
 G2VCRDNCEP_s	= g2vcrdncep0.tbl g2vcrdncep1.tbl
 G2VCRDNSSL_s	= g2vcrdnssl1.tbl
 G2VCRDWMO_s	= g2vcrdwmo0.tbl g2vcrdwmo1.tbl g2vcrdwmo2.tbl g2vcrdwmo3.tbl \
