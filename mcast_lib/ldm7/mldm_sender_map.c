@@ -48,7 +48,7 @@ typedef struct {
     /// Process identifier of multicast LDM sender
     pid_t          pid;
     /// Port number of multicast LDM sender's FMTP TCP server in host byte order
-    unsigned short port;
+    unsigned short fmtpPort;
     /// Port number of multicast LDM sender's RPC server in host byte order
     unsigned short mldmSrvrPort;
 } ProcInfo;
@@ -323,7 +323,7 @@ Ldm7Status
 msm_put(
         const feedtypet      feedtype,
         const pid_t          pid,
-        const unsigned short port,
+        const unsigned short fmtpPort,
         const unsigned short mldmSrvrPort)
 {
     unsigned  ibit;
@@ -347,7 +347,7 @@ msm_put(
         if (feedtype & mask) {
             ProcInfo* const procInfo = procInfos + ibit;
             procInfo->pid = pid;
-            procInfo->port = port;
+            procInfo->fmtpPort = fmtpPort;
             procInfo->mldmSrvrPort = mldmSrvrPort;
         }
     }
@@ -355,23 +355,11 @@ msm_put(
     return 0;
 }
 
-/**
- * Returns process-information associated with a feed-type.
- *
- * @param[in]  feedtype      Feed-type.
- * @param[out] pid           Associated process-ID.
- * @param[out] port          Port number of multicast LDM sender's FMTP TCP
- *                           server
- * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
- * @retval     0             Success. `*pid`, `*port`, and `mldmSrvrPort` are
- *                           set
- * @retval     LDM7_NOENT    No process associated with feed-type.
- */
 Ldm7Status
 msm_get(
         const feedtypet                feedtype,
         pid_t* const restrict          pid,
-        unsigned short* const restrict port,
+        unsigned short* const restrict fmtpPort,
         unsigned short* const restrict mldmSrvrPort)
 {
     unsigned  ibit;
@@ -382,7 +370,7 @@ msm_get(
         const pid_t     infoPid = procInfo->pid;
         if ((mask & feedtype) && infoPid) {
             *pid = infoPid;
-            *port = procInfo->port;
+            *fmtpPort = procInfo->fmtpPort;
             *mldmSrvrPort = procInfo->mldmSrvrPort;
             return 0;
         }
