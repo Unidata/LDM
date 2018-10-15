@@ -82,12 +82,15 @@ isa_clone(const InetSockAddr* const isa);
  * Returns a string representation of the address portion of an Internet socket
  * address.
  *
- * @param[in,out] isa   Internet socket address
- * @retval        NULL  Failure. `log_add()` called.
- * @return              String representation of the Internet address
+ * @param[in,out] isa         Internet socket address
+ * @param[out]    addrIsname  Is the address a name? May be `NULL`.
+ * @retval        NULL        Failure. `log_add()` called.
+ * @return                    String representation of the Internet address
  */
 const char*
-isa_getInetAddrStr(InetSockAddr* const isa);
+isa_getInetAddrStr(
+        InetSockAddr* const restrict isa,
+        bool* const restrict         addrIsName);
 
 /**
  * Returns the port number of an Internet socket address.

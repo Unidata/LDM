@@ -317,10 +317,10 @@ mldm_exec(
     args[i++] = "-q";
     args[i++] = (char*)pqPathname; // safe cast
 
-    if (strcmp(isa_getInetAddrStr(info->fmtpSrvr), "0.0.0.0")) {
+    if (strcmp(isa_getInetAddrStr(info->fmtpSrvr, NULL), "0.0.0.0")) {
         args[i++] = "-s";
         // Safe cast because of `execvp()`
-        args[i++] = (char*)isa_getInetAddrStr(info->fmtpSrvr);
+        args[i++] = (char*)isa_getInetAddrStr(info->fmtpSrvr, NULL);
     }
 
     char ttlOptArg[4];
@@ -512,6 +512,7 @@ mldm_spawn(
             char* const id = smi_toString(info);
             log_add_syserr("Couldn't fork() for multicast LDM sender %s", id);
             free(id);
+
             status = LDM7_SYSTEM;
         }
         else if (pid == 0) {

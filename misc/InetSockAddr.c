@@ -113,9 +113,11 @@ isa_clone(const InetSockAddr* const isa)
 }
 
 const char*
-isa_getInetAddrStr(InetSockAddr* isa)
+isa_getInetAddrStr(
+        InetSockAddr* const restrict isa,
+        bool* const restrict         addrIsName)
 {
-    return hostId_getAddrStr(isa->hostId);
+    return hostId_getId(isa->hostId, addrIsName);
 }
 
 in_port_t

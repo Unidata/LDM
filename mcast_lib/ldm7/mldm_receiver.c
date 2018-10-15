@@ -403,8 +403,9 @@ init(
             }
             else {
                 status = fmtpReceiver_new(&receiver,
-                        isa_getInetAddrStr(fmtpSrvr), isa_getPort(fmtpSrvr),
-                        notifier, isa_getInetAddrStr(mcastGroup),
+                        isa_getInetAddrStr(fmtpSrvr, NULL),
+                        isa_getPort(fmtpSrvr), notifier,
+                        isa_getInetAddrStr(mcastGroup, NULL),
                         isa_getPort(mcastGroup), iface);
 
                 if (status) {
