@@ -21,6 +21,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#ifdef __cplusplus
+extern "C" {
+#define restrict
+#endif
+
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char*    hostbyaddr(
     const struct sockaddr_in* const paddr);
@@ -379,5 +384,9 @@ sockaddr_format(
         const size_t                 bufSize);
 
 #endif // WANT_MULTICAST
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_INETUTIL_H_ */
