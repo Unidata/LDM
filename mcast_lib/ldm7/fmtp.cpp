@@ -135,7 +135,7 @@ fmtpReceiver_init(
  */
 int
 fmtpReceiver_new(
-    FmtpReceiver** const receiver,
+    FmtpReceiver** const  receiver,
     const char* const     tcpAddr,
     const unsigned short  tcpPort,
     void* const           notifier,
@@ -242,15 +242,13 @@ struct fmtp_sender {
  * `fmtpSender_start()` is called.
  *
  * @param[in]     sender        Pointer to sender to be initialized.
- * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
- *                              which the TCP server will listen for connections
- *                              from receivers for retrieving missed
- *                              data-blocks.
- * @param[in]     serverPort    Port number for TCP server or 0, in which case
- *                              one is chosen by the operating system.
- * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
- *                              multicast group.
- * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     serverAddr    Internet address of the sending FMTP
+ *                              server
+ * @param[in]     serverPort    Port number of the sending FMTP server in host
+ *                              byte order
+ * @param[in]     groupAddr     Internet socket address of the multicast group.
+ * @param[in]     groupPort     Port number of the multicast group in host byte
+ *                              order
  * @param[in]     mcastIface    IP address of the interface to use to send
  *                              multicast packets. "0.0.0.0" obtains the default
  *                              multicast interface. Caller may free.
@@ -340,15 +338,10 @@ fmtpSender_init(
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `fmtpSender_free(*sender)` when it's no longer
  *                              needed.
- * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
- *                              which the TCP server will listen for connections
- *                              from receivers for retrieving missed
- *                              data-blocks.
- * @param[in]     serverPort    Port number for TCP server or 0, in which case
- *                              one is chosen by the operating system.
- * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
- *                              multicast group.
- * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     serverAddr    Internet address of sending FMTP server
+ * @param[in]     serverPort    Port number of the sending FMTP server
+ * @param[in]     groupAddr     Internet address of the multicast group.
+ * @param[in]     groupPort     Port number of the multicast group
  * @param[in]     mcastIface    IP address of the interface to use to send
  *                              multicast packets. "0.0.0.0" obtains the default
  *                              multicast interface. Caller may free.
@@ -381,9 +374,9 @@ static int
 fmtpSender_new(
     FmtpSender** const     sender,
     const char* const      serverAddr,
-    const unsigned short   serverPort,
+    const in_port_t        serverPort,
     const char* const      groupAddr,
-    const unsigned short   groupPort,
+    const in_port_t        groupPort,
     const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
@@ -507,9 +500,9 @@ int
 fmtpSender_create(
     FmtpSender** const     sender,
     const char* const      serverAddr,
-    unsigned short* const  serverPort,
+    in_port_t* const       serverPort,
     const char* const      groupAddr,
-    const unsigned short   groupPort,
+    const in_port_t        groupPort,
     const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
