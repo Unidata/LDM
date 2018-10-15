@@ -790,7 +790,7 @@ static const char vlanUtil[] = "vlanUtil";
  *
  * @param[in] srvrAddrStr  Dotted-decimal IP address of sending FMTP server
  * @param[in] ifaceName    Name of virtual interface to be created (e.g.,
- *                         "eth0.0")
+ *                         "eth0.0") or "dummy".
  * @param[in] ifaceAddr    IP address to be assigned to virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
@@ -834,7 +834,7 @@ static int vlanIface_create(
  * @param[in] srvrAddrStr  IP address of sending FMTP server in dotted-decimal
  *                         form
  * @param[in] ifaceName    Name of virtual interface to be destroyed (e.g.,
- *                         "eth0.0").
+ *                         "eth0.0") or "dummy".
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System or command failure. `log_add()` called.
  */
@@ -903,7 +903,7 @@ mcastRcvr_init(
 
     mcastRcvr.mlr = NULL;
 
-    const char* fmtpSrvrId = mcastInfo->server.inetId;
+    const char* fmtpSrvrId = mcastInfo->server;
     int         status = getDottedDecimal(fmtpSrvrId, mcastRcvr.fmtpSrvrAddr);
 
     if (status) {
@@ -1162,8 +1162,8 @@ backlogger_stop(void)
  * accessed by the one-time, downstream LDM7.
  */
 struct {
-    pqueue*               pq;            ///< pointer to the product-queue
-    ServiceAddr*          servAddr;      ///< socket address of remote LDM7
+    pqueue*               pq;      ///< Product-queue
+    InetSockAddr*         ldmSrvr; ///< Address of remote LDM7 server
     /**
      * IPv4 address of interface to be used by FMTP layer
      */
@@ -1208,7 +1208,6 @@ typedef struct downlet {
      * IP address of interface to use for receiving multicast and unicast
      * FMTP packets
      */
-    char*           upId;             ///< ID of upstream LDM7
     char*           feedId;           ///< Desired feed specification
     /// Server-side transport for receiving products
     SVCXPRT*        xprt;
@@ -1473,7 +1472,7 @@ downlet_requestBacklog(const signaturet before)
  * Returns a socket that's connected to an Internet server via TCP. This is a
  * potentially lengthy operation.
  *
- * @param[in]  servAddr       Pointer to the address of the server.
+ * @param[in]  ldmSrvr        Address of the LDM7 server.
  * @param[in]  family         IP address family to try. One of AF_INET,
  *                            AF_INET6, or AF_UNSPEC.
  * @param[out] sock           Pointer to the socket to be set. The client should
@@ -1492,33 +1491,31 @@ downlet_requestBacklog(const signaturet before)
  */
 static int
 downlet_getSock(
-    const ServiceAddr* const restrict servAddr,
-    const int                         family,
-    int* const restrict               sock,
-    struct sockaddr* const restrict   sockAddr)
+    InetSockAddr* const restrict    ldmSrvr,
+    const int                       family,
+    int* const restrict             sock,
+    struct sockaddr* const restrict sockAddr)
 {
     struct sockaddr addr;
     socklen_t       sockLen;
-    int             status = sa_getInetSockAddr(servAddr, family, false, &addr,
-            &sockLen);
+    int             status = isa_initSockAddr(ldmSrvr, family, false, &addr);
 
-    if (status == 0) {
-        const int         useIPv6 = addr.sa_family == AF_INET6;
-        const char* const addrFamilyId = useIPv6 ? "IPv6" : "IPv4";
-        const int         fd = socket(addr.sa_family, SOCK_STREAM, IPPROTO_TCP);
+    if (status) {
+        log_add("Couldn't initialize socket address from \"%s\"",
+                isa_toString(ldmSrvr));
+        status = LDM7_SYSTEM;
+    }
+    else {
+        const int fd = socket(addr.sa_family, SOCK_STREAM, IPPROTO_TCP);
 
         if (fd == -1) {
-            log_add_syserr("Couldn't create %s TCP socket", addrFamilyId);
-            status = (useIPv6 && errno == EAFNOSUPPORT)
-                    ? LDM7_IPV6
-                    : LDM7_SYSTEM;
+            log_add_syserr("Couldn't create TCP socket");
+            status = LDM7_SYSTEM;
         }
         else {
-            if (connect(fd, &addr, sockLen)) {
-                char sockAddrStr[128] = {};
-
-                (void)sockaddr_format(&addr, sockAddrStr, sizeof(sockAddrStr));
-                log_add_syserr(NULL);
+            if (connect(fd, &addr, sizeof(addr))) {
+                log_add_syserr("connect() failure to \"%s\"",
+                        isa_toString(ldmSrvr));
 
                 status = (errno == ETIMEDOUT)
                         ? LDM7_TIMEDOUT
@@ -1545,7 +1542,7 @@ downlet_getSock(
  * address family AF_UNSPEC first, then AF_INET. This is a potentially lengthy
  * operation.
  *
- * @param[in]  servAddr       Pointer to the address of the server.
+ * @param[in]  ldmSrvr        Address of the LDM7 server.
  * @param[out] sock           Pointer to the socket to be set. The client should
  *                            call `close(*sock)` when it's no longer needed.
  * @param[out] sockAddr       Pointer to the socket address object to be set.
@@ -1562,20 +1559,14 @@ downlet_getSock(
  */
 static int
 downlet_getSocket(
-    const ServiceAddr* const restrict servAddr,
-    int* const restrict               sock,
-    struct sockaddr* const restrict   sockAddr)
+    InetSockAddr* const restrict    ldmSrvr,
+    int* const restrict             sock,
+    struct sockaddr* const restrict sockAddr)
 {
     struct sockaddr addr;
     socklen_t       sockLen;
     int             fd;
-    int             status = downlet_getSock(servAddr, AF_UNSPEC, &fd, &addr);
-
-    if (status == LDM7_IPV6 || status == LDM7_REFUSED ||
-            status == LDM7_TIMEDOUT) {
-        log_clear();
-        status = downlet_getSock(servAddr, AF_INET, &fd, &addr);
-    }
+    int             status = downlet_getSock(ldmSrvr, AF_INET, &fd, &addr);
 
     if (status == 0) {
         *sock = fd;
@@ -1612,8 +1603,8 @@ downlet_initClient()
     int             sock;
     struct sockaddr sockAddr;
 
-    status = downlet_getSocket(down7.servAddr, &sock,
-            &sockAddr); // Potentially lengthy
+    // Potentially lengthy
+    status = downlet_getSocket(down7.ldmSrvr, &sock, &sockAddr);
 
     if (status == LDM7_OK) {
         status = up7Proxy_init(sock, (struct sockaddr_in*)&sockAddr);
@@ -1658,9 +1649,9 @@ downlet_destroyClient()
  *                            packets (e.g., "eth0.0") or "dummy". Must exist
  *                            until `downlet_destroy()` returns.
  * @param[in]  vcEnd          Local virtual-circuit endpoint. Must exist until
- *                            `downlet_destroy()` returns. If the switch or port
- *                            identifier starts with "dummy", then the VLAN
- *                            virtual interface will not be created.
+ *                            `downlet_destroy()` returns. If the endpoint isn't
+ *                            valid, then the VLAN virtual interface will not be
+ *                            created.
  * @param[in]  pq             The product-queue. Must be thread-safe (i.e.,
  *                            `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
  *                            Must exist until `downlet_destroy()` returns.
@@ -1678,7 +1669,6 @@ downlet_init()
     (void)memset(&downlet, 0, sizeof(downlet));
 
     downlet.sock = -1;
-    downlet.upId = sa_format(down7.servAddr);
     downlet.ucastRcvrStatus = atomicInt_new(TASK_STOPPED);
     downlet.backstopStatus = atomicInt_new(TASK_STOPPED);
     downlet.mcastRcvrStatus = atomicInt_new(TASK_STOPPED);
@@ -1691,46 +1681,35 @@ downlet_init()
         status = LDM7_SYSTEM;
     }
     else {
-        if (downlet.upId == NULL) {
-            log_add("Couldn't format socket address of upstream LDM7");
+        downlet.feedId = feedtypet_format(down7.feedtype);
+
+        if (downlet.feedId == NULL) {
+            log_add("Couldn't format desired feed specification");
             status = LDM7_SYSTEM;
         }
         else {
-            downlet.feedId = feedtypet_format(down7.feedtype);
+            status = mutex_init(&downlet.mutex, PTHREAD_MUTEX_ERRORCHECK,
+                    true);
 
-            if (downlet.feedId == NULL) {
-                log_add("Couldn't format desired feed specification");
-                status = LDM7_SYSTEM;
+            if (status) {
+                log_add("Couldn't initialize one-time, downstream LDM7 "
+                        "mutex");
             }
             else {
-                status = mutex_init(&downlet.mutex, PTHREAD_MUTEX_ERRORCHECK,
-                        true);
+                status = pthread_cond_init(&downlet.cond, NULL);
 
                 if (status) {
                     log_add("Couldn't initialize one-time, downstream LDM7 "
-                            "mutex");
+                            "condition-variable");
+                    mutex_destroy(&downlet.mutex);
                 }
-                else {
-                    status = pthread_cond_init(&downlet.cond, NULL);
-
-                    if (status) {
-                        log_add("Couldn't initialize one-time, downstream LDM7 "
-                                "condition-variable");
-                        mutex_destroy(&downlet.mutex);
-                    }
-                } // Mutex initialized
-
-                if (status) {
-                    free(downlet.feedId);
-                    downlet.feedId = NULL;
-                }
-            } // `downlet.feedId` created
+            } // Mutex initialized
 
             if (status) {
-                free(downlet.upId);
-                downlet.upId = NULL;
+                free(downlet.feedId);
+                downlet.feedId = NULL;
             }
-        } // `downlet.upId` created
+        } // `downlet.feedId` created
 
         if (status) {
             atomicInt_free(downlet.ucastRcvrStatus);
@@ -1754,7 +1733,6 @@ downlet_destroy()
     (void)pthread_cond_destroy(&downlet.cond);
     (void)mutex_destroy(&downlet.mutex);
     free(downlet.feedId);
-    free(downlet.upId);
     atomicInt_free(downlet.ucastRcvrStatus);
     atomicInt_free(downlet.backstopStatus);
     atomicInt_free(downlet.mcastRcvrStatus);
@@ -1795,7 +1773,7 @@ downlet_run()
 
     if (status) {
         log_add("Couldn't create client for feed %s from server %s",
-                downlet.feedId, downlet.upId);
+                downlet.feedId, isa_toString(down7.ldmSrvr));
     }
     else {
         /*
@@ -1807,7 +1785,7 @@ downlet_run()
 
         if (status) {
             log_add("Couldn't subscribe to feed %s from %s",
-                    downlet.feedId, downlet.upId);
+                    downlet.feedId, isa_toString(down7.ldmSrvr));
         }
         else {
             char* const miStr = mi_format(downlet.mcastInfo);
@@ -1816,14 +1794,15 @@ downlet_run()
             (void)inet_ntop(AF_INET, &downlet.ifaceAddr, ifaceAddrStr,
                     sizeof(ifaceAddrStr));
             log_notice("Subscription reply from %s: mcastGroup=%s, "
-                    "ifaceAddr=%s", downlet.upId, miStr, ifaceAddrStr);
+                    "ifaceAddr=%s", isa_toString(down7.ldmSrvr), miStr,
+                    ifaceAddrStr);
             free(miStr);
 
             status = downlet_startTasks();
 
             if (status) {
                 log_add("Couldn't create concurrent tasks for feed %s from %s",
-                        downlet.feedId, downlet.upId);
+                        downlet.feedId, isa_toString(down7.ldmSrvr));
             }
             else {
                 // Returns when concurrent task terminates
@@ -1958,31 +1937,9 @@ downlet_lastReceived(const prod_info* const restrict last)
  * Downstream LDM7
  ******************************************************************************/
 
-/**
- * Initializes this module.
- *
- * @param[in]  servAddr     Pointer to the address of the server from which to
- *                          obtain multicast information, backlog products, and
- *                          products missed by the FMTP layer. Caller may free
- *                          upon return.
- * @param[in]  feed         Feed of multicast group to be received.
- * @param[in]  fmtpIface    Name of virtual interface to be created and used by
- *                          FMTP layer. Caller may free.
- * @param[in]  pq           The product-queue. Must be thread-safe (i.e.,
- *                          `pq_getFlags(pq) | PQ_THREADSAFE` must be true).
- * @param[in]  mrm          Persistent multicast receiver memory. Must exist
- *                          until `down7_destroy()` returns.
- * @param[in]  vcEnd        Local AL2S virtual-circuit endpoint. Caller may
- *                          free. If the switch or port identifier starts with
- *                          "dummy", then the AL2S virtual circuit will not be
- *                          created.
- * @retval     0            Success
- * @retval     LDM7_INVAL   Product-queue isn't thread-safe. `log_add()` called.
- * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
- */
 Ldm7Status
 down7_init(
-        const ServiceAddr* const restrict   servAddr,
+        InetSockAddr* const restrict        ldmSrvr,
         const feedtypet                     feed,
         const char* const restrict          fmtpIface,
         const VcEndPoint* const restrict    vcEnd,
@@ -2014,11 +1971,9 @@ down7_init(
             status = LDM7_INVAL;
         }
         else {
-            if ((down7.servAddr = sa_clone(servAddr)) == NULL) {
-                char buf[256];
-
-                (void)sa_snprint(servAddr, buf, sizeof(buf));
-                log_add("Couldn't clone server address \"%s\"", buf);
+            if ((down7.ldmSrvr = isa_clone(ldmSrvr)) == NULL) {
+                log_add("Couldn't clone LDM7 server address \"%s\"",
+                        isa_toString(ldmSrvr));
                 status = LDM7_SYSTEM;
             }
             else {
@@ -2054,8 +2009,8 @@ down7_init(
                 } // `down7.fmtpIface` set
 
                 if (status) {
-                    sa_free(down7.servAddr);
-                    down7.servAddr = NULL;
+                    isa_free(down7.ldmSrvr);
+                    down7.ldmSrvr = NULL;
                 }
             } // `down7.servAddr` initialized
         } // Product-queue is thread-safe
@@ -2078,8 +2033,8 @@ down7_destroy(void)
         (void)close(down7.pipe[1]);
         vcEndPoint_destroy(&down7.vcEnd);
         free(down7.fmtpIface);
-        sa_free(down7.servAddr);
-        down7.servAddr = NULL;
+        isa_free(down7.ldmSrvr);
+        down7.ldmSrvr = NULL;
         mutex_destroy(&down7.mutex);
         down7.initialized = false;
     }
@@ -2103,15 +2058,14 @@ down7_run()
 {
     int status = 0;
 
-    char* upId = sa_format(down7.servAddr);
     char* feedId = feedtypet_format(down7.feedtype);
     char* vcEndId = vcEndPoint_format(&down7.vcEnd);
     log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
-            "FmtpIface=%s, vcEndPoint=%s, pq=\"%s\"", upId, feedId,
-            down7.fmtpIface, vcEndId, pq_getPathname(down7.pq));
+            "FmtpIface=%s, vcEndPoint=%s, pq=\"%s\"",
+            isa_toString(down7.ldmSrvr), feedId, down7.fmtpIface, vcEndId,
+            pq_getPathname(down7.pq));
     free(vcEndId);
     free(feedId);
-    free(upId);
 
     for (;;) {
         mutex_lock(&down7.mutex);
@@ -2373,11 +2327,8 @@ end_backlog_7_svc(
     void* restrict                 noArg,
     struct svc_req* const restrict rqstp)
 {
-    char           saStr[512];
-
     log_notice("All backlog data-products received: feed=%s, server=%s",
-            s_feedtypet(down7.feedtype),
-            sa_snprint(down7.servAddr, saStr, sizeof(saStr)));
+            s_feedtypet(down7.feedtype), isa_toString(down7.ldmSrvr));
 
     return NULL; // causes RPC dispatcher to not reply
 }

@@ -123,7 +123,6 @@ static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
 static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
-static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
 static ServiceAddr*      up7Addr;
 static VcEndPoint*       localVcEnd;
 static Executor*         executor;
@@ -254,8 +253,7 @@ setup(void)
                         "Couldn't construct upstream LDM7 service address");
             }
             else {
-                localVcEnd = vcEndPoint_new(1, "dummy_sender_switch_ID",
-                        "dummy_sender_port_ID");
+                localVcEnd = vcEndPoint_new(1, NULL, NULL);
 
                 if (localVcEnd == NULL) {
                     log_add("Couldn't construct local virtual-circuit endpoint");
@@ -766,30 +764,13 @@ sender_setMcastInfo(
         McastInfo** const mcastInfo,
         const feedtypet   feedtype)
 {
-    ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", FMTP_MCAST_PORT);
+    const char mcastServAddr[] = "224.0.0.1:5173";
+    const char ucastServAddr[] = "127.0.0.1:0";
 
-    if (status) {
-        log_add("Couldn't create multicast service address object");
-    }
-    else {
-        ServiceAddr* ucastServAddr;
+    int status = mi_new(mcastInfo, feedtype, mcastServAddr, ucastServAddr);
 
-        status = sa_new(&ucastServAddr, LOCAL_HOST, 0); // O/S selects port
-        if (status) {
-            log_add("Couldn't create unicast service address object");
-        }
-        else {
-            status = mi_new(mcastInfo, feedtype, mcastServAddr, ucastServAddr);
-            if (status) {
-                log_add("Couldn't create multicast information object");
-            }
-            else {
-                sa_free(ucastServAddr);
-                sa_free(mcastServAddr);
-            }
-        }
-    }
+    if (status)
+        log_add("Couldn't create multicast information object");
 
     return status;
 }
@@ -827,7 +808,7 @@ sender_start(
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
-    VcEndPoint* vcEnd = vcEndPoint_new(1, "dummy switch ID", "dummy port ID");
+    VcEndPoint* vcEnd = vcEndPoint_new(1, NULL, NULL);
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
 
     in_addr_t subnet;
@@ -844,7 +825,7 @@ sender_start(
     char* mcastInfoStr = mi_format(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-    log_notice_q("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
+    log_notice("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
             "subnet=%s", getQueuePath(), mcastInfoStr, vcEndPointStr,
             fmtpSubnetStr);
     free(fmtpSubnetStr);
@@ -1100,16 +1081,17 @@ requester_destroy(Requester* const requester)
  * Initializes a receiver.
  *
  * @param[in,out] receiver  Receiver object
- * @param[in]     addr      Address of sender: either hostname or IPv4 address
+ * @param[in]     addr      Address of sending LDM7: either hostname or IPv4
+ *                          address
  * @param[in]     port      Port number of sender in host byte-order
  * @param[in]     feedtype  The feedtype to which to subscribe
  */
 static void
 receiver_init(
         Receiver* const restrict   receiver,
-        const char* const restrict addr,
+        const char* const restrict ldmSrvrId,
         const unsigned short       port,
-        const feedtypet            feedtype)
+        const feedtypet            feed)
 {
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(DOWN7_PQ_PATHNAME), 0)
 
@@ -1124,25 +1106,24 @@ receiver_init(
     CU_ASSERT_EQUAL_FATAL(
             pq_open(DOWN7_PQ_PATHNAME, PQ_THREADSAFE, &receiverPq), 0);
 
-    ServiceAddr* servAddr;
-    CU_ASSERT_EQUAL_FATAL(sa_new(&servAddr, addr, port), 0);
+    InetSockAddr* ldmSrvr = isa_newFromId(ldmSrvrId, port);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(ldmSrvr);
 
     // Ensure no memory from a previous session
-    CU_ASSERT_EQUAL_FATAL(mrm_delete(servAddr, feedtype), true);
-    receiver->mrm = mrm_open(servAddr, feedtype);
+    CU_ASSERT_EQUAL_FATAL(mrm_delete(ldmSrvr, feed), true);
+    receiver->mrm = mrm_open(ldmSrvr, feed);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->mrm);
 
     numDeletedProds = 0;
 
-    VcEndPoint* const vcEnd = vcEndPoint_new(1, "dummy_receiver_switch_ID",
-            "dummy_receiver_port_ID");
+    VcEndPoint* const vcEnd = vcEndPoint_new(1, NULL, NULL);
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    int status = down7_init(servAddr, feedtype, "dummy", vcEnd, receiverPq,
+    int status = down7_init(ldmSrvr, feed, "dummy", vcEnd, receiverPq,
             receiver->mrm);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     vcEndPoint_free(vcEnd);
 
-    sa_free(servAddr);
+    isa_free(ldmSrvr);
 }
 
 /**

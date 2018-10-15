@@ -20,12 +20,33 @@ extern "C" {
 #endif
 
 /**
+ * Initializes a multicast information object.
+ *
+ * @param[out] info       The multicast information object.
+ * @param[in]  feed       The feedtype of the multicast group.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
+ * @param[in]  ucast      The Internet address of the unicast service for blocks
+ *                        and files that are missed by the multicast receiver.
+ *                        The caller may free.
+ * @retval     true       Success. `info` is set.
+ * @retval     false      Failure. \c log_add() called. The state of `info` is
+ *                        indeterminate.
+ */
+bool
+mi_init(
+    McastInfo* const restrict  info,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast);
+
+/**
  * Returns a new multicast information object.
  *
  * @param[out] mcastInfo  Initialized multicast information object.
  * @param[in]  feed       The feedtype of the multicast group.
- * @param[in]  mcast      The Internet address of the multicast group. The caller
- *                        may free.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
  * @param[in]  ucast      The Internet address of the unicast service for blocks
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
@@ -34,10 +55,10 @@ extern "C" {
  */
 int
 mi_new(
-    McastInfo** const                 mcastInfo,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast);
+    McastInfo** const          mcastInfo,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast);
 
 /**
  * Destroys a multicast information object.

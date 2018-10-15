@@ -95,8 +95,8 @@ test_sa_getInet6SockAddr(void)
 
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    struct sockaddr_storage inetSockAddr;
-    socklen_t               sockLen;
+    struct sockaddr inetSockAddr;
+    socklen_t       sockLen;
 
     status = sa_getInetSockAddr(serviceAddr, AF_INET6, true, &inetSockAddr,
             &sockLen);

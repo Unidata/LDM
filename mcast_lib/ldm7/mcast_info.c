@@ -51,19 +51,19 @@
  * @retval     false      Failure. \c log_add() called. The state of `info` is
  *                        indeterminate.
  */
-static bool
+bool
 mi_init(
-    McastInfo* const restrict         info,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast)
+    McastInfo* const restrict  info,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast)
 {
-    if (!sa_copy(&info->group, mcast)) {
+    if ((info->group = strdup(mcast)) == NULL) {
         log_add("Couldn't copy multicast address");
         return false;
     }
 
-    if (!sa_copy(&info->server, ucast)) {
+    if ((info->server = strdup(ucast)) == NULL) {
         log_add("Couldn't copy unicast address");
         xdr_free(xdr_ServiceAddr, (char*)&info->group);
         return false;
@@ -85,8 +85,8 @@ mi_init(
  *                        should call `mi_free(*mcastInfo)` when it's no longer
  *                        needed.
  * @param[in]  feed       The feedtype of the multicast group.
- * @param[in]  mcast      The Internet address of the multicast group. The caller
- *                        may free.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
  * @param[in]  ucast      The Internet address of the unicast service for blocks
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
@@ -95,10 +95,10 @@ mi_init(
  */
 int
 mi_new(
-    McastInfo** const                 mcastInfo,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast)
+    McastInfo** const          mcastInfo,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast)
 {
     int              status;
     McastInfo* const info = log_malloc(sizeof(McastInfo),
@@ -130,8 +130,8 @@ void
 mi_destroy(
     McastInfo* const info)
 {
-    sa_destroy(&info->group);
-    sa_destroy(&info->server);
+    free(info->group);
+    free(info->server);
 }
 
 /**
@@ -165,7 +165,7 @@ mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from)
 {
-    return mi_init(to, from->feed, &from->group, &from->server)
+    return mi_init(to, from->feed, from->group, from->server)
             ? 0 : LDM7_SYSTEM;
 }
 
@@ -183,7 +183,7 @@ mi_clone(
 {
     McastInfo* clone;
 
-    return mi_new(&clone, info->feed, &info->group, &info->server)
+    return mi_new(&clone, info->feed, info->group, info->server)
             ? NULL
             : clone;
 }
@@ -210,8 +210,8 @@ mi_replaceServerId(
         return LDM7_SYSTEM;
     }
 
-    free(info->server.inetId);
-    info->server.inetId = dup;
+    free(info->server);
+    info->server = dup;
 
     return 0;
 }
@@ -248,7 +248,7 @@ mi_compareServers(
     const McastInfo* const restrict info1,
     const McastInfo* const restrict info2)
 {
-    return sa_compare(&info1->server, &info2->server);
+    return strcmp(info1->server, info2->server);
 }
 
 /**
@@ -270,7 +270,7 @@ mi_compareGroups(
     const McastInfo* const restrict info1,
     const McastInfo* const restrict info2)
 {
-    return sa_compare(&info1->group, &info2->group);
+    return strcmp(info1->group, info2->group);
 }
 
 /**
@@ -287,12 +287,8 @@ mi_asFilename(
     const McastInfo* const info)
 {
     const char* feedStr = s_feedtypet(info->feed);
-    char*       grpStr = sa_format(&info->group);
-    char*       svrStr = sa_format(&info->server);
-    char*       toString = ldm_format(256, "%s_%s_%s", feedStr, grpStr, svrStr);
-
-    free(grpStr);
-    free(svrStr);
+    char*       toString = ldm_format(256, "%s_%s_%s", feedStr, info->group,
+            info->server);
 
     return toString;
 }
@@ -318,24 +314,8 @@ mi_format(
         string = NULL;
     }
     else {
-        char* grpStr = sa_format(&info->group);
-        if (grpStr == NULL) {
-            log_add("Couldn't format multicast-group service-address");
-            string = NULL;
-        }
-        else {
-            char* svrStr = sa_format(&info->server);
-            if (svrStr == NULL) {
-                log_add("Couldn't format TCP-server service-address");
-                string = NULL;
-            }
-            else {
-                string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
-                        feedStr, grpStr, svrStr);
-                free(svrStr);
-            }
-            free(grpStr);
-        }
+        string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
+                feedStr, info->group, info->server);
     }
 
     return string;

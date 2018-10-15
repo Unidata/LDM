@@ -17,6 +17,7 @@
 #include "AuthServer.h"
 #include "CidrAddr.h"
 #include "globals.h"
+#include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
@@ -33,6 +34,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -128,15 +130,14 @@ Options:\n\
     -m mcastIface     IP address of interface to use to send multicast\n\
                       packets. Default is the system's default multicast\n\
                       interface.\n\
-    -p serverPort     Port number for FMTP TCP server. Default is chosen by\n\
-                      operating system.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
     -r retxTimeout    FMTP retransmission timeout in minutes. Duration that a\n\
                       product will be held by the FMTP layer before being\n\
                       released. If negative, then the default FMTP timeout is\n\
                       used.\n\
-    -s serverIface    IP Address of interface on which FMTP TCP server will\n\
-                      listen. Default is all interfaces.\n\
+    -s serverAddr     IPv4 socket address for FMTP server in the form\n\
+                      <nnn.nnn.nnn.nnn>[:<port>]. Default is all interfaces\n\
+                      and O/S-assigned port number.\n\
     -t ttl            Time-to-live of outgoing packets (default is 1):\n\
                            0  Restricted to same host. Won't be output by\n\
                               any interface.\n\
@@ -166,9 +167,7 @@ Operands:\n\
  * @param[in]  argc          Number of arguments.
  * @param[in]  argv          Arguments.
  * @param[out] feed          Feedtypes of data to be sent.
- * @param[out] serverIface   Interface on which FMTP TCP server should listen.
- *                           Caller must not free.
- * @param[out] serverPort    Port number for FMTP TCP server.
+ * @param[out] serverId      FMTP server address. Caller must not free.
  * @param[out] ttl           Time-to-live of outgoing packets.
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -194,8 +193,7 @@ mls_decodeOptions(
         int                            argc,
         char* const* const restrict    argv,
         feedtypet* const restrict      feed,
-        const char** const restrict    serverIface,
-        unsigned short* const restrict serverPort,
+        const char** const restrict    serverId,
         unsigned* const restrict       ttl,
         const char** const restrict    ifaceAddr,
         float* const                   retxTimeout)
@@ -208,7 +206,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:l:m:p:q:r:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:m:q:r:s:t:vx")) != EOF)
         switch (ch) {
             case 'f': {
                 if (strfeedtypet(optarg, feed)) {
@@ -223,19 +221,6 @@ mls_decodeOptions(
             }
             case 'm': {
                 *ifaceAddr = optarg;
-                break;
-            }
-            case 'p': {
-                unsigned short port;
-                int            nbytes;
-
-                if (1 != sscanf(optarg, "%5hu %n", &port, &nbytes) ||
-                        0 != optarg[nbytes]) {
-                    log_add("Couldn't decode TCP-server port-number option-argument "
-                            "\"%s\"", optarg);
-                    return 1;
-                }
-                *serverPort = port;
                 break;
             }
             case 'q': {
@@ -253,7 +238,7 @@ mls_decodeOptions(
                 break;
             }
             case 's': {
-                *serverIface = optarg;
+                *serverId = optarg;
                 break;
             }
             case 't': {
@@ -323,33 +308,6 @@ mls_setServiceAddr(
 }
 
 /**
- * Decodes the Internet service address of the multicast group.
- *
- * @param[in]  arg        Relevant operand.
- * @param[out] groupAddr  Internet service address of the multicast group.
- *                        Caller should free when it's no longer needed.
- * @retval     0          Success. `*groupAddr` is set.
- * @retval     1          Invalid operand. `log_add()` called.
- * @retval     2          System failure. `log_add()` called.
- */
-static int
-mls_decodeGroupAddr(
-        char* const restrict         arg,
-        ServiceAddr** const restrict groupAddr)
-{
-    int          status = sa_parse(groupAddr, arg);
-
-    if (ENOMEM == status) {
-        status = 2;
-    }
-    else if (status) {
-        log_add("Invalid multicast group specification");
-    }
-
-    return status;
-}
-
-/**
  * Decodes the operands of the command-line.
  *
  * @param[in]  argc          Number of operands.
@@ -366,10 +324,10 @@ mls_decodeGroupAddr(
  */
 static int
 mls_decodeOperands(
-        int                          argc,
-        char* const* restrict        argv,
-        ServiceAddr** const restrict groupAddr,
-        CidrAddr** const restrict    fmtpSubnet)
+        int                         argc,
+        char* const* restrict       argv,
+        const char** const restrict groupAddr,
+        CidrAddr** const restrict   fmtpSubnet)
 {
     int status;
 
@@ -378,29 +336,26 @@ mls_decodeOperands(
         status = 1;
     }
     else {
-        ServiceAddr* mcastAddr;
-        status = mls_decodeGroupAddr(*argv++, &mcastAddr);
-        if (status == 0) {
-            if (argc-- < 1) {
-                log_add("FMTP network not specified");
+        const char* mcastAddr = *argv++;
+
+        if (argc-- < 1) {
+            log_add("FMTP network not specified");
+            status = 1;
+        }
+        else {
+            CidrAddr* subnet = cidrAddr_parse(*argv++);
+
+            if (subnet == NULL) {
+                log_add("Invalid FMTP subnet specification: \"%s\"",
+                        *--argv);
                 status = 1;
             }
             else {
-                CidrAddr* subnet = cidrAddr_parse(*argv++);
-                if (subnet == NULL) {
-                    log_add("Invalid FMTP subnet specification: \"%s\"",
-                            *--argv);
-                    status = 1;
-                }
-                else {
-                    *fmtpSubnet = subnet;
-                    *groupAddr = mcastAddr;
-                    status = 0;
-                }
+                *fmtpSubnet = subnet;
+                *groupAddr = mcastAddr;
+                status = 0;
             }
-            if (status)
-                sa_free(mcastAddr);
-        } // `mcastAddr` set
+        }
     }
 
     return status;
@@ -409,11 +364,9 @@ mls_decodeOperands(
 /**
  * Sets the multicast group information from command-line arguments.
  *
- * @param[in]  serverIface  Interface on which FMTP TCP server should listen.
- *                          Caller must not free.
- * @param[in]  serverPort   Port number for FMTP TCP server.
+ * @param[in]  serverId     FMTP server ID. Caller must not free.
  * @param[in]  feed         Feedtype of multicast group.
- * @param[in]  groupAddr    Internet service address of multicast group.
+ * @param[in]  groupAddr    Internet socket address of multicast group.
  *                          Caller should free when it's no longer needed.
  * @param[out] mcastInfo    Information on multicast group.
  * @retval     0            Success. `*mcastInfo` is set.
@@ -422,22 +375,12 @@ mls_decodeOperands(
  */
 static int
 mls_setMcastGroupInfo(
-        const char* const restrict        serverIface,
-        const unsigned short              serverPort,
-        const feedtypet                   feed,
-        const ServiceAddr* const restrict groupAddr,
-        McastInfo** const restrict        mcastInfo)
+        const char* const restrict serverId,
+        const feedtypet            feed,
+        const char* const restrict groupId,
+        McastInfo** const restrict mcastInfo)
 {
-    ServiceAddr* serverAddr;
-    int          status = mls_setServiceAddr(serverIface, serverPort,
-            &serverAddr);
-
-    if (0 == status) {
-        status = mi_new(mcastInfo, feed, groupAddr, serverAddr) ? 2 : 0;
-        sa_free(serverAddr);
-    }
-
-    return status;
+    return mi_new(mcastInfo, feed, groupId, serverId) ? 2 : 0;
 }
 
 /**
@@ -484,24 +427,21 @@ mls_decodeCommandLine(
         CidrAddr** const restrict   fmtpSubnet)
 {
     feedtypet      feed = EXP;
-    const char*    serverIface = "0.0.0.0";     // default: all interfaces
-    unsigned short serverPort = 0;              // default: chosen by O/S
-    const char*    mcastIf = "0.0.0.0";         // default multicast interface
-    int            status = mls_decodeOptions(argc, argv, &feed, &serverIface,
-            &serverPort, ttl, &mcastIf, retxTimeout);
+    const char*    serverId = "0.0.0.0:0"; // default: all interfaces
+    const char*    mcastIf = "0.0.0.0";    // default multicast interface
+    int            status = mls_decodeOptions(argc, argv, &feed, &serverId,
+            ttl, &mcastIf, retxTimeout);
     extern int     optind;
 
     if (0 == status) {
-        ServiceAddr* groupAddr;
+        const char* groupId;
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupAddr, fmtpSubnet);
+        status = mls_decodeOperands(argc, argv, &groupId, fmtpSubnet);
 
         if (0 == status) {
-            status = mls_setMcastGroupInfo(serverIface, serverPort, feed,
-                    groupAddr, mcastInfo);
-            sa_free(groupAddr);
+            status = mls_setMcastGroupInfo(serverId, feed, groupId, mcastInfo);
 
             if (0 == status)
                 *ifaceAddr = mcastIf;
@@ -579,43 +519,6 @@ mls_setSignalHandling(void)
     sigact.sa_flags |= SA_RESTART;
     sigact.sa_handler = mls_rotateLoggingLevel;
     (void)sigaction(SIGUSR2, &sigact, NULL);
-}
-
-/**
- * Returns the dotted-decimal IPv4 address of an Internet identifier.
- *
- * @param[in]  inetId       The Internet identifier. May be a name or an IPv4
- *                          address in dotted-decimal form.
- * @param[in]  desc         The description of the entity associated with the
- *                          identifier appropriate for the phrase "Couldn't get
- *                          address of ...".
- * @param[out] buf          The dotted-decimal IPv4 address corresponding to the
- *                          identifier. It's the caller's responsibility to
- *                          ensure that the buffer can hold at least
- *                          INET_ADDRSTRLEN bytes.
- * @retval     0            Success. `buf` is set.
- * @retval     LDM7_INVAL   The identifier cannot be converted to an IPv4
- *                          address because it's invalid or unknown.
- *                          `log_add()` called.
- * @retval     LDM7_SYSTEM  The identifier cannot be converted to an IPv4
- *                          address due to a system error. `log_add()` called.
- */
-static Ldm7Status
-mls_getIpv4Addr(
-        const char* const restrict inetId,
-        const char* const restrict desc,
-        char* const restrict       buf)
-{
-    int status = getDottedDecimal(inetId, buf);
-
-    if (status == 0)
-        return 0;
-
-    log_add("Couldn't get address of %s", desc);
-
-    return (status == EINVAL || status == ENOENT)
-            ? LDM7_INVAL
-            : LDM7_SYSTEM;
 }
 
 /**
@@ -715,19 +618,10 @@ mls_init(
     const char* const restrict      pqPathname,
     void*                           authorizer)
 {
-    char serverInetAddr[INET_ADDRSTRLEN];
-    int  status = mls_getIpv4Addr(info->server.inetId, "server",
-            serverInetAddr);
-
-    if (status)
-        goto return_status;
-
-    char groupInetAddr[INET_ADDRSTRLEN];
-    if ((status = mls_getIpv4Addr(info->group.inetId, "multicast-group",
-            groupInetAddr)))
-        goto return_status;
+    int status;
 
     offMap = om_new();
+
     if (offMap == NULL) {
         log_add("Couldn't create prodIndex-to-prodQueueOffset map");
         status = LDM7_SYSTEM;
@@ -756,9 +650,14 @@ mls_init(
         goto close_prod_index_map;
     }
 
-    if ((status = fmtpSender_create(&fmtpSender, serverInetAddr,
-            &mcastInfo.server.port, groupInetAddr, mcastInfo.group.port,
-            mcastIface, ttl, iProd, retxTimeout, mls_doneWithProduct,
+    char* const srvrId = isa_getIpAddrId(info->server);
+    in_port_t   srvrPort = isa_getPortFromId(info->server, 0);
+
+    char* const     groupId = isa_getIpAddrId(info->server);
+    const in_port_t groupPort = isa_getPortFromId(info->server, 0);
+
+    if ((status = fmtpSender_create(&fmtpSender, srvrId, &srvrPort, groupId,
+            groupPort, mcastIface, ttl, iProd, retxTimeout, mls_doneWithProduct,
             authorizer))) {
         log_add("Couldn't create FMTP sender");
         status = (status == 1)
@@ -768,6 +667,9 @@ mls_init(
                   : LDM7_SYSTEM;
         goto free_mcastInfo;
     }
+
+    free(groupId);
+    free(srvrId);
 
     done = 0;
 
@@ -1158,10 +1060,12 @@ mls_execute(
              *   specified by the user and was, instead, chosen by the
              *   operating system; and
              * - The port number of the multicast LDM RPC command-server so that
-             *   upstream LDM processes can communicate with it to, for
-             *   example, reserve IP addresses for remote FMTP clients.
+             *   upstream LDM processes running on the local host can
+             *   communicate with it to, for example, reserve IP addresses for
+             *   remote FMTP clients.
              */
-            if (printf("%hu %hu\n", mcastInfo.server.port,
+            if (printf("%" PRIu16 " %" PRIu16 "\n",
+                    isa_getPortFromId(mcastInfo.server, LDM_PORT),
                     mldmSrvr_getPort(mldmCmdSrvr)) < 0) {
                 log_add_syserr("Couldn't write port numbers to standard output");
                 status = LDM7_SYSTEM;

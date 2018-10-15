@@ -24,7 +24,7 @@
  * Adds a potential downstream LDM-7.
  *
  * @param[in] ft           Feedtype to subscribe to.
- * @param[in] ldm          Upstream LDM-7 to which to subscribe.
+ * @param[in] ldmSrvr      Address of upstream LDM-7 to which to subscribe.
  * @param[in] iface        IP address of FMTP interface. Caller may free upon
  *                         return.
  * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
@@ -33,10 +33,10 @@
  */
 Ldm7Status
 d7mgr_add(
-        const feedtypet                  ft,
-        ServiceAddr* const restrict      ldm,
-        const char* const restrict       iface,
-        const VcEndPoint* const restrict vcEnd);
+        const feedtypet                    ft,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         iface,
+        const VcEndPoint* const restrict   vcEnd);
 
 /**
  * Frees the downstream LDM-7 manager.

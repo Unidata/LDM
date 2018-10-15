@@ -103,28 +103,27 @@ vetMrm(
  * Returns the pathname of the memory-file corresponding to a server and a
  * multicast group. This function is reentrant.
  *
- * @param[in] servAddr  The address of the server associated with the multicast
- *                      group.
- * @param[in] feedtype  Feedtype of multicast group.
+ * @param[in] ldmSrvr   Address of the LDM7 server
+ * @param[in] feed      Feedtype of multicast group.
  * @retval    NULL      Failure. `log_add()` called.
  * @return              The path of the corresponding memory-file. The caller
  *                      should free when it's no longer needed.
  */
 static char*
 getSessionPath(
-    const ServiceAddr* const servAddr,
-    const feedtypet          feedtype)
+    InetSockAddr* const ldmSrvr,
+    const feedtypet     feed)
 {
     char* path;
     char  ftBuf[256];
 
-    if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feedtype) < 0) {
+    if (sprint_feedtypet(ftBuf, sizeof(ftBuf), feed) < 0) {
         log_add("sprint_feedtypet() failure");
         path = NULL;
     }
     else {
         path = ldm_format(256, "%s/%s_%s.yaml", getLdmLogDir(),
-                servAddr->inetId, ftBuf);
+                isa_toString(ldmSrvr), ftBuf);
     }
 
     return path;
@@ -629,19 +628,19 @@ initFromScratchOrFile(
  * Initializes a multicast receiver memory. This function is reentrant.
  *
  * @param[in] mrm       The muticast receiver memory to initialize.
- * @param[in] servAddr  Address of the server.
- * @param[in] feedtype  Feedtype of the multicast group.
+ * @param[in] ldmSrvr   Address of the LDM7 server.
+ * @param[in] feed      Feedtype of the multicast group.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */
 static bool
 init(
     McastReceiverMemory* const restrict mrm,
-    const ServiceAddr* const restrict   servAddr,
-    const feedtypet                     feedtype)
+    InetSockAddr* const restrict        ldmSrvr,
+    const feedtypet                     feed)
 {
     bool        success;
-    char* const path = getSessionPath(servAddr, feedtype);
+    char* const path = getSessionPath(ldmSrvr, feed);
 
     if (path == NULL) {
         success = false;
@@ -1099,17 +1098,17 @@ addFile(
  * Deletes a multicast-receiver memory-file. This function is reentrant.
  *
  * @param[in] servAddr  Address of the server.
- * @param[in] feedtype  Feedtype of the multicast group.
+ * @param[in] feed      Feedtype of the multicast group.
  * @retval    true      Success or the file doesn't exist.
  * @retval    false     Error. `log_add()` called.
  */
 bool
 mrm_delete(
-    const ServiceAddr* const servAddr,
-    const feedtypet          feedtype)
+    InetSockAddr* const servAddr,
+    const feedtypet     feed)
 {
     bool        success;
-    char* const path = getSessionPath(servAddr, feedtype);
+    char* const path = getSessionPath(servAddr, feed);
 
     if (!path) {
         success = false;
@@ -1136,23 +1135,23 @@ mrm_delete(
 }
 
 /**
- * Opens a multicast receiver memory. This function is reentrant.
+ * Opens a multicast receiver memory.
  *
- * @param[in] servAddr  Address of the server.
- * @param[in] feedtype  Feedtype of the multicast group.
- * @retval    NULL      Error. `log_add()` called.
- * @return              Pointer to a multicast receiver memory object.
+ * @param[in] ldmSrvr  Address of LDM7 server
+ * @param[in] feed     Subscribed-to feed
+ * @retval    `NULL`   Failure. `log_add()` called.
+ * @return             Pointer to multicast receiver memory
  */
 McastReceiverMemory*
 mrm_open(
-    const ServiceAddr* const servAddr,
-    const feedtypet          feedtype)
+    InetSockAddr* const ldmSrvr,
+    const feedtypet     feed)
 {
     McastReceiverMemory* mrm = log_malloc(sizeof(McastReceiverMemory),
             "multicast receiver memory");
 
     if (mrm) {
-        if (!init(mrm, servAddr, feedtype)) {
+        if (!init(mrm, ldmSrvr, feed)) {
             free(mrm);
             mrm = NULL;
         }

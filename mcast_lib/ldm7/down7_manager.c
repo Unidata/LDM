@@ -30,16 +30,16 @@
  * Executes a downstream LDM-7. Doesn't return until an error occurs or a
  * termination signal is received.
  *
- * @param[in] servAddr       Pointer to the address of the server from which to
- *                           obtain multicast information, backlog products, and
+ * @param[in] ldmSrvr        Address of LDM7 server from which to obtain
+ *                           multicast information, backlog products, and
  *                           products missed by the FMTP layer. Caller may free
  *                           upon return.
- * @param[in] feedtype       Feedtype of multicast group to receive.
+ * @param[in] feed           Feedtype of multicast group to receive.
  * @param[in] fmtpIface      Name of virtual interface to be created and used by
  *                           FMTP layer. Caller may free.
- * @param[in] vcEnd          Local AL2S virtual-circuit endpoint. If the switch
- *                           or port ID starts with "dummy", then the AL2S
- *                           virtual circuit will not be created.
+ * @param[in] vcEnd          Local AL2S virtual-circuit endpoint. If the
+ *                           endpoint isn't valid, then the AL2S virtual circuit
+ *                           will not be created.
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    0              Success
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
@@ -47,8 +47,8 @@
  */
 static int
 executeDown7(
-    const ServiceAddr* const restrict servAddr,
-    const feedtypet                   feedtype,
+    InetSockAddr* const restrict      ldmSrvr,
+    const feedtypet                   feed,
     const char* const restrict        fmtpIface,
     const VcEndPoint* const restrict  vcEnd,
     const char* const restrict        pqPathname)
@@ -60,14 +60,14 @@ executeDown7(
         status = LDM7_SYSTEM;
     }
     else {
-        McastReceiverMemory* const mrm = mrm_open(servAddr, feedtype);
+        McastReceiverMemory* const mrm = mrm_open(ldmSrvr, feed);
 
         if (mrm == NULL) {
             log_add("Couldn't open multicast receiver memory");
             status = LDM7_SYSTEM;
         }
         else {
-            down7_init(servAddr, feedtype, fmtpIface, vcEnd, pq, mrm);
+            down7_init(ldmSrvr, feed, fmtpIface, vcEnd, pq, mrm);
 
             status = down7_run(); // Blocks until error or termination requested
 
@@ -87,11 +87,11 @@ executeDown7(
 
 typedef struct elt {
     struct elt*    next;
-    ServiceAddr*   ul7;
+    InetSockAddr*  ldmSrvr;
     char*          fmtpIface;
     /// Local virtual-circuit endpoint
     VcEndPoint     vcEnd;
-    feedtypet      ft;
+    feedtypet      feed;
     pid_t          pid;
 } Elt;
 
@@ -103,8 +103,8 @@ static Elt* top;
 /**
  * Returns a new element.
  *
- * @param[in] ft          Feedtype to subscribe to.
- * @param[in] ul7         Upstream LDM-7 to which to subscribe.
+ * @param[in] feed        Feedtype to subscribe to.
+ * @param[in] ldmSrvr     Upstream LDM-7 to which to subscribe.
  * @param[in] fmtpIface   Name of virtual interface to be created and used by
  *                        FMTP layer
  * @param[in] vcEnd       Local AL2S virtual-circuit endpoint. Caller may free.
@@ -113,18 +113,21 @@ static Elt* top;
  */
 static Elt*
 elt_new(
-        const feedtypet                  ft,
-        ServiceAddr* const restrict      ul7,
-        const char* const restrict       fmtpIface,
-        const VcEndPoint* const restrict vcEnd)
+        const feedtypet                    feed,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         fmtpIface,
+        const VcEndPoint* const restrict   vcEnd)
 {
     bool failure = true;
     Elt* elt = log_malloc(sizeof(Elt), "downstream LDM-7 element");
 
     if (elt) {
-        elt->ul7 = sa_clone(ul7);
+        elt->ldmSrvr = isa_clone(ldmSrvr);
 
-        if (elt->ul7) {
+        if (elt->ldmSrvr == NULL) {
+            log_syserr("isa_clone() failure");
+        }
+        else {
             elt->fmtpIface = strdup(fmtpIface);
 
             if (elt->fmtpIface == NULL) {
@@ -135,7 +138,7 @@ elt_new(
                     log_add_syserr("Couldn't copy virtual-circuit endpoint");
                 }
                 else {
-                    elt->ft = ft;
+                    elt->feed = feed;
                     elt->pid = -1;
                     failure = false;
                 } // `elt->vcEnd` initialized
@@ -145,7 +148,7 @@ elt_new(
             } // `elt->iface` allocated
 
             if (failure)
-                sa_free(elt->ul7);
+                isa_free(elt->ldmSrvr);
         } // `elt->ul7` allocated
 
         if (failure) {
@@ -167,7 +170,7 @@ elt_free(
         Elt* const elt)
 {
     if (elt) {
-        sa_free(elt->ul7);
+        isa_free(elt->ldmSrvr);
         free(elt->fmtpIface);
         free(elt);
     }
@@ -195,7 +198,7 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = executeDown7(elt->ul7, elt->ft, elt->fmtpIface, &elt->vcEnd,
+        status = executeDown7(elt->ldmSrvr, elt->feed, elt->fmtpIface, &elt->vcEnd,
                 getQueuePath());
 
         if (status) {
@@ -240,8 +243,8 @@ elt_stop(
 /**
  * Adds a potential downstream LDM-7.
  *
- * @param[in] ft           Feedtype to subscribe to.
- * @param[in] ul7          Upstream LDM-7 to which to subscribe. Caller may free.
+ * @param[in] feed         Feedtype to subscribe to.
+ * @param[in] ldmSrvr      Upstream LDM-7 to which to subscribe. Caller may free.
  * @param[in] fmtpIface    Name of virtual interface to be created and used by
  *                         FMTP layer
  * @param[in] vcEnd        Local AL2S virtual-circuit endpoint. Caller may free.
@@ -250,13 +253,13 @@ elt_stop(
  */
 Ldm7Status
 d7mgr_add(
-        const feedtypet                  ft,
-        ServiceAddr* const restrict      ul7,
-        const char* const restrict       fmtpIface,
-        const VcEndPoint* const restrict vcEnd)
+        const feedtypet                    feed,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         fmtpIface,
+        const VcEndPoint* const restrict   vcEnd)
 {
     int  status;
-    Elt* elt = elt_new(ft, ul7, fmtpIface, vcEnd);
+    Elt* elt = elt_new(feed, ldmSrvr, fmtpIface, vcEnd);
 
     if (NULL == elt) {
         status = LDM7_SYSTEM;

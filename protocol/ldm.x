@@ -1068,10 +1068,10 @@ struct BacklogSpec {
 struct McastInfo {
     /** Multicast group feedtype */
     feedtypet     feed;
-    /** Address of associated multicast group in network byte order */
-    ServiceAddr   group;
-    /** Address of FMTP server for missed data-blocks in network byte order */
-    ServiceAddr   server;
+    /** Internet socket address of associated multicast group */
+    string   group<>;
+    /** Internet socket address of FMTP server for missed data-blocks */
+    string   server<>;
 };
 
 /**

@@ -386,14 +386,38 @@ init(
             free(miStr);
         }
 
-        status = fmtpReceiver_new(&receiver, mcastInfo->server.inetId,
-                mcastInfo->server.port, notifier, mcastInfo->group.inetId,
-                mcastInfo->group.port, iface);
-        if (status) {
-            log_add("Couldn't create FMTP receiver");
-            ppn_free(notifier);
-            return LDM7_MCAST;
+        InetSockAddr* const fmtpSrvr = isa_newFromId(mcastInfo->server,
+                LDM_PORT);
+
+        if (fmtpSrvr == NULL) {
+            log_add("Couldn't construct FMTP server address from \"%s\"",
+                    mcastInfo->server);
         }
+        else {
+            InetSockAddr* const mcastGroup = isa_newFromId(mcastInfo->group,
+                    LDM_PORT);
+
+            if (mcastGroup == NULL) {
+                log_add("Couldn't construct multicast group address from "
+                        "\"%s\"", mcastInfo->server);
+            }
+            else {
+                status = fmtpReceiver_new(&receiver,
+                        isa_getInetAddrStr(fmtpSrvr), isa_getPort(fmtpSrvr),
+                        notifier, isa_getInetAddrStr(mcastGroup),
+                        isa_getPort(mcastGroup), iface);
+
+                if (status) {
+                    log_add("Couldn't create FMTP receiver");
+                    ppn_free(notifier);
+                    return LDM7_MCAST;
+                }
+
+                isa_free(mcastGroup);
+            } // `mcastGroup` allocated
+
+            isa_free(fmtpSrvr);
+        } // `fmtpSrvr` allocated
     } // `notifier` allocated
 
     mlr->receiver = receiver;

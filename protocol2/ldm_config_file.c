@@ -3045,39 +3045,42 @@ lcf_addMulticast(
 
 int
 lcf_addReceive(
-        const feedtypet             feedtype,
-        ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  fmtpIface,
-        const char* restrict        switchId,
-        const char* restrict        portId,
-        const char* const restrict  al2sVlanId)
+        const feedtypet                    feedtype,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         fmtpIface,
+        const char* restrict               switchId,
+        const char* restrict               portId,
+        const char* const restrict         al2sVlanId)
 {
     int        status;
     VcEndPoint vcEnd;
-    VlanId     vlanId;
+    VlanId     al2sVlanTag;
 
     if (switchId == NULL)
         switchId = "dummy";
     if (portId == NULL)
         portId = "dummy";
 
-    if (al2sVlanId == NULL &&
-            sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &vlanId) != 1) {
-        log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
-                fmtpIface);
-        status = EINVAL;
+    status = 0;
+    if (al2sVlanId == NULL) {
+        if (sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &al2sVlanTag) != 1) {
+            log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
+                    fmtpIface);
+            status = EINVAL;
+        }
     }
-    else {
-        status = 0;
+    else if (sscanf(al2sVlanId, "%hu", &al2sVlanTag) != 1) {
+        log_add("Couldn't decode VLAN tag \"%s\"", al2sVlanId);
+        status = EINVAL;
     }
 
     if (status == 0) {
-        if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
+        if (!vcEndPoint_init(&vcEnd, al2sVlanTag, switchId, portId)) {
             log_add("Couldn't construct virtual-circuit endpoint");
             status = ENOMEM;
         }
         else {
-            if (d7mgr_add(feedtype, ldmSvcAddr, fmtpIface, &vcEnd)) {
+            if (d7mgr_add(feedtype, ldmSrvr, fmtpIface, &vcEnd)) {
                 log_add("Couldn't add downstream LDM7");
                 status = ENOMEM;
             }

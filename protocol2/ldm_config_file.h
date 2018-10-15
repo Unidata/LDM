@@ -1,7 +1,7 @@
 /**
- *   Copyright 2015, University Corporation for Atmospheric Research.
+ *   Copyright 2018, University Corporation for Atmospheric Research.
  *   All Rights reserved.
- *   <p>
+ *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -10,13 +10,12 @@
 
 #include "ldm.h"
 
-#include "error.h"
+#include "InetSockAddr.h"
 #include "peer_info.h"
 #include "UpFilter.h"
 #include "wordexp.h"
 
 #include <regex.h>
-
 #include <stdbool.h>
 #include <sys/types.h>
 
@@ -320,7 +319,7 @@ lcf_addMulticast(
  * Adds a potential downstream LDM-7.
  *
  * @param[in] feedtype     Feedtype to subscribe to.
- * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
+ * @param[in] ldmSrvr      Upstream LDM-7 to which to subscribe. Caller may free.
  * @param[in] fmtpIface    Name of interface to be created and used by FMTP
  *                         layer (e.g., "eth0.4000")
  * @param[in] switchId     Local AL2S switch or `NULL`, in which case this host
@@ -336,12 +335,12 @@ lcf_addMulticast(
  */
 int
 lcf_addReceive(
-        const feedtypet             feedtype,
-        ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  fmtpIface,
-        const char* restrict        switchId,
-        const char* restrict        portId,
-        const char* const restrict  al2sVlanId);
+        const feedtypet                    feedtype,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         fmtpIface,
+        const char* restrict               switchId,
+        const char* restrict               portId,
+        const char* const restrict         al2sVlanId);
 
 #endif
 
