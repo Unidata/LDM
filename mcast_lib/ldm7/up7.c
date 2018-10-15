@@ -41,6 +41,7 @@
 #include "timestamp.h"
 #include "up7.h"
 #include "UpMcastMgr.h"
+#include "VirtualCircuit.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -73,19 +74,15 @@ static const char    python[] = "python"; ///< Name of python executable
  *
  * @param[in]  wrkGrpName   Name of the AL2S workgroup
  * @param[in]  desc         Description of virtual circuit
- * @param[in]  end1         One end of the virtual circuit. Switch or port ID
- *                          may start with "dummy", in which case the circuit
- *                          will not be created.
- * @param[in]  end2         Other end of the virtual circuit. Switch or port ID
- *                          may start with "dummy", in which case the circuit
- *                          will not be created.
+ * @param[in]  end1         One end of the virtual circuit. If the endpoint
+ *                          isn't valid, then the circuit will not be created.
+ * @param[in]  end2         Other end of the virtual circuit. If the endpoint
+ *                          isn't valid, then the circuit will not be created.
  * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
  *                          call `free(*circuitId)` when the identifier is no
- *                          longer needed. Will start with "dummy" if a switch
- *                          or port identifier of `end1` or `end2` starts with
- *                          "dummy".
- * @retval     0            Success or a switch or port identifier of `end1` or
- *                          `end2` starts with "dummy"
+ *                          longer needed. Will start with "dummy" if an
+ *                          endpoint isn't valid.
+ * @retval     0            Success or an endpoint isn't valid
  * @retval     LDM7_INVAL   Invalid argument. `log_add()` called.
  * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
  */
@@ -98,10 +95,7 @@ static int oess_provision(
 {
     int  status;
 
-    if ((end1 && (strncmp(end1->switchId, "dummy", 5) == 0 ||
-                  strncmp(end1->portId, "dummy", 5) == 0)) ||
-        (end2 && (strncmp(end2->switchId, "dummy", 5) == 0 ||
-                  strncmp(end2->portId, "dummy", 5) == 0))) {
+    if (!vcEndPoint_isValid(end1) || !vcEndPoint_isValid(end2)) {
         log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
         *circuitId = strdup("dummy_circuitId");
         status = 0;
@@ -176,9 +170,6 @@ static int oess_provision(
                 } // Child process terminated unsuccessfully
             } // Child-command was reaped
         } // Couldn't execute child-command
-
-        if (status)
-            log_add("Couldn't create AL2S virtual-circuit");
     } // Valid arguments and actual provisioning
 
     return status;
@@ -1110,6 +1101,11 @@ subscribe_7_svc(
                 else {
                     // `clnt` set
                     reply = &result; // Successful reply
+                    char* const str = mi_format(
+                            &reply->SubscriptionReply_u.info.mcastInfo);
+                    log_notice("reply->status=%d, reply->info=%s",
+                            reply->status, str);
+                    free(str);
                 } // Client-side transport to downstream LDM-7 created
             } // Product-queue is open
         } // Successful subscription: `result->status == LDM7_OK`

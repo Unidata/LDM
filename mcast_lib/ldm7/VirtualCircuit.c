@@ -16,33 +16,48 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool vcEndPoint_init(
+bool
+vcEndPoint_init(
         VcEndPoint* const restrict vcEnd,
         const VlanId               vlanId,
-        const char* const restrict switchId,
-        const char* const restrict portId)
+        const char*                switchId,
+        const char*                portId)
 {
-    bool failure = true;
-    vcEnd->switchId = strdup(switchId);
-    if (vcEnd->switchId == NULL) {
+    bool success = false;
+
+    // `xdr_string()` requires a non-NULL pointer
+    if (switchId == NULL)
+        switchId = "dummy";
+    if (portId == NULL)
+        portId = "dummy";
+
+    char* const dupSwitchId = strdup(switchId);
+
+    if (dupSwitchId == NULL) {
         log_add("Couldn't allocate space for switch identifier");
     }
     else {
-        vcEnd->portId = strdup(portId);
-        if (vcEnd->portId == NULL) {
+        char* const dupPortId = strdup(portId);
+
+        if (dupPortId == NULL) {
             log_add("Couldn't allocate space for port identifier");
         }
         else {
+            vcEnd->switchId = dupSwitchId;
+            vcEnd->portId = dupPortId;
             vcEnd->vlanId = vlanId;
-            failure = false;
-        } // `end->portId` allocated
-        if (failure)
-            free(vcEnd->switchId);
-    } // `end->switchId` allocated
-    return !failure;
+            success = true;
+        } // `dupPortId` allocated
+
+        if (!success)
+            free(dupSwitchId);
+    } // `dupSwitchId` allocated
+
+    return success;
 }
 
-VcEndPoint* vcEndPoint_new(
+VcEndPoint*
+vcEndPoint_new(
         VlanId      vlanId,
         const char* switchId,
         const char* portId)
@@ -58,7 +73,16 @@ VcEndPoint* vcEndPoint_new(
     return end;
 }
 
-char* vcEndPoint_format(const VcEndPoint* vcEnd)
+bool
+vcEndPoint_isValid(const VcEndPoint* const vcEnd)
+{
+    return vcEnd &&
+            vcEnd->switchId && strcmp(vcEnd->switchId, "dummy") &&
+            vcEnd->portId   && strcmp(vcEnd->portId,   "dummy");
+}
+
+char*
+vcEndPoint_format(const VcEndPoint* vcEnd)
 {
     char* str = ldm_format(256, "{switch=%s, port=%s, vlanId=%hu}",
             vcEnd->switchId, vcEnd->portId, vcEnd->vlanId);
@@ -67,7 +91,8 @@ char* vcEndPoint_format(const VcEndPoint* vcEnd)
     return str;
 }
 
-void vcEndPoint_destroy(VcEndPoint* const end)
+void
+vcEndPoint_destroy(VcEndPoint* const end)
 {
     if (end) {
         free(end->portId);
@@ -78,7 +103,8 @@ void vcEndPoint_destroy(VcEndPoint* const end)
     }
 }
 
-void vcEndPoint_free(VcEndPoint* const end)
+void
+vcEndPoint_free(VcEndPoint* const end)
 {
     if (end) {
         vcEndPoint_destroy(end);
@@ -86,14 +112,16 @@ void vcEndPoint_free(VcEndPoint* const end)
     }
 }
 
-bool vcEndPoint_copy(
+bool
+vcEndPoint_copy(
         VcEndPoint* const restrict       lhs,
         const VcEndPoint* const restrict rhs)
 {
     return vcEndPoint_init(lhs, rhs->vlanId, rhs->switchId, rhs->portId);
 }
 
-VcEndPoint* vcEndPoint_clone(const VcEndPoint* const end)
+VcEndPoint*
+vcEndPoint_clone(const VcEndPoint* const end)
 {
     return vcEndPoint_new(end->vlanId, end->switchId, end->portId);
 }
