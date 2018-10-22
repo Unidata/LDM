@@ -4,6 +4,7 @@
 !ID1 ID2  NAME                             UNITS                GNAM SCALE
 !23|123|123456789012345678901234567890123|12345678901234567890|1234|12345678
 !
+001 000 Surface to reserved               -                    NONE     0 
 001 001 Ground or water surface           -                    NONE     0 
 001 004 Layer between surface and 0 degC  -                    HGHT     0
 001 103 Layer between surface and press   -                    HGHT     0
