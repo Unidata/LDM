@@ -1,3 +1,10 @@
+6.13.7.65
+    g2varsncep.tbl, g2varswmo.tbl, & g2vcrdwmo.tbl:
+        - Added entries from Gilbert and Leno (duplicated by NOAA). Gave to
+          NOAA.
+        - Added "Surface to reserved" (yes, that's "reserved"), (001, 000)
+          to "g2vcrdwmo.tbl" -- for all the good it will do.
+
 6.13.7.64	2018-10-05T10:35:50-0600
     Added support for non-AL2S RECEIVE.
 
