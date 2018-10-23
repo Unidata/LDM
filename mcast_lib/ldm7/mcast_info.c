@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
@@ -319,4 +320,139 @@ mi_format(
     }
 
     return string;
+}
+
+/******************************************************************************
+ * Separated-out multicast information:
+ ******************************************************************************/
+
+struct sepMcastInfo {
+    feedtypet feed;
+    InetSockAddr* mcastGrp;
+    InetSockAddr* fmtpSrvr;
+};
+
+/**
+ * Initializes a separated-out multicast information object.
+ *
+ * @param[in,out] smi
+ * @param[in]     feed         LDM7 feed
+ * @param[in]     mcastGrpStr  String representation of the multicast group
+ *                             address in the form
+ *                               - <name>[:<port>]
+ *                               - <nnn.nnn.nnn.nnn>[:<port>]
+ *                             The default port number is `LDM_PORT`. May be
+ *                             freed.
+ * @param[in]     fmtpSrvrStr  String representation of the FMTP server address
+ *                             in the form
+ *                               - <name>[:<port>]
+ *                               - <nnn.nnn.nnn.nnn>[:<port>]
+ *                             The default port number is 0. May be freed.
+ * @retval         0           Success
+ * @retval         -1          Failure. `log_add()` called.
+ */
+static int
+smi_initFromStr(
+        SepMcastInfo* const smi,
+        const feedtypet     feed,
+        const char* const   mcastGrpStr,
+        const char* const   fmtpSrvrStr)
+{
+    int                 status = -1;
+    InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
+
+    if (mcastGrp == NULL) {
+        log_add("isa_newFromId() failure");
+    }
+    else {
+        InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpSrvrStr, 0);
+
+        if (fmtpSrvr == NULL) {
+            log_add("isa_newFromId() failure");
+        }
+        else {
+            smi->feed = feed;
+            smi->mcastGrp = mcastGrp;
+            smi->fmtpSrvr = fmtpSrvr;
+            status = 0;
+        }
+
+        if (status)
+            isa_free(mcastGrp);
+    } // `mcastGrp` allocated
+
+    return status;
+}
+
+SepMcastInfo*
+smi_newFromStr(
+        const feedtypet     feed,
+        const char* const   mcastGrpStr,
+        const char* const   fmtpSrvrStr)
+{
+    SepMcastInfo* smi = log_malloc(sizeof(SepMcastInfo),
+            "separated-out multicast information object");
+
+    if (smi && smi_initFromStr(smi, feed, mcastGrpStr, fmtpSrvrStr)) {
+        log_add("smi_initFromStr() failure");
+        free(smi);
+        smi = NULL;
+    }
+
+    return smi;
+}
+
+void
+smi_free(SepMcastInfo* const smi)
+{
+    if (smi) {
+        isa_free(smi->fmtpSrvr);
+        isa_free(smi->mcastGrp);
+        free(smi);
+    }
+}
+
+char*
+smi_toString(const SepMcastInfo* const smi)
+{
+    char* const feedStr = feedtypet_format(smi->feed);
+    const char* const mcastGrpStr = isa_toString(smi->mcastGrp);
+    const char* const fmtpSrvrStr = isa_toString(smi->fmtpSrvr);
+
+    char* const smiStr = ldm_format(256, "{feed=%s, mcastGrp=%s, "
+            "fmtpSrvr=%s}", feedStr, mcastGrpStr, fmtpSrvrStr);
+
+    return smiStr;
+}
+
+void
+smi_setFeed(
+        SepMcastInfo* const smi,
+        const feedtypet     feed)
+{
+    smi->feed = feed;
+}
+
+feedtypet
+smi_getFeed(const SepMcastInfo* const smi)
+{
+    return smi->feed;
+}
+
+InetSockAddr*
+smi_getMcastGrp(const SepMcastInfo* const smi)
+{
+    return smi->mcastGrp;
+}
+
+InetSockAddr*
+smi_getFmtpSrvr(const SepMcastInfo* const smi)
+{
+    return smi->fmtpSrvr;
+}
+
+InetSockAddr*
+smi_getMcastFrp(const SepMcastInfo* const smi)
+{
+    return smi->mcastGrp;
 }

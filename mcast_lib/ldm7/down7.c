@@ -1276,10 +1276,7 @@ downlet_startMcastRcvr(void)
     int status = mcastRcvr_start(downlet.mcastInfo, down7.fmtpIface,
                     downlet.ifaceAddr, down7.pq);
 
-    if (status) {
-        log_add("Couldn't start multicast receiver task");
-    }
-    else {
+    if (status == 0) {
         status = atomicInt_set(downlet.mcastRcvrStatus, TASK_STARTED);
         log_assert(status == TASK_STOPPED);
         status = 0;

@@ -74,81 +74,6 @@ allowSigs(void)
 }
 
 /******************************************************************************
- * Separated-out multicast information:
- ******************************************************************************/
-
-typedef struct sepMcastInfo {
-    feedtypet feed;
-    InetSockAddr* mcastGrp;
-    InetSockAddr* fmtpSrvr;
-} SepMcastInfo;
-
-static inline int
-smi_initFromStr(
-        SepMcastInfo* const smi,
-        const feedtypet     feed,
-        const char* const   mcastGrpStr,
-        const char* const   fmtpSrvrStr)
-{
-    int                 status = -1;
-    InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
-
-    if (mcastGrp == NULL) {
-        log_add("isa_newFromId() failure");
-    }
-    else {
-        InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpSrvrStr, 0);
-
-        if (fmtpSrvr == NULL) {
-            log_add("isa_newFromId() failure");
-        }
-        else {
-            smi->feed = feed;
-            smi->mcastGrp = mcastGrp;
-            smi->fmtpSrvr = fmtpSrvr;
-            status = 0;
-        }
-
-        if (status)
-            isa_free(mcastGrp);
-    } // `mcastGrp` allocated
-
-    return status;
-}
-
-static void
-smi_destroy(SepMcastInfo* const smi)
-{
-    isa_free(smi->fmtpSrvr);
-    smi->fmtpSrvr = NULL;
-
-    isa_free(smi->mcastGrp);
-    smi->mcastGrp = NULL;
-}
-
-/**
- * Returns the string representation of a separated-out multicast information
- * object.
- *
- * @param[in] smi   Separated-out multicast information object
- * @retval    NULL  Failure. `log_add()` called.
- * @return          String representation. Caller should free when it's no
- *                  longer needed.
- */
-static char*
-smi_toString(SepMcastInfo* const smi)
-{
-    char* const feedStr = feedtypet_format(smi->feed);
-    const char* const mcastGrpStr = isa_toString(smi->mcastGrp);
-    const char* const fmtpSrvrStr = isa_toString(smi->fmtpSrvr);
-
-    char* const smiStr = ldm_format(256, "{feed=%s, mcastGrp=%s, "
-            "fmtpSrvr=%s}", feedStr, mcastGrpStr, fmtpSrvrStr);
-
-    return smiStr;
-}
-
-/******************************************************************************
  * Multicast LDM process:
  ******************************************************************************/
 
@@ -296,8 +221,9 @@ mldm_exec(
     }
 
     char feedtypeBuf[256];
-    if (info->feed != EXP) {
-        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf), info->feed);
+    if (smi_getFeed(info) != EXP) {
+        (void)sprint_feedtypet(feedtypeBuf, sizeof(feedtypeBuf),
+                smi_getFeed(info));
         args[i++] = "-f";
         args[i++] = feedtypeBuf; // multicast group identifier
     }
@@ -317,10 +243,12 @@ mldm_exec(
     args[i++] = "-q";
     args[i++] = (char*)pqPathname; // safe cast
 
-    if (strcmp(isa_getInetAddrStr(info->fmtpSrvr, NULL), "0.0.0.0")) {
+    const char* const fmtpSrvrStr =
+            isa_getInetAddrStr(smi_getFmtpSrvr(info), NULL);
+    if (strcmp(fmtpSrvrStr, "0.0.0.0")) {
         args[i++] = "-s";
         // Safe cast because of `execvp()`
-        args[i++] = (char*)isa_getInetAddrStr(info->fmtpSrvr, NULL);
+        args[i++] = (char*)fmtpSrvrStr;
     }
 
     char ttlOptArg[4];
@@ -336,7 +264,7 @@ mldm_exec(
     }
 
     // Safe cast because of `execvp()`
-    args[i++] = (char*)isa_toString(info->mcastGrp);
+    args[i++] = (char*)isa_toString(smi_getMcastGrp(info));
 
     char* fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
     if (fmtpSubnetArg == NULL) {
@@ -455,7 +383,8 @@ mldm_handleExecedChild(
         free(id);
     }
     else {
-        status = msm_put(info->feed, childPid, fmtpSrvrPort, mldmCmdPort);
+        status = msm_put(smi_getFeed(info), childPid, fmtpSrvrPort,
+                mldmCmdPort);
 
         if (status) {
             // preconditions => LDM7_DUP can't be returned
@@ -581,8 +510,8 @@ mldm_ensureRunning(
     }
     else {
         if (childPid == 0) {
-            if (msm_get(info->feed, &childPid, &fmtpSrvrPort, &mldmCmdPort) ==
-                    0) {
+            if (msm_get(smi_getFeed(info), &childPid, &fmtpSrvrPort,
+                    &mldmCmdPort) == 0) {
                 if (kill(childPid, 0)) {
                     log_warning("Multicast LDM sender process %d should "
                             "exist but doesn't. Re-executing...", childPid);
@@ -651,7 +580,7 @@ mldm_getMldmCmdPort()
 
 typedef struct {
     struct in_addr mcastIface;
-    SepMcastInfo   info;
+    SepMcastInfo*  info;
     /// Local virtual-circuit endpoint
     VcEndPoint*    vcEnd;
     char*          pqPathname;
@@ -663,10 +592,11 @@ typedef struct {
  * Initializes a multicast entry.
  *
  * @param[out] entry       Entry to be initialized.
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  info        Multicast information. Caller may free.
+ * @param[in]  mcastInfo   Multicast information. Caller must not free if this
+ *                         function succeeds.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
@@ -681,7 +611,7 @@ static Ldm7Status
 me_init(
         McastEntry* const restrict       entry,
         const struct in_addr             mcastIface,
-        const McastInfo* const           info,
+        SepMcastInfo* const              mcastInfo,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
@@ -693,15 +623,12 @@ me_init(
         log_add("Time-to-live is too large: %hu >= 255", ttl);
         status = LDM7_INVAL;
     }
-    else if (smi_initFromStr(&entry->info, info->feed, info->group,
-            info->server)) {
-        status = LDM7_SYSTEM;
-    }
     else {
-        char* const str = smi_toString(&entry->info);
+        char* const str = smi_toString(mcastInfo);
         log_notice("me_init(): entry->info=%s", str);
         free(str);
 
+        entry->info = mcastInfo;
         entry->mcastIface = mcastIface;
         entry->ttl = ttl;
         entry->pqPathname = strdup(pqPathname);
@@ -724,9 +651,6 @@ me_init(
             if (status)
                 free(entry->pqPathname);
         } // `entry->pqPathname` allocated
-
-        if (status)
-            smi_destroy(&entry->info);
     } // `entry->info` allocated
 
     return status;
@@ -741,7 +665,7 @@ static void
 me_destroy(
         McastEntry* const entry)
 {
-    smi_destroy(&entry->info);
+    smi_free(entry->info);
     vcEndPoint_free(entry->vcEnd);
     free(entry->pqPathname);
 }
@@ -753,7 +677,8 @@ me_destroy(
  * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  info        Multicast information. Caller may free.
+ * @param[in]  mcastInfo   Multicast information. Caller must not free if this
+ *                         function succeeds.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
@@ -768,7 +693,7 @@ static Ldm7Status
 me_new(
         McastEntry** const restrict      entry,
         const struct in_addr             mcastIface,
-        const McastInfo* const           info,
+        SepMcastInfo* const              mcastInfo,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
@@ -781,10 +706,11 @@ me_new(
         status = LDM7_SYSTEM;
     }
     else {
-        char* const str = mi_format(info);
+        char* const str = smi_toString(mcastInfo);
         log_notice("me_new(): info=%s", str);
         free(str);
-        status = me_init(ent, mcastIface, info, ttl, vcEnd, fmtpSubnet,
+
+        status = me_init(ent, mcastIface, mcastInfo, ttl, vcEnd, fmtpSubnet,
                 pqPathname);
 
         if (status) {
@@ -850,8 +776,8 @@ me_compareFeedtypes(
         const void* o1,
         const void* o2)
 {
-    const feedtypet f1 = ((McastEntry*)o1)->info.feed;
-    const feedtypet f2 = ((McastEntry*)o2)->info.feed;
+    const feedtypet f1 = smi_getFeed(((McastEntry*)o1)->info);
+    const feedtypet f2 = smi_getFeed(((McastEntry*)o2)->info);
 
     return (f1 < f2)
               ? -1
@@ -907,11 +833,12 @@ me_startIfNecessary(
         const float       retxTimeout)
 {
     // Sets `mldmCmdPort`
-    int status = mldm_ensureRunning(entry->mcastIface, &entry->info,
+    int status = mldm_ensureRunning(entry->mcastIface, entry->info,
             entry->ttl, &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
 
     if (status == 0) {
-        status = isa_setPort(entry->info.fmtpSrvr, mldm_getFmtpSrvrPort());
+        status = isa_setPort(smi_getFmtpSrvr(entry->info),
+                mldm_getFmtpSrvrPort());
         log_assert(status == 0);
     }
 
@@ -1010,13 +937,15 @@ me_setSubscriptionReply(
 {
     int               status;
     SubscriptionReply rep;
-    char* const str = smi_toString(&entry->info);
+
+    char* const str = smi_toString(entry->info);
     log_notice("me_setSubscriptionReply(): entry->info=%s", str);
     free(str);
 
-    if (!mi_init(&rep.SubscriptionReply_u.info.mcastInfo, entry->info.feed,
-            isa_toString(entry->info.mcastGrp),
-            isa_toString(entry->info.fmtpSrvr))) {
+    if (!mi_init(&rep.SubscriptionReply_u.info.mcastInfo,
+            smi_getFeed(entry->info),
+            isa_toString(smi_getMcastGrp(entry->info)),
+            isa_toString(smi_getFmtpSrvr(entry->info)))) {
         log_add("Couldn't initialize multicast information");
         status = LDM7_SYSTEM;
     }
@@ -1046,12 +975,16 @@ me_setSubscriptionReply(
  * Upstream Multicast Manager:
  ******************************************************************************/
 
-static void* mcastEntries;
+/// Multicast entries
+static void*      mcastEntries;
+/// Key for multicast entries
+static McastEntry key;
 /// FMTP retransmission timeout in minutes
-static float retxTimeout = -1.0; // Negative => use FMTP default
+static float      retxTimeout = -1.0; // Negative => use FMTP default
 
 /**
  * Returns the multicast entry corresponding to a particular feed.
+ *
  * @param[in] feed  LDM feed
  * @retval    NULL  No entry corresponding to feed. `log_add()` called.
  * @return          Pointer to corresponding entry
@@ -1059,8 +992,10 @@ static float retxTimeout = -1.0; // Negative => use FMTP default
 static McastEntry*
 umm_getMcastEntry(const feedtypet feed)
 {
-    McastEntry key;
-    key.info.feed = feed;
+    if (key.info == NULL)
+        key.info = smi_newFromStr(0, "0.0.0.0", "0.0.0.0");
+
+    smi_setFeed(key.info, feed);
     void* const node = tfind(&key, &mcastEntries, me_compareFeedtypes);
     if (NULL == node) {
         log_add("No multicast LDM sender is associated with feed-type %s",
@@ -1078,20 +1013,20 @@ umm_setRetxTimeout(const float minutes)
 
 Ldm7Status
 umm_addPotentialSender(
-    const struct in_addr              mcastIface,
-    const McastInfo* const restrict   info,
-    const unsigned short              ttl,
-    const VcEndPoint* const restrict  vcEnd,
-    const CidrAddr* const restrict    fmtpSubnet,
-    const char* const restrict        pqPathname)
+    const struct in_addr             mcastIface,
+    SepMcastInfo* const restrict     mcastInfo,
+    const unsigned short             ttl,
+    const VcEndPoint* const restrict vcEnd,
+    const CidrAddr* const restrict   fmtpSubnet,
+    const char* const restrict       pqPathname)
 {
     McastEntry* entry;
 
-    char* const str = mi_format(info);
+    char* const str = smi_toString(mcastInfo);
     log_notice("umm_addPotentialSender(): info=%s", str);
     free(str);
 
-    int         status = me_new(&entry, mcastIface, info, ttl, vcEnd,
+    int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
             fmtpSubnet, pqPathname);
 
     if (0 == status) {
@@ -1103,8 +1038,8 @@ umm_addPotentialSender(
             status = LDM7_SYSTEM;
         }
         else if (*(McastEntry**)node != entry) {
-            char* const mi1 = smi_toString(&entry->info);
-            char* const mi2 = smi_toString(&(*(McastEntry**)node)->info);
+            char* const mi1 = smi_toString(entry->info);
+            char* const mi2 = smi_toString((*(McastEntry**)node)->info);
 
             log_add("Multicast information \"%s\" "
                     "conflicts with earlier addition \"%s\"", mi1, mi2);
@@ -1135,30 +1070,30 @@ umm_subscribe(
         status = LDM7_NOENT;
     }
     else {
-            char* const str = smi_toString(&entry->info);
+        char* const str = smi_toString(entry->info);
+        log_notice("umm_subscribe(): entry->info=%s", str);
+        free(str);
+
+        /*
+         * Sets the port numbers of the FMTP server & RPC-command server of
+         * the multicast LDM sender process
+         */
+        status = me_startIfNecessary(entry, retxTimeout);
+
+        if (status) {
+            log_add("Couldn't ensure running multicast sender");
+        }
+        else {
+            char* const str = smi_toString(entry->info);
             log_notice("umm_subscribe(): entry->info=%s", str);
             free(str);
 
-            /*
-             * Sets the port numbers of the FMTP server & RPC-command server of
-             * the multicast LDM sender process
-             */
-            status = me_startIfNecessary(entry, retxTimeout);
+            status = me_setSubscriptionReply(entry, reply);
 
-            if (status) {
-                log_add("Couldn't ensure running multicast sender");
-            }
-            else {
-                char* const str = smi_toString(&entry->info);
-                log_notice("umm_subscribe(): entry->info=%s", str);
-                free(str);
-
-                status = me_setSubscriptionReply(entry, reply);
-
-                if (status)
-                    log_add("Couldn't set subscription reply");
-            }
-    } // Feed maps to possible multicast LDM sender
+            if (status)
+                log_add("Couldn't set subscription reply");
+        }
+    } // Desired feed maps to a possible multicast LDM sender
 
     return status;
 }

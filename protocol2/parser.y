@@ -444,12 +444,13 @@ decodeMulticastEntry(
                         status = LDM7_INVAL;
                     }
                     else {
-                        McastInfo* mcastInfo;
-                        status = mi_new(&mcastInfo, feed, mcastGroupSpec,
+                        SepMcastInfo* smi = smi_newFromStr(feed, mcastGroupSpec,
                                 fmtpAddrSpec);
-                        if (0 == status) {
+
+                        if (smi) {
                             VcEndPoint* vcEnd = vcEndPoint_new(vlanId,
                                     switchSpec, switchPortSpec);
+
                             if (vcEnd == NULL) {
                                 log_add("Couldn't construct virtual-"
                                         "circuit endpoint");
@@ -457,8 +458,10 @@ decodeMulticastEntry(
                             }
                             else {
                                 struct in_addr mcastIface;
+
                                 status = inet_pton(AF_INET, mcastIfaceSpec, 
                                         &mcastIface);
+
                                 if (status != 1) {
                                     log_add("Couldn't decode multicast "
                                             "interface specification "
@@ -467,13 +470,17 @@ decodeMulticastEntry(
                                 }
                                 else {
                                     status = lcf_addMulticast(mcastIface,
-                                        mcastInfo, ttl, vcEnd, fmtpSubnet,
+                                        smi, ttl, vcEnd, fmtpSubnet,
                                         getQueuePath());
                                 }
+
                                 vcEndPoint_free(vcEnd);
                             } // `vcEnd` allocated
-                            mi_free(mcastInfo);
-                        } // `mcastInfo` allocated
+                            
+                            if (status)
+                                smi_free(smi);
+                        } // `smi` allocated
+
                         cidrAddr_delete(fmtpSubnet);
                     } // `fmtpSubnet` set
                 } // `vlanId` set

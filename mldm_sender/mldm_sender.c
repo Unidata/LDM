@@ -60,10 +60,32 @@
  */
 static FmtpSender*          fmtpSender;
 /**
- * Information on the multicast group.
+ * Time-to-live of the multicast packets:
+ *   -    0  Restricted to same host. Won't be output by any interface.
+ *   -    1  Restricted to the same subnet. Won't be forwarded by a router
+ *           (default).
+ *   -  <32  Restricted to the same site, organization or department.
+ *   -  <64  Restricted to the same region.
+ *   - <128  Restricted to the same continent.
+ *   - <255  Unrestricted in scope. Global.
  */
-static McastInfo             mcastInfo;
+static unsigned              ttl = 1; // Won't be forwarded by any router.
 /**
+ * Ratio of product-hold duration to multicast duration. If negative, then the
+ * default timeout is used.
+ */
+static float                 retxTimeout = -1;  // Use default
+/**
+ * FMTP client subnet:
+ */
+static CidrAddr*             fmtpSubnet;
+/**
+ * Address of multicast interface. "0.0.0.0" obtains the default multicast
+ * interface.
+ */
+static const char*           mcastIface;
+/**
+ *
  * Termination signals.
  */
 static const int             termSigs[] = {SIGINT, SIGTERM};
@@ -83,6 +105,14 @@ static void*                 inAddrPool;
  * Authorizer of remote clients:
  */
 static void*                 authorizer;
+/**
+ * Multicast group information:
+ */
+static SepMcastInfo*         mcastGrpInfo;
+/**
+ * Subnet for client FMTP TCP connections:
+ */
+static CidrAddr*             fmtpSubnet;
 /**
  * Multicast LDM RPC command-server:
  */
@@ -168,22 +198,8 @@ Operands:\n\
  * @param[in]  argv          Arguments.
  * @param[out] feed          Feedtypes of data to be sent.
  * @param[out] serverId      FMTP server address. Caller must not free.
- * @param[out] ttl           Time-to-live of outgoing packets.
- *                                0  Restricted to same host. Won't be output by
- *                                   any interface.
- *                                1  Restricted to the same subnet. Won't be
- *                                   forwarded by a router (default).
- *                              <32  Restricted to the same site, organization
- *                                   or department.
- *                              <64  Restricted to the same region.
- *                             <128  Restricted to the same continent.
- *                             <255  Unrestricted in scope. Global.
  * @param[out] ifaceAddr     IP address of the interface to use to send
  *                           multicast packets.
- * @param[out] retxTimeout   FMTP retransmission timeout in minutes. Duration
- *                           that a product will be held by the FMTP layer
- *                           before being released. If negative, then the
- *                           default timeout is used.
  * @retval     0             Success. `*serverIface` or `*ttl` might not have
  *                           been set.
  * @retval     1             Invalid options. `log_add()` called.
@@ -194,11 +210,8 @@ mls_decodeOptions(
         char* const* const restrict    argv,
         feedtypet* const restrict      feed,
         const char** const restrict    serverId,
-        unsigned* const restrict       ttl,
-        const char** const restrict    ifaceAddr,
-        float* const                   retxTimeout)
+        const char** const restrict    ifaceAddr)
 {
-    const char*  pqfname = getQueuePath();
     int          ch;
     extern int   opterr;
     extern int   optopt;
@@ -224,12 +237,12 @@ mls_decodeOptions(
                 break;
             }
             case 'q': {
-                pqfname = optarg;
+                setQueuePath(optarg);
                 break;
             }
             case 'r': {
                 int   nbytes;
-                if (1 != sscanf(optarg, "%f %n", retxTimeout, &nbytes) ||
+                if (1 != sscanf(optarg, "%f %n", &retxTimeout, &nbytes) ||
                         0 != optarg[nbytes]) {
                     log_add("Couldn't decode FMTP retransmission timeout "
                             "option-argument \"%s\"", optarg);
@@ -255,7 +268,7 @@ mls_decodeOptions(
                             optarg);
                     return 1;
                 }
-                *ttl = t;
+                ttl = t;
                 break;
             }
             case 'v': {
@@ -276,35 +289,8 @@ mls_decodeOptions(
                 return 1;
             }
         }
-    setQueuePath(pqfname);
 
     return 0;
-}
-
-/**
- * Sets a service address.
- *
- * @param[in]  id           The Internet identifier. Either a name or a
- *                          formatted IP address.
- * @param[in]  port         The port number.
- * @param[out] serviceAddr  The Internet service address to be set.
- * @retval     0            Success. `*serviceAddr` is set.
- * @retval     1            Invalid argument. `log_add()` called.
- * @retval     2            System failure. `log_add()` called.
- */
-static int
-mls_setServiceAddr(
-        const char* const    id,
-        const unsigned short port,
-        ServiceAddr** const  serviceAddr)
-{
-    int status = sa_new(serviceAddr, id, port);
-
-    return (0 == status)
-            ? 0
-            : (EINVAL == status)
-              ? 1
-              : 2;
 }
 
 /**
@@ -314,9 +300,6 @@ mls_setServiceAddr(
  * @param[in]  argv          Operands.
  * @param[out] groupAddr     Internet service address of the multicast group.
  *                           Caller should free when it's no longer needed.
- * @param[out] fmtpSubnet    Subnet for client FMTP TCP connections. Caller
- *                           should call `cidrAddr_delete(*fmtpSubnet)` when
- *                           it's no longer needed.
  * @retval     0             Success. `*groupAddr`, `*serverAddr`, `*feed`, and
  *                           `msgQName` are set.
  * @retval     1             Invalid operands. `log_add()` called.
@@ -326,8 +309,7 @@ static int
 mls_decodeOperands(
         int                         argc,
         char* const* restrict       argv,
-        const char** const restrict groupAddr,
-        CidrAddr** const restrict   fmtpSubnet)
+        const char** const restrict groupAddr)
 {
     int status;
 
@@ -351,7 +333,7 @@ mls_decodeOperands(
                 status = 1;
             }
             else {
-                *fmtpSubnet = subnet;
+                fmtpSubnet = subnet;
                 *groupAddr = mcastAddr;
                 status = 0;
             }
@@ -362,75 +344,25 @@ mls_decodeOperands(
 }
 
 /**
- * Sets the multicast group information from command-line arguments.
- *
- * @param[in]  serverId     FMTP server ID. Caller must not free.
- * @param[in]  feed         Feedtype of multicast group.
- * @param[in]  groupAddr    Internet socket address of multicast group.
- *                          Caller should free when it's no longer needed.
- * @param[out] mcastInfo    Information on multicast group.
- * @retval     0            Success. `*mcastInfo` is set.
- * @retval     1            Invalid argument. `log_add()` called.
- * @retval     2            System failure. `log_add()` called.
- */
-static int
-mls_setMcastGroupInfo(
-        const char* const restrict serverId,
-        const feedtypet            feed,
-        const char* const restrict groupId,
-        McastInfo** const restrict mcastInfo)
-{
-    return mi_new(mcastInfo, feed, groupId, serverId) ? 2 : 0;
-}
-
-/**
  * Decodes the command line.
  *
  * @param[in]  argc          Number of arguments.
  * @param[in]  argv          Arguments.
- * @param[out] mcastInfo     Multicast group information.
- * @param[out] ttl           Time-to-live of outgoing packets.
- *                                 0  Restricted to same host. Won't be output
- *                                    by any interface.
- *                                 1  Restricted to the same subnet. Won't be
- *                                    forwarded by a router (default).
- *                               <32  Restricted to the same site, organization
- *                                    or department.
- *                               <64  Restricted to the same region.
- *                              <128  Restricted to the same continent.
- *                              <255  Unrestricted in scope. Global.
- * @param[out] ifaceAddr     IP address of the interface from which multicast
- *                           packets should be sent or NULL to have them sent
- *                           from the system's default multicast interface.
- * @param[in]  retxTimeout   FMTP retransmission timeout in minutes. Duration
- *                           that a product will be held by the FMTP layer
- *                           before being released. If negative, then the
- *                           default timeout is used.
- * @param[out] timeoutFactor Ratio of the duration that a data-product will
- *                           be held by the FMTP layer before being released
- *                           after being multicast to the duration to
- *                           multicast the product. If negative, then the
- *                           default timeout factor is used.
- * @param[out] fmtpSubnet    Subnet for client FMTP TCP connections
- * @retval     0             Success. `*mcastInfo` is set. `*ttl` might be set.
+ * @retval     0             Success. `*mcastGrpInfo` and `mcastIface` are set.
+ *                           `*ttl` might be set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
  */
 static int
 mls_decodeCommandLine(
-        int                         argc,
-        char* const* restrict       argv,
-        McastInfo** const restrict  mcastInfo,
-        unsigned* const restrict    ttl,
-        const char** const restrict ifaceAddr,
-        float* const                retxTimeout,
-        CidrAddr** const restrict   fmtpSubnet)
+        int                           argc,
+        char* const* restrict         argv)
 {
     feedtypet      feed = EXP;
     const char*    serverId = "0.0.0.0:0"; // default: all interfaces
     const char*    mcastIf = "0.0.0.0";    // default multicast interface
     int            status = mls_decodeOptions(argc, argv, &feed, &serverId,
-            ttl, &mcastIf, retxTimeout);
+            &mcastIf);
     extern int     optind;
 
     if (0 == status) {
@@ -438,13 +370,18 @@ mls_decodeCommandLine(
 
         argc -= optind;
         argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupId, fmtpSubnet);
+        status = mls_decodeOperands(argc, argv, &groupId);
 
         if (0 == status) {
-            status = mls_setMcastGroupInfo(serverId, feed, groupId, mcastInfo);
+            SepMcastInfo* const info = smi_newFromStr(feed, groupId, serverId);
 
-            if (0 == status)
-                *ifaceAddr = mcastIf;
+            if (info == NULL) {
+                status = 2;
+            }
+            else {
+                mcastGrpInfo = info;
+                mcastIface = mcastIf;
+            }
         }
     } // options decoded
 
@@ -575,13 +512,13 @@ mls_doneWithProduct(
 }
 
 /**
- * Initializes the resources of this module. Sets `mcastInfo`; in particular,
- * sets `mcastInfo.server.port` to the actual port number used by the FMTP
- * TCP server (in case the number was chosen by the operating-system). Upon
- * return, all FMTP threads have been created -- in particular,  the FMTP TCP
- * server is listening.
+ * Initializes the resources of this module. Sets `mcastGrpInfo`; in particular,
+ * sets the actual port number used by the FMTP TCP server (in case the number
+ * was chosen by the operating-system). Upon return, all FMTP threads have been
+ * created -- in particular,  the FMTP TCP server is listening.
  *
- * @param[in] info           Information on the multicast group.
+ * @param[in] info           Information on the multicast group. Caller must not
+ *                           free on success.
  * @param[in] ttl            Time-to-live of outgoing packets.
  *                                0  Restricted to same host. Won't be output
  *                                   by any interface.
@@ -595,13 +532,6 @@ mls_doneWithProduct(
  * @param[in] mcastIface     IP address of the interface to use to send
  *                           multicast packets. "0.0.0.0" obtains the default
  *                           multicast interface. Caller may free.
- * @param[in] retxTimeout    FMTP retransmission timeout in minutes. Duration
- *                           that a product will be held by the FMTP layer
- *                           before being released. If negative, then the
- *                           default timeout is used.
- * @param[in] pqPathname     Pathname of product queue from which to obtain
- *                           data-products.
- * @param[in] authorizer     Authorizer of remote clients
  * @retval    0              Success. `*sender` is set.
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
  *                           IPv4 address because it's invalid or unknown.
@@ -610,13 +540,7 @@ mls_doneWithProduct(
  * @retval    LDM7_SYSTEM    System error. `log_add()` called.
  */
 static Ldm7Status
-mls_init(
-    const McastInfo* const restrict info,
-    const unsigned                  ttl,
-    const char*                     mcastIface,
-    const float                     retxTimeout,
-    const char* const restrict      pqPathname,
-    void*                           authorizer)
+mls_init()
 {
     int status;
 
@@ -632,51 +556,48 @@ mls_init(
      * Product-queue is opened thread-safe because `mls_tryMulticast()` and
      * `mls_doneWithProduct()` might be executed on different threads.
      */
-    if (pq_open(pqPathname, PQ_READONLY | PQ_THREADSAFE, &pq)) {
-        log_add("Couldn't open product-queue \"%s\"", pqPathname);
+    if (pq_open(getQueuePath(), PQ_READONLY | PQ_THREADSAFE, &pq)) {
+        log_add("Couldn't open product-queue \"%s\"", getQueuePath());
         status = LDM7_SYSTEM;
         goto free_offMap;
     }
 
-    if ((status = mls_openProdIndexMap(info->feed, pq_getSlotCount(pq))))
+    if ((status = mls_openProdIndexMap(smi_getFeed(mcastGrpInfo),
+            pq_getSlotCount(pq))))
         goto close_pq;
 
     FmtpProdIndex iProd;
     if ((status = pim_getNextProdIndex(&iProd)))
         goto close_prod_index_map;
 
-    if (mi_copy(&mcastInfo, info)) {
-        status = LDM7_SYSTEM;
-        goto close_prod_index_map;
-    }
+    InetSockAddr* const fmtpSrvrAddr = smi_getFmtpSrvr(mcastGrpInfo);
+    const char* const   fmtpSrvrInetAddr =
+            isa_getInetAddrStr(fmtpSrvrAddr, NULL);
+    in_port_t           fmtpSrvrPort = isa_getPort(fmtpSrvrAddr);
 
-    char* const srvrId = isa_getIpAddrId(info->server);
-    in_port_t   srvrPort = isa_getPortFromId(info->server, 0);
+    InetSockAddr* const mcastGrpAddr = smi_getMcastGrp(mcastGrpInfo);
+    const char* const   mcastGrpInetAddr =
+            isa_getInetAddrStr(mcastGrpAddr, NULL);
+    const in_port_t     mcastGrpPort = isa_getPort(mcastGrpAddr);
 
-    char* const     groupId = isa_getIpAddrId(info->server);
-    const in_port_t groupPort = isa_getPortFromId(info->server, 0);
-
-    if ((status = fmtpSender_create(&fmtpSender, srvrId, &srvrPort, groupId,
-            groupPort, mcastIface, ttl, iProd, retxTimeout, mls_doneWithProduct,
-            authorizer))) {
+    if ((status = fmtpSender_create(&fmtpSender, fmtpSrvrInetAddr,
+            &fmtpSrvrPort, mcastGrpInetAddr, mcastGrpPort, mcastIface, ttl,
+            iProd, retxTimeout, mls_doneWithProduct, authorizer))) {
         log_add("Couldn't create FMTP sender");
         status = (status == 1)
                 ? LDM7_INVAL
                 : (status == 2)
                   ? LDM7_MCAST
                   : LDM7_SYSTEM;
-        goto free_mcastInfo;
+        goto close_prod_index_map;
     }
 
-    free(groupId);
-    free(srvrId);
+    isa_setPort(fmtpSrvrAddr, fmtpSrvrPort);
 
     done = 0;
 
     return 0;
 
-free_mcastInfo:
-    xdr_free(xdr_McastInfo, (char*)&mcastInfo);
 close_prod_index_map:
     (void)pim_close();
 close_pq:
@@ -699,7 +620,7 @@ mls_destroy(void)
 {
     int status = fmtpSender_terminate(fmtpSender);
 
-    (void)xdr_free(xdr_McastInfo, (char*)&mcastInfo);
+    smi_free(mcastGrpInfo);
     (void)pim_close();
     (void)pq_close(pq);
 
@@ -798,8 +719,8 @@ mls_setProdClass(
         status = LDM7_SYSTEM;
     }
     else {
-        (void)set_timestamp(&pc->from); // send products starting now
-        pc->psa.psa_val->feedtype = mcastInfo.feed;
+        (void)set_timestamp(&pc->from); // Send products starting now
+        pc->psa.psa_val->feedtype = smi_getFeed(mcastGrpInfo);
         *prodClass = pc;
         status = 0;
     } // `pc` allocated
@@ -985,31 +906,6 @@ stopAuthorization()
  * Executes a multicast LDM. Blocks until termination is requested or
  * an error occurs.
  *
- * @param[in]  info          Information on the multicast group.
- * @param[out] ttl           Time-to-live of outgoing packets.
- *                                0  Restricted to same host. Won't be output
- *                                   by any interface.
- *                                1  Restricted to the same subnet. Won't be
- *                                   forwarded by a router (default).
- *                              <32  Restricted to the same site, organization
- *                                   or department.
- *                              <64  Restricted to the same region.
- *                             <128  Restricted to the same continent.
- *                             <255  Unrestricted in scope. Global.
- * @param[in]  mcastIface    IP address of the interface to use to send
- *                           multicast packets. "0.0.0.0" obtains the default
- *                           multicast interface. Caller may free.
- * @param[in]  retxTimeout   FMTP retransmission timeout in minutes. Duration
- *                           that a product will be held by the FMTP layer being
- *                           released. If negative, then the default timeout is
- *                           used.
- * @param[in]  timeoutFactor Ratio of the duration that a data-product will
- *                           be held by the FMTP layer before being released
- *                           after being multicast to the duration to
- *                           multicast the product. If negative, then the
- *                           default timeout factor is used.
- * @param[in]  pqPathname    Pathname of the product-queue.
- * @param[in]  fmtpSubnet    Subnet for client FMTP TCP connections
  * @retval     0             Success. Termination was requested.
  * @retval     LDM7_INVAL.   Invalid argument. `log_add()` called.
  * @retval     LDM7_MCAST    Multicast sender failure. `log_add()` called.
@@ -1017,13 +913,7 @@ stopAuthorization()
  * @retval     LDM7_SYSTEM   System failure. `log_add()` called.
  */
 static Ldm7Status
-mls_execute(
-        const McastInfo* const restrict info,
-        const unsigned                  ttl,
-        const char* const restrict      mcastIface,
-        const float                     retxTimeout,
-        const char* const restrict      pqPathname,
-        const CidrAddr* const restrict  fmtpSubnet)
+mls_execute(void)
 {
     int status;
     /*
@@ -1046,9 +936,7 @@ mls_execute(
         log_add("Couldn't initialize authorization of remote clients");
     }
     else {
-        // Sets `mcastInfo`
-        status = mls_init(info, ttl, mcastIface, retxTimeout, pqPathname,
-                authorizer);
+        status = mls_init();
         unblockTermSigs(); // Done creating child threads
         if (status) {
             log_add("Couldn't initialize multicast LDM sender");
@@ -1065,9 +953,10 @@ mls_execute(
              *   remote FMTP clients.
              */
             if (printf("%" PRIu16 " %" PRIu16 "\n",
-                    isa_getPortFromId(mcastInfo.server, LDM_PORT),
+                    isa_getPort(smi_getFmtpSrvr(mcastGrpInfo)),
                     mldmSrvr_getPort(mldmCmdSrvr)) < 0) {
-                log_add_syserr("Couldn't write port numbers to standard output");
+                log_add_syserr(
+                        "Couldn't write port numbers to standard output");
                 status = LDM7_SYSTEM;
             }
             else {
@@ -1078,12 +967,12 @@ mls_execute(
                  * that the process will automatically terminate if something
                  * goes wrong.
                  */
-                char* miStr = mi_format(&mcastInfo);
+                char* miStr = smi_toString(mcastGrpInfo);
                 char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
                 log_notice_q("Multicast LDM sender starting up: mcastIface=%s, "
-                        "mcastInfo=%s, ttl=%u, " "fmtpSubnet=%s, "
+                        "mcastGrpInfo=%s, ttl=%u, fmtpSubnet=%s, "
                         "pq=\"%s\", mldmCmdPort=%hu", mcastIface, miStr, ttl,
-                        fmtpSubnetStr, pqPathname,
+                        fmtpSubnetStr, getQueuePath(),
                         mldmSrvr_getPort(mldmCmdSrvr));
                 free(fmtpSubnetStr);
                 free(miStr);
@@ -1123,14 +1012,7 @@ main(   const int    argc,
     /*
      * Decode the command-line.
      */
-    McastInfo*  groupInfo;         // multicast group information
-    unsigned    ttl = 1;           // Won't be forwarded by any router.
-    const char* mcastIface;        // IP address of multicast interface
-    // Ratio of product-hold duration to multicast duration
-    float       retxTimeout = -1;  // Use default
-    CidrAddr*   fmtpSubnet;        // FMTP client subnet
-    int         status = mls_decodeCommandLine(argc, argv, &groupInfo, &ttl,
-            &mcastIface, &retxTimeout, &fmtpSubnet);
+    int status = mls_decodeCommandLine(argc, argv);
 
     if (status) {
         log_add("Couldn't decode command-line");
@@ -1141,8 +1023,7 @@ main(   const int    argc,
     else {
         mls_setSignalHandling();
 
-        status = mls_execute(groupInfo, ttl, mcastIface, retxTimeout,
-                getQueuePath(), fmtpSubnet);
+        status = mls_execute();
         if (status) {
             log_error_q("Couldn't execute multicast LDM sender");
             switch (status) {
@@ -1154,8 +1035,10 @@ main(   const int    argc,
         }
 
         cidrAddr_delete(fmtpSubnet);
-        mi_free(groupInfo);
         log_notice_q("Terminating");
+
+        if (status)
+            smi_free(mcastGrpInfo);
     } // `groupInfo` allocated
 
     log_fini();

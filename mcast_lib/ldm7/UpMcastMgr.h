@@ -44,9 +44,10 @@ umm_setRetxTimeout(const float minutes);
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in] info         Information on the multicast group. The port number
+ * @param[in] mcastInfo    Information on the multicast group. The port number
  *                         of the FMTP TCP server is ignored (it will be chosen
- *                         by the operating sytem). Caller may free.
+ *                         by the operating system). Caller must not free if
+ *                         this function is successful.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -68,12 +69,12 @@ umm_setRetxTimeout(const float minutes);
  */
 Ldm7Status
 umm_addPotentialSender(
-    const struct in_addr              mcastIface,
-    const McastInfo* const restrict   info,
-    const unsigned short              ttl,
-    const VcEndPoint* const restrict  vcEnd,
-    const CidrAddr* const restrict    fmtpSubnet,
-    const char* const restrict        pqPathname);
+    const struct in_addr             mcastIface,
+    SepMcastInfo* const restrict     mcastInfo,
+    const unsigned short             ttl,
+    const VcEndPoint* const restrict vcEnd,
+    const CidrAddr* const restrict   fmtpSubnet,
+    const char* const restrict       pqPathname);
 
 /**
  * Returns the response to a multicast subscription request. Doesn't block.

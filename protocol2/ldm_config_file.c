@@ -32,7 +32,7 @@
 #include "autoshift.h"
 #include "down6.h"
 #if WANT_MULTICAST
-    #include "../mcast_lib/ldm7/down7_manager.h"
+    #include "down7_manager.h"
 #endif
 #include "error.h"
 #include "feedTime.h"
@@ -44,6 +44,9 @@
 #include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
+#if WANT_MULTICAST
+    #include "mcast_info.h"
+#endif
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
@@ -2992,36 +2995,10 @@ lcf_addAccept(
 
 #if WANT_MULTICAST
 
-/**
- * Adds a potential multicast LDM sender. The sender is not started. This
- * function should be called for all potential senders before any child
- * process is forked so that all child processes will have this information.
- *
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicasting
- *                         interface.
- * @param[in] info         Information on the multicast group. Caller may free.
- * @param[in] ttl          Time-to-live for multicast packets:
- *                                0  Restricted to same host. Won't be output by
- *                                   any interface.
- *                                1  Restricted to same subnet. Won't be
- *                                   forwarded by a router.
- *                              <32  Restricted to same site, organization or
- *                                   department.
- *                              <64  Restricted to same region.
- *                             <128  Restricted to same continent.
- *                             <255  Unrestricted in scope. Global.
- * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
- * @param[in] pqPathname   Pathname of product-queue. Caller may free.
- * @retval    0            Success.
- * @retval    EINVAL       Invalid specification. `log_add()` called.
- * @retval    ENOMEM       Out-of-memory. `log_add()` called.
- */
 int
 lcf_addMulticast(
         const struct in_addr             mcastIface,
-        const McastInfo* const restrict  mcastInfo,
+        SepMcastInfo* const restrict     mcastInfo,
         const unsigned short             ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,

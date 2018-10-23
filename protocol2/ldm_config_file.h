@@ -11,6 +11,7 @@
 #include "ldm.h"
 
 #include "InetSockAddr.h"
+#include "mcast_info.h"
 #include "peer_info.h"
 #include "UpFilter.h"
 #include "wordexp.h"
@@ -288,7 +289,8 @@ lcf_addAccept(
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicasting
  *                         interface.
- * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] mcastInfo    Information on the multicast group. Caller must not
+ *                         free if this function is successful.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -309,7 +311,7 @@ lcf_addAccept(
 int
 lcf_addMulticast(
         const struct in_addr             mcastIface,
-        const McastInfo* const restrict  mcastInfo,
+        SepMcastInfo* const restrict     mcastInfo,
         const unsigned short             ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,

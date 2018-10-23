@@ -569,7 +569,7 @@ sender_run(
     fds.events = POLLIN;
 
     char* upAddr = ipv4Sock_getLocalString(servSock);
-    log_info_q("Upstream LDM listening on %s", upAddr);
+    log_info("Upstream LDM listening on %s", upAddr);
     free(upAddr);
 
     sender_lock(sender);
@@ -747,7 +747,7 @@ sender_insertProducts(void)
         status = pq_insert(pq, &prod);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         char buf[LDM_INFO_MAX];
-        log_info_q("Inserted: prodInfo=\"%s\"",
+        log_info("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
         duration.tv_sec = 0;
@@ -757,22 +757,6 @@ sender_insertProducts(void)
     }
 
     free(data);
-}
-
-static int
-sender_setMcastInfo(
-        McastInfo** const mcastInfo,
-        const feedtypet   feedtype)
-{
-    const char mcastServAddr[] = "224.0.0.1:5173";
-    const char ucastServAddr[] = "127.0.0.1:0";
-
-    int status = mi_new(mcastInfo, feedtype, mcastServAddr, ucastServAddr);
-
-    if (status)
-        log_add("Couldn't create multicast information object");
-
-    return status;
 }
 
 /**
@@ -803,8 +787,9 @@ sender_start(
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(UP7_PQ_PATHNAME), 0);
     CU_ASSERT_EQUAL_FATAL(pq_open(getQueuePath(), PQ_THREADSAFE, &pq), 0);
 
-    McastInfo* mcastInfo;
-    CU_ASSERT_EQUAL_FATAL(sender_setMcastInfo(&mcastInfo, feed), 0);
+    SepMcastInfo* mcastInfo =
+            smi_newFromStr(feed, "224.0.0.1:5173", "127.0.0.1:0");
+    CU_ASSERT_PTR_NOT_NULL_FATAL(mcastInfo);
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
@@ -819,10 +804,12 @@ sender_start(
 
     const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
 
+    // The upstream multicast manager accepts responsibility for freeing
+    // `mcastInfo`
     CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME), 0);
 
-    char* mcastInfoStr = mi_format(mcastInfo);
+    char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
     log_notice("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
@@ -850,8 +837,6 @@ sender_start(
 
     cidrAddr_delete(fmtpSubnet);
     vcEndPoint_free(vcEnd);
-
-    mi_free(mcastInfo);
 }
 
 /**
@@ -995,7 +980,7 @@ requester_deleteAndRequest(const signaturet sig)
     else {
         if (log_is_enabled_info) {
             (void)sprint_signaturet(buf, sizeof(buf), sig);
-            log_info_q("Deleted data-product: prodIndex=%lu, sig=%s",
+            log_info("Deleted data-product: prodIndex=%lu, sig=%s",
                     (unsigned long)prodIndex, buf);
         }
 
@@ -1372,13 +1357,13 @@ test_up7_down7(
     sender_insertProducts();
 
     (void)sleep(2);
-    log_notice_q("%lu sender product-queue insertions",
+    log_notice("%lu sender product-queue insertions",
             (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
-    log_notice_q("%lu product deletions", (unsigned long)numDeletedProds);
-    log_notice_q("%lu receiver product-queue insertions",
+    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
+    log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
-    log_notice_q("%ld outstanding product reservations",
+    log_notice("%ld outstanding product reservations",
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
