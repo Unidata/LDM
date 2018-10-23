@@ -129,7 +129,7 @@
 000 001 232 005 Probability Cloud Ice Present    %                    PROBCIP          0  -9999.00
 000 001 233 000 Snow Liquid ratio                kg kg-1              SNOWLR           0  -9999.00
 000 001 242 005 Rel. Hum. wrt Precip. Water      %                    RHPW             0  -9999.00
-000 001 243 008 ?????????????????????????????    ?                    ????             0  -9999.00
+000 001 243 008 Reserved                         ?                    ????             0  -9999.00
 !
 ! momentum
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
