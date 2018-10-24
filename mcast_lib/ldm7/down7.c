@@ -199,7 +199,7 @@ static int
 up7Proxy_subscribe(
         feedtypet                        feed,
         const VcEndPoint* const restrict vcEnd,
-        McastInfo** const restrict       mcastInfo,
+        SepMcastInfo** const restrict    mcastInfo,
         in_addr_t* const restrict        ifaceAddr)
 {
     int status;
@@ -238,8 +238,10 @@ up7Proxy_subscribe(
                 log_add("subscribe_7() failure: status=%d", status);
             }
             else {
-                *mcastInfo = mi_clone(
-                        &reply->SubscriptionReply_u.info.mcastInfo);
+                *mcastInfo = smi_newFromStr(
+                        reply->SubscriptionReply_u.info.mcastInfo.feed,
+                        reply->SubscriptionReply_u.info.mcastInfo.group,
+                        reply->SubscriptionReply_u.info.mcastInfo.server);
                 *ifaceAddr = cidrAddr_getAddr(
                         &reply->SubscriptionReply_u.info.fmtpAddr);
             }
@@ -894,16 +896,16 @@ static McastRcvr mcastRcvr;
  */
 static int
 mcastRcvr_init(
-        McastInfo* const restrict  mcastInfo,
-        const char* const restrict fmtpIface,
-        const in_addr_t            ifaceAddr,
-        pqueue* const restrict     pq)
+        SepMcastInfo* const restrict mcastInfo,
+        const char* const restrict   fmtpIface,
+        const in_addr_t              ifaceAddr,
+        pqueue* const restrict       pq)
 {
     (void)memset(&mcastRcvr, 0, sizeof(mcastRcvr));
 
     mcastRcvr.mlr = NULL;
 
-    const char* fmtpSrvrId = mcastInfo->server;
+    const char* fmtpSrvrId = isa_getInetAddrStr(smi_getFmtpSrvr(mcastInfo));
     int         status = getDottedDecimal(fmtpSrvrId, mcastRcvr.fmtpSrvrAddr);
 
     if (status) {
@@ -997,10 +999,10 @@ mcastRcvr_run(void* const arg)
  */
 static Ldm7Status
 mcastRcvr_start(
-        McastInfo* const restrict  mcastInfo,
-        const char* const restrict fmtpIface,
-        const in_addr_t            ifaceAddr,
-        pqueue* const restrict     pq)
+        SepMcastInfo* const restrict mcastInfo,
+        const char* const restrict   fmtpIface,
+        const in_addr_t              ifaceAddr,
+        pqueue* const restrict       pq)
 {
     int status = mcastRcvr_init(mcastInfo, fmtpIface, ifaceAddr, pq);
 
@@ -1203,7 +1205,7 @@ typedef enum {
 typedef struct downlet {
     pthread_mutex_t mutex;            ///< Mutex
     pthread_cond_t  cond;             ///< Condition variable
-    McastInfo*      mcastInfo;        ///< information on multicast group
+    SepMcastInfo*   mcastInfo;        ///< information on multicast group
     /**
      * IP address of interface to use for receiving multicast and unicast
      * FMTP packets
@@ -1631,7 +1633,7 @@ downlet_destroyClient()
 
     downlet.sock = -1;
 
-    free(downlet.mcastInfo);
+    smi_free(downlet.mcastInfo);
 }
 
 /**
@@ -1785,12 +1787,12 @@ downlet_run()
                     downlet.feedId, isa_toString(down7.ldmSrvr));
         }
         else {
-            char* const miStr = mi_format(downlet.mcastInfo);
+            char* const miStr = smi_toString(downlet.mcastInfo);
             char        ifaceAddrStr[INET_ADDRSTRLEN];
 
             (void)inet_ntop(AF_INET, &downlet.ifaceAddr, ifaceAddrStr,
                     sizeof(ifaceAddrStr));
-            log_notice("Subscription reply from %s: mcastGroup=%s, "
+            log_info("Subscription reply from %s: mcastGroup=%s, "
                     "ifaceAddr=%s", isa_toString(down7.ldmSrvr), miStr,
                     ifaceAddrStr);
             free(miStr);
@@ -1802,14 +1804,14 @@ downlet_run()
                         downlet.feedId, isa_toString(down7.ldmSrvr));
             }
             else {
-                // Returns when concurrent task terminates
+                // Returns when a concurrent task terminates
                 status = downlet_wait();
 
                 log_debug("downlet_run(): Status changed");
                 (void)downlet_stopTasks();
             } // Subtasks created
 
-            mi_free(downlet.mcastInfo); // NULL safe
+            smi_free(downlet.mcastInfo); // NULL safe
             downlet.mcastInfo = NULL;
         } // `downlet.mcastInfo` set
 
@@ -2058,7 +2060,7 @@ down7_run()
     char* feedId = feedtypet_format(down7.feedtype);
     char* vcEndId = vcEndPoint_format(&down7.vcEnd);
     log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
-            "FmtpIface=%s, vcEndPoint=%s, pq=\"%s\"",
+            "fmtpIface=%s, vcEndPoint=%s, pq=\"%s\"",
             isa_toString(down7.ldmSrvr), feedId, down7.fmtpIface, vcEndId,
             pq_getPathname(down7.pq));
     free(vcEndId);

@@ -1066,11 +1066,11 @@ subscribe_7_svc(
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
     const char*               ipv4spec = inet_ntoa(xprt->xp_raddr.sin_addr);
-    const char*               hostname = hostbyaddr(&xprt->xp_raddr);
+    const char*               hostId = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(request->feed);
 
-    log_notice_q("Incoming subscription request from %s[%s]:%u for feed %s",
-            ipv4spec, hostname, ntohs(xprt->xp_raddr.sin_port), feedspec);
+    log_notice_q("Incoming subscription request from %s:%u for feed %s",
+            hostId, ntohs(xprt->xp_raddr.sin_port), feedspec);
     if (reply) {
         up7_ensureFree(xdr_SubscriptionReply, reply); // free possible prior use
         reply = NULL;
@@ -1096,16 +1096,17 @@ subscribe_7_svc(
             else {
                 if (!up7_createClientTransport(xprt)) {
                     log_error_q("Couldn't create client-side RPC transport to "
-                            " downstream host %s", hostname);
+                            " downstream host %s", hostId);
                 }
                 else {
                     // `clnt` set
                     reply = &result; // Successful reply
-                    char* const str = mi_format(
-                            &reply->SubscriptionReply_u.info.mcastInfo);
-                    log_notice("reply->status=%d, reply->info=%s",
-                            reply->status, str);
-                    free(str);
+
+                    //char* const str = mi_format(
+                            //&reply->SubscriptionReply_u.info.mcastInfo);
+                    //log_notice("reply->status=%d, reply->info=%s",
+                            //reply->status, str);
+                    //free(str);
                 } // Client-side transport to downstream LDM-7 created
             } // Product-queue is open
         } // Successful subscription: `result->status == LDM7_OK`

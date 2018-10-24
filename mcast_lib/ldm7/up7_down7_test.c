@@ -568,10 +568,6 @@ sender_run(
     fds.fd = servSock;
     fds.events = POLLIN;
 
-    char* upAddr = ipv4Sock_getLocalString(servSock);
-    log_info("Upstream LDM listening on %s", upAddr);
-    free(upAddr);
-
     sender_lock(sender);
     sender->executing = true;
     CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
@@ -804,22 +800,24 @@ sender_start(
 
     const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
 
-    // The upstream multicast manager accepts responsibility for freeing
+    // The upstream multicast manager takes responsibility for freeing
     // `mcastInfo`
     CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME), 0);
 
+    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
+
+    char* upAddr = ipv4Sock_getLocalString(sender->sock);
     char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-    log_notice("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
-            "subnet=%s", getQueuePath(), mcastInfoStr, vcEndPointStr,
-            fmtpSubnetStr);
+    log_notice("LDM7 server starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
+            "vcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
+            vcEndPointStr, fmtpSubnetStr);
     free(fmtpSubnetStr);
     free(vcEndPointStr);
     free(mcastInfoStr);
-
-    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
+    free(upAddr);
 
     sender->executing = false;
     sender->done = false;
@@ -1394,7 +1392,7 @@ int main(
     int          status = 1;
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_INFO);
+    log_set_level(LOG_LEVEL_NOTICE);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {

@@ -96,19 +96,19 @@ static sigset_t              termSigSet;
 /**
  * FMTP product-index to product-queue offset map.
  */
-static OffMap*               offMap;
+static OffMap*               indexToOffsetMap;
 /**
- * Pool of available IP addresses:
+ * Pool of available IP addresses for FMTP clients:
  */
-static void*                 inAddrPool;
+static void*                 fmtpClntAddrPool;
 /**
  * Authorizer of remote clients:
  */
 static void*                 authorizer;
 /**
- * Multicast group information:
+ * Multicast information:
  */
-static SepMcastInfo*         mcastGrpInfo;
+static SepMcastInfo*         mcastInfo;
 /**
  * Subnet for client FMTP TCP connections:
  */
@@ -118,13 +118,9 @@ static CidrAddr*             fmtpSubnet;
  */
 static void*                 mldmCmdSrvr;
 /**
- * Multicast LDM RPC server port in host byte-order:
+ * Multicast LDM RPC command-server thread:
  */
-static in_port_t             mldmSrvrPort;
-/**
- * Multicast LDM RPC server thread:
- */
-static pthread_t             mldmSrvrThread;
+static pthread_t             mldmCmdSrvrThrd;
 
 /**
  * Blocks termination signals for the current thread.
@@ -379,7 +375,7 @@ mls_decodeCommandLine(
                 status = 2;
             }
             else {
-                mcastGrpInfo = info;
+                mcastInfo = info;
                 mcastIface = mcastIf;
             }
         }
@@ -496,7 +492,7 @@ mls_doneWithProduct(
     const FmtpProdIndex prodIndex)
 {
     off_t offset;
-    int   status = om_get(offMap, prodIndex, &offset);
+    int   status = om_get(indexToOffsetMap, prodIndex, &offset);
     if (status) {
         log_error_q("Couldn't get file-offset corresponding to product-index %lu",
                 (unsigned long)prodIndex);
@@ -544,9 +540,9 @@ mls_init()
 {
     int status;
 
-    offMap = om_new();
+    indexToOffsetMap = om_new();
 
-    if (offMap == NULL) {
+    if (indexToOffsetMap == NULL) {
         log_add("Couldn't create prodIndex-to-prodQueueOffset map");
         status = LDM7_SYSTEM;
         goto return_status;
@@ -562,7 +558,7 @@ mls_init()
         goto free_offMap;
     }
 
-    if ((status = mls_openProdIndexMap(smi_getFeed(mcastGrpInfo),
+    if ((status = mls_openProdIndexMap(smi_getFeed(mcastInfo),
             pq_getSlotCount(pq))))
         goto close_pq;
 
@@ -570,14 +566,12 @@ mls_init()
     if ((status = pim_getNextProdIndex(&iProd)))
         goto close_prod_index_map;
 
-    InetSockAddr* const fmtpSrvrAddr = smi_getFmtpSrvr(mcastGrpInfo);
-    const char* const   fmtpSrvrInetAddr =
-            isa_getInetAddrStr(fmtpSrvrAddr, NULL);
+    InetSockAddr* const fmtpSrvrAddr = smi_getFmtpSrvr(mcastInfo);
+    const char* const   fmtpSrvrInetAddr = isa_getInetAddrStr(fmtpSrvrAddr);
     in_port_t           fmtpSrvrPort = isa_getPort(fmtpSrvrAddr);
 
-    InetSockAddr* const mcastGrpAddr = smi_getMcastGrp(mcastGrpInfo);
-    const char* const   mcastGrpInetAddr =
-            isa_getInetAddrStr(mcastGrpAddr, NULL);
+    InetSockAddr* const mcastGrpAddr = smi_getMcastGrp(mcastInfo);
+    const char* const   mcastGrpInetAddr = isa_getInetAddrStr(mcastGrpAddr);
     const in_port_t     mcastGrpPort = isa_getPort(mcastGrpAddr);
 
     if ((status = fmtpSender_create(&fmtpSender, fmtpSrvrInetAddr,
@@ -603,7 +597,7 @@ close_prod_index_map:
 close_pq:
     (void)pq_close(pq);
 free_offMap:
-    om_free(offMap);
+    om_free(indexToOffsetMap);
 return_status:
     return status;
 }
@@ -620,7 +614,7 @@ mls_destroy(void)
 {
     int status = fmtpSender_terminate(fmtpSender);
 
-    smi_free(mcastGrpInfo);
+    smi_free(mcastInfo);
     (void)pim_close();
     (void)pq_close(pq);
 
@@ -655,7 +649,7 @@ mls_multicastProduct(
 {
     off_t          offset = *(off_t*)arg;
     FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
-    int            status = om_put(offMap, iProd, offset);
+    int            status = om_put(indexToOffsetMap, iProd, offset);
     if (status) {
         log_add("Couldn't add product %lu, offset %lu to map",
                 (unsigned long)iProd, (unsigned long)offset);
@@ -679,7 +673,7 @@ mls_multicastProduct(
 
             if (status) {
                 off_t off;
-                (void)om_get(offMap, iProd, &off);
+                (void)om_get(indexToOffsetMap, iProd, &off);
                 status = LDM7_MCAST;
             }
             else {
@@ -720,7 +714,7 @@ mls_setProdClass(
     }
     else {
         (void)set_timestamp(&pc->from); // Send products starting now
-        pc->psa.psa_val->feedtype = smi_getFeed(mcastGrpInfo);
+        pc->psa.psa_val->feedtype = smi_getFeed(mcastInfo);
         *prodClass = pc;
         status = 0;
     } // `pc` allocated
@@ -838,25 +832,25 @@ static Ldm7Status
 startAuthorization(const CidrAddr* const fmtpSubnet)
 {
     Ldm7Status status;
-    inAddrPool = inAddrPool_new(fmtpSubnet);
-    if (inAddrPool == NULL) {
+    fmtpClntAddrPool = inAddrPool_new(fmtpSubnet);
+    if (fmtpClntAddrPool == NULL) {
         log_add_syserr("Couldn't create pool of available IP addresses");
         status = LDM7_SYSTEM;
     }
     else {
-        authorizer = auth_new(inAddrPool);
+        authorizer = auth_new(fmtpClntAddrPool);
         if (authorizer == NULL) {
             log_add_syserr("Couldn't create authorizer of remote clients");
         }
         else {
-            mldmCmdSrvr = mldmSrvr_new(inAddrPool);
+            mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrPool);
             if (mldmCmdSrvr == NULL) {
                 log_add_syserr("Couldn't create multicast LDM RPC "
                         "command-server");
                 status = LDM7_SYSTEM;
             }
             else {
-                status = pthread_create(&mldmSrvrThread, NULL, runMldmSrvr,
+                status = pthread_create(&mldmCmdSrvrThrd, NULL, runMldmSrvr,
                         mldmCmdSrvr);
                 if (status) {
                     log_add_syserr("Couldn't create multicast LDM RPC "
@@ -866,7 +860,6 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    mldmSrvrPort = mldmSrvr_getPort(mldmCmdSrvr);
                     status = LDM7_OK;
                 }
             } // `mldmSrvr` set
@@ -874,7 +867,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
                 auth_delete(authorizer);
         } // `authorizer` set
         if (status)
-            inAddrPool_delete(inAddrPool);
+            inAddrPool_delete(fmtpClntAddrPool);
     } // `inAddrPool` set
     return status;
 }
@@ -882,14 +875,14 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
 static void
 stopAuthorization()
 {
-    int   status = pthread_cancel(mldmSrvrThread);
+    int   status = pthread_cancel(mldmCmdSrvrThrd);
     if (status) {
         log_add_syserr("Couldn't cancel multicast LDM RPC command-server "
                 "thread");
     }
     else {
         void* result;
-        status = pthread_join(mldmSrvrThread, &result);
+        status = pthread_join(mldmCmdSrvrThrd, &result);
         if (status) {
             log_add_syserr("Couldn't join multicast LDM RPC command-server "
                     "thread");
@@ -897,7 +890,7 @@ stopAuthorization()
         else {
             mldmSrvr_free(mldmCmdSrvr);
             auth_delete(authorizer);
-            inAddrPool_delete(inAddrPool);
+            inAddrPool_delete(fmtpClntAddrPool);
         }
     }
 }
@@ -953,7 +946,7 @@ mls_execute(void)
              *   remote FMTP clients.
              */
             if (printf("%" PRIu16 " %" PRIu16 "\n",
-                    isa_getPort(smi_getFmtpSrvr(mcastGrpInfo)),
+                    isa_getPort(smi_getFmtpSrvr(mcastInfo)),
                     mldmSrvr_getPort(mldmCmdSrvr)) < 0) {
                 log_add_syserr(
                         "Couldn't write port numbers to standard output");
@@ -967,7 +960,7 @@ mls_execute(void)
                  * that the process will automatically terminate if something
                  * goes wrong.
                  */
-                char* miStr = smi_toString(mcastGrpInfo);
+                char* miStr = smi_toString(mcastInfo);
                 char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
                 log_notice_q("Multicast LDM sender starting up: mcastIface=%s, "
                         "mcastGrpInfo=%s, ttl=%u, fmtpSubnet=%s, "
@@ -1038,7 +1031,7 @@ main(   const int    argc,
         log_notice_q("Terminating");
 
         if (status)
-            smi_free(mcastGrpInfo);
+            smi_free(mcastInfo);
     } // `groupInfo` allocated
 
     log_fini();

@@ -243,8 +243,7 @@ mldm_exec(
     args[i++] = "-q";
     args[i++] = (char*)pqPathname; // safe cast
 
-    const char* const fmtpSrvrStr =
-            isa_getInetAddrStr(smi_getFmtpSrvr(info), NULL);
+    const char* const fmtpSrvrStr = isa_getInetAddrStr(smi_getFmtpSrvr(info));
     if (strcmp(fmtpSrvrStr, "0.0.0.0")) {
         args[i++] = "-s";
         // Safe cast because of `execvp()`
@@ -281,9 +280,9 @@ mldm_exec(
         goto free_fmtpSubnetArg;
     }
 
-    StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    log_info("Executing multicast LDM sender: %s", sbString(command));
-    sbFree(command);
+    //StrBuf* command = catenateArgs((const char**)args); // Safe cast
+    //log_info("Executing multicast LDM sender: %s", sbString(command));
+    //sbFree(command);
 
     execvp(args[0], args);
 
@@ -625,7 +624,7 @@ me_init(
     }
     else {
         char* const str = smi_toString(mcastInfo);
-        log_notice("me_init(): entry->info=%s", str);
+        //log_notice("me_init(): entry->info=%s", str);
         free(str);
 
         entry->info = mcastInfo;
@@ -707,7 +706,7 @@ me_new(
     }
     else {
         char* const str = smi_toString(mcastInfo);
-        log_notice("me_new(): info=%s", str);
+        //log_notice("me_new(): info=%s", str);
         free(str);
 
         status = me_init(ent, mcastIface, mcastInfo, ttl, vcEnd, fmtpSubnet,
@@ -873,7 +872,7 @@ me_reserve(
         }
         else {
             char buf[80];
-            log_notice("Reserved IP address %s for remote FMTP",
+            log_info("Reserved IP address %s for remote FMTP",
                     inet_ntop(AF_INET, downFmtpAddr, buf, sizeof(buf)));
         }
 
@@ -938,9 +937,9 @@ me_setSubscriptionReply(
     int               status;
     SubscriptionReply rep;
 
-    char* const str = smi_toString(entry->info);
-    log_notice("me_setSubscriptionReply(): entry->info=%s", str);
-    free(str);
+    //char* const str = smi_toString(entry->info);
+    //log_notice("me_setSubscriptionReply(): entry->info=%s", str);
+    //free(str);
 
     if (!mi_init(&rep.SubscriptionReply_u.info.mcastInfo,
             smi_getFeed(entry->info),
@@ -1022,9 +1021,9 @@ umm_addPotentialSender(
 {
     McastEntry* entry;
 
-    char* const str = smi_toString(mcastInfo);
-    log_notice("umm_addPotentialSender(): info=%s", str);
-    free(str);
+    //char* const str = smi_toString(mcastInfo);
+    //log_notice("umm_addPotentialSender(): info=%s", str);
+    //free(str);
 
     int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
             fmtpSubnet, pqPathname);
@@ -1070,9 +1069,9 @@ umm_subscribe(
         status = LDM7_NOENT;
     }
     else {
-        char* const str = smi_toString(entry->info);
-        log_notice("umm_subscribe(): entry->info=%s", str);
-        free(str);
+        //char* const str = smi_toString(entry->info);
+        //log_notice("umm_subscribe(): entry->info=%s", str);
+        //free(str);
 
         /*
          * Sets the port numbers of the FMTP server & RPC-command server of
@@ -1084,9 +1083,9 @@ umm_subscribe(
             log_add("Couldn't ensure running multicast sender");
         }
         else {
-            char* const str = smi_toString(entry->info);
-            log_notice("umm_subscribe(): entry->info=%s", str);
-            free(str);
+            //char* const str = smi_toString(entry->info);
+            //log_notice("umm_subscribe(): entry->info=%s", str);
+            //free(str);
 
             status = me_setSubscriptionReply(entry, reply);
 

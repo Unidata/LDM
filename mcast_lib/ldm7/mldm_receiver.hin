@@ -15,6 +15,7 @@
 #include "down7.h"
 #include "fmtp.h"
 #include "ldm.h"
+#include "mcast_info.h"
 #include "pq.h"
 
 typedef struct mlr Mlr;
