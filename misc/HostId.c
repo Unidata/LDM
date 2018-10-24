@@ -337,12 +337,13 @@ hostId_initSockAddr(
 }
 
 const char*
-hostId_getId(
-        const HostId* const restrict host,
-        bool* const restrict         idIsName)
+hostId_getId(const HostId* const restrict host)
 {
-    if (idIsName)
-        *idIsName = host->idIsName;
-
     return host->id;
+}
+
+bool
+hostId_idIsName(const HostId* const host)
+{
+    return host->idIsName;
 }

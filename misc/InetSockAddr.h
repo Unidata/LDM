@@ -83,14 +83,11 @@ isa_clone(const InetSockAddr* const isa);
  * address.
  *
  * @param[in,out] isa         Internet socket address
- * @param[out]    addrIsname  Is the address a name? May be `NULL`.
  * @retval        NULL        Failure. `log_add()` called.
  * @return                    String representation of the Internet address
  */
 const char*
-isa_getInetAddrStr(
-        const InetSockAddr* const restrict isa,
-        bool* const restrict               addrIsName);
+isa_getInetAddrStr(const InetSockAddr* const restrict isa);
 
 /**
  * Returns the port number of an Internet socket address.

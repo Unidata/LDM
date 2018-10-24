@@ -131,13 +131,20 @@ hostId_getName(HostId* const host);
  * initialization.
  *
  * @param[in] host       Host identifier
- * @param[out] idIsName  Returned ID is name? Pointer may be `NULL`.
  * @return               ID of the host
  */
 const char*
-hostId_getId(
-        const HostId* const restrict host,
-        bool* const restrict         idIsName);
+hostId_getId(const HostId* const host);
+
+/**
+ * Indicates if the identifier is based on a host name.
+ *
+ * @param[in] host       Host identifier
+ * @retval    `true`     The identifier is based on a host name
+ * @retval    `false`    The identifier is not based on a host name
+ */
+bool
+hostId_idIsName(const HostId* const host);
 
 /**
  * Returns the Internet socket address corresponding to a host identifier and
