@@ -1,3 +1,13 @@
+6.13.7.66
+    HostId and InetSockAddr:
+        - Created
+        - Modified code to use
+
+    Multicast Information:
+        - Replaced ServiceAddr-based implementation of `McastInfo` with
+          string-based one
+        - Created `SepMcastInfo` and modified code to use
+
 6.13.7.65	2018-10-23T09:35:33-0600
     g2varsncep.tbl, g2varswmo.tbl, & g2vcrdwmo.tbl:
         - Added entries from Gilbert and Leno (duplicated by NOAA). Gave to

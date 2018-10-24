@@ -34,7 +34,7 @@ AC_DEFUN([UD_PREFIX],
 ])
 
 
-dnl
+
 dnl Set the C-preprocessor flags as necessary.
 dnl
 AC_DEFUN([UD_CPPFLAGS],
