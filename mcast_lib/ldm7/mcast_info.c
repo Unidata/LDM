@@ -415,12 +415,13 @@ smi_free(SepMcastInfo* const smi)
 char*
 smi_toString(const SepMcastInfo* const smi)
 {
-    char* const feedStr = feedtypet_format(smi->feed);
+    char* const       feedStr = feedtypet_format(smi->feed);
     const char* const mcastGrpStr = isa_toString(smi->mcastGrp);
     const char* const fmtpSrvrStr = isa_toString(smi->fmtpSrvr);
-
-    char* const smiStr = ldm_format(256, "{feed=%s, mcastGrp=%s, "
+    char* const       smiStr = ldm_format(256, "{feed=%s, mcastGrp=%s, "
             "fmtpSrvr=%s}", feedStr, mcastGrpStr, fmtpSrvrStr);
+
+    free(feedStr);
 
     return smiStr;
 }

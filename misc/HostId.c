@@ -140,7 +140,7 @@ hostId_newFromId(const char* const id)
         host = log_malloc(sizeof(HostId), "host identifier");
 
         if (host) {
-            if (strlen(id) > sizeof(host->id)+1) {
+            if (strlen(id)+1 > sizeof(host->id)) {
                 log_add("Host ID is too long: \"%s\"", id);
                 status = EINVAL;
             }
@@ -172,8 +172,10 @@ hostId_newFromId(const char* const id)
                 }
             } // Host ID argument isn't too long
 
-            if (status)
+            if (status) {
                 free(host);
+                host = NULL;
+            }
         } // Host identifier allocated
     } // Non-null host ID argument
 

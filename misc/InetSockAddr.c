@@ -71,8 +71,10 @@ isa_newFromId(
                 free(addrId);
             } // Address ID allocated
 
-            if (status)
+            if (status) {
                 free(isa);
+                isa = NULL;
+            }
         } // Internet socket address allocated
     } // ID argument isn't NULL
 
@@ -166,9 +168,9 @@ isa_initSockAddr(
         struct addrinfo hints = {};
         hints.ai_family = family;
         // The address family must be compatible with the local host
-        hints.ai_flags = AI_ADDRCONFIG;
+        hints.ai_flags |= AI_ADDRCONFIG;
         // The `getaddrinfo()` call specifies the numeric port number
-        hints.ai_flags = AI_NUMERICSERV;
+        hints.ai_flags |= AI_NUMERICSERV;
         if (forBind)
             hints.ai_flags |= AI_PASSIVE;
 
@@ -360,21 +362,4 @@ isa_getPortFromId(
     }
 
     return port;
-}
-
-char*
-isa_newId(
-        char* const restrict ipAddrId,
-        const in_port_t      port)
-{
-    char* id;
-
-    if (ipAddrId == NULL) {
-        log_add("NULL argument");
-    }
-    else {
-
-    }
-
-    return id;
 }

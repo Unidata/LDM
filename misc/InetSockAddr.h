@@ -199,20 +199,6 @@ isa_getPortFromId(
         const char* const sockAddrId,
         const in_port_t   defaultPort);
 
-/**
- * Returns a new Internet socket address identifier.
- *
- * @param[in] ipAddrId  IP address identifier
- * @param[in] port      Port number in host byte order
- * @retval    `NULL`    Failure. `log_add()` called.
- * @return              New Internet socket address identifier. Caller should
- *                      free when it's no longer needed.
- */
-char*
-isa_newId(
-        char* const restrict ipAddrId,
-        const in_port_t      port);
-
 #ifdef __cplusplus
     }
 #endif
