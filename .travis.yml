@@ -30,6 +30,6 @@ addons:
 script: make distcheck >&distcheck.log
 
 after_failure:
-  - cat config.log
+  - cat distcheck.log
   - echo '#####################################################################'
   - echo '#####################################################################'
