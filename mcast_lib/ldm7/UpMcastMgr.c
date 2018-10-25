@@ -1161,5 +1161,11 @@ umm_clear(void)
         msm_clear();
         (void)msm_unlock();
     }
+
+    if (key.info) {
+        smi_free(key.info);
+        key.info = NULL;
+    }
+
     return status;
 }
