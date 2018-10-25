@@ -31,6 +31,6 @@ script: make distcheck >&distcheck.log
 
 after_failure:
   - pwd
-  - cat ldm-6.13.7.67/_build/protocol/ldm.h
+  - cat ldm-6.13.7.68/_build/protocol/ldm.h
   - echo '#####################################################################'
   - echo '#####################################################################'
