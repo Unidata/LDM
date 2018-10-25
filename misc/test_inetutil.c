@@ -188,7 +188,7 @@ main(
         }
 
         CU_cleanup_registry();
-    }                           /* CUnit registery allocated */
+    }                           /* CUnit registry allocated */
 
     return exitCode;
 }
