@@ -1,3 +1,11 @@
+6.13.7.68
+    NOAAPort:
+        Enable creation of a complete LDM product-identifier even if the
+        forecast time-interval of a GRIB2 field can't be decoded due to an
+        unknown PDTN.
+
+    Eliminated memory-leaks found by valgrind(1).
+
 6.13.7.67	2018-10-24T11:27:14-0600
     Removed Coverity Scan lint
 
