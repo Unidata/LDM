@@ -17,9 +17,10 @@ before_install:
   - autoconf --version
   - autoreconf -fi
   - fgrep RPCGEN_OPTS protocol/Makefile.in
+  - g++ -dumpversion
   - ./configure --disable-root-actions --with-noaaport --with-multicast
-  
-  - fgrep WANT_MULTICAST config.status
+  - fgrep MULTICAST config.status
+  - fgrep RPCGEN_OPTS protocol/Makefile
 
 #addons:
 #  coverity_scan:
