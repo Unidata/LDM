@@ -39,7 +39,7 @@ void cst_uclc ( char *str, char *outstr, int *iret )
 	   if ( isalpha(*str) && isupper(*str) ) {
 
 		 /*
-		  * Convert lower case to upper case,....
+		  * Convert upper case to lower case,....
 		  */
 	         *outstr = tolower(*str);
 	   }
