@@ -31,4 +31,5 @@ script: make distcheck
 
 after_failure:
   - pwd
+  - fgrep WANT_MULTICAST config.status
   - cat ldm-6.13.7.68/_build/protocol/Makefile
