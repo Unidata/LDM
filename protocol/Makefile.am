@@ -10,10 +10,9 @@ BUILT_SOURCES		=  ldm_svc.c ldm.h ldm_clnt.c ldm_xdr.c
 CLEANFILES		= *.i $(BUILT_SOURCES)
 EXTRA_DIST		= ldm.x fix_clnt.pl
 if WANT_MULTICAST
-RPCGEN			= @RPCGEN@ -C -DWANT_MULTICAST
-else
-RPCGEN			= @RPCGEN@ -C
+RPCGEN_OPTS		= -DWANT_MULTICAST
 endif
+RPCGEN			= @RPCGEN@ -C
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 nodist_include_HEADERS	= ldm.h
@@ -30,11 +29,11 @@ endif
 TAGS_FILES		= ../rpc/*.c ../rpc/*.h
 
 ldm.h:		ldm.x
-	$(RPCGEN) -h $(srcdir)/ldm.x | \
+	$(RPCGEN) $(RPCGEN_OPTS) -h $(srcdir)/ldm.x | \
 	sed 's/typedef *char *signaturet/typedef unsigned char signaturet/' > $@
 
 ldm_xdr.c:	ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -c $(srcdir)/ldm.x) | \
+	(echo '#include "config.h"'; $(RPCGEN) $(RPCGEN_OPTS) -c $(srcdir)/ldm.x) | \
 	sed \
 	  -e 's;'$(srcdir)'/ldm\.h;ldm.h;' \
 	  -e 's/xdr_opaque *( *xdrs, *objp, *16)/xdr_opaque(xdrs, (char*)objp, 16)/' \
@@ -48,7 +47,7 @@ ldm_xdr.c:	ldm.x
 # Also, the target-file must be modified to be more portable.
 #
 ldm_svc.c:	ldm.x
-	(echo '#include "config.h"'; $(RPCGEN) -m $(srcdir)/ldm.x) | sed \
+	(echo '#include "config.h"'; $(RPCGEN) $(RPCGEN_OPTS) -m $(srcdir)/ldm.x) | sed \
 	    -e 's;'$(srcdir)'/ldm\.h;ldm.h;' \
 	    -e 's;<rpc/svc_soc.h>;<rpc/rpc.h>;' \
 	    -e 's;feedme_6\([^A-Za-z_]\);feedme_6_svc\1;' \
@@ -81,7 +80,7 @@ ldm_svc.c:	ldm.x
 # an `xdr_void()` function for the (non-existant) return value.
 #
 ldm_clnt.c:	ldm.x fix_clnt.pl
-	(echo '#include "config.h"'; $(RPCGEN) -l $(srcdir)/ldm.x) > $@.tmp || \
+	(echo '#include "config.h"'; $(RPCGEN) $(RPCGEN_OPTS) -l $(srcdir)/ldm.x) > $@.tmp || \
 	    rm $@.tmp
 	$(PERL) $(srcdir)/fix_clnt.pl < $@.tmp > $@ && rm $@.tmp # fix stuff
 
