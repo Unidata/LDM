@@ -30,6 +30,7 @@ addons:
 script: make distcheck >&distcheck.log
 
 after_failure:
-  - cat distcheck.log
+  - pwd
+  - cat ldm-6.13.7.67/_build/protocol/ldm.h
   - echo '#####################################################################'
   - echo '#####################################################################'
