@@ -1,7 +1,7 @@
 env:
   global:
      # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-     #   via the "travis encrypt" command using the project repo's public key
+     # via the "travis encrypt" command using the project repo's public key
    - secure: "W0cXfQm1Z59U29HRGEBFyLJlGvvUphTva9RgmU31jr1mbC6r/mcdsP/pZN+RUPwY33Y1Fo3Q8M73RcAssuoO3pOXRxf+1pWJxoyK6S9VyjGGvvzZSptPD5+6achinHtVeOhgT/Xk48liwVAXM2I2XyHywzFl7qnOdnhSIQvWxMw="
 
 dist: trusty
@@ -17,20 +17,18 @@ before_install:
   - autoreconf -i
   - ./configure --disable-root-actions --with-noaaport --with-multicast
 
-addons:
-  coverity_scan:
-    project:
-      name: "Unidata/LDM"
-      description: "Event-driven data-distribution package"
-    notification_email: emmerson@ucar.edu
-    build_command_prepend: true
-    build_command:  "make"
-    branch_pattern: master
+#addons:
+#  coverity_scan:
+#    project:
+#      name: "Unidata/LDM"
+#      description: "Event-driven data-distribution package"
+#    notification_email: emmerson@ucar.edu
+#    build_command_prepend: true
+#    build_command:  "make"
+#    branch_pattern: master
 
-script: make distcheck >&distcheck.log
+script: make distcheck
 
 after_failure:
   - pwd
   - cat ldm-6.13.7.68/_build/protocol/ldm.h
-  - echo '#####################################################################'
-  - echo '#####################################################################'
