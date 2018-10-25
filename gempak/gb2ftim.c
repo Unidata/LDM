@@ -21,8 +21,10 @@ void gb2_ftim ( gribfield *gfld, char *gdattm, int *iaccm, int *iret )
  *                                      minimum of 20 bytes.            *
  *	*iaccm		int		Accumulation time		*
  *	*iret		int		return code			*
- *                                        -27 = Unrecognized PDT number *
- **									*
+ *                                        -27 = Unrecognized PDT number.*
+ *                                              `gdattm` contains only  *
+ *                                              one time.               *
+ * 									*
  * Log:									*
  * Chiz/Unidata		 3/00   Created from gb_gpds                    *
  * M. Li/GSC		 5/00	Added iret and cleaned up		*
