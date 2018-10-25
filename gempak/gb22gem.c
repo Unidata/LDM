@@ -1,7 +1,7 @@
 #include "config.h"
 
 #include "gb2def.h"
-#include <log.h>
+#include "log.h"
 
 #include <string.h>
 
@@ -18,12 +18,14 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
  *      *cmsg        struct gribmsg     current GRIB field              *
  *	*ivers		int		GRIB version number		*
  *	*iret		int		Return code			*
- *                                        0 = Successfull               *
+ *                                        0 = Successful                *
  *                                      -34 = Could not process GRIB2   *
  *                                            message                   *
  **									*
  * Log:									*
  * S. Gilbert/NCEP		 11/2004				*
+ * S. Emmerson/Unidata           10/2018                                *
+ *     Unknown PDTN when decoding time is no longer an error            *
  ***********************************************************************/
 {
 /*---------------------------------------------------------------------*/
@@ -64,6 +66,9 @@ void gb2_2gem( Gribmsg *cmsg, Geminfo *gem , char **tbls, int *iret )
      *    Convert Date/Time information
      */
     gb2_ftim ( tg, gdattm1, &iaccm, iret );
+    if (*iret == -27)
+        *iret = 0; // Not really an error
+
     strncpy( gem->gdattm1, gdattm1, DTTMSZ-1)[DTTMSZ-1] = 0;
     strncpy( gem->gdattm2, gdattm2, DTTMSZ-1)[DTTMSZ-1] = 0;
     cmsg->tmrange=iaccm;
