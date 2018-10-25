@@ -10,9 +10,10 @@ BUILT_SOURCES		=  ldm_svc.c ldm.h ldm_clnt.c ldm_xdr.c
 CLEANFILES		= *.i $(BUILT_SOURCES)
 EXTRA_DIST		= ldm.x fix_clnt.pl
 if WANT_MULTICAST
-    RPCGEN_OPTS		= -DWANT_MULTICAST
+RPCGEN			= @RPCGEN@ -C -DWANT_MULTICAST
+else
+RPCGEN			= @RPCGEN@ -C
 endif
-RPCGEN			= @RPCGEN@ -C $(RPCGEN_OPTS)
 PERL			= @PERL@
 noinst_LTLIBRARIES	= lib.la
 nodist_include_HEADERS	= ldm.h

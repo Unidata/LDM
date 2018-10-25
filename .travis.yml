@@ -31,4 +31,4 @@ script: make distcheck
 
 after_failure:
   - pwd
-  - cat ldm-6.13.7.68/_build/protocol/ldm.h
+  - cat ldm-6.13.7.68/_build/protocol/Makefile
