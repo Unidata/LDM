@@ -14,7 +14,7 @@ before_install:
   - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - sudo iptables -F
   - mkdir m4
-  - autoreconf -i
+  - autoreconf -fi
   - ./configure --disable-root-actions --with-noaaport --with-multicast
 
 #addons:
