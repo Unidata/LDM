@@ -594,8 +594,7 @@ typedef struct {
  * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  mcastInfo   Multicast information. Caller must not free if this
- *                         function succeeds.
+ * @param[in]  mcastInfo   Multicast information. Freed by `me_destroy()`.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
@@ -605,6 +604,7 @@ typedef struct {
  * @retval     LDM7_INVAL  `ttl` is too large. `log_add()` called.
  * @retval     LDM7_SYSTEM System error. `log_add()` called. The state of
  *                         `*entry` is unspecified.
+ * @see `me_destroy()`
  */
 static Ldm7Status
 me_init(
@@ -676,8 +676,7 @@ me_destroy(
  * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  mcastInfo   Multicast information. Caller must not free if this
- *                         function succeeds.
+ * @param[in]  mcastInfo   Multicast information. Freed by `me_free()`.
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
@@ -687,6 +686,7 @@ me_destroy(
  * @retval     LDM7_INVAL  `info->server->port` is not zero. `log_add()`
  *                         called.
  * @retval     LDM7_INVAL  `ttl` is too large. `log_add()` called.
+ * @see `me_free()`
  */
 static Ldm7Status
 me_new(

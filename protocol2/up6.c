@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 University Corporation for Atmospheric Research.
+ * Copyright 2018 University Corporation for Atmospheric Research.
  * All rights reserved.
  * See file "COPYRIGHT" in the top-level source-directory for conditions.
  *
@@ -565,31 +565,33 @@ static void up6_destroy(
     }
 }
 
-/*
- * Initializes the upstream LDM module.  This function prints diagnostic
- * messages via the ulog(3) module.
+/**
+ * Initializes the upstream LDM module.
  *
- * Arguments:
- *      socket          Connected socket to be used by up6_t module.
- *      downName        Pointer to name of host of downstream LDM.  Caller must
- *                      not free or modify on successful return.
- *      downAddr        Pointer to address of host of downstream LDM.  Caller
- *                      must not free or modify on successful return.
- *      prodClass       Pointer to class of products to send.  Caller must not
- *                      free or modify on successful return.
- *      signature       Pointer to the signature of the last, successfully-
- *                      received data-product.  May be NULL.
- *      pqPath          Pointer to pathname of product-queue.
- *      interval        pq_suspend() interval in seconds.
- *      upFilter        Pointer to product-class for filtering data-products.
- *                      May not be NULL.
- *      mode            Transfer mode: FEED or NOTIFY.
- *      isPrimary       If "mode == FEED", then data-product exchange-mode.
- * Returns:
- *      0                       Success.
- *      UP6_PQ                  Problem with the product-queue.
- *      UP6_SYSTEM_ERROR        System-error occurred.  Message should be
- *                              logged and errno is set.
+ * @param[in] socket            Connected socket to be used by up6_t module.
+ * @param[in] downName          Name of host of downstream LDM.  Caller may free
+ *                              after `up6_destroy()` is called.
+ * @param[in] downAddr          Pointer to address of host of downstream LDM.
+ *                              Caller may free after `up6_destroy()` is called.
+ * @param[in] prodClass         Pointer to class of products to send. Caller may
+ *                              free after `up6_destroy()` is called.
+ * @param[in] signature         Pointer to the signature of the last,
+ *                              successfully- received data-product.  May be
+ *                              NULL. Caller may free after `up6_destroy()` is
+ *                              called.
+ * @param[in] pqPath            Pointer to pathname of product-queue. Caller may
+ *                              free.
+ * @param[in] interval          pq_suspend() interval in seconds.
+ * @param[in] upFilter          Pointer to product-class for filtering
+ *                              data-products. May not be NULL. Caller may free
+ *                              after `up6_destroy()` is called.
+ * @param[in] mode              Transfer mode: FEED or NOTIFY.
+ * @param[in] isPrimary         If "mode == FEED", then data-product
+ *                              transfer-mode.
+ * @retval    0                 Success.
+ * @retval    UP6_PQ            Problem with the product-queue.
+ * @retval    UP6_SYSTEM_ERROR  System-error occurred.  `log_add()` called and
+ *                              `errno` set.
  */
 static up6_error_t up6_init(
         const int socket,

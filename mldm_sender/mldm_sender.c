@@ -513,21 +513,6 @@ mls_doneWithProduct(
  * was chosen by the operating-system). Upon return, all FMTP threads have been
  * created -- in particular,  the FMTP TCP server is listening.
  *
- * @param[in] info           Information on the multicast group. Caller must not
- *                           free on success.
- * @param[in] ttl            Time-to-live of outgoing packets.
- *                                0  Restricted to same host. Won't be output
- *                                   by any interface.
- *                                1  Restricted to the same subnet. Won't be
- *                                   forwarded by a router (default).
- *                              <32  Restricted to the same site, organization
- *                                   or department.
- *                              <64  Restricted to the same region.
- *                             <128  Restricted to the same continent.
- *                             <255  Unrestricted in scope. Global.
- * @param[in] mcastIface     IP address of the interface to use to send
- *                           multicast packets. "0.0.0.0" obtains the default
- *                           multicast interface. Caller may free.
  * @retval    0              Success. `*sender` is set.
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
  *                           IPv4 address because it's invalid or unknown.

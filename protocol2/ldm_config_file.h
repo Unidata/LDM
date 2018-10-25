@@ -39,9 +39,9 @@ extern "C" {
  * Adds an EXEC entry and executes the command as a child process.
  *
  * @param[in] words  Command-line words.
- * @retval    0      Success. Caller must *not* call `wordfree(wrdexpp)`.
- * @return           System error code. Caller should call `wordfree(wrdexpp)`
- *                   when `*wrdexpp` is no longer needed.
+ * @retval    0      Success.
+ * @return           System error code
+ * @see `lcf_freeExec()`
  */
 int
 lcf_addExec(wordexp_t *wrdexpp);
@@ -289,8 +289,8 @@ lcf_addAccept(
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicasting
  *                         interface.
- * @param[in] mcastInfo    Information on the multicast group. Caller must not
- *                         free if this function is successful.
+ * @param[in] mcastInfo    Information on the multicast group. Freed by
+ *                         `lcf_free()`.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -307,6 +307,7 @@ lcf_addAccept(
  * @retval    0            Success.
  * @retval    EINVAL       Invalid specification. `log_add()` called.
  * @retval    ENOMEM       Out-of-memory. `log_add()` called.
+ * @see `lcf_free()`
  */
 int
 lcf_addMulticast(

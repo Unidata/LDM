@@ -479,8 +479,7 @@ initFromYamlFile(
  * reentrant.
  *
  * @param[in] mrm           The multicast receiver memory to initialize.
- * @param[in] path          The path of the memory-file. Caller must not modify
- *                          or free.
+ * @param[in] path          The pathname of the memory-file
  * @retval    0             Success.
  * @retval    1             System error. `log_add()` called.
  * @retval    2             Memory-file doesn't exist.
@@ -554,12 +553,11 @@ initMutex(
  * Initializes a multicast receiver memory from scratch.
  *
  * @param[in] mrm    The multicast receiver memory to initialize.
- * @param[in] path   The path of the canonical memory-file. Caller must not
- *                   modify or free.
- * @param[in] path   The path of the temporary memory-file. Caller must not
- *                   modify or free.
+ * @param[in] path   The path of the canonical memory-file. Freed by
+ *                   `mrm_close()`.
  * @retval    true   Success.
  * @retval    false  Failure. `log_add()` called.
+ * @see `mrm_close()`
  */
 static bool
 initFromScratch(
@@ -606,8 +604,8 @@ initFromScratch(
  * from scratch if the memory-file doesn't exist. This function is reentrant.
  *
  * @param[in] mrm       The multicast receiver memory to initialize.
- * @param[in] path      The path of the canonical memory-file. Caller must not
- *                      modify or free.
+ * @param[in] path      The path of the canonical memory-file. Freed by
+ *                      `mrm_close()`.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */

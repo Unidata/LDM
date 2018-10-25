@@ -2319,12 +2319,12 @@ proc_exec(Process *proc)
 /**
  * Returns a new process-information object.
  *
- * @param[in] wrdexpp   List of command-line words.
+ * @param[in] wrdexpp   List of command-line words. Freed by `proc_free()`.
  * @retval    NULL      Failure. Error-message logged. Caller should call
  *                      `wordfree(wrdexpp)` when `*wrdexpp` is no longer
  *                      needed.
- * @return              Pointer to the new process-information. Caller must
- *                      *not* call `wordfree(wrdexpp)`.
+ * @return              Pointer to the new process-information
+ * @see `proc_free()`
  */
 static Process *
 proc_new(
@@ -2364,10 +2364,10 @@ static bool somethingToDo = false;
 /**
  * Adds an EXEC entry and executes the command as a child process.
  *
- * @param[in] words  Command-line words.
- * @retval    0      Success. Caller must *not* call `wordfree(wrdexpp)`.
- * @return           System error code. Caller should call `wordfree(wrdexpp)`
- *                   when `*wrdexpp` is no longer needed.
+ * @param[in] words  Command-line words. Freed by `lcf_freeExec()`.
+ * @retval    0      Success
+ * @return           System error code.
+ * @see `lcf_freeExec()`
  */
 int
 lcf_addExec(wordexp_t *wrdexpp)

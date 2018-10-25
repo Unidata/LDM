@@ -46,7 +46,7 @@ umm_setRetxTimeout(const float minutes);
  *                         interface.
  * @param[in] mcastInfo    Information on the multicast group. The port number
  *                         of the FMTP TCP server is ignored (it will be chosen
- *                         by the operating system). Caller must not free if
+ *                         by the operating system). Freed by `umm_clear()`.
  *                         this function is successful.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -66,6 +66,7 @@ umm_setRetxTimeout(const float minutes);
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
  *                         addition. Manager not modified. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @see `umm_clear()`
  */
 Ldm7Status
 umm_addPotentialSender(
