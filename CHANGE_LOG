@@ -1,3 +1,6 @@
+6.13.7.70
+    Merged receiver changes. "make check" succeeds.
+
 6.13.7.69	2018-10-26T08:45:30-0600
     inetutil:
         Remove AF_INET6 test of ServiceAddr because it didn't work on Travis CI
