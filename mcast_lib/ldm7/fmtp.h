@@ -20,7 +20,8 @@
 #include <sys/types.h>
 
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
+#define restrict
 #endif
 
 typedef uint32_t                FmtpProdIndex;

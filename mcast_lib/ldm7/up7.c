@@ -549,9 +549,7 @@ up7_subscribe(
         else {
             SubscriptionReply rep = {};
 
-            status = umm_subscribe(reducedFeed,
-                    noAl2s ? sockAddr->sin_addr.s_addr : INADDR_ANY,
-                    &rep);
+            status = umm_subscribe(reducedFeed, &rep);
 
             if (status) {
                 if (LDM7_NOENT == status) {

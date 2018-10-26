@@ -30,7 +30,7 @@ TEST_F(AuthorizerTest, Construction)
     inet_pton(AF_INET, "192.168.8.0", &addr);
     CidrAddr* subnet = cidrAddr_new(addr, 21);
     InAddrPool inAddrPool{*subnet};
-    Authorizer auth(inAddrPool);
+    Authorizer auth(inAddrPool, ANY);
     cidrAddr_delete(subnet);
 }
 
@@ -41,7 +41,7 @@ TEST_F(AuthorizerTest, Authorization)
     inet_pton(AF_INET, "192.168.8.0", &addr.s_addr);
     CidrAddr* subnet = cidrAddr_new(addr.s_addr, 21);
     InAddrPool inAddrPool{*subnet};
-    Authorizer auth(inAddrPool);
+    Authorizer auth(inAddrPool, ANY);
     EXPECT_FALSE(auth.isAuthorized(addr));
     addr.s_addr = inAddrPool.reserve();
     EXPECT_TRUE(auth.isAuthorized(addr));

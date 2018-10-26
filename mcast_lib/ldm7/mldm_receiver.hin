@@ -31,6 +31,7 @@ typedef void (*mlr_missed_product_func)(McastProdIndex iProd, void *obj);
 
 #ifdef __cplusplus
 extern "C" {
+#define restrict
 #endif
 
 @FUNCTION_DECLARATIONS@

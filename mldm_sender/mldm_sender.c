@@ -818,17 +818,20 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
     Ldm7Status status;
 
     fmtpClntAddrPool = inAddrPool_new(fmtpSubnet);
+
     if (fmtpClntAddrPool == NULL) {
         log_add_syserr("Couldn't create pool of available IP addresses");
         status = LDM7_SYSTEM;
     }
     else {
-        authorizer = auth_new(fmtpClntAddrPool);
+        authorizer = auth_new(fmtpClntAddrPool, smi_getFeed(mcastInfo));
+
         if (authorizer == NULL) {
             log_add_syserr("Couldn't create authorizer of remote clients");
         }
         else {
             mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrPool);
+
             if (mldmCmdSrvr == NULL) {
                 log_add_syserr("Couldn't create multicast LDM RPC "
                         "command-server");
@@ -837,6 +840,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
             else {
                 status = pthread_create(&mldmCmdSrvrThrd, NULL, runMldmSrvr,
                         mldmCmdSrvr);
+
                 if (status) {
                     log_add_syserr("Couldn't create multicast LDM RPC "
                             "command-server thread");
@@ -848,12 +852,15 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
                     status = LDM7_OK;
                 }
             } // `mldmSrvr` set
+
             if (status)
                 auth_delete(authorizer);
         } // `authorizer` set
+
         if (status)
             inAddrPool_delete(fmtpClntAddrPool);
     } // `inAddrPool` set
+
     return status;
 }
 

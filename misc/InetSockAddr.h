@@ -21,8 +21,8 @@
 typedef struct inetSockAddr InetSockAddr;
 
 #ifdef __cplusplus
-    extern "C" {
-    #define restrict
+extern "C" {
+#define restrict
 #endif
 
 /**
@@ -200,7 +200,7 @@ isa_getPortFromId(
         const in_port_t   defaultPort);
 
 #ifdef __cplusplus
-    }
+}
 #endif
 
 #endif /* MISC_INETSOCKADDR_H_ */

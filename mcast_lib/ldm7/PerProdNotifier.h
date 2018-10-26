@@ -120,6 +120,7 @@ private:
 
 #ifdef __cplusplus
     extern "C" {
+    #define restrict
 #endif
 
 int ppn_new(
@@ -133,7 +134,7 @@ void ppn_free(
         void* ppn);
 
 #ifdef __cplusplus
-}
+    }
 #endif
 
 #endif /* PER_PROD_NOTIFIER_H_ */

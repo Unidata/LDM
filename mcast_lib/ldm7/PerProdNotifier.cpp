@@ -13,8 +13,6 @@
 
 #include "config.h"
 
-#define restrict
-
 #include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"

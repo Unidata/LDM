@@ -39,10 +39,11 @@ extern "C" {
 /**
  * Adds an EXEC entry and executes the command as a child process.
  *
- * @param[in] words  Command-line words.
+ * @param[in] words  Command-line words. Freed by `lcf_freeExec()`.
  * @retval    0      Success. Caller must *not* call `wordfree(wrdexpp)`.
  * @return           System error code. Caller should call `wordfree(wrdexpp)`
  *                   when `*wrdexpp` is no longer needed.
+ * @see `lcf_freeExec()`
  */
 int
 lcf_addExec(wordexp_t *wrdexpp);
@@ -407,7 +408,7 @@ lcf_startRequesters(
 /**
  * Indicates if a given host is allowed to connect in any fashion. First line
  * of (weak) defense.
- * <p>
+ *
  * Of course, a serious threat would spoof the IP address or name service.
  *
  * @retval 0        Iff the host is not allowed to connect.

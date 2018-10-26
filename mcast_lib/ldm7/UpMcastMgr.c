@@ -950,7 +950,7 @@ me_setSubscriptionReply(
         status = LDM7_SYSTEM;
     }
     else {
-        SubnetLen prefixLen;
+        in_addr_t downFmtpAddr;
 
         status = me_reserve(entry, &downFmtpAddr);
 

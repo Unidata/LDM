@@ -25,11 +25,6 @@ extern "C" {
 #define restrict
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#define restrict
-#endif
-
 #ifdef IPPROTO_IP /* we included netinet/in.h, so struct sockaddr_in is */
 extern const char*    hostbyaddr(
     const struct sockaddr_in* const paddr);
