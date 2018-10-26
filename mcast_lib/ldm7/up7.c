@@ -91,7 +91,8 @@ static const char    python[] = "python"; ///< Name of python executable
  *                          end-point was specified
  * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
  */
-static int oess_provision(
+static int
+oess_provision(
         const char* const restrict       wrkGrpName,
         const char* const restrict       desc,
         const VcEndPoint* const restrict end1,
