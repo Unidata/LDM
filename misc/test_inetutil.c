@@ -85,34 +85,6 @@ test_sa_getInetSockAddr(void)
 }
 
 static void
-test_sa_getInet6SockAddr(void)
-{
-    static const char* const    IP_ADDR = "::1";
-    static const unsigned short PORT = 1;
-
-    ServiceAddr* serviceAddr;
-    int          status = sa_new(&serviceAddr, IP_ADDR, PORT);
-
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    struct sockaddr inetSockAddr;
-    socklen_t       sockLen;
-
-    status = sa_getInetSockAddr(serviceAddr, AF_INET6, true, &inetSockAddr,
-            &sockLen);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_EQUAL(((struct sockaddr_in6*)&inetSockAddr)->sin6_family,
-            AF_INET6);
-    unsigned char buf[16];
-    CU_ASSERT_EQUAL(inet_pton(AF_INET6, IP_ADDR, buf), 1);
-    CU_ASSERT_TRUE(memcmp(&((struct sockaddr_in6*)&inetSockAddr)->sin6_addr,
-            buf, sizeof(buf)) == 0);
-    CU_ASSERT_EQUAL(((struct sockaddr_in6*)&inetSockAddr)->sin6_port,
-            htons(PORT));
-    CU_ASSERT_EQUAL(sockLen, sizeof(struct sockaddr_in6));
-}
-
-static void
 sa_parse_test(
     const char* const inetId,
     const unsigned short port)
@@ -171,7 +143,6 @@ main(
             CU_ADD_TEST(testSuite, test_getDottedDecimal);
 #           if WANT_MULTICAST
                 CU_ADD_TEST(testSuite, test_sa_getInetSockAddr);
-                CU_ADD_TEST(testSuite, test_sa_getInet6SockAddr);
                 CU_ADD_TEST(testSuite, test_sa_parse);
                 CU_ADD_TEST(testSuite, test_sa_parseWithDefaults);
 #           endif
