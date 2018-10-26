@@ -1,7 +1,7 @@
 /**
- *   Copyright 2015, University Corporation for Atmospheric Research.
+ *   Copyright 2018, University Corporation for Atmospheric Research.
  *   All Rights reserved.
- *   <p>
+ *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -10,7 +10,8 @@
 
 #include "ldm.h"
 
-#include "error.h"
+#include "InetSockAddr.h"
+#include "mcast_info.h"
 #include "peer_info.h"
 #include "UpFilter.h"
 #include "wordexp.h"
@@ -289,7 +290,8 @@ lcf_addAccept(
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicasting
  *                         interface.
- * @param[in] info         Information on the multicast group. Caller may free.
+ * @param[in] mcastInfo    Information on the multicast group. Freed by
+ *                         `lcf_free()`.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -306,21 +308,22 @@ lcf_addAccept(
  * @retval    0            Success.
  * @retval    EINVAL       Invalid specification. `log_add()` called.
  * @retval    ENOMEM       Out-of-memory. `log_add()` called.
+ * @see `lcf_free()`
  */
 int
 lcf_addMulticast(
-        const struct in_addr     mcastIface,
-        const McastInfo* const   mcastInfo,
-        const unsigned short     ttl,
-        const VcEndPoint* const  vcEnd,
-        const CidrAddr* const    fmtpSubnet,
-        const char* const        pqPathname);
+        const struct in_addr             mcastIface,
+        SepMcastInfo* const restrict     mcastInfo,
+        const unsigned short             ttl,
+        const VcEndPoint* const restrict vcEnd,
+        const CidrAddr* const restrict   fmtpSubnet,
+        const char* const restrict       pqPathname);
 
 /**
  * Adds a potential downstream LDM-7.
  *
  * @param[in] feedtype     Feedtype to subscribe to.
- * @param[in] ldmSvcAddr   Upstream LDM-7 to which to subscribe. Caller may free.
+ * @param[in] ldmSrvr      Upstream LDM-7 to which to subscribe. Caller may free.
  * @param[in] fmtpIface    Name of interface to be created and used by FMTP
  *                         layer (e.g., "eth0.4000")
  * @param[in] switchId     Local AL2S switch or `NULL`, in which case this host
@@ -337,7 +340,7 @@ lcf_addMulticast(
 int
 lcf_addReceive(
         const feedtypet             feedtype,
-        ServiceAddr* const restrict ldmSvcAddr,
+        const InetSockAddr* const restrict ldmSrvr,
         const char* const restrict  fmtpIface,
         const char* restrict        switchId,
         const char* restrict        portId,

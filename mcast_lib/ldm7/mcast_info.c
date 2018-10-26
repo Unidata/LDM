@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmprint.h"
@@ -51,19 +52,19 @@
  * @retval     false      Failure. \c log_add() called. The state of `info` is
  *                        indeterminate.
  */
-static bool
+bool
 mi_init(
-    McastInfo* const restrict         info,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast)
+    McastInfo* const restrict  info,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast)
 {
-    if (!sa_copy(&info->group, mcast)) {
+    if ((info->group = strdup(mcast)) == NULL) {
         log_add("Couldn't copy multicast address");
         return false;
     }
 
-    if (!sa_copy(&info->server, ucast)) {
+    if ((info->server = strdup(ucast)) == NULL) {
         log_add("Couldn't copy unicast address");
         xdr_free(xdr_ServiceAddr, (char*)&info->group);
         return false;
@@ -85,8 +86,8 @@ mi_init(
  *                        should call `mi_free(*mcastInfo)` when it's no longer
  *                        needed.
  * @param[in]  feed       The feedtype of the multicast group.
- * @param[in]  mcast      The Internet address of the multicast group. The caller
- *                        may free.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
  * @param[in]  ucast      The Internet address of the unicast service for blocks
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
@@ -95,10 +96,10 @@ mi_init(
  */
 int
 mi_new(
-    McastInfo** const                 mcastInfo,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast)
+    McastInfo** const          mcastInfo,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast)
 {
     int              status;
     McastInfo* const info = log_malloc(sizeof(McastInfo),
@@ -130,8 +131,8 @@ void
 mi_destroy(
     McastInfo* const info)
 {
-    sa_destroy(&info->group);
-    sa_destroy(&info->server);
+    free(info->group);
+    free(info->server);
 }
 
 /**
@@ -165,7 +166,7 @@ mi_copy(
     McastInfo* const restrict       to,
     const McastInfo* const restrict from)
 {
-    return mi_init(to, from->feed, &from->group, &from->server)
+    return mi_init(to, from->feed, from->group, from->server)
             ? 0 : LDM7_SYSTEM;
 }
 
@@ -183,7 +184,7 @@ mi_clone(
 {
     McastInfo* clone;
 
-    return mi_new(&clone, info->feed, &info->group, &info->server)
+    return mi_new(&clone, info->feed, info->group, info->server)
             ? NULL
             : clone;
 }
@@ -210,8 +211,8 @@ mi_replaceServerId(
         return LDM7_SYSTEM;
     }
 
-    free(info->server.inetId);
-    info->server.inetId = dup;
+    free(info->server);
+    info->server = dup;
 
     return 0;
 }
@@ -248,7 +249,7 @@ mi_compareServers(
     const McastInfo* const restrict info1,
     const McastInfo* const restrict info2)
 {
-    return sa_compare(&info1->server, &info2->server);
+    return strcmp(info1->server, info2->server);
 }
 
 /**
@@ -270,7 +271,7 @@ mi_compareGroups(
     const McastInfo* const restrict info1,
     const McastInfo* const restrict info2)
 {
-    return sa_compare(&info1->group, &info2->group);
+    return strcmp(info1->group, info2->group);
 }
 
 /**
@@ -287,12 +288,8 @@ mi_asFilename(
     const McastInfo* const info)
 {
     const char* feedStr = s_feedtypet(info->feed);
-    char*       grpStr = sa_format(&info->group);
-    char*       svrStr = sa_format(&info->server);
-    char*       toString = ldm_format(256, "%s_%s_%s", feedStr, grpStr, svrStr);
-
-    free(grpStr);
-    free(svrStr);
+    char*       toString = ldm_format(256, "%s_%s_%s", feedStr, info->group,
+            info->server);
 
     return toString;
 }
@@ -318,25 +315,145 @@ mi_format(
         string = NULL;
     }
     else {
-        char* grpStr = sa_format(&info->group);
-        if (grpStr == NULL) {
-            log_add("Couldn't format multicast-group service-address");
-            string = NULL;
-        }
-        else {
-            char* svrStr = sa_format(&info->server);
-            if (svrStr == NULL) {
-                log_add("Couldn't format TCP-server service-address");
-                string = NULL;
-            }
-            else {
-                string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
-                        feedStr, grpStr, svrStr);
-                free(svrStr);
-            }
-            free(grpStr);
-        }
+        string = ldm_format(256, "{feed=%s, group=%s, server=%s}",
+                feedStr, info->group, info->server);
     }
 
     return string;
+}
+
+/******************************************************************************
+ * Separated-out multicast information:
+ ******************************************************************************/
+
+struct sepMcastInfo {
+    feedtypet feed;
+    InetSockAddr* mcastGrp;
+    InetSockAddr* fmtpSrvr;
+};
+
+/**
+ * Initializes a separated-out multicast information object.
+ *
+ * @param[in,out] smi
+ * @param[in]     feed         LDM7 feed
+ * @param[in]     mcastGrpStr  String representation of the multicast group
+ *                             address in the form
+ *                               - <name>[:<port>]
+ *                               - <nnn.nnn.nnn.nnn>[:<port>]
+ *                             The default port number is `LDM_PORT`. May be
+ *                             freed.
+ * @param[in]     fmtpSrvrStr  String representation of the FMTP server address
+ *                             in the form
+ *                               - <name>[:<port>]
+ *                               - <nnn.nnn.nnn.nnn>[:<port>]
+ *                             The default port number is 0. May be freed.
+ * @retval         0           Success
+ * @retval         -1          Failure. `log_add()` called.
+ */
+static int
+smi_initFromStr(
+        SepMcastInfo* const smi,
+        const feedtypet     feed,
+        const char* const   mcastGrpStr,
+        const char* const   fmtpSrvrStr)
+{
+    int                 status = -1;
+    InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
+
+    if (mcastGrp == NULL) {
+        log_add("isa_newFromId() failure");
+    }
+    else {
+        InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpSrvrStr, 0);
+
+        if (fmtpSrvr == NULL) {
+            log_add("isa_newFromId() failure");
+        }
+        else {
+            smi->feed = feed;
+            smi->mcastGrp = mcastGrp;
+            smi->fmtpSrvr = fmtpSrvr;
+            status = 0;
+        }
+
+        if (status)
+            isa_free(mcastGrp);
+    } // `mcastGrp` allocated
+
+    return status;
+}
+
+SepMcastInfo*
+smi_newFromStr(
+        const feedtypet     feed,
+        const char* const   mcastGrpStr,
+        const char* const   fmtpSrvrStr)
+{
+    SepMcastInfo* smi = log_malloc(sizeof(SepMcastInfo),
+            "separated-out multicast information object");
+
+    if (smi && smi_initFromStr(smi, feed, mcastGrpStr, fmtpSrvrStr)) {
+        log_add("smi_initFromStr() failure");
+        free(smi);
+        smi = NULL;
+    }
+
+    return smi;
+}
+
+void
+smi_free(SepMcastInfo* const smi)
+{
+    if (smi) {
+        isa_free(smi->fmtpSrvr);
+        isa_free(smi->mcastGrp);
+        free(smi);
+    }
+}
+
+char*
+smi_toString(const SepMcastInfo* const smi)
+{
+    char* const       feedStr = feedtypet_format(smi->feed);
+    const char* const mcastGrpStr = isa_toString(smi->mcastGrp);
+    const char* const fmtpSrvrStr = isa_toString(smi->fmtpSrvr);
+    char* const       smiStr = ldm_format(256, "{feed=%s, mcastGrp=%s, "
+            "fmtpSrvr=%s}", feedStr, mcastGrpStr, fmtpSrvrStr);
+
+    free(feedStr);
+
+    return smiStr;
+}
+
+void
+smi_setFeed(
+        SepMcastInfo* const smi,
+        const feedtypet     feed)
+{
+    smi->feed = feed;
+}
+
+feedtypet
+smi_getFeed(const SepMcastInfo* const smi)
+{
+    return smi->feed;
+}
+
+InetSockAddr*
+smi_getMcastGrp(const SepMcastInfo* const smi)
+{
+    return smi->mcastGrp;
+}
+
+InetSockAddr*
+smi_getFmtpSrvr(const SepMcastInfo* const smi)
+{
+    return smi->fmtpSrvr;
+}
+
+InetSockAddr*
+smi_getMcastFrp(const SepMcastInfo* const smi)
+{
+    return smi->mcastGrp;
 }

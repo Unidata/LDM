@@ -123,7 +123,6 @@ static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
 static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
 static pqueue*           receiverPq;
 static uint64_t          numDeletedProds;
-static const unsigned short FMTP_MCAST_PORT = 5173; // From Wireshark plug-in
 static ServiceAddr*      up7Addr;
 static VcEndPoint*       localVcEnd;
 static Executor*         executor;
@@ -254,8 +253,7 @@ setup(void)
                         "Couldn't construct upstream LDM7 service address");
             }
             else {
-                localVcEnd = vcEndPoint_new(1, "dummy_sender_switch_ID",
-                        "dummy_sender_port_ID");
+                localVcEnd = vcEndPoint_new(1, NULL, NULL);
 
                 if (localVcEnd == NULL) {
                     log_add("Couldn't construct local virtual-circuit endpoint");
@@ -570,10 +568,6 @@ sender_run(
     fds.fd = servSock;
     fds.events = POLLIN;
 
-    char* upAddr = ipv4Sock_getLocalString(servSock);
-    log_info_q("Upstream LDM listening on %s", upAddr);
-    free(upAddr);
-
     sender_lock(sender);
     sender->executing = true;
     CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
@@ -749,7 +743,7 @@ sender_insertProducts(void)
         status = pq_insert(pq, &prod);
         CU_ASSERT_EQUAL_FATAL(status, 0);
         char buf[LDM_INFO_MAX];
-        log_info_q("Inserted: prodInfo=\"%s\"",
+        log_info("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
 
         duration.tv_sec = 0;
@@ -759,39 +753,6 @@ sender_insertProducts(void)
     }
 
     free(data);
-}
-
-static int
-sender_setMcastInfo(
-        McastInfo** const mcastInfo,
-        const feedtypet   feedtype)
-{
-    ServiceAddr* mcastServAddr;
-    int          status = sa_new(&mcastServAddr, "224.0.0.1", FMTP_MCAST_PORT);
-
-    if (status) {
-        log_add("Couldn't create multicast service address object");
-    }
-    else {
-        ServiceAddr* ucastServAddr;
-
-        status = sa_new(&ucastServAddr, LOCAL_HOST, 0); // O/S selects port
-        if (status) {
-            log_add("Couldn't create unicast service address object");
-        }
-        else {
-            status = mi_new(mcastInfo, feedtype, mcastServAddr, ucastServAddr);
-            if (status) {
-                log_add("Couldn't create multicast information object");
-            }
-            else {
-                sa_free(ucastServAddr);
-                sa_free(mcastServAddr);
-            }
-        }
-    }
-
-    return status;
 }
 
 /**
@@ -822,12 +783,13 @@ sender_start(
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(UP7_PQ_PATHNAME), 0);
     CU_ASSERT_EQUAL_FATAL(pq_open(getQueuePath(), PQ_THREADSAFE, &pq), 0);
 
-    McastInfo* mcastInfo;
-    CU_ASSERT_EQUAL_FATAL(sender_setMcastInfo(&mcastInfo, feed), 0);
+    SepMcastInfo* mcastInfo =
+            smi_newFromStr(feed, "224.0.0.1:5173", "127.0.0.1:0");
+    CU_ASSERT_PTR_NOT_NULL_FATAL(mcastInfo);
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
-    VcEndPoint* vcEnd = vcEndPoint_new(1, "dummy switch ID", "dummy port ID");
+    VcEndPoint* vcEnd = vcEndPoint_new(1, NULL, NULL);
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
 
     in_addr_t subnet;
@@ -838,20 +800,24 @@ sender_start(
 
     const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
 
+    // The upstream multicast manager takes responsibility for freeing
+    // `mcastInfo`
     CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME), 0);
 
-    char* mcastInfoStr = mi_format(mcastInfo);
+    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
+
+    char* upAddr = ipv4Sock_getLocalString(sender->sock);
+    char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(vcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-    log_notice_q("LDM7 server starting up: pq=%s, mcastInfo=%s, vcEnd=%s, "
-            "subnet=%s", getQueuePath(), mcastInfoStr, vcEndPointStr,
-            fmtpSubnetStr);
+    log_notice("LDM7 server starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
+            "vcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
+            vcEndPointStr, fmtpSubnetStr);
     free(fmtpSubnetStr);
     free(vcEndPointStr);
     free(mcastInfoStr);
-
-    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
+    free(upAddr);
 
     sender->executing = false;
     sender->done = false;
@@ -869,8 +835,6 @@ sender_start(
 
     cidrAddr_delete(fmtpSubnet);
     vcEndPoint_free(vcEnd);
-
-    mi_free(mcastInfo);
 }
 
 /**
@@ -1014,7 +978,7 @@ requester_deleteAndRequest(const signaturet sig)
     else {
         if (log_is_enabled_info) {
             (void)sprint_signaturet(buf, sizeof(buf), sig);
-            log_info_q("Deleted data-product: prodIndex=%lu, sig=%s",
+            log_info("Deleted data-product: prodIndex=%lu, sig=%s",
                     (unsigned long)prodIndex, buf);
         }
 
@@ -1100,16 +1064,17 @@ requester_destroy(Requester* const requester)
  * Initializes a receiver.
  *
  * @param[in,out] receiver  Receiver object
- * @param[in]     addr      Address of sender: either hostname or IPv4 address
+ * @param[in]     addr      Address of sending LDM7: either hostname or IPv4
+ *                          address
  * @param[in]     port      Port number of sender in host byte-order
  * @param[in]     feedtype  The feedtype to which to subscribe
  */
 static void
 receiver_init(
         Receiver* const restrict   receiver,
-        const char* const restrict addr,
+        const char* const restrict ldmSrvrId,
         const unsigned short       port,
-        const feedtypet            feedtype)
+        const feedtypet            feed)
 {
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(DOWN7_PQ_PATHNAME), 0)
 
@@ -1124,25 +1089,24 @@ receiver_init(
     CU_ASSERT_EQUAL_FATAL(
             pq_open(DOWN7_PQ_PATHNAME, PQ_THREADSAFE, &receiverPq), 0);
 
-    ServiceAddr* servAddr;
-    CU_ASSERT_EQUAL_FATAL(sa_new(&servAddr, addr, port), 0);
+    InetSockAddr* ldmSrvr = isa_newFromId(ldmSrvrId, port);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(ldmSrvr);
 
     // Ensure no memory from a previous session
-    CU_ASSERT_EQUAL_FATAL(mrm_delete(servAddr, feedtype), true);
-    receiver->mrm = mrm_open(servAddr, feedtype);
+    CU_ASSERT_EQUAL_FATAL(mrm_delete(ldmSrvr, feed), true);
+    receiver->mrm = mrm_open(ldmSrvr, feed);
     CU_ASSERT_PTR_NOT_NULL_FATAL(receiver->mrm);
 
     numDeletedProds = 0;
 
-    VcEndPoint* const vcEnd = vcEndPoint_new(1, "dummy_receiver_switch_ID",
-            "dummy_receiver_port_ID");
+    VcEndPoint* const vcEnd = vcEndPoint_new(1, NULL, NULL);
     CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    int status = down7_init(servAddr, feedtype, "dummy", vcEnd, receiverPq,
+    int status = down7_init(ldmSrvr, feed, "dummy", vcEnd, receiverPq,
             receiver->mrm);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     vcEndPoint_free(vcEnd);
 
-    sa_free(servAddr);
+    isa_free(ldmSrvr);
 }
 
 /**
@@ -1391,13 +1355,13 @@ test_up7_down7(
     sender_insertProducts();
 
     (void)sleep(2);
-    log_notice_q("%lu sender product-queue insertions",
+    log_notice("%lu sender product-queue insertions",
             (unsigned long)NUM_PRODS);
     uint64_t numDownInserts = receiver_getNumProds(&receiver);
-    log_notice_q("%lu product deletions", (unsigned long)numDeletedProds);
-    log_notice_q("%lu receiver product-queue insertions",
+    log_notice("%lu product deletions", (unsigned long)numDeletedProds);
+    log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
-    log_notice_q("%ld outstanding product reservations",
+    log_notice("%ld outstanding product reservations",
             receiver_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
@@ -1428,7 +1392,7 @@ int main(
     int          status = 1;
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_INFO);
+    log_set_level(LOG_LEVEL_NOTICE);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {

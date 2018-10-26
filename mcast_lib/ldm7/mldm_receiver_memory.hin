@@ -13,6 +13,7 @@
 #define MCAST_SESSION_MEMORY_H
 
 #include "fmtp.h"
+#include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
 

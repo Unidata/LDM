@@ -13,6 +13,7 @@
 #define DOWN7_H
 
 #include "fmtp.h"
+#include "InetSockAddr.h"
 #include "ldm.h"
 #include "mldm_receiver_memory.h"
 #include "pq.h"

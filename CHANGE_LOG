@@ -1,3 +1,38 @@
+6.13.7.69	2018-10-26T08:45:30-0600
+    inetutil:
+        Remove AF_INET6 test of ServiceAddr because it didn't work on Travis CI
+
+    Travis CI:
+        Re-enable Coverity Scan
+
+6.13.7.68	2018-10-26T08:29:54-0600
+    NOAAPort:
+        Enable creation of a complete LDM product-identifier even if the
+        forecast time-interval of a GRIB2 field can't be decoded due to an
+        unknown PDTN.
+
+    Eliminated memory-leaks found by valgrind(1).
+
+6.13.7.67	2018-10-24T11:27:14-0600
+    Removed Coverity Scan lint
+
+6.13.7.66	2018-10-24T10:42:34-0600
+    HostId and InetSockAddr:
+        - Created
+        - Modified code to use
+
+    Multicast Information:
+        - Replaced ServiceAddr-based implementation of `McastInfo` with
+          string-based one
+        - Created `SepMcastInfo` and modified code to use
+
+6.13.7.65	2018-10-23T09:35:33-0600
+    g2varsncep.tbl, g2varswmo.tbl, & g2vcrdwmo.tbl:
+        - Added entries from Gilbert and Leno (duplicated by NOAA). Gave to
+          NOAA.
+        - Added "Surface to reserved" (yes, that's "reserved"), (001, 000)
+          to "g2vcrdwmo.tbl" -- for all the good it will do.
+
 6.13.7.64	2018-10-05T10:35:50-0600
     Added support for non-AL2S RECEIVE.
 

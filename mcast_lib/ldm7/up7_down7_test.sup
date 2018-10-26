@@ -53,11 +53,8 @@
    subscribe_7_svc sa_copy
    Memcheck:Leak
    match-leak-kinds: reachable
-   fun:malloc
-   fun:strdup
-   fun:sa_copy
+   ...
    fun:mi_init
-   fun:mi_copy
    fun:me_setSubscriptionReply
    fun:umm_subscribe
    fun:up7_subscribe

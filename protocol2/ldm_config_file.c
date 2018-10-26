@@ -44,6 +44,9 @@
 #include "ldmfork.h"
 #include "ldmprint.h"
 #include "log.h"
+#if WANT_MULTICAST
+    #include "mcast_info.h"
+#endif
 #include "pattern.h"
 #include "peer_info.h"
 #include "pq.h"
@@ -2316,12 +2319,12 @@ proc_exec(Process *proc)
 /**
  * Returns a new process-information object.
  *
- * @param[in] wrdexpp   List of command-line words.
+ * @param[in] wrdexpp   List of command-line words. Freed by `proc_free()`.
  * @retval    NULL      Failure. Error-message logged. Caller should call
  *                      `wordfree(wrdexpp)` when `*wrdexpp` is no longer
  *                      needed.
- * @return              Pointer to the new process-information. Caller must
- *                      *not* call `wordfree(wrdexpp)`.
+ * @return              Pointer to the new process-information
+ * @see `proc_free()`
  */
 static Process *
 proc_new(
@@ -2361,10 +2364,10 @@ static bool somethingToDo = false;
 /**
  * Adds an EXEC entry and executes the command as a child process.
  *
- * @param[in] words  Command-line words.
- * @retval    0      Success. Caller must *not* call `wordfree(wrdexpp)`.
- * @return           System error code. Caller should call `wordfree(wrdexpp)`
- *                   when `*wrdexpp` is no longer needed.
+ * @param[in] words  Command-line words. Freed by `lcf_freeExec()`.
+ * @retval    0      Success
+ * @return           System error code.
+ * @see `lcf_freeExec()`
  */
 int
 lcf_addExec(wordexp_t *wrdexpp)
@@ -2992,6 +2995,7 @@ lcf_addAccept(
 
 #if WANT_MULTICAST
 
+<<<<<<< HEAD
 /**
  * Adds a potential multicast LDM sender. The sender is not started. This
  * function should be called for all potential senders before any child
@@ -3018,10 +3022,12 @@ lcf_addAccept(
  * @retval    EINVAL       Invalid specification. `log_add()` called.
  * @retval    ENOMEM       Out-of-memory. `log_add()` called.
  */
+=======
+>>>>>>> branch 'master' of git@github.com:Unidata/LDM.git
 int
 lcf_addMulticast(
         const struct in_addr             mcastIface,
-        const McastInfo* const restrict  mcastInfo,
+        SepMcastInfo* const restrict     mcastInfo,
         const unsigned short             ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
@@ -3045,39 +3051,42 @@ lcf_addMulticast(
 
 int
 lcf_addReceive(
-        const feedtypet             feedtype,
-        ServiceAddr* const restrict ldmSvcAddr,
-        const char* const restrict  fmtpIface,
-        const char* restrict        switchId,
-        const char* restrict        portId,
-        const char* const restrict  al2sVlanId)
+        const feedtypet                    feedtype,
+        const InetSockAddr* const restrict ldmSrvr,
+        const char* const restrict         fmtpIface,
+        const char* restrict               switchId,
+        const char* restrict               portId,
+        const char* const restrict         al2sVlanId)
 {
     int        status;
     VcEndPoint vcEnd;
-    VlanId     vlanId;
+    VlanId     al2sVlanTag;
 
     if (switchId == NULL)
         switchId = "dummy";
     if (portId == NULL)
         portId = "dummy";
 
-    if (al2sVlanId == NULL &&
-            sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &vlanId) != 1) {
-        log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
-                fmtpIface);
-        status = EINVAL;
+    status = 0;
+    if (al2sVlanId == NULL) {
+        if (sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &al2sVlanTag) != 1) {
+            log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
+                    fmtpIface);
+            status = EINVAL;
+        }
     }
-    else {
-        status = 0;
+    else if (sscanf(al2sVlanId, "%hu", &al2sVlanTag) != 1) {
+        log_add("Couldn't decode VLAN tag \"%s\"", al2sVlanId);
+        status = EINVAL;
     }
 
     if (status == 0) {
-        if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
+        if (!vcEndPoint_init(&vcEnd, al2sVlanTag, switchId, portId)) {
             log_add("Couldn't construct virtual-circuit endpoint");
             status = ENOMEM;
         }
         else {
-            if (d7mgr_add(feedtype, ldmSvcAddr, fmtpIface, &vcEnd)) {
+            if (d7mgr_add(feedtype, ldmSrvr, fmtpIface, &vcEnd)) {
                 log_add("Couldn't add downstream LDM7");
                 status = ENOMEM;
             }

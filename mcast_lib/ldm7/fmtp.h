@@ -13,6 +13,7 @@
 #ifndef FMTP_C_API_H
 #define FMTP_C_API_H
 
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -59,15 +60,10 @@ void fmtpReceiver_stop(
  * @param[out]    sender        Pointer to returned sender. Caller should call
  *                              `fmtpSender_terminate(*sender)` when it's no
  *                              longer needed.
- * @param[in]     serverAddr    Dotted-decimal IPv4 address of the interface on
- *                              which the TCP server will listen for connections
- *                              from receivers for retrieving missed
- *                              data-blocks.
- * @param[in,out] serverPort    Port number for TCP server or 0, in which case
- *                              one is chosen by the operating system.
- * @param[in]     groupAddr     Dotted-decimal IPv4 address address of the
- *                              multicast group.
- * @param[in]     groupPort     Port number of the multicast group.
+ * @param[in]     serverAddr    Internet address of the sending FMTP server
+ * @param[in]     serverPort    Port number of the sending FMTP server
+ * @param[in]     groupAddr     Internet address of the multicast group.
+ * @param[in]     groupPort     Port number of the multicast group
  * @param[in]     mcastIface    IP address of the interface to use to send
  *                              multicast packets. "0.0.0.0" obtains the default
  *                              multicast interface. Caller may free.
@@ -101,9 +97,9 @@ int
 fmtpSender_create(
     FmtpSender** const     sender,
     const char* const      serverAddr,
-    unsigned short* const  serverPort,
+    in_port_t* const       serverPort,
     const char* const      groupAddr,
-    const unsigned short   groupPort,
+    const in_port_t        groupPort,
     const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,

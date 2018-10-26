@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -12,20 +12,43 @@
 #ifndef MCAST_INFO_H
 #define MCAST_INFO_H
 
+#include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
 
 #ifdef __cplusplus
 extern "C" {
+#define restrict
 #endif
+
+/**
+ * Initializes a multicast information object.
+ *
+ * @param[out] info       The multicast information object.
+ * @param[in]  feed       The feedtype of the multicast group.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
+ * @param[in]  ucast      The Internet address of the unicast service for blocks
+ *                        and files that are missed by the multicast receiver.
+ *                        The caller may free.
+ * @retval     true       Success. `info` is set.
+ * @retval     false      Failure. \c log_add() called. The state of `info` is
+ *                        indeterminate.
+ */
+bool
+mi_init(
+    McastInfo* const restrict  info,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast);
 
 /**
  * Returns a new multicast information object.
  *
  * @param[out] mcastInfo  Initialized multicast information object.
  * @param[in]  feed       The feedtype of the multicast group.
- * @param[in]  mcast      The Internet address of the multicast group. The caller
- *                        may free.
+ * @param[in]  mcast      The Internet address of the multicast group. The
+ *                        caller may free.
  * @param[in]  ucast      The Internet address of the unicast service for blocks
  *                        and files that are missed by the multicast receiver.
  *                        The caller may free.
@@ -34,10 +57,10 @@ extern "C" {
  */
 int
 mi_new(
-    McastInfo** const                 mcastInfo,
-    const feedtypet                   feed,
-    const ServiceAddr* const restrict mcast,
-    const ServiceAddr* const restrict ucast);
+    McastInfo** const          mcastInfo,
+    const feedtypet            feed,
+    const char* const restrict mcast,
+    const char* const restrict ucast);
 
 /**
  * Destroys a multicast information object.
@@ -168,6 +191,100 @@ mi_asFilename(
 char*
 mi_format(
     const McastInfo* const info);
+
+typedef struct sepMcastInfo SepMcastInfo;
+
+/**
+ * Returns a new separated-out multicast information object.
+ *
+ * @param[in] feed         LDM7 feed
+ * @param[in] mcastGrpStr  String representation of the multicast group address
+ *                         in the form
+ *                           - <name>[:<port>]
+ *                           - <nnn.nnn.nnn.nnn>[:<port>]
+ *                         The default port number is `LDM_PORT`. May be freed.
+ * @param[in] fmtpSrvrStr  String representation of the FMTP server address in
+ *                         the form
+ *                           - <name>[:<port>]
+ *                           - <nnn.nnn.nnn.nnn>[:<port>]
+ *                         The default port number is 0. May be freed.
+ * @retval    NULL         Failure. `log_add()` called.
+ */
+SepMcastInfo*
+smi_newFromStr(
+        const feedtypet     feed,
+        const char* const   mcastGrpStr,
+        const char* const   fmtpSrvrStr);
+
+/**
+ * Frees a separated-out multicast information object.
+ *
+ * @param[in,out] smi  Separated-out multicast information object
+ */
+void
+smi_free(SepMcastInfo* const smi);
+
+/**
+ * Returns the string representation of a separated-out multicast information
+ * object.
+ *
+ * @param[in] smi   Separated-out multicast information object
+ * @retval    NULL  Failure. `log_add()` called.
+ * @return          String representation. Caller should free when it's no
+ *                  longer needed.
+ */
+char*
+smi_toString(const SepMcastInfo* const smi);
+
+/**
+ * Sets the LDM7 feed of a separated-out multicast information object.
+ *
+ * @param[in,out] smi   Separated-out multicast information object
+ * @param[in]     feed  LDM7 feed
+ */
+void
+smi_setFeed(
+        SepMcastInfo* const smi,
+        const feedtypet     feed);
+
+/**
+ * Returns the LDM7 feed of a separated-out multicast information object.
+ *
+ * @param[in] smi   Separated-out multicast information object
+ * @return          LDM7 feed
+ */
+feedtypet
+smi_getFeed(const SepMcastInfo* const smi);
+
+/**
+ * Returns the Internet socket address of the multicast group of a separated-out
+ * multicast information object. Returns a pointer to the actual object.
+ *
+ * @param[in] smi   Separated-out multicast information object
+ * @return          Internet socket address of the multicast group
+ */
+InetSockAddr*
+smi_getMcastGrp(const SepMcastInfo* const smi);
+
+/**
+ * Returns the Internet socket address of the FMTP server of a separated-out
+ * multicast information object. Returns a pointer to the actual object.
+ *
+ * @param[in] smi   Separated-out multicast information object
+ * @return          Internet socket address of the FMTP server
+ */
+InetSockAddr*
+smi_getFmtpSrvr(const SepMcastInfo* const smi);
+
+/**
+ * Returns the Internet socket address of the multicast group of a separated-out
+ * multicast information object.
+ *
+ * @param[in] smi   Separated-out multicast information object
+ * @return          Internet socket address of the multicast group
+ */
+InetSockAddr*
+smi_getMcastGrp(const SepMcastInfo* const smi);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 env:
   global:
      # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-     #   via the "travis encrypt" command using the project repo's public key
+     # via the "travis encrypt" command using the project repo's public key
    - secure: "W0cXfQm1Z59U29HRGEBFyLJlGvvUphTva9RgmU31jr1mbC6r/mcdsP/pZN+RUPwY33Y1Fo3Q8M73RcAssuoO3pOXRxf+1pWJxoyK6S9VyjGGvvzZSptPD5+6achinHtVeOhgT/Xk48liwVAXM2I2XyHywzFl7qnOdnhSIQvWxMw="
 
 dist: trusty
@@ -14,8 +14,13 @@ before_install:
   - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - sudo iptables -F
   - mkdir m4
-  - autoreconf -i
+  #- autoconf --version
+  - autoreconf -fi
+  #- fgrep RPCGEN_OPTS protocol/Makefile.in
+  #- g++ -dumpversion
   - ./configure --disable-root-actions --with-noaaport --with-multicast
+  #- fgrep MULTICAST config.status
+  #- fgrep RPCGEN_OPTS protocol/Makefile
 
 addons:
   coverity_scan:
@@ -27,9 +32,7 @@ addons:
     build_command:  "make"
     branch_pattern: master
 
-script: make distcheck >&distcheck.log
+script: make distcheck
 
 after_failure:
-  - cat config.log
-  - echo '#####################################################################'
-  - echo '#####################################################################'
+  - pwd

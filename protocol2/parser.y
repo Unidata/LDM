@@ -416,80 +416,77 @@ decodeMulticastEntry(
     status = decodeFeedtype(&feed, feedSpec);
     
     if (0 == status) {
-        ServiceAddr* mcastGroupSa = NULL;
-        
-        if ((status = sa_parseWithDefaults(&mcastGroupSa, mcastGroupSpec, NULL,
-                LDM_PORT))) {
-            log_add("Couldn't parse multicast group specification: \"%s\"", 
-                    mcastGroupSpec);
+        unsigned short ttl;
+        int            nbytes;
+
+        if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
+                ttlSpec[nbytes] != 0) {
+            log_add("Couldn't parse time-to-live specification: "
+                    "\"%s\"",  ttlSpec);
         }
         else {
-            unsigned short ttl;
-            int            nbytes;
-
-            if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
-                    ttlSpec[nbytes] != 0) {
-                log_add("Couldn't parse time-to-live specification: "
-                        "\"%s\"",  ttlSpec);
+            ServiceAddr* fmtpServerSa;
+            if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) { // NB: port 0
+                log_add("Couldn't create service address for FMTP server");
             }
             else {
-                ServiceAddr* fmtpServerSa;
-                if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) { // NB: port 0
-                    log_add("Couldn't create service address for FMTP server");
+                unsigned short vlanId;
+                if ((sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
+                        vlanIdSpec[nbytes] != 0) {
+                    log_add("Couldn't parse VLAN ID specification \"%s\"",
+                            vlanIdSpec);
                 }
                 else {
-                    unsigned short vlanId;
-                    if ((sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
-                            vlanIdSpec[nbytes] != 0) {
-                        log_add("Couldn't parse VLAN ID specification \"%s\"",
-                                vlanIdSpec);
+                    CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetSpec);
+                    if (fmtpSubnet == NULL) {
+                        log_add("Couldn't parse FMTP subnet \"%s\"",
+                                fmtpSubnetSpec);
+                        status = LDM7_INVAL;
                     }
                     else {
-                        CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetSpec);
-                        if (fmtpSubnet == NULL) {
-                            log_add("Couldn't parse FMTP subnet \"%s\"",
-                                    fmtpSubnetSpec);
-                            status = LDM7_INVAL;
-                        }
-                        else {
-                            McastInfo* mcastInfo;
-                            status = mi_new(&mcastInfo, feed, mcastGroupSa,
-                                    fmtpServerSa);
-                            if (0 == status) {
-                                VcEndPoint* vcEnd = vcEndPoint_new(vlanId,
-                                        switchSpec, switchPortSpec);
-                                if (vcEnd == NULL) {
-                                    log_add("Couldn't construct virtual-"
-                                            "circuit endpoint");
-                                    status = LDM7_SYSTEM;
+                        SepMcastInfo* smi = smi_newFromStr(feed, mcastGroupSpec,
+                                fmtpAddrSpec);
+
+                        if (smi) {
+                            VcEndPoint* vcEnd = vcEndPoint_new(vlanId,
+                                    switchSpec, switchPortSpec);
+
+                            if (vcEnd == NULL) {
+                                log_add("Couldn't construct virtual-"
+                                        "circuit endpoint");
+                                status = LDM7_SYSTEM;
+                            }
+                            else {
+                                struct in_addr mcastIface;
+
+                                status = inet_pton(AF_INET, mcastIfaceSpec, 
+                                        &mcastIface);
+
+                                if (status != 1) {
+                                    log_add("Couldn't decode multicast "
+                                            "interface specification "
+                                            "\"%s\"", mcastIfaceSpec);
+                                    status = LDM7_INVAL;
                                 }
                                 else {
-                                    struct in_addr mcastIface;
-                                    status = inet_pton(AF_INET, mcastIfaceSpec, 
-                                            &mcastIface);
-                                    if (status != 1) {
-                                        log_add("Couldn't decode multicast "
-                                                "interface specification "
-                                                "\"%s\"", mcastIfaceSpec);
-                                        status = LDM7_INVAL;
-                                    }
-                                    else {
-                                        status = lcf_addMulticast(mcastIface,
-                                            mcastInfo, ttl, vcEnd, fmtpSubnet,
-                                            getQueuePath());
-                                    }
-                                    vcEndPoint_free(vcEnd);
-                                } // `vcEnd` allocated
-                                mi_free(mcastInfo);
-                            } // `mcastInfo` allocated
-                            cidrAddr_delete(fmtpSubnet);
-                        } // `fmtpSubnet` set
-                    } // `vlanId` set
-                    sa_free(fmtpServerSa);
-                } // `fmtpServerSa` allocated
-            } // `ttl` set
-            sa_free(mcastGroupSa);
-        } // `mcastGroupSa` allocated
+                                    status = lcf_addMulticast(mcastIface,
+                                        smi, ttl, vcEnd, fmtpSubnet,
+                                        getQueuePath());
+                                }
+
+                                vcEndPoint_free(vcEnd);
+                            } // `vcEnd` allocated
+                            
+                            if (status)
+                                smi_free(smi);
+                        } // `smi` allocated
+
+                        cidrAddr_delete(fmtpSubnet);
+                    } // `fmtpSubnet` set
+                } // `vlanId` set
+                sa_free(fmtpServerSa);
+            } // `fmtpServerSa` allocated
+        } // `ttl` set
     } // `feed` set
     
     return status;
@@ -499,7 +496,7 @@ decodeMulticastEntry(
  * Decodes a RECEIVE entry.
  *
  * @param[in] feedtypeSpec   Specification of feedtype.
- * @param[in] LdmServerSpec  Specification of upstream LDM server.
+ * @param[in] ldmServerSpec  Specification of upstream LDM server.
  * @param[in] fmtpIface      Name of interface to be created and used by FMTP
  *                           layer (e.g., "ens33.232")
  * @param[in] switchId       Local AL2S switch ID
@@ -522,22 +519,22 @@ processReceiveEntry(
     int         status = decodeFeedtype(&feedtype, feedtypeSpec);
 
     if (0 == status) {
-        ServiceAddr* ldmSvcAddr;
+        InetSockAddr* const ldmSrvr = isa_newFromId(ldmServerSpec,
+            LDM_PORT);
 
-        status = sa_parseWithDefaults(&ldmSvcAddr, ldmServerSpec, NULL,
-                ldmPort);       // Internet ID must exist; port is optional
-
-        if (status) {
-            log_add("Couldn't parse receive entry");
+        if (ldmSrvr == NULL) {
+            log_add("Couldn't create server address from \"%s\"",
+                ldmServerSpec);
         }
         else {
-            status = lcf_addReceive(feedtype, ldmSvcAddr, fmtpIface,
+            status = lcf_addReceive(feedtype, ldmSrvr, fmtpIface,
                     switchId, portId, al2sVlanId);
 
             if (status)
                 log_add("Couldn't add RECEIVE entry");
-            sa_free(ldmSvcAddr);
-        } // `ldmSvcAddr` allocated
+                
+            isa_free(ldmSrvr);
+        } // `ldmSrvr` allocated
     } // `feedtype` set
 
     return status;
