@@ -38,6 +38,7 @@ lib_la_SOURCES		= \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
+			  FmtpClntAddrs.cpp FmtpClntAddrs.h \
 			  MldmRpc.cpp MldmRpc.h
 #			  AuthClient.cpp AuthClient.h
 AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \

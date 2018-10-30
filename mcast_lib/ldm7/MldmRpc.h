@@ -10,6 +10,7 @@
 #define MCAST_LIB_LDM7_MLDMRPC_H_
 
 #include "ldm.h"
+#include "FmtpClntAddrs.h"
 
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -66,26 +67,6 @@ Ldm7Status mldmClnt_release(
 void mldmClnt_free(void* mldmClnt);
 
 /**
- * Creates.
- * @param[in] subnet Subnet specification
- * @retval NULL      Failure. `log_add()` called.
- */
-void* inAddrPool_new(const CidrAddr* subnet);
-
-/**
- * Indicates if an IP address has been previously reserved.
- * @param[in]        IP address pool
- * @param[in] addr   IP address to check
- * @retval `true`    IP address has been previously reserved
- * @retval `false`   IP address has not been previously reserved
- */
-bool inAddrPool_isReserved(
-        void*           inAddrPool,
-        const in_addr_t addr);
-
-void inAddrPool_delete(void* inAddrPool);
-
-/**
  * Constructs. Creates a listening server-socket and a file that contains a
  * secret that can be shared by other processes belonging to the same user.
  * @param[in] inAddrPool     Pool of available IP addresses
@@ -138,6 +119,8 @@ void mldmSrvr_free(void* mldmSrvr);
 /// Multicast LDM RPC actions
 typedef enum MldmRpcAct
 {
+    /// Allow an IPv4 address
+    ALLOW_ADDR,
     /// Reserve an IP address
     RESERVE_ADDR,
     /// Release a previously-reserved IP address
@@ -177,51 +160,6 @@ public:
 };
 
 /**
- * Thread-safe pool of available IP addresses.
- */
-class InAddrPool final
-{
-    class                 Impl;
-    std::shared_ptr<Impl> pImpl;
-
-public:
-    /**
-     * Constructs.
-     * @param[in] subnet Subnet specification
-     */
-    InAddrPool(const CidrAddr& subnet);
-
-    /**
-     * Reserves an address.
-     * @return                    Reserved address in network byte-order
-     * @throw std::out_of_range   No address is available
-     * @threadsafety              Safe
-     * @exceptionsafety           Strong guarantee
-     */
-    in_addr_t reserve() const;
-
-    /**
-     * Indicates if an IP address has been previously reserved.
-     * @param[in] addr   IP address to check
-     * @retval `true`    IP address has been previously reserved
-     * @retval `false`   IP address has not been previously reserved
-     * @threadsafety     Safe
-     * @exceptionsafety  Nothrow
-     */
-    bool isReserved(const in_addr_t addr) const noexcept;
-
-    /**
-     * Releases an address so that it can be subsequently reserved.
-     * @param[in] addr          Reserved address to be released in network
-     *                          byte-order
-     * @throw std::logic_error  `addr` wasn't previously reserved
-     * @threadsafety            Safe
-     * @exceptionsafety         Strong guarantee
-     */
-    void release(const in_addr_t addr) const;
-}; // class InAddrPool
-
-/**
  * Multicast LDM RPC server.
  */
 class MldmSrvr final
@@ -235,7 +173,7 @@ public:
      * secret.
      * @param[in] inAddrPool     Pool of available IP addresses
      */
-    MldmSrvr(InAddrPool& inAddrPool);
+    MldmSrvr(FmtpClntAddrs& inAddrPool);
 
     /**
      * Returns the port number of the multicast LDM RPC server.

@@ -817,7 +817,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
 {
     Ldm7Status status;
 
-    fmtpClntAddrPool = inAddrPool_new(fmtpSubnet);
+    fmtpClntAddrPool = fmtpClntAddrs_new(fmtpSubnet);
 
     if (fmtpClntAddrPool == NULL) {
         log_add_syserr("Couldn't create pool of available IP addresses");
@@ -858,7 +858,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
         } // `authorizer` set
 
         if (status)
-            inAddrPool_delete(fmtpClntAddrPool);
+            fmtpClntAddrs_delete(fmtpClntAddrPool);
     } // `inAddrPool` set
 
     return status;
@@ -882,7 +882,7 @@ stopAuthorization()
         else {
             mldmSrvr_free(mldmCmdSrvr);
             auth_delete(authorizer);
-            inAddrPool_delete(fmtpClntAddrPool);
+            fmtpClntAddrs_delete(fmtpClntAddrPool);
         }
     }
 }

@@ -10,7 +10,7 @@
 #ifndef MCAST_LIB_LDM7_AUTHORIZER_H_
 #define MCAST_LIB_LDM7_AUTHORIZER_H_
 
-#include "MldmRpc.h"
+#include "FmtpClntAddrs.h"
 
 #include <arpa/inet.h>
 
@@ -25,13 +25,15 @@ class Authorizer
 public:
     /**
      * Constructs.
-     * @param[in] inAddrPool  Pool of IP addresses
+     *
+     * @param[in] addrs       FMTP client IP addresses
      * @param[in] feed        Outgoing LDM feed
      */
-    Authorizer(InAddrPool& inAddrPool, const feedtypet feed);
+    Authorizer(FmtpClntAddrs& addrs, const feedtypet feed);
 
     /**
-     * Indicates if a client is authorized to connect to the server FMTP layer.
+     * Indicates if an FMTP client is authorized to connect.
+     *
      * @param[in] clntAddr  Address of client
      * @retval `true`       Client is authorized
      * @retval `false`      Client is not authorized

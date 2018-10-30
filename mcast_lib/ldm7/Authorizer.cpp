@@ -21,21 +21,21 @@
 
 class Authorizer::Impl
 {
-    InAddrPool inAddrPool;
+    FmtpClntAddrs fmtpClntAddrs;
     feedtypet  feed;
 
 public:
     /**
      * Constructs.
      */
-    explicit Impl(InAddrPool& inAddrPool, const feedtypet feed)
-        : inAddrPool{inAddrPool}
+    explicit Impl(FmtpClntAddrs& addrs, const feedtypet feed)
+        : fmtpClntAddrs{addrs}
         , feed{feed}
     {}
 
     inline bool isAuthorized(const struct in_addr& clntAddr) const noexcept
     {
-        bool authorized = inAddrPool.isReserved(clntAddr.s_addr);
+        bool authorized = fmtpClntAddrs.isAllowed(clntAddr.s_addr);
 
         if (!authorized) {
             struct sockaddr_in sockAddrIn = {};
@@ -53,9 +53,9 @@ public:
 };
 
 Authorizer::Authorizer(
-        InAddrPool&     inAddrPool,
+        FmtpClntAddrs&  addrs,
         const feedtypet feed)
-    : pImpl{new Impl(inAddrPool, feed)}
+    : pImpl{new Impl(addrs, feed)}
 {}
 
 bool Authorizer::isAuthorized(const struct in_addr& clntAddr) const noexcept
@@ -71,7 +71,7 @@ void* auth_new(
         void*           inAddrPool,
         const feedtypet feed)
 {
-    return new Authorizer(*static_cast<InAddrPool*>(inAddrPool), feed);
+    return new Authorizer(*static_cast<FmtpClntAddrs*>(inAddrPool), feed);
 }
 
 void auth_delete(void* const authorizer)

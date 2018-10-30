@@ -14,7 +14,6 @@
 #include "TcpSock.h"
 
 #include <chrono>
-#include <deque>
 #include <fcntl.h>
 #include <mutex>
 #include <random>
@@ -22,13 +21,6 @@
 #include <system_error>
 #include <unistd.h>
 #include <unordered_set>
-
-static std::string to_string(const CidrAddr& addr)
-{
-    char buf[INET_ADDRSTRLEN];
-    return std::string{::inet_ntop(AF_INET, &addr.addr, buf, sizeof(buf))} +
-            "/" + std::to_string(addr.prefixLen);
-}
 
 /**
  * Returns the pathname of the file that contains the authorization secret.
@@ -206,136 +198,14 @@ void mldmClnt_free(void* mldmClnt)
 }
 
 /******************************************************************************
- * Pool of Available IP Addresses:
- ******************************************************************************/
-class InAddrPool::Impl final
-{
-    /// Available IP addresses
-    std::deque<in_addr_t>           available;
-    /// Allocated IP addresses
-    std::unordered_set<in_addr_t>   allocated;
-    /// Concurrency support
-    typedef std::mutex              Mutex;
-    typedef std::lock_guard<Mutex>  LockGuard;
-    mutable Mutex                   mutex;
-
-public:
-    /**
-     * Constructs.
-     * @param[in] cidr               Subnet specification
-     */
-    Impl(const CidrAddr& cidr)
-        // Parentheses are needed to obtain correct construction
-        : available(cidrAddr_getNumHostAddrs(&cidr), cidrAddr_getSubnet(&cidr))
-        , allocated{}
-        , mutex{}
-    {
-        log_debug(("cidr=" + to_string(cidr)).c_str());
-        auto size = available.size();
-        // Doesn't include network or broadcast address
-        for (in_addr_t i = 1; i <= size; ++i)
-            available[i-1] |= htonl(i);
-    }
-
-    /**
-     * Reserves an address.
-     * @return                    Reserved address in network byte-order
-     * @throw std::out_of_range   No address is available
-     * @threadsafety              Safe
-     * @exceptionsafety           Strong guarantee
-     */
-    in_addr_t reserve()
-    {
-        LockGuard lock{mutex};
-        in_addr_t addr = {available.at(0)};
-        available.pop_front();
-        allocated.insert(addr);
-        return addr;
-    }
-
-    /**
-     * Indicates if an IP address has been previously reserved.
-     * @param[in] addr   IP address to check
-     * @retval `true`    IP address has been previously reserved
-     * @retval `false`   IP address has not been previously reserved
-     * @threadsafety     Safe
-     * @exceptionsafety  Nothrow
-     */
-    bool isReserved(const in_addr_t addr) const noexcept
-    {
-        LockGuard lock{mutex};
-        bool found = allocated.find(addr) != allocated.end();
-        if (!found)
-            log_debug((std::string("Address ") + to_string(addr) +
-                    " not found").c_str());
-        return found;
-    }
-
-    /**
-     * Releases an address so that it can be subsequently reserved.
-     * @param[in] addr          Reserved address to be released in network
-     *                          byte-order
-     * @throw std::logic_error  `addr` wasn't previously reserved
-     * @threadsafety            Compatible but not safe
-     * @exceptionsafety         Strong guarantee
-     */
-    void release(const in_addr_t addr)
-    {
-        LockGuard lock{mutex};
-        auto      iter = allocated.find(addr);
-        if (iter == allocated.end())
-            throw std::logic_error("IP address " + to_string(addr) +
-                    " wasn't previously reserved");
-        available.push_back(addr);
-        allocated.erase(iter);
-        log_debug((std::string("Address ") + to_string(addr) + " released")
-                .c_str());
-    }
-}; // class InAddrPool::Impl
-
-InAddrPool::InAddrPool(const CidrAddr& subnet)
-    : pImpl{new Impl(subnet)}
-{}
-
-in_addr_t InAddrPool::reserve() const
-{
-    return pImpl->reserve();
-}
-
-bool InAddrPool::isReserved(const in_addr_t addr) const noexcept
-{
-    return pImpl->isReserved(addr);
-}
-
-void InAddrPool::release(const in_addr_t addr) const
-{
-    pImpl->release(addr);
-}
-
-void* inAddrPool_new(const CidrAddr* subnet)
-{
-    return new InAddrPool{*subnet};
-}
-
-bool inAddrPool_isReserved(void* inAddrPool, const in_addr_t addr)
-{
-    return static_cast<InAddrPool*>(inAddrPool)->isReserved(addr);
-}
-
-void inAddrPool_delete(void* inAddrPool)
-{
-    delete static_cast<InAddrPool*>(inAddrPool);
-}
-
-/******************************************************************************
  * Multicast LDM RPC Server:
  ******************************************************************************/
 
 class MldmSrvr::Impl final
 {
 
-    /// Pool of available IP addresses
-    InAddrPool                     inAddrPool;
+    /// Collection of FMTP client IP addresses
+    FmtpClntAddrs                  fmtpClntAddrs;
     /// Server's listening socket
     SrvrTcpSock                    srvrSock;
     /// Authentication secret
@@ -414,6 +284,39 @@ class MldmSrvr::Impl final
     }
 
     /**
+     * Reads an IPv4 address from a socket, adds it to the collection of FMTP
+     * client addresses, and replies to the multicast LDM RPC client.
+     *
+     * @param[in] connSock        Socket with multicast LDM RPC client
+     * @throw std::runtime_error  I/O error
+     */
+    void allowAddr(TcpSock& connSock)
+    {
+        in_addr_t addr; ///< FMTP client address in network byte order
+
+        try {
+            if (connSock.read(&addr, sizeof(addr)) == 0)
+                throw std::runtime_error("Socket was closed");
+        }
+        catch (const std::exception& ex) {
+            log_add(ex.what());
+            throw std::runtime_error("Couldn't read IPv4 address");
+        }
+
+        fmtpClntAddrs.allow(addr);
+
+        try {
+            const Ldm7Status status = LDM7_OK;
+
+            connSock.write(&status, sizeof(status));
+        }
+        catch (const std::exception& ex) {
+            log_add(ex.what());
+            throw std::runtime_error("Couldn't reply to client");
+        }
+    }
+
+    /**
      * Reserves an IP address for use by a remote FMTP layer.
      * @param[in] connSock        Connection socket
      * @throw std::out_of_range   No address is available
@@ -421,14 +324,14 @@ class MldmSrvr::Impl final
      */
     void reserveAddr(TcpSock& connSock)
     {
-        struct in_addr fmtpAddr = {inAddrPool.reserve()};
+        struct in_addr fmtpAddr = {fmtpClntAddrs.getAvailable()};
         try {
             connSock.write(&fmtpAddr.s_addr, sizeof(fmtpAddr));
             log_debug((std::string("Reserved address ") +
                     ::inet_ntoa(fmtpAddr)).c_str());
         }
         catch (const std::exception& ex) {
-            inAddrPool.release(fmtpAddr.s_addr);
+            fmtpClntAddrs.release(fmtpAddr.s_addr);
             log_add(ex.what());
             throw std::system_error(errno, std::system_category(),
                     "Couldn't reply to client");
@@ -453,7 +356,7 @@ class MldmSrvr::Impl final
         }
         Ldm7Status ldm7Status;
         try {
-            inAddrPool.release(fmtpAddr);
+            fmtpClntAddrs.release(fmtpAddr);
             ldm7Status = LDM7_OK;
         }
         catch (const std::logic_error& ex) {
@@ -483,10 +386,11 @@ public:
     /**
      * Constructs. Creates a listening server-socket and a file that contains a
      * secret.
+     *
      * @param[in] inAddrPool     Pool of available IP addresses
      */
-    Impl(InAddrPool& inAddrPool)
-        : inAddrPool{inAddrPool}
+    Impl(FmtpClntAddrs& addrs)
+        : fmtpClntAddrs{addrs}
         , srvrSock{InetSockAddr{InetAddr{"127.0.0.1"}}, 32}
         , secret{initSecret(srvrSock.getPort())}
         , mutex{}
@@ -519,6 +423,10 @@ public:
                             !done() && action != CLOSE_CONNECTION;
                             action = getAction(connSock)) {
                         switch (action) {
+                        case ALLOW_ADDR: {
+                            allowAddr(connSock);
+                            break;
+                        }
                         case RESERVE_ADDR:
                             reserveAddr(connSock);
                             break;
@@ -566,7 +474,7 @@ public:
 };
 
 MldmSrvr::MldmSrvr(
-        InAddrPool& inAddrPool)
+        FmtpClntAddrs& inAddrPool)
     : pImpl{new Impl(inAddrPool)}
 {}
 
@@ -587,7 +495,7 @@ void MldmSrvr::stop()
 
 void* mldmSrvr_new(void* inAddrPool)
 {
-    return new MldmSrvr(*static_cast<InAddrPool*>(inAddrPool));
+    return new MldmSrvr(*static_cast<FmtpClntAddrs*>(inAddrPool));
 }
 
 in_port_t mldmSrvr_getPort(void* mldmSrvr)

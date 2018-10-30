@@ -29,8 +29,8 @@ TEST_F(AuthorizerTest, Construction)
     in_addr_t addr;
     inet_pton(AF_INET, "192.168.8.0", &addr);
     CidrAddr* subnet = cidrAddr_new(addr, 21);
-    InAddrPool inAddrPool{*subnet};
-    Authorizer auth(inAddrPool, ANY);
+    FmtpClntAddrs addrs{*subnet};
+    Authorizer auth(addrs, ANY);
     cidrAddr_delete(subnet);
 }
 
@@ -39,14 +39,24 @@ TEST_F(AuthorizerTest, Authorization)
 {
     struct in_addr addr;
     inet_pton(AF_INET, "192.168.8.0", &addr.s_addr);
-    CidrAddr* subnet = cidrAddr_new(addr.s_addr, 21);
-    InAddrPool inAddrPool{*subnet};
-    Authorizer auth(inAddrPool, ANY);
+
+    CidrAddr*     subnet = cidrAddr_new(addr.s_addr, 21);
+    FmtpClntAddrs addrs{*subnet};
+    Authorizer    auth(addrs, ANY);
+
     EXPECT_FALSE(auth.isAuthorized(addr));
-    addr.s_addr = inAddrPool.reserve();
+    addr.s_addr = addrs.getAvailable();
     EXPECT_TRUE(auth.isAuthorized(addr));
-    inAddrPool.release(addr.s_addr);
+    addrs.release(addr.s_addr);
     EXPECT_FALSE(auth.isAuthorized(addr));
+
+    addr.s_addr = inet_addr("127.0.0.1");
+    EXPECT_FALSE(auth.isAuthorized(addr));
+    addrs.allow(addr.s_addr);
+    EXPECT_TRUE(auth.isAuthorized(addr));
+    addrs.release(addr.s_addr);
+    EXPECT_FALSE(auth.isAuthorized(addr));
+
     cidrAddr_delete(subnet);
 }
 
