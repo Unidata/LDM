@@ -31,7 +31,7 @@ TEST_F(AuthorizerTest, Construction)
     CidrAddr* subnet = cidrAddr_new(addr, 21);
     FmtpClntAddrs addrs{*subnet};
     Authorizer auth(addrs, ANY);
-    cidrAddr_delete(subnet);
+    cidrAddr_free(subnet);
 }
 
 // Tests authorization
@@ -57,7 +57,7 @@ TEST_F(AuthorizerTest, Authorization)
     addrs.release(addr.s_addr);
     EXPECT_FALSE(auth.isAuthorized(addr));
 
-    cidrAddr_delete(subnet);
+    cidrAddr_free(subnet);
 }
 
 }  // namespace
