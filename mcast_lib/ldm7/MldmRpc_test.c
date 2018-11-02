@@ -47,7 +47,7 @@ static void test_construction(void)
     CU_ASSERT_TRUE(0 < mldmSrvr_getPort(mldmSrvr));
     mldmSrvr_free(mldmSrvr);
     fmtpClntAddrs_delete(inAddrPool);
-    cidrAddr_delete(subnet);
+    cidrAddr_free(subnet);
 }
 
 static void* runServer(void* mldmSrvr)
@@ -88,7 +88,7 @@ static void test_reserveAndRelease(void)
     CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_free(mldmSrvr);
     fmtpClntAddrs_delete(inAddrPool);
-    cidrAddr_delete(subnet);
+    cidrAddr_free(subnet);
 }
 
 static void test_releaseUnreserved(void)
@@ -119,7 +119,7 @@ static void test_releaseUnreserved(void)
     CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_free(mldmSrvr);
     fmtpClntAddrs_delete(inAddrPool);
-    cidrAddr_delete(subnet);
+    cidrAddr_free(subnet);
 }
 
 int main(
