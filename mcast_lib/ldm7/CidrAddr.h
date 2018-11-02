@@ -34,6 +34,14 @@ cidrAddr_init(
         const SubnetLen subnetLen);
 
 /**
+ * Destroys a CIDR address.
+ *
+ * @param[in,out] cidrAddr  CIDR address to be destroyed
+ */
+void
+cidrAddr_destroy(CidrAddr* const cidrAddr);
+
+/**
  * Returns an allocated CIDR address.
  * @param[in] addr       IPv4 address in network byte-order
  * @param[in] subnetLen  Number of bits in network prefix
@@ -48,12 +56,13 @@ cidrAddr_new(
         const SubnetLen subnetLen);
 
 /**
- * Deletes a CIDR address.
- * @param[in] cidrAddr  Instance to be deleted
+ * Frees a CIDR address.
+ *
+ * @param[in] cidrAddr  Instance to be freed
  * @see cidrAddr_new()
  */
 void
-cidrAddr_delete(CidrAddr* cidrAddr);
+cidrAddr_free(CidrAddr* cidrAddr);
 
 /**
  * Returns the subnet mask of a CIDR address.

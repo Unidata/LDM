@@ -34,6 +34,10 @@ cidrAddr_init(
     return true;
 }
 
+void
+cidrAddr_destroy(CidrAddr* const cidrAddr)
+{}
+
 CidrAddr*
 cidrAddr_new(
         const in_addr_t addr,
@@ -50,7 +54,7 @@ cidrAddr_new(
 }
 
 void
-cidrAddr_delete(CidrAddr* cidrAddr)
+cidrAddr_free(CidrAddr* cidrAddr)
 {
     free(cidrAddr);
 }
