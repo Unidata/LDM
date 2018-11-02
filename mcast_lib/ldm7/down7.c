@@ -792,39 +792,33 @@ static const char vlanUtil[] = "vlanUtil";
  *
  * @param[in] srvrAddrStr  Dotted-decimal IP address of sending FMTP server
  * @param[in] ifaceName    Name of virtual interface to be created (e.g.,
- *                         "eth0.0") or "dummy".
+ *                         "eth0.0")
  * @param[in] ifaceAddr    IP address to be assigned to virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  */
-static int vlanIface_create(
+static int
+vlanIface_create(
         const char* const restrict srvrAddrStr,
         const char* const restrict ifaceName,
         const in_addr_t            ifaceAddr)
 {
     int  status;
+    char ifaceAddrStr[INET_ADDRSTRLEN];
 
-    if (strncmp(ifaceName, "dummy", 5) == 0) {
-        status = 0;
-    }
-    else {
-        char ifaceAddrStr[INET_ADDRSTRLEN];
+    // Can't fail
+    (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-        // Can't fail
-        (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr,
-                sizeof(ifaceAddrStr));
+    const char* const cmdVec[] = {vlanUtil, "create", ifaceName, ifaceAddrStr,
+            srvrAddrStr, NULL};
 
-        const char* const cmdVec[] = {vlanUtil, "create", ifaceName,
-                ifaceAddrStr, srvrAddrStr, NULL};
+    int childStatus;
+    status = sudo(cmdVec, &childStatus);
 
-        int childStatus;
-        status = sudo(cmdVec, &childStatus);
-
-        if (status || childStatus) {
-            log_add("Couldn't create local VLAN interface");
-            status = LDM7_SYSTEM;
-        }
+    if (status || childStatus) {
+        log_add("Couldn't create local VLAN interface");
+        status = LDM7_SYSTEM;
     }
 
     return status;
@@ -885,14 +879,16 @@ static McastRcvr mcastRcvr;
  *
  * @param[in] mcastInfo    Information on multicast group
  * @param[in] fmtpIface    Name of virtual interface to be created and used by
- *                         FMTP layer. Must exist until `mcastRcvr_destroy()`
- *                         returns.
+ *                         FMTP layer or "dummy", indicating that no virtual
+ *                         interfaces is to be created. Must exist until
+ *                         `mcastRcvr_destroy()` returns.
  * @param[in] ifaceAddr    IP address to be assigned to `fmtpIface`
  * @param[in] pq           Product queue
  * @retval    0            Success or `ifaceName` starts with "dummy"
  * @retval    LDM7_INVAL   Invalid address of sending FMTP server. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @see `mcastRcvr_destroy()`
  */
 static int
 mcastRcvr_init(
@@ -913,12 +909,15 @@ mcastRcvr_init(
         status = LDM7_INVAL;
     }
     else {
-        status = vlanIface_create(mcastRcvr.fmtpSrvrAddr, fmtpIface, ifaceAddr);
+        if (strcmp(fmtpIface, "dummy")) {
+            status = vlanIface_create(mcastRcvr.fmtpSrvrAddr, fmtpIface,
+                    ifaceAddr);
 
-        if (status) {
-            log_add("Couldn't create VLAN virtual interface");
+            if (status)
+                log_add("Couldn't create VLAN virtual interface");
         }
-        else {
+
+        if (status == 0) {
             char ifaceAddrStr[INET_ADDRSTRLEN];
 
             // Can't fail
@@ -986,10 +985,12 @@ mcastRcvr_run(void* const arg)
  * Starts the multicast receiver concurrent task.
  *
  * @param[in] mcastInfo   Information on multicast feed
- * @param[in] fmtpIface   Name of virtual interface to be created and used by
- *                        FMTP layer. Must exist until `mcastRcvr_destroy()`
- *                        returns.
- * @param[in] ifaceAddr   IP address to be assigned to `fmtpIface`
+ * @param[in] fmtpIface    Name of virtual interface to be created and used by
+ *                         FMTP layer or "dummy", indicating that no virtual
+ *                         interfaces is to be created. Must exist until
+ *                         `mcastRcvr_stop()` returns.
+ * @param[in] ifaceAddr   IP address to be assigned to the virtual interface if
+ *                        it's created
  * @param[in] pq          Output product queue
  * @retval    0           Success
  * @retval    LDM7_INVAL  Invalid address of sending FMTP server. `log_add()`
@@ -1276,7 +1277,7 @@ static Ldm7Status
 downlet_startMcastRcvr(void)
 {
     int status = mcastRcvr_start(downlet.mcastInfo, down7.fmtpIface,
-                    downlet.ifaceAddr, down7.pq);
+            downlet.ifaceAddr, down7.pq);
 
     if (status == 0) {
         status = atomicInt_set(downlet.mcastRcvrStatus, TASK_STARTED);
@@ -1936,6 +1937,24 @@ downlet_lastReceived(const prod_info* const restrict last)
  * Downstream LDM7
  ******************************************************************************/
 
+/**
+ * Initializes this module.
+ *
+ * @param[in] ldmSrvr     Internet socket address of the LDM7 server
+ * @param[in] feed        LDM feed
+ * @param[in] fmtpIface   Virtual interface to be created for the FMTP
+ *                        component to use or "dummy", indicating that no
+ *                        virtual interface should be created, in which case
+ *                        `vcEnd` must be invalid. Caller may free.
+ * @param[in] vcEnd       Local virtual-circuit endpoint for an AL2S VLAN.
+ *                        It must be valid only if communication with the FMTP
+ *                        server will be over an AL2S VLAN. Caller may free.
+ * @param[in] pq          Product-queue for received data-products
+ * @param[in] mrm         Persistent multicast receiver memory
+ * @retval    0           Success
+ * @retval    LDM7_INVAL  `fmtpIface` is inconsistent with `vcEnd`. `log_add()`
+ *                        called.
+ */
 Ldm7Status
 down7_init(
         InetSockAddr* const restrict        ldmSrvr,
@@ -1945,78 +1964,90 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
-    (void)memset(&down7, 0, sizeof(down7));
+    int status;
 
-    int status = mutex_init(&down7.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
-
-    if (status) {
-        status = LDM7_SYSTEM;
+    if (vcEndPoint_isValid(vcEnd) != strcmp(fmtpIface, "dummy")) {
+        char* vcEndStr = vcEndPoint_format(vcEnd);
+        log_add("FMTP interface specification, %s, is inconsistent with "
+                "local virtual-circuit endpoint, %s", fmtpIface, vcEndStr);
+        free(vcEndStr);
+        status = LDM7_INVAL;
     }
     else {
-        down7.pq = pq;
-        down7.feedtype = feed;
-        down7.mrm = mrm;
+        (void)memset(&down7, 0, sizeof(down7));
 
-        /*
-         * The product-queue must be thread-safe because this module accesses it
-         * on these threads:
-         *   - FMTP multicast receiver
-         *   - FMTP unicast receiver
-         *   - LDM7 data-product receiver.
-         */
-        if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
-            log_add("Product-queue %s isn't thread-safe: %0x",
-                    pq_getPathname(pq), pq_getFlags(pq));
-            status = LDM7_INVAL;
+        status = mutex_init(&down7.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
+
+        if (status) {
+            status = LDM7_SYSTEM;
         }
         else {
-            if ((down7.ldmSrvr = isa_clone(ldmSrvr)) == NULL) {
-                log_add("Couldn't clone LDM7 server address \"%s\"",
-                        isa_toString(ldmSrvr));
-                status = LDM7_SYSTEM;
+            down7.pq = pq;
+            down7.feedtype = feed;
+            down7.mrm = mrm;
+
+            /*
+             * The product-queue must be thread-safe because this module
+             * accesses it on these threads:
+             *   - FMTP multicast receiver
+             *   - FMTP unicast receiver
+             *   - LDM7 data-product receiver.
+             */
+            if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
+                log_add("Product-queue %s isn't thread-safe: %0x",
+                        pq_getPathname(pq), pq_getFlags(pq));
+                status = LDM7_INVAL;
             }
             else {
-                down7.fmtpIface = strdup(fmtpIface);
-
-                if (down7.fmtpIface == NULL) {
-                    log_add("Couldn't copy FMTP interface name");
+                if ((down7.ldmSrvr = isa_clone(ldmSrvr)) == NULL) {
+                    log_add("Couldn't clone LDM7 server address \"%s\"",
+                            isa_toString(ldmSrvr));
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
-                        log_add("Couldn't copy local AL2S virtual-circuit "
-                                "endpoint");
+                    down7.fmtpIface = strdup(fmtpIface);
+
+                    if (down7.fmtpIface == NULL) {
+                        log_add("Couldn't copy FMTP interface name");
                         status = LDM7_SYSTEM;
                     }
                     else {
-                        status = pipe(down7.pipe);
-
-                        if (status) {
-                            log_add_syserr("Couldn't create signaling pipe");
+                        if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
+                            log_add("Couldn't copy local AL2S virtual-circuit "
+                                    "endpoint");
                             status = LDM7_SYSTEM;
                         }
                         else {
-                            down7.initialized = true;
-                        }
+                            status = pipe(down7.pipe);
+
+                            if (status) {
+                                log_add_syserr("Couldn't create signaling "
+                                        "pipe");
+                                status = LDM7_SYSTEM;
+                            }
+                            else {
+                                down7.initialized = true;
+                            }
+
+                            if (status)
+                                vcEndPoint_destroy(&down7.vcEnd);
+                        } // `down7.vcEnd` initialized
 
                         if (status)
-                            vcEndPoint_destroy(&down7.vcEnd);
-                    } // `down7.vcEnd` initialized
+                            free(down7.fmtpIface);
+                    } // `down7.fmtpIface` set
 
-                    if (status)
-                        free(down7.fmtpIface);
-                } // `down7.fmtpIface` set
+                    if (status) {
+                        isa_free(down7.ldmSrvr);
+                        down7.ldmSrvr = NULL;
+                    }
+                } // `down7.servAddr` initialized
+            } // Product-queue is thread-safe
 
-                if (status) {
-                    isa_free(down7.ldmSrvr);
-                    down7.ldmSrvr = NULL;
-                }
-            } // `down7.servAddr` initialized
-        } // Product-queue is thread-safe
-
-        if (status)
-            mutex_destroy(&down7.mutex);
-    } // Downstream LDM7 mutex initialized
+            if (status)
+                mutex_destroy(&down7.mutex);
+        } // Downstream LDM7 mutex initialized
+    } //  FMTP interface spec and local virtual-circuit endpoint are consistent
 
     return status;
 }
