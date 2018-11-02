@@ -177,17 +177,31 @@ void FmtpClntAddrs::release(const in_addr_t addr) const
  * C interface:
  ******************************************************************************/
 
-void* fmtpClntAddrs_new(const CidrAddr* subnet)
+void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet)
 {
-    return new FmtpClntAddrs{*subnet};
+    return new FmtpClntAddrs{*fmtpSubnet};
 }
 
-bool fmtpClntAddrs_isReserved(void* inAddrPool, const in_addr_t addr)
+in_addr_t fmtpClntAddrs_getAvailable(const void* const fmtpClntAddrs)
 {
-    return static_cast<FmtpClntAddrs*>(inAddrPool)->isAllowed(addr);
+    return static_cast<const FmtpClntAddrs*>(fmtpClntAddrs)->getAvailable();
 }
 
-void fmtpClntAddrs_delete(void* inAddrPool)
+void fmtpClntAddrs_allow(
+        const void* const fmtpClntAddrs,
+        const in_addr_t   addr)
 {
-    delete static_cast<FmtpClntAddrs*>(inAddrPool);
+    static_cast<const FmtpClntAddrs*>(fmtpClntAddrs)->allow(addr);
+}
+
+bool fmtpClntAddrs_isAllowed(
+        const void* const fmtpClntAddrs,
+        const in_addr_t   addr)
+{
+    return static_cast<const FmtpClntAddrs*>(fmtpClntAddrs)->isAllowed(addr);
+}
+
+void fmtpClntAddrs_free(void* const fmtpClntAddrs)
+{
+    delete static_cast<FmtpClntAddrs*>(fmtpClntAddrs);
 }

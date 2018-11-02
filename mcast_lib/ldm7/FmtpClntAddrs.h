@@ -23,24 +23,52 @@
 #endif
 
 /**
- * Creates.
- * @param[in] subnet Subnet specification
- * @retval NULL      Failure. `log_add()` called.
+ * Creates a collection of IP addresses for FMTP clients.
+ *
+ * @param[in] fmtpSubnet Subnet specification for FMTP clients
+ * @retval    NULL       Failure. `log_add()` called.
  */
-void* fmtpClntAddrs_new(const CidrAddr* subnet);
+void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet);
 
 /**
- * Indicates if an IP address has been previously reserved.
- * @param[in]        IP address pool
- * @param[in] addr   IP address to check
- * @retval `true`    IP address has been previously reserved
- * @retval `false`   IP address has not been previously reserved
+ * Returns an available (i.e., unused) address for an FMTP client on an AL2S
+ * virtual circuit.
+ *
+ * @return                    Available address in network byte-order
+ * @throw std::out_of_range   No address is available
+ * @threadsafety              Safe
  */
-bool fmtpClntAddrs_isReserved(
-        void*           inAddrPool,
+in_addr_t fmtpClntAddrs_getAvailable(const void* const fmtpClntAddrs);
+
+/**
+ * Explicitly allows an FMTP client to connect.
+ *
+ * @param[in,out] fmtpClntAddrs  Collection of FMTP client addresses
+ * @param[in]     addr           IPv4 address of FMTP client in network byte
+ *                               order
+ */
+void fmtpClntAddrs_allow(
+        const void*     fmtpClntAddrs,
         const in_addr_t addr);
 
-void fmtpClntAddrs_delete(void* inAddrPool);
+/**
+ * Indicates if an IP address is allowed to connect to the local FMTP server.
+ *
+ * @param[in] fmtpClntAddrs  Collection of FMTP client addresses
+ * @param[in] addr           IP address to check
+ * @retval `true`            IP address is allowed
+ * @retval `false`           IP address is not allowed
+ */
+bool fmtpClntAddrs_isAllowed(
+        const void*     fmtpClntAddrs,
+        const in_addr_t addr);
+
+/**
+ * Frees a collection of FMTP client addresses.
+ *
+ * @param[in,out] fmtpClntAddrs  Collection of FMTP client addresses
+ */
+void fmtpClntAddrs_free(void* fmtpClntAddrs);
 
 #ifdef __cplusplus
 } // `extern "C"`
