@@ -1,4 +1,4 @@
-6.13.7.71
+6.13.7.71	2018-11-02T15:45:25-0600
     Multicast:
         - Changed "-m <interface>" option to "-i <interface>" in mldm_sender(1).
         - Changed specification of FMTP subnet to mldm_sender(1) from operand to
