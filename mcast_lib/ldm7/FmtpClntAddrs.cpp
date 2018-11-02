@@ -49,19 +49,6 @@ class FmtpClntAddrs::Impl final
 
 public:
     /**
-     * Default constructs. The function `getAvailable()` will always fail.
-     *
-     * @see `getAvailable()`
-     */
-    Impl()
-        : al2sSubnet()
-        // Parentheses are needed to obtain correct construction
-        , available(0, 0)
-        , allocated{}
-        , mutex{}
-    {}
-
-    /**
      * Constructs from a specification of the subnet to be used by FMTP clients.
      *
      * @param[in] cidr               Al2S subnet specification
@@ -162,10 +149,6 @@ public:
  * Collection of FMTP client addresses:
  ******************************************************************************/
 
-FmtpClntAddrs::FmtpClntAddrs()
-    : pImpl{new Impl()}
-{}
-
 FmtpClntAddrs::FmtpClntAddrs(const CidrAddr& subnet)
     : pImpl{new Impl(subnet)}
 {}
@@ -196,9 +179,7 @@ void FmtpClntAddrs::release(const in_addr_t addr) const
 
 void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet)
 {
-    return fmtpSubnet
-            ? new FmtpClntAddrs{*fmtpSubnet}
-            : new FmtpClntAddrs{};
+    return new FmtpClntAddrs{*fmtpSubnet};
 }
 
 in_addr_t fmtpClntAddrs_getAvailable(const void* const fmtpClntAddrs)

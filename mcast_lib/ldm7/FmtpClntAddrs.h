@@ -25,9 +25,7 @@
 /**
  * Creates a collection of IP addresses for FMTP clients.
  *
- * @param[in] fmtpSubnet Subnet specification for FMTP clients. May be `NULL`,
- *                       in which case `fmtpClntAddrs_getAvailable()` will
- *                       always fail.
+ * @param[in] fmtpSubnet Subnet specification for FMTP clients
  * @retval    NULL       Failure. `log_add()` called.
  * @see `fmtpClntAddrs_getAvailable()`
  */
@@ -91,13 +89,6 @@ class FmtpClntAddrs final
     std::shared_ptr<Impl> pImpl;
 
 public:
-    /**
-     * Default constructs. The function `getAvailable()` will always fail.
-     *
-     * @see `getAvailable()`
-     */
-    FmtpClntAddrs();
-
     /**
      * Constructs from a specification of the subnet to be used by FMTP clients.
      *
