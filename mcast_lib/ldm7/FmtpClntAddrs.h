@@ -25,8 +25,11 @@
 /**
  * Creates a collection of IP addresses for FMTP clients.
  *
- * @param[in] fmtpSubnet Subnet specification for FMTP clients
+ * @param[in] fmtpSubnet Subnet specification for FMTP clients. May be `NULL`,
+ *                       in which case `fmtpClntAddrs_getAvailable()` will
+ *                       always fail.
  * @retval    NULL       Failure. `log_add()` called.
+ * @see `fmtpClntAddrs_getAvailable()`
  */
 void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet);
 
@@ -34,8 +37,8 @@ void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet);
  * Returns an available (i.e., unused) address for an FMTP client on an AL2S
  * virtual circuit.
  *
+ * @retval INADDR_ANY         No address is available
  * @return                    Available address in network byte-order
- * @throw std::out_of_range   No address is available
  * @threadsafety              Safe
  */
 in_addr_t fmtpClntAddrs_getAvailable(const void* const fmtpClntAddrs);
@@ -89,7 +92,14 @@ class FmtpClntAddrs final
 
 public:
     /**
-     * Constructs.
+     * Default constructs. The function `getAvailable()` will always fail.
+     *
+     * @see `getAvailable()`
+     */
+    FmtpClntAddrs();
+
+    /**
+     * Constructs from a specification of the subnet to be used by FMTP clients.
      *
      * @param[in] subnet  Subnet specification for potential FMTP client
      *                    addresses on an AL2S virtual circuit
