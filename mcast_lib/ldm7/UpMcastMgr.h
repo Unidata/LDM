@@ -37,6 +37,16 @@ void
 umm_setRetxTimeout(const float minutes);
 
 /**
+ * Sets the name of the AL2S workgroup. Only necessary if the multicast LDM
+ * senders will use an AL2S multipoint VLAN.
+ *
+ * @param[in] name  Name of the AL2S workgroup. Caller must not free until done
+ *                  with this module.
+ */
+void
+umm_setWrkGrpName(const char* name);
+
+/**
  * Adds a potential multicast LDM sender. The sender is not started. This
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
@@ -46,8 +56,7 @@ umm_setRetxTimeout(const float minutes);
  *                         interface.
  * @param[in] mcastInfo    Information on the multicast group. The port number
  *                         of the FMTP TCP server is ignored (it will be chosen
- *                         by the operating system). Freed by `umm_clear()`.
- *                         this function is successful.
+ *                         by the operating system). Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -58,7 +67,8 @@ umm_setRetxTimeout(const float minutes);
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
+ *                         free.
  * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
@@ -66,25 +76,32 @@ umm_setRetxTimeout(const float minutes);
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
  *                         addition. Manager not modified. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
- * @see `umm_clear()`
  */
 Ldm7Status
 umm_addPotentialSender(
-    const struct in_addr             mcastIface,
-    SepMcastInfo* const restrict     mcastInfo,
-    const unsigned short             ttl,
-    const VcEndPoint* const restrict vcEnd,
-    const CidrAddr* const restrict   fmtpSubnet,
-    const char* const restrict       pqPathname);
+    const struct in_addr               mcastIface,
+    const SepMcastInfo* const restrict mcastInfo,
+    const unsigned short               ttl,
+    const VcEndPoint* const restrict   vcEnd,
+    const CidrAddr* const restrict     fmtpSubnet,
+    const char* const restrict         pqPathname);
 
 /**
- * Returns the response to a multicast subscription request. Doesn't block.
+ * Subscribes to an LDM7 multicast:
+ *   - Starts the multicast LDM process if necessary
+ *   - Returns information on the multicast group
+ *   - Returns the CIDR address for the FMTP client
  *
- * @param[in]  feedtype     Multicast group feed-type.
- * @param[out] reply        Reply to the subscription-request. Call should
- *                          destroy when it's no longer needed.
+ * @param[in]  feed         Multicast group feed-type.
+ * @param[in]  clntAddr     Address of client
+ * @param[in]  rmtVcEnd     Remote virtual-circuit endpoint or `NULL`. Caller
+ *                          may free.
+ * @param[out] smi          Separated-out multicast information. Set only on
+ *                          success.
+ * @param[out] fmtpClntCidr CIDR address for the FMTP client. Set only on
+ *                          success.
  * @retval     0            Success. The group is being multicast and
- *                          `*reply` is set.
+ *                          `*smi` and `*fmtpClntCidr` are set.
  * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
  *                          `mlsm_addPotentialSender()`. `log_add() called`.
@@ -92,8 +109,11 @@ umm_addPotentialSender(
  */
 Ldm7Status
 umm_subscribe(
-        const feedtypet          feedtype,
-        SubscriptionReply* const reply);
+        const feedtypet                     feed,
+        const in_addr_t                     clntAddr,
+        const VcEndPoint* const restrict    rmtVcEnd,
+        const SepMcastInfo** const restrict smi,
+        CidrAddr* const restrict            fmtpClntCidr);
 
 /**
  * Handles the termination of a multicast LDM sender process. This function
@@ -122,13 +142,17 @@ umm_getMldmSenderPid(void);
  * Releases the IP address reserved for the FMTP TCP connection in a downstream
  * LDM7.
  * @param[in] feed          LDM feed associated with `downFmtpAddr`
- * @param[in] downFmtpAddr  Address of TCP connection in downstream FMTP layer
- * @retval    LDM7_NOENT    No address pool corresponding to `feed`
- * @retval    LDM7_NOENT    `downFmtpAddr` wasn't reserved
+ * @param[in] fmtpClntAddr  Address of FMTP client
+ * @retval    0             Success
+ * @retval    LDM7_INVAL    No multicast LDM sender corresponds to `feed`.
+ *                          `log_add()` called.
+ * @retval    LDM7_NOENT    `downFmtpAddr` wasn't previously reserved.
+ *                          `log_add()` called.
+ * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
  */
 Ldm7Status umm_unsubscribe(
         const feedtypet feed,
-        const in_addr_t downFmtpAddr);
+        const in_addr_t fmtpClntAddr);
 
 /**
  * Clears all entries.

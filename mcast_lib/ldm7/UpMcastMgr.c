@@ -19,6 +19,7 @@
 #include "log.h"
 #include "inetutil.h"
 //#include "AuthClient.h"
+#include "ChildCommand.h"
 #include "CidrAddr.h"
 #include "fmtp.h"
 #include "InetSockAddr.h"
@@ -28,6 +29,7 @@
 #include "mcast_info.h"
 #include "MldmRpc.h"
 #include "mldm_sender_map.h"
+#include "priv.h"
 #include "StrBuf.h"
 #include "UpMcastMgr.h"
 
@@ -76,16 +78,14 @@ allowSigs(void)
 }
 
 /******************************************************************************
- * Multicast LDM process:
+ * Proxy for multicast LDM sender process:
  ******************************************************************************/
 
-/// Feed being multicast
-static feedtypet feed;
-/// Pid of multicast LDM sender child process
+/// Pid of multicast LDM sender process
 static pid_t     childPid;
-/// Port number of FMTP server in multicast LDM sender process
+/// Port number of FMTP server of multicast LDM sender process
 static in_port_t fmtpSrvrPort;
-/// Port number of RPC command server in multicast LDM sender process
+/// Port number of RPC command server of multicast LDM sender process
 static in_port_t mldmCmdPort;
 
 static void
@@ -191,13 +191,13 @@ mldm_getServerPorts(const int pipe)
  */
 static void
 mldm_exec(
-    const struct in_addr            mcastIface,
-    SepMcastInfo* const restrict   info,
-    const unsigned short            ttl,
-    const CidrAddr* const restrict  fmtpSubnet,
-    const float                     retxTimeout,
-    const char* const restrict      pqPathname,
-    const int                       pipe)
+    const struct in_addr               mcastIface,
+    const SepMcastInfo* const restrict info,
+    const unsigned short               ttl,
+    const CidrAddr* const restrict     fmtpSubnet,
+    const float                        retxTimeout,
+    const char* const restrict         pqPathname,
+    const int                          pipe)
 {
     char* args[23]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
@@ -282,9 +282,9 @@ mldm_exec(
         goto free_fmtpSubnetArg;
     }
 
-    //StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    //log_info("Executing multicast LDM sender: %s", sbString(command));
-    //sbFree(command);
+    StrBuf* command = catenateArgs((const char**)args); // Safe cast
+    log_info("Executing multicast LDM sender: %s", sbString(command));
+    sbFree(command);
 
     execvp(args[0], args);
 
@@ -366,8 +366,8 @@ mldm_terminateSenderAndReap()
  */
 static Ldm7Status
 mldm_handleExecedChild(
-        SepMcastInfo* const restrict info,
-        const int* restrict       fds)
+        const SepMcastInfo* const restrict info,
+        const int* restrict                fds)
 {
     int status;
 
@@ -421,12 +421,12 @@ mldm_handleExecedChild(
  */
 static Ldm7Status
 mldm_spawn(
-    const struct in_addr            mcastIface,
-    SepMcastInfo* const restrict    info,
-    const unsigned short            ttl,
-    const CidrAddr* const restrict  fmtpSubnet,
-    const float                     retxTimeout,
-    const char* const restrict      pqPathname)
+    const struct in_addr               mcastIface,
+    const SepMcastInfo* const restrict info,
+    const unsigned short               ttl,
+    const CidrAddr* const restrict     fmtpSubnet,
+    const float                        retxTimeout,
+    const char* const restrict         pqPathname)
 {
     int   fds[2];
     int   status = pipe(fds);
@@ -492,12 +492,12 @@ mldm_spawn(
  */
 static Ldm7Status
 mldm_ensureRunning(
-        const struct in_addr            mcastIface,
-        SepMcastInfo* const restrict    info,
-        const unsigned short            ttl,
-        const CidrAddr* const restrict  fmtpSubnet,
-        const float                     retxTimeout,
-        const char* const restrict      pqPathname)
+        const struct in_addr               mcastIface,
+        const SepMcastInfo* const restrict info,
+        const unsigned short               ttl,
+        const CidrAddr* const restrict     fmtpSubnet,
+        const float                        retxTimeout,
+        const char* const restrict         pqPathname)
 {
     /*
      * The Multicast-LDM Sender Map (MSM) is locked because it might be accessed
@@ -562,16 +562,253 @@ mldm_getFmtpSrvrPort()
 }
 
 /**
- * Returns the port number of the RPC command-server of the child multicast LDM
- * sender process.
- * @retval 0  No such process exists
- * @return    Port number of RPC command-server of child multicast LDM sender
- *            process
+ * Obtains an IP address for a client FMTP component.
+ *
+ * @param[out] downFmtpAddr  IP address for client FMTP component in network
+ *                           byte order
+ * @retval LDM7_OK           Success. `*downFmtpAddr` is set.
+ * @retval LDM7_SYSTEM       System failure. `log_add()` called.
  */
-inline static in_port_t
-mldm_getMldmCmdPort()
+static Ldm7Status
+mldm_getFmtpClntAddr(in_addr_t* const restrict downFmtpAddr)
 {
-    return mldmCmdPort;
+    Ldm7Status  status;
+    void* const mldmClnt = mldmClnt_new(mldmCmdPort);
+
+    if (mldmClnt == NULL) {
+        log_add("Couldn't create new multicast LDM RPC client");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
+
+        if (status) {
+            log_add("Couldn't obtain IP address for remote FMTP layer");
+        }
+        else {
+            char buf[80];
+            log_info("Allocated IP address %s for remote FMTP",
+                    inet_ntop(AF_INET, downFmtpAddr, buf, sizeof(buf)));
+        }
+
+        mldmClnt_free(mldmClnt);
+    }
+
+    return status;
+}
+
+/**
+ * Explicitly allows the IP address of an FMTP client to connect to the
+ * multicast LDM FMTP server.
+ *
+ * @param[in] fmtpClntAddr  IP address of FMTP client
+ * @retval    0             Success
+ * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
+ */
+static Ldm7Status
+mldm_allow(const in_addr_t fmtpClntAddr)
+{
+    Ldm7Status  status;
+    void* const mldmClnt = mldmClnt_new(mldmCmdPort);
+
+    if (mldmClnt == NULL) {
+        log_add("mldmClnt_new() failure");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = mldmClnt_allow(mldmClnt, fmtpClntAddr);
+
+        if (status) {
+            log_add("mldmClnt_allow() failure");
+        }
+        else {
+            char ipStr[INET_ADDRSTRLEN];
+            log_debug("Address %s allowed", inet_ntop(AF_INET, &fmtpClntAddr,
+                    ipStr, sizeof(ipStr)));
+        }
+
+        mldmClnt_free(mldmClnt);
+    } // Have multicast LDM command-client
+
+    return status;
+}
+
+/**
+ * Releases for reuse the IP address of an FMTP client.
+ *
+ * @param[in]     fmtpClntAddr  IP address of FMTP client
+ * @retval        LDM7_OK       Success
+ * @retval        LDM7_NOENT    `fmtpClntAddr` wasn't previously reserved.
+ *                              `log_add()` called.
+ * @retval        LDM7_SYSTEM   System failure. `log_add()` called.
+ */
+static Ldm7Status
+mldm_release(const in_addr_t fmtpClntAddr)
+{
+    Ldm7Status  status;
+    void* const mldmClnt = mldmClnt_new(mldmCmdPort);
+
+    if (mldmClnt == NULL) {
+        log_add("mldmClnt_new() failure");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        status = mldmClnt_release(mldmClnt, fmtpClntAddr);
+
+        if (status) {
+            log_add("mldmClnt_release() failure");
+        }
+        else {
+            char ipStr[INET_ADDRSTRLEN];
+            log_debug("Address %s released", inet_ntop(AF_INET, &fmtpClntAddr,
+                    ipStr, sizeof(ipStr)));
+        }
+
+        mldmClnt_free(mldmClnt);
+    }
+
+    return status;
+}
+
+/******************************************************************************
+ * OESS-based submodule for creating an AL2S virtual circuit
+ ******************************************************************************/
+
+static const char    python[] = "python"; ///< Name of python executable
+
+/**
+ * Creates an AL2S virtual circuit between two end-points.
+ *
+ * @param[in]  wrkGrpName   Name of the AL2S workgroup
+ * @param[in]  desc         Description of virtual circuit
+ * @param[in]  end1         One end of the virtual circuit. If the endpoint
+ *                          isn't valid, then the circuit will not be created.
+ * @param[in]  end2         Other end of the virtual circuit. If the endpoint
+ *                          isn't valid, then the circuit will not be created.
+ * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
+ *                          call `free(*circuitId)` when the identifier is no
+ *                          longer needed.
+ * @retval     0            Success or an endpoint isn't valid
+ * @retval     LDM7_INVAL   Invalid argument. `log_add()` called.
+ * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
+ */
+static int
+oess_provision(
+        const char* const restrict       wrkGrpName,
+        const char* const restrict       desc,
+        const VcEndPoint* const restrict end1,
+        const VcEndPoint* const restrict end2,
+        char** const restrict            circuitId)
+{
+    int  status;
+
+    if (wrkGrpName == NULL || desc == NULL || end1 == NULL ||
+            end2 == NULL || circuitId == NULL) {
+        char* end1Id = end1 ? vcEndPoint_format(end1) : NULL;
+        char* end2Id = end2 ? vcEndPoint_format(end2) : NULL;
+        log_add("NULL argument: wrkGrpName=%s, desc=%s, end1=%s, end2=%s, "
+                "circuitId=%p", wrkGrpName, desc, end1Id, end2Id, circuitId);
+        free(end1Id);
+        free(end2Id);
+        status = LDM7_INVAL;
+    }
+    else {
+        char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
+        char vlanId2[12];
+
+        (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
+        (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
+
+        const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
+                end1->switchId, end1->portId, vlanId1,
+                end2->switchId, end2->portId, vlanId2, NULL};
+
+        rootpriv();
+            ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+        unpriv();
+
+        if (cmd == NULL) {
+            status = LDM7_SYSTEM;
+        }
+        else {
+            char*   line = NULL;
+            size_t  size = 0;
+            ssize_t nbytes = childCmd_getline(cmd, &line, &size);
+            int     circuitIdStatus;
+
+            if (nbytes <= 0) {
+                log_add("Couldn't get AL2S virtual-circuit ID");
+
+                circuitIdStatus = LDM7_SYSTEM;
+            }
+            else {
+                circuitIdStatus = 0;
+
+                if (line[nbytes-1] == '\n')
+                    line[nbytes-1] = 0;
+            }
+
+            int childExitStatus;
+
+            status = childCmd_reap(cmd, &childExitStatus);
+
+            if (status) {
+                status = LDM7_SYSTEM;
+            }
+            else {
+                if (childExitStatus) {
+                    log_add("OESS provisioning process terminated with status "
+                            "%d", childExitStatus);
+
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    if (circuitIdStatus) {
+                        status = circuitIdStatus;
+                    }
+                    else {
+                        *circuitId = line;
+                    }
+                } // Child process terminated unsuccessfully
+            } // Child-command was reaped
+        } // Couldn't execute child-command
+    } // Valid arguments and actual provisioning
+
+    return status;
+}
+
+/**
+ * Destroys an Al2S virtual circuit.
+ *
+ * @param[in] wrkGrpName   Name of the AL2S workgroup
+ * @param[in] circuitId    Virtual-circuit identifier
+ */
+static void
+oess_remove(
+        const char* const restrict wrkGrpName,
+        const char* const restrict circuitId)
+{
+    int               status;
+    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
+            NULL};
+    ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
+
+    if (cmd == NULL) {
+        status = errno;
+    }
+    else {
+        int exitStatus;
+
+        status = childCmd_reap(cmd, &exitStatus);
+
+        if (status == 0 && exitStatus)
+            log_add("Child-process terminated with status %d", exitStatus);
+    } // Child-command executing
+
+    if (status) {
+        log_add_errno(status, "Couldn't destroy AL2S virtual-circuit");
+        log_flush_error();
+    }
 }
 
 /******************************************************************************
@@ -581,9 +818,9 @@ mldm_getMldmCmdPort()
 typedef struct {
     struct in_addr mcastIface;
     SepMcastInfo*  info;
-    /// Local virtual-circuit endpoint
-    VcEndPoint*    vcEnd;
+    char*          circuitId;
     char*          pqPathname;
+    VcEndPoint*    vcEnd;
     CidrAddr       fmtpSubnet;
     unsigned short ttl;
 } McastEntry;
@@ -592,12 +829,13 @@ typedef struct {
  * Initializes a multicast entry.
  *
  * @param[out] entry       Entry to be initialized.
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  mcastInfo   Multicast information. Freed by `me_destroy()`.
+ * @param[in]  mcastInfo   Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
- * @param[in]  vcEnd       Local virtual-circuit endpoint
+ * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
+ *                         free.
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
@@ -611,7 +849,7 @@ static Ldm7Status
 me_init(
         McastEntry* const restrict       entry,
         const struct in_addr             mcastIface,
-        SepMcastInfo* const              mcastInfo,
+        const SepMcastInfo* const        mcastInfo,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
@@ -624,34 +862,47 @@ me_init(
         status = LDM7_INVAL;
     }
     else {
-        char* const str = smi_toString(mcastInfo);
+        //char* const str = smi_toString(mcastInfo);
         //log_notice("me_init(): entry->info=%s", str);
-        free(str);
+        //free(str);
 
-        entry->info = mcastInfo;
-        entry->mcastIface = mcastIface;
-        entry->ttl = ttl;
-        entry->pqPathname = strdup(pqPathname);
+        entry->vcEnd = vcEndPoint_clone(vcEnd);
 
-        if (NULL == entry->pqPathname) {
-            log_add_syserr("Couldn't copy pathname of product-queue");
+        if (entry->vcEnd == NULL) {
+            log_add("vcEndPoint_clone() failure");
             status = LDM7_SYSTEM;
         }
         else {
-            entry->vcEnd = vcEndPoint_clone(vcEnd);
+            entry->info = smi_clone(mcastInfo);
 
-            if (NULL == entry->vcEnd) {
-                log_add_syserr("Couldn't clone virtual-circuit endpoint");
+            if (entry->info == NULL) {
+                log_add("smi_clone() failure");
                 status = LDM7_SYSTEM;
             }
             else {
-                cidrAddr_copy(&entry->fmtpSubnet, fmtpSubnet);
-                status = 0;
-            } // `entry->vcEnd` allocated
+                entry->pqPathname = strdup(pqPathname);
+
+                if (NULL == entry->pqPathname) {
+                    log_add_syserr("Couldn't copy pathname of product-queue");
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    cidrAddr_copy(&entry->fmtpSubnet, fmtpSubnet);
+
+                    entry->mcastIface = mcastIface;
+                    entry->ttl = ttl;
+                    entry->circuitId = NULL;
+                    status = 0;
+                } // `entry->pqPathname` allocated
+
+                if (status)
+                    smi_free(entry->info);
+            } // `entry->info` allocated
+
             if (status)
-                free(entry->pqPathname);
-        } // `entry->pqPathname` allocated
-    } // `entry->info` allocated
+                vcEndPoint_free(entry->vcEnd);
+        } // `entry->vcEnd` allocated
+    } // `ttl` is valid
 
     return status;
 }
@@ -659,15 +910,16 @@ me_init(
 /**
  * Destroys a multicast entry.
  *
- * @param[in] entry  The multicast entry to be destroyed.
+ * @param[in,out] entry  The multicast entry to be destroyed.
  */
 static void
-me_destroy(
-        McastEntry* const entry)
+me_destroy(McastEntry* const entry)
 {
+    free(entry->circuitId);
+    cidrAddr_destroy(&entry->fmtpSubnet);
+    free(entry->pqPathname);
     smi_free(entry->info);
     vcEndPoint_free(entry->vcEnd);
-    free(entry->pqPathname);
 }
 
 /**
@@ -677,9 +929,10 @@ me_destroy(
  * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicast
  *                         interface.
- * @param[in]  mcastInfo   Multicast information. Freed by `me_free()`.
+ * @param[in]  mcastInfo   Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
- * @param[in]  vcEnd       Local virtual-circuit endpoint
+ * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
+ *                         free.
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
@@ -693,33 +946,33 @@ static Ldm7Status
 me_new(
         McastEntry** const restrict      entry,
         const struct in_addr             mcastIface,
-        SepMcastInfo* const              mcastInfo,
+        const SepMcastInfo* const        mcastInfo,
         unsigned short                   ttl,
         const VcEndPoint* const restrict vcEnd,
         const CidrAddr* const restrict   fmtpSubnet,
         const char* const restrict       pqPathname)
 {
-    int            status;
-        McastEntry* ent = log_malloc(sizeof(McastEntry), "multicast entry");
+    int         status;
+    McastEntry* ent = log_malloc(sizeof(McastEntry), "multicast entry");
 
-        if (ent == NULL) {
-            status = LDM7_SYSTEM;
-        }
-        else {
-        char* const str = smi_toString(mcastInfo);
+    if (ent == NULL) {
+        status = LDM7_SYSTEM;
+    }
+    else {
+        //char* const str = smi_toString(mcastInfo);
         //log_notice("me_new(): info=%s", str);
-        free(str);
+        //free(str);
 
         status = me_init(ent, mcastIface, mcastInfo, ttl, vcEnd, fmtpSubnet,
                     pqPathname);
 
-            if (status) {
-                free(ent);
-            }
-            else {
-                *entry = ent;
-            }
+        if (status) {
+            free(ent);
         }
+        else {
+            *entry = ent;
+        }
+    }
 
     return status;
 }
@@ -846,126 +1099,197 @@ me_startIfNecessary(
 }
 
 /**
- * Reserves an IP address for a downstream FMTP layer.
- * @param[in]  entry         Multicast LDM entry
- * @param[out] downFmtpAddr  IP address for downstream FMTP layer in network
- *                           byte order
- * @retval LDM7_OK           Success. `*downFmtpAddr` is set.
- * @retval LDM7_SYSTEM       System failure. `log_add()` called.
+ * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
+ *
+ * @param[in,out] entry       Multicast entry
+ * @param[in]     wrkGrpName  Name of AL2S workgroup or `NULL`
+ * @param[in]     feed        LDM feed
+ * @param[in]     rmtVcEnd    Remote end of virtual circuit
+ * @retval        0           Success
+ * @retval        LDM7_SYSTEM Failure. `log_add()` called.
  */
 static Ldm7Status
-me_reserve(
-        const McastEntry* const restrict entry,
-        in_addr_t* const restrict        downFmtpAddr)
+me_createVirtCirc(
+        McastEntry* const restrict       entry,
+        const char* const restrict       wrkGrpName,
+        const VcEndPoint* const restrict rmtVcEnd)
 {
-    Ldm7Status  status;
-    void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
+    int  status;
+    char feedStr[128];
 
-    if (mldmClnt == NULL) {
-        log_add("Couldn't create new multicast LDM RPC client");
+    (void)ft_format(smi_getFeed(entry->info), feedStr, sizeof(feedStr));
+    feedStr[sizeof(feedStr)-1] = 0;
+
+    char* const desc = ldm_format(128, "%s feed", feedStr);
+
+    if (desc == NULL) {
+        log_add("Couldn't format description for AL2S virtual-circuit for "
+                "feed %s", feedStr);
         status = LDM7_SYSTEM;
     }
     else {
-        status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
-
-        if (status) {
-            log_add("Couldn't reserve IP address for remote FMTP layer");
-        }
-        else {
-            char buf[80];
-            log_info("Reserved IP address %s for remote FMTP",
-                    inet_ntop(AF_INET, downFmtpAddr, buf, sizeof(buf)));
-        }
-
-        mldmClnt_free(mldmClnt);
-    }
-
-    return status;
-}
-
-/**
- * @retval LDM7_OK       Success. `fmtpAddr` is available for subsequent
- *                       reservation.
- * @retval LDM7_NOENT    `fmtpAddr` wasn't previously reserved. `log_add()`
- *                       called.
- * @retval LDM7_SYSTEM   System failure. `log_add()` called.
- */
-static Ldm7Status
-me_release(
-        const McastEntry* const restrict entry,
-        in_addr_t const                  fmtpAddr)
-{
-    Ldm7Status  status;
-    void* const mldmClnt = mldmClnt_new(mldm_getMldmCmdPort());
-
-    if (mldmClnt == NULL) {
-        log_add("Couldn't create new command-client to multicast LDM sender");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = mldmClnt_release(mldmClnt, fmtpAddr);
-
-        if (status) {
-            log_add("Couldn't release IP address for remote FMTP layer");
-        }
-        else {
-            char ipStr[INET_ADDRSTRLEN];
-            log_debug("Address %s released", inet_ntop(AF_INET, &fmtpAddr,
-                    ipStr, sizeof(ipStr)));
-        }
-
-        mldmClnt_free(mldmClnt);
-    }
-
-    return status;
-}
-
-/**
- * Sets the response to a subscription request.
- * @param[in]  entry     Multicast entry
- * @param[out] reply     Subscription reply. Caller should destroy when it's no
- *                       longer needed.
- * @retval 0             Success
- * @retval LDM7_NOENT    No associated Internet address-space
- * @retval LDM7_MCAST    All addresses have been reserved
- * @retval LDM7_SYSTEM   System error
- */
-static Ldm7Status
-me_setSubscriptionReply(
-        McastEntry* const restrict        entry,
-        SubscriptionReply* const restrict reply)
-{
-    int               status;
-    SubscriptionReply rep;
-
-    //char* const str = smi_toString(entry->info);
-    //log_notice("me_setSubscriptionReply(): entry->info=%s", str);
-    //free(str);
-
-    if (!mi_init(&rep.SubscriptionReply_u.info.mcastInfo,
-            smi_getFeed(entry->info),
-            isa_toString(smi_getMcastGrp(entry->info)),
-            isa_toString(smi_getFmtpSrvr(entry->info)))) {
-        log_add("Couldn't initialize multicast information");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        in_addr_t downFmtpAddr;
-
-        status = me_reserve(entry, &downFmtpAddr);
-
-        if (status == 0) {
-            cidrAddr_init(&rep.SubscriptionReply_u.info.fmtpAddr,
-                    downFmtpAddr, cidrAddr_getPrefixLen(&entry->fmtpSubnet));
-            *reply = rep;
-            status = LDM7_OK;
-        } // `rep->SubscriptionReply_u.info.clntAddr` set
+        status = oess_provision(wrkGrpName, desc, entry->vcEnd, rmtVcEnd,
+                &entry->circuitId);
 
         if (status)
-            mi_destroy(&rep.SubscriptionReply_u.info.mcastInfo);
-    } // `rep->SubscriptionReply_u.info.mcastInfo` allocated
+            log_add("Couldn't add host to AL2S virtual circuit for feed %s",
+                    feedStr);
 
-    reply->status = status;
+        free(desc);
+    } // `desc` allocated
+
+    return status;
+}
+
+/**
+ * Destroys the virtual circuit of a multicast entry.
+ *
+ * @param[in,out] entry       Multicast entry
+ * @param[in]     wrkGrpName  Name of AL2S workgroup
+ */
+static void
+me_destroyVirtCirc(
+        McastEntry* const restrict entry,
+        const char* const restrict wrkGrpName)
+{
+    if (entry->circuitId) {
+        oess_remove(wrkGrpName, entry->circuitId);
+        free(entry->circuitId);
+        entry->circuitId = NULL;
+    }
+}
+
+/**
+ * Indicates if the multicast LDM sender of a multicast entry multicasts on an
+ * AL2S multipoint VLAN.
+ *
+ * @param[in] entry    Multicast entry
+ * @retval    `true`   The associated multicast LDM sender does use a VLAN
+ * @retval    `false`  The associated multicast LDM sender does not use a VLAN
+ */
+static inline bool
+me_usesVlan(McastEntry* const entry)
+{
+    return vcEndPoint_isValid(entry->vcEnd);
+}
+
+/**
+ * Subscribes to an LDM7 multicast:
+ *   - Adds the FMTP client to the multipoint VLAN if appropriate
+ *   - Starts the multicast LDM process if necessary
+ *   - Returns information on the multicast group
+ *   - Returns the CIDR address for the FMTP client if appropriate
+ *
+ * @param[in]  entry        Multicast entry
+ * @param[in]  wrkGrpName   Name of AL2S workgroup
+ * @param[in]  clntAddr     Address of client in network byte order
+ * @param[in]  rmtVcEnd     Remote virtual-circuit endpoint or `NULL`. Caller
+ *                          may free.
+ * @param[in]  retxTimeout  FMTP retransmission timeout in minutes. A negative
+ *                          value obtains the FMTP default.
+ * @param[out] smi          Separated-out multicast information. Set only on
+ *                          success.
+ * @param[out] fmtpClntCidr CIDR address for the FMTP client. Set only on
+ *                          success.
+ * @retval 0                Success
+ * @retval LDM7_MCAST       All addresses have been reserved
+ * @retval LDM7_SYSTEM      System error. `log_add()` called.
+ */
+static Ldm7Status
+me_subscribe(
+        McastEntry* const restrict          entry,
+        const char* const restrict          wrkGrpName,
+        const in_addr_t                     clntAddr,
+        const VcEndPoint* const restrict    rmtVcEnd,
+        const float                         retxTimeout,
+        const SepMcastInfo** const restrict smi,
+        CidrAddr* const restrict            fmtpClntCidr)
+{
+    int status = me_usesVlan(entry)
+            ? me_createVirtCirc(entry, wrkGrpName, rmtVcEnd)
+            : 0;
+
+    if (status == 0) {
+        /*
+         * Sets the port numbers of the FMTP server & RPC-command server of
+         * the multicast LDM sender process
+         */
+        status = me_startIfNecessary(entry, retxTimeout);
+
+        if (status) {
+            log_add("Couldn't ensure running multicast sender");
+        }
+        else {
+            //char* const str = smi_toString(entry->info);
+            //log_notice("me_setSubscriptionReply(): entry->info=%s", str);
+            //free(str);
+
+            if (me_usesVlan(entry)) {
+                in_addr_t fmtpClntAddr;
+
+                status = mldm_getFmtpClntAddr(&fmtpClntAddr);
+
+                if (status == 0)
+                    cidrAddr_init(fmtpClntCidr, fmtpClntAddr,
+                            cidrAddr_getPrefixLen(&entry->fmtpSubnet));
+            } // Sending FMTP multicasts on multipoint VLAN
+            else {
+                status = mldm_allow(clntAddr);
+
+                if (status) {
+                    log_add("mldm_allow() failure");
+                }
+                else {
+                    cidrAddr_init(fmtpClntCidr, clntAddr, 32);
+                }
+            } // Sending FMTP doesn't multicast on multipoint VLAN
+
+            if (status == 0)
+                *smi = entry->info;
+        } // Multicast LDM sender is running
+
+        if (status && me_usesVlan(entry))
+            me_destroyVirtCirc(entry, wrkGrpName);
+    } // Virtual circuit to FMTP client created if appropriate
+
+    return status;
+}
+
+/**
+ * Unsubscribes an FMTP client from the multicast LDM sender associated with
+ * a multicast entry.
+ *
+ * @param[in,out] entry         Multicast entry
+ * @param[in]     fmtpClntAddr  Address of FMTP client
+ * @param[in]     wrkGrpName    Name of AL2S workgroup. Only necessary if the
+ *                              multicast LDM sender associated with `entry`
+ *                              communicates with the FMTP client using an AL2S
+ *                              multipoint VLAN.
+ * @retval        LDM7_OK       Success. `fmtpClntAddr` is available for subsequent
+ *                              reservation.
+ * @retval        LDM7_NOENT    `fmtpAddr` wasn't previously reserved.
+ *                              `log_add()` called.
+ * @retval        LDM7_SYSTEM   System failure. `log_add()` called.
+ */
+static Ldm7Status
+me_unsubscribe(
+        McastEntry* const restrict entry,
+        const in_addr_t            fmtpClntAddr,
+        const char* const restrict wrkGrpName)
+{
+    int status;
+
+    if (me_usesVlan(entry)) {
+        status = mldm_release(fmtpClntAddr);
+
+        if (status) {
+            struct in_addr addr = {fmtpClntAddr};
+            log_add("Couldn't release client FMTP address %s for reuse",
+                    inet_ntoa(addr));
+        }
+
+        me_destroyVirtCirc(entry, wrkGrpName);
+    } // Associated multicast LDM sender uses an AL2S VLAN
 
     return status;
 }
@@ -981,6 +1305,8 @@ static void* mcastEntries;
 static McastEntry key;
 /// FMTP retransmission timeout in minutes
 static float retxTimeout = -1.0; // Negative => use FMTP default
+/// Name of AL2S Workgroup
+static const char* wrkGrpName;
 
 /**
  * Returns the multicast entry corresponding to a particular feed.
@@ -1011,14 +1337,20 @@ umm_setRetxTimeout(const float minutes)
     retxTimeout = minutes;
 }
 
+void
+umm_setWrkGrpName(const char* const name)
+{
+    wrkGrpName = name;
+}
+
 Ldm7Status
 umm_addPotentialSender(
-    const struct in_addr              mcastIface,
-    SepMcastInfo* const restrict     mcastInfo,
-    const unsigned short              ttl,
-    const VcEndPoint* const restrict  vcEnd,
-    const CidrAddr* const restrict    fmtpSubnet,
-    const char* const restrict        pqPathname)
+    const struct in_addr               mcastIface,
+    const SepMcastInfo* const restrict mcastInfo,
+    const unsigned short               ttl,
+    const VcEndPoint* const restrict   vcEnd,
+    const CidrAddr* const restrict     fmtpSubnet,
+    const char* const restrict         pqPathname)
 {
     McastEntry* entry;
 
@@ -1056,8 +1388,11 @@ umm_addPotentialSender(
 
 Ldm7Status
 umm_subscribe(
-        const feedtypet          feed,
-        SubscriptionReply* const reply)
+        const feedtypet                     feed,
+        const in_addr_t                     clntAddr,
+        const VcEndPoint* const restrict    rmtVcEnd,
+        const SepMcastInfo** const restrict smi,
+        CidrAddr* const restrict            fmtpClntCidr)
 {
     int         status;
     McastEntry* entry = umm_getMcastEntry(feed);
@@ -1071,25 +1406,15 @@ umm_subscribe(
         //log_notice("umm_subscribe(): entry->info=%s", str);
         //free(str);
 
-            /*
+        /*
          * Sets the port numbers of the FMTP server & RPC-command server of
-         * the multicast LDM sender process
-             */
-            status = me_startIfNecessary(entry, retxTimeout);
+         * the multicast LDM sender process if appropriate
+         */
+        status = me_subscribe(entry, wrkGrpName, clntAddr, rmtVcEnd,
+                retxTimeout, smi, fmtpClntCidr);
 
-            if (status) {
-                log_add("Couldn't ensure running multicast sender");
-            }
-            else {
-            //char* const str = smi_toString(entry->info);
-            //log_notice("umm_subscribe(): entry->info=%s", str);
-            //free(str);
-
-            status = me_setSubscriptionReply(entry, reply);
-
-                if (status)
-                    log_add("Couldn't set subscription reply");
-            }
+        if (status)
+            log_add("me_subscribe() failure");
     } // Desired feed maps to a possible multicast LDM sender
 
     return status;
@@ -1121,24 +1446,23 @@ umm_getMldmSenderPid(void)
 Ldm7Status
 umm_unsubscribe(
         const feedtypet feed,
-        const in_addr_t downFmtpAddr)
+        const in_addr_t fmtpClntAddr)
 {
     int status;
 
     McastEntry* entry = umm_getMcastEntry(feed);
 
     if (entry == NULL) {
+        log_add("No multicast LDM sender corresponds to feed %s",
+                s_feedtypet(feed));
         status = LDM7_INVAL;
     }
     else  {
-        status = me_release(entry, downFmtpAddr);
+        status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName);
 
-        if (status == 0) {
-            char ipStr[INET_ADDRSTRLEN];
-            log_debug("Address %s released", inet_ntop(AF_INET, &downFmtpAddr,
-                    ipStr, sizeof(ipStr)));
-        }
-    }
+        if (status)
+            log_add("me_unsubscribe() failure");
+    } // Corresponding entry found
 
     return status;
 }

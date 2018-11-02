@@ -447,8 +447,7 @@ myUp7_run(
     fds.fd = sock;
     fds.events = POLLRDNORM;
 
-    status = up7_init("UCAR LDM7", localVcEnd);
-    CU_ASSERT_EQUAL(status, 0);
+    umm_setWrkGrpName("UCAR LDM7");
 
     /**
      * The `up7.c` module needs to tell this function to return when a error
@@ -789,9 +788,6 @@ sender_start(
 
     CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
 
-    VcEndPoint* vcEnd = vcEndPoint_new(1, NULL, NULL);
-    CU_ASSERT_PTR_NOT_NULL(vcEnd);
-
     in_addr_t subnet;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, LOCAL_HOST, &subnet), 1);
 
@@ -802,17 +798,17 @@ sender_start(
 
     // The upstream multicast manager takes responsibility for freeing
     // `mcastInfo`
-    CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, vcEnd,
+    CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, localVcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME), 0);
 
     CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
 
     char* upAddr = ipv4Sock_getLocalString(sender->sock);
     char* mcastInfoStr = smi_toString(mcastInfo);
-    char* vcEndPointStr = vcEndPoint_format(vcEnd);
+    char* vcEndPointStr = vcEndPoint_format(localVcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
     log_notice("LDM7 server starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
-            "vcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
+            "localVcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
             vcEndPointStr, fmtpSubnetStr);
     free(fmtpSubnetStr);
     free(vcEndPointStr);
@@ -833,8 +829,8 @@ sender_start(
                 0);
     sender_unlock(sender);
 
-    cidrAddr_delete(fmtpSubnet);
-    vcEndPoint_free(vcEnd);
+    cidrAddr_free(fmtpSubnet);
+    smi_free(mcastInfo);
 }
 
 /**
@@ -1099,12 +1095,9 @@ receiver_init(
 
     numDeletedProds = 0;
 
-    VcEndPoint* const vcEnd = vcEndPoint_new(1, NULL, NULL);
-    CU_ASSERT_PTR_NOT_NULL(vcEnd);
-    int status = down7_init(ldmSrvr, feed, "dummy", vcEnd, receiverPq,
+    int status = down7_init(ldmSrvr, feed, "dummy", localVcEnd, receiverPq,
             receiver->mrm);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    vcEndPoint_free(vcEnd);
 
     isa_free(ldmSrvr);
 }

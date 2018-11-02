@@ -225,18 +225,6 @@ static void oess_remove(
  */
 static bool        isInitialized = FALSE;
 /**
- * Name of AL2S workgroup
- */
-static char*       wrkGrpName = NULL;
-/**
- * Local AL2S end-point for virtual circuits
- */
-static VcEndPoint* localVcEndPoint = NULL;
-/**
- * Identifier of AL2S virtual circuit
- */
-static char*       circuitId = NULL;
-/**
  * The RPC client-side transport to the downstream LDM-7
  */
 static CLIENT*     clnt = NULL;
@@ -245,9 +233,9 @@ static CLIENT*     clnt = NULL;
  */
 static feedtypet   feedtype = NONE;
 /**
- * The IP address of the downstream FMTP layer's TCP connection.
+ * The IP address of the client FMTP component
  */
-static in_addr_t   downFmtpAddr = INADDR_ANY;
+static in_addr_t   fmtpClntAddr = INADDR_ANY;
 /**
  * Whether or not the product-index map is open.
  */
@@ -256,88 +244,6 @@ static bool        pimIsOpen = false;
  * Whether or not this component is done.
  */
 static bool        isDone = false;
-
-/**
- * Idempotent.
- */
-static void
-releaseDownFmtpAddr()
-{
-    if (feedtype != NONE && downFmtpAddr != INADDR_ANY) {
-        if (umm_unsubscribe(feedtype, downFmtpAddr)) {
-            log_flush_error();
-        }
-        else {
-            char ipStr[INET_ADDRSTRLEN];
-            log_debug("Address %s released", inet_ntop(AF_INET, &downFmtpAddr,
-                    ipStr, sizeof(ipStr)));
-        }
-        downFmtpAddr = INADDR_ANY;
-        feedtype = NONE;
-    }
-}
-
-/**
- * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
- *
- * @param[in]  feed              LDM feed
- * @param[in]  remoteVcEndPoint  Remote end of virtual circuit
- * @retval     0                 Success
- * @retval     LDM7_NOENT        Virtual circuit not created because one of the
- *                               end-points is a dummy
- * @retval     LDM7_SYSTEM       Failure. `log_add()` called.
- */
-static Ldm7Status
-up7_createVirtCirc(
-        const feedtypet                  feed,
-        const VcEndPoint* const restrict remoteVcEndPoint)
-{
-    int  status;
-    char feedStr[128];
-
-    (void)ft_format(feed, feedStr, sizeof(feedStr));
-    feedStr[sizeof(feedStr)-1] = 0;
-
-    char* const desc = ldm_format(128, "%s feed", feedStr);
-
-    if (desc == NULL) {
-        log_add("Couldn't format description for AL2S virtual-circuit for "
-                "feed %s", feedStr);
-        status = LDM7_SYSTEM;
-    }
-    else {
-        char* id;
-
-        status = oess_provision(wrkGrpName, desc, localVcEndPoint,
-                remoteVcEndPoint, &id);
-
-        if (status && status != LDM7_NOENT) {
-            log_add("Couldn't create AL2S virtual circuit for feed %s",
-                    feedStr);
-        }
-        else {
-            free(circuitId);
-            circuitId = id;
-        }
-
-        free(desc);
-    } // `desc` allocated
-
-    return status;
-}
-
-/**
- * Destroys the virtual circuit if it exists.
- */
-static void
-up7_destroyVirtCirc()
-{
-    if (circuitId) {
-        oess_remove(wrkGrpName, circuitId);
-        free(circuitId);
-        circuitId = NULL;
-    }
-}
 
 /**
  * Opens the product-index map associated with a feedtype.
@@ -473,10 +379,11 @@ up7_createClientTransport(
  * @param[in] inAddr  Address of the host
  * @return            Reduced feed. Might be `NONE`.
  */
-static feedtypet up7_reduceToAllowed(
+static feedtypet
+up7_reduceFeed(
         feedtypet                            feed,
-        const char* const restrict           hostId,
-        const struct in_addr* const restrict inAddr)
+        const struct in_addr* const restrict inAddr,
+        const char* const restrict           hostId)
 {
     static const size_t maxFeeds = 128;
     feedtypet           allowedFeeds[maxFeeds];
@@ -490,108 +397,93 @@ static feedtypet up7_reduceToAllowed(
 }
 
 /**
- * Ensures that a reply to an RPC service routine has been freed.
+ * Finishes subscribing to a multicast feed:
+ *   - Starts the multicast sender if necessary
+ *   - Gets a CIDR address for the FMTP client if appropriate
+ *   - Opens the product-to-index map
+ *   - Sets the file-scoped variables `feedtype` and `downFmtpAddr`
+ *   - Sets the reply to the RPC client
  *
- * @param[in] xdrProc  Associated XDR function.
- * @param[in] reply    RPC reply.
+ * @param[in]  xprt         RPC transport
+ * @param[in]  feed         Multicast feed
+ * @param[in]  fmtVcEnd     Remote endpoint of the AL2S virtual circuit or
+ *                          `NULL`. Necessary only if the multicast LDM sender
+ *                          associated with `feed` multicasts on an AL2S
+ *                          multipoint VLAN.
+ * @param[out] reply        RPC reply. Only modified on success.
+ * @retval     0            Success. `*reply` is set.
+ * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
-static inline void
-up7_ensureFree(
-        xdrproc_t const      xdrProc,
-        void* const restrict reply)
-{
-    if (reply)
-        xdr_free(xdrProc, (char*)reply);
-}
-
-/**
- * Sets the subscription of the associated downstream LDM-7. Ensures that the
- * multicast LDM sender process that's associated with the given feedtype is
- * running.
- *
- * @param[in]  request  Subscription request
- * @param[in]  xprt     RPC transport
- * @param[out] reply    Reply.
- * @retval     `true`   Success. `*reply` is set. `feedtype` and
- *                      `downFmtpAddr` are set iff a corresponding multicast
- *                      sender exists.
- * @retval     `false`  Failure. `log_add()` called. Caller should kill the
- *                      connection.
- */
-static bool
+static int
 up7_subscribe(
-        const McastSubReq* const restrict request,
         struct SVCXPRT* const restrict    xprt,
+        feedtypet                         feed,
+        const VcEndPoint* const restrict  rmtVcEnd,
         SubscriptionReply* const restrict reply)
 {
-    bool                replySet = false;
-    struct sockaddr_in* sockAddr = svc_getcaller(xprt);
-    const char*         hostId = hostbyaddr(sockAddr);
-    feedtypet           reducedFeed = up7_reduceToAllowed(request->feed, hostId,
-            &sockAddr->sin_addr);
+    int                                  status;
+    struct sockaddr_in*                  sockAddr = svc_getcaller(xprt);
+    const char* const                    hostId = hostbyaddr(sockAddr);
+    const struct in_addr* const restrict hostAddr = &sockAddr->sin_addr;
 
-    if (reducedFeed == NONE) {
+    feed = up7_reduceFeed(feed, hostAddr, hostId);
+
+    if (feed == NONE) {
         log_notice("Host %s isn't allowed to receive any part of feed %s",
-                hostId, s_feedtypet(request->feed));
+                hostId, s_feedtypet(feed));
         reply->status = LDM7_UNAUTH;
-        replySet = true;
+        status = 0;
     }
     else {
-        Ldm7Status status = up7_createVirtCirc(reducedFeed, &request->vcEnd);
-        const bool noAl2s = status == LDM7_NOENT;
+        const SepMcastInfo* smi;
+        CidrAddr            fmtpClntCidr;
 
-        if (noAl2s)
+        status = umm_subscribe(feed, hostAddr->s_addr, rmtVcEnd,
+                &smi, &fmtpClntCidr);
+
+        if (LDM7_NOENT == status) {
+            log_flush_notice();
+            reply->status = LDM7_NOENT;
             status = 0;
-
-        if (status) {
-            log_add("Couldn't create virtual circuit to host %s", hostId);
+        }
+        else if (status) {
+            log_add("Couldn't subscribe host %s to feed %s", hostId,
+                    s_feedtypet(feed));
         }
         else {
-            SubscriptionReply rep = {};
+            McastInfo mcastInfo;
 
-            status = umm_subscribe(reducedFeed, &rep);
-
-            if (status) {
-                if (LDM7_NOENT == status) {
-                    log_notice_q("Allowed feed %s isn't multicasted",
-                            s_feedtypet(reducedFeed));
-                    reply->status = LDM7_NOENT;
-                    replySet = true;
-                }
-                else {
-                    log_add("Couldn't subscribe host %s to feed %s",
-                            hostId, s_feedtypet(reducedFeed));
-                }
+            if (!mi_init(&mcastInfo, feed,
+                    isa_toString(smi_getMcastGrp(smi)),
+                    isa_toString(smi_getFmtpSrvr(smi)))) {
+                log_add("Couldn't set multicast information");
+                status = LDM7_SYSTEM;
             }
             else {
-                in_addr_t addr = cidrAddr_getAddr(
-                        &rep.SubscriptionReply_u.info.fmtpAddr);
-
-                status = up7_openProdIndexMap(request->feed);
+                status = up7_openProdIndexMap(feed);
 
                 if (status) {
-                    log_add("Couldn't open product->index map");
+                    log_add("Couldn't open product-to-index map for feed %s",
+                            s_feedtypet(feed));
+                    mi_destroy(&mcastInfo);
                 }
                 else {
-                    feedtype = reducedFeed;
-                    downFmtpAddr = addr;
-                    *reply = rep;
+                    reply->SubscriptionReply_u.info.mcastInfo = mcastInfo;
+                    reply->SubscriptionReply_u.info.fmtpAddr = fmtpClntCidr;
                     reply->status = LDM7_OK;
-                    replySet = true;
+                    feedtype = feed;
+                    fmtpClntAddr = cidrAddr_getAddr(&fmtpClntCidr);
                 }
+            } // Multicast information initialized
 
-                if (status) {
-                    (void)umm_unsubscribe(reducedFeed, addr);
-                    up7_ensureFree(xdr_SubscriptionReply, &rep);
-                }
-            } // Multicast LDM sender exists & reply is initialized
+            if (status &&
+                    umm_unsubscribe(feed, cidrAddr_getAddr(&fmtpClntCidr)))
+                log_flush_error();
+        } // `umm_subscribe()` successful
+    } // Client is allowed to receive something
 
-            if (status)
-                up7_destroyVirtCirc();
-        } // Virtual circuit with downstream client created
-    } // All or part of subscription is allowed by configuration-file
-
-    return replySet;
+    return status;
 }
 
 /**
@@ -976,16 +868,13 @@ up7_sendBacklog(
 /**
  * Initializes this module.
  *
- * @param[in] workGroup    Name of AL2S workgroup
- * @param[in] endPoint     Local end-point for AL2S virtual circuits
+ * @param[in] workGroup    Name of AL2S workgroup. Freed by `up7_destroy()`.
  * @retval    0            Success
  * @retval    LDM7_LOGIC   Module is already initialized. `log_add()` called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 int
-up7_init(
-        const char* const restrict       workGroup,
-        const VcEndPoint* const restrict endPoint)
+up7_init(const char* const restrict workGroup)
 {
     int status;
 
@@ -1001,23 +890,8 @@ up7_init(
             status = LDM7_SYSTEM;
         }
         else {
-            free(wrkGrpName);
-            wrkGrpName = name;
-
-            VcEndPoint* end = vcEndPoint_clone(endPoint);
-
-            if (end == NULL) {
-                log_add("Couldn't copy local end-point of AL2S "
-                        "virtual-circuit");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                vcEndPoint_free(localVcEndPoint);
-                localVcEndPoint = end;
-
-                isInitialized = true;
-                status = 0;
-            } // `localVcEndPoint` allocated
+            isInitialized = true;
+            status = 0;
         } // `wrkGrpName` allocated
     }
 
@@ -1033,17 +907,11 @@ up7_destroy(void)
     log_debug("up7_destroy() entered");
 
     if (isInitialized) {
-        releaseDownFmtpAddr();
+        (void)umm_unsubscribe(feedtype, fmtpClntAddr);
+        log_clear();
+
         up7_destroyClient();
         up7_closeProdIndexMap();
-
-        up7_destroyVirtCirc();
-
-        vcEndPoint_free(localVcEndPoint);
-        localVcEndPoint = NULL;
-
-        free(wrkGrpName);
-        wrkGrpName = NULL;
 
         isDone = false;
         isInitialized = false;
@@ -1078,13 +946,14 @@ subscribe_7_svc(
 
     log_notice_q("Incoming subscription request from %s:%u for feed %s",
             hostId, ntohs(xprt->xp_raddr.sin_port), feedspec);
+
     if (reply) {
-        up7_ensureFree(xdr_SubscriptionReply, reply); // free possible prior use
+        xdr_free(xdr_SubscriptionReply, reply); // Free possible previous use
         reply = NULL;
     }
 
-    if (!up7_subscribe(request, xprt, &result)) {
-        log_error_q("Subscription failure");
+    if (up7_subscribe(xprt, request->feed, &request->vcEnd, &result)) {
+        log_flush_error();
     }
     else {
         if (result.status != LDM7_OK) {
