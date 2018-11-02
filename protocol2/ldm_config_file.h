@@ -291,8 +291,7 @@ lcf_addAccept(
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
  *                         "0.0.0.0" obtains the system's default multicasting
  *                         interface.
- * @param[in] mcastInfo    Information on the multicast group. Freed by
- *                         `lcf_free()`.
+ * @param[in] mcastInfo    Information on the multicast group. Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
  *                                   any interface.
@@ -303,7 +302,8 @@ lcf_addAccept(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may free.
+ * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
+ *                         free.
  * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
@@ -313,12 +313,12 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
-        const struct in_addr             mcastIface,
-        SepMcastInfo* const restrict     mcastInfo,
-        const unsigned short             ttl,
-        const VcEndPoint* const restrict vcEnd,
-        const CidrAddr* const restrict   fmtpSubnet,
-        const char* const restrict       pqPathname);
+        const struct in_addr               mcastIface,
+        const SepMcastInfo* const restrict mcastInfo,
+        const unsigned short               ttl,
+        const VcEndPoint* const restrict   vcEnd,
+        const CidrAddr* const restrict     fmtpSubnet,
+        const char* const restrict         pqPathname);
 
 /**
  * Adds a potential downstream LDM-7.

@@ -2848,12 +2848,12 @@ lcf_addAccept(
 
 int
 lcf_addMulticast(
-        const struct in_addr             mcastIface,
-        SepMcastInfo* const restrict     mcastInfo,
-        const unsigned short             ttl,
-        const VcEndPoint* const restrict vcEnd,
-        const CidrAddr* const restrict   fmtpSubnet,
-        const char* const restrict       pqPathname)
+        const struct in_addr               mcastIface,
+        const SepMcastInfo* const restrict mcastInfo,
+        const unsigned short               ttl,
+        const VcEndPoint* const restrict   vcEnd,
+        const CidrAddr* const restrict     fmtpSubnet,
+        const char* const restrict         pqPathname)
 {
     int status = umm_addPotentialSender(mcastIface, mcastInfo, ttl, vcEnd,
             fmtpSubnet, pqPathname);
@@ -2878,32 +2878,32 @@ lcf_addReceive(
         const char* const restrict         fmtpIface,
         const char* restrict               switchId,
         const char* restrict               portId,
-        const char* const restrict         al2sVlanId)
+        const char* const restrict         vlanId)
 {
-    int        status;
-    VcEndPoint vcEnd;
-    VlanId     al2sVlanTag;
+    int        status = 0;
+    VlanId     vlanTag;
 
     if (switchId == NULL)
         switchId = "dummy";
     if (portId == NULL)
         portId = "dummy";
 
-    status = 0;
-    if (al2sVlanId == NULL) {
-        if (sscanf(fmtpIface, "%*[A-Za-z0-9.]%hu", &al2sVlanTag) != 1) {
+    if (vlanId == NULL) {
+        if (sscanf(fmtpIface, "%*[-_A-Za-z0-9.]%hu", &vlanTag) != 1) {
             log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
                     fmtpIface);
             status = EINVAL;
         }
     }
-    else if (sscanf(al2sVlanId, "%hu", &al2sVlanTag) != 1) {
-        log_add("Couldn't decode VLAN tag \"%s\"", al2sVlanId);
+    else if (sscanf(vlanId, "%hu", &vlanTag) != 1) {
+        log_add("Couldn't decode VLAN tag \"%s\"", vlanId);
         status = EINVAL;
     }
 
     if (status == 0) {
-        if (!vcEndPoint_init(&vcEnd, al2sVlanTag, switchId, portId)) {
+        VcEndPoint vcEnd;
+
+        if (!vcEndPoint_init(&vcEnd, vlanTag, switchId, portId)) {
             log_add("Couldn't construct virtual-circuit endpoint");
             status = ENOMEM;
         }
@@ -2918,7 +2918,7 @@ lcf_addReceive(
             }
 
             vcEndPoint_destroy(&vcEnd);
-        } // `vcEnd` constructed
+        } // `vcEnd` initialized
     } // VLAN ID extracted
 
     return status;
