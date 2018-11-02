@@ -98,9 +98,9 @@ static sigset_t              termSigSet;
  */
 static OffMap*               indexToOffsetMap;
 /**
- * Pool of available IP addresses for FMTP clients:
+ * Collection of IP addresses for FMTP clients:
  */
-static void*                 fmtpClntAddrPool;
+static void*                 fmtpClntAddrs;
 /**
  * Authorizer of remote clients:
  */
@@ -153,7 +153,7 @@ Options:\n\
                       is EXP.\n\
     -l dest           Log to `dest`. One of: \"\" (system logging daemon, \"-\"\n\
                       (standard error), or file `dest`. Default is \"%s\"\n\
-    -m mcastIface     IP address of interface to use to send multicast\n\
+    -i mcastIface     IP address of interface to use to send multicast\n\
                       packets. Default is the system's default multicast\n\
                       interface.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
@@ -215,7 +215,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:l:m:q:r:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:i:q:r:s:t:vx")) != EOF)
         switch (ch) {
             case 'f': {
                 if (strfeedtypet(optarg, feed)) {
@@ -224,12 +224,12 @@ mls_decodeOptions(
                 }
                 break;
             }
-            case 'l': {
-                (void)log_set_destination(optarg);
+            case 'i': {
+                *ifaceAddr = optarg;
                 break;
             }
-            case 'm': {
-                *ifaceAddr = optarg;
+            case 'l': {
+                (void)log_set_destination(optarg);
                 break;
             }
             case 'q': {
@@ -315,23 +315,18 @@ mls_decodeOperands(
     }
     else {
         const char* mcastAddr = *argv++;
+        CidrAddr*   subnet = (argc-- < 1)
+                ? cidrAddr_new(0, 32) // Empty set: no members
+                : cidrAddr_parse(*argv++);
 
-        if (argc-- < 1) {
-            log_add("FMTP network not specified");
+        if (subnet == NULL) {
+            log_add("Couldn't construct FMTP subnet");
             status = 1;
         }
         else {
-            CidrAddr* subnet = cidrAddr_parse(*argv++);
-            if (subnet == NULL) {
-                log_add("Invalid FMTP subnet specification: \"%s\"",
-                        *--argv);
-                status = 1;
-            }
-            else {
-                fmtpSubnet = subnet;
-                *groupAddr = mcastAddr;
-                status = 0;
-            }
+            *groupAddr = mcastAddr;
+            fmtpSubnet = subnet;
+            status = 0;
         }
     }
 
@@ -812,25 +807,32 @@ runMldmSrvr(void* mldmSrvr)
     return NULL;
 }
 
+/**
+ * Starts the FMTP client authorization prcess.
+ *
+ * @param[in] fmtpSubnet   Subnet for FMTP clients
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  Failure. `log_add()` called.
+ */
 static Ldm7Status
 startAuthorization(const CidrAddr* const fmtpSubnet)
 {
     Ldm7Status status;
 
-    fmtpClntAddrPool = fmtpClntAddrs_new(fmtpSubnet);
+    fmtpClntAddrs = fmtpClntAddrs_new(fmtpSubnet);
 
-    if (fmtpClntAddrPool == NULL) {
+    if (fmtpClntAddrs == NULL) {
         log_add_syserr("Couldn't create pool of available IP addresses");
         status = LDM7_SYSTEM;
     }
     else {
-        authorizer = auth_new(fmtpClntAddrPool, smi_getFeed(mcastInfo));
+        authorizer = auth_new(fmtpClntAddrs, smi_getFeed(mcastInfo));
 
         if (authorizer == NULL) {
             log_add_syserr("Couldn't create authorizer of remote clients");
         }
         else {
-            mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrPool);
+            mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrs);
 
             if (mldmCmdSrvr == NULL) {
                 log_add_syserr("Couldn't create multicast LDM RPC "
@@ -858,7 +860,7 @@ startAuthorization(const CidrAddr* const fmtpSubnet)
         } // `authorizer` set
 
         if (status)
-            fmtpClntAddrs_delete(fmtpClntAddrPool);
+            fmtpClntAddrs_free(fmtpClntAddrs);
     } // `inAddrPool` set
 
     return status;
@@ -882,7 +884,7 @@ stopAuthorization()
         else {
             mldmSrvr_free(mldmCmdSrvr);
             auth_delete(authorizer);
-            fmtpClntAddrs_delete(fmtpClntAddrPool);
+            fmtpClntAddrs_free(fmtpClntAddrs);
         }
     }
 }

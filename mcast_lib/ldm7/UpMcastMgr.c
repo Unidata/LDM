@@ -218,7 +218,7 @@ mldm_exec(
     char mcastIfaceBuf[INET_ADDRSTRLEN];
     if (mcastIface.s_addr) {
         inet_ntop(AF_INET, &mcastIface, mcastIfaceBuf, sizeof(mcastIfaceBuf));
-        args[i++] = "-m";
+        args[i++] = "-i";
         args[i++] = mcastIfaceBuf;
     }
 
