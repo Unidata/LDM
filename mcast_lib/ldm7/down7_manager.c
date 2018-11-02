@@ -36,12 +36,15 @@
  *                           upon return.
  * @param[in] feed           Feedtype of multicast group to receive.
  * @param[in] fmtpIface      Name of virtual interface to be created and used by
- *                           FMTP layer. Caller may free.
+ *                           FMTP layer or "dummy", in which case no such
+ *                           interface will be created and `vcEnd` must be
+ *                           invalid. Caller may free.
  * @param[in] vcEnd          Local AL2S virtual-circuit endpoint. If the
  *                           endpoint isn't valid, then the AL2S virtual circuit
- *                           will not be created.
+ *                           will not be created. Caller may free.
  * @param[in] pqPathname     Pathname of the product-queue.
  * @retval    0              Success
+ * @retval    LDM7_INVAL     `fmtpIface` and `vcEnd` are inconsistent
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
  * @retval    LDM7_SYSTEM    System error occurred. `log_add()` called.
  */
@@ -67,14 +70,19 @@ executeDown7(
             status = LDM7_SYSTEM;
         }
         else {
-            down7_init(ldmSrvr, feed, fmtpIface, vcEnd, pq, mrm);
+            status = down7_init(ldmSrvr, feed, fmtpIface, vcEnd, pq, mrm);
 
-            status = down7_run(); // Blocks until error or termination requested
+            if (status) {
+                log_add("Couldn't initialize downstream LDM7");
+            }
+            else {
+                status = down7_run(); // Blocks until error or termination requested
 
-            if (status == LDM7_INTR)
-                status = 0; // Success
+                if (status == LDM7_INTR)
+                    status = 0; // Success
 
-            down7_destroy();
+                down7_destroy();
+            } // Downstream LDM7 initialized
 
             (void)mrm_close(mrm);
         } // `mrm` open
@@ -198,8 +206,8 @@ elt_start(
     }
     else if (0 == pid) {
         /* Child process */
-        status = executeDown7(elt->ldmSrvr, elt->feed, elt->fmtpIface, &elt->vcEnd,
-                getQueuePath());
+        status = executeDown7(elt->ldmSrvr, elt->feed, elt->fmtpIface,
+                &elt->vcEnd, getQueuePath());
 
         if (status) {
             log_add("executeDown7() failure: status=%d", status);
