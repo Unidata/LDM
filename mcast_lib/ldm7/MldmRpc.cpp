@@ -109,6 +109,23 @@ public:
         return inAddr.s_addr;
     }
 
+    void allow(in_addr_t fmtpAddr)
+    {
+        static auto action = MldmRpcAct::ALLOW_ADDR;
+        struct iovec iov[2] = {
+                {&action,   sizeof(action)},
+                {&fmtpAddr, sizeof(fmtpAddr)}
+        };
+        tcpSock.writev(iov, 2);
+        Ldm7Status ldm7Status;
+        if (tcpSock.read(&ldm7Status, sizeof(ldm7Status)) == 0)
+            throw std::system_error(errno, std::system_category(),
+                    "Socket was closed");
+        if (ldm7Status != LDM7_OK)
+            throw std::runtime_error("Couldn't allow IP address " +
+                    to_string(fmtpAddr));
+    }
+
     /**
      * Releases an IP address for subsequent reuse.
      * @param[in] fmtpAddr       IP address to be release in network byte-order
@@ -143,6 +160,11 @@ in_addr_t MldmClnt::reserve() const
     return pImpl->reserve();
 }
 
+void MldmClnt::allow(const in_addr_t fmtpAddr) const
+{
+    pImpl->allow(fmtpAddr);
+}
+
 void MldmClnt::release(const in_addr_t fmtpAddr) const
 {
     pImpl->release(fmtpAddr);
@@ -165,6 +187,20 @@ Ldm7Status mldmClnt_reserve(
 {
     try {
         *fmtpAddr = static_cast<MldmClnt*>(mldmClnt)->reserve();
+    }
+    catch (const std::exception& ex) {
+        log_add(ex.what());
+        return LDM7_SYSTEM;
+    }
+    return LDM7_OK;
+}
+
+Ldm7Status mldmClnt_allow(
+        void*           mldmClnt,
+        const in_addr_t fmtpClnt)
+{
+    try {
+        static_cast<MldmClnt*>(mldmClnt)->allow(fmtpClnt);
     }
     catch (const std::exception& ex) {
         log_add(ex.what());

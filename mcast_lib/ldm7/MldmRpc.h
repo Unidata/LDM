@@ -47,6 +47,18 @@ Ldm7Status mldmClnt_reserve(
         in_addr_t* fmtpAddr);
 
 /**
+ * Explicitly allows the IP address of an FMTP client to connect.
+ *
+ * @param[in]  mldmClnt  Multicast LDM RPC client
+ * @param[out] fmtpAddr  IP address of FMTP client
+ * @retval LDM7_OK       Success
+ * @retval LDM7_SYSTEM   System failure. `log_add()` called.
+ */
+Ldm7Status mldmClnt_allow(
+        void*           mldmClnt,
+        const in_addr_t fmtpAddr);
+
+/**
  * Releases a reserved IP address for subsequent reuse.
  * @param[in] mldmClnt  Multicast LDM RPC client
  * @param[in] fmtpAddr  IP address in network byte order to be released
@@ -151,6 +163,13 @@ public:
      * @return  Reserved IP address in network byte order
      */
     in_addr_t reserve() const;
+
+    /**
+     * Explicitly allows the IP address of an FMTP client.
+     *
+     * @return  Reserved IP address in network byte order
+     */
+    void allow(const in_addr_t fmtpClnt) const;
 
     /**
      * Releases a reserved IP address for subsequent reuse.
