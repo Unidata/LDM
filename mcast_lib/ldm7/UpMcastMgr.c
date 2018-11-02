@@ -188,8 +188,10 @@ mldm_getServerPorts(const int pipe)
  *                           default timeout is used.
  * @param[in] pqPathname     Pathname of product-queue. Caller may free.
  * @param[in] pipe           Write end of pipe to parent process
+ * @retval    0              Success
+ * @retval    LDM7_SYSTEM    Failure. `log_add()` called.
  */
-static void
+static Ldm7Status
 mldm_exec(
     const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict info,
@@ -199,28 +201,24 @@ mldm_exec(
     const char* const restrict         pqPathname,
     const int                          pipe)
 {
+    int   status = 0;
     char* args[23]; // Keep sufficiently capacious (search for `i\+\+`)
     int   i = 0;
 
     args[i++] = "mldm_sender";
 
-    char* arg = (char*)log_get_destination(); // safe cast
-    if (arg != NULL) {
-        args[i++] = "-l";
-        args[i++] = arg;
-    }
+    const char* logDestArg = log_get_destination();
+    if (strcmp(log_get_default_destination(), logDestArg)) {
+        if (logDestArg != NULL) {
+            args[i++] = "-l";
+            args[i++] = (char*)logDestArg; // Safe cast
+        }
+    } // Non-default logging destination
 
     if (log_is_enabled_info)
         args[i++] = "-v";
     if (log_is_enabled_debug)
         args[i++] = "-x";
-
-    char mcastIfaceBuf[INET_ADDRSTRLEN];
-    if (mcastIface.s_addr) {
-        inet_ntop(AF_INET, &mcastIface, mcastIfaceBuf, sizeof(mcastIfaceBuf));
-        args[i++] = "-i";
-        args[i++] = mcastIfaceBuf;
-    }
 
     char feedtypeBuf[256];
     if (smi_getFeed(info) != EXP) {
@@ -228,74 +226,106 @@ mldm_exec(
                 smi_getFeed(info));
         args[i++] = "-f";
         args[i++] = feedtypeBuf; // multicast group identifier
-    }
+    } // Non-default LDM7 feed
 
-    char* retxTimeoutOptArg = NULL;
-    if (retxTimeout >= 0) {
-        retxTimeoutOptArg = ldm_format(4, "%f", retxTimeout);
-        if (retxTimeoutOptArg == NULL) {
+    char mcastIfaceArg[INET_ADDRSTRLEN];
+    if (mcastIface.s_addr) {
+        inet_ntop(AF_INET, &mcastIface, mcastIfaceArg, sizeof(mcastIfaceArg));
+        args[i++] = "-i";
+        args[i++] = mcastIfaceArg;
+    } // Non-default multicast interface
+
+    char* fmtpSubnetArg = NULL;
+    if (status == 0 && cidrAddr_getNumHostAddrs(fmtpSubnet)) {
+        fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
+        if (fmtpSubnetArg == NULL) {
+            log_add("Couldn't create FMTP subnet option-argument");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            args[i++] = "-n";
+            args[i++] = fmtpSubnetArg;
+        }
+    } // Non-default FMTP VLAN subnet
+
+    char* retxTimeoutArg = NULL;
+    if (status == 0 && retxTimeout >= 0) {
+        retxTimeoutArg = ldm_format(4, "%f", retxTimeout);
+        if (retxTimeoutArg == NULL) {
             log_add("Couldn't create FMTP retransmission timeout "
                     "option-argument");
-            goto failure;
+            status = LDM7_SYSTEM;
         }
-        args[i++] = "-r";
-        args[i++] = retxTimeoutOptArg;
+        else {
+            args[i++] = "-r";
+            args[i++] = retxTimeoutArg;
+        }
+    } // Non-default FMTP retransmission timeout
+
+    if (status == 0 && strcmp(getDefaultQueuePath(), pqPathname)) {
+        args[i++] = "-q";
+        args[i++] = (char*)pqPathname; // safe cast
     }
 
-    args[i++] = "-q";
-    args[i++] = (char*)pqPathname; // safe cast
-
-    const char* const fmtpSrvrStr = isa_getInetAddrStr(smi_getFmtpSrvr(info));
-    if (strcmp(fmtpSrvrStr, "0.0.0.0")) {
-        args[i++] = "-s";
-        // Safe cast because of `execvp()`
-        args[i++] = (char*)fmtpSrvrStr;
-    }
+    if (status == 0) {
+        const char* fmtpSrvrArg = isa_getInetAddrStr(smi_getFmtpSrvr(info));
+        if (fmtpSrvrArg == NULL) {
+            log_add("Couldn't get FMTP server address");
+            status = LDM7_SYSTEM;
+        }
+        else if (strcmp(fmtpSrvrArg, "0.0.0.0")) {
+            args[i++] = "-s";
+            args[i++] = (char*)fmtpSrvrArg; // `execvp()`=>Safe cast
+        }
+    } // Non-default FMTP server address
 
     char ttlOptArg[4];
-    if (ttl != 1) {
+    if (status == 0 && ttl != 1) {
         ssize_t nbytes = snprintf(ttlOptArg, sizeof(ttlOptArg), "%hu", ttl);
         if (nbytes < 0 || nbytes >= sizeof(ttlOptArg)) {
             log_add("Couldn't create time-to-live option-argument \"%hu\"",
                     ttl);
-            goto free_retxTimeoutOptArg;
+            status = LDM7_SYSTEM;
         }
-        args[i++] = "-t";
-        args[i++] = ttlOptArg;
-    }
+        else {
+            args[i++] = "-t";
+            args[i++] = ttlOptArg;
+        }
+    } // Non-default time-to-live argument
 
-    // Safe cast because of `execvp()`
-    args[i++] = (char*)isa_toString(smi_getMcastGrp(info));
+    if (status == 0) {
+        const char* mcastGrpArg = isa_toString(smi_getMcastGrp(info));
 
-    char* fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
-    if (fmtpSubnetArg == NULL) {
-        goto free_retxTimeoutOptArg;
-    }
-    else {
-        args[i++] = fmtpSubnetArg;
-    }
+        if (mcastGrpArg == NULL) {
+            log_add("Couldn't get multicast group argument");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            args[i++] = (char*)mcastGrpArg; // Safe cast because of `execvp()`
+            args[i++] = NULL;
 
-    args[i++] = NULL;
+            if (status == 0 && dup2(pipe, STDOUT_FILENO) < 0) {
+                log_add("Couldn't redirect standard output stream to pipe");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                StrBuf* command = catenateArgs((const char**)args); // Safe cast
+                log_info("Executing multicast LDM sender: %s",
+                        sbString(command));
+                sbFree(command);
 
-    if (dup2(pipe, STDOUT_FILENO) < 0) {
-        log_add("Couldn't redirect standard output stream to pipe");
-        goto free_fmtpSubnetArg;
-    }
+                execvp(args[0], args);
 
-    StrBuf* command = catenateArgs((const char**)args); // Safe cast
-    log_info("Executing multicast LDM sender: %s", sbString(command));
-    sbFree(command);
+                log_add_syserr("Couldn't execute multicast LDM sender \"%s\"; "
+                        "PATH=%s", args[0], getenv("PATH"));
+            } // Standard output redirected to pipe
+        } // Got multicast group argument
+    } // `status == 0`
 
-    execvp(args[0], args);
-
-    log_add_syserr("Couldn't execute multicast LDM sender \"%s\"; PATH=%s",
-            args[0], getenv("PATH"));
-free_fmtpSubnetArg:
+    free(retxTimeoutArg);
     free(fmtpSubnetArg);
-free_retxTimeoutOptArg:
-    free(retxTimeoutOptArg);
-failure:
-    return;
+
+    return status;
 }
 
 /**
