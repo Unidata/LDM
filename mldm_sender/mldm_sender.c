@@ -147,15 +147,18 @@ static void
 mls_usage(void)
 {
     log_add("\
-Usage: %s [options] groupId:groupPort FmtpNetPrefix/prefixLen\n\
+Usage: %s [options] groupId:groupPort\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
-    -l dest           Log to `dest`. One of: \"\" (system logging daemon, \"-\"\n\
-                      (standard error), or file `dest`. Default is \"%s\"\n\
     -i mcastIface     IP address of interface to use to send multicast\n\
                       packets. Default is the system's default multicast\n\
                       interface.\n\
+    -l dest           Log to `dest`. One of: \"\" (system logging daemon),\n\
+                      \"-\" (standard error), or file `dest`. Default is\n\
+                      \"%s\".\n\
+    -n subnet         Subnet for VLAN FMTP clients in CIDR format (e.g.,\n\
+                      \"192.168.8.0/21\"). Default is the empty set.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
     -r retxTimeout    FMTP retransmission timeout in minutes. Duration that a\n\
                       product will be held by the FMTP layer before being\n\
@@ -164,25 +167,23 @@ Options:\n\
     -s serverAddr     IPv4 socket address for FMTP server in the form\n\
                       <nnn.nnn.nnn.nnn>[:<port>]. Default is all interfaces\n\
                       and O/S-assigned port number.\n\
-    -t ttl            Time-to-live of outgoing packets (default is 1):\n\
+    -t ttl            Time-to-live for outgoing multicast packets:\n\
                            0  Restricted to same host. Won't be output by\n\
                               any interface.\n\
                            1  Restricted to same subnet. Won't be\n\
-                              forwarded by a router (default).\n\
+                              forwarded by a router. This is the default.\n\
                          <32  Restricted to same site, organization or\n\
                               department.\n\
                          <64  Restricted to same region.\n\
                         <128  Restricted to same continent.\n\
                         <255  Unrestricted in scope. Global.\n\
+                      The default is 1.\n\
     -v                Verbose logging: log INFO level messages.\n\
     -x                Debug logging: log DEBUG level messages.\n\
 Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
-                      address and <groupPort> is port number.\n\
-    FmtpNetPrefix/prefixLen\n\
-                      Prefix of FMTP network in CIDR format (e.g.\n\
-                      \"192.168.8.0/21\").\n",
+                      address and <groupPort> is port number.\n",
             log_get_id(), log_get_default_destination(), getDefaultQueuePath());
 }
 
@@ -215,7 +216,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:l:i:q:r:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:i:l:n:q:r:s:t:vx")) != EOF)
         switch (ch) {
             case 'f': {
                 if (strfeedtypet(optarg, feed)) {
@@ -230,6 +231,16 @@ mls_decodeOptions(
             }
             case 'l': {
                 (void)log_set_destination(optarg);
+                break;
+            }
+            case 'n': {
+                CidrAddr* subnet = cidrAddr_parse(optarg);
+                if (subnet == NULL) {
+                    log_add("Couldn't parse FMTP subnet \"%s\"", optarg);
+                    return 1;
+                }
+                cidrAddr_free(fmtpSubnet);
+                fmtpSubnet = subnet;
                 break;
             }
             case 'q': {
@@ -299,33 +310,26 @@ mls_decodeOptions(
  * @retval     0             Success. `*groupAddr`, `*serverAddr`, `*feed`, and
  *                           `msgQName` are set.
  * @retval     1             Invalid operands. `log_add()` called.
- * @retval     2             System failure. `log_add()` called.
  */
 static int
 mls_decodeOperands(
-        int                          argc,
-        char* const* restrict        argv,
+        int                         argc,
+        char* const* restrict       argv,
         const char** const restrict groupAddr)
 {
-    int status;
+    int status = 1;
 
     if (argc-- < 1) {
         log_add("Multicast group not specified");
-        status = 1;
     }
     else {
         const char* mcastAddr = *argv++;
-        CidrAddr*   subnet = (argc-- < 1)
-                ? cidrAddr_new(0, 32) // Empty set: no members
-                : cidrAddr_parse(*argv++);
 
-        if (subnet == NULL) {
-            log_add("Couldn't construct FMTP subnet");
-            status = 1;
+        if (argc > 0) {
+            log_add("Too many operands");
         }
         else {
             *groupAddr = mcastAddr;
-            fmtpSubnet = subnet;
             status = 0;
         }
     }
@@ -348,32 +352,49 @@ mls_decodeCommandLine(
         int                           argc,
         char* const* restrict         argv)
 {
-    feedtypet      feed = EXP;
-    const char*    serverId = "0.0.0.0:0"; // default: all interfaces
-    const char*    mcastIf = "0.0.0.0";    // default multicast interface
-    int            status = mls_decodeOptions(argc, argv, &feed, &serverId,
-            &mcastIf);
-    extern int     optind;
+    int status;
 
-    if (0 == status) {
-        const char* groupId;
+    cidrAddr_free(fmtpSubnet);
+    fmtpSubnet = cidrAddr_new(0, 32); // default: empty set
 
-        argc -= optind;
-        argv += optind;
-        status = mls_decodeOperands(argc, argv, &groupId);
+    if (fmtpSubnet == NULL) {
+        log_add("Couldn't create default subnet for FMTP clients");
+        status = 2;
+    }
+    else {
+        feedtypet   feed = EXP;
+        const char* serverId = "0.0.0.0:0"; // default: all interfaces
+        const char* mcastIf = "0.0.0.0";    // default multicast interface
+
+        status = mls_decodeOptions(argc, argv, &feed, &serverId, &mcastIf);
 
         if (0 == status) {
-            SepMcastInfo* const info = smi_newFromStr(feed, groupId, serverId);
+            extern int  optind;
+            const char* groupId;
 
-            if (info == NULL) {
-                status = 2;
+            argc -= optind;
+            argv += optind;
+            status = mls_decodeOperands(argc, argv, &groupId);
+
+            if (0 == status) {
+                SepMcastInfo* const info = smi_newFromStr(feed, groupId,
+                        serverId);
+
+                if (info == NULL) {
+                    status = 2;
+                }
+                else {
+                    mcastInfo = info;
+                    mcastIface = mcastIf;
+                }
             }
-            else {
-                mcastInfo = info;
-                mcastIface = mcastIf;
-            }
+        } // options decoded
+
+        if (status) {
+            cidrAddr_free(fmtpSubnet);
+            fmtpSubnet = NULL;
         }
-    } // options decoded
+    } // Default subnet for FMTP clients created
 
     return status;
 }
@@ -1022,6 +1043,8 @@ main(   const int    argc,
         }
 
         cidrAddr_free(fmtpSubnet);
+        fmtpSubnet = NULL;
+
         log_notice_q("Terminating");
 
         if (status)
