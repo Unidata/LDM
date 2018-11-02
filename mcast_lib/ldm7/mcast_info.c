@@ -332,6 +332,54 @@ struct sepMcastInfo {
     InetSockAddr* fmtpSrvr;
 };
 
+static Ldm7Status
+smi_init(
+        SepMcastInfo* const restrict       smi,
+        const feedtypet                    feed,
+        const InetSockAddr* const restrict mcastGrp,
+        const InetSockAddr* const restrict fmtpSrvr)
+{
+    int status = LDM7_SYSTEM;
+
+    smi->feed = feed;
+    smi->fmtpSrvr = isa_clone(fmtpSrvr);
+
+    if (smi->fmtpSrvr == NULL) {
+        log_add("isa_clone() failure");
+    }
+    else {
+        smi->mcastGrp = isa_clone(mcastGrp);
+
+        if (smi->mcastGrp == NULL) {
+            log_add("isa_clone() failure");
+            isa_free(smi->fmtpSrvr);
+        }
+        else {
+            status = 0;
+        }
+    } // `smi->fmtpSrvr` allocated
+
+    return status;
+}
+
+SepMcastInfo*
+smi_new(const feedtypet                    feed,
+        const InetSockAddr* const restrict mcastGrp,
+        const InetSockAddr* const restrict fmtpSrvr)
+{
+    SepMcastInfo* smi = log_malloc(sizeof(SepMcastInfo),
+            "separated-out multicast information object");
+
+    if (smi) {
+        if (smi_init(smi, feed, mcastGrp, fmtpSrvr)) {
+            free(smi);
+            smi = NULL;
+        }
+    }
+
+    return smi;
+}
+
 /**
  * Initializes a separated-out multicast information object.
  *
@@ -402,6 +450,13 @@ smi_newFromStr(
     return smi;
 }
 
+SepMcastInfo*
+smi_clone(
+        const SepMcastInfo* const smi)
+{
+    return smi_new(smi->feed, smi->mcastGrp, smi->fmtpSrvr);
+}
+
 void
 smi_free(SepMcastInfo* const smi)
 {
@@ -450,10 +505,4 @@ InetSockAddr*
 smi_getFmtpSrvr(const SepMcastInfo* const smi)
 {
     return smi->fmtpSrvr;
-}
-
-InetSockAddr*
-smi_getMcastFrp(const SepMcastInfo* const smi)
-{
-    return smi->mcastGrp;
 }

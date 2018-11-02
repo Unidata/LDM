@@ -198,6 +198,19 @@ typedef struct sepMcastInfo SepMcastInfo;
  * Returns a new separated-out multicast information object.
  *
  * @param[in] feed         LDM7 feed
+ * @param[in] mcastGrp     Multicast group address
+ * @param[in] fmtpSrvr     FMTP server address
+ * @retval    NULL         Failure. `log_add()` called.
+ */
+SepMcastInfo*
+smi_new(const feedtypet                    feed,
+        const InetSockAddr* const restrict mcastGrp,
+        const InetSockAddr* const restrict fmtpSrvr);
+
+/**
+ * Returns a new separated-out multicast information object.
+ *
+ * @param[in] feed         LDM7 feed
  * @param[in] mcastGrpStr  String representation of the multicast group address
  *                         in the form
  *                           - <name>[:<port>]
@@ -215,6 +228,16 @@ smi_newFromStr(
         const feedtypet     feed,
         const char* const   mcastGrpStr,
         const char* const   fmtpSrvrStr);
+
+/**
+ * Returns a clone of a separated-out multicast-information object.
+ *
+ * @param[in] smi     Separated-out multicast-information object to be cloned
+ * @retval    `NULL`  Failure. `log_add()` called.
+ * @return            Clone of `smi`
+ */
+SepMcastInfo*
+smi_clone(const SepMcastInfo* const smi);
 
 /**
  * Frees a separated-out multicast information object.
