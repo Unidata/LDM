@@ -40,13 +40,13 @@ static void test_construction(void)
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
     CidrAddr* subnet = cidrAddr_new(networkPrefix, 16);
-    void* inAddrPool = fmtpClntAddrs_new(subnet);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(inAddrPool);
-    void* mldmSrvr = mldmSrvr_new(inAddrPool);
+    void* fmtpClntAddrs = fmtpClntAddrs_new(subnet);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(fmtpClntAddrs);
+    void* mldmSrvr = mldmSrvr_new(fmtpClntAddrs);
     CU_ASSERT_PTR_NOT_NULL_FATAL(mldmSrvr);
     CU_ASSERT_TRUE(0 < mldmSrvr_getPort(mldmSrvr));
     mldmSrvr_free(mldmSrvr);
-    fmtpClntAddrs_delete(inAddrPool);
+    fmtpClntAddrs_free(fmtpClntAddrs);
     cidrAddr_free(subnet);
 }
 
@@ -64,8 +64,8 @@ static void test_reserveAndRelease(void)
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "1.0.0.0", &networkPrefix), 1);
     CidrAddr* subnet = cidrAddr_new(networkPrefix, 24);
-    void* inAddrPool = fmtpClntAddrs_new(subnet);
-    void* mldmSrvr = mldmSrvr_new(inAddrPool);
+    void* fmtpClntAddrs = fmtpClntAddrs_new(subnet);
+    void* mldmSrvr = mldmSrvr_new(fmtpClntAddrs);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
     pthread_t mldmSrvrThread;
     pthread_create(&mldmSrvrThread, NULL, runServer, mldmSrvr);
@@ -76,9 +76,9 @@ static void test_reserveAndRelease(void)
     CU_ASSERT_EQUAL(mldmClnt_reserve(mldmClnt, &fmtpAddr), 0);
     CU_ASSERT_NOT_EQUAL(fmtpAddr, 0);
     CU_ASSERT_TRUE(cidrAddr_isMember(subnet, fmtpAddr));
-    CU_ASSERT_TRUE(fmtpClntAddrs_isReserved(inAddrPool, fmtpAddr));
+    CU_ASSERT_TRUE(fmtpClntAddrs_isAllowed(fmtpClntAddrs, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), 0);
-    CU_ASSERT_FALSE(fmtpClntAddrs_isReserved(inAddrPool, fmtpAddr));
+    CU_ASSERT_FALSE(fmtpClntAddrs_isAllowed(fmtpClntAddrs, fmtpAddr));
 
     mldmClnt_free(mldmClnt);
     status = mldmSrvr_stop(mldmSrvr);
@@ -87,7 +87,7 @@ static void test_reserveAndRelease(void)
     status = pthread_join(mldmSrvrThread, &ptr);
     CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_free(mldmSrvr);
-    fmtpClntAddrs_delete(inAddrPool);
+    fmtpClntAddrs_free(fmtpClntAddrs);
     cidrAddr_free(subnet);
 }
 
@@ -98,8 +98,8 @@ static void test_releaseUnreserved(void)
     in_addr_t networkPrefix;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.0", &networkPrefix), 1);
     CidrAddr* subnet = cidrAddr_new(networkPrefix, 16);
-    void* inAddrPool = fmtpClntAddrs_new(subnet);
-    void* mldmSrvr = mldmSrvr_new(inAddrPool);
+    void* fmtpClntAddrs = fmtpClntAddrs_new(subnet);
+    void* mldmSrvr = mldmSrvr_new(fmtpClntAddrs);
     in_port_t port = mldmSrvr_getPort(mldmSrvr);
     pthread_t thread;
     pthread_create(&thread, NULL, runServer, mldmSrvr);
@@ -107,7 +107,7 @@ static void test_releaseUnreserved(void)
     void* mldmClnt = mldmClnt_new(port);
     in_addr_t fmtpAddr;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, "192.168.0.1", &fmtpAddr), 1);
-    CU_ASSERT_FALSE(fmtpClntAddrs_isReserved(inAddrPool, fmtpAddr));
+    CU_ASSERT_FALSE(fmtpClntAddrs_isAllowed(fmtpClntAddrs, fmtpAddr));
     CU_ASSERT_EQUAL(mldmClnt_release(mldmClnt, fmtpAddr), LDM7_NOENT);
     log_notice_q("");
 
@@ -118,7 +118,7 @@ static void test_releaseUnreserved(void)
     status = pthread_join(thread, &ptr);
     CU_ASSERT_EQUAL(status, 0);
     mldmSrvr_free(mldmSrvr);
-    fmtpClntAddrs_delete(inAddrPool);
+    fmtpClntAddrs_free(fmtpClntAddrs);
     cidrAddr_free(subnet);
 }
 
