@@ -477,8 +477,7 @@ decodeMulticastEntry(
                                 vcEndPoint_free(vcEnd);
                             } // `vcEnd` allocated
                             
-                            if (status)
-                                smi_free(smi);
+                            smi_free(smi);
                         } // `smi` allocated
 
                         cidrAddr_delete(fmtpSubnet);
