@@ -1019,7 +1019,7 @@ main(   const int    argc,
             }
         }
 
-        cidrAddr_delete(fmtpSubnet);
+        cidrAddr_free(fmtpSubnet);
         log_notice_q("Terminating");
 
         if (status)
