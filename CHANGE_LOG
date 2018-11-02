@@ -1,3 +1,11 @@
+6.13.7.71
+    Multicast:
+        - Changed "-m <interface>" option to "-i <interface>" in mldm_sender(1).
+        - Changed specification of FMTP subnet to mldm_sender(1) from operand to
+          option-argument (default is no subnet).
+        - Moved addition of FMTP client to multipoint VLAN from module "up7" to
+          module "UpMcastMgr".
+
 6.13.7.70	2018-10-26T14:55:35-0600
     Merged receiver changes. "make check" succeeds.
 
