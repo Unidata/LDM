@@ -480,7 +480,7 @@ decodeMulticastEntry(
                             smi_free(smi);
                         } // `smi` allocated
 
-                        cidrAddr_delete(fmtpSubnet);
+                        cidrAddr_free(fmtpSubnet);
                     } // `fmtpSubnet` set
                 } // `vlanId` set
                 sa_free(fmtpServerSa);

@@ -46,9 +46,9 @@ cidrAddr_destroy(CidrAddr* const cidrAddr);
  * @param[in] addr       IPv4 address in network byte-order
  * @param[in] subnetLen  Number of bits in network prefix
  * @retval    NULL       Couldn't allocate instance. `log_add()` called.
- * @return               CIDR address. Caller should call `cidrAddr_delete()`
+ * @return               CIDR address. Caller should call `cidrAddr_free()`
  *                       when it's no longer needed.
- * @see cidrAddr_delete()
+ * @see cidrAddr_free()
  */
 CidrAddr*
 cidrAddr_new(
@@ -126,9 +126,9 @@ uint32_t cidrAddr_getNumHostAddrs(const CidrAddr* cidrAddr);
  * @param[in] spec  Formatted CIDR address to be parsed in the form
  *                  `nnn.nnn.nnn.nnn/nn`
  * @retval    NULL  Couldn't parse or allocate instance. `log_add()` called.
- * @return          CIDR address. Caller should call `cidrAddr_delete()` when
+ * @return          CIDR address. Caller should call `cidrAddr_free()` when
  *                  it's no longer needed.
- * @see cidrAddr_delete()
+ * @see cidrAddr_free()
  */
 CidrAddr*
 cidrAddr_parse(const char* const spec);
