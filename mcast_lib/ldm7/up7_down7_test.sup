@@ -50,13 +50,12 @@
    ...
 }
 {
-   subscribe_7_svc sa_copy
+   subscribe_7_svc reply
    Memcheck:Leak
    match-leak-kinds: reachable
-   ...
+   fun:malloc
+   fun:strdup
    fun:mi_init
-   fun:me_setSubscriptionReply
-   fun:umm_subscribe
    fun:up7_subscribe
    fun:subscribe_7_svc
    ...
