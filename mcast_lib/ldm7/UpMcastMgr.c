@@ -209,10 +209,8 @@ mldm_exec(
 
     const char* logDestArg = log_get_destination();
     if (strcmp(log_get_default_destination(), logDestArg)) {
-        if (logDestArg != NULL) {
-            args[i++] = "-l";
-            args[i++] = (char*)logDestArg; // Safe cast
-        }
+        args[i++] = "-l";
+        args[i++] = (char*)logDestArg; // Safe cast
     } // Non-default logging destination
 
     if (log_is_enabled_info)
@@ -1307,7 +1305,7 @@ me_unsubscribe(
         const in_addr_t            fmtpClntAddr,
         const char* const restrict wrkGrpName)
 {
-    int status;
+    int status = 0;
 
     if (me_usesVlan(entry)) {
         status = mldm_release(fmtpClntAddr);
@@ -1319,7 +1317,7 @@ me_unsubscribe(
         }
 
         me_destroyVirtCirc(entry, wrkGrpName);
-    } // Associated multicast LDM sender uses an AL2S VLAN
+    } // Associated multicast LDM sender uses a multipoint VLAN
 
     return status;
 }
