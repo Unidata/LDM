@@ -103,7 +103,8 @@ public:
         static const auto action = MldmRpcAct::RESERVE_ADDR;
         tcpSock.write(&action, sizeof(action));
         struct in_addr inAddr;
-        tcpSock.read(&inAddr, sizeof(inAddr));
+        if (tcpSock.read(&inAddr, sizeof(inAddr)) != sizeof(inAddr))
+            throw std::runtime_error("EOF read");
         log_debug((std::string("Obtained reserved address ") +
                 inet_ntoa(inAddr)).c_str());
         return inAddr.s_addr;
