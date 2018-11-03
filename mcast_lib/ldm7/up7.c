@@ -64,159 +64,6 @@
 #endif
 
 /******************************************************************************
- * OESS-based submodule for creating an AL2S virtual circuit
- ******************************************************************************/
-
-static const char    python[] = "python"; ///< Name of python executable
-
-/**
- * Creates an AL2S virtual circuit between two end-points.
- *
- * @param[in]  wrkGrpName   Name of the AL2S workgroup
- * @param[in]  desc         Description of virtual circuit
- * @param[in]  end1         One end of the virtual circuit. If the endpoint
- *                          isn't valid, then the circuit will not be created.
- * @param[in]  end2         Other end of the virtual circuit. If the endpoint
- *                          isn't valid, then the circuit will not be created.
- * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
- *                          call `free(*circuitId)` when the identifier is no
- *                          longer needed. Will start with "dummy" if an
- *                          endpoint isn't valid.
- * @retval     0            Success or an endpoint isn't valid
- * @retval     LDM7_INVAL   Invalid argument. `log_add()` called.
- * @retval     LDM7_NOENT   Virtual circuit not created because a dummy
- *                          end-point was specified
- * @retval     LDM7_SYSTEM  Failure. `log_add()` called.
- */
-static int
-oess_provision(
-        const char* const restrict       wrkGrpName,
-        const char* const restrict       desc,
-        const VcEndPoint* const restrict end1,
-        const VcEndPoint* const restrict end2,
-        char** const restrict            circuitId)
-{
-    int  status;
-
-    if (!vcEndPoint_isValid(end1) || !vcEndPoint_isValid(end2)) {
-        log_notice("Ignoring call to create a dummy AL2S virtual-circuit");
-        *circuitId = strdup("dummy_circuitId");
-        status = LDM7_NOENT;
-    }
-    else if (wrkGrpName == NULL || desc == NULL || end1 == NULL ||
-            end2 == NULL || circuitId == NULL) {
-        char* end1Id = end1 ? vcEndPoint_format(end1) : NULL;
-        char* end2Id = end2 ? vcEndPoint_format(end2) : NULL;
-        log_add("NULL argument: wrkGrpName=%s, desc=%s, end1=%s, end2=%s, "
-                "circuitId=%p", wrkGrpName, desc, end1Id, end2Id, circuitId);
-        free(end1Id);
-        free(end2Id);
-        status = LDM7_INVAL;
-    }
-    else {
-        char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
-        char vlanId2[12];
-
-        (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
-        (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
-
-        const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
-                end1->switchId, end1->portId, vlanId1,
-                end2->switchId, end2->portId, vlanId2, NULL};
-
-        rootpriv();
-            ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-        unpriv();
-
-        if (cmd == NULL) {
-            status = LDM7_SYSTEM;
-        }
-        else {
-            char*   line = NULL;
-            size_t  size = 0;
-            ssize_t nbytes = childCmd_getline(cmd, &line, &size);
-            int     circuitIdStatus;
-
-            if (nbytes <= 0) {
-                log_add("Couldn't get AL2S virtual-circuit ID");
-
-                circuitIdStatus = LDM7_SYSTEM;
-            }
-            else {
-                circuitIdStatus = 0;
-
-                if (line[nbytes-1] == '\n')
-                    line[nbytes-1] = 0;
-            }
-
-            int childExitStatus;
-
-            status = childCmd_reap(cmd, &childExitStatus);
-
-            if (status) {
-                status = LDM7_SYSTEM;
-            }
-            else {
-                if (childExitStatus) {
-                    log_add("OESS provisioning process terminated with status "
-                            "%d", childExitStatus);
-
-                    status = LDM7_SYSTEM;
-                }
-                else {
-                    if (circuitIdStatus) {
-                        status = circuitIdStatus;
-                    }
-                    else {
-                        *circuitId = line;
-                    }
-                } // Child process terminated unsuccessfully
-            } // Child-command was reaped
-        } // Couldn't execute child-command
-    } // Valid arguments and actual provisioning
-
-    return status;
-}
-
-/**
- * Destroys an Al2S virtual circuit.
- *
- * @param[in] wrkGrpName   Name of the AL2S workgroup
- * @param[in] circuitId    Virtual-circuit identifier
- */
-static void oess_remove(
-        const char* const restrict wrkGrpName,
-        const char* const restrict circuitId)
-{
-    if (strncmp(circuitId, "dummy", 5) == 0) {
-        log_notice("Ignoring call to remove a dummy AL2S virtual-circuit");
-    }
-    else {
-        int               status;
-        const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
-                NULL};
-        ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
-
-        if (cmd == NULL) {
-            status = errno;
-        }
-        else {
-            int exitStatus;
-
-            status = childCmd_reap(cmd, &exitStatus);
-
-            if (status == 0 && exitStatus)
-                log_add("Child-process terminated with status %d", exitStatus);
-        } // Child-command executing
-
-        if (status) {
-            log_add_errno(status, "Couldn't destroy AL2S virtual-circuit");
-            log_flush_error();
-        }
-    } // Not a dummy AL2S virtual-circuit
-}
-
-/******************************************************************************
  * Upstream LDM7:
  ******************************************************************************/
 
@@ -868,13 +715,12 @@ up7_sendBacklog(
 /**
  * Initializes this module.
  *
- * @param[in] workGroup    Name of AL2S workgroup. Freed by `up7_destroy()`.
  * @retval    0            Success
  * @retval    LDM7_LOGIC   Module is already initialized. `log_add()` called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 int
-up7_init(const char* const restrict workGroup)
+up7_init()
 {
     int status;
 
@@ -883,16 +729,8 @@ up7_init(const char* const restrict workGroup)
         status = LDM7_LOGIC;
     }
     else {
-        char* const name = strdup(workGroup);
-
-        if (name == NULL) {
-            log_add("Couldn't duplicate AL2S work-group name");
-            status = LDM7_SYSTEM;
-        }
-        else {
-            isInitialized = true;
-            status = 0;
-        } // `wrkGrpName` allocated
+        isInitialized = true;
+        status = 0;
     }
 
     return status;
