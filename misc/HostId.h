@@ -95,10 +95,10 @@ hostId_fill(HostId* const host);
  */
 const int
 hostId_getAddr(
-        HostId* const restrict    host,
-        int* const restrict       family,
-        void* const restrict      addr,
-        socklen_t* const restrict size);
+        HostId* const restrict      host,
+        sa_family_t* const restrict family,
+        void* const restrict        addr,
+        socklen_t* const restrict   size);
 
 /**
  * Returns the formatted representation of the IP address associated with a host
