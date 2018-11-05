@@ -79,6 +79,22 @@ InetSockAddr*
 isa_clone(const InetSockAddr* const isa);
 
 /**
+ * Sets a `struct sockaddr` to correspond to an Internet socket address.
+ *
+ * @param[in]  isa       Internet socket address
+ * @param[out] sockaddr  Socket address to be set
+ * @param[out] socklen   Length of socket address in bytes
+ * @retval     0         Success. The address portion of `*sockaddr` is set and
+ *                       `*socklen` is set. NB: Only the address portion is set.
+ * @retval     EINVAL    Invalid address family. `log_add()` called.
+ */
+int
+isa_getSockAddr(
+        InetSockAddr* const restrict    isa,
+        struct sockaddr* const restrict sockaddr,
+        socklen_t* const restrict       socklen);
+
+/**
  * Returns a string representation of the address portion of an Internet socket
  * address.
  *

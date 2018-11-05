@@ -113,6 +113,31 @@ isa_clone(const InetSockAddr* const isa)
             : isa_newFromId(hostId_getId(isa->hostId), isa->port);
 }
 
+int
+isa_getSockAddr(
+        InetSockAddr* const restrict    isa,
+        struct sockaddr* const restrict sockaddr,
+        socklen_t* const restrict       socklen)
+{
+    int       status = hostId_getAddr(isa->hostId, &sockaddr->sa_family,
+            sockaddr, socklen);
+
+    if (status == 0) {
+        if (sockaddr->sa_family == AF_INET) {
+            ((struct sockaddr_in*)sockaddr)->sin_port = htons(isa->port);
+        }
+        else if (sockaddr->sa_family == AF_INET6) {
+            ((struct sockaddr_in6*)sockaddr)->sin6_port = htons(isa->port);
+        }
+        else {
+            log_add("Invalid address family");
+            status = EINVAL;
+        }
+    }
+
+    return status;
+}
+
 const char*
 isa_getInetAddrStr(const InetSockAddr* const restrict isa)
 {
