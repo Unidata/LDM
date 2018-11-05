@@ -69,7 +69,8 @@ umm_setWrkGrpName(const char* name);
  *                             <255  Unrestricted in scope. Global.
  * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
  *                         free.
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
+ * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections. Caller may
+ *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
