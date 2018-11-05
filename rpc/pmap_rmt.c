@@ -162,7 +162,7 @@ xdr_rmtcallres(
 	char* port_ptr;
 
 	port_ptr = (char*)crp->port_ptr;
-	if (xdr_reference(xdrs, (void**)&port_ptr, sizeof (unsigned long),
+	if (xdr_reference(xdrs, (char**)&port_ptr, sizeof (unsigned long),
 	    (xdrproc_t)xdr_u_long) && xdr_u_long(xdrs, &crp->resultslen)) {
 		crp->port_ptr = (unsigned long *)port_ptr;
 		return ((*(crp->xdr_results))(xdrs, crp->results_ptr));
