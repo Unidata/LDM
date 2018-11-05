@@ -1,3 +1,17 @@
+6.13.7.75
+    XDR:
+        Eliminated a warning.
+
+    vlanUtil(1):
+        Changed "ip route show ..." to "ip route get ...".
+
+    Networking:
+        - Changed "int" to "sa_family_t".
+        - Added isa_getSockAddr()
+
+    LDM configuration-file:
+        Modify decodeMulticastEntry() to allow NULL arguments.
+
 6.13.7.74	2018-11-05T10:44:50-0700
     XDR:
         Eliminated some warnings.
@@ -5,7 +19,7 @@
     LDM configuration-file:
         - Moved some functions from "parser.y" to "ldm_config_file.c"
         - Adapted some arguments to new "InetSockAddr" and "SepMcastInfo" tyeps
-    
+
 6.13.7.73	2018-11-03T10:43:46-0600
     Removed Coverity Scan lint.
 
