@@ -607,7 +607,7 @@ multicast_entry: MULTICAST_K STRING STRING STRING
                 {
                 #if WANT_MULTICAST
                     int errCode = decodeMulticastEntry($2, $3, $4, "0.0.0.0",
-                            "0", "dummy", "dummy", "0.0.0.0/32", "0.0.0.0");
+                            NULL, NULL, NULL, NULL, NULL);
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
