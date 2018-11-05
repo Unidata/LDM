@@ -743,7 +743,7 @@ program LDMPROG {
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
 #if WANT_MULTICAST
-%int   clntStatusToLdm7Status(const CLIENT* clnt);
+%int   clntStatusToLdm7Status(CLIENT* clnt);
 #endif
 #endif
 
@@ -927,7 +927,7 @@ enum Ldm7Status {
 %
 %int
 %clntStatusToLdm7Status(
-%    const CLIENT* clnt)
+%    CLIENT* clnt)
 %{
 %    int    status = clnt_stat((CLIENT*)clnt); // Safe cast
 %    if (status != 0) {
