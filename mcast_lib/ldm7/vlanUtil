@@ -31,7 +31,7 @@ destroy()
 
     # Remove route if receiver and route exists
     if test "$srvrAddr"; then
-        if ip route show "$srvrAddr" | fgrep "$virtIface" >/dev/null 2>&1; then
+        if ip route get "$srvrAddr" | fgrep "$virtIface" >/dev/null 2>&1; then
             if ! ip route del "$srvrAddr/32" dev "$virtIface"; then
                 echo 1>&2 "Couldn't remove interface $virtIface as route to $srvrAddr"
                 status=1;
