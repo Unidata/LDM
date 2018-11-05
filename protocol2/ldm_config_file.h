@@ -289,8 +289,8 @@ lcf_addAccept(
  * process is forked so that all child processes will have this information.
  *
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicasting
- *                         interface.
+ *                         `INADDR_ANY` obtains the system's default
+ *                         multicasting interface.
  * @param[in] mcastInfo    Information on the multicast group. Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -304,7 +304,8 @@ lcf_addAccept(
  *                             <255  Unrestricted in scope. Global.
  * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
  *                         free.
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
+ * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections. Caller may
+ *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    EINVAL       Invalid specification. `log_add()` called.
@@ -340,12 +341,12 @@ lcf_addMulticast(
  */
 int
 lcf_addReceive(
-        const feedtypet             feedtype,
+        const feedtypet                    feedtype,
         const InetSockAddr* const restrict ldmSrvr,
-        const char* const restrict  fmtpIface,
-        const char* restrict        switchId,
-        const char* restrict        portId,
-        const char* const restrict  al2sVlanId);
+        const char* const restrict         fmtpIface,
+        const char* restrict               switchId,
+        const char* restrict               portId,
+        const VlanId                       vlanId);
 
 #endif
 
@@ -446,6 +447,62 @@ lcf_free(void);
  */
 void
 lcf_savePreviousProdInfo(void);
+
+int
+decodeFeedtype(
+    feedtypet*  ftp,
+    const char* string);
+
+/**
+ * Decodes a MULTICAST entry.
+ *
+ * @param[in] feedStr         Feedtype.
+ * @param[in] mcastGrpStr     Multicast group IP address.
+ * @param[in] ttlStr          Time-to-live for multicast packets.
+ * @param[in] fmtpAddrStr     IPv4 address of local FMTP server
+ * @param[in] vlanIdStr       VLAN identifier/tag
+ * @param[in] switchStr       Layer-2 switch ID
+ * @param[in] switchPortStr   Port ID on layer-2 switch
+ * @param[in] fmtpSubnetStr   IPv4 address-space for clients
+ * @param[in] mcastIfaceStr   Interface to use for outgoing multicast packets
+ * @retval    0               Success.
+ * @retval    EINVAL          Invalid specification. `log_add()` called.
+ * @retval    ENOMEM          Out-of-memory. `log_add()` called.
+ */
+int
+decodeMulticastEntry(
+    const char* const   feedStr,
+    const char* const   mcastGrpStr,
+    const char* const   ttlSpec,
+    const char* const   fmtpAddrStr,
+    const char* const   vlanIdStr,
+    const char* const   switchStr,
+    const char* const   switchPortStr,
+    const char* const   fmtpSubnetStr,
+    const char* const   mcastIfaceStr);
+
+/**
+ * Decodes a RECEIVE entry.
+ *
+ * @param[in] feedtypeStr    Specification of feedtype.
+ * @param[in] LdmServerStr   Specification of upstream LDM server.
+ * @param[in] switchId       Receiver-side OSI layer 2 switch ID
+ * @param[in] portId         Receiver-side OSI layer 2 switch port ID
+ * @param[in] vlanStr        Receiver-side VLAN specification
+ * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
+ *                           system's default multicast interface.
+ * @retval    0              Success.
+ * @retval    EINVAL         Invalid specification. `log_add()` called.
+ * @retval    ENOMEM         Out-of-memory. `log_add()` called.
+ */
+int
+decodeReceiveEntry(
+        const char* const restrict feedtypeStr,
+        const char* const restrict ldmServerStr,
+        const char* const restrict switchId,
+        const char* const restrict portId,
+        const char* const restrict vlanStr,
+        const char* const restrict iface);
 
 #ifdef __cplusplus
 }

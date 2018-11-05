@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "abbr.h"
+#include "atofeedt.h"
 #include "ldm_config_file.h"
 #include "autoshift.h"
 #include "down6.h"
@@ -2878,32 +2879,19 @@ lcf_addReceive(
         const char* const restrict         fmtpIface,
         const char* restrict               switchId,
         const char* restrict               portId,
-        const char* const restrict         vlanId)
+        const VlanId                       vlanId)
 {
     int        status = 0;
-    VlanId     vlanTag;
 
     if (switchId == NULL)
         switchId = "dummy";
     if (portId == NULL)
         portId = "dummy";
 
-    if (vlanId == NULL) {
-        if (sscanf(fmtpIface, "%*[-_A-Za-z0-9.]%hu", &vlanTag) != 1) {
-            log_add("Couldn't extract VLAN ID from FMTP interface \"%s\"",
-                    fmtpIface);
-            status = EINVAL;
-        }
-    }
-    else if (sscanf(vlanId, "%hu", &vlanTag) != 1) {
-        log_add("Couldn't decode VLAN tag \"%s\"", vlanId);
-        status = EINVAL;
-    }
-
     if (status == 0) {
         VcEndPoint vcEnd;
 
-        if (!vcEndPoint_init(&vcEnd, vlanTag, switchId, portId)) {
+        if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
             log_add("Couldn't construct virtual-circuit endpoint");
             status = ENOMEM;
         }
@@ -3182,4 +3170,195 @@ lcf_savePreviousProdInfo(void)
             }
         }                               /* "file" open */
     }                                   /* info != NULL && statePath[0] */
+}
+
+
+int
+decodeFeedtype(
+    feedtypet*  ftp,
+    const char* string)
+{
+    feedtypet   ft;
+    int         error;
+    int         status = strfeedtypet(string, &ft);
+
+    if (status == FEEDTYPE_OK) {
+#if YYDEBUG
+        if(yydebug)
+            udebug("feedtype: %#x", ft);
+#endif
+        *ftp = ft;
+        error = 0;
+    }
+    else {
+        log_add("Invalid feedtype expression \"%s\": %s", string,
+            strfeederr(status));
+
+        error = 1;
+    }
+
+    return error;
+}
+
+int
+decodeMulticastEntry(
+    const char* const   feedStr,
+    const char* const   mcastGrpStr,
+    const char* const   ttlSpec,
+    const char* const   fmtpAddrStr,
+    const char* const   vlanIdStr,
+    const char* const   switchStr,
+    const char* const   switchPortStr,
+    const char* const   fmtpSubnetStr,
+    const char* const   mcastIfaceStr)
+{
+    int         status = EINVAL;
+    feedtypet   feed;
+
+    status = decodeFeedtype(&feed, feedStr);
+
+    if (0 == status) {
+        InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
+
+        if (mcastGrp == NULL) {
+            log_add("Couldn't create socket address for multicast group: \"%s\"",
+                    mcastGrpStr);
+        }
+        else {
+            unsigned short ttl;
+            int            nbytes;
+
+            if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
+                    ttlSpec[nbytes] != 0) {
+                log_add("Couldn't parse time-to-live specification: "
+                        "\"%s\"",  ttlSpec);
+            }
+            else {
+                // NB: port 0
+                InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpAddrStr, 0);
+
+                if (fmtpSrvr == NULL) {
+                    log_add("Couldn't create socket address for FMTP server: "
+                            "\"%s\"", fmtpAddrStr);
+                }
+                else {
+                    unsigned short vlanId;
+
+                    if ((sscanf(vlanIdStr, "%hu %n", &vlanId, &nbytes) != 1) ||
+                            vlanIdStr[nbytes] != 0) {
+                        log_add("Couldn't parse VLAN ID specification \"%s\"",
+                                vlanIdStr);
+                    }
+                    else {
+                        CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetStr);
+
+                        if (fmtpSubnet == NULL) {
+                            log_add("Couldn't parse FMTP subnet \"%s\"",
+                                    fmtpSubnetStr);
+                            status = LDM7_INVAL;
+                        }
+                        else {
+                            SepMcastInfo* const mcastInfo = smi_new(feed,
+                                    mcastGrp, fmtpSrvr);
+
+                            if (mcastInfo) {
+                                VcEndPoint* const vcEnd = vcEndPoint_new(vlanId,
+                                        switchStr, switchPortStr);
+
+                                if (vcEnd == NULL) {
+                                    log_add("Couldn't construct virtual-"
+                                            "circuit endpoint");
+                                    status = LDM7_SYSTEM;
+                                }
+                                else {
+                                    struct in_addr mcastIface;
+
+                                    status = inet_pton(AF_INET, mcastIfaceStr,
+                                            &mcastIface);
+                                    if (status != 1) {
+                                        log_add("Couldn't decode multicast "
+                                                "interface specification "
+                                                "\"%s\"", mcastIfaceStr);
+                                        status = LDM7_INVAL;
+                                    }
+                                    else {
+                                        status = lcf_addMulticast(mcastIface,
+                                            mcastInfo, ttl, vcEnd, fmtpSubnet,
+                                            getQueuePath());
+                                    }
+
+                                    vcEndPoint_free(vcEnd);
+                                } // `vcEnd` allocated
+
+                                smi_free(mcastInfo);
+                            } // `mcastInfo` allocated
+
+                            cidrAddr_free(fmtpSubnet);
+                        } // `fmtpSubnet` set
+                    } // `vlanId` set
+
+                    isa_free(fmtpSrvr);
+                } // `fmtpServerSa` allocated
+            } // `ttl` set
+
+            isa_free(mcastGrp);
+        } // `mcastGroupSa` allocated
+    } // `feed` set
+
+    return status;
+}
+
+/**
+ * Decodes a RECEIVE entry.
+ *
+ * @param[in] feedtypeStr    Specification of feedtype.
+ * @param[in] ldmSrvrStr     Specification of upstream LDM server.
+ * @param[in] switchId       Receiver-side OSI layer 2 switch ID
+ * @param[in] portId         Receiver-side OSI layer 2 switch port ID
+ * @param[in] vlanStr        Receiver-side VLAN specification
+ * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
+ *                           system's default multicast interface.
+ * @retval    0              Success.
+ * @retval    EINVAL         Invalid specification. `log_add()` called.
+ * @retval    ENOMEM         Out-of-memory. `log_add()` called.
+ */
+int
+decodeReceiveEntry(
+        const char* const restrict feedtypeStr,
+        const char* const restrict ldmSrvrStr,
+        const char* const restrict switchId,
+        const char* const restrict portId,
+        const char* const restrict vlanStr,
+        const char* const restrict iface)
+{
+    feedtypet   feedtype;
+    int         status = decodeFeedtype(&feedtype, feedtypeStr);
+
+    if (0 == status) {
+        InetSockAddr* ldmSrvr = isa_newFromId(ldmSrvrStr, LDM_PORT);
+
+        if (ldmSrvr == NULL) {
+            log_add("Couldn't create socket address for LDM server: \"%s\"",
+                    ldmSrvrStr);
+        }
+        else {
+            unsigned short vlanId;
+
+            if (1 != sscanf(vlanStr, "%hu", &vlanId)) {
+                log_add("Invalid VLAN ID: \"%s\"", vlanStr);
+                status = EINVAL;
+            }
+            else {
+                status = lcf_addReceive(feedtype, ldmSrvr, iface, switchId,
+                        portId, vlanId);
+
+                if (status)
+                    log_add("Couldn't add RECEIVE entry");
+            } // `vlanId` set
+
+            isa_free(ldmSrvr);
+        } // `ldmSvcAddr` allocated
+    } // `feedtype` set
+
+    return status;
 }

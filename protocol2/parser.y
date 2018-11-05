@@ -61,34 +61,6 @@ extern int yyparse(void);
 
 
 static int
-decodeFeedtype(
-    feedtypet*  ftp,
-    const char* string)
-{
-    feedtypet   ft;
-    int         error;
-    int         status = strfeedtypet(string, &ft);
-
-    if (status == FEEDTYPE_OK) {
-#if YYDEBUG
-        if(yydebug)
-            udebug("feedtype: %#x", ft);
-#endif
-        *ftp = ft;
-        error = 0;
-    }
-    else {
-        log_add("Invalid feedtype expression \"%s\": %s", string,
-            strfeederr(status));
-
-        error = 1;
-    }
-
-    return error;
-}
-
-
-static int
 decodeRegEx(
     regex_t** const     regexpp,
     const char*         string)
@@ -352,194 +324,76 @@ decodeRequestEntry(
     return errCode;
 }
 
-
-#if WANT_MULTICAST
-static bool
-decodeSubnet(
-        const char* const restrict addrsSpec,
-        struct in_addr*            netPrefix,
-        unsigned*                  prefixLen)
-{
-    struct in_addr addr;
-    addr.s_addr = inet_addr(addrsSpec);
-    if (addr.s_addr == (in_addr_t)(-1)) {
-        log_add("Couldn't decode network-prefix");
-        return false;
-    }
-    *netPrefix = addr;
-    const char* cp = strchr(addrsSpec, '/');
-    if (cp == NULL) {
-        log_add("Couldn't find network-prefix length");
-        return false;
-    }
-    if (scanf(cp+1, "%u", prefixLen) != 1) {
-        log_add("Couldn't decode network-prefix length");
-        return false;
-    }
-    if (*prefixLen > 32) {
-        log_add("Invalid network-prefix length");
-        return false;
-    }
-    return true;
-}
-
 /**
- * Decodes a MULTICAST entry.
- * @param[in] feedSpec        Feedtype.
- * @param[in] mcastGroupSpec  Multicast group IP address.
- * @param[in] ttlSpec         Time-to-live for multicast packets.
- * @param[in] fmtpAddrSpec    IPv4 address of local FMTP server
- * @param[in] vlanIdSpec      VLAN identifier/tag
- * @param[in] switchSpec      Layer-2 switch ID
- * @param[in] switchPortSpec  Port ID on layer-2 switch
- * @param[in] fmtpSubnetSpec  IPv4 address-space for clients
- * @param[in] mcastIfaceSpec  Interface to use for outgoing multicast packets
- * @retval    0               Success.
- * @retval    EINVAL          Invalid specification. `log_add()` called.
- * @retval    ENOMEM          Out-of-memory. `log_add()` called.
- */
-static int
-decodeMulticastEntry(
-    const char* const   feedSpec,
-    const char* const   mcastGroupSpec,
-    const char* const   ttlSpec,
-    const char* const   fmtpAddrSpec,
-    const char* const   vlanIdSpec,
-    const char* const   switchSpec,
-    const char* const   switchPortSpec,
-    const char* const   fmtpSubnetSpec,
-    const char* const   mcastIfaceSpec)
-{
-    int         status = EINVAL;
-    feedtypet   feed;
-
-    status = decodeFeedtype(&feed, feedSpec);
-    
-    if (0 == status) {
-        unsigned short ttl;
-        int            nbytes;
-
-        if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
-                ttlSpec[nbytes] != 0) {
-            log_add("Couldn't parse time-to-live specification: "
-                    "\"%s\"",  ttlSpec);
-        }
-        else {
-            ServiceAddr* fmtpServerSa;
-            if (sa_new(&fmtpServerSa, fmtpAddrSpec, 0)) { // NB: port 0
-                log_add("Couldn't create service address for FMTP server");
-            }
-            else {
-                unsigned short vlanId;
-                if ((sscanf(vlanIdSpec, "%hu %n", &vlanId, &nbytes) != 1) ||
-                        vlanIdSpec[nbytes] != 0) {
-                    log_add("Couldn't parse VLAN ID specification \"%s\"",
-                            vlanIdSpec);
-                }
-                else {
-                    CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetSpec);
-                    if (fmtpSubnet == NULL) {
-                        log_add("Couldn't parse FMTP subnet \"%s\"",
-                                fmtpSubnetSpec);
-                        status = LDM7_INVAL;
-                    }
-                    else {
-                        SepMcastInfo* smi = smi_newFromStr(feed, mcastGroupSpec,
-                                fmtpAddrSpec);
-
-                        if (smi) {
-                            VcEndPoint* vcEnd = vcEndPoint_new(vlanId,
-                                    switchSpec, switchPortSpec);
-
-                            if (vcEnd == NULL) {
-                                log_add("Couldn't construct virtual-"
-                                        "circuit endpoint");
-                                status = LDM7_SYSTEM;
-                            }
-                            else {
-                                struct in_addr mcastIface;
-
-                                status = inet_pton(AF_INET, mcastIfaceSpec, 
-                                        &mcastIface);
-
-                                if (status != 1) {
-                                    log_add("Couldn't decode multicast "
-                                            "interface specification "
-                                            "\"%s\"", mcastIfaceSpec);
-                                    status = LDM7_INVAL;
-                                }
-                                else {
-                                    status = lcf_addMulticast(mcastIface,
-                                        smi, ttl, vcEnd, fmtpSubnet,
-                                        getQueuePath());
-                                }
-
-                                vcEndPoint_free(vcEnd);
-                            } // `vcEnd` allocated
-                            
-                            smi_free(smi);
-                        } // `smi` allocated
-
-                        cidrAddr_free(fmtpSubnet);
-                    } // `fmtpSubnet` set
-                } // `vlanId` set
-                sa_free(fmtpServerSa);
-            } // `fmtpServerSa` allocated
-        } // `ttl` set
-    } // `feed` set
-    
-    return status;
-}
-
-/**
- * Decodes a RECEIVE entry.
+ * Acts upon parsed REQUEST and RECEIVE entries of the configuration-file.
  *
- * @param[in] feedtypeSpec   Specification of feedtype.
- * @param[in] ldmServerSpec  Specification of upstream LDM server.
- * @param[in] fmtpIface      Name of interface to be created and used by FMTP
- *                           layer (e.g., "ens33.232")
- * @param[in] switchId       Local AL2S switch ID
- * @param[in] portId         Port on local AL2S switch
- * @param[in] al2sVlanId     VLAN ID to/from local AL2S switch
- * @retval    0              Success.
- * @retval    EINVAL         Invalid specification. `log_add()` called.
- * @retval    ENOMEM         Out-of-memory. `log_add()` called.
+ * @retval 0  Success
+ * @return    System error code.
  */
 static int
-processReceiveEntry(
-        const char* const restrict feedtypeSpec,
-        const char* const restrict ldmServerSpec,
-        const char* const restrict fmtpIface,
-        const char* const restrict switchId,
-        const char* const restrict portId,
-        const char* const restrict al2sVlanId)
+actUponEntries(
+        const unsigned defaultPort)
 {
-    feedtypet   feedtype;
-    int         status = decodeFeedtype(&feedtype, feedtypeSpec);
+    int status = lcf_startRequesters(defaultPort);
 
-    if (0 == status) {
-        InetSockAddr* const ldmSrvr = isa_newFromId(ldmServerSpec,
-            LDM_PORT);
+    if (status) {
+        log_add("Problem starting downstream LDM-s");
+    }
+#if WANT_MULTICAST
+    else {
+        status = d7mgr_startAll();
 
-        if (ldmSrvr == NULL) {
-            log_add("Couldn't create server address from \"%s\"",
-                ldmServerSpec);
+        if (status) {
+            log_add("Couldn't start all multicast LDM receivers");
+            d7mgr_free();
         }
-        else {
-            status = lcf_addReceive(feedtype, ldmSrvr, fmtpIface,
-                    switchId, portId, al2sVlanId);
-
-            if (status)
-                log_add("Couldn't add RECEIVE entry");
-                
-            isa_free(ldmSrvr);
-        } // `ldmSrvr` allocated
-    } // `feedtype` set
+    }
+#endif
 
     return status;
 }
-#endif // WANT_MULTICAST
 
+/**
+ * Parses an LDM configuration-file and optionally executes the entries.
+ *
+ * @param[in] pathname          Pathname of configuration-file.
+ * @param[in] execEntries       Whether or not to execute the entries.
+ * @param[in] ldmAddr           LDM server IP address in network byte order.
+ * @param[in] defaultPort       The default LDM port.
+ * @retval    0                 Success.
+ * @retval    -1                Failure.  `log_add()` called.
+ */
+int
+read_conf(
+    const char* const   pathname,
+    int                 execEntries,
+    in_addr_t           ldmAddr,
+    unsigned            defaultPort)
+{
+    int status;
+
+    if (scannerPush(pathname)) {
+        log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
+        status = -1;
+    }
+    else {
+        ldmPort = defaultPort;
+        execute = execEntries;
+        ldmIpAddr = ldmAddr;
+        // yydebug = 1;
+        status = yyparse();
+
+        if (status) {
+            log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
+            status = -1;
+        }
+        else if (execute) {
+            status = actUponEntries(defaultPort) ? -1 : 0;
+        }
+    }
+
+    return status;
+}
 
 #if YYDEBUG
 #define printf udebug
@@ -694,7 +548,7 @@ include_stmt:   INCLUDE_K STRING
 receive_entry:  RECEIVE_K STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = processReceiveEntry($2, $3, "dummy", "dummy",
+                    int errCode = decodeReceiveEntry($2, $3, "dummy", "dummy",
                             "dummy", "dummy");
 
                     if (errCode) {
@@ -707,7 +561,7 @@ receive_entry:  RECEIVE_K STRING STRING
                 | RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = processReceiveEntry($2, $3, $4, $5, $6,
+                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6,
                             "dummy");
 
                     if (errCode) {
@@ -721,7 +575,7 @@ receive_entry:  RECEIVE_K STRING STRING
                 | RECEIVE_K STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = processReceiveEntry($2, $3, $4, $5, $6, $7);
+                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6, $7);
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "
@@ -805,75 +659,4 @@ int
 yywrap(void)
 {
     return scannerPop();
-}
-
-/**
- * Acts upon parsed REQUEST and RECEIVE entries of the configuration-file.
- *
- * @retval 0  Success
- * @return    System error code.
- */
-static int
-actUponEntries(
-        const unsigned defaultPort)
-{
-    int status = lcf_startRequesters(defaultPort);
-
-    if (status) {
-        log_add("Problem starting downstream LDM-s");
-    }
-#if WANT_MULTICAST
-    else {
-        status = d7mgr_startAll();
-
-        if (status) {
-            log_add("Couldn't start all multicast LDM receivers");
-            d7mgr_free();
-        }
-    }
-#endif
-    
-    return status;
-}
-
-/**
- * Parses an LDM configuration-file and optionally executes the entries.
- * 
- * @param[in] pathname          Pathname of configuration-file.
- * @param[in] execEntries       Whether or not to execute the entries.
- * @param[in] ldmAddr           LDM server IP address in network byte order.
- * @param[in] defaultPort       The default LDM port.
- * @retval    0                 Success.
- * @retval    -1                Failure.  `log_add()` called.
- */
-int
-read_conf(
-    const char* const   pathname,
-    int                 execEntries,
-    in_addr_t           ldmAddr,
-    unsigned            defaultPort)
-{
-    int status;
-
-    if (scannerPush(pathname)) {
-        log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
-        status = -1;
-    }
-    else {
-        ldmPort = defaultPort;
-        execute = execEntries;
-        ldmIpAddr = ldmAddr;
-        // yydebug = 1;
-        status = yyparse();
-
-        if (status) {
-            log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
-            status = -1;
-        }
-        else if (execute) {
-            status = actUponEntries(defaultPort) ? -1 : 0;
-        }
-    }
-
-    return status;
 }
