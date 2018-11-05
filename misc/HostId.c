@@ -268,10 +268,10 @@ hostId_getName(HostId* const host)
 
 const int
 hostId_getAddr(
-        HostId* const restrict    host,
-        int* const restrict       family,
-        void* const restrict      addr,
-        socklen_t* const restrict size)
+        HostId* const restrict      host,
+        sa_family_t* const restrict family,
+        void* const restrict        addr,
+        socklen_t* const restrict   size)
 {
     int status = host->idIsName ? hostId_setAddr(host) : 0;
 
