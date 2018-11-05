@@ -266,7 +266,7 @@ extern bool_t	xdr_bool(XDR *xdrs, bool_t *bp);
 #define xdr_enum	my_xdr_enum
 extern bool_t	xdr_enum(XDR *xdrs, enum_t *ep);
 #define xdr_free	my_xdr_free
-extern void	xdr_free(xdrproc_t xdr_result, char* result);
+extern void	xdr_free(xdrproc_t xdr_result, void* result);
 #define xdr_array	my_xdr_array
 extern bool_t	xdr_array(
 	XDR *xdrs,
@@ -316,7 +316,7 @@ extern bool_t	xdr_double(register XDR *xdrs, double *dp);
 #define xdr_reference	my_xdr_reference
 extern bool_t	xdr_reference(
 	XDR *xdrs,
-	void* *pp,		/* the pointer to work on */
+	char* *pp,		/* the pointer to work on */
 	unsigned size,		/* size of the object pointed to */
 	xdrproc_t proc);	/* xdr routine to handle the object */
 #define xdr_pointer	my_xdr_pointer

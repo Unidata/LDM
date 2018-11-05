@@ -81,7 +81,7 @@ static char xdr_zero[BYTES_PER_XDR_UNIT] = { 0, 0, 0, 0 };
 void
 xdr_free(
 	xdrproc_t proc,
-	char *objp)
+	void *objp)
 {
 	XDR x;
 	
