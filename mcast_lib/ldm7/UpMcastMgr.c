@@ -864,7 +864,8 @@ typedef struct {
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
  *                         free.
- * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
+ * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections. Caller may
+ *                         free.
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
@@ -961,7 +962,8 @@ me_destroy(McastEntry* const entry)
  * @param[in]  ttl         Time-to-live for multicast packets.
  * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
  *                         free.
- * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections
+ * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections. Caller may
+ *                         free.
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
  *                         `me_free(*entry)` when it's no longer needed.
