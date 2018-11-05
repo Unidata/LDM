@@ -289,8 +289,8 @@ lcf_addAccept(
  * process is forked so that all child processes will have this information.
  *
  * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         `INADDR_ANY` obtains the system's default
- *                         multicasting interface.
+ *                         Only the address portion is used. `INADDR_ANY`
+ *                         obtains the system's default multicasting interface.
  * @param[in] mcastInfo    Information on the multicast group. Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -314,12 +314,12 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
-        const struct in_addr               mcastIface,
-        const SepMcastInfo* const restrict mcastInfo,
-        const unsigned short               ttl,
-        const VcEndPoint* const restrict   vcEnd,
-        const CidrAddr* const restrict     fmtpSubnet,
-        const char* const restrict         pqPathname);
+        const struct sockaddr* const restrict mcastIface,
+        const SepMcastInfo* const restrict    mcastInfo,
+        const unsigned short                  ttl,
+        const VcEndPoint* const restrict      vcEnd,
+        const CidrAddr* const restrict        fmtpSubnet,
+        const char* const restrict            pqPathname);
 
 /**
  * Adds a potential downstream LDM-7.
@@ -456,16 +456,31 @@ decodeFeedtype(
 /**
  * Decodes a MULTICAST entry.
  *
- * @param[in] feedStr         Feedtype.
- * @param[in] mcastGrpStr     Multicast group IP address.
- * @param[in] ttlStr          Time-to-live for multicast packets.
- * @param[in] fmtpAddrStr     IPv4 address of local FMTP server
- * @param[in] vlanIdStr       VLAN identifier/tag
- * @param[in] switchStr       Layer-2 switch ID
- * @param[in] switchPortStr   Port ID on layer-2 switch
- * @param[in] fmtpSubnetStr   IPv4 address-space for clients
- * @param[in] mcastIfaceStr   Interface to use for outgoing multicast packets
- * @retval    0               Success.
+ * @param[in] feedStr         LDM feed specification
+ * @param[in] mcastGrpStr     Multicast group Internet address in the form
+ *                            "<nnn.nnn.nnn.nnn>[:<port>]". The default for
+ *                            <port> is `regutil /server/port`.
+ * @param[in] ttlStr          Time-to-live for multicast packets
+ * @param[in] fmtpAddrStr     Address of local FMTP server in the form
+ *                            "<nnn.nnn.nnn.nnn>[:<port]". If <port> isn't
+ *                            specified, then it is chosen by the operating
+ *                            system.
+ * @param[in] vlanIdStr       VLAN identifier/tag or `NULL` indicating a
+ *                            multipoint VLAN won't be used
+ * @param[in] switchStr       Identifier of nearest level-2 switch or `NULL`
+ *                            indicating a multipoint VLAN won't be used
+ * @param[in] switchPortStr   Identifier of port on `switchStr` or `NULL`
+ *                            indicating a multipoint VLAN won't be used
+ * @param[in] fmtpSubnetStr   IPv4 address-space for FMTP clients or `NULL`,
+ *                            indicating that multipoint VLAN won't be used.
+ * @param[in] mcastIfaceStr   Interface to use for outgoing multicast packets.
+ *                            If `NULL`, then the same  interface as
+ *                            `fmtpAddrStr` will be used if a multipoint VLAN
+ *                            will be used; otherwise the default multicast
+ *                            interface will be used. If non-NULL, then it must
+ *                            be in the form "<nnn.nnn.nnn.nnn>[:<port]". The
+ *                            <port> specification will be ignored.
+ * @retval    0               Success
  * @retval    EINVAL          Invalid specification. `log_add()` called.
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
  */
@@ -478,7 +493,7 @@ decodeMulticastEntry(
     const char* const   vlanIdStr,
     const char* const   switchStr,
     const char* const   switchPortStr,
-    const char* const   fmtpSubnetStr,
+    const char* const   vlanSubnetStr,
     const char* const   mcastIfaceStr);
 
 /**

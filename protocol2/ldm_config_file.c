@@ -2849,26 +2849,36 @@ lcf_addAccept(
 
 int
 lcf_addMulticast(
-        const struct in_addr               mcastIface,
-        const SepMcastInfo* const restrict mcastInfo,
-        const unsigned short               ttl,
-        const VcEndPoint* const restrict   vcEnd,
-        const CidrAddr* const restrict     fmtpSubnet,
-        const char* const restrict         pqPathname)
+        const struct sockaddr* const restrict mcastIface,
+        const SepMcastInfo* const restrict    mcastInfo,
+        const unsigned short                  ttl,
+        const VcEndPoint* const restrict      vcEnd,
+        const CidrAddr* const restrict        fmtpSubnet,
+        const char* const restrict            pqPathname)
 {
-    int status = umm_addPotentialSender(mcastIface, mcastInfo, ttl, vcEnd,
-            fmtpSubnet, pqPathname);
-    if (0 == status) {
-        serverNeeded = true;
-        somethingToDo = true;
+    int status;
+
+    if (mcastIface->sa_family != AF_INET) {
+        log_add("Address family not AF_INET");
+        status = LDM7_INVAL;
     }
     else {
-        status = (LDM7_DUP == status)
-                    ? EINVAL
-                    : (LDM7_INVAL == status)
+        status = umm_addPotentialSender(
+                ((struct sockaddr_in*)mcastIface)->sin_addr, mcastInfo, ttl,
+                vcEnd, fmtpSubnet, pqPathname);
+        if (0 == status) {
+            serverNeeded = true;
+            somethingToDo = true;
+        }
+        else {
+            status = (LDM7_DUP == status)
                         ? EINVAL
-                        : ENOMEM;
+                        : (LDM7_INVAL == status)
+                            ? EINVAL
+                            : ENOMEM;
+        }
     }
+
     return status;
 }
 
@@ -3206,10 +3216,10 @@ decodeMulticastEntry(
     const char* const   mcastGrpStr,
     const char* const   ttlSpec,
     const char* const   fmtpAddrStr,
-    const char* const   vlanIdStr,
+    const char*         vlanIdStr,
     const char* const   switchStr,
     const char* const   switchPortStr,
-    const char* const   fmtpSubnetStr,
+    const char*         vlanSubnetStr,
     const char* const   mcastIfaceStr)
 {
     int         status = EINVAL;
@@ -3221,8 +3231,8 @@ decodeMulticastEntry(
         InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
 
         if (mcastGrp == NULL) {
-            log_add("Couldn't create socket address for multicast group: \"%s\"",
-                    mcastGrpStr);
+            log_add("Couldn't create socket address for multicast group from "
+                    "\"%s\"", mcastGrpStr);
         }
         else {
             unsigned short ttl;
@@ -3230,7 +3240,7 @@ decodeMulticastEntry(
 
             if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
                     ttlSpec[nbytes] != 0) {
-                log_add("Couldn't parse time-to-live specification: "
+                log_add("Couldn't parse time-to-live specification from "
                         "\"%s\"",  ttlSpec);
             }
             else {
@@ -3238,23 +3248,29 @@ decodeMulticastEntry(
                 InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpAddrStr, 0);
 
                 if (fmtpSrvr == NULL) {
-                    log_add("Couldn't create socket address for FMTP server: "
-                            "\"%s\"", fmtpAddrStr);
+                    log_add("Couldn't create socket address for FMTP server "
+                            "from \"%s\"", fmtpAddrStr);
                 }
                 else {
                     unsigned short vlanId;
 
-                    if ((sscanf(vlanIdStr, "%hu %n", &vlanId, &nbytes) != 1) ||
-                            vlanIdStr[nbytes] != 0) {
-                        log_add("Couldn't parse VLAN ID specification \"%s\"",
+                    if (vlanIdStr == NULL)
+                        vlanIdStr = "0";
+
+                    if ((sscanf(vlanIdStr, "%hu %n", &vlanId,
+                            &nbytes) != 1) || vlanIdStr[nbytes] != 0) {
+                        log_add("Couldn't create VLAN tag from \"%s\"",
                                 vlanIdStr);
                     }
                     else {
-                        CidrAddr* fmtpSubnet = cidrAddr_parse(fmtpSubnetStr);
+                        if (vlanSubnetStr == NULL)
+                            vlanSubnetStr = "0.0.0.0/32";
+
+                        CidrAddr* fmtpSubnet = cidrAddr_parse(vlanSubnetStr);
 
                         if (fmtpSubnet == NULL) {
-                            log_add("Couldn't parse FMTP subnet \"%s\"",
-                                    fmtpSubnetStr);
+                            log_add("Couldn't create VLAN subnet from \"%s\"",
+                                    vlanSubnetStr);
                             status = LDM7_INVAL;
                         }
                         else {
@@ -3271,20 +3287,40 @@ decodeMulticastEntry(
                                     status = LDM7_SYSTEM;
                                 }
                                 else {
-                                    struct in_addr mcastIface;
+                                    InetSockAddr* mcastIfaceSockAddr;
 
-                                    status = inet_pton(AF_INET, mcastIfaceStr,
-                                            &mcastIface);
-                                    if (status != 1) {
-                                        log_add("Couldn't decode multicast "
-                                                "interface specification "
-                                                "\"%s\"", mcastIfaceStr);
-                                        status = LDM7_INVAL;
+                                    if (mcastIfaceStr == NULL) {
+                                        mcastIfaceSockAddr = fmtpSrvr;
                                     }
                                     else {
-                                        status = lcf_addMulticast(mcastIface,
-                                            mcastInfo, ttl, vcEnd, fmtpSubnet,
-                                            getQueuePath());
+                                        mcastIfaceSockAddr =
+                                                isa_newFromId(mcastIfaceStr, 0);
+
+                                        if (mcastIfaceSockAddr == NULL) {
+                                            log_add("isa_newFromId() failure");
+                                            status = LDM7_INVAL;
+                                        }
+                                    }
+
+                                    if (status == 0) {
+                                        struct sockaddr mcastIface = {};
+                                        socklen_t       socklen;
+
+                                        status = isa_getSockAddr(
+                                                mcastIfaceSockAddr,
+                                                &mcastIface, &socklen);
+
+                                        if (status) {
+                                            log_add("isa_getSockAddr() "
+                                                    "failure");
+                                            status = LDM7_INVAL;
+                                        }
+                                        else {
+                                            status = lcf_addMulticast(
+                                                    &mcastIface, mcastInfo, ttl,
+                                                    vcEnd, fmtpSubnet,
+                                                    getQueuePath());
+                                        }
                                     }
 
                                     vcEndPoint_free(vcEnd);
