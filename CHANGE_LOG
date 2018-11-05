@@ -1,3 +1,11 @@
+6.13.7.74
+    XDR:
+        Eliminated some warnings.
+
+    LDM configuration-file:
+        - Moved some functions from "parser.y" to "ldm_config_file.c"
+        - Adapted some arguments to new "InetSockAddr" and "SepMcastInfo" tyeps
+    
 6.13.7.73	2018-11-03T10:43:46-0600
     Removed Coverity Scan lint.
 
