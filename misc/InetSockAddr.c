@@ -170,6 +170,23 @@ isa_setPort(
 }
 
 int
+isa_compare(
+        const InetSockAddr* const isa1,
+        const InetSockAddr* const isa2)
+{
+    int status = hostId_compare(isa1->hostId, isa2->hostId);
+
+    if (status == 0)
+        status = (isa1->port < isa2->port)
+                ? -1
+                : (isa1->port == isa2->port)
+                  ? 0
+                  : 1;
+
+    return status;
+}
+
+int
 isa_initSockAddr(
         const InetSockAddr* const restrict isa,
         const int                          family,

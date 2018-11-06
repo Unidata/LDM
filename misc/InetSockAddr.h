@@ -81,12 +81,12 @@ isa_clone(const InetSockAddr* const isa);
 /**
  * Sets a `struct sockaddr` to correspond to an Internet socket address.
  *
- * @param[in]  isa       Internet socket address
- * @param[out] sockaddr  Socket address to be set
- * @param[out] socklen   Length of socket address in bytes
- * @retval     0         Success. The address portion of `*sockaddr` is set and
- *                       `*socklen` is set. NB: Only the address portion is set.
- * @retval     EINVAL    Invalid address family. `log_add()` called.
+ * @param[in]     isa       Internet socket address
+ * @param[out]    sockaddr  Socket address to be set
+ * @param[in,out] socklen   Length of socket address in bytes
+ * @retval        0         Success. The address portion of `*sockaddr` is set and
+ *                          `*socklen` is set. NB: Only the address portion is set.
+ * @retval        EINVAL    Invalid address family. `log_add()` called.
  */
 int
 isa_getSockAddr(
@@ -126,6 +126,20 @@ int
 isa_setPort(
         InetSockAddr* const isa,
         const in_port_t     port);
+
+/**
+ * Compares two Internet socket addresses.
+ *
+ * @param[in] isa1  First Internet socket address
+ * @param[in] isa2  Second Internet socket address
+ * @retval    -1    `isa1 <  isa2`
+ * @retval     0    `isa1 == isa2`
+ * @retval     1    `isa1 >  isa2`
+ */
+int
+isa_compare(
+        const InetSockAddr* const isa1,
+        const InetSockAddr* const isa2);
 
 /**
  * Initializes a socket address structure from an Internet socket address.

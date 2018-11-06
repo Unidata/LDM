@@ -147,6 +147,20 @@ bool
 hostId_idIsName(const HostId* const host);
 
 /**
+ * Compares two host identifiers.
+ *
+ * @param[in] id1  First host identifier
+ * @param[in] id2  Second host identifier
+ * @retval    -1   `id1 <  id2`
+ * @retval     0   `id1 == id2`
+ * @retval     1   `id1 >  id2`
+ */
+int
+hostId_compare(
+        const HostId* const id1,
+        const HostId* const id2);
+
+/**
  * Returns the Internet socket address corresponding to a host identifier and
  * a port number. Calls `hostId_fill()` if necessary.
  *

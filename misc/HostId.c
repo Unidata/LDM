@@ -349,3 +349,11 @@ hostId_idIsName(const HostId* const host)
 {
     return host->idIsName;
 }
+
+int
+hostId_compare(
+        const HostId* const id1,
+        const HostId* const id2)
+{
+    return strcmp(id1->id, id2->id);
+}
