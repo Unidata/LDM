@@ -3304,7 +3304,8 @@ decodeMulticastEntry(
 
                                     if (status == 0) {
                                         struct sockaddr mcastIface = {};
-                                        socklen_t       socklen;
+                                        socklen_t       socklen =
+                                                sizeof(mcastIface);
 
                                         status = isa_getSockAddr(
                                                 mcastIfaceSockAddr,
@@ -3321,7 +3322,10 @@ decodeMulticastEntry(
                                                     vcEnd, fmtpSubnet,
                                                     getQueuePath());
                                         }
-                                    }
+
+                                        if (mcastIfaceStr != NULL)
+                                            isa_free(mcastIfaceSockAddr);
+                                    } // `mcastIfaceSockAddr` constructed
 
                                     vcEndPoint_free(vcEnd);
                                 } // `vcEnd` allocated
