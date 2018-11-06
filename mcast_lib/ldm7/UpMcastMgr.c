@@ -1027,19 +1027,24 @@ me_free(
  * overlap, specify the same TCP server IP address and positive port number,
  * etc.).
  *
- * @param[in] info1  First multicast entry.
- * @param[in] info2  Second multicast entry.
- * @retval    true   The multicast entries do conflict.
- * @retval    false  The multicast entries do not conflict.
+ * @param[in] entry1  First multicast entry.
+ * @param[in] entry1  Second multicast entry.
+ * @retval    true    The multicast entries do conflict.
+ * @retval    false   The multicast entries do not conflict.
  */
 static bool
 me_doConflict(
-        const McastInfo* const info1,
-        const McastInfo* const info2)
+        const McastEntry* const entry1,
+        const McastEntry* const entry2)
 {
-    return ((mi_getFeedtype(info1) & mi_getFeedtype(info2)) || // Common feed
-        (strcmp(info1->server, info2->server) == 0) ||         // Same server
-        (strcmp(info1->group, info2->group) == 0));            // Same group
+    const SepMcastInfo* const info1 = entry1->info;
+    const SepMcastInfo* const info2 = entry2->info;
+
+    return ((smi_getFeed(info1) & smi_getFeed(info2)) || // Common feed
+        isa_compare(smi_getFmtpSrvr(info1),
+                smi_getFmtpSrvr(info2)) == 0 || // Same server
+        isa_compare(smi_getMcastGrp(info1),
+                smi_getMcastGrp(info2)) == 0); // Same group
 }
 
 /**
@@ -1055,7 +1060,7 @@ me_doConflict(
  * @retval    +1  First object is greater than second object.
  */
 static int
-me_compareFeedtypes(
+me_compareFeeds(
         const void* o1,
         const void* o2)
 {
@@ -1087,13 +1092,13 @@ me_compareOrConflict(
         const void* o1,
         const void* o2)
 {
-    const McastInfo* const i1 = o1;
-    const McastInfo* const i2 = o2;
+    const McastEntry* const entry1 = o1;
+    const McastEntry* const entry2 = o2;
 
-    if (me_doConflict(i1, i2))
+    if (me_doConflict(entry1, entry2))
         return 0;
 
-    return me_compareFeedtypes(o1, o2);
+    return me_compareFeeds(entry1, entry2);
 }
 
 /**
@@ -1352,7 +1357,7 @@ umm_getMcastEntry(const feedtypet feed)
         key.info = smi_newFromStr(0, "0.0.0.0", "0.0.0.0");
 
     smi_setFeed(key.info, feed);
-    void* const node = tfind(&key, &mcastEntries, me_compareFeedtypes);
+    void* const node = tfind(&key, &mcastEntries, me_compareFeeds);
     if (NULL == node) {
         log_add("No multicast LDM sender is associated with feed-type %s",
                 s_feedtypet(feed));
