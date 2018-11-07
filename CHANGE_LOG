@@ -1,4 +1,4 @@
-6.13.7.76
+6.13.7.76	2018-11-07T15:46:10-0700
     Created hostId_compare() and isa_compare().
 
     Corrected isa_getSockAddr() usage in ldm_config_file.c and freed
