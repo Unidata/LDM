@@ -1,5 +1,6 @@
 /**
- * This file declares a host identifier.
+ * This file declares an Internet address identifier (i.e., host name or IP
+ * address).
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
