@@ -9,7 +9,7 @@
  *  Created on: Oct 9, 2018
  *      Author: Steven R. Emmerson
  */
-#include "config.h"
+#include "HostId.h"
 
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -104,6 +104,15 @@ isa_getSockAddr(
  */
 const char*
 isa_getInetAddrStr(const InetSockAddr* const restrict isa);
+
+/**
+ * Returns the address identifier portion of an Internet socket address.
+ *
+ * @param[in] isa Internet socket address
+ * @return        Internet address identifier
+ */
+const HostId*
+isa_getHostId(const InetSockAddr* const isa);
 
 /**
  * Returns the port number of an Internet socket address.

@@ -13,7 +13,6 @@
 
 #include "InetSockAddr.h"
 
-#include "HostId.h"
 #include "log.h"
 
 #include <inttypes.h>
@@ -142,6 +141,12 @@ const char*
 isa_getInetAddrStr(const InetSockAddr* const restrict isa)
 {
     return hostId_getId(isa->hostId);
+}
+
+const HostId*
+isa_getHostId(const InetSockAddr* const isa)
+{
+    return isa->hostId;
 }
 
 in_port_t
