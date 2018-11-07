@@ -1023,9 +1023,8 @@ me_free(
 }
 
 /**
- * Indicates if two multicast entries conflict (e.g., have feed-types that
- * overlap, specify the same TCP server IP address and positive port number,
- * etc.).
+ * Indicates if two multicast entries conflict (e.g., specify the same
+ * multicast group, the same FMTP server with positive port numbers, etc.).
  *
  * @param[in] entry1  First multicast entry.
  * @param[in] entry1  Second multicast entry.
@@ -1037,14 +1036,41 @@ me_doConflict(
         const McastEntry* const entry1,
         const McastEntry* const entry2)
 {
-    const SepMcastInfo* const info1 = entry1->info;
-    const SepMcastInfo* const info2 = entry2->info;
+    bool conflict;
 
-    return ((smi_getFeed(info1) & smi_getFeed(info2)) || // Common feed
-        isa_compare(smi_getFmtpSrvr(info1),
-                smi_getFmtpSrvr(info2)) == 0 || // Same server
-        isa_compare(smi_getMcastGrp(info1),
-                smi_getMcastGrp(info2)) == 0); // Same group
+    if (entry1 == entry2) {
+        conflict = false; // Same multicast entry
+    }
+    else {
+        const SepMcastInfo* const info1 = entry1->info;
+        const SepMcastInfo* const info2 = entry2->info;
+        const InetSockAddr* const mcastGrp1 = smi_getMcastGrp(info1);
+        const InetSockAddr* const mcastGrp2 = smi_getMcastGrp(info2);
+        const InetSockAddr* const fmtpSrvr1 = smi_getFmtpSrvr(info1);
+        const InetSockAddr* const fmtpSrvr2 = smi_getFmtpSrvr(info2);
+
+        if (isa_compare(mcastGrp1, mcastGrp2) == 0) {
+            // Source-specific multicasting won't work in the source is the same
+            conflict = isa_compare(fmtpSrvr1, fmtpSrvr2) == 0;
+        } // Same multicast group addresses
+        else {
+            const in_port_t port1 = isa_getPort(fmtpSrvr1);
+            const in_port_t port2 = isa_getPort(fmtpSrvr2);
+
+            // Different multicast groups can't have the same source
+            if (port1 || port2) {
+                conflict = isa_compare(fmtpSrvr1, fmtpSrvr2) == 0;
+            } // An FMTP server port was explicitly specified
+            else {
+                const HostId* const hostId1 = isa_getHostId(fmtpSrvr1);
+                const HostId* const hostId2 = isa_getHostId(fmtpSrvr2);
+
+                conflict = hostId_compare(hostId1, hostId2) == 0;
+            } // Both FMTP server ports will be chosen by O/S
+        } // Different multicast group addresses
+    } // Not the same entry
+
+    return conflict;
 }
 
 /**
@@ -1387,12 +1413,11 @@ umm_addPotentialSender(
     const CidrAddr* const restrict     fmtpSubnet,
     const char* const restrict         pqPathname)
 {
-    McastEntry* entry;
-
     //char* const str = smi_toString(mcastInfo);
     //log_notice("umm_addPotentialSender(): info=%s", str);
     //free(str);
 
+    McastEntry* entry;
     int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
             fmtpSubnet, pqPathname);
 
@@ -1402,20 +1427,9 @@ umm_addPotentialSender(
 
         if (NULL == node) {
             log_add_syserr("Couldn't add to multicast entries");
+            me_free(entry);
             status = LDM7_SYSTEM;
         }
-        else if (*(McastEntry**)node != entry) {
-            char* const mi1 = smi_toString(entry->info);
-            char* const mi2 = smi_toString((*(McastEntry**)node)->info);
-
-            log_add("Multicast information \"%s\" "
-                    "conflicts with earlier addition \"%s\"", mi1, mi2);
-            free(mi1);
-            free(mi2);
-            status = LDM7_DUP;
-        }
-        if (status)
-            me_free(entry);
     } // `entry` allocated
 
     return status;
