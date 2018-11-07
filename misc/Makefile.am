@@ -42,7 +42,7 @@ lib_la_SOURCES	= \
 	fdnb.c \
         FixedDelayQueue.h \
 	fsStats.c \
-	HostId.c HostId.h \
+	InetId.c InetId.h \
 	InetSockAddr.c InetSockAddr.h \
 	inetutil.c \
 	mkdirs_open.c \

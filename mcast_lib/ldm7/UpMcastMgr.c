@@ -1062,10 +1062,10 @@ me_doConflict(
                 conflict = isa_compare(fmtpSrvr1, fmtpSrvr2) == 0;
             } // An FMTP server port was explicitly specified
             else {
-                const HostId* const hostId1 = isa_getHostId(fmtpSrvr1);
-                const HostId* const hostId2 = isa_getHostId(fmtpSrvr2);
+                const InetId* const hostId1 = isa_getHostId(fmtpSrvr1);
+                const InetId* const hostId2 = isa_getHostId(fmtpSrvr2);
 
-                conflict = hostId_compare(hostId1, hostId2) == 0;
+                conflict = inetId_compare(hostId1, hostId2) == 0;
             } // Both FMTP server ports will be chosen by O/S
         } // Different multicast group addresses
     } // Not the same entry

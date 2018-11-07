@@ -1,17 +1,18 @@
 /**
- * This file implements a host identifier.
+ * This file implements an Internet identifier (i.e., either a host name or an
+ * IP address).
  *
  * Copyright 2018, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  * 
- *        File: HostId.c
+ *        File: InetId.c
  *  Created on: Oct 6, 2018
  *      Author: Steven R. Emmerson
  */
 #include "config.h"
 
-#include "HostId.h"
+#include "InetId.h"
 
 #include "log.h"
 
@@ -20,24 +21,24 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-struct hostId {
+struct inetId {
     union {
         struct in_addr  inAddr;
         struct in6_addr in6Addr;
-    }    addr;                              ///< Host's IP address
-    char      id[_POSIX_HOST_NAME_MAX+1];   ///< Host's name or IP address
-    char      name[_POSIX_HOST_NAME_MAX+1]; ///< Host's name
-    char      addrStr[INET6_ADDRSTRLEN];    ///< Host's IP address
+    }    addr;                              ///< IP address
+    char      id[_POSIX_HOST_NAME_MAX+1];   ///< Name or IP address
+    char      name[_POSIX_HOST_NAME_MAX+1]; ///< Name
+    char      addrStr[INET6_ADDRSTRLEN];    ///< IP address
     int       family;                       ///< AF_INET or AF_INET6
     socklen_t addrLen;                      ///< Address size in bytes
-    bool      idIsName;                     ///< `id` is host name?
+    bool      idIsName;                     ///< `id` is name?
 };
 
 /**
- * Sets the name of a host identifier based on the host's IP address. Uses DNS
+ * Sets the name of an Internet identifier based on the IP address. Uses DNS
  * every time.
  *
- * @param[in,out] host       Host identifier
+ * @param[in,out] inetId     Internet identifier
  * @retval     0             Success
  * @retval     EAI_AGAIN     The name could not be resolved at this time. Future
  *                           attempts may succeed. `log_add()` called.
@@ -45,24 +46,23 @@ struct hostId {
  *                           called.
  * @retval     EAI_MEMORY    There was a memory allocation failure. `log_add()`
  *                           called.
- * @retval     EAI_NONAME    The host's name cannot be located. `log_add()`
- *                           called.
+ * @retval     EAI_NONAME    The name cannot be located. `log_add()` called.
  * @retval     EAI_OVERFLOW  An argument buffer overflowed. `log_add()` called.
  * @retval     EAI_SYSTEM    A system error occurred. The error code can be
  *                           found in `errno`. `log_add()` called.
  */
 static int
-hostId_setName(HostId* const host)
+inetId_setName(InetId* const inetId)
 {
-    log_assert(!host->idIsName);
+    log_assert(!inetId->idIsName);
 
     struct sockaddr sockAddr = {};
-    sockAddr.sa_family = host->family;
-    (void)memcpy(sockAddr.sa_data, &host->addr, host->addrLen);
+    sockAddr.sa_family = inetId->family;
+    (void)memcpy(sockAddr.sa_data, &inetId->addr, inetId->addrLen);
 
     // Don't return numeric address
-    int status = getnameinfo(&sockAddr, sizeof(sockAddr), host->name,
-            sizeof(host->name), NULL, 0, NI_NAMEREQD);
+    int status = getnameinfo(&sockAddr, sizeof(sockAddr), inetId->name,
+            sizeof(inetId->name), NULL, 0, NI_NAMEREQD);
 
     if (status)
         log_syserr("");
@@ -71,10 +71,10 @@ hostId_setName(HostId* const host)
 }
 
 /**
- * Sets the IP address fields of a host identifier based on the host's name.
- * Uses DNS every time.
+ * Sets the IP address fields of an Internet identifier based on the name. Uses
+ * DNS every time.
  *
- * @param[in,out] host          Host identifier
+ * @param[in,out] inetId        Internet identifier
  * @retval        0             Success
  * @retval        EAI_AGAIN     The name could not be resolved at this time.
  *                              Future attempts may succeed. `log_add()` called.
@@ -89,9 +89,9 @@ hostId_setName(HostId* const host)
  *                              found in `errno`. `log_add()` called.
  */
 static int
-hostId_setAddr(HostId* const host)
+inetId_setAddr(InetId* const inetId)
 {
-    log_assert(host->idIsName);
+    log_assert(inetId->idIsName);
 
     int              status;
     struct addrinfo* addrInfo;
@@ -101,165 +101,165 @@ hostId_setAddr(HostId* const host)
     hints.ai_flags = AI_ADDRCONFIG;
 
     hints.ai_family = AF_INET6; // Use IPv6 if possible
-    status = getaddrinfo(host->id, NULL, &hints, &addrInfo);
+    status = getaddrinfo(inetId->id, NULL, &hints, &addrInfo);
 
     if (status) {
         hints.ai_family = AF_INET;
-        status = getaddrinfo(host->id, NULL, &hints, &addrInfo);
+        status = getaddrinfo(inetId->id, NULL, &hints, &addrInfo);
     }
 
     if (status) {
-        log_add("Couldn't get address information for host \"%s\"", host->id);
+        log_add("Couldn't get IP address information for \"%s\"", inetId->id);
     }
     else {
-        host->family = addrInfo->ai_family;
-        host->addrLen = addrInfo->ai_addrlen;
+        inetId->family = addrInfo->ai_family;
+        inetId->addrLen = addrInfo->ai_addrlen;
 
-        (void)memcpy(&host->addr, addrInfo->ai_addr->sa_data,
+        (void)memcpy(&inetId->addr, addrInfo->ai_addr->sa_data,
                 addrInfo->ai_addrlen);
-        (void)inet_ntop(host->family, &host->addr, host->addrStr,
-                sizeof(host->addrStr)); // Can't fail
+        (void)inet_ntop(inetId->family, &inetId->addr, inetId->addrStr,
+                sizeof(inetId->addrStr)); // Can't fail
         freeaddrinfo(addrInfo);
     }
 
     return status;
 }
 
-HostId*
-hostId_newFromId(const char* const id)
+InetId*
+inetId_newFromStr(const char* const id)
 {
-    HostId* host;
+    InetId* inetId;
 
     if (id == NULL) {
-        log_add("Host ID is NULL");
-        host = NULL;
+        log_add("Internet ID is NULL");
+        inetId = NULL;
     }
     else {
         int status;
 
-        host = log_malloc(sizeof(HostId), "host identifier");
+        inetId = log_malloc(sizeof(InetId), "Internet identifier");
 
-        if (host) {
-            if (strlen(id)+1 > sizeof(host->id)) {
-                log_add("Host ID is too long: \"%s\"", id);
+        if (inetId) {
+            if (strlen(id)+1 > sizeof(inetId->id)) {
+                log_add("ID is too long: \"%s\"", id);
                 status = EINVAL;
             }
             else {
-                (void)strncpy(host->id, id, sizeof(host->id));
+                (void)strncpy(inetId->id, id, sizeof(inetId->id));
 
-                status = inet_pton(AF_INET6, id, &host->addr);
+                status = inet_pton(AF_INET6, id, &inetId->addr);
 
                 if (status == 1) {
-                    host->idIsName = false;
-                    host->family = AF_INET6;
-                    host->addrLen = sizeof(struct in6_addr);
+                    inetId->idIsName = false;
+                    inetId->family = AF_INET6;
+                    inetId->addrLen = sizeof(struct in6_addr);
                     status = 0;
                 }
                 else {
-                    status = inet_pton(AF_INET, id, &host->addr);
+                    status = inet_pton(AF_INET, id, &inetId->addr);
 
                     if (status == 1) {
-                        host->idIsName = false;
-                        host->family = AF_INET;
-                        host->addrLen = sizeof(struct in_addr);
+                        inetId->idIsName = false;
+                        inetId->family = AF_INET;
+                        inetId->addrLen = sizeof(struct in_addr);
                     }
                     else {
-                        // Must be the name of a host
-                        host->idIsName = true;
+                        // Must be a name
+                        inetId->idIsName = true;
                     }
 
                     status = 0;
                 }
-            } // Host ID argument isn't too long
+            } // ID argument isn't too long
 
             if (status) {
-                free(host);
-                host = NULL;
+                free(inetId);
+                inetId = NULL;
             }
-        } // Host identifier allocated
-    } // Non-null host ID argument
+        } // Internet identifier allocated
+    } // Non-null ID argument
 
-    return host;
+    return inetId;
 }
 
-HostId*
-hostId_newFromAddr(
+InetId*
+inetId_newFromAddr(
         const int         family,
         const void* const addr)
 {
-    HostId* host;
+    InetId* inetId;
 
     if (family != AF_INET && family != AF_INET6) {
         log_add("Invalid address family: %d", family);
-        host = NULL;
+        inetId = NULL;
     }
     else if (addr == NULL) {
         log_add("NULL address argument");
-        host = NULL;
+        inetId = NULL;
     }
     else {
-        host = log_malloc(sizeof(HostId), "host identifier");
+        inetId = log_malloc(sizeof(InetId), "Internet identifier");
 
-        if (host) {
-            host->idIsName = false;
-            host->family = family;
-            host->addrLen = (family == AF_INET)
+        if (inetId) {
+            inetId->idIsName = false;
+            inetId->family = family;
+            inetId->addrLen = (family == AF_INET)
                     ? sizeof(struct in_addr)
                     : sizeof(struct in6_addr);
 
-            (void)memcpy(&host->addr, addr, host->addrLen);
+            (void)memcpy(&inetId->addr, addr, inetId->addrLen);
             // Can't fail
-            (void)inet_ntop(family, addr, host->id, sizeof(host->id));
-        } // Host ID allocated
+            (void)inet_ntop(family, addr, inetId->id, sizeof(inetId->id));
+        } // Internet ID allocated
     } // Valid arguments
 
-    return host;
+    return inetId;
 }
 
 void
-hostId_free(HostId* const host)
+inetId_free(InetId* const inetId)
 {
-    free(host);
+    free(inetId);
 }
 
 int
-hostId_fill(HostId* const host)
+inetId_fill(InetId* const inetId)
 {
     int status;
 
-    if (host->idIsName) {
-        status = hostId_setAddr(host);
+    if (inetId->idIsName) {
+        status = inetId_setAddr(inetId);
 
         if (status)
-            log_add("Can't get IP address of host \"%s\"", host->id);
+            log_add("Can't get IP address of \"%s\"", inetId->id);
     }
     else {
-        status = hostId_setName(host);
+        status = inetId_setName(inetId);
 
         if (status)
-            log_add("Can't get name of host \"%s\"", host->id);
+            log_add("Can't get name of \"%s\"", inetId->id);
     }
 
     return status;
 }
 
 const char*
-hostId_getName(HostId* const host)
+inetId_getName(InetId* const inetId)
 {
     const char* name;
 
-    if (host->idIsName) {
-        name = host->id;
+    if (inetId->idIsName) {
+        name = inetId->id;
     }
     else {
-        int status = hostId_setName(host);
+        int status = inetId_setName(inetId);
 
         if (status) {
             errno = status;
             name = NULL;
         }
         else {
-            name = host->name;
+            name = inetId->name;
         }
     }
 
@@ -267,23 +267,23 @@ hostId_getName(HostId* const host)
 }
 
 const int
-hostId_getAddr(
-        HostId* const restrict      host,
+inetId_getAddr(
+        InetId* const restrict      inetId,
         sa_family_t* const restrict family,
         void* const restrict        addr,
         socklen_t* const restrict   size)
 {
-    int status = host->idIsName ? hostId_setAddr(host) : 0;
+    int status = inetId->idIsName ? inetId_setAddr(inetId) : 0;
 
     if (status == 0) {
-        if (*size < host->addrLen) {
+        if (*size < inetId->addrLen) {
             log_add("Receiving address is too small");
             status = EAI_OVERFLOW;
         }
         else {
-            (void)memcpy(addr, &host->addr, host->addrLen);
-            *family = host->family;
-            *size = host->addrLen;
+            (void)memcpy(addr, &inetId->addr, inetId->addrLen);
+            *family = inetId->family;
+            *size = inetId->addrLen;
             status = 0;
         }
     }
@@ -292,45 +292,45 @@ hostId_getAddr(
 }
 
 const char*
-hostId_getAddrStr(HostId* const host)
+inetId_getAddrStr(InetId* const inetId)
 {
     const char* addrStr;
-    int         status = host->idIsName ? hostId_setAddr(host) : 0;
+    int         status = inetId->idIsName ? inetId_setAddr(inetId) : 0;
 
     if (status) {
         errno = status;
         addrStr = NULL;
     }
     else {
-        addrStr = host->addrStr;
+        addrStr = inetId->addrStr;
     }
 
     return addrStr;
 }
 
 const int
-hostId_initSockAddr(
-        HostId* const restrict          host,
+inetId_initSockAddr(
+        InetId* const restrict          inetId,
         const in_port_t                 port,
         struct sockaddr* const restrict sockAddr)
 {
-    int status = host->idIsName ? hostId_setAddr(host) : 0;
+    int status = inetId->idIsName ? inetId_setAddr(inetId) : 0;
 
     if (status == 0) {
-        if (host->family == AF_INET) {
+        if (inetId->family == AF_INET) {
             struct sockaddr_in* const sa = (struct sockaddr_in*)sockAddr;
 
             (void)memset(sa, 0, sizeof(*sa));
-            sa->sin_addr = host->addr.inAddr;
-            sa->sin_family = host->family;
+            sa->sin_addr = inetId->addr.inAddr;
+            sa->sin_family = inetId->family;
             sa->sin_port = htons(port);
         }
         else {
             struct sockaddr_in6* const sa = (struct sockaddr_in6*)sockAddr;
 
             (void)memset(sa, 0, sizeof(*sa));
-            sa->sin6_addr = host->addr.in6Addr;
-            sa->sin6_family = host->family;
+            sa->sin6_addr = inetId->addr.in6Addr;
+            sa->sin6_family = inetId->family;
             sa->sin6_port = htons(port);
         }
     }
@@ -339,21 +339,21 @@ hostId_initSockAddr(
 }
 
 const char*
-hostId_getId(const HostId* const restrict host)
+inetId_getId(const InetId* const restrict inetId)
 {
-    return host->id;
+    return inetId->id;
 }
 
 bool
-hostId_idIsName(const HostId* const host)
+inetId_idIsName(const InetId* const inetId)
 {
-    return host->idIsName;
+    return inetId->idIsName;
 }
 
 int
-hostId_compare(
-        const HostId* const id1,
-        const HostId* const id2)
+inetId_compare(
+        const InetId* const id1,
+        const InetId* const id2)
 {
     return strcmp(id1->id, id2->id);
 }

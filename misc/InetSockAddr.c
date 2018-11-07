@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 struct inetSockAddr {
-    HostId*   hostId;    ///< Host identifier
+    InetId*   hostId;    ///< Host identifier
     in_port_t port;      ///< Port number in host byte order
     /// String representation
     char      sockAddrStr[1+_POSIX_HOST_NAME_MAX+1+1+5+1];
@@ -57,7 +57,7 @@ isa_newFromId(
             }
             else {
                 isa->port = port;
-                isa->hostId = hostId_newFromId(addrId);
+                isa->hostId = inetId_newFromStr(addrId);
 
                 if (isa->hostId == NULL) {
                     log_add("hostId_newFromId() failure");
@@ -84,7 +84,7 @@ void
 isa_free(InetSockAddr* const isa)
 {
     if (isa) {
-        hostId_free(isa->hostId);
+        inetId_free(isa->hostId);
         free(isa);
     }
 }
@@ -92,8 +92,8 @@ isa_free(InetSockAddr* const isa)
 const char*
 isa_toString(InetSockAddr* const isa)
 {
-    const char* addrId = hostId_getId(isa->hostId);
-    const char* fmt = (hostId_idIsName(isa->hostId) || strchr(addrId, '.'))
+    const char* addrId = inetId_getId(isa->hostId);
+    const char* fmt = (inetId_idIsName(isa->hostId) || strchr(addrId, '.'))
             ? "%s:%u"
             : "[%s]:%u";
     int         nbytes = snprintf(isa->sockAddrStr, sizeof(isa->sockAddrStr),
@@ -109,7 +109,7 @@ isa_clone(const InetSockAddr* const isa)
 {
     return (isa == NULL)
             ? NULL
-            : isa_newFromId(hostId_getId(isa->hostId), isa->port);
+            : isa_newFromId(inetId_getId(isa->hostId), isa->port);
 }
 
 int
@@ -118,7 +118,7 @@ isa_getSockAddr(
         struct sockaddr* const restrict sockaddr,
         socklen_t* const restrict       socklen)
 {
-    int       status = hostId_getAddr(isa->hostId, &sockaddr->sa_family,
+    int       status = inetId_getAddr(isa->hostId, &sockaddr->sa_family,
             sockaddr, socklen);
 
     if (status == 0) {
@@ -140,10 +140,10 @@ isa_getSockAddr(
 const char*
 isa_getInetAddrStr(const InetSockAddr* const restrict isa)
 {
-    return hostId_getId(isa->hostId);
+    return inetId_getId(isa->hostId);
 }
 
-const HostId*
+const InetId*
 isa_getHostId(const InetSockAddr* const isa)
 {
     return isa->hostId;
@@ -179,7 +179,7 @@ isa_compare(
         const InetSockAddr* const isa1,
         const InetSockAddr* const isa2)
 {
-    int status = hostId_compare(isa1->hostId, isa2->hostId);
+    int status = inetId_compare(isa1->hostId, isa2->hostId);
 
     if (status == 0)
         status = (isa1->port < isa2->port)
@@ -224,12 +224,12 @@ isa_initSockAddr(
         char portStr[6];
         (void)sprintf(portStr, "%" PRIu16, isa->port); // Can't fail
 
-        status = getaddrinfo(hostId_getId(isa->hostId), portStr, &hints,
+        status = getaddrinfo(inetId_getId(isa->hostId), portStr, &hints,
                 &addrInfo);
 
         if (status) {
             log_add("Couldn't get address information for host \"%s\"",
-                    hostId_getId(isa->hostId));
+                    inetId_getId(isa->hostId));
         }
         else {
             *sockAddr = *addrInfo->ai_addr;

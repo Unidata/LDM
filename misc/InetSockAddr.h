@@ -9,11 +9,10 @@
  *  Created on: Oct 9, 2018
  *      Author: Steven R. Emmerson
  */
-#include "HostId.h"
-
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <sys/socket.h>
+#include "InetId.h"
 
 #ifndef MISC_INETSOCKADDR_H_
 #define MISC_INETSOCKADDR_H_
@@ -111,7 +110,7 @@ isa_getInetAddrStr(const InetSockAddr* const restrict isa);
  * @param[in] isa Internet socket address
  * @return        Internet address identifier
  */
-const HostId*
+const InetId*
 isa_getHostId(const InetSockAddr* const isa);
 
 /**
