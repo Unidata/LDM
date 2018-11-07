@@ -1,3 +1,16 @@
+6.13.7.76
+    Created hostId_compare() and isa_compare().
+
+    Corrected isa_getSockAddr() usage in ldm_config_file.c and freed
+    mcastIfaceSockAddr.
+    
+    Created isa_getHostId().
+    
+    Corrected me_doConflict(), me_compareOrConflict(), and
+    umm_addPotentialSender().
+    
+    Changed HostId to InetId.
+
 6.13.7.75	2018-11-05T16:18:15-0700
     XDR:
         Eliminated a warning.
