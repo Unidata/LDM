@@ -1,3 +1,6 @@
+6.13.7.77
+    isa_getHostId() -> isa_getInetId()
+
 6.13.7.76	2018-11-07T15:46:10-0700
     Created hostId_compare() and isa_compare().
 
