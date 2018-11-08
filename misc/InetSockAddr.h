@@ -111,7 +111,7 @@ isa_getInetAddrStr(const InetSockAddr* const restrict isa);
  * @return        Internet address identifier
  */
 const InetId*
-isa_getHostId(const InetSockAddr* const isa);
+isa_getInetId(const InetSockAddr* const isa);
 
 /**
  * Returns the port number of an Internet socket address.
@@ -199,8 +199,8 @@ isa_initSockAddr(
  *                           called.
  * @retval     EAI_MEMORY    There was a memory allocation failure. `log_add()`
  *                           called.
- * @retval     EAI_NONAME    The host's name cannot be located. `log_add()`
- *                           called.
+ * @retval     EAI_NONAME    The Internet identifier's name cannot be located.
+ *                           `log_add()` called.
  * @retval     EAI_OVERFLOW  A buffer overflowed. `log_add()` called.
  * @retval     EAI_SYSTEM    A system error occurred. The error code can be
  *                           found in `errno`. `log_add()` called.

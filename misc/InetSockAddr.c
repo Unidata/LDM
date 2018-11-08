@@ -5,14 +5,13 @@
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  * 
- *        File: HostId.c
+ *        File: InetSockAddr.c
  *  Created on: Oct 6, 2018
  *      Author: Steven R. Emmerson
  */
 #include "config.h"
 
 #include "InetSockAddr.h"
-
 #include "log.h"
 
 #include <inttypes.h>
@@ -22,7 +21,7 @@
 #include <stdio.h>
 
 struct inetSockAddr {
-    InetId*   hostId;    ///< Host identifier
+    InetId*   inetId;    ///< Internet identifier
     in_port_t port;      ///< Port number in host byte order
     /// String representation
     char      sockAddrStr[1+_POSIX_HOST_NAME_MAX+1+1+5+1];
@@ -57,10 +56,10 @@ isa_newFromId(
             }
             else {
                 isa->port = port;
-                isa->hostId = inetId_newFromStr(addrId);
+                isa->inetId = inetId_newFromStr(addrId);
 
-                if (isa->hostId == NULL) {
-                    log_add("hostId_newFromId() failure");
+                if (isa->inetId == NULL) {
+                    log_add("inetId_newFromId() failure");
                     status = -1;
                 }
                 else {
@@ -84,7 +83,7 @@ void
 isa_free(InetSockAddr* const isa)
 {
     if (isa) {
-        inetId_free(isa->hostId);
+        inetId_free(isa->inetId);
         free(isa);
     }
 }
@@ -92,8 +91,8 @@ isa_free(InetSockAddr* const isa)
 const char*
 isa_toString(InetSockAddr* const isa)
 {
-    const char* addrId = inetId_getId(isa->hostId);
-    const char* fmt = (inetId_idIsName(isa->hostId) || strchr(addrId, '.'))
+    const char* addrId = inetId_getId(isa->inetId);
+    const char* fmt = (inetId_idIsName(isa->inetId) || strchr(addrId, '.'))
             ? "%s:%u"
             : "[%s]:%u";
     int         nbytes = snprintf(isa->sockAddrStr, sizeof(isa->sockAddrStr),
@@ -109,7 +108,7 @@ isa_clone(const InetSockAddr* const isa)
 {
     return (isa == NULL)
             ? NULL
-            : isa_newFromId(inetId_getId(isa->hostId), isa->port);
+            : isa_newFromId(inetId_getId(isa->inetId), isa->port);
 }
 
 int
@@ -118,7 +117,7 @@ isa_getSockAddr(
         struct sockaddr* const restrict sockaddr,
         socklen_t* const restrict       socklen)
 {
-    int       status = inetId_getAddr(isa->hostId, &sockaddr->sa_family,
+    int       status = inetId_getAddr(isa->inetId, &sockaddr->sa_family,
             sockaddr, socklen);
 
     if (status == 0) {
@@ -140,13 +139,13 @@ isa_getSockAddr(
 const char*
 isa_getInetAddrStr(const InetSockAddr* const restrict isa)
 {
-    return inetId_getId(isa->hostId);
+    return inetId_getId(isa->inetId);
 }
 
 const InetId*
-isa_getHostId(const InetSockAddr* const isa)
+isa_getInetId(const InetSockAddr* const isa)
 {
-    return isa->hostId;
+    return isa->inetId;
 }
 
 in_port_t
@@ -179,7 +178,7 @@ isa_compare(
         const InetSockAddr* const isa1,
         const InetSockAddr* const isa2)
 {
-    int status = inetId_compare(isa1->hostId, isa2->hostId);
+    int status = inetId_compare(isa1->inetId, isa2->inetId);
 
     if (status == 0)
         status = (isa1->port < isa2->port)
@@ -224,12 +223,12 @@ isa_initSockAddr(
         char portStr[6];
         (void)sprintf(portStr, "%" PRIu16, isa->port); // Can't fail
 
-        status = getaddrinfo(inetId_getId(isa->hostId), portStr, &hints,
+        status = getaddrinfo(inetId_getId(isa->inetId), portStr, &hints,
                 &addrInfo);
 
         if (status) {
-            log_add("Couldn't get address information for host \"%s\"",
-                    inetId_getId(isa->hostId));
+            log_add("Couldn't get address information for \"%s\"",
+                    inetId_getId(isa->inetId));
         }
         else {
             *sockAddr = *addrInfo->ai_addr;
@@ -242,19 +241,18 @@ isa_initSockAddr(
 }
 
 /**
- * Initializes an Internet socket address structure from a string representation
- * of a host.
+ * Initializes an Internet socket address structure from a string
+ * representation.
  *
  * @param[out] sockAddr      Internet socket address
- * @param[in]  hostId        String representation of a host in one of the
- *                           following forms:
+ * @param[in]  inetId        String representation of an Internet identifier in
+ *                           one of the following forms:
  *                             - <hostname>
  *                             - <IPv4 address>
  *                             - <IPv6 address>
  * @param[in]  family        IP address family. One of `AF_UNSPEC`, `AF_INET` or
  *                           `AF_INET6`. This function will fail if the local
  *                           host doesn't support the requested address family.
- *                           the local host supports it.
  * @param[in]  forBind       Socket address is intended for `bind()`
  * @retval     EAI_AGAIN     The name could not be resolved at this time. Future
  *                           attempts may succeed. `log_add()` called.
@@ -262,16 +260,16 @@ isa_initSockAddr(
  *                           called.
  * @retval     EAI_MEMORY    There was a memory allocation failure. `log_add()`
  *                           called.
- * @retval     EAI_NONAME    The host's name cannot be located. `log_add()`
- *                           called.
+ * @retval     EAI_NONAME    The Internet identifier's name cannot be located.
+ *                           `log_add()` called.
  * @retval     EAI_OVERFLOW  An argument buffer overflowed. `log_add()` called.
  * @retval     EAI_SYSTEM    A system error occurred. The error code can be
  *                           found in `errno`. `log_add()` called.
  */
 static int
-isa_initFromHostId(
+isa_initFromInetId(
         struct sockaddr* const restrict sockAddr,
-        const char* const restrict      hostId,
+        const char* const restrict      inetId,
         const int                       family,
         const bool                      forBind)
 {
@@ -284,10 +282,10 @@ isa_initFromHostId(
     if (forBind)
         hints.ai_flags |= AI_PASSIVE;
 
-    int status = getaddrinfo(hostId, NULL, &hints, &addrInfo);
+    int status = getaddrinfo(inetId, NULL, &hints, &addrInfo);
 
     if (status) {
-        log_add("Couldn't get address information for host \"%s\"", hostId);
+        log_add("Couldn't get address information for \"%s\"", inetId);
     }
     else {
         *sockAddr = *addrInfo->ai_addr;
@@ -324,9 +322,9 @@ isa_initFromId(
         const char* fmt = (id[0] == '[')
                 ? "[%m[^\]]]:%u"
                 : "%m[^:]:%u";
-        char*       hostId;
+        char*       inetId;
 
-        int numAssigned = sscanf(id, fmt, &hostId, &port);
+        int numAssigned = sscanf(id, fmt, &inetId, &port);
 
         if (numAssigned <= 0) {
             log_add("Can't decode \"%s\"", id);
@@ -341,10 +339,10 @@ isa_initFromId(
             }
 
             if (status == 0) {
-                status = isa_initFromHostId(sockAddr, hostId, family, forBind);
+                status = isa_initFromInetId(sockAddr, inetId, family, forBind);
 
                 if (status) {
-                    log_add("Couldn't initialize sockaddr from \"%s\"", hostId);
+                    log_add("Couldn't initialize sockaddr from \"%s\"", inetId);
                 }
                 else {
                     if (sockAddr->sa_family == AF_INET) {
@@ -356,8 +354,8 @@ isa_initFromId(
                 }
             }
 
-            free(hostId);
-        } // Host ID allocated
+            free(inetId);
+        } // Internet ID allocated
     } // Valid arguments
 
     return status;
