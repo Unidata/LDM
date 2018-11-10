@@ -37,6 +37,20 @@ extern "C" {
 #endif
 
 /**
+ * Initializes this module from an LDM configuration-file.
+ *
+ * @param[in] pathname     Pathname of LDM configuration-file
+ * @param[in] ldmAddr      LDM server address in network byte order
+ * @param[in] defaultPort  Default LDM port-number if not specified in entry
+ * @retval    0            Success.
+ * @retval    -1           Failure. `log_add()` called.
+ */
+int lcf_init(                   // defined in "parser.y"
+    const char* const   pathname,
+    in_addr_t           ldmAddr,
+    unsigned            defaultPort);
+
+/**
  * Adds an EXEC entry and executes the command as a child process.
  *
  * @param[in] words  Command-line words. Freed by `lcf_freeExec()`.
@@ -324,29 +338,33 @@ lcf_addMulticast(
 /**
  * Adds a potential downstream LDM-7.
  *
- * @param[in] feedtype     Feedtype to subscribe to.
- * @param[in] ldmSrvr      Upstream LDM-7 to which to subscribe. Caller may free.
- * @param[in] fmtpIface    Name of interface to be created and used by FMTP
- *                         layer (e.g., "eth0.4000")
- * @param[in] switchId     Local AL2S switch or `NULL`, in which case this host
- *                         will not be added to an AL2S multipoint VLAN
- * @param[in] portId       Port on local AL2S switch or `NULL`, in which case
- *                         this host will not be added to an AL2S multipoint
- *                         VLAN
- * @param[in] al2sVlanId   VLAN ID to/from AL2S switch. Default is VLAN ID of
- *                         `fmtpIface`.
+ * @param[in] feed         LDM feed to subscribe to.
+ * @param[in] ldmSrvr      Sending LDM-7 server. Caller may free.
+ * @param[in] fmtpIface    Name of virtual interface to be created for the FMTP
+ *                         layer in the form `<name>.<tag>`, where <name> is
+ *                         the name of an existing interface (e.g., "eth0") and
+ *                         <tag> is the unique VLAN ID to be used by the FMTP
+ *                         layer. May be `NULL`, in which case no virtual
+ *                         interface will be created and used. Caller may free.
+ * @param[in] switchId     ID of port on `switchID`. May be `NULL`, in which
+ *                         case an AL2S multipoint VLAN won't be joined. Caller
+ *                         may free.
+ * @param[in] portId       ID of port on `switchID`. May be `NULL`, in which
+ *                         case an AL2S multipoint VLAN won't be joined. Caller
+ *                         may free.
+ * @param[in] vlanTag      VLAN tag at switch `switchId`, port `portId`
  * @retval    0            Success.
  * @retval    EINVAL       Invalid argument. `log_add()` called.
  * @retval    ENOMEM       System failure. `log_add()` called.
  */
 int
 lcf_addReceive(
-        const feedtypet                    feedtype,
+        const feedtypet                    feed,
         const InetSockAddr* const restrict ldmSrvr,
         const char* const restrict         fmtpIface,
         const char* restrict               switchId,
         const char* restrict               portId,
-        const VlanId                       vlanId);
+        const VlanId                       vlanTag);
 
 #endif
 
@@ -398,13 +416,11 @@ lcf_reduceToAcceptable(
 /**
  * Starts the necessary downstream LDM-s.
  *
- * @param ldmPort       [in] Ignored.
  * @retval 0            Success.
  * @return              System error code. log_add() called.
  */
 int
-lcf_startRequesters(
-    unsigned    ldmPort);
+lcf_startRequesters(void);
 
 /**
  * Indicates if a given host is allowed to connect in any fashion. First line
@@ -436,10 +452,23 @@ bool
 lcf_haveSomethingToDo(void);
 
 /**
- * Frees this module's resources. Idempotent.
+ * Destroys this module, freeing its resources. Idempotent.
+ *
+ * @param[in] final  Whether inter-process communication resources should also
+ *                   be destroyed. Should be `true` in only one process per LDM
+ *                   session.
  */
 void
-lcf_free(void);
+lcf_destroy(const bool final);
+
+/**
+ * Executes all EXEC, REQUEST, and RECEIVE entries of the configuration-file.
+ *
+ * @retval 0  Success
+ * @return    System error code.
+ */
+int
+lcf_execute(void);
 
 /**
  * Saves information on the last, successfully-received product under a key
@@ -499,25 +528,37 @@ decodeMulticastEntry(
 /**
  * Decodes a RECEIVE entry.
  *
- * @param[in] feedtypeStr    Specification of feedtype.
- * @param[in] LdmServerStr   Specification of upstream LDM server.
- * @param[in] switchId       Receiver-side OSI layer 2 switch ID
- * @param[in] portId         Receiver-side OSI layer 2 switch port ID
- * @param[in] vlanStr        Receiver-side VLAN specification
- * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
- *                           system's default multicast interface.
- * @retval    0              Success.
- * @retval    EINVAL         Invalid specification. `log_add()` called.
- * @retval    ENOMEM         Out-of-memory. `log_add()` called.
+ * @param[in] feedStr       LDM feed
+ * @param[in] ldmSrvrStr    Sending LDM7 server. Either hostname or IPv4
+ *                          address. Caller may free.
+ * @param[in] fmtpIfaceStr  Name of virtual interface to be created for the FMTP
+ *                          layer in the form `<name>.<tag>`, where <name> is
+ *                          the name of an existing interface (e.g., "eth0") and
+ *                          <tag> is the unique VLAN ID to be used by the FMTP
+ *                          layer. May be `NULL`, in which case no virtual
+ *                          interface will be created and used.
+ * @param[in] switchId      ID of nearest AL2S switch for joining a multipoint
+ *                          VLAN. May be `NULL`, in which case an AL2S
+ *                          multipoint VLAN won't be joined. Caller may free.
+ * @param[in] portId        ID of port on `switchID`. May be `NULL`, in which
+ *                          case an AL2S multipoint VLAN won't be joined. Caller
+ *                          may free.
+ * @param[in] vlanTagStr    VLAN tag at switch `switchId`, port `portId`. May be
+ *                          `NULL`, in which case the VLAN tag of `fmtpIface` is
+ *                          used if that parameter is specified. Caller may
+ *                          free.
+ * @retval    0             Success.
+ * @retval    EINVAL        Invalid specification. `log_add()` called.
+ * @retval    ENOMEM        Out-of-memory. `log_add()` called.
  */
 int
 decodeReceiveEntry(
-        const char* const restrict feedtypeStr,
-        const char* const restrict ldmServerStr,
+        const char* const restrict feedStr,
+        const char* const restrict ldmSrvrStr,
+        const char* const restrict fmtpIfaceStr,
         const char* const restrict switchId,
         const char* const restrict portId,
-        const char* const restrict vlanStr,
-        const char* const restrict iface);
+        const char* restrict       vlanTagStr);
 
 #ifdef __cplusplus
 }

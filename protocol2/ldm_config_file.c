@@ -2337,11 +2337,6 @@ proc_new(
         proc->wrdexp = *wrdexpp;
         proc->pid = -1;
         proc->next = NULL;
-
-        if (proc_exec(proc) < 0) {
-            free(proc);
-            proc = NULL;
-        }
     }
 
     return proc;
@@ -2398,6 +2393,22 @@ lcf_freeExec(
             break;
         }
     }
+}
+
+static int
+lcf_startExecs(void)
+{
+    Process*      entry = processes;
+    Process**     prev = &processes;
+
+    for (; entry != NULL; prev = &entry->next, entry = entry->next) {
+        pid_t pid = proc_exec(entry);
+
+        if (pid < 0)
+            return errno;
+    }
+
+    return 0;
 }
 
 
@@ -2884,40 +2895,32 @@ lcf_addMulticast(
 
 int
 lcf_addReceive(
-        const feedtypet                    feedtype,
+        const feedtypet                    feed,
         const InetSockAddr* const restrict ldmSrvr,
         const char* const restrict         fmtpIface,
         const char* restrict               switchId,
         const char* restrict               portId,
-        const VlanId                       vlanId)
+        const VlanId                       vlanTag)
 {
-    int        status = 0;
+    int        status;
+    VcEndPoint vcEnd;
 
-    if (switchId == NULL)
-        switchId = "dummy";
-    if (portId == NULL)
-        portId = "dummy";
-
-    if (status == 0) {
-        VcEndPoint vcEnd;
-
-        if (!vcEndPoint_init(&vcEnd, vlanId, switchId, portId)) {
-            log_add("Couldn't construct virtual-circuit endpoint");
+    if (!vcEndPoint_init(&vcEnd, vlanTag, switchId, portId)) {
+        log_add("Couldn't construct virtual-circuit endpoint");
+        status = ENOMEM;
+    }
+    else {
+        if (d7mgr_add(feed, ldmSrvr, fmtpIface, &vcEnd)) {
+            log_add("Couldn't add receiving LDM7");
             status = ENOMEM;
         }
         else {
-            if (d7mgr_add(feedtype, ldmSrvr, fmtpIface, &vcEnd)) {
-                log_add("Couldn't add downstream LDM7");
-                status = ENOMEM;
-            }
-            else {
-                somethingToDo = true;
-                status = 0;
-            }
+            somethingToDo = true;
+            status = 0;
+        }
 
-            vcEndPoint_destroy(&vcEnd);
-        } // `vcEnd` initialized
-    } // VLAN ID extracted
+        vcEndPoint_destroy(&vcEnd);
+    } // `vcEnd` initialized
 
     return status;
 }
@@ -3074,8 +3077,7 @@ lcf_reduceToAcceptable(
 }
 
 int
-lcf_startRequesters(
-    unsigned    ldmPort)
+lcf_startRequesters(void)
 {
     return subs_startRequesters();
 }
@@ -3118,7 +3120,7 @@ lcf_haveSomethingToDo(void)
 }
 
 void
-lcf_free(void)
+lcf_destroy(const bool final)
 {
     servers_free();
     subs_free();
@@ -3127,6 +3129,40 @@ lcf_free(void)
     execEntries_free();
     serverNeeded = false;
     somethingToDo = false;
+#if WANT_MULTICAST
+    umm_destroy(final); // Destroy upstream multicast manager
+    d7mgr_destroy();    // Destroy downstream multicast manager
+#endif
+}
+
+int
+lcf_execute(void)
+{
+    int status = lcf_startExecs();
+
+    if (status) {
+        log_add("Couldn't start all EXEC entries");
+    }
+    else {
+        status = lcf_startRequesters();
+
+        if (status) {
+            log_add("Problem starting downstream LDM-s");
+        }
+
+#if WANT_MULTICAST
+        else {
+            status = d7mgr_startAll();
+
+            if (status) {
+                log_add("Couldn't start all multicast LDM receivers");
+                d7mgr_destroy();
+            }
+        }
+#endif
+    }
+
+    return status;
 }
 
 void
@@ -3348,57 +3384,63 @@ decodeMulticastEntry(
     return status;
 }
 
-/**
- * Decodes a RECEIVE entry.
- *
- * @param[in] feedtypeStr    Specification of feedtype.
- * @param[in] ldmSrvrStr     Specification of upstream LDM server.
- * @param[in] switchId       Receiver-side OSI layer 2 switch ID
- * @param[in] portId         Receiver-side OSI layer 2 switch port ID
- * @param[in] vlanStr        Receiver-side VLAN specification
- * @param[in] iface          IP address of FMTP interface. "0.0.0.0" obtains the
- *                           system's default multicast interface.
- * @retval    0              Success.
- * @retval    EINVAL         Invalid specification. `log_add()` called.
- * @retval    ENOMEM         Out-of-memory. `log_add()` called.
- */
 int
 decodeReceiveEntry(
-        const char* const restrict feedtypeStr,
+        const char* const restrict feedStr,
         const char* const restrict ldmSrvrStr,
+        const char* const restrict fmtpIfaceStr,
         const char* const restrict switchId,
         const char* const restrict portId,
-        const char* const restrict vlanStr,
-        const char* const restrict iface)
+        const char* restrict       vlanTagStr)
 {
-    feedtypet   feedtype;
-    int         status = decodeFeedtype(&feedtype, feedtypeStr);
+    feedtypet   feed;
+    int         status = decodeFeedtype(&feed, feedStr);
 
     if (0 == status) {
         InetSockAddr* ldmSrvr = isa_newFromId(ldmSrvrStr, LDM_PORT);
 
         if (ldmSrvr == NULL) {
-            log_add("Couldn't create socket address for LDM server: \"%s\"",
+            log_add("Couldn't create socket address for LDM server from \"%s\"",
                     ldmSrvrStr);
         }
         else {
-            unsigned short vlanId;
+            unsigned short vlanTag;
 
-            if (1 != sscanf(vlanStr, "%hu", &vlanId)) {
-                log_add("Invalid VLAN ID: \"%s\"", vlanStr);
-                status = EINVAL;
-            }
-            else {
-                status = lcf_addReceive(feedtype, ldmSrvr, iface, switchId,
-                        portId, vlanId);
+            if (vlanTagStr == NULL) {
+                if (fmtpIfaceStr == NULL) {
+                    vlanTagStr = "0";
+                }
+                else {
+                    vlanTagStr = strrchr(fmtpIfaceStr, '.');
 
-                if (status)
-                    log_add("Couldn't add RECEIVE entry");
-            } // `vlanId` set
+                    if (vlanTagStr) {
+                        ++vlanTagStr;
+                    }
+                    else {
+                        log_add("No VLAN tag in FMTP interface, \"%s\"",
+                                fmtpIfaceStr);
+                        status = EINVAL;
+                    }
+                } // FMTP virtual-interface specified
+            } // VLAN tag not specified
+
+            if (status == 0) {
+                if (1 != sscanf(vlanTagStr, "%hu", &vlanTag)) {
+                    log_add("Invalid VLAN tag, \"%s\"", vlanTagStr);
+                    status = EINVAL;
+                }
+                else {
+                    status = lcf_addReceive(feed, ldmSrvr, fmtpIfaceStr,
+                            switchId, portId, vlanTag);
+
+                    if (status)
+                        log_add("Couldn't add RECEIVE entry");
+                }
+            } // `vlanTag` set
 
             isa_free(ldmSrvr);
-        } // `ldmSvcAddr` allocated
-    } // `feedtype` set
+        } // `ldmSrvr` allocated
+    } // `feed` set
 
     return status;
 }

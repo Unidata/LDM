@@ -4,7 +4,8 @@
 
 %{
 /*
- *   See file ../COPYRIGHT for copying and redistribution conditions.
+ *   See file COPYRIGHT in the top-level source-directory for copying and
+ *   redistribution conditions.
  */
 
 #include "config.h"
@@ -44,7 +45,6 @@ extern int yydebug;
 
 static int       line = 0;
 static unsigned  ldmPort = LDM_PORT;
-static int       execute = 1;
 static in_addr_t ldmIpAddr;
 static int       scannerPush(const char* const path);
 static int       scannerPop(void);
@@ -324,73 +324,48 @@ decodeRequestEntry(
     return errCode;
 }
 
-/**
- * Acts upon parsed REQUEST and RECEIVE entries of the configuration-file.
- *
- * @retval 0  Success
- * @return    System error code.
- */
-static int
-actUponEntries(
-        const unsigned defaultPort)
+int
+lcf_init(
+    const char* const   pathname,
+    in_addr_t           ldmAddr,
+    unsigned            defaultPort) // Declared in ldm_config_file.h
 {
-    int status = lcf_startRequesters(defaultPort);
+    int status = 0;
 
-    if (status) {
-        log_add("Problem starting downstream LDM-s");
-    }
 #if WANT_MULTICAST
-    else {
-        status = d7mgr_startAll();
-
-        if (status) {
-            log_add("Couldn't start all multicast LDM receivers");
-            d7mgr_free();
-        }
+    /*
+     * Initialize the upstream multicast manager.
+     */
+    status = umm_init();
+    
+    if (status) {
+        log_add("Couldn't initialize upstream multicast manager");
+        status = -1;
     }
 #endif
 
-    return status;
-}
-
-/**
- * Parses an LDM configuration-file and optionally executes the entries.
- *
- * @param[in] pathname          Pathname of configuration-file.
- * @param[in] execEntries       Whether or not to execute the entries.
- * @param[in] ldmAddr           LDM server IP address in network byte order.
- * @param[in] defaultPort       The default LDM port.
- * @retval    0                 Success.
- * @retval    -1                Failure.  `log_add()` called.
- */
-int
-read_conf(
-    const char* const   pathname,
-    int                 execEntries,
-    in_addr_t           ldmAddr,
-    unsigned            defaultPort)
-{
-    int status;
-
-    if (scannerPush(pathname)) {
-        log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
-        status = -1;
-    }
-    else {
-        ldmPort = defaultPort;
-        execute = execEntries;
-        ldmIpAddr = ldmAddr;
-        // yydebug = 1;
-        status = yyparse();
-
-        if (status) {
-            log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
+    if (status == 0) {
+        if (scannerPush(pathname)) {
+            log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
             status = -1;
         }
-        else if (execute) {
-            status = actUponEntries(defaultPort) ? -1 : 0;
+        else {
+            ldmPort = defaultPort;
+            ldmIpAddr = ldmAddr;
+            // yydebug = 1;
+            status = yyparse();
+
+            if (status) {
+                log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
+                status = -1;
+            }
         }
-    }
+
+#if WANT_MULTICAST
+        if (status)
+            umm_destroy(true);
+#endif
+    } // Upstream multicast manager possibly initialized
 
     return status;
 }
@@ -525,10 +500,9 @@ exec_entry:     EXEC_K STRING
                         if(yydebug)
                             udebug("command: \"%s\"", $2);
 #endif
-                        if (execute)
-                            error = lcf_addExec(&words);
+                        error = lcf_addExec(&words);
                         
-                        if (!execute || error)
+                        if (error)
                             wordfree(&words);
                     }                   /* "words" set */
 
@@ -548,12 +522,12 @@ include_stmt:   INCLUDE_K STRING
 receive_entry:  RECEIVE_K STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, "dummy", "dummy",
-                            "dummy", "dummy");
+                    int errCode = decodeReceiveEntry($2, $3, NULL, NULL, NULL,
+                            NULL);
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "
-                                "\"RECEIVE %s %s %s\"", $2, $3);
+                                "\"RECEIVE %s %s\"", $2, $3);
                         return errCode;
                     }
                 #endif
@@ -561,8 +535,7 @@ receive_entry:  RECEIVE_K STRING STRING
                 | RECEIVE_K STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6,
-                            "dummy");
+                    int errCode = decodeReceiveEntry($2, $3, $4, $5, $6, NULL);
 
                     if (errCode) {
                         log_add("Couldn't process receive entry "

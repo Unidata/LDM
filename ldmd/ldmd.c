@@ -119,7 +119,7 @@ static pid_t reap(
             cps_remove(wpid);       // Upstream LDM processes
             lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)msm_remove(wpid); // Multicast LDM senders
+            (void)umm_remove(wpid); // Multicast LDM senders
 #endif
 
             log_notice_q(
@@ -165,7 +165,7 @@ static pid_t reap(
             cps_remove(wpid);       // Upstream LDM processes
             lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)msm_remove(wpid); // Multicast LDM senders
+            (void)umm_remove(wpid); // Multicast LDM senders
 #endif
             int         exitStatus = WEXITSTATUS(status);
             log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
@@ -215,10 +215,13 @@ static void cleanup(
      * that the database is closed.
      */
     (void) uldb_remove(getpid());
+    log_clear();
     (void) uldb_close();
     log_clear();
 
-    if (getpid() == getpgrp()) {
+    const bool isTopProc = getpid() == getpgrp();
+
+    if (isTopProc) {
         /*
          * This process is the process group leader (i.e., the top-level
          * LDM server).
@@ -268,19 +271,13 @@ static void cleanup(
         /*
          * Delete the upstream LDM database.
          */
-        (void) uldb_delete(NULL);
+       (void) uldb_delete(NULL);
     }
 
     /*
-     * Free access-control-list resources.
+     * Destroy the LDM configuration-file module.
      */
-    lcf_free(); // eventually calls msm_destroy()
-
-#if WANT_MULTICAST
-    if (umm_clear())
-        log_error_q("Couldn't clear multicast LDM sender manager");
-    d7mgr_free();  // Clears multicast receiver manager
-#endif
+    lcf_destroy(isTopProc);
 
     /*
      * Close registry.
@@ -927,10 +924,10 @@ int main(
     setQueuePath(pqfname);
 
     /*
-     * Vet the configuration file.
+     * Initialize the configuration file module.
      */
-    log_debug("main(): Vetting configuration-file");
-    if (read_conf(getLdmdConfigPath(), 0, ldmIpAddr, ldmPort) != 0) {
+    log_debug("Initializing configuration-file module");
+    if (lcf_init(getLdmdConfigPath(), ldmIpAddr, ldmPort) != 0) {
         log_flush_error();
         exit(1);
     }
@@ -939,7 +936,6 @@ int main(
                 getLdmdConfigPath());
         exit(1);
     }
-    // lcf_free() not called because lcf_isServerNeeded() will be
 
     if (!becomeDaemon) {
         /*
@@ -1055,22 +1051,10 @@ int main(
         }
 
         /*
-         * Initialize the multicast sender map.
+         * Execute appropriate entries in the configuration file.
          */
-#if WANT_MULTICAST
-        if (msm_init()) {
-            log_error_q("Couldn't initialize multicast LDM sender map");
-            exit(1);
-        }
-#endif
-
-        /*
-         * Re-read (and execute) the configuration file (downstream LDM-s are
-         * started).
-         */
-        lcf_free(); // Prevent duplicates
-        log_debug("main(): Reading configuration-file");
-        if (read_conf(getLdmdConfigPath(), 1, ldmIpAddr, ldmPort) != 0) {
+        log_debug("main(): Executing configuration-file");
+        if (lcf_execute() != 0) {
             log_flush_error();
             exit(1);
         }
