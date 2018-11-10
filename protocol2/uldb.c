@@ -2108,27 +2108,28 @@ uldb_Status uldb_getSize(
  * terminates every previously-existing upstream LDM process that's feeding (not
  * notifying) a subset of the subscription to the same IP address.
  *
- * @param pid           [in] PID of upstream LDM process
- * @param protoVers     [in] Protocol version number (e.g., 5 or 6)
- * @param sockAddr      [in] Socket Internet address of downstream LDM
- * @param desired       [in] The subscription desired by the downstream LDM
- * @param allowed       [out] The allowed subscription. Equal to the desired
- *                      subscription reduced by existing subscriptions from the
- *                      same host. Might specify an empty subscription. Upon
- *                      successful return, the client should call
- *                      "free_prod_class(*allowed)" when the allowed
- *                      subscription is no longer needed.
- * @param isNotifier    [in] Whether the upstream LDM is a notifier or a feeder
- * @param isPrimary     [in] Whether the upstream LDM is in primary transfer
- *                      mode or not
- * @retval 0            Success. "*allowed" is set. The database is unmodified,
- *                      however, if the allowed subscription is the empty set.
- *                      The client should call "free_prod_class(*allowed)" when
- *                      the allowed subscription is no longer needed.
- * @retval ULDB_INIT    Module not initialized. log_add() called.
- * @retval ULDB_ARG     Invalid PID. log_add() called.
- * @retval ULDB_EXIST   Entry for PID already exists. log_add() called.
- * @retval ULDB_SYSTEM  System error. log_add() called.
+ * @param pid[in]         PID of upstream LDM process
+ * @param protoVers[in]   Protocol version number (e.g., 5 or 6)
+ * @param sockAddr[in]    Socket Internet address of downstream LDM
+ * @param desired[in]     The subscription desired by the downstream LDM
+ * @param allowed[out]    The allowed subscription or `NULL`. Equal to the
+ *                        desired subscription reduced by existing subscriptions
+ *                        from the same host. Might specify an empty
+ *                        subscription. Upon successful return, the client
+ *                        should call "free_prod_class(*allowed)" when the
+ *                        allowed subscription is no longer needed.
+ * @param isNotifier[in]  Whether the upstream LDM is a notifier or a feeder
+ * @param isPrimary[in]   Whether the upstream LDM is in primary transfer
+ *                        mode or not
+ * @retval 0              Success. "*allowed" is set if non-NULL. The database
+ *                        is unmodified, however, if the allowed subscription is
+ *                        the empty set. The client should call
+ *                        "free_prod_class(*allowed)" when the allowed
+ *                        subscription is no longer needed.
+ * @retval ULDB_INIT      Module not initialized. log_add() called.
+ * @retval ULDB_ARG       Invalid PID. log_add() called.
+ * @retval ULDB_EXIST     Entry for PID already exists. log_add() called.
+ * @retval ULDB_SYSTEM    System error. log_add() called.
  */
 uldb_Status uldb_addProcess(
     const pid_t                              pid,
@@ -2168,7 +2169,7 @@ uldb_Status uldb_addProcess(
             if (status) {
                 free_prod_class(sub); /* NULL safe */
             }
-            else {
+            else if (allowed) {
                 *allowed = sub;
             }
         } /* database is locked */
@@ -2190,8 +2191,8 @@ uldb_Status uldb_addProcess(
  * @retval ULDB_EXIST        No corresponding entry found. log_add() called.
  * @retval ULDB_SYSTEM       System error. See "errno". log_add() called.
  */
-uldb_Status uldb_remove(
-        const pid_t pid)
+uldb_Status
+uldb_remove(const pid_t pid)
 {
     int status;
 
