@@ -1367,7 +1367,7 @@ test_up7_down7(
     log_debug("Stopping sender");
     sender_stop(&sender);
 
-    lcf_free();
+    lcf_destroy();
 
     /*
     status = pthread_sigmask(SIG_SETMASK, &oldSigSet, NULL);
