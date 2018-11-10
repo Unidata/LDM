@@ -39,10 +39,10 @@ d7mgr_add(
         const VcEndPoint* const restrict   vcEnd);
 
 /**
- * Frees the downstream LDM-7 manager.
+ * Destroys the downstream LDM-7 manager.
  */
 void
-d7mgr_free(void);
+d7mgr_destroy(void);
 
 /**
  * Starts all multicast-receiving LDM-7s as individual child processes of the

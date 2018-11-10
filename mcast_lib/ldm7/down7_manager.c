@@ -16,6 +16,7 @@
 #include "globals.h"
 #include "ldm.h"
 #include "ldmfork.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "pq.h"
 #include "VirtualCircuit.h"
@@ -42,7 +43,7 @@
  * @param[in] vcEnd          Local AL2S virtual-circuit endpoint. If the
  *                           endpoint isn't valid, then the AL2S virtual circuit
  *                           will not be created. Caller may free.
- * @param[in] pqPathname     Pathname of the product-queue.
+ * @param[in] pqPathname     Pathname of the product-queue. Caller may free.
  * @retval    0              Success
  * @retval    LDM7_INVAL     `fmtpIface` and `vcEnd` are inconsistent
  * @retval    LDM7_MCAST     Multicast layer failure. `log_add()` called.
@@ -112,9 +113,9 @@ static Elt* top;
  * Returns a new element.
  *
  * @param[in] feed        Feedtype to subscribe to.
- * @param[in] ldmSrvr     Upstream LDM-7 to which to subscribe.
+ * @param[in] ldmSrvr     Upstream LDM-7 to which to subscribe. Caller may free.
  * @param[in] fmtpIface   Name of virtual interface to be created and used by
- *                        FMTP layer
+ *                        FMTP layer. May be `NULL`. Caller may free.
  * @param[in] vcEnd       Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    NULL        Failure. `log_add()` called.
  * @return                Pointer to new element.
@@ -136,7 +137,7 @@ elt_new(
             log_syserr("isa_clone() failure");
         }
         else {
-            elt->fmtpIface = strdup(fmtpIface);
+            elt->fmtpIface = strdup(fmtpIface ? fmtpIface : "dummy");
 
             if (elt->fmtpIface == NULL) {
                 log_add_syserr("Couldn't duplicate interface specification");
@@ -147,7 +148,7 @@ elt_new(
                 }
                 else {
                     elt->feed = feed;
-                    elt->pid = -1;
+                    elt->pid = 0;
                     failure = false;
                 } // `elt->vcEnd` initialized
 
@@ -182,6 +183,26 @@ elt_free(
         free(elt->fmtpIface);
         free(elt);
     }
+}
+
+/**
+ * Returns the string representation of an element.
+ *
+ * @param[in] elt     Element
+ * @retval    `NULL`  Failure. `log_add()` called.
+ * @return            String representation of `elt`. Caller should free.
+ */
+static char*
+elt_toString(const Elt* const elt)
+{
+    char* const vcEndStr = vcEndPoint_format(&elt->vcEnd);
+    char* const string = ldm_format(128, "{feed=%s, ldmSrvr=%s, fmtpIface=%s, "
+            "vcEnd=%s, pid=%lu}", s_feedtypet(elt->feed), isa_toString(elt->ldmSrvr),
+            elt->fmtpIface, vcEndStr, (unsigned long)elt->pid);
+
+    free(vcEndStr);
+
+    return string;
 }
 
 /**
@@ -223,6 +244,11 @@ elt_start(
     else {
         /* Parent process */
         elt->pid = pid;
+        if (log_is_enabled_debug) {
+            char* const eltStr = elt_toString(elt);
+            log_debug("Started multicast receiver %s", eltStr);
+            free(eltStr);
+        }
         status = 0;
     }
 
@@ -240,7 +266,7 @@ elt_stop(
 {
     if (0 < elt->pid) {
         (void)kill(elt->pid, SIGTERM);
-        elt->pid = -1;
+        elt->pid = 0;
     }
 }
 
@@ -254,7 +280,7 @@ elt_stop(
  * @param[in] feed         Feedtype to subscribe to.
  * @param[in] ldmSrvr      Upstream LDM-7 to which to subscribe. Caller may free.
  * @param[in] fmtpIface    Name of virtual interface to be created and used by
- *                         FMTP layer
+ *                         FMTP layer. May be `NULL`. Caller may free.
  * @param[in] vcEnd        Local AL2S virtual-circuit endpoint. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
@@ -275,6 +301,11 @@ d7mgr_add(
     else {
         elt->next = top;
         top = elt;
+        if (log_is_enabled_debug) {
+            char* eltStr = elt_toString(elt);
+            log_debug("Added multicast receiver %s", elt_toString(elt));
+            free(eltStr);
+        }
         status = 0;
     }
 
@@ -282,10 +313,10 @@ d7mgr_add(
 }
 
 /**
- * Frees the downstream LDM-7 manager.
+ * Destroys the downstream LDM-7 manager.
  */
 void
-d7mgr_free(void)
+d7mgr_destroy(void)
 {
     if (top) {
         for (Elt* elt = top; elt != NULL; ) {
