@@ -33,6 +33,17 @@ Ldm7Status
 msm_init(void);
 
 /**
+ * Destroys this module. Should be called once in each process per LDM session.
+ *
+ * Idempotent.
+ *
+ * @param[in] final  Whether to free inter-process communication resources.
+ *                   Should be `true` only once per LDM session.
+ */
+void
+msm_destroy(const bool final);
+
+/**
  * Locks the map. Idempotent. Blocks until the lock is acquired or an error
  * occurs.
  *
@@ -103,21 +114,6 @@ msm_unlock(void);
  */
 Ldm7Status
 msm_remove(const pid_t pid);
-
-/**
- * Clears all entries.
- */
-void
-msm_clear(void);
-
-/**
- * Destroys this module. Should be called only once per LDM session.
- *
- * @retval 0            Success.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
- */
-void
-msm_destroy(void);
 
 #ifdef __cplusplus
     }

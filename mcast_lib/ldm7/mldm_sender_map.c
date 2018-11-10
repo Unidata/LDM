@@ -76,31 +76,18 @@ smo_open(
         const char* const restrict pathname,
         int* const restrict        fd)
 {
-    int status;
-    int myFd = shm_open(pathname, O_RDWR|O_CREAT|O_EXCL, 0666);
+    int       status;
+    const int myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0600);
 
-    if (-1 < myFd) {
-        *fd = myFd;
-        status = 0;
-    }
-    else if (errno != EEXIST) {
-        log_add_syserr("Couldn't create shared memory object \"%s\"", pathname);
+    if (myFd == -1) {
+        log_add_syserr("Couldn't open/create shared memory object, \"%s\"",
+                pathname);
         status = LDM7_SYSTEM;
     }
     else {
-        log_info_q("Shared memory object \"%s\" already exists");
-        myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0666);
-
-        if (-1 < myFd) {
-            *fd = myFd;
-            status = 0;
-        }
-        else {
-            log_add_syserr("Couldn't open shared memory object \"%s\"",
-                    pathname);
-            status = LDM7_SYSTEM;
-        }
-    }
+        *fd = myFd;
+        status = 0;
+    } // Shared-memory object was opened
 
     return status;
 }
@@ -162,14 +149,14 @@ smo_init(
 }
 
 /**
- * Sets the pathname of the shared-memory object. The name is unique to the
- * user.
+ * Initializes the pathname of the shared-memory object. The name is unique to
+ * the user.
  *
  * @retval 0            Success
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-msm_setSmoPathname(void)
+msm_initSmoPathname(void)
 {
     static const char format[] = "/mldmSenderMap-%s";
     int               status;
@@ -211,11 +198,20 @@ msm_setSmoPathname(void)
     return status;
 }
 
+static void
+msm_destroySmoPathname()
+{
+    if (smo_pathname) {
+        free(smo_pathname);
+        smo_pathname = NULL;
+    }
+}
+
 /**
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
+ * @retval LDM7_LOGIC   This module is already initialized. `log_add()` called.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
@@ -227,21 +223,25 @@ msm_init(void)
 
     if (smo_pathname) {
         log_add("Multicast sender map is already initialized");
-        status = LDM7_INVAL;
+        status = LDM7_LOGIC;
     }
     else {
         // `smo_pathname == NULL`
-        status = msm_setSmoPathname();
+        status = msm_initSmoPathname();
 
         if (status) {
             log_add("Couldn't initialize pathname of shared-memory object");
         }
         else {
             int fd;
+
             status = smo_open(smo_pathname, &fd);
+
             if (0 == status) {
                 void* addr;
+
                 status = smo_init(fd, NUM_FEEDTYPES, &addr);
+
                 if (status) {
                     log_add("Couldn't initialize shared-memory object \"%s\"",
                             smo_pathname);
@@ -255,6 +255,9 @@ msm_init(void)
                     lock.l_len = 0; // entire object
                 } // shared PID array initialized
             } // `fd` is open
+
+            if (status)
+                msm_destroySmoPathname();
         } // `smo_pathname` set
     } // module not initialized
 
@@ -262,23 +265,18 @@ msm_init(void)
     return status;
 }
 
-/**
- * Destroys this module. Should be called only once per LDM session.
- *
- * @retval 0            Success.
- */
 void
-msm_destroy(void)
+msm_destroy(const bool final)
 {
-    log_debug("Entered");
+    log_debug("msm_destroy(): Entered");
 
     if (smo_pathname) {
-        smo_close(fileDes, smo_pathname);
-        free(smo_pathname);
-        smo_pathname = NULL;
+        if (final)
+            smo_close(fileDes, smo_pathname);
+        msm_destroySmoPathname();
     }
 
-    log_debug("Returning");
+    log_debug("msm_destroy(): Returning");
 }
 
 /**
@@ -304,21 +302,6 @@ msm_lock(const bool exclusive)
     return 0;
 }
 
-/**
- * Adds a mapping between a feed-type and a multicast LDM sender process.
- *
- * @param[in] feedtype      Feed-type.
- * @param[in] pid           Multicast LDM sender process-ID.
- * @param[in] port          Port number of sender's FMTP TCP server in host byte
- *                          order
- * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
- *                          host byte order
- * @retval    0             Success.
- * @retval    LDM7_DUP      Process identifier duplicates existing entry.
- *                          `log_add()` called.
- * @retval    LDM7_DUP      Feed-type overlaps with feed-type being sent by
- *                          another process. `log_add()` called.
- */
 Ldm7Status
 msm_put(
         const feedtypet      feedtype,
@@ -399,15 +382,6 @@ msm_unlock(void)
     return 0;
 }
 
-/**
- * Removes the entry corresponding to a process identifier.
- *
- * @param[in] pid          Process identifier.
- * @retval    0            Success. `msm_getPid()` for the associated feed-type
- *                         will return LDM7_NOENT.
- * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
- *                         Database is unchanged.
- */
 Ldm7Status
 msm_remove(const pid_t pid)
 {
@@ -423,14 +397,4 @@ msm_remove(const pid_t pid)
     }
 
     return status;
-}
-
-/**
- * Clears all entries.
- */
-void
-msm_clear(void)
-{
-    if (smo_pathname)
-        (void)memset(procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
 }
