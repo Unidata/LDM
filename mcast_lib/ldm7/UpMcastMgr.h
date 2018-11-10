@@ -20,11 +20,42 @@
 
 #include <sys/types.h>
 
-typedef struct mul               Mul;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Initializes this module. Shall be called only once per LDM session.
+ *
+ * @retval 0            Success.
+ * @retval LDM7_LOGIC   Module is already initialized. `log_add()` called.
+ * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+umm_init(void);
+
+/**
+ * Destroys this module. Should be called once in each process per LDM session.
+ *
+ * Idempotent.
+ *
+ * @param[in] final  Whether to free inter-process communication resources.
+ *                   Should be `true` only once per LDM session.
+ */
+void
+umm_destroy(const bool final);
+
+/**
+ * Removes the entry corresponding to a process identifier.
+ *
+ * @param[in] pid          Process identifier.
+ * @retval    0            Success
+ * @retval    LDM7_LOGIC   Module is not initialized. `log_add()` called.
+ * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
+ *                         Database is unchanged.
+ */
+Ldm7Status
+umm_remove(const pid_t pid);
 
 /**
  * Sets the FMTP retransmission timeout. Calls to `umm_subscribe()` will use
@@ -74,6 +105,7 @@ umm_setWrkGrpName(const char* name);
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
+ * @retval    LDM7_LOGIC   Module is not initialized. `log_add()` called.
  * @retval    LDM7_DUP     Multicast group information conflicts with earlier
  *                         addition. Manager not modified. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
@@ -103,7 +135,7 @@ umm_addPotentialSender(
  *                          success.
  * @retval     0            Success. The group is being multicast and
  *                          `*smi` and `*fmtpClntCidr` are set.
- * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval     LDM7_LOGIC   Module is not initialized. `log_add()` called.
  * @retval     LDM7_NOENT   No corresponding potential sender was added via
  *                          `mlsm_addPotentialSender()`. `log_add() called`.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
@@ -124,6 +156,8 @@ umm_subscribe(
  * @param[in] pid          Process-ID of the terminated multicast LDM sender
  *                         process.
  * @retval    0            Success.
+ * @retval    LDM7_LOGIC   Module is not already initialized. `log_add()`
+ *                         called.
  * @retval    LDM7_NOENT   PID doesn't correspond to known process.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
@@ -147,6 +181,7 @@ umm_getMldmSenderPid(void);
  * @retval    0             Success
  * @retval    LDM7_INVAL    No multicast LDM sender corresponds to `feed`.
  *                          `log_add()` called.
+ * @retval    LDM7_LOGIC    Module is not initialized. `log_add()` called.
  * @retval    LDM7_NOENT    `downFmtpAddr` wasn't previously reserved.
  *                          `log_add()` called.
  * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
@@ -154,15 +189,6 @@ umm_getMldmSenderPid(void);
 Ldm7Status umm_unsubscribe(
         const feedtypet feed,
         const in_addr_t fmtpClntAddr);
-
-/**
- * Clears all entries.
- *
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
- */
-Ldm7Status
-umm_clear(void);
 
 #ifdef __cplusplus
 }

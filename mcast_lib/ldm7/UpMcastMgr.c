@@ -1360,6 +1360,8 @@ me_unsubscribe(
  * Upstream Multicast Manager:
  ******************************************************************************/
 
+/// Module is initialized?
+static bool initialized = false;
 /// Multicast entries
 static void* mcastEntries;
 /// Key for multicast entries
@@ -1379,17 +1381,24 @@ static const char* wrkGrpName;
 static McastEntry*
 umm_getMcastEntry(const feedtypet feed)
 {
+    McastEntry* entry;
+
     if (key.info == NULL)
         key.info = smi_newFromStr(0, "0.0.0.0", "0.0.0.0");
 
     smi_setFeed(key.info, feed);
     void* const node = tfind(&key, &mcastEntries, me_compareFeeds);
+
     if (NULL == node) {
         log_add("No multicast LDM sender is associated with feed-type %s",
                 s_feedtypet(feed));
-        return NULL;
+        entry = NULL;
     }
-    return *(McastEntry**)node;
+    else {
+        entry = *(McastEntry**)node;
+    }
+
+    return entry;
 }
 
 void
@@ -1413,24 +1422,32 @@ umm_addPotentialSender(
     const CidrAddr* const restrict     fmtpSubnet,
     const char* const restrict         pqPathname)
 {
-    //char* const str = smi_toString(mcastInfo);
-    //log_notice("umm_addPotentialSender(): info=%s", str);
-    //free(str);
+    int status;
 
-    McastEntry* entry;
-    int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
-            fmtpSubnet, pqPathname);
+    if (!initialized) {
+        log_add("Upstream multicast manager is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        //char* const str = smi_toString(mcastInfo);
+        //log_notice("umm_addPotentialSender(): info=%s", str);
+        //free(str);
 
-    if (0 == status) {
-        const void* const node = tsearch(entry, &mcastEntries,
-                me_compareOrConflict);
+        McastEntry* entry;
+        int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
+                fmtpSubnet, pqPathname);
 
-        if (NULL == node) {
-            log_add_syserr("Couldn't add to multicast entries");
-            me_free(entry);
-            status = LDM7_SYSTEM;
-        }
-    } // `entry` allocated
+        if (0 == status) {
+            const void* const node = tsearch(entry, &mcastEntries,
+                    me_compareOrConflict);
+
+            if (NULL == node) {
+                log_add_syserr("Couldn't add to multicast entries");
+                me_free(entry);
+                status = LDM7_SYSTEM;
+            }
+        } // `entry` allocated
+    }
 
     return status;
 }
@@ -1444,27 +1461,35 @@ umm_subscribe(
         CidrAddr* const restrict            fmtpClntCidr)
 {
     int         status;
-    McastEntry* entry = umm_getMcastEntry(feed);
 
-    if (NULL == entry) {
-        log_add("No multicast entry corresponds to feed %s", s_feedtypet(feed));
-        status = LDM7_NOENT;
+    if (!initialized) {
+        log_add("Upstream multicast manager is not initialized");
+        status = LDM7_LOGIC;
     }
     else {
-        //char* const str = smi_toString(entry->info);
-        //log_notice("umm_subscribe(): entry->info=%s", str);
-        //free(str);
+        McastEntry* entry = umm_getMcastEntry(feed);
 
-        /*
-         * Sets the port numbers of the FMTP server & RPC-command server of
-         * the multicast LDM sender process if appropriate
-         */
-        status = me_subscribe(entry, wrkGrpName, clntAddr, rmtVcEnd,
-                retxTimeout, smi, fmtpClntCidr);
+        if (NULL == entry) {
+            log_add("No multicast entry corresponds to feed %s",
+                    s_feedtypet(feed));
+            status = LDM7_NOENT;
+        }
+        else {
+            //char* const str = smi_toString(entry->info);
+            //log_notice("umm_subscribe(): entry->info=%s", str);
+            //free(str);
 
-        if (status)
-            log_add("me_subscribe() failure");
-    } // Desired feed maps to a possible multicast LDM sender
+            /*
+             * Sets the port numbers of the FMTP server & RPC-command server of
+             * the multicast LDM sender process if appropriate
+             */
+            status = me_subscribe(entry, wrkGrpName, clntAddr, rmtVcEnd,
+                    retxTimeout, smi, fmtpClntCidr);
+
+            if (status)
+                log_add("me_subscribe() failure");
+        } // Desired feed maps to a possible multicast LDM sender
+    }
 
     return status;
 }
@@ -1473,16 +1498,25 @@ Ldm7Status
 umm_terminated(
         const pid_t pid)
 {
-    int status = msm_lock(true);
-    if (status) {
-        log_add("Couldn't lock multicast sender map");
+    int status;
+
+    if (!initialized) {
+        log_add("Upstream multicast manager is not initialized");
+        status = LDM7_LOGIC;
     }
     else {
-        status = msm_remove(pid);
-        if (pid == childPid)
-            childPid = 0; // No need to kill child because must have terminated
-        (void)msm_unlock();
+        status = msm_lock(true);
+        if (status) {
+            log_add("Couldn't lock multicast sender map");
+        }
+        else {
+            status = msm_remove(pid);
+            if (pid == childPid)
+                childPid = 0; // No need to kill child because must have terminated
+            (void)msm_unlock();
+        }
     }
+
     return status;
 }
 
@@ -1499,43 +1533,101 @@ umm_unsubscribe(
 {
     int status;
 
-    McastEntry* entry = umm_getMcastEntry(feed);
-
-    if (entry == NULL) {
-        log_add("No multicast LDM sender corresponds to feed %s",
-                s_feedtypet(feed));
-        status = LDM7_INVAL;
+    if (!initialized) {
+        log_add("Upstream multicast manager is not initialized");
+        status = LDM7_LOGIC;
     }
-    else  {
-        status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName);
+    else {
+        McastEntry* entry = umm_getMcastEntry(feed);
 
-        if (status)
-            log_add("me_unsubscribe() failure");
-    } // Corresponding entry found
+        if (entry == NULL) {
+            log_add("No multicast LDM sender corresponds to feed %s",
+                    s_feedtypet(feed));
+            status = LDM7_INVAL;
+        }
+        else  {
+            status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName);
+
+            if (status)
+                log_add("me_unsubscribe() failure");
+        } // Corresponding entry found
+    }
 
     return status;
 }
 
-Ldm7Status
+/**
+ * Clears all entries. Frees resources.
+ *
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
 umm_clear(void)
 {
-    int status = msm_lock(true);
-    if (status) {
-        log_add("Couldn't lock multicast sender map");
-    }
-    else {
-        while (mcastEntries) {
-            McastEntry* entry = *(McastEntry**)mcastEntries;
-            (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
-            me_free(entry);
-        }
-        msm_clear();
-        (void)msm_unlock();
+    int status;
+
+    while (mcastEntries) {
+        McastEntry* entry = *(McastEntry**)mcastEntries;
+        (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
+        me_free(entry);
     }
 
     if (key.info) {
         smi_free(key.info);
         key.info = NULL;
+    }
+
+    return status;
+}
+
+Ldm7Status
+umm_init(void)
+{
+    int status;
+
+    if (initialized) {
+        log_add("Upstream multicast manager is already initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = msm_init();
+
+        if (status) {
+            log_add("Couldn't initialize the multicast sender map");
+        }
+        else {
+            initialized = true;
+        }
+    }
+
+    return status;
+}
+
+void
+umm_destroy(const bool final)
+{
+    if (!initialized) {
+        log_warning("Upstream multicast manager is not initialized");
+    }
+    else {
+        umm_clear();
+        msm_destroy(final);
+        initialized = false;
+    }
+}
+
+Ldm7Status
+umm_remove(const pid_t pid)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Upstream multicast manager is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = msm_remove(pid);
     }
 
     return status;
