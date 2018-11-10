@@ -39,6 +39,7 @@
 #include "prod_info.h"
 #include "rpcutil.h"
 #include "timestamp.h"
+#include "uldb.h"
 #include "up7.h"
 #include "UpMcastMgr.h"
 #include "VirtualCircuit.h"
@@ -813,6 +814,13 @@ subscribe_7_svc(
                             " downstream host %s", hostId);
                 }
                 else {
+                    prod_class prodCls = {};
+                    cp_prod_class(&prodCls, &_clss_all, 1);
+                    prodCls.psa.psa_val->feedtype = request->feed;
+                    if (uldb_addProcess(getpid(), 7, &xprt->xp_raddr, &prodCls,
+                            NULL, false, true))
+                        log_flush_error();
+
                     // `clnt` set
                     reply = &result; // Successful reply
 
