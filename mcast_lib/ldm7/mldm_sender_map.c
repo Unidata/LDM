@@ -398,3 +398,10 @@ msm_remove(const pid_t pid)
 
     return status;
 }
+
+void
+msm_clear(void)
+{
+    if (smo_pathname)
+        (void)memset(procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
+}

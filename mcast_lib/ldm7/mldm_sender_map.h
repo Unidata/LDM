@@ -6,7 +6,7 @@
  *   @file: mldm_sender_map.h
  * @author: Steven R. Emmerson
  *
- * This file defines the API for a singleton mapping between feedtypes and
+ * This file defines the API for a singleton mapping between LDM feeds and
  * process-IDs of multicast LDM senders. The same mapping is accessible from
  * multiple processes and exists for the duration of the LDM session.
  */
@@ -33,12 +33,13 @@ Ldm7Status
 msm_init(void);
 
 /**
- * Destroys this module. Should be called once in each process per LDM session.
+ * Destroys this module and, optionally, frees the IPC resource. Should be
+ * called once in each process per LDM session.
  *
  * Idempotent.
  *
- * @param[in] final  Whether to free inter-process communication resources.
- *                   Should be `true` only once per LDM session.
+ * @param[in] final  Whether to free the IPC resource. Should be `true` only
+ *                   once per LDM session.
  */
 void
 msm_destroy(const bool final);
@@ -114,6 +115,13 @@ msm_unlock(void);
  */
 Ldm7Status
 msm_remove(const pid_t pid);
+
+/**
+ * Clears all entries -- freeing their resources. Doesn't destroy this module or
+ * free the IPC resource. Used for testing.
+ */
+void
+msm_clear(void);
 
 #ifdef __cplusplus
     }
