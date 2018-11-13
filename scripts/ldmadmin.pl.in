@@ -1391,7 +1391,7 @@ sub are_pqact_confs_ok
 	    while (<LDM_CONF_FILE>) {
 		if (/^exec/i && /pqact/) {
 		    chomp;
-		    s/^exec\s+"\s*//i;
+		    s/^exec\s+"?\s*//i;
 		    s/\s*"\s*$//;
 
 		    my @fields = split;
