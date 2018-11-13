@@ -315,7 +315,7 @@ static void signal_handler(
         up6_close();
         req6_close();
 #if WANT_MULTICAST
-        down7_halt();
+        //down7_halt();
 #endif
         return;
     case SIGUSR1:
@@ -927,7 +927,7 @@ int main(
      * Initialize the configuration file module.
      */
     log_debug("Initializing configuration-file module");
-    if (lcf_init(getLdmdConfigPath(), ldmIpAddr, ldmPort) != 0) {
+    if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
         log_flush_error();
         exit(1);
     }
