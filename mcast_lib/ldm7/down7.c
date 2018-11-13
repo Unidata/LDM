@@ -2168,13 +2168,22 @@ down7_signal()
  * @asyncsignalsafety  Safe
  */
 void
-down7_halt(void)
+down7_halt(const pthread_t thread)
 {
-    if (down7.initialized) {
-        down7.terminate = 1;
+    mutex_lock(&down7.mutex);
+        if (down7.initialized) {
+            down7.terminate = 1;
 
-        (void)down7_signal();
-    }
+            (void)down7_signal();
+
+            int status = pthread_kill(thread, SIGTERM);
+
+            if (status) {
+                log_add_errno(status, "pthread_kill() failure");
+                log_flush_error();
+            }
+        }
+    mutex_unlock(&down7.mutex);
 }
 
 /**
