@@ -1002,7 +1002,7 @@ static int unio_open(
             fl_closeLru(0);
         }
 
-        log_syserr_q("unio_open: %s", path);
+        log_add_syserr("Couldn't open file \"%s\"", path);
     }
     else {
         /*
@@ -1012,7 +1012,7 @@ static int unio_open(
          */
         int status = ensureCloseOnExec(writeFd);
         if (status) {
-            log_error_q("Couldn't open FILE output-file");
+            log_add_syserr("ensureCloseOnExec() failure on file \"%s\"", path);
         }
         else {
             if (!(flags & O_TRUNC)) {
@@ -1020,7 +1020,7 @@ static int unio_open(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr_q("unio_open(): Couldn't seek to EOF: %s", path);
+                    log_add_syserr("lseek() failure on file \"%s\"", path);
                 }
             }
 
@@ -1283,7 +1283,7 @@ int unio_prodput(
     char	must_free_data = 0;
 
     log_debug("%d %s", entry == NULL ? -1 : entry->handle.fd,
-    prodp->info.ident);
+            prodp->info.ident);
 
     if (entry == NULL ) {
         log_add("Couldn't get entry for product \"%s\"", prodp->info.ident);
@@ -1292,8 +1292,8 @@ int unio_prodput(
     else {
         if (entry_isFlagSet(entry, FL_EDEX)) {
             if (shared_id == -1) {
-                log_error_q(
-                        "Notification specified but shared memory is not available.");
+                log_add("Notification specified but shared memory is not "
+                        "available.");
             }
             else {
                 edex_message* const queue =
@@ -1304,7 +1304,7 @@ int unio_prodput(
                 strncpy(msg->ident, prodp->info.ident, 256);
                 msg->ident[256-1] = 0;
                 if (shmdt((void*)queue) == -1) {
-                    log_error_q("Detaching shared memory failed.");
+                    log_add_syserr("Detaching shared memory failed.");
                 }
             }
         }
@@ -1338,7 +1338,7 @@ int unio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr_q("Couldn't seek to BOF: %s", entry->path);
+                    log_add_syserr("lseek() failure on file %s", entry->path);
                 }
             }
 
@@ -1356,7 +1356,7 @@ int unio_prodput(
                 }
                 else {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        log_notice_q("Filed in \"%s\": %s", argv[argc - 1],
+                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
                                         log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
@@ -2820,12 +2820,12 @@ entry_new(
         #ifndef NO_DB
             ops = &ldmdb_ops;
         #else
-            log_error_q("DB type not enabled");
+            log_add("DB type not enabled");
             ops = NULL;
         #endif
         break;
     default:
-        log_error_q("unknown type %d", type);
+        log_add("unknown type %d", type);
         ops = NULL;
     }
 
@@ -2836,7 +2836,7 @@ entry_new(
         entry = Alloc(1, fl_entry);
 
         if (NULL == entry) {
-            log_syserr_q("entry_new: malloc");
+            log_add_syserr("malloc() failure");
         }
         else {
             entry->ops = ops;

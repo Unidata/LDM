@@ -1184,7 +1184,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         argc = 0;
         status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
         if (status)
-            log_error_q("Couldn't process product: "
+            log_add("Couldn't process product: "
                     "feedtype=%s, pattern=\"%s\", action=%s",
                     s_feedtypet(prod->info.feedtype), pal->pattern,
                     pal->action.name);
@@ -1218,7 +1218,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        log_info_q("               %s: %s and the ident is %s",
+        log_info("               %s: %s and the ident is %s",
                 s_actiont(&pal->action), INBUF, prod->info.ident);
 
         argc = tokenize(INBUF, argv, ARRAYLEN(argv));
@@ -1228,14 +1228,14 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
             argv[argc] = NULL;
             status = (*pal->action.prod_action)(prod, argc, argv, xprod, xlen);
             if (status)
-                log_error_q("Couldn't process product: "
+                log_add("Couldn't process product: "
                         "feedtype=%s, pattern=\"%s\", action=%s, "
                         "args=\"%s\"", s_feedtypet(prod->info.feedtype),
                         pal->pattern, pal->action.name, pal->private);
         }
         else
         {
-            log_error_q("Too many arguments: \"%s\"", INBUF);
+            log_add("Too many arguments: \"%s\"", INBUF);
             status = -1;
         }
     }
@@ -1354,6 +1354,7 @@ processProduct(
             prod.info = *infop;
             prod.data = (void*)datap; /* cast away const */
             if (prodAction(&prod, pal, prod_par->encoded, prod_par->size)) {
+                log_flush_error();
                 if (pal->action.flags & LDM_ACT_TRANSIENT) {
                     /* connection closed, don't try again */
                     remove_palt(pal);
