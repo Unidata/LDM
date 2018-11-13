@@ -253,7 +253,7 @@ up7_reduceFeed(
  *   - Sets the reply to the RPC client
  *
  * @param[in]  xprt         RPC transport
- * @param[in]  feed         Multicast feed
+ * @param[in]  desiredFeed  Multicast feed desired by downstream client
  * @param[in]  fmtVcEnd     Remote endpoint of the AL2S virtual circuit or
  *                          `NULL`. Necessary only if the multicast LDM sender
  *                          associated with `feed` multicasts on an AL2S
@@ -266,7 +266,7 @@ up7_reduceFeed(
 static int
 up7_subscribe(
         struct SVCXPRT* const restrict    xprt,
-        feedtypet                         feed,
+        const feedtypet                   desiredFeed,
         const VcEndPoint* const restrict  rmtVcEnd,
         SubscriptionReply* const restrict reply)
 {
@@ -275,11 +275,11 @@ up7_subscribe(
     const char* const                    hostId = hostbyaddr(sockAddr);
     const struct in_addr* const restrict hostAddr = &sockAddr->sin_addr;
 
-    feed = up7_reduceFeed(feed, hostAddr, hostId);
+    const feedtypet reducedFeed = up7_reduceFeed(desiredFeed, hostAddr, hostId);
 
-    if (feed == NONE) {
+    if (reducedFeed == NONE) {
         log_notice("Host %s isn't allowed to receive any part of feed %s",
-                hostId, s_feedtypet(feed));
+                hostId, s_feedtypet(desiredFeed));
         reply->status = LDM7_UNAUTH;
         status = 0;
     }
@@ -287,7 +287,7 @@ up7_subscribe(
         const SepMcastInfo* smi;
         CidrAddr            fmtpClntCidr;
 
-        status = umm_subscribe(feed, hostAddr->s_addr, rmtVcEnd,
+        status = umm_subscribe(reducedFeed, hostAddr->s_addr, rmtVcEnd,
                 &smi, &fmtpClntCidr);
 
         if (LDM7_NOENT == status) {
@@ -297,36 +297,36 @@ up7_subscribe(
         }
         else if (status) {
             log_add("Couldn't subscribe host %s to feed %s", hostId,
-                    s_feedtypet(feed));
+                    s_feedtypet(reducedFeed));
         }
         else {
             McastInfo mcastInfo;
 
-            if (!mi_init(&mcastInfo, feed,
+            if (!mi_init(&mcastInfo, reducedFeed,
                     isa_toString(smi_getMcastGrp(smi)),
                     isa_toString(smi_getFmtpSrvr(smi)))) {
                 log_add("Couldn't set multicast information");
                 status = LDM7_SYSTEM;
             }
             else {
-                status = up7_openProdIndexMap(feed);
+                status = up7_openProdIndexMap(reducedFeed);
 
                 if (status) {
                     log_add("Couldn't open product-to-index map for feed %s",
-                            s_feedtypet(feed));
+                            s_feedtypet(reducedFeed));
                     mi_destroy(&mcastInfo);
                 }
                 else {
                     reply->SubscriptionReply_u.info.mcastInfo = mcastInfo;
                     reply->SubscriptionReply_u.info.fmtpAddr = fmtpClntCidr;
                     reply->status = LDM7_OK;
-                    feedtype = feed;
+                    feedtype = reducedFeed;
                     fmtpClntAddr = cidrAddr_getAddr(&fmtpClntCidr);
                 }
             } // Multicast information initialized
 
             if (status &&
-                    umm_unsubscribe(feed, cidrAddr_getAddr(&fmtpClntCidr)))
+                    umm_unsubscribe(reducedFeed, cidrAddr_getAddr(&fmtpClntCidr)))
                 log_flush_error();
         } // `umm_subscribe()` successful
     } // Client is allowed to receive something
@@ -758,6 +758,45 @@ up7_destroy(void)
 }
 
 /**
+ * Adds an upstream LDM7 process to the upstream LDM database.
+ *
+ * @param[in] clientAddr   Socket address of the downstream LDM7 client
+ * @param[in] feed         LDM7 feed
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+static Ldm7Status
+addToUldb(
+        const struct sockaddr_in* const clientAddr,
+        const feedtypet                 feed)
+{
+    int status;
+
+    prod_class* const prodCls = dup_prod_class(&_clss_all);
+
+    if (prodCls == NULL) {
+        log_add("dup_prod_class() failure");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        prodCls->psa.psa_val->feedtype = feed;
+
+        if (uldb_addProcess(getpid(), 7, clientAddr, prodCls, NULL, false,
+                true)) {
+            log_add("uldb_addProcess() failure");
+            status = LDM7_SYSTEM;
+        }
+        else {
+            status = 0;
+        }
+
+        free_prod_class(prodCls);
+    } // `prodCls` allocated
+
+    return status;
+}
+
+/**
  * Synchronously subscribes a downstream LDM-7 to a feed. Called by the RPC
  * dispatch function `ldmprog_7()`.
  *
@@ -783,7 +822,7 @@ subscribe_7_svc(
     const char*               hostId = hostbyaddr(&xprt->xp_raddr);
     const char*               feedspec = s_feedtypet(request->feed);
 
-    log_notice_q("Incoming subscription request from %s:%u for feed %s",
+    log_notice("Incoming subscription request from %s:%u for feed %s",
             hostId, ntohs(xprt->xp_raddr.sin_port), feedspec);
 
     if (reply) {
@@ -810,16 +849,21 @@ subscribe_7_svc(
             }
             else {
                 if (!up7_createClientTransport(xprt)) {
-                    log_error_q("Couldn't create client-side RPC transport to "
+                    log_add("Couldn't create client-side RPC transport to "
                             " downstream host %s", hostId);
+                    log_flush_error();
                 }
                 else {
-                    prod_class prodCls = {};
-                    cp_prod_class(&prodCls, &_clss_all, 1);
-                    prodCls.psa.psa_val->feedtype = request->feed;
-                    if (uldb_addProcess(getpid(), 7, &xprt->xp_raddr, &prodCls,
-                            NULL, false, true))
+                    if (addToUldb(&xprt->xp_raddr, request->feed)) {
+                        char* const clientStr =
+                                sockAddrIn_format(&xprt->xp_raddr);
+
+                        log_add("Couldn't add LDM7 process for client %s, feed "
+                                "%s to upstream LDM database", clientStr,
+                                s_feedtypet(request->feed));
                         log_flush_error();
+                        free(clientStr);
+                    }
 
                     // `clnt` set
                     reply = &result; // Successful reply
