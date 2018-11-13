@@ -25,7 +25,8 @@ extern "C" {
 #endif
 
 /**
- * Initializes this module. Shall be called only once per LDM session.
+ * Initializes this module. Creates an IPC resource. Shall be called only once
+ * per LDM session.
  *
  * @retval 0            Success.
  * @retval LDM7_LOGIC   Module is already initialized. `log_add()` called.
@@ -35,15 +36,25 @@ Ldm7Status
 umm_init(void);
 
 /**
- * Destroys this module. Should be called once in each process per LDM session.
+ * Destroys this module and, optionally, frees the IPC resource. Should be
+ * called once in each process per LDM session.
  *
  * Idempotent.
  *
- * @param[in] final  Whether to free inter-process communication resources.
- *                   Should be `true` only once per LDM session.
+ * @param[in] final  Whether to free the IPC resource. Should be `true` only
+ *                   once per LDM session.
  */
 void
 umm_destroy(const bool final);
+
+/**
+ * Indicates if this module has been initialized.
+ *
+ * @retval `true`   This module has been initialized
+ * @retval `false`  This module has not been initialized
+ */
+bool
+umm_isInited(void);
 
 /**
  * Removes the entry corresponding to a process identifier.
@@ -189,6 +200,16 @@ umm_getMldmSenderPid(void);
 Ldm7Status umm_unsubscribe(
         const feedtypet feed,
         const in_addr_t fmtpClntAddr);
+
+/**
+ * Clears all entries -- freeing their resources. Doesn't destroy this module or
+ * delete the IPC resource. Used for testing.
+ *
+ * @retval    0            Success.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+Ldm7Status
+umm_clear(void);
 
 #ifdef __cplusplus
 }

@@ -1434,7 +1434,8 @@ umm_addPotentialSender(
         //free(str);
 
         McastEntry* entry;
-        int         status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
+
+        status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
                 fmtpSubnet, pqPathname);
 
         if (0 == status) {
@@ -1556,13 +1557,7 @@ umm_unsubscribe(
     return status;
 }
 
-/**
- * Clears all entries. Frees resources.
- *
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
- */
-static Ldm7Status
+Ldm7Status
 umm_clear(void)
 {
     int status;
@@ -1572,6 +1567,8 @@ umm_clear(void)
         (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
         me_free(entry);
     }
+
+    msm_clear();
 
     if (key.info) {
         smi_free(key.info);
@@ -1615,6 +1612,12 @@ umm_destroy(const bool final)
         msm_destroy(final);
         initialized = false;
     }
+}
+
+bool
+umm_isInited(void)
+{
+    return initialized;
 }
 
 Ldm7Status
