@@ -1,3 +1,31 @@
+6.13.7.78
+    down7_manager:
+        - Allowed NULL FMTP interface
+        - Created elt_toString()
+        - Changed d7mgr_destroy() to dymgr_free()
+        
+    Multicast LDM sender map:
+        - Add `final` argument to msm_destroy()
+
+    Upstream multicast manager:
+        - Added umm_init() and checks for initialization.
+        - umm_destroy() now calls msm_destroy()
+
+    ldmd(1) and LDM Configuration-file:
+        - Made initialization and execution into separate functions.
+        - Moved upstream LDM management into configuration-file module
+        - Removed down7_halt() from SIGTERM handler
+        - lcf_destroy() now calls umm_destroy()
+
+    Upstream LDM database:
+        Set allowed product-class only if non-NULL in uldb_addProcess().
+
+    Upstream LDM7:
+        Added upstream LDM7 to upstream LDM database.
+
+    pqact(1):
+        Improved logging.
+
 6.13.7.77	2018-11-08T12:01:22-0700
     isa_getHostId() -> isa_getInetId()
 
@@ -16,7 +44,7 @@
 
 6.13.7.75	2018-11-05T16:18:15-0700
     XDR:
-        Eliminated a warning.
+        Eliminated some compiler warnings.
 
     vlanUtil(1):
         Changed "ip route show ..." to "ip route get ...".
@@ -30,7 +58,7 @@
 
 6.13.7.74	2018-11-05T10:44:50-0700
     XDR:
-        Eliminated some warnings.
+        Eliminated some compiler warnings.
 
     LDM configuration-file:
         - Moved some functions from "parser.y" to "ldm_config_file.c"
