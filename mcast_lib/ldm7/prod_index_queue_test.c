@@ -117,7 +117,8 @@ main(
                 CU_ADD_TEST(testSuite, test_order);
 
                 if (CU_basic_run_tests() == CUE_SUCCESS)
-                    exitCode = CU_get_number_of_failures();
+                    exitCode = CU_get_number_of_suites_failed() +
+                            CU_get_number_of_tests_failed();
             }
 
             CU_cleanup_registry();

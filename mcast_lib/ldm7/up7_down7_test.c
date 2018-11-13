@@ -25,6 +25,7 @@
 #include "pq.h"
 #include "prod_index_map.h"
 #include "registry.h"
+#include "Thread.h"
 #include "timestamp.h"
 #include "up7.h"
 #include "UpMcastMgr.h"
@@ -69,7 +70,8 @@ typedef struct {
 } Sender;
 
 typedef struct {
-    volatile sig_atomic_t done;
+    pthread_mutex_t mutex;
+    bool            done;
 } Requester;
 
 typedef struct {
@@ -215,68 +217,57 @@ setup(void)
 
     setLdmLogDir("."); // For LDM-7 receiver session-memory files (*.yaml)
 
-    int status = msm_init();
+    /*
+     * The following allows a SIGTERM to be sent to the process group
+     * without affecting the parent process (e.g., a make(1)). Unfortunately,
+     * it also prevents a `SIGINT` from terminating the process.
+    (void)setpgrp();
+     */
+
+    /*
+     * Create a signal mask that would block all signals except those that
+     * would cause undefined behavior
+     */
+    const int undefSigs[] = { SIGFPE, SIGILL, SIGSEGV, SIGBUS };
+    int       status = sigfillset(&mostSigMask);
+    assert(status == 0);
+    for (int i = 0; i < sizeof(undefSigs)/sizeof(undefSigs[0]); ++i) {
+        status = sigdelset(&mostSigMask, undefSigs[i]);
+        assert(status == 0);
+    }
+
+    status = setSignalHandling();
     if (status) {
-        log_add("Couldn't initialize multicast sender map");
+        log_add("Couldn't set termination signal handler");
     }
     else {
-        msm_clear();
+        status = sa_new(&up7Addr, LOCAL_HOST, UP7_PORT);
 
-        /*
-         * The following allows a SIGTERM to be sent to the process group
-         * without affecting the parent process (e.g., a make(1)). Unfortunately,
-         * it also prevents a `SIGINT` from terminating the process.
-        (void)setpgrp();
-         */
-
-        /*
-         * Create a signal mask that would block all signals except those that
-         * would cause undefined behavior
-         */
-        const int undefSigs[] = { SIGFPE, SIGILL, SIGSEGV, SIGBUS };
-        status = sigfillset(&mostSigMask);
-        assert(status == 0);
-        for (int i = 0; i < sizeof(undefSigs)/sizeof(undefSigs[0]); ++i) {
-            status = sigdelset(&mostSigMask, undefSigs[i]);
-            assert(status == 0);
-        }
-
-        status = setSignalHandling();
         if (status) {
-            log_add("Couldn't set termination signal handler");
+            log_add_errno(status,
+                    "Couldn't construct upstream LDM7 service address");
         }
         else {
-            status = sa_new(&up7Addr, LOCAL_HOST, UP7_PORT);
+            localVcEnd = vcEndPoint_new(1, NULL, NULL);
 
-            if (status) {
-                log_add_errno(status,
-                        "Couldn't construct upstream LDM7 service address");
+            if (localVcEnd == NULL) {
+                log_add("Couldn't construct local virtual-circuit endpoint");
+                status = LDM7_SYSTEM;
             }
             else {
-                localVcEnd = vcEndPoint_new(1, NULL, NULL);
+                executor = executor_new();
 
-                if (localVcEnd == NULL) {
-                    log_add("Couldn't construct local virtual-circuit endpoint");
+                if (executor == NULL) {
+                    vcEndPoint_free(localVcEnd);
+                    log_add("Couldn't create new execution service");
                     status = LDM7_SYSTEM;
                 }
-                else {
-                    executor = executor_new();
+            } // `localVcEnd` created
 
-                    if (executor == NULL) {
-                        vcEndPoint_free(localVcEnd);
-                        log_add("Couldn't create new execution service");
-                        status = LDM7_SYSTEM;
-                    }
-                } // `localVcEnd` created
-
-                if (status)
-                    sa_free(up7Addr);
-            } // `up7Addr` created
-        } // Termination signal handler installed
-
-        if (status)
-            msm_destroy();
-    } // Multicast sender map initialized
+            if (status)
+                sa_free(up7Addr);
+        } // `up7Addr` created
+    } // Termination signal handler installed
 
     if (status)
         log_error_q("setup() failure");
@@ -293,9 +284,6 @@ teardown(void)
     executor_free(executor);
     vcEndPoint_free(localVcEnd);
     sa_free(up7Addr);
-
-    msm_clear();
-    msm_destroy();
 
     unlink(UP7_PQ_PATHNAME);
     unlink(DOWN7_PQ_PATHNAME);
@@ -766,6 +754,8 @@ sender_start(
         Sender* const   sender,
         const feedtypet feed)
 {
+    int status;
+
     CU_ASSERT_EQUAL_FATAL(pthread_mutex_init(&sender->mutex, NULL), 0);
     CU_ASSERT_EQUAL_FATAL(pthread_cond_init(&sender->cond, NULL), 0);
 
@@ -786,7 +776,13 @@ sender_start(
             smi_newFromStr(feed, "224.0.0.1:5173", "127.0.0.1:0");
     CU_ASSERT_PTR_NOT_NULL_FATAL(mcastInfo);
 
-    CU_ASSERT_EQUAL_FATAL(umm_clear(), 0); // Upstream multicast manager
+    if (!umm_isInited()) {
+        status = umm_init(); // Upstream multicast manager
+        if (status) {
+            log_flush_error();
+            CU_FAIL_FATAL("");
+        }
+    }
 
     in_addr_t subnet;
     CU_ASSERT_EQUAL(inet_pton(AF_INET, LOCAL_HOST, &subnet), 1);
@@ -798,8 +794,12 @@ sender_start(
 
     // The upstream multicast manager takes responsibility for freeing
     // `mcastInfo`
-    CU_ASSERT_EQUAL(umm_addPotentialSender(mcastIface, mcastInfo, 2, localVcEnd,
-            fmtpSubnet, UP7_PQ_PATHNAME), 0);
+    status = umm_addPotentialSender(mcastIface, mcastInfo, 2, localVcEnd,
+            fmtpSubnet, UP7_PQ_PATHNAME);
+    if (status) {
+        log_flush_error();
+        CU_FAIL_FATAL("");
+    }
 
     CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
 
@@ -845,9 +845,6 @@ sender_stop(Sender* const sender)
     CU_ASSERT_EQUAL(future_getAndFree(sender->future, NULL), ECANCELED);
 
     CU_ASSERT_EQUAL_FATAL(close(sender->sock), 0);
-
-    log_debug("Clearing upstream multicast manager");
-    CU_ASSERT_EQUAL(umm_clear(), 0);
 
     CU_ASSERT_EQUAL(pq_close(pq), 0);
     CU_ASSERT_EQUAL(unlink(UP7_PQ_PATHNAME), 0);
@@ -1037,8 +1034,11 @@ requester_halt(
         Requester* const requester,
         const pthread_t  thread)
 {
-    requester->done = 1;
-    CU_ASSERT_EQUAL(pthread_kill(thread, SIGTERM), 0);
+
+    mutex_lock(&requester->mutex);
+        requester->done = true;
+        CU_ASSERT_EQUAL(pthread_kill(thread, SIGTERM), 0);
+    mutex_unlock(&requester->mutex);
 }
 
 /**
@@ -1049,12 +1049,18 @@ requester_halt(
 static void
 requester_init(Requester* const requester)
 {
+    int status = mutex_init(&requester->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+
     requester->done = false;
 }
 
 static void
 requester_destroy(Requester* const requester)
-{}
+{
+    int status = mutex_destroy(&requester->mutex);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
+}
 
 /**
  * Initializes a receiver.
@@ -1160,7 +1166,7 @@ receiver_haltDown7(
         void* const     arg,
         const pthread_t thread)
 {
-    down7_halt();
+    down7_halt(thread);
 
     return 0;
 }
@@ -1238,6 +1244,9 @@ test_up7(
 
     sender_stop(&sender);
     log_clear();
+
+    umm_destroy(true);
+    log_flush_error();
 }
 
 static void
@@ -1299,6 +1308,9 @@ test_bad_subscription(
     log_debug("Terminating sender");
     sender_stop(&sender);
     log_clear();
+
+    umm_destroy(true);
+    log_flush_error();
 }
 
 static void
@@ -1328,6 +1340,9 @@ test_up7_down7(
 
     const float retxTimeout = (MEAN_RESIDENCE_TIME/2.0) / 60.0;
     umm_setRetxTimeout(retxTimeout);
+
+    status = lcf_init(LDM_PORT, NULL);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
 
     host_set* hostSet = lcf_newHostSet(HS_DOTTED_QUAD, LOCAL_HOST, NULL);
     CU_ASSERT_PTR_NOT_NULL_FATAL(hostSet);
@@ -1367,7 +1382,7 @@ test_up7_down7(
     log_debug("Stopping sender");
     sender_stop(&sender);
 
-    lcf_destroy();
+    lcf_destroy(true);
 
     /*
     status = pthread_sigmask(SIG_SETMASK, &oldSigSet, NULL);
@@ -1382,7 +1397,7 @@ int main(
         const int    argc,
         char* const* argv)
 {
-    int          status = 1;
+    int status = 1; // Failure
 
     (void)log_init(argv[0]);
     log_set_level(LOG_LEVEL_NOTICE);
@@ -1423,7 +1438,8 @@ int main(
             }
         }
 
-        status = CU_get_number_of_tests_failed();
+        status = CU_get_number_of_suites_failed() +
+                CU_get_number_of_tests_failed();
         CU_cleanup_registry();
     }
 

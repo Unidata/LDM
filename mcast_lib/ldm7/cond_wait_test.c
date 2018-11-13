@@ -115,7 +115,8 @@ int main(
             }
         }
 
-        exitCode = CU_get_number_of_tests_failed();
+        exitCode = CU_get_number_of_suites_failed() +
+                CU_get_number_of_tests_failed();
         CU_cleanup_registry();
     }
 

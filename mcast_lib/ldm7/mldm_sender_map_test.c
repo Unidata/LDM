@@ -24,7 +24,22 @@
  */
 static int setup(void)
 {
-    return 0;
+    int status = msm_init();
+
+    if (status)
+        log_flush_error();
+
+    status = msm_init();
+
+    if (status != LDM7_LOGIC) {
+        log_flush_error();
+    }
+    else {
+        status = 0;
+        log_clear();
+    }
+
+    return status;
 }
 
 /**
@@ -32,18 +47,10 @@ static int setup(void)
  */
 static int teardown(void)
 {
-    return 0;
-}
-
-static void test_msm_init(void)
-{
-    int status = msm_init();
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    msm_destroy(true);
     log_flush_error();
 
-    status = msm_init();
-    CU_ASSERT_EQUAL(status, LDM7_INVAL);
-    log_clear();
+    return 0;
 }
 
 static void test_locking(void)
@@ -92,11 +99,6 @@ static void test_msm_removePid(void)
     log_clear();
 }
 
-static void test_msm_destroy(void)
-{
-    msm_destroy();
-}
-
 int main(
         const int argc,
         const char* const * argv)
@@ -112,19 +114,18 @@ int main(
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {
-                if (CU_ADD_TEST(testSuite, test_msm_init)
-                        && CU_ADD_TEST(testSuite, test_locking)
+                if (       CU_ADD_TEST(testSuite, test_locking)
                         && CU_ADD_TEST(testSuite, test_msm_put)
                         && CU_ADD_TEST(testSuite, test_msm_get)
                         && CU_ADD_TEST(testSuite, test_msm_removePid)
-                        && CU_ADD_TEST(testSuite, test_msm_destroy)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
                 }
             }
 
-            exitCode = CU_get_number_of_tests_failed();
+            exitCode = CU_get_number_of_suites_failed() +
+                    CU_get_number_of_tests_failed();
             CU_cleanup_registry();
         }
     }
