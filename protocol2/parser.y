@@ -45,7 +45,6 @@ extern int yydebug;
 
 static int       line = 0;
 static unsigned  ldmPort = LDM_PORT;
-static in_addr_t ldmIpAddr;
 static int       scannerPush(const char* const path);
 static int       scannerPop(void);
 
@@ -324,34 +323,25 @@ decodeRequestEntry(
     return errCode;
 }
 
+// Declared in ldm_config_file.h
 int
 lcf_init(
-    const char* const   pathname,
-    in_addr_t           ldmAddr,
-    unsigned            defaultPort) // Declared in ldm_config_file.h
+    const unsigned      defaultPort,
+    const char* const   pathname)
 {
-    int status = 0;
+    int status;
 
-#if WANT_MULTICAST
-    /*
-     * Initialize the upstream multicast manager.
-     */
-    status = umm_init();
-    
-    if (status) {
-        log_add("Couldn't initialize upstream multicast manager");
-        status = -1;
+    ldmPort = defaultPort;
+
+    if (pathname == NULL) {
+        status = 0;
     }
-#endif
-
-    if (status == 0) {
+    else {
         if (scannerPush(pathname)) {
             log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
             status = -1;
         }
         else {
-            ldmPort = defaultPort;
-            ldmIpAddr = ldmAddr;
             // yydebug = 1;
             status = yyparse();
 
@@ -360,12 +350,21 @@ lcf_init(
                 status = -1;
             }
         }
+    }
 
 #if WANT_MULTICAST
-        if (status)
-            umm_destroy(true);
+    if (status == 0) {
+        /*
+         * Initialize the upstream multicast manager.
+         */
+        status = umm_init();
+        
+        if (status) {
+            log_add("Couldn't initialize upstream multicast manager");
+            status = -1;
+        }
+    }
 #endif
-    } // Upstream multicast manager possibly initialized
 
     return status;
 }

@@ -37,18 +37,17 @@ extern "C" {
 #endif
 
 /**
- * Initializes this module from an LDM configuration-file.
+ * Initializes this module. Defined in "parser.y".
  *
- * @param[in] pathname     Pathname of LDM configuration-file
- * @param[in] ldmAddr      LDM server address in network byte order
  * @param[in] defaultPort  Default LDM port-number if not specified in entry
+ * @param[in] pathname     Pathname of LDM configuration-file. May be `NULL`, in
+ *                         which case the module will have no entries.
  * @retval    0            Success.
  * @retval    -1           Failure. `log_add()` called.
  */
-int lcf_init(                   // defined in "parser.y"
-    const char* const   pathname,
-    in_addr_t           ldmAddr,
-    unsigned            defaultPort);
+int lcf_init(
+    const unsigned      defaultPort,
+    const char* const   pathname);
 
 /**
  * Adds an EXEC entry and executes the command as a child process.
