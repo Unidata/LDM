@@ -1,4 +1,4 @@
-6.13.7.78
+6.13.7.78	2018-11-13T15:36:16-0700
     down7_manager:
         - Allowed NULL FMTP interface
         - Created elt_toString()
