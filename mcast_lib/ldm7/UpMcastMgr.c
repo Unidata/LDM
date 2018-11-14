@@ -1557,11 +1557,9 @@ umm_unsubscribe(
     return status;
 }
 
-Ldm7Status
+void
 umm_clear(void)
 {
-    int status;
-
     while (mcastEntries) {
         McastEntry* entry = *(McastEntry**)mcastEntries;
         (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
@@ -1574,8 +1572,6 @@ umm_clear(void)
         smi_free(key.info);
         key.info = NULL;
     }
-
-    return status;
 }
 
 Ldm7Status

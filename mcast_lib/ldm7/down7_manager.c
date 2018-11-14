@@ -303,7 +303,7 @@ d7mgr_add(
         top = elt;
         if (log_is_enabled_debug) {
             char* eltStr = elt_toString(elt);
-            log_debug("Added multicast receiver %s", elt_toString(elt));
+            log_debug("Added multicast receiver %s", eltStr);
             free(eltStr);
         }
         status = 0;
