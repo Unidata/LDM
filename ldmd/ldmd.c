@@ -315,7 +315,7 @@ static void signal_handler(
         up6_close();
         req6_close();
 #if WANT_MULTICAST
-        //down7_halt();
+        down7_halt();
 #endif
         return;
     case SIGUSR1:
