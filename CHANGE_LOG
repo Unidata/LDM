@@ -1,3 +1,11 @@
+6.13.7.79
+    ldmd(1):
+        - Call down7_halt() from signal handler
+        
+    down7:
+        - Prevent down7_halt() from sending SIGTERM to down7.thread if same
+          thread
+
 6.13.7.78	2018-11-15T13:39:54-0700
     down7_manager:
         - Allowed NULL FMTP interface
