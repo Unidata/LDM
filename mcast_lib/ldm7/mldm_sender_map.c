@@ -15,343 +15,261 @@
 
 #include "config.h"
 
-#include "ldm.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mldm_sender_map.h"
 
-#include <fcntl.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <pthread.h>
+#include <sys/shm.h>
 
-/**
- * Pathname of the shared memory object:
- */
-static char*        smo_pathname;
-/**
- * Number of feed-types:
- */
+/// Number of feed-types:
 static const size_t NUM_FEEDTYPES = sizeof(feedtypet)*CHAR_BIT;
-/**
- * File descriptor for shared memory object for multicast LDM sender map:
- */
-static int          fileDes;
-/**
- * Multicast LDM process information structure.
- */
+
+/// Information on a multicast LDM process:
 typedef struct {
-    /// Process identifier of multicast LDM sender
+    /// Process identifier of multicast LDM sender:
     pid_t          pid;
-    /// Port number of multicast LDM sender's FMTP TCP server in host byte order
+    /// Port number of multicast LDM sender's FMTP server in host byte order:
     unsigned short fmtpPort;
-    /// Port number of multicast LDM sender's RPC server in host byte order
+    /// Port number of multicast LDM sender's RPC server in host byte order:
     unsigned short mldmSrvrPort;
 } ProcInfo;
-/**
- * Array of process information structures indexed by feed-type bit-index.
- */
-static ProcInfo*  procInfos;
-/**
- * Locking structure for concurrent access to the shared process-information
- * array:
- */
-static struct flock lock;
+
+/// Shared memory object that maps from LDM feed to multicast LDM information:
+static struct {
+    pthread_rwlock_t rwLock;
+    ProcInfo         procInfos[1];
+}*                  smo;
+
+/// ID of the shared-memory object:
+static int          shmId;
+
+/// Whether or not this module is initialized:
+static bool         initialized = false;
 
 /**
- * Opens a shared memory object. Creates it if it doesn't exist. The resulting
- * shared memory object will have zero size.
- *
- * @param[in]  pathname     Pathname of the shared memory object.
- * @param[out] fd           File descriptor of the shared memory object.
- * @retval     0            Success. `*fd` is set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
- */
-static Ldm7Status
-smo_open(
-        const char* const restrict pathname,
-        int* const restrict        fd)
-{
-    int       status;
-    const int myFd = shm_open(pathname, O_RDWR|O_CREAT|O_TRUNC, 0600);
-
-    if (myFd == -1) {
-        log_add_syserr("Couldn't open/create shared memory object, \"%s\"",
-                pathname);
-        status = LDM7_SYSTEM;
-    }
-    else {
-        *fd = myFd;
-        status = 0;
-    } // Shared-memory object was opened
-
-    return status;
-}
-
-/**
- * Closes a shared memory object by closing the associated file descriptor and
- * unlinking the pathname.
- *
- * @param[in] fd        The file-descriptor associated with the shared memory
- *                      object.
- * @param[in] pathname  The pathname of the shared memory object.
- */
-static void
-smo_close(
-        const int         fd,
-        const char* const pathname)
-{
-    (void)close(fd);
-    (void)shm_unlink(pathname);
-}
-
-/**
- * Initializes a shared memory object. All elements of the array will be zero.
- *
- * @param[in]  fd           File descriptor of the shared memory object.
- * @param[in]  size         Size of the shared memory object in bytes.
- * @param[out] smo          The shared memory object.
- * @retval     0            Success. `*smo` is set.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
- */
-static Ldm7Status
-smo_init(
-        const int    fd,
-        const size_t size,
-        void** const smo)
-{
-    int          status = ftruncate(fd, size);
-
-    if (status) {
-        log_add_syserr("Couldn't set size of shared memory object");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        void* const addr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-                fd, 0);
-
-        if (MAP_FAILED == addr) {
-            log_add_syserr("Couldn't memory-map shared memory object");
-            status = LDM7_SYSTEM;
-        }
-        else {
-            (void)memset(addr, 0, size);
-            *smo = addr;
-            status = 0;
-        }
-    }
-
-    return status;
-}
-
-/**
- * Initializes the pathname of the shared-memory object. The name is unique to
- * the user.
+ * Initializes the shared-memory object that contains the mapping from LDM feed
+ * to information on the associated multicast LDM process.
  *
  * @retval 0            Success
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval LDM7_SYSTEM  Failure. `log_add()` called.
+ * @threadsafety        Compatible but not safe
  */
 static Ldm7Status
-msm_initSmoPathname(void)
+smo_init(void)
 {
-    static const char format[] = "/mldmSenderMap-%s";
-    int               status;
-    const char*       userName = getenv("LOGNAME");
+    /*
+     * The X/Open system interfaces (XSI) shared-memory API is used instead of
+     * the X/OPEN Shared Memory Objects (SHM) REALTIME API because
+     *   - `IPC_PRIVATE` can be used, obviating the need for a unique pathname
+     *   - An SHM pathname can't be portably stat()ed for diagnostic purposes
+     *     should shared-memory creation fail.
+     */
 
-    if (userName == NULL) {
-        userName = getenv("USER");
+    int status;
+    shmId = shmget(IPC_PRIVATE, sizeof(smo)+(NUM_FEEDTYPES-1)*sizeof(ProcInfo),
+            0600);
 
-        if (userName == NULL) {
-            log_add("Couldn't get value of environment variables "
-                    "\"LOGNAME\" or \"USER\"");
-            status = LDM7_SYSTEM;
-        }
+    if (shmId == -1) {
+        log_add_syserr("shmget() failure");
+        status = LDM7_SYSTEM;
     }
+    else {
+        smo = shmat(shmId, NULL, 0);
 
-    if (userName) {
-        int nbytes = snprintf(NULL, 0, format, userName);
-
-        if (nbytes < 0) {
-            log_add_syserr("Couldn't get size of pathname of shared-memory "
-                    "object");
+        if (smo == (void*)-1) {
+            log_add_syserr("shmat() failure");
             status = LDM7_SYSTEM;
         }
         else {
-            nbytes += 1; // for NUL-terminator
-            smo_pathname = log_malloc(nbytes,
-                    "pathname of shared-memory object");
+            pthread_rwlockattr_t rwLockAttr;
 
-            if (smo_pathname == NULL) {
+            status = pthread_rwlockattr_init(&rwLockAttr);
+
+            if (status) {
+                log_add_syserr("pthread_rwlockattr_init() failure");
                 status = LDM7_SYSTEM;
             }
             else {
-                (void)snprintf(smo_pathname, nbytes, format, userName);
-                status = 0;
-            }
-        }
-    }
+                (void)pthread_rwlockattr_setpshared(&rwLockAttr,
+                        PTHREAD_PROCESS_SHARED);
 
-    return status;
-}
-
-static void
-msm_destroySmoPathname()
-{
-    if (smo_pathname) {
-        free(smo_pathname);
-        smo_pathname = NULL;
-    }
-}
-
-/**
- * Initializes this module. Shall be called only once per LDM session.
- *
- * @retval 0            Success.
- * @retval LDM7_LOGIC   This module is already initialized. `log_add()` called.
- * @retval LDM7_SYSTEM  System error. `log_add()` called.
- */
-Ldm7Status
-msm_init(void)
-{
-    log_debug("Entered");
-
-    int status;
-
-    if (smo_pathname) {
-        log_add("Multicast sender map is already initialized");
-        status = LDM7_LOGIC;
-    }
-    else {
-        // `smo_pathname == NULL`
-        status = msm_initSmoPathname();
-
-        if (status) {
-            log_add("Couldn't initialize pathname of shared-memory object");
-        }
-        else {
-            int fd;
-
-            status = smo_open(smo_pathname, &fd);
-
-            if (0 == status) {
-                void* addr;
-
-                status = smo_init(fd, NUM_FEEDTYPES, &addr);
+                status = pthread_rwlock_init(&smo->rwLock, &rwLockAttr);
 
                 if (status) {
-                    log_add("Couldn't initialize shared-memory object \"%s\"",
-                            smo_pathname);
-                    smo_close(fd, smo_pathname);
+                    log_add_syserr("pthread_rwlock_init() failure");
+                    status = LDM7_SYSTEM;
                 }
                 else {
-                    procInfos = addr;
-                    fileDes = fd;
-                    lock.l_whence = SEEK_SET;
-                    lock.l_start = 0;
-                    lock.l_len = 0; // entire object
-                } // shared PID array initialized
-            } // `fd` is open
+                    (void)memset(smo->procInfos, 0,
+                            NUM_FEEDTYPES*sizeof(ProcInfo));
 
-            if (status)
-                msm_destroySmoPathname();
-        } // `smo_pathname` set
-    } // module not initialized
+                    status = 0;
+                } // Read/write lock initialized
 
-    log_debug("Returning");
+                (void)pthread_rwlockattr_destroy(&rwLockAttr);
+            } // Read/write lock attributes initialized
+
+            if (status) {
+                (void)shmdt(smo);
+                smo = NULL;
+            }
+        } // Shared-memory object attached
+
+        if (status)
+            (void)shmctl(shmId, IPC_RMID, NULL);
+    } // Shared-memory object created
+
     return status;
 }
 
-void
-msm_destroy(const bool final)
+/**
+ * Destroys the shared-memory object.
+ *
+ * @param final   Should the shared-memory object be deleted?
+ * @threadsafety  Compatible but not safe
+ */
+static void
+smo_destroy(const bool final)
 {
-    log_debug("msm_destroy(): Entered");
-
-    if (smo_pathname) {
+    if (smo) {
         if (final)
-            smo_close(fileDes, smo_pathname);
-        msm_destroySmoPathname();
-    }
+            (void)pthread_rwlock_destroy(&smo->rwLock);
 
-    log_debug("msm_destroy(): Returning");
+        (void)shmdt(smo);
+        smo = NULL;
+
+        if (final) {
+            (void)shmctl(shmId, IPC_RMID, NULL);
+            shmId = -1;
+        }
+    }
 }
 
 /**
- * Locks the map. Idempotent. Blocks until the lock is acquired or an error
- * occurs. Locking the map is explicit because the map is shared by multiple
- * processes and a transaction might require several function calls.
+ * Locks the shared-memory object.
  *
- * @param[in] exclusive    Lock for exclusive access?
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @param[in] forWriting   For writing?
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  Failure. `log_add()` called.
+ * @threadsafety           Compatible but not safe
  */
-Ldm7Status
-msm_lock(const bool exclusive)
+static Ldm7Status
+smo_lock(const bool forWriting)
 {
-    lock.l_type = exclusive ? F_RDLCK : F_WRLCK;
+    int status = forWriting
+            ? pthread_rwlock_wrlock(&smo->rwLock)
+            : pthread_rwlock_rdlock(&smo->rwLock);
 
-    if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_add_syserr("Couldn't lock shared process-information array: "
-                "fileDes=%d", fileDes);
-        return LDM7_SYSTEM;
+    if (status) {
+        log_add_errno(status, "pthread_rwlock_lock() failure");
+        status = LDM7_SYSTEM;
     }
 
-    return 0;
+    return status;
 }
 
-Ldm7Status
-msm_put(
-        const feedtypet      feedtype,
+/**
+ * Unlocks the shared-memory object.
+ *
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  Failure. `log_add()` called.
+ * @threadsafety           Compatible but not safe
+ */
+static Ldm7Status
+smo_unlock(void)
+{
+    int status = pthread_rwlock_unlock(&smo->rwLock);
+
+    if (status) {
+        log_add_errno(status, "pthread_rwlock_unlock() failure");
+        status = LDM7_SYSTEM;
+    }
+
+    return status;
+}
+
+/**
+ * Adds a mapping between an LDM feed and a multicast LDM sender process.
+ *
+ * @param[in] feed          LDM eed
+ * @param[in] pid           Multicast LDM sender process-ID.
+ * @param[in] fmtpPort      Port number of the FMTP TCP server.
+ * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
+ *                          host byte order
+ * @retval    0             Success.
+ * @retval    LDM7_DUP      Process identifier duplicates existing entry.
+ *                          `log_add()` called.
+ * @retval    LDM7_DUP      Feed overlaps with feed being sent by another
+ *                          process. `log_add()` called.
+ * @threadsafety            Compatible but not safe
+ */
+static Ldm7Status
+smo_put(const feedtypet      feed,
         const pid_t          pid,
         const unsigned short fmtpPort,
         const unsigned short mldmSrvrPort)
 {
+    int       status = 0;
     unsigned  ibit;
     feedtypet mask;
 
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        const pid_t infoPid = procInfos[ibit].pid;
-        if ((feedtype & mask) && infoPid) {
+        const pid_t infoPid = smo->procInfos[ibit].pid;
+        if ((feed & mask) && infoPid) {
             log_add("Feed-type %s is already being sent by process %ld",
                     s_feedtypet(mask), (long)pid);
-            return LDM7_DUP;
+            status = LDM7_DUP;
+            break;
         }
         if (pid == infoPid) {
             log_add("Process-information array already contains entry for PID "
                     "%ld", (long)pid);
-            return LDM7_DUP;
+            status = LDM7_DUP;
+            break;
         }
     }
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        if (feedtype & mask) {
-            ProcInfo* const procInfo = procInfos + ibit;
-            procInfo->pid = pid;
-            procInfo->fmtpPort = fmtpPort;
-            procInfo->mldmSrvrPort = mldmSrvrPort;
+    if (status == 0) {
+        for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
+            if (feed & mask) {
+                ProcInfo* const procInfo = smo->procInfos + ibit;
+                procInfo->pid = pid;
+                procInfo->fmtpPort = fmtpPort;
+                procInfo->mldmSrvrPort = mldmSrvrPort;
+            }
         }
     }
 
-    return 0;
+    return status;
 }
 
-Ldm7Status
-msm_get(
-        const feedtypet                feedtype,
+/**
+ * Returns process-information associated with a feed-type.
+ *
+ * @param[in]  feed          LDM feed
+ * @param[out] pid           Associated process-ID.
+ * @param[out] fmtpPort      Port number of the associated FMTP TCP server.
+ * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
+ * @retval     0             Success. `*pid`, `*fmtpPort`, and `mldmSrvrPort`
+ *                           are set
+ * @retval     LDM7_NOENT    No process associated with feed
+ * @threadsafety             Compatible but not safe
+ */
+static Ldm7Status
+smo_get(const feedtypet                feed,
         pid_t* const restrict          pid,
         unsigned short* const restrict fmtpPort,
         unsigned short* const restrict mldmSrvrPort)
 {
+    int       status;
     unsigned  ibit;
     feedtypet mask;
 
     for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ++ibit) {
-        const ProcInfo* procInfo = procInfos + ibit;
+        const ProcInfo* procInfo = smo->procInfos + ibit;
         const pid_t     infoPid = procInfo->pid;
-        if ((mask & feedtype) && infoPid) {
+        if ((mask & feed) && infoPid) {
             *pid = infoPid;
             *fmtpPort = procInfo->fmtpPort;
             *mldmSrvrPort = procInfo->mldmSrvrPort;
@@ -362,34 +280,25 @@ msm_get(
     return LDM7_NOENT;
 }
 
+
 /**
- * Unlocks the map.
+ * Removes the entry corresponding to a process identifier.
  *
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @param[in] pid          Process identifier.
+ * @retval    0            Success. `msp_getPid()` for the associated feed-type
+ *                         will return LDM7_NOENT.
+ * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
+ *                         Database is unchanged.
+ * @threadsafety           Compatible but not safe
  */
-Ldm7Status
-msm_unlock(void)
-{
-    lock.l_type = F_UNLCK;
-
-    if (-1 == fcntl(fileDes, F_SETLKW, &lock)) {
-        log_add_syserr("Couldn't unlock shared process-information array: "
-                "fileDes=%d", fileDes);
-        return LDM7_SYSTEM;
-    }
-
-    return 0;
-}
-
-Ldm7Status
-msm_remove(const pid_t pid)
+static Ldm7Status
+smo_remove(const pid_t pid)
 {
     int       status = LDM7_NOENT;
     unsigned  ibit;
 
     for (ibit = 0; ibit < NUM_FEEDTYPES; ibit++) {
-        ProcInfo* const procInfo = procInfos + ibit;
+        ProcInfo* const procInfo = smo->procInfos + ibit;
         if (pid == procInfo->pid) {
             (void)memset(procInfo, 0, sizeof(*procInfo));
             status = 0;
@@ -399,9 +308,172 @@ msm_remove(const pid_t pid)
     return status;
 }
 
+/**
+ * Clears the map.
+ *
+ * @threadsafety        Compatible but not safe
+ */
+static void
+smo_clear(void)
+{
+    (void)memset(smo->procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
+}
+
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
+
+Ldm7Status
+msm_init(void)
+{
+    log_debug("Entered");
+
+    int status;
+
+    if (initialized) {
+        log_add("Module is already initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_init();
+
+        if (status) {
+            log_add("Couldn't initialize shared-memory object");
+        }
+        else {
+            initialized = true;
+        } // `smo_pathname` set
+    }
+
+    log_debug("Returning");
+    return status;
+}
+
+void
+msm_destroy(const bool final)
+{
+    log_debug("msm_destroy(): Entered");
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        log_flush_error();
+    }
+    else {
+        smo_destroy(final);
+        initialized = false;
+    }
+
+    log_debug("msm_destroy(): Returning");
+}
+
+Ldm7Status
+msm_lock(const bool forWriting)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_lock(forWriting);
+
+        if (status)
+            log_add_syserr("Couldn't lock shared process-information object");
+    }
+
+    return status;
+}
+
+Ldm7Status
+msm_unlock(void)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_unlock();
+
+        if (status)
+            log_add_syserr("Couldn't unlock shared process-information object");
+    }
+
+    return status;
+}
+
+Ldm7Status
+msm_put(
+        const feedtypet      feed,
+        const pid_t          pid,
+        const unsigned short fmtpPort,
+        const unsigned short mldmSrvrPort)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_put(feed, pid, fmtpPort, mldmSrvrPort);
+
+        if (status)
+            log_add("Couldn't save multicast process information");
+    }
+
+    return status;
+}
+
+Ldm7Status
+msm_get(const feedtypet                feed,
+        pid_t* const restrict          pid,
+        unsigned short* const restrict fmtpPort,
+        unsigned short* const restrict mldmSrvrPort)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_get(feed, pid, fmtpPort, mldmSrvrPort);
+    }
+
+    return status;
+}
+
+Ldm7Status
+msm_remove(const pid_t pid)
+{
+    int status;
+
+    if (!initialized) {
+        log_add("Module is not initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = smo_remove(pid);
+
+        if (status)
+            log_add_syserr("Couldn't remove information on process %ld",
+                    (long)pid);
+    }
+
+    return status;
+}
+
 void
 msm_clear(void)
 {
-    if (smo_pathname)
-        (void)memset(procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
+    if (!initialized) {
+        log_add("Module is not initialized");
+        log_flush_error();
+    }
+    else {
+        smo_clear();
+    }
 }

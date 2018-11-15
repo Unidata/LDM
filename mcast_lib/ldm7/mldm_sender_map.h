@@ -26,8 +26,9 @@
  * Initializes this module. Shall be called only once per LDM session.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   This module is already initialized. `log_add()` called.
+ * @retval LDM7_LOGIC   This module is already initialized. `log_add()` called.
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
+ * @threadsafety        Compatible but not safe
  */
 Ldm7Status
 msm_init(void);
@@ -40,21 +41,25 @@ msm_init(void);
  *
  * @param[in] final  Whether to free the IPC resource. Should be `true` only
  *                   once per LDM session.
+ * @threadsafety     Compatible but not safe
  */
 void
 msm_destroy(const bool final);
 
 /**
- * Locks the map. Idempotent. Blocks until the lock is acquired or an error
- * occurs.
+ * Locks the map. Blocks until the lock is acquired or an error occurs. Locking
+ * the map is explicit because the map is shared by multiple processes and a
+ * transaction might require several function calls.
  *
- * @param[in] exclusive    Lock for exclusive access?
+ * @param[in] forWriting   Lock for writing?
  * @retval    0            Success.
+ * @retval    LDM7_LOGIC   Module is not initialized. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @threadsafety           Compatible but not safe
  */
 Ldm7Status
 msm_lock(
-        const bool exclusive);
+        const bool forWriting);
 
 /**
  * Adds a mapping between a feed-type and a multicast LDM sender process.
@@ -65,10 +70,12 @@ msm_lock(
  * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
  *                          host byte order
  * @retval    0             Success.
+ * @retval    LDM7_LOGIC    Module is not initialized. `log_add()` called.
  * @retval    LDM7_DUP      Process identifier duplicates existing entry.
  *                          `log_add()` called.
  * @retval    LDM7_DUP      Feed-type overlaps with feed-type being sent by
  *                          another process. `log_add()` called.
+ * @threadsafety            Compatible but not safe
  */
 Ldm7Status
 msm_put(
@@ -86,11 +93,12 @@ msm_put(
  * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
  * @retval     0             Success. `*pid`, `*fmtpPort`, and `mldmSrvrPort`
  *                           are set
+ * @retval     LDM7_LOGIC    Module is not initialized. `log_add()` called.
  * @retval     LDM7_NOENT    No process associated with feed-type.
+ * @threadsafety             Compatible but not safe
  */
 Ldm7Status
-msm_get(
-        const feedtypet                feedtype,
+msm_get(const feedtypet                feedtype,
         pid_t* const restrict          pid,
         unsigned short* const restrict fmtpPort,
         unsigned short* const restrict mldmSrvrPort);
@@ -99,7 +107,9 @@ msm_get(
  * Unlocks the map.
  *
  * @retval    0            Success.
+ * @retval    LDM7_LOGIC   Module is not initialized. `log_add()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @threadsafety           Compatible but not safe
  */
 Ldm7Status
 msm_unlock(void);
@@ -110,8 +120,10 @@ msm_unlock(void);
  * @param[in] pid          Process identifier.
  * @retval    0            Success. `msp_getPid()` for the associated feed-type
  *                         will return LDM7_NOENT.
+ * @retval    LDM7_LOGIC   Module is not initialized. `log_add()` called.
  * @retval    LDM7_NOENT   No entry corresponding to given process identifier.
  *                         Database is unchanged.
+ * @threadsafety           Compatible but not safe
  */
 Ldm7Status
 msm_remove(const pid_t pid);
@@ -119,6 +131,8 @@ msm_remove(const pid_t pid);
 /**
  * Clears all entries -- freeing their resources. Doesn't destroy this module or
  * free the IPC resource. Used for testing.
+ *
+ * @threadsafety        Compatible but not safe
  */
 void
 msm_clear(void);
