@@ -1,11 +1,15 @@
-6.13.7.78	2018-11-13T15:36:16-0700
+6.13.7.78
     down7_manager:
         - Allowed NULL FMTP interface
         - Created elt_toString()
-        - Changed d7mgr_destroy() to dymgr_free()
+        - Changed d7mgr_destroy() to d7mgr_free()
         
+    Downstream LDM7 (down7):
+        - Eliminate thread argument of down7_halt()
+
     Multicast LDM sender map:
-        - Add `final` argument to msm_destroy()
+        - Added `final` argument to msm_destroy()
+        - Replaced use of SHM REALTIME API with XSI
 
     Upstream multicast manager:
         - Added umm_init() and checks for initialization.
@@ -16,6 +20,7 @@
         - Moved upstream LDM management into configuration-file module
         - Removed down7_halt() from SIGTERM handler
         - lcf_destroy() now calls umm_destroy()
+        - Relinquished root privileges immediately
 
     Upstream LDM database:
         Set allowed product-class only if non-NULL in uldb_addProcess().
@@ -25,6 +30,8 @@
 
     pqact(1):
         Improved logging.
+        
+    Removed Coverity Scan lint.
 
 6.13.7.77	2018-11-08T12:01:22-0700
     isa_getHostId() -> isa_getInetId()
