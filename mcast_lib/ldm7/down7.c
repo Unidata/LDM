@@ -1188,6 +1188,7 @@ struct {
     feedtypet             feedtype;         ///< Feed of multicast group
     VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
     Ldm7Status            status;           ///< Downstream LDM7 status
+    pthread_t             thread;           ///< Thread down7_run() executes on
     int                   pipe[2];          ///< Signaling pipe
     bool                  prevLastMcastSet; ///< `prevLastMcast` set?
     volatile sig_atomic_t terminate;        ///< Termination requested?
@@ -1985,6 +1986,7 @@ down7_init(
             down7.pq = pq;
             down7.feedtype = feed;
             down7.mrm = mrm;
+            down7.terminate = false;
 
             /*
              * The product-queue must be thread-safe because this module
@@ -2088,6 +2090,10 @@ down7_run()
 {
     int status = 0;
 
+    mutex_lock(&down7.mutex);
+        down7.thread = pthread_self();
+    mutex_unlock(&down7.mutex);
+
     char* feedId = feedtypet_format(down7.feedtype);
     char* vcEndId = vcEndPoint_format(&down7.vcEnd);
     log_notice("Downstream LDM7 starting up: remoteLDM7=%s, feed=%s, "
@@ -2168,7 +2174,7 @@ down7_signal()
  * @asyncsignalsafety  Safe
  */
 void
-down7_halt(const pthread_t thread)
+down7_halt()
 {
     mutex_lock(&down7.mutex);
         if (down7.initialized) {
@@ -2176,12 +2182,14 @@ down7_halt(const pthread_t thread)
 
             (void)down7_signal();
 
-            int status = pthread_kill(thread, SIGTERM);
+            if (down7.thread) {
+                int status = pthread_kill(down7.thread, SIGTERM);
 
-            if (status) {
-                log_add_errno(status, "pthread_kill() failure");
-                log_flush_error();
-            }
+                if (status) {
+                    log_add_errno(status, "pthread_kill() failure");
+                    log_flush_error();
+                }
+            } // `down7_run()` is executing
         }
     mutex_unlock(&down7.mutex);
 }

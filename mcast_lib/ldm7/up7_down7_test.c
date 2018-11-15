@@ -1166,7 +1166,7 @@ receiver_haltDown7(
         void* const     arg,
         const pthread_t thread)
 {
-    down7_halt(thread);
+    down7_halt();
 
     return 0;
 }
