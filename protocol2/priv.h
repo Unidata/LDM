@@ -1,20 +1,35 @@
+/**
+ * This file declares a module that enables and disables root privileges.
+ *
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
+ */
+
 #ifndef _PRIV_H_
 #define _PRIV_H_
-/*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
- */
-/* $Id: priv.h,v 1.3.22.1 2005/09/22 14:41:07 steve Exp $ */
 
+/**
+ * Ensures that the process may dump core on a Linux system.
+ */
 extern void
 ensureDumpable();
 
+/**
+ * Enable root privileges if possible.
+ */
 extern void
 rootpriv(void);
 
+/**
+ * Disable root privileges if possible.
+ */
 extern void
 unpriv(void);
 
+/**
+ * Permanently disable root privileges if possible.
+ */
 extern void
 endpriv(void);
 

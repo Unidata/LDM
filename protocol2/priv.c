@@ -1,10 +1,15 @@
-/*
- *   Copyright 1995, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ * This file defines a module that enables and disables root privileges.
+ *
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
  */
-/* $Id: priv.c,v 1.10.18.3 2005/09/23 21:52:10 steve Exp $ */
 
 #include "config.h"
+
+#include "log.h"
+#include "priv.h"
 
 #include <errno.h>
 #include <string.h>
@@ -14,28 +19,8 @@
 #include <sys/prctl.h>
 #endif
 
-#include "error.h"
-#include "priv.h"
-
-/*
- * N.B.: You won't be able to get root priv
- * back after the call to unpriv()
- * unless the OS supports the "saved set-user-ID"
- * feature and has seteuid().
- */
-#ifndef HAVE_SETEUID
-    #define seteuid(uid) setuid(uid)
-#else
-    /* Is there a standard place where this is declared? missing on IRIX */
-    extern int seteuid(uid_t euid);
-#endif
-
-#define UID_NONE ((uid_t)-1)
-static uid_t sav_uid = UID_NONE;
-
-
-/*
- * Ensures that the process may dump core.
+/**
+ * Ensures that the process may dump core on a Linux system.
  */
 void
 ensureDumpable()
@@ -46,92 +31,36 @@ ensureDumpable()
      * of a core file for a setuid program.
      */
     if (-1 == prctl(PR_SET_DUMPABLE, 1, 0, 0, 0))
-    {
-        err_log_and_free(
-            ERR_NEW1(0, NULL,
-                "Couldn't give process the ability to create a core file: %s",
-                strerror(errno)),
-            ERR_WARNING);
-    }
+        log_syserr("Couldn't give process the ability to create a core file");
 #endif
 }
 
-
-/*
- * If either euid or uid is unprivileged, stash it,
- * for later use by unpriv().
- * Set euid to root if possible and necessary.
- */
 void
 rootpriv(void)
 {
-        const uid_t euid = geteuid();
-        
-        if(sav_uid == UID_NONE)
-        {
-                /* first time */
-                const uid_t uid = getuid();
+    int status = seteuid(0);
 
-                /* if either euid or uid is unprivileged, stash it */
-                if(euid > 0)
-                        sav_uid = euid;
-                else if(uid > 0)
-                        sav_uid = uid;
-                else
-                        sav_uid = 0;
-        }
-
-        if(euid > 0)
-        {
-                (void) seteuid(0);
-                ensureDumpable();
-        }
+    if (status) {
+        log_syserr("Couldn't set effective user-ID to root's (0)");
+    }
+    else {
+        ensureDumpable();
+    }
 }
 
-
-/*
- * Set to non-root privilege if possible.
- * Assumes rootpriv() was called prior.
- */
 void
 unpriv(void)
 {
-#ifdef HAVE_SETEUID
-        if(sav_uid != UID_NONE && sav_uid != 0)
-        {
-                (void) seteuid(sav_uid);
-                ensureDumpable();
-        }
-#endif
+    (void)seteuid(getuid()); // Can't fail
+    ensureDumpable();
 }
 
-
-/*
- * Permanently set to non-root privilege if possible.
- * Do it in such a way that it is safe to fork.
- */
 void
 endpriv(void)
 {
-    uid_t       uid = geteuid();
-
-    if (uid <= 0)
-        uid = getuid();
-
-    if (uid > 0)
-    {
-        (void)setuid(uid);
-        ensureDumpable();               /* can't hurt */
-    }
-    else
-    {
-        err_log_and_free(
-            ERR_NEW(0, NULL,
-                "Couldn't permanently remove root privilege of process"),
-            ERR_WARNING);
-    }
+    (void)setuid(getuid()); // Can't fail
+    ensureDumpable();       // Can't hurt
 }
-
 
 #ifdef TEST_PRIV
 
