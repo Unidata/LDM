@@ -204,11 +204,8 @@ Ldm7Status umm_unsubscribe(
 /**
  * Clears all entries -- freeing their resources. Doesn't destroy this module or
  * delete the IPC resource. Used for testing.
- *
- * @retval    0            Success.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
-Ldm7Status
+void
 umm_clear(void);
 
 #ifdef __cplusplus
