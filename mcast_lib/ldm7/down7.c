@@ -2176,13 +2176,14 @@ down7_signal()
 void
 down7_halt()
 {
-    mutex_lock(&down7.mutex);
-        if (down7.initialized) {
-            down7.terminate = 1;
+    down7.terminate = 1;
 
+    if (down7.initialized) {
+        mutex_lock(&down7.mutex);
             (void)down7_signal();
 
-            if (down7.thread) {
+            // Same thread => called by signal handler
+            if (down7.thread && down7.thread != pthread_self()) {
                 int status = pthread_kill(down7.thread, SIGTERM);
 
                 if (status) {
@@ -2190,8 +2191,8 @@ down7_halt()
                     log_flush_error();
                 }
             } // `down7_run()` is executing
-        }
-    mutex_unlock(&down7.mutex);
+        mutex_unlock(&down7.mutex);
+    }
 }
 
 /**
