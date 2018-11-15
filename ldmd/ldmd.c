@@ -497,7 +497,7 @@ static int create_ldm_tcp_svc(
          * services.  Also needed for the pmap_set() call.
          */
         log_debug("create_ldm_tcp_svc(): Getting root privs");
-        rootpriv();
+        rootpriv(); // Become root
             log_debug("create_ldm_tcp_svc(): Binding socket");
             if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;
@@ -576,7 +576,7 @@ static int create_ldm_tcp_svc(
          * Done with the need for privilege.
          */
         log_debug("create_ldm_tcp_svc(): Releasing root privs");
-        unpriv();
+        unpriv(); // Become LDM user
 
         if (error)
             (void) close(sock);
@@ -802,6 +802,8 @@ int main(
         int ac,
         char* av[])
 {
+    unpriv(); // Only become root when necessary
+
     int         status;
     int         doSomething = 1;
     in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
@@ -814,7 +816,7 @@ int main(
     const char* pqfname = getQueuePath();
 
     /*
-     * deal with the command line, set options
+     * Decode the command line, set options
      */
     {
         extern int optind;
@@ -1003,9 +1005,7 @@ int main(
 
         if (lcf_isServerNeeded()) {
             /*
-             * Create a service portal. This should be done before anything is
-             * created because this is the function that relinquishes superuser
-             * privileges.
+             * Create a service portal.
              */
             log_debug("main(): Creating service portal");
             if (create_ldm_tcp_svc(&sock, ldmIpAddr, ldmPort) != ENOERR) {
