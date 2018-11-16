@@ -1,4 +1,4 @@
-6.13.7.81
+6.13.7.81	2018-11-16T10:19:42-0700
     Remove indefinite loop from TcpRecv::initSocket().
 
 6.13.7.80	2018-11-16T08:24:03-0700
