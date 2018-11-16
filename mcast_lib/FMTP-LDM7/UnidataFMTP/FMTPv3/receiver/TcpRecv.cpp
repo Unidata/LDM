@@ -137,7 +137,7 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
 
 /**
  * Initializes the TCP connection. Blocks until the connection is established
- * or a severe error occurs. The interval between two trials is 30 seconds.
+ * or a severe error occurs.
  *
  * @throws std::system_error  if the socket is not created.
  * @throws std::system_error  if connect() returns errors.
@@ -171,20 +171,10 @@ void TcpRecv::initSocket()
         }
     }
 
-    while (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
-        if (errno == ECONNREFUSED || errno == ETIMEDOUT ||
-                errno == ECONNRESET || errno == EHOSTUNREACH) {
-            if (sleep(30)) {
-                close(sockfd);
-                throw std::system_error(EINTR, std::system_category(),
-                    "TcpRecv:TcpRecv() sleep() interrupted");
-            }
-        }
-        else {
-            close(sockfd);
-            throw std::system_error(errno, std::system_category(),
-                    "TcpRecv:TcpRecv() Error connecting to " + servAddr);
-        }
+    if (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
+        close(sockfd);
+        throw std::system_error(errno, std::system_category(),
+                "TcpRecv:TcpRecv() Error connecting to " + servAddr);
     }
 #if 0
     std::cerr << "TcpRecv::initSocket(): Socket " + std::to_string(sockfd) +
