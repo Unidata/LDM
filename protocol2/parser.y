@@ -56,6 +56,7 @@ yyerror(const char *msg)
 
 #if __STDC__
 extern int yyparse(void);
+extern int yylex(void);
 #endif
 
 
@@ -323,48 +324,45 @@ decodeRequestEntry(
     return errCode;
 }
 
-// Declared in ldm_config_file.h
+// Defined in parser.y; declared in ldm_config_file.h
 int
 lcf_init(
     const unsigned      defaultPort,
     const char* const   pathname)
 {
-    int status;
-
-    ldmPort = defaultPort;
-
-    if (pathname == NULL) {
-        status = 0;
+#if WANT_MULTICAST
+    /*
+     * Initialize the upstream multicast manager.
+     */
+    int status = umm_init();
+        
+    if (status) {
+        log_add("Couldn't initialize upstream multicast manager");
+        status = -1;
     }
-    else {
-        if (scannerPush(pathname)) {
-            log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
-            status = -1;
-        }
-        else {
-            // yydebug = 1;
-            status = yyparse();
+#else
+    int status = 0;
+#endif
 
-            if (status) {
-                log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
+    if (status == 0) {
+        ldmPort = defaultPort;
+
+        if (pathname) {
+            if (scannerPush(pathname)) {
+                log_add("Couldn't open LDM configuration-file \"%s\"", pathname);
                 status = -1;
             }
-        }
-    }
+            else {
+                // yydebug = 1;
+                status = yyparse();
 
-#if WANT_MULTICAST
-    if (status == 0) {
-        /*
-         * Initialize the upstream multicast manager.
-         */
-        status = umm_init();
-        
-        if (status) {
-            log_add("Couldn't initialize upstream multicast manager");
-            status = -1;
-        }
-    }
-#endif
+                if (status) {
+                    log_add("Couldn't parse LDM configuration-file \"%s\"", pathname);
+                    status = -1;
+                }
+            } // Configuration-file opened
+        } // Configuration-file pathname specified
+    } // Multicast not wanted or `UpMcastMgr` successfully initialized
 
     return status;
 }
