@@ -174,7 +174,7 @@ void TcpRecv::initSocket()
     if (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         close(sockfd);
         throw std::system_error(errno, std::system_category(),
-                "TcpRecv:TcpRecv() Error connecting to " + servAddr);
+                "TcpRecv::TcpRecv() Error connecting to " + servAddr);
     }
 #if 0
     std::cerr << "TcpRecv::initSocket(): Socket " + std::to_string(sockfd) +
