@@ -192,7 +192,7 @@ smo_unlock(void)
 /**
  * Adds a mapping between an LDM feed and a multicast LDM sender process.
  *
- * @param[in] feed          LDM eed
+ * @param[in] feed          LDM feed
  * @param[in] pid           Multicast LDM sender process-ID.
  * @param[in] fmtpPort      Port number of the FMTP TCP server.
  * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
@@ -420,8 +420,12 @@ msm_put(
     else {
         status = smo_put(feed, pid, fmtpPort, mldmSrvrPort);
 
-        if (status)
+        if (status) {
             log_add("Couldn't save multicast process information");
+        }
+        else {
+            log_debug("Saved information on multicast process %ld", (long)pid);
+        }
     }
 
     return status;
