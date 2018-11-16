@@ -2182,7 +2182,7 @@ down7_halt()
         mutex_lock(&down7.mutex);
             (void)down7_signal();
 
-            // Same thread => called by signal handler
+            // Same thread => called by signal handler => rely on EINTR instead
             if (down7.thread && down7.thread != pthread_self()) {
                 int status = pthread_kill(down7.thread, SIGTERM);
 
