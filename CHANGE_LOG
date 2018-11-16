@@ -1,5 +1,10 @@
+6.13.7.82
+    If the subscription reply from the LDM7 server says that the FMTP server's
+    address is "0.0.0.0", then set it to the LDM7 server's address.
+
 6.13.7.81	2018-11-16T10:19:42-0700
-    Remove indefinite loop from TcpRecv::initSocket().
+    Remove indefinite loop from TcpRecv::initSocket() because failure should be
+    handled by the application.
 
 6.13.7.80	2018-11-16T08:24:03-0700
     parser:
