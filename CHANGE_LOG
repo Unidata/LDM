@@ -1,4 +1,4 @@
-6.13.7.83
+6.13.7.83	2018-11-16T15:42:35-0700
     Note in ldmd.conf that multicast feeds must be disjoint.
 
     Improve logic of mldm_ensureRunning().
