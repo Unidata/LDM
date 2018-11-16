@@ -148,6 +148,35 @@ isa_getInetId(const InetSockAddr* const isa)
     return isa->inetId;
 }
 
+int
+isa_setInetId(
+        InetSockAddr* const restrict isa,
+        const InetId* const restrict inetId)
+{
+    int status;
+
+    if (isa == NULL || inetId == NULL) {
+        log_add("NULL argument");
+        status = EINVAL;
+    }
+    else {
+        InetId* const newId = inetId_clone(inetId);
+
+        if (newId == NULL) {
+            log_add("inetId_clone() failure");
+            status = ENOMEM;
+        }
+        else {
+            free(isa->inetId);
+
+            isa->inetId = newId;
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
 in_port_t
 isa_getPort(const InetSockAddr* const isa)
 {

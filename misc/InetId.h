@@ -61,6 +61,16 @@ void
 inetId_free(InetId* const inetId);
 
 /**
+ * Clones an Internet identifier.
+ *
+ * @param[in] inetId  Internet identifier to be cloned.
+ * @retval    `NULL`  Failure. `log_add()` called.
+ * @return            Clone of `inetId`
+ */
+InetId*
+inetId_clone(const InetId* const inetId);
+
+/**
  * Completes an Internet identifier by consulting DNS for missing attributes.
  * Uses DNS every time.
  *

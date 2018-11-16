@@ -1226,6 +1226,8 @@ typedef struct downlet {
 } Downlet;
 static Downlet downlet;
 
+static InetId* inAddrAny;             ///< INADDR_ANY
+
 static Ldm7Status
 downlet_startUcastRcvr(void)
 {
@@ -1799,22 +1801,43 @@ downlet_run()
                     ifaceAddrStr);
             free(miStr);
 
-            status = downlet_startTasks();
+            {
+                InetSockAddr* const fmtpSrvr =
+                        smi_getFmtpSrvr(downlet.mcastInfo);
 
-            if (status) {
-                log_add("Couldn't create concurrent tasks for feed %s from %s",
-                        downlet.feedId, isa_toString(down7.ldmSrvr));
+                if (inetId_compare(inAddrAny, isa_getInetId(fmtpSrvr)) == 0) {
+                    status = isa_setInetId(fmtpSrvr,
+                            isa_getInetId(down7.ldmSrvr));
+
+                    if (status) {
+                        log_add("Couldn't set INADDR_ANY address of FMTP "
+                                "server to that of LDM7 server");
+                    }
+                    else {
+                        log_notice("INADDR_ANY address of FMTP server set to "
+                                "that of LDM7 server");
+                    }
+                }
             }
-            else {
-                // Returns when a concurrent task terminates
-                status = downlet_wait();
 
-                log_debug("downlet_run(): Status changed");
-                (void)downlet_stopTasks();
-            } // Subtasks created
+            if (status == 0) {
+                status = downlet_startTasks();
 
-            smi_free(downlet.mcastInfo); // NULL safe
-            downlet.mcastInfo = NULL;
+                if (status) {
+                    log_add("Couldn't create concurrent tasks for feed %s from %s",
+                            downlet.feedId, isa_toString(down7.ldmSrvr));
+                }
+                else {
+                    // Returns when a concurrent task terminates
+                    status = downlet_wait();
+
+                    log_debug("downlet_run(): Status changed");
+                    (void)downlet_stopTasks();
+                } // Subtasks created
+
+                smi_free(downlet.mcastInfo); // NULL safe
+                downlet.mcastInfo = NULL;
+            }
         } // `downlet.mcastInfo` set
 
         downlet_destroyClient();
@@ -2028,7 +2051,17 @@ down7_init(
                                 status = LDM7_SYSTEM;
                             }
                             else {
-                                down7.initialized = true;
+                                if (inAddrAny == NULL) {
+                                    inAddrAny = inetId_newFromStr("0.0.0.0");
+
+                                    if (inAddrAny == NULL) {
+                                        log_add("inetId_newFromStr() failure");
+                                        status = LDM7_SYSTEM;
+                                    }
+                                }
+                                else {
+                                    down7.initialized = true;
+                                }
                             }
 
                             if (status)

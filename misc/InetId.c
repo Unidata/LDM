@@ -222,6 +222,12 @@ inetId_free(InetId* const inetId)
     free(inetId);
 }
 
+InetId*
+inetId_clone(const InetId* const inetId)
+{
+    return inetId_newFromStr(inetId->id);
+}
+
 int
 inetId_fill(InetId* const inetId)
 {

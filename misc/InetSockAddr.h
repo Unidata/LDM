@@ -114,6 +114,20 @@ const InetId*
 isa_getInetId(const InetSockAddr* const isa);
 
 /**
+ * Sets the address identifier portion of an Internet socket address.
+ *
+ * @param[in,out] isa     Internet socket address to be modified
+ * @param[in]     inetId  New address. Caller may free.
+ * @retval        0       Success
+ * @retval        EINVAL  `isa == NULL || inetId == NULL`. `log_add()` called.
+ * @retval        ENOMEM  Out of memory. `log_add()` called.
+ */
+int
+isa_setInetId(
+        InetSockAddr* const restrict isa,
+        const InetId* const restrict inetId);
+
+/**
  * Returns the port number of an Internet socket address.
  *
  * @param[in] isa  Internet socket address
