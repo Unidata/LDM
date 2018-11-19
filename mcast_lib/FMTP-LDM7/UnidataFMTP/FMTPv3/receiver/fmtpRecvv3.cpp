@@ -714,7 +714,7 @@ void fmtpRecvv3::joinGroup(
     if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
             < 0)
         throw std::system_error(errno, std::system_category(),
-                "fmtprecvv3::joingroup(): couldn't bind socket  to multicast "
+                "fmtprecvv3::joinGroup(): couldn't bind socket  to multicast "
                 "group " + mcastgroup);
 
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
