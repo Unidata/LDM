@@ -1,9 +1,14 @@
-6.13.7.83	2018-11-19T09:51:29-0700
+6.13.7.84
     Port priv.h to C++
 
     Correct fmtprecvv3::joinGroup() name
 
     Add ability for fmtp.c to join mcasticast group with port number < 1024
+
+6.13.7.83	2018-11-16T15:42:35-0700
+    Note in ldmd.conf that multicast feeds must be disjoint.
+
+    Improve logic of mldm_ensureRunning().
 
 6.13.7.82	2018-11-16T15:22:15-0700
     If the subscription reply from the LDM7 server says that the FMTP server's

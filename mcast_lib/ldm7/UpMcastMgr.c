@@ -500,23 +500,22 @@ mldm_spawn(
 /**
  * Ensures that a multicast LDM sender process is running.
  *
- * @param[in] mcastIface    IPv4 address of interface to use for multicasting.
- *                          "0.0.0.0" obtains the system's default multicast
- *                          interface.
- * @param[in]  info         LDM7 multicast information
- * @param[in]  ttl          Time-to-live of multicast packets
- * @param[in]  fmtpSubnet   Subnet for client FMTP TCP connections
- * @param[in]  retxTimeout  FMTP retransmission timeout in minutes. A
- *                          negative value obtains the FMTP default.
- * @param[in]  pqPathname   Pathname of product-queue
- * @retval     0            Success. The multicast LDM sender associated
- *                          with the given multicast group was already running
- *                          or was successfully started.
- *                          `mldm_getFmtpSrvrPort()` will return the port number
- *                          of the FMTP server of the multicast LDM sender
- *                          process.
- * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
- * @retval     LDM7_SYSTEM  System error. `log_add()` called.
+ * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
+ *                         "0.0.0.0" obtains the system's default multicast
+ *                         interface.
+ * @param[in] info         LDM7 multicast information
+ * @param[in] ttl          Time-to-live of multicast packets
+ * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
+ * @param[in] retxTimeout  FMTP retransmission timeout in minutes. A negative
+ *                         value obtains the FMTP default.
+ * @param[in] pqPathname   Pathname of product-queue
+ * @retval    0            Success. The multicast LDM sender associated with the
+ *                         given multicast group was already running or was
+ *                         successfully started. `mldm_getFmtpSrvrPort()` will
+ *                         return the port number of the FMTP server of the
+ *                         multicast LDM sender process.
+ * @retval    LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
 mldm_ensureRunning(
@@ -537,17 +536,29 @@ mldm_ensureRunning(
         log_add("Couldn't lock multicast sender map");
     }
     else {
-        if (childPid == 0) {
-            if (msm_get(smi_getFeed(info), &childPid, &fmtpSrvrPort,
-                    &mldmCmdPort) == 0) {
-                if (kill(childPid, 0)) {
-                    log_warning("Multicast LDM sender process %d should "
-                            "exist but doesn't. Re-executing...", childPid);
-                    childPid = 0;
-                }
+        status = msm_get(smi_getFeed(info), &childPid, &fmtpSrvrPort,
+                &mldmCmdPort);
+
+        if (status) {
+            if (status == LDM7_NOENT) {
+                log_debug("No multicast sender for feed %s",
+                        s_feedtypet(smi_getFeed(info)));
+                childPid = 0;
+                status = 0;
+            }
+            else {
+                log_add("msm_get() failure");
             }
         }
-        if (childPid == 0) {
+        else {
+            if (kill(childPid, 0)) {
+                log_warning("Multicast LDM sender process %d should "
+                        "exist but doesn't. Re-executing...", childPid);
+                childPid = 0;
+            }
+        }
+
+        if (status == 0 && childPid == 0) {
             /*
              * Sets `feed`, `childPid`, `fmtpSrvrPort`, `mldmCmdPort`; calls
              * `msm_put()`
