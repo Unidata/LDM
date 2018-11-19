@@ -1,4 +1,4 @@
-6.13.7.84
+6.13.7.84	2018-11-19T09:54:34-0700
     Port priv.h to C++
 
     Correct fmtprecvv3::joinGroup() name
