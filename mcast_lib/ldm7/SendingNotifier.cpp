@@ -11,11 +11,11 @@
  * @author: Steven R. Emmerson
  */
 
+#include "SendingNotifier.h"
+
 #include "fmtp.h"
 #include "Internet.h"
 #include "log.h"
-#include "PerProdSendingNotifier.h"
-
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
@@ -43,16 +43,18 @@ void PerProdSendingNotifier::notify_of_eop(
 }
 
 /**
- * Requests the application to verify an incoming connection request,
+ * Requests the application to verify an incoming connection request
  * and to decide whether to accept or to reject the connection. This
  * method is thread-safe.
- * @return    true: receiver accepted; false: receiver rejected.
+ *
+ * @retval true   Client is acceptable
+ * @retval false  Client is not acceptable
  */
 bool PerProdSendingNotifier::verify_new_recv(int newsock)
 {
     struct sockaddr sockaddr;
     socklen_t       len = sizeof(sockaddr);
-    if (::getsockname(newsock, &sockaddr, &len)) {
+    if (::getpeername(newsock, &sockaddr, &len)) {
         log_warning("Couldn't get address of new FMTP socket");
         return false;
     }
