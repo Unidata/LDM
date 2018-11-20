@@ -11,17 +11,17 @@
  * @author: Steven R. Emmerson
  */
 
-#include "SendingNotifier.h"
-
 #include "fmtp.h"
 #include "Internet.h"
 #include "log.h"
+#include "SendingNotifier.h"
+
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
 #include <sys/socket.h>
 
-PerProdSendingNotifier::PerProdSendingNotifier(
+SendingNotifier::SendingNotifier(
         void      (*eop_func)(FmtpProdIndex iProd),
         Authorizer& authorizer)
     : eop_func(eop_func)
@@ -36,7 +36,7 @@ PerProdSendingNotifier::PerProdSendingNotifier(
  *
  * @param[in,out] prodIndex             Index of the product.
  */
-void PerProdSendingNotifier::notify_of_eop(
+void SendingNotifier::notify_of_eop(
         const FmtpProdIndex prodIndex)
 {
     eop_func(prodIndex);
@@ -50,7 +50,7 @@ void PerProdSendingNotifier::notify_of_eop(
  * @retval true   Client is acceptable
  * @retval false  Client is not acceptable
  */
-bool PerProdSendingNotifier::verify_new_recv(int newsock)
+bool SendingNotifier::verify_new_recv(int newsock)
 {
     struct sockaddr sockaddr;
     socklen_t       len = sizeof(sockaddr);

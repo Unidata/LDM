@@ -20,7 +20,7 @@
 
 #include <sys/types.h>
 
-class PerProdSendingNotifier: public SendProxy {
+class SendingNotifier: public SendProxy {
     /// Function to call when the FMTP layer is done with a product.
     void     (*eop_func)(FmtpProdIndex prodIndex);
 
@@ -35,11 +35,11 @@ public:
      *                                  finished with a product.
      * @throws    std::invalid_argument if `eop_func == NULL`.
      */
-    PerProdSendingNotifier(
+    SendingNotifier(
             void      (*eop_func)(FmtpProdIndex prodIndex),
             Authorizer& authDb);
 
-    ~PerProdSendingNotifier() {}
+    ~SendingNotifier() {}
     void notify_of_eop(FmtpProdIndex prodIndex);
 
     /**
