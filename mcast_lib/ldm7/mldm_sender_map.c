@@ -239,40 +239,50 @@ smo_put(const feedtypet      feed,
 {
     smo_abortIfUnlocked();
 
-    int       status = 0;
-    unsigned  ibit;
-    feedtypet mask;
+    int status;
 
-    // Ensure an atomic transaction by vetting before modifying. The following
-    // assumes all feeds are disjoint.
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; ++ibit, mask <<= 1) {
-        if (feed & mask) {
-            const pid_t infoPid = smo->procInfos[ibit].pid;
+    if (pid == 0) {
+        log_add("PID is zero");
+        status = LDM7_INVAL;
+    }
+    else {
+        status = 0;
 
-            if (infoPid) {
-                if (pid == infoPid) {
-                    log_add("Process-information array already contains entry "
-                            "for PID %ld", (long)pid);
-                }
-                else {
-                    log_add("Feed %s is already being sent by process %ld",
-                            s_feedtypet(mask), (long)infoPid);
-                }
+        unsigned long mask;
+        ProcInfo*     procInfo = smo->procInfos;
 
+        /*
+         * Ensure an atomic transaction by vetting before modifying. The
+         * following assumes all feeds are disjoint.
+         */
+        for (mask = 1; mask && mask <= ANY; mask <<= 1, ++procInfo) {
+            const pid_t infoPid = procInfo->pid;
+
+            if (infoPid == pid) {
+                log_add("Process-information array already contains entry for "
+                        "PID %ld", (long)pid);
                 status = LDM7_DUP;
                 break;
             }
-        }
-    }
 
-    if (status == 0) {
-        for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; ++ibit, mask <<= 1) {
             if (feed & mask) {
-                ProcInfo* const procInfo = smo->procInfos + ibit;
+                if (infoPid) {
+                    log_add("Feed %s is already being sent by process %ld",
+                            s_feedtypet(mask), (long)infoPid);
+                    status = LDM7_DUP;
+                    break;
+                }
+            }
+        }
 
-                procInfo->pid = pid;
-                procInfo->fmtpPort = fmtpPort;
-                procInfo->mldmSrvrPort = mldmSrvrPort;
+        if (status == 0) {
+            for (mask = 1, procInfo = smo->procInfos; mask && mask <= ANY;
+                    mask <<= 1, ++procInfo) {
+                if (feed & mask) {
+                    procInfo->pid = pid;
+                    procInfo->fmtpPort = fmtpPort;
+                    procInfo->mldmSrvrPort = mldmSrvrPort;
+                }
             }
         }
     }
