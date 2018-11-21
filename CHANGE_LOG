@@ -1,3 +1,22 @@
+6.13.7.84	2018-11-21T14:05:00-0700
+    PerProdSendingNotifier:
+        Rename to SendingNotifier
+
+    FmtpClntAddrs:
+        Add debug message and improve exception message
+
+    ldmd:
+        Clear log messages if umm_remove() returns "no entry"
+
+    mldm_sender_map:
+        Improve and correct
+
+    up7:
+        Add debug messages
+
+    UpMcastMgr:
+        Improve
+
 6.13.7.83	2018-11-16T15:42:35-0700
     Note in ldmd.conf that multicast feeds must be disjoint.
 
