@@ -114,6 +114,7 @@ mldm_getServerPorts(const int pipe)
 #if 1
     char    buf[100];
     ssize_t nbytes = read(pipe, buf, sizeof(buf));
+
     if (nbytes == -1) {
         log_add_syserr("Couldn't read from pipe to multicast FMTP process");
         status = LDM7_SYSTEM;
@@ -383,51 +384,6 @@ mldm_terminateSenderAndReap()
 }
 
 /**
- * Handles a just-executed multicast LDM child process.
- *
- * @pre                     `childPid` is set
- * @param[in] info          Multicast information
- * @param[in] fds           Pipe to child process
- * @retval    0             Success
- * @retval    LDM7_SYSTEM   System failure. `log_add()` called.
- * @retval    LDM7_LOGIC    Logic failure. `log_add()` called.
- */
-static Ldm7Status
-mldm_handleExecedChild(
-        const SepMcastInfo* const restrict info,
-        const int* restrict                fds)
-{
-    int status;
-
-    (void)close(fds[1]);                // write end of pipe unneeded
-
-    // Sets `fmtpSrvrPort` and `mldmCmdPort`
-    status = mldm_getServerPorts(fds[0]);
-    (void)close(fds[0]);                // no longer needed
-
-    if (status) {
-        char* const id = smi_toString(info);
-        log_add("Couldn't get port numbers from multicast LDM sender "
-                "%s. Terminating that process.", id);
-        free(id);
-    }
-    else {
-        status = msm_put(smi_getFeed(info), childPid, fmtpSrvrPort,
-                mldmCmdPort);
-
-        if (status) {
-            // preconditions => LDM7_DUP can't be returned
-            char* const id = smi_toString(info);
-            log_add("Couldn't save information on multicast LDM sender "
-                    "%s. Terminating that process.", id);
-            free(id);
-        } // Information saved in multicast sender map
-    } // FMTP server port and mldm_sender command port set
-
-    return status;
-}
-
-/**
  * Executes a multicast LDM sender as a child process. Doesn't block. Sets
  * `childPid`, `fmtpSrvrPort` and `mldmCmdPort`.
  *
@@ -470,6 +426,7 @@ mldm_spawn(
             char* const id = smi_toString(info);
             log_add_syserr("Couldn't fork() for multicast LDM sender %s", id);
             free(id);
+
             status = LDM7_SYSTEM;
         }
         else if (pid == 0) {
@@ -485,13 +442,23 @@ mldm_spawn(
         else {
             /* Parent process */
             childPid = pid;
-            status = mldm_handleExecedChild(info, fds); // Uses `childPid`
+
+            // Sets `fmtpSrvrPort` and `mldmCmdPort`
+            status = mldm_getServerPorts(fds[0]);
 
             if (status) {
+                char* const id = smi_toString(info);
+                log_add("Couldn't get port numbers from multicast LDM sender "
+                        "%s", id);
+                free(id);
+
                 (void)mldm_terminateSenderAndReap(); // Uses `childPid`
                 childPid = 0;
             }
         } // Parent process
+
+        (void)close(fds[0]);
+        (void)close(fds[1]);
     } // Pipe created
 
     return status;
@@ -560,15 +527,29 @@ mldm_ensureRunning(
 
         if (status == 0 && childPid == 0) {
             /*
-             * Sets `feed`, `childPid`, `fmtpSrvrPort`, `mldmCmdPort`; calls
-             * `msm_put()`
+             * Sets `childPid`, `fmtpSrvrPort`, and `mldmCmdPort`
              */
             status = mldm_spawn(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
                     pqPathname);
 
-            if (status)
+            if (status) {
                 log_add("Couldn't spawn multicast LDM sender process");
-        }
+            }
+            else {
+                status = msm_put(smi_getFeed(info), childPid, fmtpSrvrPort,
+                        mldmCmdPort);
+
+                if (status) {
+                    char* const id = smi_toString(info);
+                    log_add("Couldn't save information on multicast LDM sender "
+                            "%s. Terminating that process.", id);
+                    free(id);
+
+                    (void)mldm_terminateSenderAndReap(); // Uses `childPid`
+                    childPid = 0;
+                }
+            } // Multicast LDM sender spawned
+        } // Multicast LDM sender should be spawned
 
         (void)msm_unlock();
     } // Multicast sender map is locked
@@ -1456,6 +1437,7 @@ umm_addPotentialSender(
             if (NULL == node) {
                 log_add_syserr("Couldn't add to multicast entries");
                 me_free(entry);
+
                 status = LDM7_SYSTEM;
             }
         } // `entry` allocated
@@ -1518,16 +1500,19 @@ umm_terminated(
     }
     else {
         status = msm_lock(true);
+
         if (status) {
             log_add("Couldn't lock multicast sender map");
         }
         else {
             status = msm_remove(pid);
+
             if (pid == childPid)
                 childPid = 0; // No need to kill child because must have terminated
+
             (void)msm_unlock();
-        }
-    }
+        } // Multicast sender map is locked
+    } // This module is initialized
 
     return status;
 }
@@ -1572,12 +1557,11 @@ void
 umm_clear(void)
 {
     while (mcastEntries) {
-        McastEntry* entry = *(McastEntry**)mcastEntries;
+        McastEntry* const entry = *(McastEntry**)mcastEntries;
+
         (void)tdelete(entry, &mcastEntries, me_compareOrConflict);
         me_free(entry);
     }
-
-    msm_clear();
 
     if (key.info) {
         smi_free(key.info);
@@ -1637,7 +1621,16 @@ umm_remove(const pid_t pid)
         status = LDM7_LOGIC;
     }
     else {
-        status = msm_remove(pid);
+        status = msm_lock(true);
+
+        if (status) {
+            log_add("msm_lock() failure");
+        }
+        else {
+            status = msm_remove(pid);
+        }
+
+        (void)msm_unlock();
     }
 
     return status;
