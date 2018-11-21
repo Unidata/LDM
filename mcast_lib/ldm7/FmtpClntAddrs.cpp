@@ -23,10 +23,15 @@
  * Misc functions:
  ******************************************************************************/
 
-static std::string to_string(const CidrAddr& addr)
+static std::string to_string(const in_addr_t addr)
 {
     char buf[INET_ADDRSTRLEN];
-    return std::string{::inet_ntop(AF_INET, &addr.addr, buf, sizeof(buf))} +
+    return std::string(::inet_ntop(AF_INET, &addr, buf, sizeof(buf)));
+}
+
+static std::string to_string(const CidrAddr& addr)
+{
+    return std::string{to_string(addr.addr)} +
             "/" + std::to_string(addr.prefixLen);
 }
 
@@ -110,10 +115,14 @@ public:
     bool isAllowed(const in_addr_t addr) const noexcept
     {
         LockGuard lock{mutex};
-        bool found = allocated.find(addr) != allocated.end();
-        if (!found)
-            log_debug((std::string("Address ") + std::to_string(addr) +
-                    " not found").c_str());
+        bool      found = allocated.find(addr) != allocated.end();
+
+        if (!found) {
+            char buf[INET_ADDRSTRLEN];
+            log_debug("Address %s not found", ::inet_ntop(AF_INET, &addr, buf,
+                    sizeof(buf)));
+        }
+
         return found;
     }
 
@@ -132,7 +141,7 @@ public:
         auto      iter = allocated.find(addr);
 
         if (iter == allocated.end())
-            throw std::logic_error("IP address " + std::to_string(addr) +
+            throw std::logic_error("IP address " + to_string(addr) +
                     " wasn't previously reserved");
 
         allocated.erase(iter);
