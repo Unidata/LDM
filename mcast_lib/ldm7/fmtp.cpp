@@ -15,6 +15,7 @@
 #include "fmtpRecvv3.h"
 #include "fmtpSendv3.h"
 #include "fmtp.h"
+#include "priv.h"
 #include "SendingNotifier.h"
 
 #include <errno.h>
@@ -43,14 +44,14 @@ void log_what(const std::exception& e)
  * The FMTP receiver:
  */
 struct fmtp_receiver {
-    /**
-     * The FMTP-layer receiver.
-     */
+    /// The FMTP-layer receiver.
     fmtpRecvv3*      fmtpReceiver;
-    /**
-     * The receiving application notifier.
-     */
+
+    /// The receiving application notifier.
     RecvProxy*       notifier;
+
+    /// Port number of the multicast group in host byte order
+    in_port_t        mcastGrpPort;
 };
 
 /**
@@ -99,6 +100,7 @@ fmtpReceiver_init(
     std::string             hostId(tcpAddr);
     std::string             groupId(mcastAddr);
     receiver->notifier = notifier;
+    receiver->mcastGrpPort = mcastPort;
     log_debug("Creating FMTP receiver: sendHost=%s, sendPort=%hu, "
             "groupId=%s, groupPort=%hu, iface=%s", tcpAddr, tcpPort, mcastAddr,
             mcastPort, iface);
@@ -204,8 +206,17 @@ fmtpReceiver_execute(
     else {
         status = -1;
         try {
+            // Joining a multicast group with a well-known port number requires
+            // root privileges
+            if (receiver->mcastGrpPort < 1024)
+                rootpriv();
+
             // FMTP call
             receiver->fmtpReceiver->Start();
+
+            if (receiver->mcastGrpPort < 1024)
+                unpriv();
+
             status = 0;
         }
         catch (const std::exception& e) {

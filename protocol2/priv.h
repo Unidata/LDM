@@ -9,6 +9,10 @@
 #ifndef _PRIV_H_
 #define _PRIV_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Ensures that the process may dump core on a Linux system.
  */
@@ -32,5 +36,9 @@ unpriv(void);
  */
 extern void
 endpriv(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_PRIV_H_ */
