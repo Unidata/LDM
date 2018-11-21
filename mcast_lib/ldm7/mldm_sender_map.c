@@ -23,7 +23,7 @@
 #include <sys/shm.h>
 
 /// Number of feed-types:
-static const size_t NUM_FEEDTYPES = sizeof(feedtypet)*CHAR_BIT;
+static const size_t NUM_FEEDTYPES = (sizeof(feedtypet)*CHAR_BIT);
 
 /// Information on a multicast LDM process:
 typedef struct {
@@ -36,10 +36,11 @@ typedef struct {
 } ProcInfo;
 
 /// Shared memory object that maps from LDM feed to multicast LDM information:
-static struct {
+typedef struct {
     pthread_rwlock_t rwLock;
     ProcInfo         procInfos[1];
-}*                  smo;
+} Smo;
+static Smo*         smo;
 
 /// ID of the shared-memory object:
 static int          shmId;
@@ -47,9 +48,22 @@ static int          shmId;
 /// Whether or not this module is initialized:
 static bool         initialized = false;
 
+static char*
+smo_mldmStr(
+        const feedtypet feed,
+        const pid_t     pid,
+        const in_port_t fmtpPort,
+        const in_port_t mldmSrvrPort)
+{
+    return ldm_format(128, "{feed=%s, pid=%ld, fmtpPort=%hu, "
+            "mldmSrvrPort=%hu}", s_feedtypet(feed), (long)pid, fmtpPort,
+            mldmSrvrPort);
+}
+
 /**
  * Initializes the shared-memory object that contains the mapping from LDM feed
- * to information on the associated multicast LDM process.
+ * to information on the associated multicast LDM process. Should only be called
+ * by the top-level LDM server and only once per LDM session.
  *
  * @retval 0            Success
  * @retval LDM7_SYSTEM  Failure. `log_add()` called.
@@ -66,15 +80,19 @@ smo_init(void)
      *     should shared-memory creation fail.
      */
 
-    int status;
-    shmId = shmget(IPC_PRIVATE, sizeof(smo)+(NUM_FEEDTYPES-1)*sizeof(ProcInfo),
-            0600);
+    int          status;
+    const size_t nbytes = sizeof(Smo)+(NUM_FEEDTYPES-1)*sizeof(ProcInfo);
+
+    shmId = shmget(IPC_PRIVATE, nbytes, 0600);
 
     if (shmId == -1) {
         log_add_syserr("shmget() failure");
         status = LDM7_SYSTEM;
     }
     else {
+        // Shared memory segment is initialized with all zero values
+        log_debug("Allocated %zu-byte shared memory", nbytes);
+
         smo = shmat(shmId, NULL, 0);
 
         if (smo == (void*)-1) {
@@ -87,25 +105,26 @@ smo_init(void)
             status = pthread_rwlockattr_init(&rwLockAttr);
 
             if (status) {
-                log_add_syserr("pthread_rwlockattr_init() failure");
+                log_add_errno(status, "pthread_rwlockattr_init() failure");
                 status = LDM7_SYSTEM;
             }
             else {
-                (void)pthread_rwlockattr_setpshared(&rwLockAttr,
+                status = pthread_rwlockattr_setpshared(&rwLockAttr,
                         PTHREAD_PROCESS_SHARED);
 
-                status = pthread_rwlock_init(&smo->rwLock, &rwLockAttr);
-
                 if (status) {
-                    log_add_syserr("pthread_rwlock_init() failure");
+                    log_add_errno(status, "pthread_rwlockattr_setpshared() "
+                            "failure");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    (void)memset(smo->procInfos, 0,
-                            NUM_FEEDTYPES*sizeof(ProcInfo));
+                    status = pthread_rwlock_init(&smo->rwLock, &rwLockAttr);
 
-                    status = 0;
-                } // Read/write lock initialized
+                    if (status) {
+                        log_add_errno(status, "pthread_rwlock_init() failure");
+                        status = LDM7_SYSTEM;
+                    }
+                } // Read/write lock attributes configured
 
                 (void)pthread_rwlockattr_destroy(&rwLockAttr);
             } // Read/write lock attributes initialized
@@ -189,6 +208,14 @@ smo_unlock(void)
     return status;
 }
 
+static void
+smo_abortIfUnlocked(void)
+{
+    int status = pthread_rwlock_trywrlock(&smo->rwLock);
+
+    log_assert(status == EBUSY);
+}
+
 /**
  * Adds a mapping between an LDM feed and a multicast LDM sender process.
  *
@@ -210,30 +237,39 @@ smo_put(const feedtypet      feed,
         const unsigned short fmtpPort,
         const unsigned short mldmSrvrPort)
 {
+    smo_abortIfUnlocked();
+
     int       status = 0;
     unsigned  ibit;
     feedtypet mask;
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
-        const pid_t infoPid = smo->procInfos[ibit].pid;
-        if ((feed & mask) && infoPid) {
-            log_add("Feed-type %s is already being sent by process %ld",
-                    s_feedtypet(mask), (long)pid);
-            status = LDM7_DUP;
-            break;
-        }
-        if (pid == infoPid) {
-            log_add("Process-information array already contains entry for PID "
-                    "%ld", (long)pid);
-            status = LDM7_DUP;
-            break;
+    // Ensure an atomic transaction by vetting before modifying. The following
+    // assumes all feeds are disjoint.
+    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; ++ibit, mask <<= 1) {
+        if (feed & mask) {
+            const pid_t infoPid = smo->procInfos[ibit].pid;
+
+            if (infoPid) {
+                if (pid == infoPid) {
+                    log_add("Process-information array already contains entry "
+                            "for PID %ld", (long)pid);
+                }
+                else {
+                    log_add("Feed %s is already being sent by process %ld",
+                            s_feedtypet(mask), (long)infoPid);
+                }
+
+                status = LDM7_DUP;
+                break;
+            }
         }
     }
 
     if (status == 0) {
-        for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ibit++) {
+        for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; ++ibit, mask <<= 1) {
             if (feed & mask) {
                 ProcInfo* const procInfo = smo->procInfos + ibit;
+
                 procInfo->pid = pid;
                 procInfo->fmtpPort = fmtpPort;
                 procInfo->mldmSrvrPort = mldmSrvrPort;
@@ -251,7 +287,7 @@ smo_put(const feedtypet      feed,
  * @param[out] pid           Associated process-ID.
  * @param[out] fmtpPort      Port number of the associated FMTP TCP server.
  * @param[out] mldmSrvrPort  Port number of multicast LDM sender's RPC server
- * @retval     0             Success. `*pid`, `*fmtpPort`, and `mldmSrvrPort`
+ * @retval     0             Success. `*pid`, `*fmtpPort`, and `*mldmSrvrPort`
  *                           are set
  * @retval     LDM7_NOENT    No process associated with feed
  * @threadsafety             Compatible but not safe
@@ -262,18 +298,23 @@ smo_get(const feedtypet                feed,
         unsigned short* const restrict fmtpPort,
         unsigned short* const restrict mldmSrvrPort)
 {
-    int       status;
-    unsigned  ibit;
-    feedtypet mask;
+    smo_abortIfUnlocked();
 
-    for (ibit = 0, mask = 1; ibit < NUM_FEEDTYPES; mask <<= 1, ++ibit) {
-        const ProcInfo* procInfo = smo->procInfos + ibit;
-        const pid_t     infoPid = procInfo->pid;
-        if ((mask & feed) && infoPid) {
-            *pid = infoPid;
-            *fmtpPort = procInfo->fmtpPort;
-            *mldmSrvrPort = procInfo->mldmSrvrPort;
-            return 0;
+    unsigned long   mask;
+    const ProcInfo* procInfo = smo->procInfos;
+
+    // The following assumes all feeds are disjoint
+    for (mask = 1; mask && mask <= ANY; mask <<= 1, ++procInfo) {
+        if (mask & feed) {
+            const pid_t infoPid = procInfo->pid;
+
+            if (infoPid) {
+                *pid = infoPid;
+                *fmtpPort = procInfo->fmtpPort;
+                *mldmSrvrPort = procInfo->mldmSrvrPort;
+
+                return 0;
+            }
         }
     }
 
@@ -294,6 +335,9 @@ smo_get(const feedtypet                feed,
 static Ldm7Status
 smo_remove(const pid_t pid)
 {
+    log_debug("smo_remove() entered");
+    smo_abortIfUnlocked();
+
     int       status = LDM7_NOENT;
     unsigned  ibit;
 
@@ -305,6 +349,7 @@ smo_remove(const pid_t pid)
         }
     }
 
+    log_debug("smo_remove() returning");
     return status;
 }
 
@@ -316,7 +361,12 @@ smo_remove(const pid_t pid)
 static void
 smo_clear(void)
 {
+    log_debug("smo_clear() entered");
+    smo_abortIfUnlocked();
+
     (void)memset(smo->procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
+
+    log_debug("smo_clear() returning");
 }
 
 /******************************************************************************
@@ -379,7 +429,7 @@ msm_lock(const bool forWriting)
         status = smo_lock(forWriting);
 
         if (status)
-            log_add_syserr("Couldn't lock shared process-information object");
+            log_add("Couldn't lock shared process-information object");
     }
 
     return status;
@@ -398,18 +448,17 @@ msm_unlock(void)
         status = smo_unlock();
 
         if (status)
-            log_add_syserr("Couldn't unlock shared process-information object");
+            log_add("Couldn't unlock shared process-information object");
     }
 
     return status;
 }
 
 Ldm7Status
-msm_put(
-        const feedtypet      feed,
-        const pid_t          pid,
-        const unsigned short fmtpPort,
-        const unsigned short mldmSrvrPort)
+msm_put(const feedtypet feed,
+        const pid_t     pid,
+        const in_port_t fmtpPort,
+        const in_port_t mldmSrvrPort)
 {
     int status;
 
@@ -424,7 +473,10 @@ msm_put(
             log_add("Couldn't save multicast process information");
         }
         else {
-            log_debug("Saved information on multicast process %ld", (long)pid);
+            char* const mldmStr = smo_mldmStr(feed, pid, fmtpPort,
+                    mldmSrvrPort);
+            log_debug("Saved information on multicast process %s", mldmStr);
+            free(mldmStr);
         }
     }
 
@@ -462,22 +514,15 @@ msm_remove(const pid_t pid)
     else {
         status = smo_remove(pid);
 
-        if (status)
-            log_add_syserr("Couldn't remove information on process %ld",
+        if (status) {
+            log_add("No multicast sender corresponds to process %ld",
                     (long)pid);
+        }
+        else if (log_is_enabled_debug) {
+            log_debug("Removed information on multicast process %ld",
+                    (long)pid);
+        }
     }
 
     return status;
-}
-
-void
-msm_clear(void)
-{
-    if (!initialized) {
-        log_add("Module is not initialized");
-        log_flush_error();
-    }
-    else {
-        smo_clear();
-    }
 }

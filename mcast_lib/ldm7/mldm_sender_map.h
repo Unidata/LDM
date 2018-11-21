@@ -66,7 +66,8 @@ msm_lock(
  *
  * @param[in] feedtype      Feed-type.
  * @param[in] pid           Multicast LDM sender process-ID.
- * @param[in] fmtpPort      Port number of the FMTP TCP server.
+ * @param[in] fmtpPort      Port number of the FMTP TCP server in host byte
+ *                          order
  * @param[in] mldmSrvrPort  Port number of multicast LDM sender's RPC server in
  *                          host byte order
  * @retval    0             Success.
@@ -79,10 +80,10 @@ msm_lock(
  */
 Ldm7Status
 msm_put(
-        const feedtypet      feedtype,
-        const pid_t          pid,
-        const unsigned short fmtpPort,
-        const unsigned short mldmSrvrPort);
+        const feedtypet feedtype,
+        const pid_t     pid,
+        const in_port_t fmtpPort,
+        const in_port_t mldmSrvrPort);
 
 /**
  * Returns process-information associated with a feed-type.
@@ -127,15 +128,6 @@ msm_unlock(void);
  */
 Ldm7Status
 msm_remove(const pid_t pid);
-
-/**
- * Clears all entries -- freeing their resources. Doesn't destroy this module or
- * free the IPC resource. Used for testing.
- *
- * @threadsafety        Compatible but not safe
- */
-void
-msm_clear(void);
 
 #ifdef __cplusplus
     }
