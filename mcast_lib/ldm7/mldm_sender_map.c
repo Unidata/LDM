@@ -258,15 +258,15 @@ smo_put(const feedtypet      feed,
         for (mask = 1; mask && mask <= ANY; mask <<= 1, ++procInfo) {
             const pid_t infoPid = procInfo->pid;
 
-            if (infoPid == pid) {
-                log_add("Process-information array already contains entry for "
-                        "PID %ld", (long)pid);
-                status = LDM7_DUP;
-                break;
-            }
+            if (infoPid) {
+                if (infoPid == pid) {
+                    log_add("Process-information array already contains entry "
+                            "for PID %ld", (long)pid);
+                    status = LDM7_DUP;
+                    break;
+                }
 
-            if (feed & mask) {
-                if (infoPid) {
+                if (feed & mask) {
                     log_add("Feed %s is already being sent by process %ld",
                             s_feedtypet(mask), (long)infoPid);
                     status = LDM7_DUP;
