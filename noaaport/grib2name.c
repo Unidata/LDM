@@ -698,7 +698,7 @@ int grib2name (
 
     return status;
 #else
-    static StringBuf*  prodBuf;       /* Buffer for product ID-s */
+    static StringBuf*  paramNames;    /* Buffer for parameter name(s) */
     int                iField;        /* GRIB-2 field index */
     int                status;        /* Function return code */
     g2int              listsec0[3];   /* GRIB-2 section 0 parameters */
@@ -710,13 +710,13 @@ int grib2name (
     char               levelstmp[80]; /* Level? */
     Gribmsg            g2Msg;         /* GRIB-2 message structure */
 
-    if (prodBuf) {
-        strBuf_clear(prodBuf);
+    if (paramNames) {
+        strBuf_clear(paramNames);
     }
     else {
-        prodBuf = strBuf_new(127);
-        if (NULL == prodBuf) {
-            log_add("Couldn't allocate buffer for parameter ID-s");
+        paramNames = strBuf_new(127);
+        if (NULL == paramNames) {
+            log_add("Couldn't allocate buffer for parameter name(s)");
             return 3;
         }
     }
@@ -776,8 +776,9 @@ int grib2name (
         gb2_2gem(&g2Msg, &gemInfo, tbllist, &status);
 
         if (status) {
-            log_error_q("Couldn't decode GRIB2 message. WMO header=\"%s\"",
+            log_add("Couldn't decode GRIB2 message. WMO header=\"%s\"",
                     wmohead);
+            log_flush_error();
 
             if (lastField) {
                 (void)strcpy(fdats, "FHRS"); /* safe */
@@ -792,8 +793,8 @@ int grib2name (
             cst_rmbl(g2name, g2name, &ilen, &status);
 
             if (iField)
-                strBuf_appendString(prodBuf, ";");
-            strBuf_appendString(prodBuf, g2name);
+                strBuf_appendString(paramNames, ";");
+            strBuf_appendString(paramNames, g2name);
 
             cst_rxbl(gemInfo.unit, gemInfo.unit, &ilen, &status);
             if (ilen == 0)
@@ -852,7 +853,7 @@ int grib2name (
             s_pds_model((int)listsec1[0], model_id),
             grid_id,
             fdats,
-            strBuf_toString(prodBuf),
+            strBuf_toString(paramNames),
             levelstmp);
 
     return 0;
