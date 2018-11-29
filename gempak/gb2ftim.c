@@ -66,6 +66,18 @@ void gb2_ftim ( gribfield *gfld, char *gdattm, int *iaccm, int *iret )
 	    case 5:
 	    case 6:
 	    case 7:
+            /*
+             * Added 2018-11-27 by Steve Emmerson because the following entry
+	     * was added to "g2varswmo.tbl":
+	     *   000 000 027 015 Maximum Wet Bulb Temp Aloft      K                    MWBTA            0  -9999.00
+	     * At the time, no other entry had a PDTN of 15.
+	     * The PDTN webpage
+	     * http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table4-0.shtml
+	     * indicates that a PDTN 15 parameter is at a point in time and
+	     * template 4.15 is identical, with respect to time, to template
+	     * 4.0 (case 0 above).
+             */
+	    case 15:
 		    iafgi = 1;
             ifcst = gb2_fcsm((int)gfld->ipdtmpl[8],(int)gfld->ipdtmpl[7]);
 		    break;
@@ -106,7 +118,7 @@ void gb2_ftim ( gribfield *gfld, char *gdattm, int *iaccm, int *iret )
             itmp = gb2_fcsm((int)gfld->ipdtmpl[8],(int)gfld->ipdtmpl[7]);
 		    ti_addm(istart,&itmp,istart,&ier);
             /*
-             *  Calculate diff of end time to start of forecast perioid 
+             *  Calculate diff of end time to start of forecast period
              *  to get accum time.
              */
             ti_mdif(iend,istart,iaccm,&ier);
