@@ -86,7 +86,8 @@ void ctb_g2rdlvl ( char *tbname, G2lvls *lvltbl, int *iret )
                             &id1, &id2, name, unit, abbrev, &scale);
 
             if (numAssigned != 6) {
-                log_add("Couldn't decode 6 fields from entry %d", n);
+                log_add("Couldn't decode 6 fields from entry %d, \"%s\"", n,
+                        buffer);
                 *iret = -2;
             }
             else {
