@@ -9,11 +9,10 @@
  *  Created on: May 7, 2018
  *      Author: Steven R. Emmerson
  */
-#include "Thread.h"
-
 #include "config.h"
 
 #include "log.h"
+#include "Thread.h"
 
 int
 mutex_init(
