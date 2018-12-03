@@ -778,7 +778,7 @@ up7_init()
 void
 up7_destroy(void)
 {
-    log_debug("up7_destroy() entered");
+    log_debug("Entered");
 
     if (isInitialized) {
         (void)umm_unsubscribe(feedtype, fmtpClntAddr);
@@ -790,6 +790,8 @@ up7_destroy(void)
         isDone = false;
         isInitialized = false;
     }
+
+    log_debug("Returning");
 }
 
 /**
@@ -849,7 +851,8 @@ subscribe_7_svc(
         McastSubReq* const restrict    request,
         struct svc_req* const restrict rqstp)
 {
-    log_debug("subscribe_7_svc() entered");
+    log_debug("Entered");
+
     static SubscriptionReply* reply;
     static SubscriptionReply  result;
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
@@ -930,6 +933,8 @@ subscribe_7_svc(
         isDone = true;
     }
 
+    log_debug("Returning");
+
     return reply;
 }
 
@@ -971,6 +976,8 @@ request_product_7_svc(
         isDone = true;
     }
 
+    log_debug("Returning");
+
     return NULL;                // don't reply
 }
 
@@ -989,6 +996,7 @@ request_backlog_7_svc(
     struct svc_req* const rqstp)
 {
     log_debug("Entered");
+
     struct SVCXPRT* const     xprt = rqstp->rq_xprt;
 
     if (clnt == NULL) {
@@ -1000,6 +1008,8 @@ request_backlog_7_svc(
         up7_destroyClient();
         isDone = true;
     }
+
+    log_debug("Returning");
 
     return NULL;                // don't reply
 }
@@ -1016,5 +1026,7 @@ test_connection_7_svc(
     struct svc_req* const rqstp)
 {
     log_debug("Entered");
+    log_debug("Returning");
+
     return NULL;                // don't reply
 }
