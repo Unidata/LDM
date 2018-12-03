@@ -136,7 +136,7 @@ static Up7Proxy up7Proxy;
 static void
 up7Proxy_lock()
 {
-    log_debug("up7Proxy_lock() entered");
+    log_debug("Entered");
     int status = pthread_mutex_lock(&up7Proxy.mutex);
     log_assert(status == 0);
 }
@@ -147,7 +147,7 @@ up7Proxy_lock()
 static void
 up7Proxy_unlock()
 {
-    log_debug("up7Proxy_unlock() entered");
+    log_debug("Entered");
     int status = pthread_mutex_unlock(&up7Proxy.mutex);
     log_assert(status == 0);
 }
@@ -509,7 +509,7 @@ backstop_destroy()
 static void*
 backstop_run(void* const arg)
 {
-    log_debug("backstop_run() entered");
+    log_debug("Entered");
 
     int status;
 
@@ -550,11 +550,11 @@ backstop_run(void* const arg)
         } // have peeked-at product-index from missed-but-not-requested queue
     }
 
-    log_debug("backstop_run() Calling downlet_taskCompleted(%d)", status);
+    log_debug("Calling downlet_taskCompleted(%d)", status);
     downlet_taskCompleted(status);
 
     log_flush_error(); // Just in case
-    log_debug("backstop_run() returning");
+    log_debug("Returning");
     log_free();        // Because end of thread
 
     return NULL;
@@ -1182,7 +1182,7 @@ backlogger_run(void* const arg)
 
     int status = downlet_requestBacklog(backlogger.before); // SIGTERM sensitive
 
-    log_debug("backlogger_run() Calling downlet_taskCompleted(%d)", status);
+    log_debug("Calling downlet_taskCompleted(%d)", status);
     downlet_taskCompleted(status);
 
     log_flush_error(); // Just in case
@@ -1409,7 +1409,7 @@ mcastRcvr_destroy()
 static void*
 mcastRcvr_run(void* const arg)
 {
-    log_debug("mcastRcvr_run() entered");
+    log_debug("Entered");
 
     mutex_lock(&mcastRcvr.mutex);
         log_assert(mcastRcvr.state == TASK_STARTED); // Blocks signals
@@ -1422,11 +1422,11 @@ mcastRcvr_run(void* const arg)
      * LDM7_SHUTDOWN  Shutdown requested
      */
 
-    log_debug("mcastRcvr_run() Calling downlet_taskCompleted(%d)", status);
+    log_debug("Calling downlet_taskCompleted(%d)", status);
     downlet_taskCompleted(status);
 
     log_flush_error(); // Just in case
-    log_debug("mcastRcvr_run() returning");
+    log_debug("Returning");
     log_free();        // Because end of thread
 
     return NULL;
@@ -1893,7 +1893,7 @@ downlet_initClient()
 static void
 downlet_destroyClient()
 {
-    log_debug("downlet_destroyClient() entered");
+    log_debug("Entered");
 
     up7Proxy_destroy(); // Won't close externally-created socket
     (void)close(downlet.sock);
@@ -2065,7 +2065,7 @@ downlet_run()
                     // Returns when a concurrent task terminates with an error
                     status = downlet_wait();
 
-                    log_debug("downlet_run(): Status changed");
+                    log_debug("Status changed");
                     (void)downlet_stopTasks();
                 } // Subtasks created
 
@@ -2228,7 +2228,7 @@ downlet_lastReceived(const prod_info* const restrict last)
 static Ldm7Status
 down7_wait(void)
 {
-    log_debug("down7_wait() entered");
+    log_debug("Entered");
 
     int status;
 
@@ -2242,7 +2242,7 @@ down7_wait(void)
         status = LDM7_SYSTEM;
     }
 
-    log_debug("down7_wait() returning");
+    log_debug("Returning");
     return status;
 }
 
@@ -2273,7 +2273,7 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
-    log_debug("down7_init() entered");
+    log_debug("Entered");
 
     int status;
 
@@ -2393,7 +2393,7 @@ down7_init(
         } // Downstream LDM7 mutex initialized
     } //  FMTP interface spec and local virtual-circuit endpoint are consistent
 
-    log_debug("down7_init() returning");
+    log_debug("Returning");
     return status;
 }
 
@@ -2406,7 +2406,7 @@ down7_init(
 void
 down7_destroy(void)
 {
-    log_debug("down7_destroy() entered");
+    log_debug("Entered");
 
     if (down7.state != DOWN7_UNINIT) {
         int status = mutex_lock(&down7.mutex);
@@ -2438,7 +2438,7 @@ down7_destroy(void)
         mutex_destroy(&down7.mutex);
     } // Module is not uninitialized
 
-    log_debug("down7_destroy() returning");
+    log_debug("Returning");
 }
 
 /**
@@ -2458,7 +2458,7 @@ down7_destroy(void)
 Ldm7Status
 down7_run()
 {
-    log_debug("down7_run() entered");
+    log_debug("Entered");
 
     int  status;
 
@@ -2515,7 +2515,7 @@ down7_run()
                 }
             mutex_unlock(&down7.mutex);
 
-            log_debug("down7_run() sleeping");
+            log_debug("Sleeping");
             sleep(interval); // Problem might be temporary
         } // One-time, downstream LDM7 execution loop
 
@@ -2525,7 +2525,7 @@ down7_run()
         mutex_unlock(&down7.mutex);
     } // Downstream LDM7 should be executed
 
-    log_debug("down7_run() returning");
+    log_debug("Returning");
 
     return status;
 }
@@ -2533,7 +2533,7 @@ down7_run()
 static int
 down7_signal()
 {
-    log_debug("down7_signal() entered");
+    log_debug("Entered");
 
     sigset_t prevMask;
     sigprocmask(SIG_BLOCK, &termMask, &prevMask);
@@ -2544,7 +2544,7 @@ down7_signal()
             : LDM7_SYSTEM;
     sigprocmask(SIG_SETMASK, &prevMask, NULL);
 
-    log_debug("down7_signal() returning");
+    log_debug("Returning");
 
     return status;
 }
@@ -2559,7 +2559,7 @@ down7_signal()
 void
 down7_halt()
 {
-    log_debug("down7_halt() entered");
+    log_debug("Entered");
 
     /*
      * A condition variable can't be used because the relevant pthread functions
@@ -2584,7 +2584,7 @@ down7_halt()
         }
     } // `down7_run()` is executing on a different thread
 
-    log_debug("down7_halt() returning");
+    log_debug("Returning");
 }
 
 /**
