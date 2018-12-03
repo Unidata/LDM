@@ -43,7 +43,7 @@
 #define DEFAULT_KEY_PATH    getQueuePath()
 #define KEY_INDEX   1
 
-const char* VALID_STRING = __FILE__;
+static const char* const VALID_STRING = __FILE__;
 
 /**
  * A product-specification as implemented in an entry.
