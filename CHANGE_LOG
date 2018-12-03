@@ -1,3 +1,36 @@
+6.13.7.85
+    Logging:
+        - Make logging macros not cancellation points
+        - Replace line number with function name in simple logging
+
+    uldb.c:
+        - Make object in validity-test static
+
+    down7.c:
+        - Error-return if poll() error-returns only if errno != EINTR to
+          accomodate Linux's non-standard signaling when seteuid() is called
+        - Don't error-return if pthread_kill(SIGTERM) fails with ESRCH because
+          completed threads can't be signaled
+        - Improve concurrency:
+            - Add task states
+            - Improve inter-thread signaling
+        - Misc:
+            - Block SIGCONT & SIGALRM
+            - Add debug statements
+            - Add assertions
+
+    ldmd.c:
+        - Add down7_destroy() to cleanup()
+        - Replace log_*_q() with log*()
+        - Log all caught signals
+        - Catch all signals
+
+    up7_down7_test:
+        - Add down7_destroy() to cleanup()
+        - Replace log_*_q() with log*()
+        - Log all caught signals
+        - Catch all signals
+
 6.13.7.84	2018-11-19T09:54:34-0700
     Port priv.h to C++
 
