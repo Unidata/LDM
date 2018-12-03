@@ -15,6 +15,7 @@
 #include "config.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -257,10 +258,15 @@ void log_clear(void);
 /**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
+ *
+ * This is not a thread-cancellation point.
  */
 #define log_free() do {\
+    int prevState; \
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState); \
     LOG_LOC_DECL(loc);\
     log_free_located(&loc);\
+    (void)pthread_setcancelstate(prevState, &prevState); \
 } while (false)
 
 /**
@@ -514,14 +520,19 @@ bool log_is_level_enabled(
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-queue for the current thread.
  *
+ * This is not a thread-cancellation point.
+ *
  * @param[in] level  The level at which to log the messages. One of
  *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
  *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
  */
 #define log_flush(level) do { \
+    int prevState; \
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState); \
     LOG_LOC_DECL(loc); \
     logl_flush(&loc, level); \
+    (void)pthread_setcancelstate(prevState, &prevState); \
 } while (false)
 
 /**
@@ -595,11 +606,16 @@ bool log_is_level_enabled(
      * Tests an assertion. Logs an error-message and then aborts the process
      * if the assertion is false.
      *
+     * This is not a thread cancellation point.
+     *
      * @param[in] expr  The assertion to be tested.
      */
     #define log_assert(expr) do { \
+        int prevState; \
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState); \
         if (!(expr)) \
             log_abort("Assertion failure: %s", #expr); \
+        (void)pthread_setcancelstate(prevState, &prevState); \
     } while (false)
 #endif
 
