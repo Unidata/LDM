@@ -268,18 +268,15 @@ static void stream_log(
                 // Process
                 (void)fprintf(dest->stream, "%s[%d] ", ident, pid);
 
-                #define LEVEL_OFFSET 57
-                #define MIN0(x)    ((x) >= 0 ? (x) : 0)
+                // Location
+                #define MIN0(x) ((x) >= 0 ? (x) : 0)
+                int     nbytes = snprintf(NULL, 0, "%s:%s()", basename,
+                        loc->func);
+                (void)fprintf(dest->stream, "%*s%s:%s() ", MIN0(32-nbytes),
+                        "", basename, loc->func);
 
                 // Error level
                 (void)fprintf(dest->stream, "%-5s ", levelId);
-
-                // File
-                int nbytes = fprintf(dest->stream, "%s:", basename);
-
-                // Function
-                (void)fprintf(dest->stream, "%*s() ", MIN0(32-nbytes),
-                        loc->func);
 
                 // Message
                 (void)fprintf(dest->stream, "%s\n", msg);
