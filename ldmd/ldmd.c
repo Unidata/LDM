@@ -469,7 +469,7 @@ static int create_ldm_tcp_svc(
     /*
      * Get a TCP socket.
      */
-    log_debug("create_ldm_tcp_svc(): Getting TCP socket");
+    log_debug("Getting TCP socket");
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
         error = errno;
@@ -487,7 +487,7 @@ static int create_ldm_tcp_svc(
          * We get this if an upstream data source hasn't tried to
          * write on the other end and we are in FIN_WAIT_2
          */
-        log_debug("create_ldm_tcp_svc(): Eliminating EADDRINUSE problem.");
+        log_debug("Eliminating EADDRINUSE problem.");
         {
             int on = 1;
 
@@ -504,9 +504,9 @@ static int create_ldm_tcp_svc(
          * If privilege available, set it so we can bind to the port for LDM
          * services.  Also needed for the pmap_set() call.
          */
-        log_debug("create_ldm_tcp_svc(): Getting root privs");
+        log_debug("Getting root privs");
         rootpriv(); // Become root
-            log_debug("create_ldm_tcp_svc(): Binding socket");
+            log_debug("Binding socket");
             if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;
 
@@ -530,7 +530,7 @@ static int create_ldm_tcp_svc(
                 /*
                  * Get the local address associated with the bound socket.
                  */
-                log_debug("create_ldm_tcp_svc(): Calling getsockname()");
+                log_debug("Calling getsockname()");
                 if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
                     error = errno;
 
@@ -542,7 +542,7 @@ static int create_ldm_tcp_svc(
                     log_notice_q("Using local address %s:%u",
                             inet_ntoa(addr.sin_addr), (unsigned) port);
 
-                    log_debug("create_ldm_tcp_svc(): Calling listen()");
+                    log_debug("Calling listen()");
                     if (listen(sock, 32) != 0) {
                         error = errno;
 
@@ -556,9 +556,9 @@ static int create_ldm_tcp_svc(
                          * FreeBSD 4.7-STABLE system, a pmap_set() call takes
                          * one minute even if the portmapper isn't running.
                          */
-                        log_debug("create_ldm_tcp_svc(): Checking portmapper");
+                        log_debug("Checking portmapper");
                         if (local_portmapper_running()) {
-                            log_debug("create_ldm_tcp_svc(): Registering");
+                            log_debug("Registering");
 
                             if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
                                 log_add("Can't register TCP service %lu on "
@@ -583,7 +583,7 @@ static int create_ldm_tcp_svc(
         /*
          * Done with the need for privilege.
          */
-        log_debug("create_ldm_tcp_svc(): Releasing root privs");
+        log_debug("Releasing root privs");
         unpriv(); // Become LDM user
 
         if (error)
@@ -1015,7 +1015,7 @@ int main(
             /*
              * Create a service portal.
              */
-            log_debug("main(): Creating service portal");
+            log_debug("Creating service portal");
             if (create_ldm_tcp_svc(&sock, ldmIpAddr, ldmPort) != ENOERR) {
                 /* error reports are emitted from create_ldm_tcp_svc() */
                 exit(1);
@@ -1026,7 +1026,7 @@ int main(
         /*
          * Verify that the product-queue can be open for writing.
          */
-        log_debug("main(): Opening product-queue");
+        log_debug("Opening product-queue");
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
                 log_error_q("The product-queue \"%s\" is inconsistent", pqfname);
@@ -1042,7 +1042,7 @@ int main(
         /*
          * Create the sharable database of upstream LDM metadata.
          */
-        log_debug("main(): Creating shared upstream LDM database");
+        log_debug("Creating shared upstream LDM database");
         if ((status = uldb_delete(NULL))) {
             if (ULDB_EXIST == status) {
                 log_clear();
@@ -1061,7 +1061,7 @@ int main(
         /*
          * Execute appropriate entries in the configuration file.
          */
-        log_debug("main(): Executing configuration-file");
+        log_debug("Executing configuration-file");
         if (lcf_execute() != 0) {
             log_flush_error();
             exit(1);
@@ -1071,7 +1071,7 @@ int main(
             /*
              * Serve
              */
-            log_debug("main(): Serving socket");
+            log_debug("Serving socket");
             sock_svc(sock);
         }
         else {
