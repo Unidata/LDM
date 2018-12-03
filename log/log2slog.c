@@ -260,25 +260,29 @@ static void stream_log(
                         newline ? newline - msg : strlen(msg);
 
                 // Timestamp
-                int nbytes = fprintf(dest->stream,
+                (void)fprintf(dest->stream,
                         "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
                         year, month, tm.tm_mday, tm.tm_hour,
                         tm.tm_min, tm.tm_sec, microseconds);
 
                 // Process
-                nbytes += fprintf(dest->stream, "%s[%d] ", ident, pid);
+                (void)fprintf(dest->stream, "%s[%d] ", ident, pid);
 
-                #define LOC_OFFSET 57
+                #define LEVEL_OFFSET 57
                 #define MIN0(x)    ((x) >= 0 ? (x) : 0)
 
-                // Location
-                nbytes += fprintf(dest->stream, "%*s%s:%s() ",
-                        MIN0(LOC_OFFSET-nbytes), "", basename, loc->func);
+                // Error level
+                (void)fprintf(dest->stream, "%-5s ", levelId);
 
-                // Error level and message
-                nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
-                        MIN0(LOC_OFFSET+34-nbytes), "", levelId,
-                        (int)msglen, msg);
+                // File
+                int nbytes = fprintf(dest->stream, "%s:", basename);
+
+                // Function
+                (void)fprintf(dest->stream, "%*s() ", MIN0(32-nbytes),
+                        loc->func);
+
+                // Message
+                (void)fprintf(dest->stream, "%s\n", msg);
 
                 if (newline) {
                     msg = newline + 1;
