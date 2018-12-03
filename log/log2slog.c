@@ -272,12 +272,12 @@ static void stream_log(
                 #define MIN0(x)    ((x) >= 0 ? (x) : 0)
 
                 // Location
-                nbytes += fprintf(dest->stream, "%*s%s:%d ",
-                        MIN0(LOC_OFFSET-nbytes), "", basename, loc->line);
+                nbytes += fprintf(dest->stream, "%*s%s:%s() ",
+                        MIN0(LOC_OFFSET-nbytes), "", basename, loc->func);
 
                 // Error level and message
                 nbytes += fprintf(dest->stream, "%*s%-5s %.*s\n",
-                        MIN0(LOC_OFFSET+23-nbytes), "", levelId,
+                        MIN0(LOC_OFFSET+34-nbytes), "", levelId,
                         (int)msglen, msg);
 
                 if (newline) {
