@@ -850,7 +850,7 @@ subscribe_7_svc(
             else {
                 if (!up7_createClientTransport(xprt)) {
                     log_add("Couldn't create client-side RPC transport to "
-                            " downstream host %s", hostId);
+                            "downstream host %s", hostId);
                     log_flush_error();
                 }
                 else {
