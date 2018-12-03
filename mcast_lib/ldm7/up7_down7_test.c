@@ -499,20 +499,22 @@ myUp7_run(
 }
 
 static void
-sender_lock(Sender* const sender)
+sndr_lock(Sender* const sender)
 {
     CU_ASSERT_EQUAL_FATAL(pthread_mutex_lock(&sender->mutex), 0);
 }
 
 static void
-sender_unlock(Sender* const sender)
+sndr_unlock(Sender* const sender)
 {
     CU_ASSERT_EQUAL_FATAL(pthread_mutex_unlock(&sender->mutex), 0);
 }
 
 static void
-terminateMcastSender(void)
+killMcastSndr(void)
 {
+    log_debug("Entered");
+
     pid_t pid = umm_getMldmSenderPid();
 
     if (pid) {
@@ -533,6 +535,8 @@ terminateMcastSender(void)
             CU_ASSERT_EQUAL(umm_terminated(wpid), 0);
         }
     }
+
+    log_debug("Returning");
 }
 
 /**
@@ -543,7 +547,7 @@ terminateMcastSender(void)
  * @retval     0       Success
  */
 static int
-sender_run(
+sndr_run(
         void* const restrict  arg,
         void** const restrict result)
 {
@@ -555,18 +559,18 @@ sender_run(
     fds.fd = servSock;
     fds.events = POLLIN;
 
-    sender_lock(sender);
+    sndr_lock(sender);
     sender->executing = true;
     CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
-    sender_unlock(sender);
+    sndr_unlock(sender);
 
     for (;;) {
-        sender_lock(sender);
+        sndr_lock(sender);
         if (sender->done) {
-            sender_unlock(sender);
+            sndr_unlock(sender);
             break;
         }
-        sender_unlock(sender);
+        sndr_unlock(sender);
 
         /* NULL-s => not interested in receiver's address */
         int sock = accept(servSock, NULL, NULL);
@@ -576,16 +580,16 @@ sender_run(
             break;
         }
         else {
-            sender_lock(sender);
+            sndr_lock(sender);
 
             if (sender->done) {
-                sender_unlock(sender);
+                sndr_unlock(sender);
             }
             else {
                 // Initializes `sender->myUp7.xprt`
                 sender->myUp7 = myUp7_new(sock);
 
-                sender_unlock(sender);
+                sndr_unlock(sender);
 
                 myUp7_run(sender->myUp7);
                 myUp7_free(sender->myUp7);
@@ -606,26 +610,30 @@ sender_run(
  * @param[in] thread  Thread on which sender is running
  */
 static int
-sender_halt(
+sndr_halt(
         void* const     arg,
         const pthread_t thread)
 {
+    log_debug("Entered");
+
     Sender* const sender = (Sender*)arg;
 
     log_debug("Terminating multicast LDM sender");
-    terminateMcastSender();
+    killMcastSndr();
 
-    sender_lock(sender);
+    sndr_lock(sender);
         sender->done = true;
 
         CU_ASSERT_EQUAL_FATAL(pthread_kill(thread, SIGTERM), 0);
-    sender_unlock(sender);
+    sndr_unlock(sender);
+
+    log_debug("Returning");
 
     return 0;
 }
 
 static int
-sender_initSock(
+sndr_initSock(
         int* const sock)
 {
     int status;
@@ -662,7 +670,7 @@ sender_initSock(
  * @return            Formatted address of the sender.
  */
 static const char*
-sender_getAddr(
+sndr_getAddr(
         Sender* const sender)
 {
     struct sockaddr_in addr;
@@ -680,7 +688,7 @@ sender_getAddr(
  * @return            Port number of the sender in host byte-order.
  */
 static unsigned short
-sender_getPort(
+sndr_getPort(
         Sender* const sender)
 {
     struct sockaddr_in addr;
@@ -692,7 +700,7 @@ sender_getPort(
 }
 
 static void
-sender_insertProducts(void)
+sndr_insertProducts(void)
 {
     int             status;
     product         prod;
@@ -750,7 +758,7 @@ sender_insertProducts(void)
  * @param[in]     feed    Feed to be sent
  */
 static void
-sender_start(
+sndr_start(
         Sender* const   sender,
         const feedtypet feed)
 {
@@ -801,7 +809,7 @@ sender_start(
         CU_FAIL_FATAL("");
     }
 
-    CU_ASSERT_EQUAL_FATAL(sender_initSock(&sender->sock), 0);
+    CU_ASSERT_EQUAL_FATAL(sndr_initSock(&sender->sock), 0);
 
     char* upAddr = ipv4Sock_getLocalString(sender->sock);
     char* mcastInfoStr = smi_toString(mcastInfo);
@@ -820,14 +828,14 @@ sender_start(
     sender->myUp7 = NULL;
 
     // Starts the sender on a new thread
-    sender->future = executor_submit(executor, sender, sender_run, sender_halt);
+    sender->future = executor_submit(executor, sender, sndr_run, sndr_halt);
     CU_ASSERT_PTR_NOT_NULL_FATAL(sender->future);
 
-    sender_lock(sender);
+    sndr_lock(sender);
     while (!sender->executing)
         CU_ASSERT_EQUAL_FATAL(pthread_cond_wait(&sender->cond, &sender->mutex),
                 0);
-    sender_unlock(sender);
+    sndr_unlock(sender);
 
     cidrAddr_free(fmtpSubnet);
     smi_free(mcastInfo);
@@ -839,8 +847,10 @@ sender_start(
  * @param[in,out]  Sender to be stopped and destroyed
  */
 static void
-sender_stop(Sender* const sender)
+sndr_stop(Sender* const sender)
 {
+    log_debug("Entered");
+
     CU_ASSERT_EQUAL(future_cancel(sender->future), 0);
     CU_ASSERT_EQUAL(future_getAndFree(sender->future, NULL), ECANCELED);
 
@@ -851,6 +861,8 @@ sender_stop(Sender* const sender)
 
     CU_ASSERT_EQUAL(pthread_cond_destroy(&sender->cond), 0);
     CU_ASSERT_EQUAL(pthread_mutex_destroy(&sender->mutex), 0);
+
+    log_debug("Returning");
 }
 
 typedef struct {
@@ -869,7 +881,7 @@ thread_blockSigTerm()
 }
 
 static bool
-requester_isDone(Requester* const requester)
+rqstr_isDone(Requester* const requester)
 {
     bool done;
 
@@ -888,7 +900,7 @@ requester_isDone(Requester* const requester)
 }
 
 static void
-requester_subDecide(
+rqstr_subDecide(
         RequestArg* const reqArg,
         const signaturet  sig)
 {
@@ -905,7 +917,7 @@ requester_subDecide(
 }
 
 static int
-requester_decide(
+rqstr_decide(
         const prod_info* const restrict info,
         const void* const restrict      data,
         void* const restrict            xprod,
@@ -931,7 +943,7 @@ requester_decide(
         reqArg->delete = false;
     }
     else {
-        requester_subDecide(reqArg, info->signature);
+        rqstr_subDecide(reqArg, info->signature);
         maxProdIndex = prodIndex;
         maxProdIndexSet = true;
     }
@@ -953,7 +965,7 @@ requester_decide(
  * @retval    PQ_SYSTEM    System error. Error message logged.
  */
 static inline int // inline because only called in one place
-requester_deleteAndRequest(const signaturet sig)
+rqstr_delAndReq(const signaturet sig)
 {
     FmtpProdIndex  prodIndex;
     (void)memcpy(&prodIndex, sig + sizeof(signaturet) - sizeof(FmtpProdIndex),
@@ -991,16 +1003,16 @@ requester_deleteAndRequest(const signaturet sig)
  * @param[in,out] arg   Pointer to requester object
  */
 static void
-requester_run(Requester* const requester)
+rqstr_run(Requester* const requester)
 {
-    log_debug("requester_run(): Entered");
+    log_debug("rqstr_run(): Entered");
 
     thread_blockSigTerm();
 
-    while (!requester_isDone(requester)) {
+    while (!rqstr_isDone(requester)) {
         RequestArg reqArg;
         int        status = pq_sequence(receiverPq, TV_GT, PQ_CLASS_ALL,
-                requester_decide, &reqArg);
+                rqstr_decide, &reqArg);
 
         if (status == PQUEUE_END) {
             static int unblockSigs[] = {SIGTERM};
@@ -1018,7 +1030,7 @@ requester_run(Requester* const requester)
                  * product's region is locked, deleting it attempts to lock it
                  * again, and deadlock results.
                  */
-                CU_ASSERT_EQUAL_FATAL(requester_deleteAndRequest(reqArg.sig),
+                CU_ASSERT_EQUAL_FATAL(rqstr_delAndReq(reqArg.sig),
                         0);
             }
         }
@@ -1026,11 +1038,11 @@ requester_run(Requester* const requester)
 
     // Because end-of-thread
     log_flush_error();
-    log_debug("requester_run(): Returning");
+    log_debug("rqstr_run(): Returning");
 }
 
 static void
-requester_halt(
+rqstr_halt(
         Requester* const requester,
         const pthread_t  thread)
 {
@@ -1047,7 +1059,7 @@ requester_halt(
  * upstream LDM.
  */
 static void
-requester_init(Requester* const requester)
+rqstr_init(Requester* const requester)
 {
     int status = mutex_init(&requester->mutex, PTHREAD_MUTEX_ERRORCHECK, true);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -1056,7 +1068,7 @@ requester_init(Requester* const requester)
 }
 
 static void
-requester_destroy(Requester* const requester)
+rqstr_destroy(Requester* const requester)
 {
     int status = mutex_destroy(&requester->mutex);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -1072,7 +1084,7 @@ requester_destroy(Requester* const requester)
  * @param[in]     feedtype  The feedtype to which to subscribe
  */
 static void
-receiver_init(
+rcvr_init(
         Receiver* const restrict   receiver,
         const char* const restrict ldmSrvrId,
         const unsigned short       port,
@@ -1112,7 +1124,7 @@ receiver_init(
  * Destroys a receiver.
  */
 static void
-receiver_destroy(Receiver* const recvr)
+rcvr_destroy(Receiver* const recvr)
 {
     down7_destroy();
 
@@ -1124,13 +1136,13 @@ receiver_destroy(Receiver* const recvr)
 }
 
 static int
-receiver_runRequester(
+rcvr_runRequester(
         void* const restrict  arg,
         void** const restrict result)
 {
     Receiver* receiver = (Receiver*)arg;
 
-    requester_run(&receiver->requester);
+    rqstr_run(&receiver->requester);
 
     log_flush_error();
 
@@ -1138,19 +1150,19 @@ receiver_runRequester(
 }
 
 static int
-receiver_haltRequester(
+rcvr_haltRequester(
         void* const     arg,
         const pthread_t thread)
 {
     Receiver* receiver = (Receiver*)arg;
 
-    requester_halt(&receiver->requester, thread);
+    rqstr_halt(&receiver->requester, thread);
 
     return 0;
 }
 
 static int
-receiver_runDown7(
+rcvr_runDown7(
         void* const restrict  arg,
         void** const restrict result)
 {
@@ -1162,7 +1174,7 @@ receiver_runDown7(
 }
 
 static int
-receiver_haltDown7(
+rcvr_haltDown7(
         void* const     arg,
         const pthread_t thread)
 {
@@ -1183,10 +1195,10 @@ receiver_haltDown7(
  * @param[in,out] recvr     Receiver object
  */
 static void
-receiver_start(
+rcvr_start(
         Receiver* const restrict recvr)
 {
-    requester_init(&recvr->requester);
+    rqstr_init(&recvr->requester);
 
     /**
      * Starts a data-product requester on a separate thread to test the
@@ -1194,11 +1206,11 @@ receiver_start(
      * downstream product-queue and then requested from the upstream LDM.
      */
     recvr->requesterFuture = executor_submit(executor, recvr,
-            receiver_runRequester, receiver_haltRequester);
+            rcvr_runRequester, rcvr_haltRequester);
     CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->requesterFuture );
 
     recvr->down7Future = executor_submit(executor, recvr,
-            receiver_runDown7, receiver_haltDown7);
+            rcvr_runDown7, rcvr_haltDown7);
     CU_ASSERT_PTR_NOT_NULL_FATAL(recvr->down7Future);
 }
 
@@ -1206,7 +1218,7 @@ receiver_start(
  * Stops the receiver. Blocks until the receiver's thread terminates.
  */
 static void
-receiver_stop(Receiver* const recvr)
+rcvr_stop(Receiver* const recvr)
 {
     CU_ASSERT_EQUAL(future_cancel(recvr->down7Future), 0);
     CU_ASSERT_EQUAL(future_getAndFree(recvr->down7Future, NULL), ECANCELED);
@@ -1214,20 +1226,20 @@ receiver_stop(Receiver* const recvr)
     CU_ASSERT_EQUAL(future_cancel(recvr->requesterFuture), 0);
     CU_ASSERT_EQUAL(future_getAndFree(recvr->requesterFuture, NULL), ECANCELED);
 
-    requester_destroy(&recvr->requester);
+    rqstr_destroy(&recvr->requester);
 }
 
 /**
  * @retval 0  Success
  */
 static uint64_t
-receiver_getNumProds(
+rcvr_getNumProds(
         Receiver* const receiver)
 {
     return down7_getNumProds();
 }
 
-static long receiver_getPqeCount(
+static long rcvr_getPqeCount(
         Receiver* const receiver)
 {
     return down7_getPqeCount();
@@ -1239,10 +1251,10 @@ test_up7(
 {
     Sender   sender;
 
-    sender_start(&sender, ANY);
+    sndr_start(&sender, ANY);
     log_flush_error();
 
-    sender_stop(&sender);
+    sndr_stop(&sender);
     log_clear();
 
     umm_destroy(true);
@@ -1256,13 +1268,13 @@ test_down7(
 #if 1
     Receiver receiver;
 
-    receiver_init(&receiver, LOCAL_HOST, UP7_PORT, ANY);
-    receiver_start(&receiver);
+    rcvr_init(&receiver, LOCAL_HOST, UP7_PORT, ANY);
+    rcvr_start(&receiver);
 
     sleep(1);
 
-    receiver_stop(&receiver);
-    receiver_destroy(&receiver);
+    rcvr_stop(&receiver);
+    rcvr_destroy(&receiver);
 #else
     CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(DOWN7_PQ_PATHNAME), 0)
     CU_ASSERT_EQUAL_FATAL(
@@ -1293,20 +1305,20 @@ test_bad_subscription(
     Sender   sender;
     Receiver receiver;
 
-    sender_start(&sender, NEXRAD2);
+    sndr_start(&sender, NEXRAD2);
     log_flush_error();
 
-    receiver_init(&receiver, sender_getAddr(&sender), sender_getPort(&sender),
+    rcvr_init(&receiver, sndr_getAddr(&sender), sndr_getPort(&sender),
             NGRID);
-    receiver_start(&receiver);
+    rcvr_start(&receiver);
 
     sleep(1);
 
-    receiver_stop(&receiver);
-    receiver_destroy(&receiver);
+    rcvr_stop(&receiver);
+    rcvr_destroy(&receiver);
 
     log_debug("Terminating sender");
-    sender_stop(&sender);
+    sndr_stop(&sender);
     log_clear();
 
     umm_destroy(true);
@@ -1349,38 +1361,38 @@ test_up7_down7(
     ErrorObj* errObj = lcf_addAllow(ANY, hostSet, ".*", NULL);
     CU_ASSERT_PTR_NULL_FATAL(errObj);
 
-    sender_start(&sender, ANY); // Blocks until sender is ready
+    sndr_start(&sender, ANY); // Blocks until sender is ready
     log_flush_error();
 
-    receiver_init(&receiver, sender_getAddr(&sender), sender_getPort(&sender),
+    rcvr_init(&receiver, sndr_getAddr(&sender), sndr_getPort(&sender),
             ANY);
     /* Starts a receiver on a new thread */
-    receiver_start(&receiver);
+    rcvr_start(&receiver);
     log_flush_error();
 
     CU_ASSERT_EQUAL(sleep(2), 0);
 
-    sender_insertProducts();
+    sndr_insertProducts();
 
     (void)sleep(2);
     log_notice("%lu sender product-queue insertions",
             (unsigned long)NUM_PRODS);
-    uint64_t numDownInserts = receiver_getNumProds(&receiver);
+    uint64_t numDownInserts = rcvr_getNumProds(&receiver);
     log_notice("%lu product deletions", (unsigned long)numDeletedProds);
     log_notice("%lu receiver product-queue insertions",
             (unsigned long)numDownInserts);
     log_notice("%ld outstanding product reservations",
-            receiver_getPqeCount(&receiver));
+            rcvr_getPqeCount(&receiver));
     CU_ASSERT_EQUAL(numDownInserts - numDeletedProds, NUM_PRODS);
 
     CU_ASSERT_EQUAL(sleep(2), 0);
 
     log_debug("Stopping receiver");
-    receiver_stop(&receiver);
-    receiver_destroy(&receiver);
+    rcvr_stop(&receiver);
+    rcvr_destroy(&receiver);
 
     log_debug("Stopping sender");
-    sender_stop(&sender);
+    sndr_stop(&sender);
 
     lcf_destroy(true);
 
@@ -1400,7 +1412,7 @@ int main(
     int status = 1; // Failure
 
     (void)log_init(argv[0]);
-    log_set_level(LOG_LEVEL_NOTICE);
+    log_set_level(LOG_LEVEL_DEBUG);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
