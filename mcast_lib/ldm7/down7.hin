@@ -15,7 +15,7 @@
 #include "fmtp.h"
 #include "InetSockAddr.h"
 #include "ldm.h"
-#include "mldm_receiver_memory.h"
+#include "MldmRcvrMemory.h"
 #include "pq.h"
 
 #include <inetutil.h>
