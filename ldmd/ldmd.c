@@ -119,7 +119,8 @@ static pid_t reap(
             cps_remove(wpid);       // Upstream LDM processes
             lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)umm_remove(wpid); // Multicast LDM senders
+            if (umm_remove(wpid) == LDM7_NOENT) // Multicast LDM senders
+                log_clear();
 #endif
 
             log_notice_q(
@@ -165,7 +166,8 @@ static pid_t reap(
             cps_remove(wpid);       // Upstream LDM processes
             lcf_freeExec(wpid);     // EXEC processes
 #if WANT_MULTICAST
-            (void)umm_remove(wpid); // Multicast LDM senders
+            if (umm_remove(wpid) == LDM7_NOENT) // Multicast LDM senders
+                log_clear();
 #endif
             int         exitStatus = WEXITSTATUS(status);
             log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;

@@ -63,12 +63,14 @@ static void test_locking(void)
 
 static void test_msm_put(void)
 {
+    CU_ASSERT_EQUAL(msm_lock(true), 0);
     CU_ASSERT_EQUAL(msm_put(IDS|DDPLUS, 1, 38800, 48800), 0);
     CU_ASSERT_EQUAL(msm_put(PPS, 1, 38800, 48800), LDM7_DUP);
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 1, 38800, 48800), LDM7_DUP);
     log_clear();
     CU_ASSERT_EQUAL(msm_put(NEXRAD3, 2, 38801, 48801), 0);
     log_clear();
+    CU_ASSERT_EQUAL(msm_unlock(), 0);
 }
 
 static void test_msm_get(void)
@@ -77,6 +79,7 @@ static void test_msm_get(void)
     unsigned short port;
     in_port_t      mldmSrvrPort;
 
+    CU_ASSERT_EQUAL(msm_lock(false), 0);
     CU_ASSERT_EQUAL(msm_get(NIMAGE, &pid, &port, &mldmSrvrPort), LDM7_NOENT);
     CU_ASSERT_EQUAL(msm_get(IDS, &pid, &port, &mldmSrvrPort), 0);
     CU_ASSERT_EQUAL(pid, 1);
@@ -85,6 +88,7 @@ static void test_msm_get(void)
     CU_ASSERT_EQUAL(pid, 2);
     CU_ASSERT_EQUAL(port, 38801);
     log_clear();
+    CU_ASSERT_EQUAL(msm_unlock(), 0);
 }
 
 static void test_msm_removePid(void)
@@ -93,10 +97,12 @@ static void test_msm_removePid(void)
     unsigned short port;
     in_port_t      mldmSrvrPort;
 
+    CU_ASSERT_EQUAL(msm_lock(true), 0);
     CU_ASSERT_EQUAL(msm_remove(5), LDM7_NOENT);
     CU_ASSERT_EQUAL(msm_remove(1), 0);
     CU_ASSERT_EQUAL(msm_get(IDS, &pid, &port, &mldmSrvrPort), LDM7_NOENT);
     log_clear();
+    CU_ASSERT_EQUAL(msm_unlock(), 0);
 }
 
 int main(

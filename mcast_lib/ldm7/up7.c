@@ -65,6 +65,41 @@
 #endif
 
 /******************************************************************************
+ * Subscription Reply:
+ ******************************************************************************/
+
+/**
+ * Returns the string representation of subscription reply.
+ *
+ * @param[in] reply  Subscription reply
+ * @retval    NULL   System failure
+ * @return           String representation of `reply`. Caller should free when
+ *                   it's no longer needed.
+ */
+static char*
+subRep_toString(const SubscriptionReply* const reply)
+{
+    char* str;
+
+    if (reply->status) {
+        str = ldm_format(128, "status=%d", reply->status);
+    }
+    else {
+        char* const miStr = mi_format(&reply->SubscriptionReply_u.info.mcastInfo);
+        char* const cidrStr =
+                cidrAddr_format(&reply->SubscriptionReply_u.info.fmtpAddr);
+
+        str = ldm_format(128, "{status=LDM7_OK, mcastSubInfo={mcastInfo=%s, "
+                "cidrAddr=%s}}", miStr, cidrStr);
+
+        free(cidrStr);
+        free(miStr);
+    }
+
+    return str;
+};
+
+/******************************************************************************
  * Upstream LDM7:
  ******************************************************************************/
 
@@ -878,7 +913,14 @@ subscribe_7_svc(
         } // Successful subscription: `result->status == LDM7_OK`
     } // `result` is set.
 
-    if (reply == NULL) {
+    if (reply) {
+        if (log_is_enabled_debug) {
+            char* const subRepStr = subRep_toString(reply);
+            log_debug("Replying with %s", subRepStr);
+            free(subRepStr);
+        }
+    }
+    else {
         /*
          * A NULL reply will cause the RPC dispatch routine to not reply. This
          * is good because the following `svcerr_systemerr()` replies instead.

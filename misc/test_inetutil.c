@@ -38,8 +38,6 @@ test_getDottedDecimal(void)
     int status;
     const char* const localDottedDecimal = "127.0.0.1";
     const char* const localName = "localhost";
-    const char* const zeroName = "zero.unidata.ucar.edu";
-    const char* const zeroDottedDecimal = "128.117.140.56";
     char              buf[INET_ADDRSTRLEN];
 
     status = getDottedDecimal(localDottedDecimal, buf);
@@ -49,14 +47,6 @@ test_getDottedDecimal(void)
     status = getDottedDecimal(localName, buf);
     CU_ASSERT_EQUAL_FATAL(status, 0);
     CU_ASSERT_STRING_EQUAL(buf, localDottedDecimal);
-
-    status = getDottedDecimal(zeroName, buf);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(buf, zeroDottedDecimal);
-
-    status = getDottedDecimal(zeroDottedDecimal, buf);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_STRING_EQUAL(buf, zeroDottedDecimal);
 }
 
 

@@ -1,4 +1,4 @@
-6.13.7.85	2018-12-03T09:08:04-0700
+6.13.7.86
     Logging:
         - Make logging macros not cancellation points
         - Replace line number with function name in simple logging
@@ -30,6 +30,26 @@
         - Replace log_*_q() with log*()
         - Log all caught signals
         - Catch all signals
+
+6.13.7.85	2018-11-21T14:33:29-0700
+    PerProdSendingNotifier:
+        Rename to SendingNotifier
+
+    FmtpClntAddrs:
+        Add debug message and improve exception message
+
+    ldmd:
+        Clear log messages if umm_remove() returns "no entry"
+
+    mldm_sender_map:
+        Improve and correct
+
+    up7:
+        Add debug messages
+
+    UpMcastMgr:
+        Improve
+>>>>>>> branch 'master' of git@github.com:Unidata/LDM.git
 
 6.13.7.84	2018-11-19T09:54:34-0700
     Port priv.h to C++

@@ -15,8 +15,8 @@
 #include "fmtpRecvv3.h"
 #include "fmtpSendv3.h"
 #include "fmtp.h"
-#include "PerProdSendingNotifier.h"
 #include "priv.h"
+#include "SendingNotifier.h"
 
 #include <errno.h>
 #include <exception>
@@ -245,7 +245,7 @@ struct fmtp_sender {
      * The per-product notifier passed to the FMTP sender. Pointer kept so
      * that the object can be deleted when it's no longer needed.
      */
-    PerProdSendingNotifier* notifier;
+    SendingNotifier* notifier;
 };
 
 /**
@@ -305,8 +305,8 @@ fmtpSender_init(
     int status;
 
     try {
-        PerProdSendingNotifier* notifier =
-                new PerProdSendingNotifier(doneWithProd,
+        SendingNotifier* notifier =
+                new SendingNotifier(doneWithProd,
                         *static_cast<Authorizer*>(authorizer));
 
         try {

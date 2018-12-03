@@ -14,14 +14,14 @@
 #include "fmtp.h"
 #include "Internet.h"
 #include "log.h"
-#include "PerProdSendingNotifier.h"
+#include "SendingNotifier.h"
 
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
 #include <sys/socket.h>
 
-PerProdSendingNotifier::PerProdSendingNotifier(
+SendingNotifier::SendingNotifier(
         void      (*eop_func)(FmtpProdIndex iProd),
         Authorizer& authorizer)
     : eop_func(eop_func)
@@ -36,23 +36,25 @@ PerProdSendingNotifier::PerProdSendingNotifier(
  *
  * @param[in,out] prodIndex             Index of the product.
  */
-void PerProdSendingNotifier::notify_of_eop(
+void SendingNotifier::notify_of_eop(
         const FmtpProdIndex prodIndex)
 {
     eop_func(prodIndex);
 }
 
 /**
- * Requests the application to verify an incoming connection request,
+ * Requests the application to verify an incoming connection request
  * and to decide whether to accept or to reject the connection. This
  * method is thread-safe.
- * @return    true: receiver accepted; false: receiver rejected.
+ *
+ * @retval true   Client is acceptable
+ * @retval false  Client is not acceptable
  */
-bool PerProdSendingNotifier::verify_new_recv(int newsock)
+bool SendingNotifier::verify_new_recv(int newsock)
 {
     struct sockaddr sockaddr;
     socklen_t       len = sizeof(sockaddr);
-    if (::getsockname(newsock, &sockaddr, &len)) {
+    if (::getpeername(newsock, &sockaddr, &len)) {
         log_warning("Couldn't get address of new FMTP socket");
         return false;
     }
