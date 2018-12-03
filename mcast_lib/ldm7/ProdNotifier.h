@@ -15,10 +15,10 @@
 #define PROD_NOTIFIER_H_
 
 #include "fmtp.h"
-#include "mldm_receiver.h"
 #include "pq.h"
 
 #include <sys/types.h>
+#include "MldmRcvr.h"
 
 typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
                         unsigned metaSize, void** data, pqe_index* pqeIndex);

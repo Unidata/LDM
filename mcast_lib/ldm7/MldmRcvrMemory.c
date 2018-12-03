@@ -12,12 +12,13 @@
 
 #include "config.h"
 
+#include "MldmRcvrMemory.h"
+
 #include "fmtp.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mldm_receiver_memory.h"
 #include "prod_index_queue.h"
 
 #include <errno.h>

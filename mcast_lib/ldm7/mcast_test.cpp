@@ -16,12 +16,11 @@
 #include "fmtp.h"
 #include "FMTPReceiver_stub.hpp"
 #include "log.h"
-#include "mldm_receiver.h"
-
 #include <errno.h>
 #include <opmock.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "MldmRcvr.h"
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed by OpMock

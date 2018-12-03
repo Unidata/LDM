@@ -20,7 +20,6 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
-#include "mldm_receiver_memory.h"
 #include "mldm_sender_map.h"
 #include "pq.h"
 #include "prod_index_map.h"
@@ -50,6 +49,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include "MldmRcvrMemory.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))

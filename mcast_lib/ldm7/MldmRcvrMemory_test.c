@@ -15,8 +15,6 @@
 #include "inetutil.h"
 #include "ldm.h"
 #include "log.h"
-#include "mldm_receiver_memory.h"
-
 #include <errno.h>
 #include <libgen.h>
 #include <opmock.h>
@@ -24,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "MldmRcvrMemory.h"
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT" // needed due to OpMock

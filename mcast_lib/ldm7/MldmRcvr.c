@@ -18,7 +18,6 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
-#include "mldm_receiver.h"
 #include "pq.h"
 #include "prod_info.h"
 #include "ProdNotifier.h"
@@ -31,6 +30,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <pthread.h>
+#include "MldmRcvr.h"
 
 /**
  * The multicast LDM receiver data-structure:

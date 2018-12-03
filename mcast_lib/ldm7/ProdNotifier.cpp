@@ -11,6 +11,7 @@
  * @author: Steven R. Emmerson
  */
 
+#include <MldmRcvr.h>
 #include "config.h"
 
 #include "ProdNotifier.h"
@@ -18,7 +19,6 @@
 #include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mldm_receiver.h"
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>

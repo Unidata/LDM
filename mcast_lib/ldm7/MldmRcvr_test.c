@@ -16,7 +16,6 @@
 #include "log.h"
 #include "down7_stub.h"
 #include "mcast_stub.h"
-#include "mldm_receiver.h"
 #include "pq_stub.h"
 
 #include <errno.h>
@@ -25,6 +24,7 @@
 #include <stdlib.h>
 
 #include "../ldm7/mcast_info.h"
+#include "MldmRcvr.h"
 
 #ifndef __BASE_FILE__
     #define __BASE_FILE__ "BASE_FILE_REPLACEMENT"

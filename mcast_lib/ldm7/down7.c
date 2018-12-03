@@ -31,8 +31,6 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
-#include "mldm_receiver.h"
-#include "mldm_receiver_memory.h"
 #include "pq.h"
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
@@ -59,6 +57,8 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
+#include "MldmRcvr.h"
+#include "MldmRcvrMemory.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))

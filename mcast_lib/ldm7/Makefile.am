@@ -7,14 +7,14 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 EXTRA_DIST              = down7.hin \
-			  mldm_receiver.hin \
-			  mldm_receiver_memory.hin \
+			  MldmRcvr.hin \
+			  MldmRcvrMemory.hin \
 			  prod_index_queue.hin \
 			  sock_funcs.c sock_funcs.hin \
 			  up7.hin
 BUILT_SOURCES           = down7.h \
-			  mldm_receiver.h \
-			  mldm_receiver_memory.h \
+			  MldmRcvr.h \
+			  MldmRcvrMemory.h \
 			  prod_index_queue.h \
 			  sock_funcs.h \
 			  up7.h
@@ -25,8 +25,8 @@ lib_la_SOURCES		= \
 			  up7.c \
 			  prod_index_map.c prod_index_map.h \
 			  mcast_info.c mcast_info.h \
-			  mldm_receiver.c \
-			  mldm_receiver_memory.c \
+			  MldmRcvr.c \
+			  MldmRcvrMemory.c \
 			  UpMcastMgr.c UpMcastMgr.h \
 			  mldm_sender_map.c mldm_sender_map.h \
 			  prod_index_queue.c \
@@ -67,8 +67,8 @@ LDADD			=  $(top_builddir)/lib/libldm.la
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
 	mv -f $@.tmp $@
 down7.h:		down7.hin down7.c
-mldm_receiver.h:	mldm_receiver.hin mldm_receiver.c
-mldm_receiver_memory.h:	mldm_receiver_memory.c mldm_receiver_memory.hin
+MldmRcvr.h:		MldmRcvr.hin MldmRcvr.c
+MldmRcvrMemory.h:	MldmRcvrMemory.c MldmRcvrMemory.hin
 prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
 sock_funcs.h:		sock_funcs.hin sock_funcs.c
 up7.h:			up7.hin up7.c
@@ -138,24 +138,24 @@ UpMcastMgr_test_LDADD		= $(top_builddir)/lib/libldm.la \
 check_PROGRAMS			+= UpMcastMgr_test
 TESTS				+= UpMcastMgr_test
 
-mldm_receiver_test_SOURCES 		= mldm_receiver_test.c mldm_receiver.c
-nodist_mldm_receiver_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
+MldmRcvr_test_SOURCES 		= MldmRcvr_test.c MldmRcvr.c
+nodist_MldmRcvr_test_SOURCES 	= $(mcast_stubs) $(pq_stubs) \
 					  $(down7_stubs)
-mldm_receiver_test_CPPFLAGS		= $(AM_CPPFLAGS) $(test_cppflags)
-mldm_receiver_test_LDFLAGS		= @OPMOCK_LDFLAGS@
-mldm_receiver_test_LDADD  		= $(top_builddir)/lib/libldm.la \
+MldmRcvr_test_CPPFLAGS		= $(AM_CPPFLAGS) $(test_cppflags)
+MldmRcvr_test_LDFLAGS		= @OPMOCK_LDFLAGS@
+MldmRcvr_test_LDADD  		= $(top_builddir)/lib/libldm.la \
 					  @OPMOCK_LDADD@
-check_PROGRAMS				+= mldm_receiver_test
-TESTS					+= mldm_receiver_test
+check_PROGRAMS			+= MldmRcvr_test
+TESTS				+= MldmRcvr_test
 
-mldm_receiver_memory_test_SOURCES 	= mldm_receiver_memory_test.c
-nodist_mldm_receiver_memory_test_SOURCES = $(globals_stubs)
-mldm_receiver_memory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
-mldm_receiver_memory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
-mldm_receiver_memory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
+MldmRcvrMemory_test_SOURCES 	= MldmRcvrMemory_test.c
+nodist_MldmRcvrMemory_test_SOURCES = $(globals_stubs)
+MldmRcvrMemory_test_CPPFLAGS	= $(AM_CPPFLAGS) $(test_cppflags)
+MldmRcvrMemory_test_LDFLAGS	= @OPMOCK_LDFLAGS@
+MldmRcvrMemory_test_LDADD  	= $(top_builddir)/lib/libldm.la \
 					  @OPMOCK_LDADD@
-check_PROGRAMS				+= mldm_receiver_memory_test
-TESTS					+= mldm_receiver_memory_test
+check_PROGRAMS			+= MldmRcvrMemory_test
+TESTS				+= MldmRcvrMemory_test
 endif
 
 if HAVE_GTEST
