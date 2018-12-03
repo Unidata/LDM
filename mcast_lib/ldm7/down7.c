@@ -884,8 +884,8 @@ ucastRcvr_run(void* const restrict arg)
 
             if (pfd.revents & (POLLIN | POLLRDNORM)) {
                 /*
-                 * Processes RPC message. Calls select(). Calls `ldmprog_7()`. Calls
-                 * `svc_destroy(ucastRcvr.xprt)` on error.
+                 * Processes RPC message. Calls select(). Calls `ldmprog_7()`.
+                 * Calls `svc_destroy(ucastRcvr.xprt)` on error.
                  */
                 log_debug("Got RPC message");
                 svc_getreqsock(sock);
@@ -2711,6 +2711,8 @@ no_such_product_7_svc(
     FmtpProdIndex* const restrict  missingIprod,
     struct svc_req* const restrict rqstp)
 {
+    log_debug("Entered");
+
     FmtpProdIndex  iProd;
 
     if (!mrm_peekRequestedFileNoWait(down7.mrm, &iProd) ||
@@ -2724,6 +2726,8 @@ no_such_product_7_svc(
         log_warning("Requested product %lu doesn't exist",
                 (unsigned long)*missingIprod);
     }
+
+    log_debug("Returning");
 
     return NULL ; /* don't reply */
 }
@@ -2745,9 +2749,13 @@ deliver_backlog_product_7_svc(
     product* const restrict        prod,
     struct svc_req* const restrict rqstp)
 {
+    log_debug("Entered");
+
     int status = downlet_recvProd(prod);
 
     log_assert(status == 0);
+
+    log_debug("Returning");
 
     return NULL; // causes RPC dispatcher to not reply
 }
@@ -2767,8 +2775,12 @@ end_backlog_7_svc(
     void* restrict                 noArg,
     struct svc_req* const restrict rqstp)
 {
+    log_debug("Entered");
+
     log_notice("All backlog data-products received: feed=%s, server=%s",
             s_feedtypet(down7.feedtype), isa_toString(down7.ldmSrvr));
+
+    log_debug("Returning");
 
     return NULL; // causes RPC dispatcher to not reply
 }
