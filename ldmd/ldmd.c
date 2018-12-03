@@ -200,6 +200,7 @@ static void cleanup(
     down6_destroy();
 #if WANT_MULTICAST
     up7_destroy();
+    down7_destroy();
 #endif
 
     /*
@@ -256,7 +257,7 @@ static void cleanup(
             (void) sigemptyset(&sigact.sa_mask);
             sigact.sa_flags = 0;
             sigact.sa_handler = SIG_IGN;
-            (void) sigaction(SIGTERM, &sigact, NULL );
+            (void) sigaction(SIGTERM, &sigact, NULL);
         }
 
         /*
@@ -306,11 +307,11 @@ static void signal_handler(
 #endif
     switch (sig) {
     case SIGINT:
-        log_notice_q("SIGINT received");
+        log_notice("SIGINT received");
         exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
-        log_notice_q("SIGTERM received");
+        log_notice("SIGTERM received");
         done = 1;
         up6_close();
         req6_close();
@@ -319,11 +320,11 @@ static void signal_handler(
 #endif
         return;
     case SIGUSR1:
-        log_info_q("SIGUSR1 received");
+        log_info("SIGUSR1 received");
         log_refresh();
         return;
     case SIGUSR2:
-        log_info_q("SIGUSR2 received");
+        log_info("SIGUSR2 received");
         log_roll_level();
         return;
     case SIGPIPE:
@@ -334,6 +335,9 @@ static void signal_handler(
         return;
     case SIGALRM:
         log_debug("SIGALRM received");
+        return;
+    default:
+        log_debug("Signal %d received", sig);
         return;
     }
 }
@@ -349,29 +353,31 @@ static void set_sigactions(
     (void) sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
 
-    /* Ignore these */
+    if (log_is_enabled_debug) {
+        // Unless otherwise configured, catch all signals
+        sigact.sa_handler = signal_handler;
+        for (int i = 1; i < _NSIG; ++i)
+            (void)sigaction(i, &sigact, NULL);
+    }
+
+    // Ignore these
     sigact.sa_handler = SIG_IGN;
-    (void) sigaction(SIGPIPE, &sigact, NULL );
-    (void) sigaction(SIGCONT, &sigact, NULL );
+    (void)sigaction(SIGPIPE, &sigact, NULL);
+    (void)sigaction(SIGCONT, &sigact, NULL);
 
-    /* Handle these */
-#ifdef SA_RESTART       /* SVR4, 4.3+ BSD */
-    /* usually, restart system calls */
-    sigact.sa_flags |= SA_RESTART;
-#endif
+    // Catch everything else
     sigact.sa_handler = signal_handler;
-    (void) sigaction(SIGUSR1, &sigact, NULL );
-    (void) sigaction(SIGUSR2, &sigact, NULL );
-    (void) sigaction(SIGCHLD, &sigact, NULL );
 
-    /* Don't restart after alarms, interrupts, or termination */
-    sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT     /* SunOS 4.x */
-    sigact.sa_flags |= SA_INTERRUPT;
-#endif
-    (void) sigaction(SIGALRM, &sigact, NULL );
-    (void) sigaction(SIGINT, &sigact, NULL );
-    (void) sigaction(SIGTERM, &sigact, NULL );
+    // Don't restart after catching these
+    (void)sigaction(SIGALRM, &sigact, NULL);
+    (void)sigaction(SIGINT, &sigact, NULL);
+    (void)sigaction(SIGTERM, &sigact, NULL);
+
+    // Restart after catching these
+    sigact.sa_flags |= SA_RESTART;
+    (void)sigaction(SIGUSR1, &sigact, NULL);
+    (void)sigaction(SIGUSR2, &sigact, NULL);
+    (void)sigaction(SIGCHLD, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);
@@ -672,7 +678,7 @@ static void handle_connection(
              * TODO: Why doesn't this work?
              */
             xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
-            if (xprt != NULL ) {
+            if (xprt != NULL) {
                 xprt->xp_raddr = raddr;
                 xprt->xp_addrlen = (int) len;
                 svcerr_weakauth(xprt);
@@ -694,7 +700,7 @@ static void handle_connection(
     log_info_q("Connection from %s", remote_name());
 
     xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
-    if (xprt == NULL ) {
+    if (xprt == NULL) {
         log_error_q("Can't create fd service.");
         goto unwind_sock;
     }
@@ -806,7 +812,7 @@ int main(
 
     int         status;
     int         doSomething = 1;
-    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY );
+    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY);
     unsigned    ldmPort = LDM_PORT;
     unsigned    logOpts = 0;
     bool        becomeDaemon = true; // default
