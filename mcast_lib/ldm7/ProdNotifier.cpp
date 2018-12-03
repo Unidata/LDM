@@ -13,17 +13,17 @@
 
 #include "config.h"
 
+#include "ProdNotifier.h"
+
 #include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mldm_receiver.h"
-#include "PerProdNotifier.h"
-
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
 
-PerProdNotifier::ProdInfo::ProdInfo()
+ProdNotifier::ProdInfo::ProdInfo()
 :
     pqRegion(nullptr),
     size(0),
@@ -31,7 +31,7 @@ PerProdNotifier::ProdInfo::ProdInfo()
     startTime{}
 {}
 
-PerProdNotifier::ProdInfo::~ProdInfo()
+ProdNotifier::ProdInfo::~ProdInfo()
 {
     pqRegion = nullptr;
 }
@@ -45,7 +45,7 @@ int ppn_new(
 {
     int status;
     try {
-        *ppn = new PerProdNotifier(bop_func, eop_func, missed_prod_func, mlr);
+        *ppn = new ProdNotifier(bop_func, eop_func, missed_prod_func, mlr);
         status = 0;
     }
     catch (...) {
@@ -58,10 +58,10 @@ int ppn_new(
 void ppn_free(
         void* ppn)
 {
-    delete static_cast<PerProdNotifier*>(ppn);
+    delete static_cast<ProdNotifier*>(ppn);
 }
 
-PerProdNotifier::PerProdNotifier(
+ProdNotifier::ProdNotifier(
     BopFunc             bop_func,
     EopFunc             eop_func,
     MissedProdFunc      missed_prod_func,
@@ -99,7 +99,7 @@ PerProdNotifier::PerProdNotifier(
  * @throws      std::runtime_error    if the receiving application indicates
  *                                    an error.
  */
-void PerProdNotifier::notify_of_bop(
+void ProdNotifier::notify_of_bop(
         const struct timespec& startTime,
         const FmtpProdIndex    iProd,
         const size_t           prodSize,
@@ -152,7 +152,7 @@ void PerProdNotifier::notify_of_bop(
  * @param[in] prodIndex        The FMTP index of the product.
  * @throws std::runtime_error  Receiving application error.
  */
-void PerProdNotifier::notify_of_eop(
+void ProdNotifier::notify_of_eop(
         const struct timespec& stopTime,
         const FmtpProdIndex    prodIndex)
 {
@@ -182,7 +182,7 @@ void PerProdNotifier::notify_of_eop(
  * @param[in] prodIndex       The FMTP product index.
  * @throws std::out_of_range  `prodIndex` is unknown.
  */
-void PerProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
+void ProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].pqRegion;

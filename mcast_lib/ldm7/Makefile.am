@@ -33,7 +33,7 @@ lib_la_SOURCES		= \
 			  VirtualCircuit.c VirtualCircuit.h \
 			  CidrAddr.c CidrAddr.h \
 			  fmtp.cpp fmtp.h \
-			  PerProdNotifier.cpp PerProdNotifier.h \
+			  ProdNotifier.cpp ProdNotifier.h \
 			  SendingNotifier.cpp SendingNotifier.h \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \

@@ -19,9 +19,9 @@
 #include "log.h"
 #include "mcast_info.h"
 #include "mldm_receiver.h"
-#include "PerProdNotifier.h"
 #include "pq.h"
 #include "prod_info.h"
+#include "ProdNotifier.h"
 #include "xdr.h"
 
 #include <errno.h>

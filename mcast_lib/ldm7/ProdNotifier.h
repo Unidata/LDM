@@ -6,13 +6,13 @@
  * @file PerProdNotifier.h
  *
  * This file declares the API for a class that notifies the receiving
- * application of events on a per-file basis.
+ * application of events on a per-product basis.
  *
  * @author: Steven R. Emmerson
  */
 
-#ifndef PER_PROD_NOTIFIER_H_
-#define PER_PROD_NOTIFIER_H_
+#ifndef PROD_NOTIFIER_H_
+#define PROD_NOTIFIER_H_
 
 #include "fmtp.h"
 #include "mldm_receiver.h"
@@ -30,10 +30,11 @@ typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
 #ifdef __cplusplus
 
 #include "RecvProxy.h"
+
 #include <mutex>
 #include <unordered_map>
 
-class PerProdNotifier: public RecvProxy {
+class ProdNotifier: public RecvProxy {
 public:
     /**
      * Constructs from the notification functions.
@@ -49,13 +50,13 @@ public:
      * @throws    std::invalid_argument if @code{!bof_func || !eof_func ||
      *                                  !missed_prod_func}
      */
-    PerProdNotifier(
+    ProdNotifier(
             BopFunc         bop_func,
             EopFunc         eop_func,
             MissedProdFunc  missed_prod_func,
             Mlr*            mlr);
 
-    ~PerProdNotifier() {}
+    ~ProdNotifier() {}
     void notify_of_bop(
             const struct timespec& startTime,
             const FmtpProdIndex    iProd,
@@ -137,4 +138,4 @@ void ppn_free(
     }
 #endif
 
-#endif /* PER_PROD_NOTIFIER_H_ */
+#endif /* PROD_NOTIFIER_H_ */
