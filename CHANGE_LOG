@@ -1,3 +1,6 @@
+6.13.7.88
+    Change "ldm_config_file.h" to "LdmConfFile.h" in scanner.c and parser.c
+
 6.13.7.87	2018-12-06T13:27:55-0700
     ldmd(1):
         - Decompose server into smaller functions.
