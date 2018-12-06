@@ -16,11 +16,12 @@
 #include "atofeedt.h"
 #include "AuthServer.h"
 #include "CidrAddr.h"
+#include "fmtp.h"
 #include "globals.h"
 #include "InetSockAddr.h"
 #include "inetutil.h"
 #include "ldm.h"
-#include "ldm_config_file.h"
+#include "LdmConfFile.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
@@ -47,7 +48,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "../mcast_lib/ldm7/fmtp.h"
 
 #ifndef _XOPEN_PATH_MAX
 /* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
@@ -640,7 +640,7 @@ mls_destroy(void)
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static int
-mls_multicastProduct(
+mls_mcastProd(
         const prod_info* const restrict info,
         const void* const restrict      data,
         void* const restrict            xprod,
@@ -740,7 +740,7 @@ mls_tryMulticast(
     // TODO: Keep product locked until FMTP notification, then release
 
     off_t offset;
-    int   status = pq_sequenceLock(pq, TV_GT, prodClass, mls_multicastProduct,
+    int   status = pq_sequenceLock(pq, TV_GT, prodClass, mls_mcastProd,
             &offset, &offset);
 
     if (PQUEUE_END == status) {
