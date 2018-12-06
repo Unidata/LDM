@@ -1,3 +1,20 @@
+6.13.7.87	2018-12-06T13:27:55-0700
+    ldmd(1):
+        - Decompose server into smaller functions.
+
+    Logging:
+        - Right-justify location and process fields to minimize eye travel
+        - Shorten many file and function names to shorten log messages
+
+    Multicast:
+        - Rename PerProdNotifier to ProdNotifier
+        - Rename mldm_receiver* to MldmRcvr*
+        - Rename "SendingNotifier" to "SendNotifier" and shorten function names
+        - Redo subscribe_7_svc()
+
+    Down7:
+        - Correct check of pthread_kill() return value
+
 6.13.7.86	2018-12-03T09:09:54-0700
     Logging:
         - Make logging macros not cancellation points
