@@ -631,7 +631,8 @@ backstop_stop(void)
 typedef struct {
     pthread_t             thread;      ///< Thread on which task executes
     pthread_mutex_t       mutex;       ///< Mutex
-    SVCXPRT*              xprt;        ///< Server-side RPC transport
+    SVCXPRT*              xprt;        ///< Server-side RPC transport for
+                                       ///< receiving missed data-products
     char*                 remoteStr;   ///< ID of remote peer
     TaskState             state;       ///< State of task
 } UcastRcvr;
@@ -664,6 +665,7 @@ ucastRcvr_createXprt(
     }
     else {
         SVCXPRT* const xprt = svcfd_create(sock, 0, MAX_RPC_BUF_NEEDED);
+
         if (xprt == NULL) {
             log_add("Couldn't create server-side RPC transport for receiving "
                     "data-products from \"%s\"", inet_ntoa(addr.sin_addr));
@@ -986,8 +988,8 @@ ucastRcvr_stop(void)
              * Apparently, between the time a thread completes and the thread is
              * joined, the thread cannot be sent a signal.
              */
-            if (status && errno != ESRCH) {
-                log_add_errno(errno, "Couldn't kill unicast receiver");
+            if (status && status != ESRCH) {
+                log_add_errno(status, "Couldn't kill unicast receiver");
                 log_flush_error();
             }
         }
@@ -1259,8 +1261,8 @@ backlogger_stop(void)
              * Apparently, between the time a thread completes and the thread is
              * joined, the thread cannot be sent a signal.
              */
-            if (status && errno != ESRCH) {
-                log_add_errno(errno, "Couldn't kill backlog requester");
+            if (status && status != ESRCH) {
+                log_add_errno(status, "Couldn't kill backlog requester");
                 log_flush_error();
             }
         }
@@ -2578,8 +2580,8 @@ down7_halt()
          * Apparently, between the time a thread completes and the thread is
          * joined, the thread cannot be sent a signal.
          */
-        if (status && errno != ESRCH) {
-            log_add_errno(errno, "Couldn't kill downstream LDM7");
+        if (status && status != ESRCH) {
+            log_add_errno(status, "Couldn't kill downstream LDM7");
             log_flush_error();
         }
     } // `down7_run()` is executing on a different thread
