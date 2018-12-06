@@ -39,13 +39,14 @@
  * @param timeout           The maximum amount of time to wait with no activity
  *                          on the socket in seconds.
  *
- * @retval 0                Success.  as_shouldSwitch() is true.
- * @retval EBADF            The socket isn't open.
- * @retval EINVAL           Invalid timeout value.
+ * @retval 0                Success.  as_shouldSwitch() is true. Only happens
+ *                          for downstream LDM-s.
+ * @retval EBADF            The socket isn't open. `log_add()` called.
+ * @retval EINVAL           Invalid timeout value. `log_add()` called.
  * @retval ECONNRESET       RPC layer closed socket.  The RPC layer also
  *                          destroyed the associated SVCXPRT structure;
  *                          therefore, that object must not be subsequently
- *                          dereferenced.
+ *                          dereferenced. `log_add()` called.
  * @retval ETIMEDOUT        "timeout" time passed without any activity on
  *                          the socket.
  */ 
@@ -103,7 +104,7 @@ one_svc_run(
         } /* socket is read-ready */
         else {
             if (errno != EINTR) {
-                log_syserr_q("select() error on socket %d", sock);
+                log_add_syserr("select() error on socket %d", sock);
                 return errno;
             }
 
