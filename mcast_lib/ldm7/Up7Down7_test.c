@@ -16,11 +16,12 @@
 #include "Executor.h"
 #include "globals.h"
 #include "inetutil.h"
-#include "ldm_config_file.h"
+#include "LdmConfFile.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
 #include "mldm_sender_map.h"
+#include "MldmRcvrMemory.h"
 #include "pq.h"
 #include "prod_index_map.h"
 #include "registry.h"
@@ -49,7 +50,6 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "MldmRcvrMemory.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
@@ -130,38 +130,38 @@ static VcEndPoint*       localVcEnd;
 static Executor*         executor;
 static sigset_t          mostSigMask;
 
-static void signal_handler(
+static void sigHandler(
         int sig)
 {
     switch (sig) {
     case SIGCHLD:
-        log_notice("signal_handler(): SIGCHLD");
+        log_notice("SIGCHLD");
         return;
     case SIGCONT:
-        log_notice("signal_handler(): SIGCONT");
+        log_notice("SIGCONT");
         return;
     case SIGIO:
-        log_notice("signal_handler(): SIGIO");
+        log_notice("SIGIO");
         return;
     case SIGPIPE:
-        log_notice("signal_handler(): SIGPIPE");
+        log_notice("SIGPIPE");
         return;
     case SIGINT:
-        log_notice("signal_handler(): SIGINT");
+        log_notice("SIGINT");
         return;
     case SIGTERM:
-        log_notice("signal_handler(): SIGTERM");
+        log_notice("SIGTERM");
         return;
     case SIGUSR1:
-        log_notice("signal_handler(): SIGUSR1");
+        log_notice("SIGUSR1");
         log_refresh();
         return;
     case SIGUSR2:
-        log_notice("signal_handler(): SIGUSR2");
+        log_notice("SIGUSR2");
         log_refresh();
         return;
     default:
-        log_notice("signal_handler(): Signal %d", sig);
+        log_notice("Unexpected signal %d", sig);
         return;
     }
 }
@@ -181,7 +181,7 @@ setSignalHandling(void)
     sigact.sa_mask = mostSigMask;
 
     // Catch all following signals
-    sigact.sa_handler = signal_handler;
+    sigact.sa_handler = sigHandler;
 
     // Interrupt system calls for these signals
     for (int i = 0; i < sizeof(interuptSigs)/sizeof(interuptSigs[0]); ++i) {
@@ -420,16 +420,31 @@ myUp7_free(MyUp7* const myUp7)
 
 /**
  * @param[in] up7          Upstream LDM-7.
- * @retval    0            Success. Connection was closed by downstream LDM-7.
- * @retval    LDM7_INTR    Signal was caught.
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static void
-myUp7_run(
-        MyUp7* const myUp7)
+myUp7_run(MyUp7* const myUp7)
 {
-    int       status;
     const int sock = myUp7->xprt->xp_sock;
+
+#if 1
+    // The following is taken from "ldmd.c:childLdm_run()"
+
+    const unsigned TIMEOUT = 2*interval;
+
+    int status = one_svc_run(sock, TIMEOUT);
+
+    if (status == ETIMEDOUT) {
+        log_add("Connection from client LDM silent for %u seconds", TIMEOUT);
+    }
+    else {
+        log_add("Connection with LDM client lost");
+        /*
+         * one_svc_run() called svc_getreqset(), which called svc_destroy()
+         */
+        myUp7->xprt = NULL;
+    }
+#else
+    int       status;
     struct    pollfd fds;
 
     fds.fd = sock;
@@ -459,7 +474,7 @@ myUp7_run(
      * - Creating and using the function `up7_isDone()`. This was chosen.
      */
     for (;;) {
-        log_debug("myUp7_run(): Calling poll()");
+        log_debug("Calling poll()");
 
         sigset_t prevSigMask;
         CU_ASSERT_EQUAL_FATAL(pthread_sigmask(SIG_SETMASK, &mostSigMask,
@@ -484,7 +499,7 @@ myUp7_run(
 
         CU_ASSERT_TRUE_FATAL(fds.revents & POLLRDNORM)
 
-        log_debug("myUp7_run(): Calling svc_getreqsock()");
+        log_debug("Calling svc_getreqsock()");
         svc_getreqsock(sock); // Calls `ldmprog_7()`. *Might* destroy `xprt`.
 
         if (!FD_ISSET(sock, &svc_fdset)) {
@@ -494,6 +509,7 @@ myUp7_run(
             break;
         }
     } // While not done loop
+#endif
 
     up7_destroy();
 }
@@ -598,7 +614,7 @@ sndr_run(
     }
 
     log_flush_error();
-    log_debug("sender_run(): Returning &%d", status);
+    log_debug("Returning &%d", status);
 
     return 0;
 }
@@ -1005,7 +1021,7 @@ rqstr_delAndReq(const signaturet sig)
 static void
 rqstr_run(Requester* const requester)
 {
-    log_debug("rqstr_run(): Entered");
+    log_debug("Entered");
 
     thread_blockSigTerm();
 
@@ -1038,7 +1054,7 @@ rqstr_run(Requester* const requester)
 
     // Because end-of-thread
     log_flush_error();
-    log_debug("rqstr_run(): Returning");
+    log_debug("Returning");
 }
 
 static void
