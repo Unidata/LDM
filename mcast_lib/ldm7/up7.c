@@ -238,7 +238,8 @@ ensureProductQueueOpen(void)
 }
 
 /**
- * Idempotent.
+ * Destroys the client-side transport for unicasting missed data-products to the
+ * downstream LDM7. Idempotent.
  */
 static void
 destroyClient(void)
