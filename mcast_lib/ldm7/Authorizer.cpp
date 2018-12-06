@@ -11,8 +11,8 @@
 
 #include "Authorizer.h"
 #include "FixedDelayQueue.h"
+#include <LdmConfFile.h>
 #include "inetutil.h"
-#include "ldm_config_file.h"
 #include "log.h"
 
 #include <mutex>
@@ -44,7 +44,7 @@ public:
             sockAddrIn.sin_addr = clntAddr;
             const char* name = hostbyaddr(&sockAddrIn);
 
-            authorized = lcf_reduceByAllowedFeeds(name, &clntAddr, feed) ==
+            authorized = lcf_getAllowed(name, &clntAddr, feed) ==
                     feed;
         }
 

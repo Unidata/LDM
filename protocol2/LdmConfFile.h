@@ -177,7 +177,7 @@ lcf_getAllowedFeeds(
  *                          `feeds`
  */
 feedtypet
-lcf_reduceByFeeds(
+lcf_reduceFeed(
         feedtypet    desiredFeed,
         feedtypet*   allowedFeeds,
         const size_t numFeeds);
@@ -192,7 +192,7 @@ lcf_reduceByFeeds(
  *                         allowed to receive
  */
 feedtypet
-lcf_reduceByAllowedFeeds(
+lcf_getAllowed(
         const char*           name,
         const struct in_addr* addr,
         const feedtypet       desiredFeed);

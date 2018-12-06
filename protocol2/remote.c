@@ -24,7 +24,7 @@
 #include "globals.h"
 #include "remote.h"
 #include "inetutil.h"
-#include "ldm_config_file.h"
+#include "LdmConfFile.h"
 #include "timestamp.h"
 
 /* global */

@@ -29,9 +29,9 @@
 
 #include "abbr.h"
 #include "atofeedt.h"
-#include "ldm_config_file.h"
 #include "autoshift.h"
 #include "down6.h"
+#include "LdmConfFile.h"
 #if WANT_MULTICAST
     #include "down7_manager.h"
 #endif
@@ -2649,7 +2649,7 @@ lcf_getAllowedFeeds(
 }
 
 feedtypet
-lcf_reduceByFeeds(
+lcf_reduceFeed(
         feedtypet    desiredFeed,
         feedtypet*   allowedFeeds,
         const size_t numFeeds)
@@ -2671,7 +2671,7 @@ lcf_reduceByFeeds(
 }
 
 feedtypet
-lcf_reduceByAllowedFeeds(
+lcf_getAllowed(
         const char*           name,
         const struct in_addr* addr,
         const feedtypet       desiredFeed)
@@ -2684,7 +2684,7 @@ lcf_reduceByAllowedFeeds(
         log_error_q("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
         numFeeds = maxFeeds;
     }
-    return lcf_reduceByFeeds(desiredFeed, allowedFeeds, numFeeds);
+    return lcf_reduceFeed(desiredFeed, allowedFeeds, numFeeds);
 }
 
 int
@@ -2732,7 +2732,7 @@ lcf_reduceToAllowed(
                 // Compute the intersection.
                 int       ii;
                 for (ii = 0; ii < inter->psa.psa_len; ++ii)
-                    inter->psa.psa_val[ii].feedtype = lcf_reduceByFeeds(
+                    inter->psa.psa_val[ii].feedtype = lcf_reduceFeed(
                             inter->psa.psa_val[ii].feedtype, feedType, nhits);
                 clss_scrunch(inter);
             }

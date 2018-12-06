@@ -10,7 +10,6 @@
 #include "config.h"
 
 #include "abbr.h"
-#include "ldm_config_file.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "autoshift.h"
 #include "child_process_set.h"       /* cps_contains() */
 #include "data_prod.h"
@@ -41,6 +40,7 @@
 #include <sys/types.h>
 #include <unistd.h>      /* getpid() */
 
+#include "LdmConfFile.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "up6.h"         /* the pure "upstream" LDM module */
 
 /*

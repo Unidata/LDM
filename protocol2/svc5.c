@@ -18,7 +18,6 @@
 
 #include "ldm.h"
 
-#include "ldm_config_file.h"
 #include "down6.h"
 #include "DownHelp.h"
 #include "error.h"
@@ -30,6 +29,7 @@
 #include "remote.h"
 #include "savedInfo.h"
 #include "log.h"
+#include "LdmConfFile.h"
 #include "xdr_data.h"
 
 static ldm_replyt  reply;
