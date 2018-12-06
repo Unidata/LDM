@@ -65,7 +65,7 @@ public:
         , allocated{}
         , mutex{}
     {
-        log_debug(("cidr=" + to_string(cidr)).c_str());
+        log_debug("cidr=%s", to_string(cidr).c_str());
         auto size = available.size();
         // Doesn't include network or broadcast address
         for (in_addr_t i = 1; i <= size; ++i)
