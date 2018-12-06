@@ -265,13 +265,15 @@ static void stream_log(
                         year, month, tm.tm_mday, tm.tm_hour,
                         tm.tm_min, tm.tm_sec, microseconds);
 
+                #define MIN0(x) ((x) >= 0 ? (x) : 0)
+
                 // Process
-                (void)fprintf(dest->stream, "%s[%d] ", ident, pid);
+                int nbytes = snprintf(NULL, 0, "%s[%d]", ident, pid);
+                (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(24-nbytes),
+                        "", ident, pid);
 
                 // Location
-                #define MIN0(x) ((x) >= 0 ? (x) : 0)
-                int     nbytes = snprintf(NULL, 0, "%s:%s()", basename,
-                        loc->func);
+                nbytes = snprintf(NULL, 0, "%s:%s()", basename, loc->func);
                 (void)fprintf(dest->stream, "%*s%s:%s() ", MIN0(32-nbytes),
                         "", basename, loc->func);
 
