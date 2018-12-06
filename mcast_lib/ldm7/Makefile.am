@@ -34,7 +34,7 @@ lib_la_SOURCES		= \
 			  CidrAddr.c CidrAddr.h \
 			  fmtp.cpp fmtp.h \
 			  ProdNotifier.cpp ProdNotifier.h \
-			  SendingNotifier.cpp SendingNotifier.h \
+			  SendNotifier.cpp SendNotifier.h \
 			  Authorizer.cpp Authorizer.h \
 			  TcpSock.cpp TcpSock.h \
 			  Internet.cpp Internet.h \
@@ -214,12 +214,12 @@ MldmRpc_test_LDADD		= $(LDADD) @LIBS_CUNIT@
 check_PROGRAMS			+= MldmRpc_test
 TESTS				+= MldmRpc_test
 
-up7_down7_test_SOURCES		= up7_down7_test.c
-up7_down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-up7_down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
+Up7Down7_test_SOURCES		= Up7Down7_test.c
+Up7Down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+Up7Down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
-check_PROGRAMS			+= up7_down7_test
-TESTS				+= up7_down7_test
+check_PROGRAMS			+= Up7Down7_test
+TESTS				+= Up7Down7_test
 
 SUFFIXES:	.i .c
 
