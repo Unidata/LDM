@@ -108,7 +108,7 @@ mldm_reset(void)
  * @retval     LDM7_LOGIC    Logic failure. `log_add()` called.
  */
 static Ldm7Status
-mldm_getServerPorts(const int pipe)
+mldm_getSrvrPorts(const int pipe)
 {
     int     status;
 #if 1
@@ -444,7 +444,7 @@ mldm_spawn(
             childPid = pid;
 
             // Sets `fmtpSrvrPort` and `mldmCmdPort`
-            status = mldm_getServerPorts(fds[0]);
+            status = mldm_getSrvrPorts(fds[0]);
 
             if (status) {
                 char* const id = smi_toString(info);
@@ -485,7 +485,7 @@ mldm_spawn(
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-mldm_ensureRunning(
+mldm_ensureExec(
         const struct in_addr               mcastIface,
         const SepMcastInfo* const restrict info,
         const unsigned short               ttl,
@@ -1139,7 +1139,7 @@ me_startIfNecessary(
         const float       retxTimeout)
 {
     // Sets `mldmCmdPort`
-    int status = mldm_ensureRunning(entry->mcastIface, entry->info,
+    int status = mldm_ensureExec(entry->mcastIface, entry->info,
             entry->ttl, &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
 
     if (status == 0) {
