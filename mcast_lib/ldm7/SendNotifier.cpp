@@ -14,14 +14,13 @@
 #include "fmtp.h"
 #include "Internet.h"
 #include "log.h"
-#include "SendingNotifier.h"
-
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
 #include <sys/socket.h>
+#include <SendNotifier.h>
 
-SendingNotifier::SendingNotifier(
+SendNotifier::SendNotifier(
         void      (*eop_func)(FmtpProdIndex iProd),
         Authorizer& authorizer)
     : eop_func(eop_func)
@@ -36,7 +35,7 @@ SendingNotifier::SendingNotifier(
  *
  * @param[in,out] prodIndex             Index of the product.
  */
-void SendingNotifier::notify_of_eop(
+void SendNotifier::notifyOfEop(
         const FmtpProdIndex prodIndex)
 {
     eop_func(prodIndex);
@@ -50,7 +49,7 @@ void SendingNotifier::notify_of_eop(
  * @retval true   Client is acceptable
  * @retval false  Client is not acceptable
  */
-bool SendingNotifier::verify_new_recv(int newsock)
+bool SendNotifier::vetNewRcvr(int newsock)
 {
     struct sockaddr sockaddr;
     socklen_t       len = sizeof(sockaddr);

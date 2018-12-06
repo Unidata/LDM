@@ -20,7 +20,7 @@
 
 #include <sys/types.h>
 
-class SendingNotifier: public SendProxy {
+class SendNotifier: public SendProxy {
     /// Function to call when the FMTP layer is done with a product.
     void     (*eop_func)(FmtpProdIndex prodIndex);
 
@@ -35,20 +35,22 @@ public:
      *                                  finished with a product.
      * @throws    std::invalid_argument if `eop_func == NULL`.
      */
-    SendingNotifier(
+    SendNotifier(
             void      (*eop_func)(FmtpProdIndex prodIndex),
             Authorizer& authDb);
 
-    ~SendingNotifier() {}
-    void notify_of_eop(FmtpProdIndex prodIndex);
+    ~SendNotifier() {}
+    void notifyOfEop(FmtpProdIndex prodIndex);
 
     /**
-     * Requests the application to verify an incoming connection request,
-     * and to decide whether to accept or to reject the connection. This
-     * method is thread-safe.
-     * @return    true: receiver accepted; false: receiver rejected.
+     * Requests the application to vet an incoming connection request, and to
+     * decide whether to accept or to reject the connection.
+     *
+     * @return `true`   Receiver is acceptable
+     * @retval `false`  Receiver is not acceptable
+     * @threadsafety    Safe
      */
-    bool verify_new_recv(int newsock);
+    bool vetNewRcvr(int newsock);
 };
 
 #endif /* PER_PROD_SENDING_NOTIFIER_H_ */

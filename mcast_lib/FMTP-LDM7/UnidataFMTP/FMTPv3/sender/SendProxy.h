@@ -31,14 +31,14 @@ public:
      * Notifies the sending application about the complete reception of the
      * previous product. This method is thread-safe.
      */
-    virtual void notify_of_eop(uint32_t prodindex) = 0;
+    virtual void notifyOfEop(uint32_t prodindex) = 0;
     /**
      * Requests the application to verify an incoming connection request,
      * and to decide whether to accept or to reject the connection. This
      * method is thread-safe.
      * @return    true: receiver accepted; false: receiver rejected.
      */
-    virtual bool verify_new_recv(int newsock) = 0;
+    virtual bool vetNewRcvr(int newsock) = 0;
 };
 
 
