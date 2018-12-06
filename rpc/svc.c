@@ -43,6 +43,7 @@ static char sccsid[] = "@(#)svc.c 1.41 87/10/13 Copyr 1984 Sun Micro";
 
 #include "config.h"
 
+#include "log.h"
 #include "rpc.h"
 #include "pmap_clnt.h"
 
@@ -393,6 +394,10 @@ svc_getreq(
 #endif /* def FD_SETSIZE */
 }
 
+/**
+ * NB: This function calls `svc_destroy()` if the connection is lost -- and that
+ * function must only be called once.
+ */
 #ifdef FD_SETSIZE
 void
 svc_getreqset(
@@ -485,12 +490,15 @@ svc_getreqset(
 }
 
 
-/*
- * Services RPC requests on a single socket.  This is much more
- * efficient than svc_getreqset() for a single socket.
+/**
+ * Services RPC requests on a single socket.  This is much more efficient than
+ * svc_getreqset() for a single socket.
  *
- * Arguments:
- *	sock		The socket on which to service incoming RPC requests.
+ * NB: This function calls `svc_destroy()` if the connection is lost -- and that
+ * function must only be called once.
+ *
+ * @param[in] sock  The socket on which to service incoming RPC requests.
+ * @threadsafety    Compatible but unsafe
  */
 void
 svc_getreqsock(
@@ -514,7 +522,10 @@ svc_getreqsock(
 
     /* now receive msgs from xprtprt (support batch calls) */
     do {
-	if (SVC_RECV(xprt, &msg)) {
+	if (!SVC_RECV(xprt, &msg)) {
+	    log_debug("Couldn't receive");
+	}
+	else {
 	    /* now find the exported program and call it */
 	    register struct svc_callout *s;
 	    enum auth_stat why;
@@ -527,6 +538,7 @@ svc_getreqsock(
 
 	    /* first authenticate the message */
 	    if ((why= _authenticate(&r, &msg)) != AUTH_OK) {
+		log_debug("RPC authentication failure");
 		svcerr_auth(xprt, why);
 		goto call_done;
 	    }
@@ -552,10 +564,12 @@ svc_getreqsock(
 	     * if we got here, the program or version is not served ...
 	     */
 	    if (prog_found) {
+		log_debug("Didn't find program");
 		svcerr_progvers(xprt,
 		low_vers, high_vers);
 	    }
 	    else {
+		log_debug("Didn't find program version");
 		 svcerr_noprog(xprt);
 	    }
 
@@ -563,6 +577,7 @@ svc_getreqsock(
 	}
     call_done:
 	if ((stat = SVC_STAT(xprt)) == XPRT_DIED){
+	    log_debug("Transport died");
 	    SVC_DESTROY(xprt);
 	    break;
 	}
