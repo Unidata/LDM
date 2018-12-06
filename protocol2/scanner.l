@@ -24,7 +24,7 @@
 
 #include "ldm.h"
 #include "atofeedt.h"
-#include "ldm_config_file.h"
+#include "LdmConfFile.h"
 #include "error.h"
 #include "ldmfork.h"
 #include "log.h"

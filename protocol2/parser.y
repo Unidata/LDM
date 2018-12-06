@@ -10,13 +10,13 @@
 
 #include "config.h"
 
-#include "ldm_config_file.h"
 #include "atofeedt.h"
 #include "error.h"
 #include "globals.h"
 #include "inetutil.h"
 #include "remote.h"
 #include "ldm.h"
+#include "LdmConfFile.h"
 #include "ldmprint.h"
 #include "RegularExpressions.h"
 #include "log.h"
