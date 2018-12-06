@@ -4,8 +4,8 @@
  *     - Ensures that a multicast LDM sender processes is running for its
  *       associated multicast group;
  *     - Handles one and only one downstream LDM-7;
- *     - Runs a server on its TCP connection that accepts requests for files
- *       missed by the multicast component of its downstream LDM-7; and
+ *     - Implements a server on its TCP connection that accepts requests for
+ *       files missed by the multicast component of its downstream LDM-7; and
  *     - Sends such files to its downstream LDM-7.
  *
  * NB: Using a single TCP connection and having both client-side and server-side
