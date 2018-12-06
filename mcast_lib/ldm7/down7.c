@@ -70,6 +70,12 @@
 
 static sigset_t termMask;
 
+/**
+ * Does something with the signal mask.
+ *
+ * @param[in] how   What to do. One of `SIG_BLOCK` or `SIG_UNBLOCK`.
+ * @param[in] sigs  Signals
+ */
 static void
 doSigs(
         const int how,
@@ -89,6 +95,11 @@ doSigs(
     log_assert(status == 0);
 }
 
+/**
+ * Blocks signals.
+ *
+ * @param[in] sig  Signals to be blocked
+ */
 static void
 blockSigs(
         const int sig,
@@ -101,6 +112,11 @@ blockSigs(
     va_end(sigs);
 }
 
+/**
+ * Unblocks signals.
+ *
+ * @param[in] sig  Signals to be unblocked
+ */
 static void
 unblockSigs(
         const int sig,
@@ -152,10 +168,20 @@ up7Proxy_unlock()
     log_assert(status == 0);
 }
 
-// Forward declaration
-static Ldm7Status
-downlet_testConnection();
-
+/**
+ * Initializes the proxy for the upstream LDM7.
+ *
+ * @param[in] socket       Socket with upstream LDM7
+ * @param[in] sockAddr     Remote address of socket
+ * @retval    0            Success
+ * @retval    LDM7_INVAL   `socket < 0`
+ * @retval    LDM7_INVAL   `sockAddr == NULL`
+ * @retval    LDM7_INVAL   `sockAddr->sin_family != AF_INET`
+ * @retval    LDM7_RPC     Error in RPC layer. `log_add()` called.
+ * @retval    LDM7_SYSTEM  Couldn't initialize mutex. `log_add()` called.
+ * @retval    LDM7_SYSTEM  Couldn't obtain string representation of remote end
+ *                         of socket. `log_add()` called.
+ */
 static int
 up7Proxy_init(const int           socket,
         struct sockaddr_in* const sockAddr)
@@ -203,6 +229,9 @@ up7Proxy_init(const int           socket,
     return status;
 }
 
+/**
+ * Destroys the proxy for the upstream LDM7.
+ */
 static void
 up7Proxy_destroy(void)
 {
@@ -448,7 +477,8 @@ typedef struct {
 static Backstop backstop;
 
 /**
- * Initializes the backstop of the one-time, downstream LDM7 missed-product
+ * Initializes the concurrent task for requesting data-products missed by the
+ * multicast component of the one-time, downstream LDM7.
  *
  * @param[in] mrm          Multicast receiver memory. Must exist until
  *                         `backstop_destroy()` returns.
@@ -479,6 +509,10 @@ backstop_init(McastReceiverMemory* const mrm)
     return 0;
 }
 
+/**
+ * Destroys the concurrent task for requesting data-products missed by the
+ * multicast component of the one-time, downstream LDM7.
+ */
 static void
 backstop_destroy()
 {
@@ -1085,6 +1119,9 @@ typedef struct backlogger {
 static Backlogger backlogger;
 
 /**
+ * Initializes the concurrent task that requests the backlog of data-products
+ * that were missed since the end of the previous downstream LDM7 session.
+ *
  * @param[in]  before       Signature of first product received via multicast
  * @retval     0            Success
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
@@ -1115,6 +1152,9 @@ backlogger_init(const signaturet before)
     return status;
 }
 
+/**
+ * Destroys the backlog concurrent task.
+ */
 static void
 backlogger_destroy()
 {
@@ -1353,6 +1393,9 @@ mcastRcvr_init(
     return status;
 }
 
+/**
+ * Destroys the concurrent task that receives multicast data-products.
+ */
 static void
 mcastRcvr_destroy()
 {
@@ -1497,6 +1540,13 @@ mcastRcvr_stop(void)
     log_debug("Returning");
 }
 
+/**
+ * Accepts notification of the last data-product to be received via multicast.
+ *
+ * @param[in] signature    MD5 checksum of the data-product
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ */
 static int
 mcastRcvr_lastReceived(const signaturet signature)
 {
@@ -1645,6 +1695,13 @@ downlet_stopTasks(void)
     ucastRcvr_stop();
 }
 
+/**
+ * Waits for the one-time, downstream LDM7 to complete.
+ *
+ * @retval 0            Success
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ * @return              Status of the first concurrent task to complete
+ */
 static int
 downlet_wait(void)
 {
@@ -2039,6 +2096,26 @@ downlet_run()
     return status;
 }
 
+/**
+ * Executes the one-time, downstream LDM7.
+ *
+ * @retval 0              Success
+ * @retval LDM7_SYSTEM    System error. `log_add()` called.
+ * @retval LDM7_INTR      Signal caught. `log_add()` called.
+ * @retval LDM7_INVAL     Invalid port number or host identifier. `log_add()`
+ *                        called.
+ * @retval LDM7_LOGIC     Logic error. `log_add()` called.
+ * @retval LDM7_MCAST     Multicast layer failure. `log_add()` called.
+ * @retval LDM7_RPC       RPC failure (including interrupt). `log_add()` called.
+ * @retval LDM7_SYSTEM    System error. `log_add()` called.
+ * @retval LDM7_NOENT     The upstream LDM7 doesn't multicast `feed`.
+ *                        `log_add()` called.
+ * @retval LDM7_SHUTDOWN  Shutdown requested
+ * @retval LDM7_TIMEDOUT  Subscription request timed-out. `log_add()` called.
+ * @retval LDM7_REFUSED   Upstream host refused connection (LDM7 not running?).
+ *                        `log_add()` called.
+ * @retval LDM7_UNAUTH    Upstream LDM7 denied request. `log_add()` called.
+ */
 static Ldm7Status
 downlet_execute(void)
 {
@@ -2054,12 +2131,6 @@ downlet_execute(void)
     } // One-time downstream LDM7 initialized
 
     return status;
-}
-
-static Ldm7Status
-downlet_testConnection()
-{
-    return up7Proxy_testConnection();
 }
 
 /**
@@ -2489,6 +2560,12 @@ down7_run()
     return status;
 }
 
+/**
+ * Signals the downstream LDM7 that it should terminate.
+ *
+ * @retval 0            Success
+ * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ */
 static int
 down7_signal()
 {
