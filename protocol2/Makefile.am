@@ -22,7 +22,7 @@ EXTRA_DIST		= \
     forn5_svc.h \
     ldm4.h \
     ldm5.h \
-    ldm_config_file.h \
+    LdmConfFile.h \
     rsaglobal.h \
     parser.y \
     prod_info.h \
@@ -74,7 +74,7 @@ lib_la_SOURCES		= \
     ldmfork.c ldmfork.h \
     ldmprint.c \
     ldm_clnt_misc.c \
-    ldm_config_file.c \
+    LdmConfFile.c \
     md5c.c \
     one_svc_run.c \
     parser.c \
