@@ -43,11 +43,11 @@
 #endif
 #include "priv.h"
 #include "abbr.h"
-#include "ldm_config_file.h"                // LDM configuration-file
 #include "down6.h"              /* down6_destroy() */
 #include "globals.h"
 #include "child_process_set.h"
 #include "inetutil.h"
+#include "LdmConfFile.h"                // LDM configuration-file
 #if WANT_MULTICAST
     #include "down7_manager.h"
     #include "mldm_sender_map.h"
@@ -593,22 +593,184 @@ static int create_ldm_tcp_svc(
     return error;
 }
 
-/*
+/**
+ * Runs the upstream LDM server.
+ *
+ * @param[in] sock           Socket connected to client LDM
+ * @param[in] hostId         Identifier of client
+ * @retval    ECONNRESET     The connection to the client LDM was lost.
+ *                           `svc_destroy(xprt)` called. `log_add()` called.
+ * @retval    EBADF          The socket isn't open. `log_add()` called.
+ */
+static int
+runSvc(
+        const int         sock,
+        const char* const hostId)
+{
+    log_debug("Entered");
+
+    log_assert(sock >= 0);
+    log_assert(hostId);
+
+    int            status;
+    const unsigned TIMEOUT = 2*interval;
+
+    for (;;) {
+        status = one_svc_run(sock, TIMEOUT);
+
+        if (status == ETIMEDOUT) {
+            log_debug("Client LDM, %s, has been silent for %u seconds", hostId,
+                    TIMEOUT);
+            continue;
+        }
+
+        if (status == ECONNRESET){ // Connection to client lost
+            /*
+             * one_svc_run() called svc_getreqsock(), which called
+             * svc_destroy(xprt), which must only be called once
+             */
+            log_add("Connection with client LDM, %s, has been lost", hostId);
+        }
+
+        break;
+    }
+
+    log_debug("Returning");
+
+    return status;
+}
+
+/**
+ * Executes the child LDM process.
+ *
+ * @param[in] raddr       Internet socket address of client
+ * @param[in] xp_sock     Socket connection with client
+ * @retval    0           Connection with client lost. `log_add()` called.
+ * @retval    EFAULT      Couldn't register LDM versions with RPC. `log_add()`
+ *                        called.
+ * @retval    EPERM       Can't create server-side RPC transport. `log_add()`
+ *                        called.
+ * @retval    ESRCH       Client isn't allowed. `log_add()` called.
+ * @retval    ETIMEDOUT   Client didn't make contact. `log_add()` called.
+ */
+static int
+runChildLdm(
+    const struct sockaddr_in* raddr,
+    const int                 xp_sock)
+{
+    setremote(raddr, xp_sock);
+
+    int        status;
+    peer_info* remote = get_remote();
+    SVCXPRT*   xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
+
+    if (xprt == NULL) {
+        log_add("Can't create fd service.");
+        status = EFAULT;
+    }
+    else {
+        xprt->xp_raddr = *raddr;
+        xprt->xp_addrlen = sizeof(*raddr);
+
+        /* Access control */
+        if (lcf_isHostOk(remote)) {
+            status = 0;
+        }
+        else {
+            ensureRemoteName(raddr);
+
+            if (lcf_isHostOk(remote)) {
+                status = 0;
+            }
+            else {
+                if (remote->printname == remote->astr) {
+                    log_add("Denying connection from [%s] because not allowed",
+                            remote->astr);
+                }
+                else {
+                    log_add("Denying connection from \"%s\" because not allowed",
+                            remote_name());
+                }
+
+                /*
+                 * Try to tell the other guy.
+                 * TODO: Why doesn't this work?
+                 */
+                svcerr_weakauth(xprt);
+
+                status = ESRCH;
+            } // Client's hostname is not allowed
+        } // Client's IP address is not allowed
+
+        if (status == 0) {
+            portIsMapped = 0; /* don't call pmap_unset() from child */
+
+            /* Set the logging identifier, optional. */
+            log_set_id(remote_name());
+            log_info("Connection from %s", remote_name());
+
+            // Set the client's address in the server-side RPC transport
+            xprt->xp_raddr = *raddr;
+            xprt->xp_addrlen = sizeof(*raddr);
+
+            if (!svc_register(xprt, LDMPROG, 4, ldmprog_4, 0)) {
+                log_add("Unable to register LDM-4 service.");
+                status = EFAULT;
+            }
+            else {
+                if (!svc_register(xprt, LDMPROG, FIVE, ldmprog_5, 0)) {
+                    log_add("Unable to register LDM-5 service.");
+                    status = EFAULT;
+                }
+                else {
+                    if (!svc_register(xprt, LDMPROG, SIX, ldmprog_6, 0)) {
+                        log_add("Unable to register LDM-6 service.");
+                        status = EFAULT;
+                    }
+                    else {
+                        #if WANT_MULTICAST
+                            if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7,
+                                    0)) {
+                                log_add("Unable to register LDM-7 service.");
+                                status = EFAULT;
+                            }
+                        #endif
+                    } // LDM6 registered
+                } // LDM5 registered
+            } // LDM4 registered
+
+            if (status == 0) {
+                status = runSvc(xp_sock, remote->printname);
+
+                if (status == ECONNRESET) {
+                    xprt = NULL; // svc_destroy() was called
+                    status = 0;
+                }
+            } // LDM versions registered with RPC
+        } // Client is allowed
+
+        if (xprt)
+            // Unregisters LDM versions. Must only be called once.
+            svc_destroy(xprt);
+    } // Server-side RPC transport created
+
+    return status;
+}
+
+/**
  * Handles an incoming RPC connection on a socket.  This method will fork(2)
  * a copy of this program, if appropriate, for handling incoming RPC messages.
  *
- * sock           The socket with the incoming RPC connection.
+ * @param[in] sock  The socket on which to accept incoming connection
  */
-static void handle_connection(
-        int sock)
+static void
+handle_connection(const int sock)
 {
     struct sockaddr_in raddr;
-    socklen_t len;
-    int xp_sock;
-    pid_t pid;
-    SVCXPRT *xprt;
-    int status = 1; /* EXIT_FAILURE assumed unless one_svc_run() success */
-    peer_info* remote = get_remote();
+    socklen_t          len;
+    int                xp_sock;
+    pid_t              pid;
+    peer_info*         remote = get_remote();
 
     again: len = sizeof(raddr);
     (void) memset(&raddr, 0, len);
@@ -660,105 +822,11 @@ static void handle_connection(
     }
     /* else child */
 
-    setremote(&raddr, xp_sock);
+    (void)close(sock);
 
-    /* Access control */
-    if (!lcf_isHostOk(remote)) {
-        ensureRemoteName(&raddr);
-        if (!lcf_isHostOk(remote)) {
-            if (remote->printname == remote->astr) {
-                log_notice_q("Denying connection from [%s] because not "
-                        "allowed", remote->astr);
-            }
-            else {
-                log_notice_q("Denying connection from \"%s\" because not "
-                        "allowed", remote_name());
-            }
+    int status = runChildLdm(&raddr, xp_sock);
 
-            /*
-             * Try to tell the other guy.
-             * TODO: Why doesn't this work?
-             */
-            xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
-            if (xprt != NULL) {
-                xprt->xp_raddr = raddr;
-                xprt->xp_addrlen = (int) len;
-                svcerr_weakauth(xprt);
-                svc_destroy(xprt);
-            }
-
-            goto unwind_sock;
-        }
-    }
-    /* else */
-
-    portIsMapped = 0; /* don't call pmap_unset() from child */
-
-    (void) close(sock);
-
-    /* Set the ulog identifier, optional. */
-    log_set_id(remote_name());
-
-    log_info_q("Connection from %s", remote_name());
-
-    xprt = svcfd_create(xp_sock, remote->sendsz, remote->recvsz);
-    if (xprt == NULL) {
-        log_error_q("Can't create fd service.");
-        goto unwind_sock;
-    }
-    /* hook up the remote address to the xprt. */
-    /* xprt->xp_raddr = raddr; */
-    xprt->xp_raddr = raddr;
-    xprt->xp_addrlen = (int) len;
-
-    if (!svc_register(xprt, LDMPROG, 4, ldmprog_4, 0)) {
-        log_error_q("unable to register LDM-4 service.");
-        svc_destroy(xprt);
-        goto unwind_sock;
-    }
-
-    if (!svc_register(xprt, LDMPROG, FIVE, ldmprog_5, 0)) {
-        log_error_q("unable to register LDM-5 service.");
-        svc_destroy(xprt);
-        goto unwind_sock;
-    }
-
-    if (!svc_register(xprt, LDMPROG, SIX, ldmprog_6, 0)) {
-        log_error_q("unable to register LDM-6 service.");
-        svc_destroy(xprt);
-        goto unwind_sock;
-    }
-
-#if WANT_MULTICAST
-    if (!svc_register(xprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
-        log_error_q("unable to register LDM-7 service.");
-        svc_destroy(xprt);
-        goto unwind_sock;
-    }
-#endif
-
-    /*
-     *  handle rpc requests
-     */
-    {
-        const unsigned  TIMEOUT = 2*interval;
-        status = one_svc_run(xp_sock, TIMEOUT);
-        if (status == 0) {
-            log_info_q("Done");
-        }
-        else if (status == ETIMEDOUT) {
-            log_notice_q("Connection from client LDM silent for %u seconds",
-                    TIMEOUT);
-        }
-        else { /* connection to client lost */
-            log_info_q("Connection with client LDM closed");
-            status = 0; /* EXIT_SUCCESS */
-        }
-    }
-
-    /* svc_destroy(xprt);  done by svc_getreqset() */
-
-    unwind_sock: (void) close(xp_sock);
+    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_NOTICE);
 
     exit(status); // `cleanup()` will release acquired resources
 }
