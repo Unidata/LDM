@@ -809,41 +809,15 @@ ucastRcvr_run(void* const restrict arg)
     log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
             timeout);
 
-#define BLOCK_ALL_SIGS 0
-#if BLOCK_ALL_SIGS
-    sigset_t allSigs;
-    sigfillset(&allSigs);
-#endif
 
     mutex_lock(&ucastRcvr.mutex);
         while (ucastRcvr.state == TASK_STARTED) {
-#if BLOCK_ALL_SIGS
-            sigset_t prevSigs;
-
-            status = pthread_sigmask(SIG_BLOCK, &allSigs, &prevSigs);
-            log_assert(status == 0);
-            {
-                sigset_t sigset;
-                status = sigpending(&sigset);
-                log_assert(status == 0);
-                for (int i = 1; i < _NSIG; ++i)
-                    if (sigismember(&sigset, i))
-                        log_debug("Signal %d is pending", i);
-            }
-#endif
 
             // Excessive output
             log_debug("Calling poll(): socket=%d, timeout=%d", sock, timeout);
             mutex_unlock(&ucastRcvr.mutex);
                 status = poll(&pfd, 1, timeout); // poll() is async-signal safe
             mutex_lock(&ucastRcvr.mutex);
-
-#if BLOCK_ALL_SIGS
-            {
-                int status = pthread_sigmask(SIG_SETMASK, &prevSigs, NULL);
-                log_assert(status == 0);
-            }
-#endif
 
             if (0 == status) {
                 log_debug("Timeout");
@@ -1674,7 +1648,6 @@ downlet_stopTasks(void)
 static int
 downlet_wait(void)
 {
-#if 1
     char byte;
     int  status = read(down7.pipe[0], &byte, sizeof(byte));
 
@@ -1687,22 +1660,6 @@ downlet_wait(void)
     }
 
     return status;
-#else
-#if 0
-    sigset_t oldsigset;
-    sigprocmask(SIG_BLOCK, &down7.cancelSigSet, &oldsigset);
-    int sig;
-    (void)sigwait(&down7.cancelSigSet, &sig);
-    sigprocmask(SIG_SETMASK, &oldsigset, NULL);
-#else
-    mutex_lock(&downlet.mutex);
-        while (downlet.taskStatus == 0)
-            pthread_cond_wait(&downlet.cond, &downlet.mutex);
-    mutex_unlock(&downlet.mutex);
-#endif
-
-    return downlet.taskStatus;
-#endif
 }
 
 // Forward declaration
