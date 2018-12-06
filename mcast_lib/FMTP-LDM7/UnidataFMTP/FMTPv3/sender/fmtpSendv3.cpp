@@ -452,7 +452,7 @@ void* fmtpSendv3::coordinator(void* ptr)
              * is no application support (e.g. testApp).
              */
             if (sendptr->notifier) {
-                if (!sendptr->notifier->verify_new_recv(newtcpsockfd)) {
+                if (!sendptr->notifier->vetNewRcvr(newtcpsockfd)) {
                     logMsg("fmtpSendv3::coordinator(): Connection on socket " +
                             std::to_string(newtcpsockfd) + " isn't authorized");
                     sendptr->tcpsend->dismantleConn(newtcpsockfd);
@@ -544,7 +544,7 @@ void fmtpSendv3::handleRetxEnd(FmtpHeader*   const recvheader,
              * notify the sending application.
              */
             if (notifier) {
-                notifier->notify_of_eop(recvheader->prodindex);
+                notifier->notifyOfEop(recvheader->prodindex);
             }
             else {
                 suppressor->remove(recvheader->prodindex);
@@ -1371,7 +1371,7 @@ void fmtpSendv3::timerThread()
          * RetxMetadata exclusively, notify_of_eop() will be called only once.
          */
         if (notifier && isRemoved) {
-            notifier->notify_of_eop(prodindex);
+            notifier->notifyOfEop(prodindex);
         }
         else if (isRemoved) {
             suppressor->remove(prodindex);
