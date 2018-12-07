@@ -2820,3 +2820,20 @@ end_backlog_7_svc(
 
     return NULL; // causes RPC dispatcher to not reply
 }
+
+/**
+ * Does nothing. Does not reply.
+ *
+ * @param[in] rqstp   Pointer to the RPC service-request.
+ * @retval    NULL    Always.
+ */
+void*
+test_connection_7_svc(
+    void* const           no_op,
+    struct svc_req* const rqstp)
+{
+    log_debug("Entered");
+    log_debug("Returning");
+
+    return NULL;                // don't reply
+}

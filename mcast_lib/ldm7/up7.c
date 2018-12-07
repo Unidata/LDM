@@ -225,7 +225,8 @@ ensureProductQueueOpen(void)
         }
         else {
             if (atexit(closePq)) {
-                log_add_syserr("Couldn't register product-queue closing function");
+                log_add_syserr("Couldn't register product-queue closing "
+                        "function");
                 success = false;
             }
             else {
@@ -990,23 +991,6 @@ request_backlog_7_svc(
         isDone = true;
     }
 
-    log_debug("Returning");
-
-    return NULL;                // don't reply
-}
-
-/**
- * Does nothing. Does not reply.
- *
- * @param[in] rqstp   Pointer to the RPC service-request.
- * @retval    NULL    Always.
- */
-void*
-test_connection_7_svc(
-    void* const           no_op,
-    struct svc_req* const rqstp)
-{
-    log_debug("Entered");
     log_debug("Returning");
 
     return NULL;                // don't reply
