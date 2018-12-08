@@ -3,7 +3,7 @@
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- *   @file: up7_down7_test.c
+ *   @file: Up7Down7_test.c
  * @author: Steven R. Emmerson
  *
  * This file tests an upstream LDM-7 sending to a downstream LDM-7.
@@ -419,6 +419,8 @@ myUp7_free(MyUp7* const myUp7)
 }
 
 /**
+ * Always destroys the server-side RPC transport.
+ *
  * @param[in] up7          Upstream LDM-7.
  */
 static void
@@ -433,16 +435,19 @@ myUp7_run(MyUp7* const myUp7)
 
     int status = one_svc_run(sock, TIMEOUT);
 
-    if (status == ETIMEDOUT) {
-        log_add("Connection from client LDM silent for %u seconds", TIMEOUT);
+    if (status == ECONNRESET) {
+        log_add("Connection with LDM client lost");
+        // one_svc_run() called svc_getreqset(), which called svc_destroy()
     }
     else {
-        log_add("Connection with LDM client lost");
-        /*
-         * one_svc_run() called svc_getreqset(), which called svc_destroy()
-         */
-        myUp7->xprt = NULL;
+        if (status == ETIMEDOUT)
+            log_add("Connection from client LDM silent for %u seconds",
+                    TIMEOUT);
+
+        svc_destroy(myUp7->xprt);
     }
+
+    myUp7->xprt = NULL;
 #else
     int       status;
     struct    pollfd fds;
@@ -780,7 +785,8 @@ sndr_start(
 {
     int status;
 
-    CU_ASSERT_EQUAL_FATAL(pthread_mutex_init(&sender->mutex, NULL), 0);
+    CU_ASSERT_EQUAL_FATAL(mutex_init(&sender->mutex,
+            PTHREAD_MUTEX_ERRORCHECK, true), 0);
     CU_ASSERT_EQUAL_FATAL(pthread_cond_init(&sender->cond, NULL), 0);
 
     // Ensure that the first product-index will be 0
@@ -1342,7 +1348,7 @@ test_bad_subscription(
 }
 
 static void
-test_up7_down7(
+test_up7Down7(
         void)
 {
     //log_set_level(LOG_LEVEL_DEBUG);
@@ -1459,7 +1465,7 @@ int main(
             if (CU_ADD_TEST(testSuite, test_up7)
                     && CU_ADD_TEST(testSuite, test_down7)
                     && CU_ADD_TEST(testSuite, test_bad_subscription)
-                    && CU_ADD_TEST(testSuite, test_up7_down7)
+                    && CU_ADD_TEST(testSuite, test_up7Down7)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
