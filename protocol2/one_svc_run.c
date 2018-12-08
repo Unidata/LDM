@@ -30,8 +30,9 @@
  * Run an RPC server on a single socket (similar to svc_run(3RPC)). Runs until:
  *   1) The socket gets closed; or
  *   2) The timeout expires without any activity; or
- *   3) as_shouldSwitch() returns true; or
- *   4) An error occurs.
+ *   3) as_shouldSwitch() returns true;
+ *   4) An error occurs; or
+ *   5) The thread is interrupted and the `done` global variable is set.
  * <p>
  * This function uses the "log" module to accumulate messages.
  *

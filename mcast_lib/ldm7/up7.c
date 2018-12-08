@@ -105,30 +105,32 @@ subRep_toString(const SubscriptionReply* const reply)
  * Upstream LDM7:
  ******************************************************************************/
 
-/**
- * Module is initialized?
- */
-static bool        initialized = FALSE;
-/**
- * The RPC client-side transport to the downstream LDM-7
- */
-static CLIENT*     clnt = NULL;
-/**
- * The feedtype of the subscription.
- */
-static feedtypet   feedtype = NONE;
-/**
- * The IP address of the client FMTP component
- */
-static in_addr_t   fmtpClntAddr = INADDR_ANY;
-/**
- * Whether or not the product-index map is open.
- */
-static bool        pimIsOpen = false;
-/**
- * Whether or not this component is done.
- */
-static bool        isDone = false;
+/// Module is initialized?
+static bool               initialized = FALSE;
+
+/// Separate, server-side RPC transport with downstream LDM7:
+static SVCXPRT*           svcXprt = NULL;
+
+/// Client-side RPC transport with downstream LDM-7:
+static CLIENT*            clnt = NULL;
+
+/// Identifier of the client:
+static char               clntId[_POSIX_HOST_NAME_MAX+1];
+
+/// Feedtype of the subscription:
+static feedtypet          feedtype = NONE;
+
+/// IP address of the client FMTP component:
+static in_addr_t          fmtpClntAddr = INADDR_ANY;
+
+/// Product-index map is open?
+static bool               pimIsOpen = false;
+
+/// Reply to subscription request:
+static SubscriptionReply* subReply = NULL;
+
+/// This module is done?
+static bool               isDone = false;
 
 /**
  * Opens the product-index map associated with a feedtype.
@@ -239,69 +241,56 @@ ensureProductQueueOpen(void)
 }
 
 /**
- * Destroys the client-side transport for unicasting missed data-products to the
- * downstream LDM7. Idempotent.
+ * Creates the client-side RPC transport on the TCP connection of the
+ * server-side RPC transport.
+ *
+ * @retval 0           Success
+ * @retval LDM7_SYSTEM System error. `log_add()` called.
+ */
+static Ldm7Status
+initClient()
+{
+    log_debug("Entered");
+
+    log_assert(svcXprt);
+    log_assert(svcXprt->xp_raddr.sin_port != 0);
+    log_assert(svcXprt->xp_sock >= 0); // So client-error won't close socket
+
+    int status;
+
+    // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
+    // TODO: adjust sending buffer size
+    CLIENT* client = clnttcp_create(&svcXprt->xp_raddr, LDMPROG, SEVEN,
+            &svcXprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
+
+    if (client == NULL) {
+        log_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
+        log_add("Couldn't create client-side transport to downstream LDM-7 on "
+                "%s%s", hostbyaddr(&svcXprt->xp_raddr), clnt_spcreateerror(""));
+
+        status = LDM7_RPC;
+    }
+    else {
+        clnt = client;
+        status = 0;
+    } // Client-side transport created
+
+    log_debug("Returning %d", status);
+    return status;
+}
+
+/**
+ * Destroys the separate, client-side RPC transport for unicasting missed
+ * data-products to the downstream LDM7. Idempotent.
  */
 static void
 destroyClient(void)
 {
     if (clnt) {
-        clnt_destroy(clnt); // Frees `clnt`. Doesn't check for `NULL`.
+        // Doesn't check for `NULL`. Doesn't close socket. Frees `clnt`.
+        clnt_destroy(clnt);
         clnt = NULL;
     }
-}
-
-/**
- * Creates a client-side RPC transport on the TCP connection of a server-side
- * RPC transport.
- *
- * @param[in] xprt      Server-side RPC transport.
- * @retval    true      Success.
- * @retval    false     System error. `log_add()` called.
- */
-static bool
-initClient(
-        struct SVCXPRT* const xprt)
-{
-    bool success;
-
-    /*
-     * Create a client-side RPC transport on the TCP connection.
-     */
-    log_assert(xprt->xp_raddr.sin_port != 0);
-    log_assert(xprt->xp_sock >= 0);
-
-    // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
-    // TODO: adjust sending buffer size
-    CLIENT* client = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
-            &xprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
-
-    if (client == NULL) {
-        log_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
-        log_add("Couldn't create client-side transport to downstream LDM-7 on "
-                "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
-
-        success = false;
-    }
-    else {
-        if (atexit(destroyClient)) {
-            log_add_syserr("Couldn't register upstream LDM-7 cleanup function");
-
-            success = false;
-        }
-        else {
-            // `up7_down7_test` calls this function more than once
-            destroyClient();
-            clnt = client;
-
-            success = true;
-        }
-
-        if (!success)
-            clnt_destroy(client); // Frees `client`
-    } // `client` allocated
-
-    return success;
 }
 
 /**
@@ -370,7 +359,159 @@ reduceFeed(
 }
 
 /**
- * Initializes this module:
+ * Initializes the separate, server-side RPC transport. This is done because the
+ * RPC library assumes a one-to-one correspondence between server-side
+ * transports and calls to `svc_getreqset()` and `svc_getreqsock()`.
+ *
+ * @param[in] xprt         Initial, server-side RPC transport
+ * @retval    0            Success
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ * @retval    LDM7_RPC     Failure in RPC component. `log_add()` called.
+ */
+static int
+initXprt(const SVCXPRT* const xprt)
+{
+    log_debug("Entered");
+    log_assert(xprt);
+
+    int status;
+    int sock = dup(xprt->xp_sock);
+
+    if (sock == -1) {
+        log_add_syserr("dup() failure");
+        status = LDM7_SYSTEM;
+    }
+    else {
+        svcXprt = svcfd_create(xprt->xp_sock, 0, 0);
+
+        if (svcXprt == NULL) {
+            log_add("svcfd_create() failure");
+            status = LDM7_RPC;
+        }
+        else {
+            svcXprt->xp_raddr = xprt->xp_raddr;
+            svcXprt->xp_addrlen = sizeof(xprt->xp_raddr);
+
+            if (!svc_register(svcXprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
+                log_add("svc_register() failure");
+                status = LDM7_RPC;
+            }
+            else {
+                status = 0;
+            }
+
+            if (status) {
+                svc_destroy(svcXprt);
+                svcXprt = NULL;
+            }
+        } // Separate, server-side RPC transport created
+
+        if (status && svcXprt) // svc_destroy() closes socket
+            (void)close(sock);
+    } // Socket duplicated
+
+    log_debug("Returning %d", status);
+    return status;
+}
+
+/**
+ * Destroys the separate, server-side RPC transport. Idempotent.
+ */
+static void
+destroyXprt()
+{
+    if (svcXprt) {
+        svc_destroy(svcXprt);
+        svcXprt = NULL;
+    }
+}
+
+/**
+ * Finishes initializing this module:
+ *   - Opens the product-to-index map
+ *   - Initializes a separate, client-side RPC transport for unicasting missed
+ *     data-products to the downstream LDM7
+ *   - Sets the file-scoped variables `feedtype` and `fmtpClntAddr`
+ *   - Sets the reply to the RPC client
+ *   - Sets `isInitialized` to true
+ *
+ * @param[in]  mcastInfo     Multicast information. On success, caller must not
+ *                           destroy.
+ * @param[in]  hostId        Identifier of client
+ * @param[in]  fmtpClntCidr  Address for FMTP client
+ * @param[out] reply         RPC reply. Only modified on success.
+ * @retval     0             Success. `*reply` is set.
+ * @retval     LDM7_LOGIC    Logic error. `log_add()` called.
+ * @retval     LDM7_RPC      Couldn't create client-side RPC transport.
+ *                           `log_add()` called.
+ * @retval     LDM7_SYSTEM   System error. `log_add()` called.
+ */
+static int
+init2(  const McastInfo* restrict         mcastInfo,
+        const char* const restrict        hostId,
+        const CidrAddr* const restrict    fmtpClntCidr,
+        SubscriptionReply* const restrict reply)
+{
+    // The cleanup() function in ldmd.c destroys this instance
+
+    log_assert(!initialized);
+    log_assert(svcXprt);
+    log_assert(mcastInfo);
+    log_assert(hostId);
+    log_assert(fmtpClntCidr);
+    log_assert(reply);
+
+    int       status;
+    status = openProdIndexMap(mcastInfo->feed);
+
+    if (status) {
+        log_add("Couldn't open product-to-index map for feed %s",
+                s_feedtypet(mcastInfo->feed));
+    }
+    else {
+        if (!ensureProductQueueOpen()) {
+            status = LDM7_PQ;
+        }
+        else {
+            status = initClient();
+
+            if (status) {
+                log_add("Couldn't create client-side RPC transport to "
+                        "downstream host %s", hostId);
+            }
+            else {
+                // Failure is ignored to enable testing
+                if (addToUldb(&svcXprt->xp_raddr, mcastInfo->feed)) {
+                    log_add("Couldn't add LDM7 process for client %s, feed "
+                            "%s to upstream LDM database", hostId,
+                            s_feedtypet(mcastInfo->feed));
+                    log_flush_error();
+                }
+
+                reply->SubscriptionReply_u.info.mcastInfo = *mcastInfo;
+                reply->SubscriptionReply_u.info.fmtpAddr = *fmtpClntCidr;
+                reply->status = LDM7_OK;
+                feedtype = mcastInfo->feed;
+                fmtpClntAddr = cidrAddr_getAddr(fmtpClntCidr);
+                strncpy(clntId, hostId, sizeof(clntId))
+                        [sizeof(clntId)-1] = 0;
+                initialized = true;
+            } // Client-side transport created
+
+            if (status)
+                closePq();
+        } // Product-queue opened
+
+        if (status)
+            closeProdIndexMap();
+    } // Product-index map is opened
+
+    return status;
+}
+
+/**
+ * Initializes this module.
+ *   - Creates a separate, server-side RPC transport from the initial transport
  *   - Starts the multicast sender if necessary
  *   - Gets a CIDR address for the FMTP client if appropriate
  *   - Opens the product-to-index map
@@ -378,7 +519,7 @@ reduceFeed(
  *   - Sets the reply to the RPC client
  *   - Sets `isInitialized` to true
  *
- * @param[in]  xprt         RPC transport
+ * @param[in]  xprt         Server-side RPC transport
  * @param[in]  desiredFeed  Multicast feed desired by downstream client
  * @param[in]  fmtVcEnd     Remote endpoint of the AL2S virtual circuit or
  *                          `NULL`. Necessary only if the multicast LDM sender
@@ -398,24 +539,19 @@ init(   struct SVCXPRT* const restrict    xprt,
         const VcEndPoint* const restrict  rmtVcEnd,
         SubscriptionReply* const restrict reply)
 {
-    // The cleanup() function in ldmd.c destroys this instance
-
+    log_assert(!initialized);
     log_assert(xprt);
     log_assert(rmtVcEnd);
     log_assert(reply);
 
-    int                                  status;
-    struct sockaddr_in*                  sockAddr = svc_getcaller(xprt);
-    const char* const                    hostId = hostbyaddr(sockAddr);
-    const struct in_addr* const restrict hostAddr = &sockAddr->sin_addr;
+    int status = initXprt(xprt);
 
-    if (initialized) {
-        log_warning("Upstream LDM7 module is already initialized");
-        reply->status = LDM7_LOGIC;
-    }
-    else {
-        const feedtypet reducedFeed = reduceFeed(desiredFeed, hostAddr,
-                hostId);
+    if (status == 0) {
+        struct sockaddr_in* const   sockAddr = svc_getcaller(xprt);
+        const char* const           hostId = hostbyaddr(sockAddr);
+        const struct in_addr* const hostAddr = &sockAddr->sin_addr;
+
+        const feedtypet reducedFeed = reduceFeed(desiredFeed, hostAddr, hostId);
 
         if (reducedFeed == NONE) {
             log_notice("Host %s isn't allowed to receive any part of feed %s",
@@ -449,68 +585,160 @@ init(   struct SVCXPRT* const restrict    xprt,
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    status = openProdIndexMap(reducedFeed);
-
-                    if (status) {
-                        log_add("Couldn't open product-to-index map for feed "
-                                "%s", s_feedtypet(reducedFeed));
-                        mi_destroy(&mcastInfo);
-                    }
-                    else {
-                        if (!ensureProductQueueOpen()) {
-                            status = LDM7_PQ;
-                        }
-                        else {
-                            if (!initClient(xprt)) {
-                                log_add("Couldn't create client-side RPC "
-                                        "transport to downstream host %s",
-                                        hostId);
-                                status = LDM7_RPC;
-                            }
-                            else {
-                                // Failure is ignored to enable testing
-                                if (addToUldb(&xprt->xp_raddr, reducedFeed)) {
-                                    log_add("Couldn't add LDM7 process for "
-                                            "client %s, feed %s to upstream "
-                                            "LDM database", hostId,
-                                            s_feedtypet(reducedFeed));
-                                    log_flush_error();
-                                }
-
-                                svc_unregister(LDMPROG, 4);
-                                svc_unregister(LDMPROG, 5);
-                                svc_unregister(LDMPROG, 6);
-
-                                reply->SubscriptionReply_u.info.mcastInfo =
-                                        mcastInfo;
-                                reply->SubscriptionReply_u.info.fmtpAddr =
-                                        fmtpClntCidr;
-                                reply->status = LDM7_OK;
-                                feedtype = reducedFeed;
-                                fmtpClntAddr = cidrAddr_getAddr(&fmtpClntCidr);
-                                initialized = true;
-                            } // Client-side transport created
-
-                            if (status)
-                                closePq();
-                        } // Product-queue opened
-
-                        if (status)
-                            closeProdIndexMap();
-                    } // Product-index map is opened
+                    status = init2(&mcastInfo, hostId, &fmtpClntCidr, reply);
 
                     if (status)
                         mi_destroy(&mcastInfo);
                 } // Multicast information initialized
 
-                if (status && umm_unsubscribe(reducedFeed,
-                        cidrAddr_getAddr(&fmtpClntCidr)))
-                    log_flush_error();
+                if (status)
+                    (void)umm_unsubscribe(reducedFeed,
+                            cidrAddr_getAddr(&fmtpClntCidr));
             } // `umm_subscribe()` successful
         } // Client is allowed to receive something
-    } // Client isn't already subscribed
+
+        if (status)
+            destroyXprt();
+    } // Separate, server-side RPC transport initialized
 
     return status;
+}
+
+/**
+ * Destroys this module. Idempotent.
+ */
+static void
+destroy(void)
+{
+    log_debug("Entered");
+
+    if (initialized) {
+        (void)umm_unsubscribe(feedtype, fmtpClntAddr);
+        log_clear();
+
+        if (subReply) {
+            xdr_free(xdr_SubscriptionReply, subReply);
+            subReply = NULL;
+        }
+
+        /*
+         * `svcXprt` is not destroyed because ldmd(1) might have called
+         * svc_destroy() on it, and that function must only be called once per
+         * transport
+         */
+
+        destroyClient(); // Closes socket
+        closeProdIndexMap();
+
+        isDone = false;
+        initialized = false;
+    }
+
+    log_debug("Returning");
+}
+
+/**
+ * Runs the upstream LDM server. The server-side RPC transport is always
+ * destroyed.
+ *
+ * @retval    ECONNRESET     The connection to the client LDM was lost.
+ *                           `svc_destroy(svcXprt)` called. `log_add()` called.
+ * @retval    EBADF          The socket isn't open. `log_add()` called.
+ * @retval    EPIPE          Testing the connection failed. `log_add()` called.
+ */
+static int
+runSvc(void)
+{
+    log_debug("Entered");
+
+    log_assert(svcXprt);
+    log_assert(clntId);
+
+    int            status;
+    const int      sock = svcXprt->xp_sock;
+    const unsigned TIMEOUT = 2*interval; // 60 seconds
+
+    do {
+        status = one_svc_run(sock, TIMEOUT); // Exits if `done` set
+
+        if (status == ECONNRESET) { // Connection to client lost
+            /*
+             * one_svc_run() called svc_getreqsock(), which called
+             * svc_destroy(svcXprt), which must only be called once per
+             * transport
+             */
+            log_add("Connection with client LDM, %s, has been lost", clntId);
+            svcXprt = NULL; // Let others know
+        }
+        else if (status == ETIMEDOUT) {
+            log_debug("Client LDM, %s, has been silent for %u seconds", clntId,
+                    TIMEOUT);
+            (void)test_connection_7(NULL, clnt);
+
+            /*
+             * The status will be RPC_TIMEDOUT unless an error occurs because
+             * the RPC call uses asynchronous message-passing.
+             */
+            if (clnt_stat(clnt) == RPC_TIMEDOUT) {
+                status = 0;
+            }
+            else {
+                log_add("Connection with downstream LDM-7 is broken: %s",
+                        clnt_errmsg(clnt));
+                status = EPIPE;
+            }
+        } // one_svc_run() timed-out
+        else {
+            log_add("Error running upstream LDM7 server");
+        }
+    } while (status == 0);
+
+    if (svcXprt) {
+        svc_destroy(svcXprt);
+        svcXprt = NULL;
+    }
+
+    log_debug("Returning");
+
+    return status;
+}
+
+/**
+ * Indicates if the caller should send a reply to the downstream LDM7. Will
+ * start a separate upstream LDM7 server if appropriate and not return until
+ * that server terminates.
+ *
+ * @param[in] xprt     Initial, server-side RPC transport
+ * @param[in] result   Reply to be sent if appropriate
+ * @retval    `true`   `result` should be sent to downstream LDM7
+ * @retval    `false`  `result` should not be sent to downstream LDM7: NULL
+ *                     should be send instead.
+ */
+static bool
+shouldReply(
+        SVCXPRT* const restrict           xprt,
+        SubscriptionReply* const restrict result)
+{
+    log_debug("Entered");
+    log_assert(result);
+
+    const bool serve = result->status == LDM7_OK;
+
+    if (serve) {
+	if (!svc_sendreply(xprt, (xdrproc_t)xdr_SubscriptionReply,
+	        (char*)result)) {
+	    log_error("Couldn't send subscription reply to client");
+            svcerr_systemerr(svcXprt);
+	}
+	else {
+            runSvc();
+            log_flush_error();
+	}
+    }
+
+    log_debug("Returning");
+
+    return !serve;
 }
 
 /**
@@ -859,18 +1087,16 @@ subscribe_7_svc(
 {
     log_debug("Entered");
 
-    struct SVCXPRT*           xprt = rqstp->rq_xprt;
-    const char*               ipv4spec = inet_ntoa(xprt->xp_raddr.sin_addr);
-    const char*               hostId = hostbyaddr(&xprt->xp_raddr);
-    const char*               feedspec = s_feedtypet(request->feed);
-    static SubscriptionReply* reply;
+    struct SVCXPRT* const xprt = rqstp->rq_xprt;
+    const char* const     hostId = hostbyaddr(&xprt->xp_raddr);
+    const char* const     feedspec = s_feedtypet(request->feed);
 
     log_notice("Incoming subscription request from %s:%u for feed %s",
             hostId, ntohs(xprt->xp_raddr.sin_port), feedspec);
 
-    if (reply) {
-        xdr_free(xdr_SubscriptionReply, reply); // Free any previous use
-        reply = NULL;
+    if (subReply) {
+        xdr_free(xdr_SubscriptionReply, subReply); // Free any previous use
+        subReply = NULL;
     }
 
     static SubscriptionReply result;
@@ -883,18 +1109,24 @@ subscribe_7_svc(
     else {
         // `result` is set
 
-        reply = &result;
-
-        if (log_is_enabled_debug) {
-            char* const subRepStr = subRep_toString(reply);
-            log_debug("Replying with %s", subRepStr);
-            free(subRepStr);
+        if (!shouldReply(xprt, &result)) {
+            // A separate upstream LDM7 server was run
+            destroy();
         }
-    } // `result` is set.
+        else {
+            subReply = &result;
+
+            if (log_is_enabled_debug) {
+                char* const subRepStr = subRep_toString(subReply);
+                log_debug("Replying with %s", subRepStr);
+                free(subRepStr);
+            }
+        }
+    } // Module is initialized. `result` is set.
 
     log_debug("Returning");
 
-    return reply;
+    return subReply;
 }
 
 /**
@@ -904,18 +1136,7 @@ void
 up7_destroy(void)
 {
     log_debug("Entered");
-
-    if (initialized) {
-        (void)umm_unsubscribe(feedtype, fmtpClntAddr);
-        log_clear();
-
-        destroyClient();
-        closeProdIndexMap();
-
-        isDone = false;
-        initialized = false;
-    }
-
+    destroy();
     log_debug("Returning");
 }
 

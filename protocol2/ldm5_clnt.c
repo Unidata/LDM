@@ -468,8 +468,7 @@ forn5(
              *
              * Should we setsockopt(sock, SOL_SOCKET, SO_RCVBUF, ...)?
              */
-            SVCXPRT* const      xprt =
-                svcfd_create(xp_sock, 0, MAX_RPC_BUF_NEEDED);
+            SVCXPRT* xprt = svcfd_create(xp_sock, 0, MAX_RPC_BUF_NEEDED);
 
             if(xprt == NULL) {
                 log_error_q("svcfd_create() failure.");
@@ -477,15 +476,25 @@ forn5(
             else {
                 if(!svc_register(xprt, LDMPROG, 5, dispatch, 0)) {
                     log_error_q("svc_register() failure.");
-                    svc_destroy(xprt);
                 }
                 else {
                     status = one_svc_run(xp_sock, inactive_timeo);
-                    /*
-                     * svc_destroy(xprt) was invoked by svc_getreqset() in
-                     * one_svc_run().
-                     */
+
+                    if (status == ECONNRESET) {
+                        /*
+                         * one_svc_run() called svc_getreqset(), which called
+                         * svc_destroy(xprt)
+                         */
+                    }
+                    else {
+                        svc_destroy(xprt);
+                    }
+
+                    xprt = NULL;
                 }                       /* dispatch routine registered */
+
+                if (xprt)
+                    svc_destroy(xprt);  /* Unregisters dispatch routine */
             }                           /* svcfd_create() success */
 
             (void)close(xp_sock);       /* might already be closed */

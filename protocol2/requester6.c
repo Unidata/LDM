@@ -136,8 +136,7 @@ static int is_upstream_alive(
 
 
 /**
- * Runs the downstream LDM server. On return, the socket might or might not be
- * closed.
+ * Runs the downstream LDM server. On return, the socket will be closed.
  *
  * @retval NULL     Success.
  * @return          Error object. err_code() values:
@@ -176,8 +175,6 @@ run_service(
             "Couldn't create RPC service for %s", upName);
     }
     else {
-        int destroyTransport = 1;
-
         if (!svc_register(xprt, LDMPROG, SIX, ldmprog_6, 0)) {
             error = ERR_NEW(REQ6_SYSTEM_ERROR, NULL, 
                 "Couldn't register LDM service");
@@ -198,7 +195,7 @@ run_service(
 
                     log_debug("Downstream LDM initialized");
 
-                    for (;;) {
+                    do {
                         /*
                          * The only possible return values are:
                          *     0          if as_shouldSwitch()
@@ -207,51 +204,54 @@ run_service(
                          *     EBADF      if socket not open.
                          *     EINVAL     if invalid timeout.
                          */
-                        int err = one_svc_run(socket, inactiveTimeout);
+                        int status = one_svc_run(socket, inactiveTimeout);
 
                         (void)exitIfDone(0);
 
-                        if (err == ETIMEDOUT) {
-                            log_info_q("Connection from upstream LDM silent for "
-                                    "%u seconds", inactiveTimeout);
+                        if (status == ECONNRESET) {
+                            /*
+                             * one_svc_run() called svc_getreqset(), which
+                             * called svc_destroy()
+                             */
+                        }
+                        else {
+                            if (status == ETIMEDOUT) {
+                                log_info("Connection from upstream LDM silent "
+                                        "for %u seconds", inactiveTimeout);
 
 #if ENABLE_IS_ALIVE
-                            if (is_upstream_alive(upName, upAddr, upId)) {
-                                log_info_q("Upstream LDM is alive.  Waiting...");
-
-                                continue;
-                            }
+                                if (is_upstream_alive(upName, upAddr, upId)) {
+                                    log_info("Upstream LDM is alive. "
+                                            "Waiting...");
+                                    continue;
+                                }
 #endif
 
-                            error = ERR_NEW1(REQ6_TIMED_OUT, NULL,
-                                "Upstream LDM died: pid=%u", upId);
-                        }
-                        else if (err != 0) {
-                            error = ERR_NEW1(REQ6_DISCONNECT, NULL,
-                                "Connection to upstream LDM closed: pid=%u",
-                                upId);
-                            /*
-                             * The service-transport was destroyed by
-                             * one_svc_run().
-                             */
-                            destroyTransport = 0;
-                        }
+                                error = ERR_NEW1(REQ6_TIMED_OUT, NULL,
+                                    "Upstream LDM died: pid=%u", upId);
+                            }
+                            else if (status) {
+                                error = ERR_NEW1(REQ6_SYSTEM_ERROR, NULL,
+                                    "Error running downstream LDM6 server: "
+                                        "pid=%u", upId);
+                            }
 
-                        break;
-                    }                   /* service timeout loop */
-                }                       /* expected product-class set */
+                            svc_destroy(xprt);
+                        } // Connection wasn't reset and `xprt` wasn't destroyed
+
+                        xprt = NULL;
+                    } while (xprt); // Service timeout loop
+                } // Expected product-class set
 
                 down6_destroy();
-            }                           /* down6 module initialized */
+            } // Down6 module initialized
 
-            /*
-             * svc_destroy() calls svc_unregister(LDMPROG, SIX).
-             */
-        }                               /* RPC service registered */
+            // svc_destroy() calls svc_unregister(LDMPROG, SIX).
+        } // RPC service registered
 
-        if (destroyTransport)
+        if (xprt)
             svc_destroy(xprt);
-    }                                   /* xprt != NULL */
+    } // Server-side RPC transport created
 
     return error;
 }

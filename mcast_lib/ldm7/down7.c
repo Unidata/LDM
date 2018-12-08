@@ -2456,13 +2456,20 @@ down7_destroy(void)
                 log_assert(status == 0);
             }
 
+            inetId_free(inAddrAny);
+            inAddrAny = NULL;
+
             (void)close(down7.pipe[0]);
             (void)close(down7.pipe[1]);
-            vcEndPoint_destroy(&down7.vcEnd);
-            free(down7.fmtpIface);
-            isa_free(down7.ldmSrvr);
 
+            vcEndPoint_destroy(&down7.vcEnd);
+
+            free(down7.fmtpIface);
+            down7.fmtpIface = NULL;
+
+            isa_free(down7.ldmSrvr);
             down7.ldmSrvr = NULL;
+
             down7.state = DOWN7_UNINIT;
         mutex_unlock(&down7.mutex);
         mutex_destroy(&down7.mutex);

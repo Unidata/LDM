@@ -594,45 +594,43 @@ static int create_ldm_tcp_svc(
 }
 
 /**
- * Runs the upstream LDM server.
+ * Runs the upstream LDM server. This function always destroys the server-side
+ * RPC transport.
  *
- * @param[in] sock           Socket connected to client LDM
- * @param[in] hostId         Identifier of client
- * @retval    ECONNRESET     The connection to the client LDM was lost.
- *                           `svc_destroy(xprt)` called. `log_add()` called.
- * @retval    EBADF          The socket isn't open. `log_add()` called.
+ * @param[in,out] xprt        Server-side RPC transport. Destroyed on return.
+ * @param[in]     hostId      Identifier of client
+ * @retval        ECONNRESET  The connection to the client LDM was lost.
+ *                            `svc_destroy(xprt)` called. `log_add()` called.
+ * @retval        EBADF       The socket isn't open. `log_add()` called.
  */
 static int
-runSvc(
-        const int         sock,
-        const char* const hostId)
+runSvc( SVCXPRT* const restrict    xprt,
+        const char* const restrict hostId)
 {
     log_debug("Entered");
 
-    log_assert(sock >= 0);
+    log_assert(xprt);
     log_assert(hostId);
 
     int            status;
     const unsigned TIMEOUT = 2*interval;
+    const int      sock = xprt->xp_sock;
 
-    for (;;) {
-        status = one_svc_run(sock, TIMEOUT);
+    status = one_svc_run(sock, TIMEOUT); // Exits if `done` set
 
-        if (status == ETIMEDOUT) {
-            log_debug("Client LDM, %s, has been silent for %u seconds", hostId,
-                    TIMEOUT);
-            continue;
-        }
+    if (status == ECONNRESET){ // Connection to client lost
+        /*
+         * one_svc_run() called svc_getreqsock(), which called
+         * svc_destroy(xprt), which must only be called once
+         */
+        log_add("Connection with client LDM, %s, has been lost", hostId);
+    }
+    else {
+        if (status == ETIMEDOUT)
+            log_debug("Client LDM, %s, has been silent for %u seconds",
+                    hostId, TIMEOUT);
 
-        if (status == ECONNRESET){ // Connection to client lost
-            /*
-             * one_svc_run() called svc_getreqsock(), which called
-             * svc_destroy(xprt), which must only be called once
-             */
-            log_add("Connection with client LDM, %s, has been lost", hostId);
-        }
-
-        break;
+        svc_destroy(xprt);
     }
 
     log_debug("Returning");
@@ -740,12 +738,11 @@ runChildLdm(
             } // LDM4 registered
 
             if (status == 0) {
-                status = runSvc(xp_sock, remote->printname);
+                status = runSvc(xprt, remote->printname); // Destroys `xprt`
+                xprt = NULL;
 
-                if (status == ECONNRESET) {
-                    xprt = NULL; // svc_destroy() was called
+                if (status == ECONNRESET)
                     status = 0;
-                }
             } // LDM versions registered with RPC
         } // Client is allowed
 
