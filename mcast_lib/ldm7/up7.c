@@ -354,9 +354,8 @@ reduceFeed(
 }
 
 /**
- * Initializes the separate, server-side RPC transport. This is done because the
- * RPC library assumes a one-to-one correspondence between server-side
- * transports and calls to `svc_getreqset()` and `svc_getreqsock()`.
+ * Initializes the separate, server-side RPC transport. A separate transport is
+ * created because `svc_getreqsock()` and `svc_getreqset()` can't be nested.
  *
  * @param[in] xprt         Initial, server-side RPC transport
  * @retval    0            Success
