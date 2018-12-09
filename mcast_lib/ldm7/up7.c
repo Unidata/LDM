@@ -37,6 +37,7 @@
 #include "prod_class.h"
 #include "prod_index_map.h"
 #include "prod_info.h"
+#include "remote.h"
 #include "rpcutil.h"
 #include "timestamp.h"
 #include "uldb.h"
@@ -113,9 +114,6 @@ static SVCXPRT*           svcXprt = NULL;
 
 /// Client-side RPC transport with downstream LDM-7:
 static CLIENT*            clnt = NULL;
-
-/// Identifier of the client:
-static char               clntId[_POSIX_HOST_NAME_MAX+1];
 
 /// Feedtype of the subscription:
 static feedtypet          feedtype = NONE;
@@ -336,21 +334,18 @@ addToUldb(
  * Reduces the feed requested by a host according to what it is allowed to
  * receive.
  * @param[in] feed    Feed requested by host
- * @param[in] hostId  Host identifier: either a hostname or an IP address in
- *                    dotted-decimal form
  * @param[in] inAddr  Address of the host
  * @return            Reduced feed. Might be `NONE`.
  */
 static feedtypet
 reduceFeed(
         feedtypet                            feed,
-        const struct in_addr* const restrict inAddr,
-        const char* const restrict           hostId)
+        const struct in_addr* const restrict inAddr)
 {
     static const size_t maxFeeds = 128;
     feedtypet           allowedFeeds[maxFeeds];
-    size_t              numFeeds = lcf_getAllowedFeeds(hostId, inAddr, maxFeeds,
-            allowedFeeds);
+    size_t              numFeeds = lcf_getAllowedFeeds(remote_name(), inAddr,
+            maxFeeds, allowedFeeds);
     if (numFeeds > maxFeeds) {
         log_error("numFeeds (%u) > maxFeeds (%d)", numFeeds, maxFeeds);
         numFeeds = maxFeeds;
@@ -437,7 +432,6 @@ destroyXprt()
  *
  * @param[in]  mcastInfo     Multicast information. On success, caller must not
  *                           destroy.
- * @param[in]  hostId        Identifier of client
  * @param[in]  fmtpClntCidr  Address for FMTP client
  * @param[out] reply         RPC reply. Only modified on success.
  * @retval     0             Success. `*reply` is set.
@@ -448,7 +442,6 @@ destroyXprt()
  */
 static int
 init2(  const McastInfo* restrict         mcastInfo,
-        const char* const restrict        hostId,
         const CidrAddr* const restrict    fmtpClntCidr,
         SubscriptionReply* const restrict reply)
 {
@@ -457,7 +450,7 @@ init2(  const McastInfo* restrict         mcastInfo,
     log_assert(!initialized);
     log_assert(svcXprt);
     log_assert(mcastInfo);
-    log_assert(hostId);
+    log_assert(remote_name());
     log_assert(fmtpClntCidr);
     log_assert(reply);
 
@@ -477,13 +470,13 @@ init2(  const McastInfo* restrict         mcastInfo,
 
             if (status) {
                 log_add("Couldn't create client-side RPC transport to "
-                        "downstream host %s", hostId);
+                        "downstream host %s", remote_name());
             }
             else {
                 // Failure is ignored to enable testing
                 if (addToUldb(&svcXprt->xp_raddr, mcastInfo->feed)) {
                     log_add("Couldn't add LDM7 process for client %s, feed "
-                            "%s to upstream LDM database", hostId,
+                            "%s to upstream LDM database", remote_name(),
                             s_feedtypet(mcastInfo->feed));
                     log_flush_error();
                 }
@@ -493,8 +486,6 @@ init2(  const McastInfo* restrict         mcastInfo,
                 reply->status = LDM7_OK;
                 feedtype = mcastInfo->feed;
                 fmtpClntAddr = cidrAddr_getAddr(fmtpClntCidr);
-                strncpy(clntId, hostId, sizeof(clntId))
-                        [sizeof(clntId)-1] = 0;
                 initialized = true;
             } // Client-side transport created
 
@@ -548,14 +539,13 @@ init(   struct SVCXPRT* const restrict    xprt,
 
     if (status == 0) {
         struct sockaddr_in* const   sockAddr = svc_getcaller(xprt);
-        const char* const           hostId = hostbyaddr(sockAddr);
         const struct in_addr* const hostAddr = &sockAddr->sin_addr;
 
-        const feedtypet reducedFeed = reduceFeed(desiredFeed, hostAddr, hostId);
+        const feedtypet reducedFeed = reduceFeed(desiredFeed, hostAddr);
 
         if (reducedFeed == NONE) {
             log_notice("Host %s isn't allowed to receive any part of feed %s",
-                    hostId, s_feedtypet(desiredFeed));
+                    remote_name(), s_feedtypet(desiredFeed));
             reply->status = LDM7_UNAUTH;
             status = 0;
         }
@@ -572,7 +562,7 @@ init(   struct SVCXPRT* const restrict    xprt,
                 status = 0;
             }
             else if (status) {
-                log_add("Couldn't subscribe host %s to feed %s", hostId,
+                log_add("Couldn't subscribe host %s to feed %s", remote_name(),
                         s_feedtypet(reducedFeed));
             }
             else {
@@ -585,7 +575,7 @@ init(   struct SVCXPRT* const restrict    xprt,
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    status = init2(&mcastInfo, hostId, &fmtpClntCidr, reply);
+                    status = init2(&mcastInfo, &fmtpClntCidr, reply);
 
                     if (status)
                         mi_destroy(&mcastInfo);
@@ -652,7 +642,7 @@ runSvc(void)
     log_debug("Entered");
 
     log_assert(svcXprt);
-    log_assert(clntId);
+    log_assert(remote_name());
 
     int            status;
     const int      sock = svcXprt->xp_sock;
@@ -667,12 +657,13 @@ runSvc(void)
              * svc_destroy(svcXprt), which must only be called once per
              * transport
              */
-            log_add("Connection with client LDM, %s, has been lost", clntId);
+            log_add("Connection with client LDM, %s, has been lost",
+                    remote_name());
             svcXprt = NULL; // Let others know
         }
         else if (status == ETIMEDOUT) {
-            log_debug("Client LDM, %s, has been silent for %u seconds", clntId,
-                    TIMEOUT);
+            log_debug("Client LDM, %s, has been silent for %u seconds",
+                    remote_name(), TIMEOUT);
             (void)test_connection_7(NULL, clnt);
 
             /*
@@ -708,37 +699,54 @@ runSvc(void)
  * start a separate upstream LDM7 server if appropriate and not return until
  * that server terminates.
  *
+ *
  * @param[in] xprt     Initial, server-side RPC transport
+ * @param[in] request  Subscription request
  * @param[in] result   Reply to be sent if appropriate
- * @retval    `true`   `result` should be sent to downstream LDM7
- * @retval    `false`  `result` should not be sent to downstream LDM7: NULL
- *                     should be send instead.
+ * @retval    NULL     Do not reply to the client
+ * @return             Response to be sent to the client
  */
-static bool
-shouldReply(
+static SubscriptionReply*
+subscribe(
         SVCXPRT* const restrict           xprt,
+        McastSubReq* const restrict       request,
         SubscriptionReply* const restrict result)
 {
     log_debug("Entered");
+    log_assert(xprt);
+    log_assert(request);
     log_assert(result);
 
-    const bool serve = result->status == LDM7_OK;
+    SubscriptionReply* reply = NULL;
 
-    if (serve) {
-	if (!svc_sendreply(xprt, (xdrproc_t)xdr_SubscriptionReply,
-	        (char*)result)) {
-	    log_error("Couldn't send subscription reply to client");
-            svcerr_systemerr(svcXprt);
-	}
-	else {
-            runSvc();
-            log_flush_error();
-	}
+    if (init(xprt, request->feed, &request->vcEnd, result)) {
+        log_add("Couldn't initialize the upstream LDM7 module");
+        log_flush_error();
+        svcerr_systemerr(xprt);
     }
+    else {
+        const bool serve = result->status == LDM7_OK;
 
-    log_debug("Returning");
+        if (serve) {
+            if (!svc_sendreply(xprt, (xdrproc_t)xdr_SubscriptionReply,
+                    (char*)result)) {
+                log_error("Couldn't send subscription reply to client");
+                svcerr_systemerr(svcXprt);
+            }
+            else {
+                runSvc();
+                log_flush_error();
+            }
+        }
+        else {
+            reply = result; // Do respond to client
+        }
 
-    return !serve;
+        destroy();
+    } // Module is initialized
+
+    log_debug("Returning %p", reply);
+    return reply;
 }
 
 /**
@@ -1087,12 +1095,13 @@ subscribe_7_svc(
 {
     log_debug("Entered");
 
+    svc_setremote(rqstp);
+
     struct SVCXPRT* const xprt = rqstp->rq_xprt;
-    const char* const     hostId = hostbyaddr(&xprt->xp_raddr);
     const char* const     feedspec = s_feedtypet(request->feed);
 
     log_notice("Incoming subscription request from %s:%u for feed %s",
-            hostId, ntohs(xprt->xp_raddr.sin_port), feedspec);
+            remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
 
     if (subReply) {
         xdr_free(xdr_SubscriptionReply, subReply); // Free any previous use
@@ -1101,30 +1110,16 @@ subscribe_7_svc(
 
     static SubscriptionReply result;
 
-    if (init(xprt, request->feed, &request->vcEnd, &result)) {
-        log_add("Couldn't initialize the upstream LDM7 module");
-        log_flush_error();
-        svcerr_systemerr(xprt);
+    subReply = subscribe(xprt, request, &result);
+
+    if (subReply) {
+        char* const subRepStr = subRep_toString(subReply);
+        log_debug("Returning %s", subRepStr);
+        free(subRepStr);
     }
-    else {
-        // `result` is set
-
-        if (!shouldReply(xprt, &result)) {
-            // A separate upstream LDM7 server was run
-            destroy();
-        }
-        else {
-            subReply = &result;
-
-            if (log_is_enabled_debug) {
-                char* const subRepStr = subRep_toString(subReply);
-                log_debug("Replying with %s", subRepStr);
-                free(subRepStr);
-            }
-        }
-    } // Module is initialized. `result` is set.
-
-    log_debug("Returning");
+    else if (log_is_enabled_debug) {
+        log_debug("Returning NULL");
+    }
 
     return subReply;
 }
