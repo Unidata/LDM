@@ -848,7 +848,7 @@ sendProduct(
  */
 static bool
 findAndSendProduct(
-    FmtpProdIndex iProd)       // not `cont` because of `no_such_product_7()`
+    FmtpProdIndex iProd)       // not `const` because of `no_such_product_7()`
 {
     int status = sendProduct(iProd);
 
