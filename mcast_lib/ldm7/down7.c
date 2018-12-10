@@ -2060,12 +2060,12 @@ downlet_run()
                             isa_getInetId(down7.ldmSrvr));
 
                     if (status) {
-                        log_add("Couldn't set INADDR_ANY address of FMTP "
-                                "server to that of LDM7 server");
+                        log_add("Couldn't change address of FMTP server from "
+                                "INADDR_ANY to that of LDM7 server");
                     }
                     else {
-                        log_notice("INADDR_ANY address of FMTP server set to "
-                                "that of LDM7 server");
+                        log_notice("Address of FMTP server changed from "
+                                "INADDR_ANY to that of LDM7 server");
                     }
                 }
             }
