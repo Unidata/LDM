@@ -322,6 +322,8 @@ private:
     std::mutex              notifyprodmtx;
     uint32_t                notifyprodidx;
     std::condition_variable notify_cv;
+    // Has `mcastHandler()` been called?
+    bool                    mcastHndlrStarted;
 
     /* member variables for measurement use only */
     Measure*                measure;

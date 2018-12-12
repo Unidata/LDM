@@ -97,6 +97,7 @@ fmtpRecvv3::fmtpRecvv3(
     //linkspeed(0),
     /* Coverity Scan #1: Issue #2. Initialize notifyprodidx to 0 for product index */
     notifyprodidx(0),
+    mcastHndlrStarted(false),
     linkspeed(20000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
@@ -396,7 +397,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     }
     if (insertion && !inTracker) {
         if(notifier) {
-            notifier->notify_of_bop(BOPmsg.start.host, header.prodindex,
+            notifier->startProd(BOPmsg.start.host, header.prodindex,
                     BOPmsg.prodsize, BOPmsg.metadata, BOPmsg.metasize,
                     &prodptr);
         }
@@ -573,7 +574,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
             inTracker = trackermap.count(header.prodindex);
         }
         if (notifier && inTracker) {
-            notifier->notify_of_eop(now, header.prodindex);
+            notifier->endProd(now, header.prodindex);
         }
         else if (inTracker) {
             /**
@@ -741,7 +742,6 @@ void fmtpRecvv3::joinGroup(
  */
 void fmtpRecvv3::mcastHandler()
 {
-    static bool started = false; // Has this method been called?
     while(1)
     {
         FmtpHeader   header;
@@ -775,9 +775,9 @@ void fmtpRecvv3::mcastHandler()
 
         decodeHeader(header);
 
-        if (!started) {
+        if (!mcastHndlrStarted) {
             prodidx_mcast = header.prodindex;
-            started = true;
+            mcastHndlrStarted = true;
         }
 
         if (header.flags == FMTP_BOP) {
@@ -1157,7 +1157,7 @@ void fmtpRecvv3::retxHandler()
                     inTracker = trackermap.count(header.prodindex);
                 }
                 if (notifier && inTracker) {
-                    notifier->notify_of_eop(now, header.prodindex);
+                    notifier->endProd(now, header.prodindex);
                 }
                 else if (inTracker) {
                     /**
@@ -1243,7 +1243,7 @@ void fmtpRecvv3::retxHandler()
                 #endif
 
                 if (notifier) {
-                    notifier->notify_of_missed_prod(header.prodindex);
+                    notifier->missedProd(header.prodindex);
                 }
                 else {
                     /**
