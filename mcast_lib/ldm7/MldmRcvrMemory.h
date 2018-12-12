@@ -247,6 +247,16 @@ void
 mrm_shutDownMissedFiles(
     McastReceiverMemory* const restrict mrm);
 
+/**
+ * Restarts the operation of the queue of missed-but-not-requested files in a
+ * multicast receiver memory. The queue picks up where it left off. Idempotent
+ * and thread-safe.
+ *
+ * @param[in] mrm  Multicast receiver memory
+ */
+void
+mrm_restart(McastReceiverMemory* const mrm);
+
 #ifdef __cplusplus
 }
 #endif
