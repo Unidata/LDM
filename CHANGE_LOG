@@ -1,3 +1,30 @@
+6.13.7.89
+    Upstream LDM7:
+        - Improve documentation
+        - Server-side changes to accomodate RPC assumption that calls to
+          svc_getreqset() and svc_getreqsock() aren't nested
+            - Functions that call svc_getreqset() always destroys transport
+            - Separate, server-side RPC transport created and used
+        - Use "remote.h"
+        - Extract init() and shouldReply() from subscribe_7_svc() into
+          subscribe()
+        - Improve handling of multicast information
+        - Improve destruction
+
+    Downstream LDM7:
+         - Improve handling of task states
+         - Improve Backlogger
+         - Add restart capability to missed-product queue
+         - Shorten method names in RecvProxy & ProdNotifier
+
+    FmtpRecvv3:
+         - Improve re-connection logic by making locally-static
+           mcast-handler-started variable a member
+
+    LDM7:
+        - Move test_connection_7_svc() from Up7 to Down7
+        - Rename "up7_down7_test" to "Up7Down7_test"
+
 6.13.7.88	2018-12-06T14:17:23-0700
     Change "ldm_config_file.h" to "LdmConfFile.h" in scanner.c and parser.c
 
@@ -7,15 +34,13 @@
 
     Logging:
         - Right-justify location and process fields to minimize eye travel
-        - Shorten many file and function names to shorten log messages
+        - Shorten many file, function, class, and method names to shorten log
+          messages
 
-    Multicast:
-        - Rename PerProdNotifier to ProdNotifier
-        - Rename mldm_receiver* to MldmRcvr*
-        - Rename "SendingNotifier" to "SendNotifier" and shorten function names
+    Upstream LDM7:
         - Redo subscribe_7_svc()
 
-    Down7:
+    Downstream LDM7:
         - Correct check of pthread_kill() return value
 
 6.13.7.86	2018-12-03T09:09:54-0700
