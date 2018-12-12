@@ -611,7 +611,7 @@ sendProduct(
  */
 static bool
 findAndSendProduct(
-    FmtpProdIndex iProd)       // not `cont` because of `no_such_product_7()`
+    FmtpProdIndex iProd)       // not `const` because of `no_such_product_7()`
 {
     int status = sendProduct(iProd);
 
@@ -647,18 +647,23 @@ static Ldm7Status
 setCursorFromSignature(
         const signaturet after)
 {
+    log_debug("Entered. after=%s", s_signaturet(NULL, 0, after));
+
     int status;
 
     switch ((status = pq_setCursorFromSignature(pq, after))) {
     case 0:
+        log_debug("Returning 0");
         return 0;
     case PQ_NOTFOUND:
         log_info("Data-product with signature %s wasn't found in product-queue",
                 s_signaturet(NULL, 0, after));
+        log_debug("Returning LDM7_NOENT");
         return LDM7_NOENT;
     default:
         log_add("Couldn't set product-queue cursor from signature %s: %s",
                 s_signaturet(NULL, 0, after), pq_strerror(pq, status));
+        log_debug("Returning LDM7_SYSTEM");
         return LDM7_SYSTEM;
     }
 }
@@ -694,19 +699,24 @@ static bool
 setProductQueueCursor(
         const BacklogSpec* const restrict backlog)
 {
+    log_debug("Entered");
+
     if (backlog->afterIsSet) {
         switch (setCursorFromSignature(backlog->after)) {
         case 0:
+            log_debug("Returning true");
             return true;
         case LDM7_NOENT:
             break;
         default:
+            log_debug("Returning false");
             return false;
         }
     }
 
     setCursorFromTimeOffset(backlog->timeOffset);
 
+    log_debug("Returning true");
     return true;
 }
 
@@ -734,6 +744,8 @@ sendIfNotSignature(
     const size_t                    size,
     void* const restrict            arg)
 {
+    log_debug("Entered");
+
     int               status;
     const signaturet* sig = (const signaturet*)arg;
 
@@ -763,6 +775,7 @@ sendIfNotSignature(
         }
     }
 
+    log_debug("Returning %d", status);
     return status;
 }
 
@@ -774,18 +787,22 @@ sendIfNotSignature(
  * @param[in] before       Signature of data-product at which to stop sending.
  * @retval    0            Success.
  * @retval    LDM7_NOENT   Data-product with given signature not found before
- *                         end of queue reached. `log_info_1()` called.
+ *                         end of queue reached. `log_info()` called.
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
 sendUpToSignature(
         const signaturet* const before)
 {
+    log_debug("Entered");
+
     // `dup_prod_class()` compiles the patterns
     prod_class_t* const prodClass = dup_prod_class(PQ_CLASS_ALL);
 
-    if (NULL == prodClass)
+    if (NULL == prodClass) {
+        log_debug("Returning LDM7_SYSTEM");
         return LDM7_SYSTEM;
+    }
 
     prodClass->psa.psa_val->feedtype = feedtype;        // was `ANY`
 
@@ -810,6 +827,7 @@ sendUpToSignature(
 
     free_prod_class(prodClass);
 
+    log_debug("Returning %d", status);
     return status; // TODO
 }
 
@@ -828,10 +846,15 @@ static bool
 sendBacklog(
         const BacklogSpec* const restrict backlog)
 {
+    log_debug("Entered");
+
     if (!setProductQueueCursor(backlog))
         return false;
 
-    return LDM7_SYSTEM != sendUpToSignature(&backlog->before);
+    const bool success = LDM7_SYSTEM != sendUpToSignature(&backlog->before);
+
+    log_debug("Returning %d", success);
+    return success;
 }
 
 /******************************************************************************
@@ -977,7 +1000,6 @@ request_backlog_7_svc(
     struct svc_req* const rqstp)
 {
     log_debug("Entered");
-
 
     if (clnt == NULL) {
         log_warning("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
