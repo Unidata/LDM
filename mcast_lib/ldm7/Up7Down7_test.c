@@ -445,9 +445,8 @@ myUp7_run(MyUp7* const myUp7)
                     TIMEOUT);
 
         svc_destroy(myUp7->xprt);
+        myUp7->xprt = NULL;
     }
-
-    myUp7->xprt = NULL;
 #else
     int       status;
     struct    pollfd fds;
@@ -581,8 +580,8 @@ sndr_run(
     fds.events = POLLIN;
 
     sndr_lock(sender);
-    sender->executing = true;
-    CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
+        sender->executing = true;
+        CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
     sndr_unlock(sender);
 
     for (;;) {
@@ -854,9 +853,9 @@ sndr_start(
     CU_ASSERT_PTR_NOT_NULL_FATAL(sender->future);
 
     sndr_lock(sender);
-    while (!sender->executing)
-        CU_ASSERT_EQUAL_FATAL(pthread_cond_wait(&sender->cond, &sender->mutex),
-                0);
+        while (!sender->executing)
+            CU_ASSERT_EQUAL_FATAL(pthread_cond_wait(&sender->cond,
+                    &sender->mutex), 0);
     sndr_unlock(sender);
 
     cidrAddr_free(fmtpSubnet);
