@@ -505,11 +505,30 @@ piq_cancel(
         return EINVAL;
 
     lock(fiq);
-    fiq->isCancelled = 1;
-    (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
+        fiq->isCancelled = 1;
+        (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
     unlock(fiq);
 
     return 0;
+}
+
+/**
+ * Restarts the operation of an FMTP product-index queue on which `piq_cancel()`
+ * has been called. Idempotent.
+ *
+ * @param[in] fiq     Queue to be restarted
+ * @return    EINVAL  `fiq == NULL`
+ */
+int
+piq_restart(ProdIndexQueue* const fiq)
+{
+    if (!fiq)
+        return EINVAL;
+
+    lock(fiq);
+        fiq->isCancelled = 0;
+        (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
+    unlock(fiq);
 }
 
 /**
@@ -526,7 +545,7 @@ piq_isCanceled(
     bool isCanceled;
 
     lock(fiq);
-    isCanceled = fiq->isCancelled;
+        isCanceled = fiq->isCancelled;
     unlock(fiq);
 
     return isCanceled;
