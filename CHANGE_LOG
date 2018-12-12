@@ -1,4 +1,4 @@
-6.13.7.89
+6.13.7.90
     Upstream LDM7:
         - Improve documentation
         - Server-side changes to accomodate RPC assumption that calls to
@@ -24,6 +24,9 @@
     LDM7:
         - Move test_connection_7_svc() from Up7 to Down7
         - Rename "up7_down7_test" to "Up7Down7_test"
+
+6.13.7.89	2018-12-12T13:16:18-0700
+    Added some debug messages.
 
 6.13.7.88	2018-12-06T14:17:23-0700
     Change "ldm_config_file.h" to "LdmConfFile.h" in scanner.c and parser.c
