@@ -1428,3 +1428,17 @@ mrm_shutDownMissedFiles(
     vetMrm(mrm);
     (void)piq_cancel(mrm->missedQ);
 }
+
+/**
+ * Restarts the operation of the queue of missed-but-not-requested files in a
+ * multicast receiver memory. The queue picks up where it left off. Idempotent
+ * and thread-safe.
+ *
+ * @param[in] mrm  Multicast receiver memory
+ */
+void
+mrm_restart(McastReceiverMemory* const mrm)
+{
+    vetMrm(mrm);
+    (void)piq_restart(mrm->missedQ);
+}
