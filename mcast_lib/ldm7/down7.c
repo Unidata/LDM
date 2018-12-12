@@ -349,14 +349,15 @@ up7Proxy_subscribe(
  */
 static int
 up7Proxy_requestBacklog(
-    BacklogSpec* const restrict spec)
+    const BacklogSpec* const restrict spec)
 {
     int status;
 
     up7Proxy_lock();
         CLIENT* const clnt = up7Proxy.clnt;
 
-        (void)request_backlog_7(spec, clnt); // asynchronous => no reply
+        // asynchronous => no reply
+        (void)request_backlog_7((BacklogSpec*)spec, clnt); // Safe cast
         if (clnt_stat(clnt) == RPC_TIMEDOUT) {
             /*
              * The status will always be RPC_TIMEDOUT unless an error occurs
@@ -381,7 +382,7 @@ up7Proxy_requestBacklog(
  * @retval    LDM7_RPC    RPC error. `log_add()` called.
  */
 static int
-up7Proxy_requestProduct(const FmtpProdIndex iProd)
+up7Proxy_reqProd(const FmtpProdIndex iProd)
 {
     int status;
 
@@ -548,46 +549,52 @@ backstop_run(void* const arg)
     int status;
 
     mutex_lock(&backstop.mutex);
-        log_assert(backstop.state == TASK_STARTED); // Blocks signals
+        const bool run = backstop.state == TASK_INITIALIZED;
+
+        if (run)
+            backstop.state = TASK_STARTED;
     mutex_unlock(&backstop.mutex);
 
-    for (;;) {
-        /*
-         * The semantics and order of the following actions are necessary to
-         * preserve the meaning of the two queues and to ensure that all missed
-         * data-products are received following a restart.
-         */
-        FmtpProdIndex iProd;
+    if (run) {
+        for (;;) {
+            /*
+             * The semantics and order of the following actions are necessary to
+             * preserve the meaning of the two queues and to ensure that all missed
+             * data-products are received following a restart.
+             */
+            FmtpProdIndex iProd;
 
-        if (!mrm_peekMissedFileWait(backstop.mrm, &iProd)) {
-            log_debug("The queue of missed data-products has been shutdown");
-            status = LDM7_SHUTDOWN;
-            break;
-        }
-        else {
-            if (!mrm_addRequestedFile(backstop.mrm, iProd)) {
-                log_add("Couldn't add FMTP product-index to requested-queue");
-                status = LDM7_SYSTEM;
+            if (!mrm_peekMissedFileWait(backstop.mrm, &iProd)) {
+                log_debug("The queue of missed data-products has been shutdown");
+                status = LDM7_SHUTDOWN;
                 break;
             }
             else {
-                /* The queue can't be empty */
-                (void)mrm_removeMissedFileNoWait(backstop.mrm, &iProd);
-
-                status = up7Proxy_requestProduct(iProd);
-
-                if (status) {
-                    log_add("Couldn't request product");
+                if (!mrm_addRequestedFile(backstop.mrm, iProd)) {
+                    log_add("Couldn't add FMTP product-index to requested-queue");
+                    status = LDM7_SYSTEM;
                     break;
                 }
-            } // product-index added to requested-but-not-received queue
-        } // have peeked-at product-index from missed-but-not-requested queue
+                else {
+                    /* The queue can't be empty */
+                    (void)mrm_removeMissedFileNoWait(backstop.mrm, &iProd);
+
+                    status = up7Proxy_reqProd(iProd);
+
+                    if (status) {
+                        log_add("Couldn't request product");
+                        break;
+                    }
+                } // product-index added to requested-but-not-received queue
+            } // have peeked-at product-index from missed-but-not-requested queue
+        }
+
+        log_debug("Calling downlet_taskCompleted(%d)", status);
+        downlet_taskCompleted(status);
+
+        log_flush_error(); // Just in case
     }
 
-    log_debug("Calling downlet_taskCompleted(%d)", status);
-    downlet_taskCompleted(status);
-
-    log_flush_error(); // Just in case
     log_debug("Returning");
     log_free();        // Because end of thread
 
@@ -616,9 +623,6 @@ backstop_start(McastReceiverMemory* const mrm)
     else {
         mutex_lock(&backstop.mutex);
             status = pthread_create(&backstop.thread, NULL, backstop_run, NULL);
-
-            if (status == 0)
-                backstop.state = TASK_STARTED;
         mutex_unlock(&backstop.mutex);
 
         if (status) {
@@ -827,103 +831,111 @@ ucastRcvr_run(void* const restrict arg)
     log_debug("Entered");
 
     mutex_lock(&ucastRcvr.mutex);
-        log_assert(ucastRcvr.state == TASK_STARTED); // Blocks signals
+        const bool run = ucastRcvr.state == TASK_INITIALIZED;
+
+        if (run)
+            ucastRcvr.state = TASK_STARTED;
     mutex_unlock(&ucastRcvr.mutex);
 
-    blockSigs(SIGCONT, SIGALRM, 0);
+    if (run) {
+        blockSigs(SIGCONT, SIGALRM, 0);
 
-    int           status = 0;
-    const int     sock = ucastRcvr.xprt->xp_sock;
-    const int     timeout = interval * 1000; // Probably 30 seconds
-    struct pollfd pfd;
+        int           status = 0;
+        const int     sock = ucastRcvr.xprt->xp_sock;
+        const int     timeout = interval * 1000; // Probably 30 seconds
+        struct pollfd pfd;
 
-    pfd.fd = sock;
-    pfd.events = POLLRDNORM;
+        pfd.fd = sock;
+        pfd.events = POLLRDNORM;
 
-    log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
-            timeout);
+        log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
+                timeout);
 
 
-    mutex_lock(&ucastRcvr.mutex);
-        while (ucastRcvr.state == TASK_STARTED) {
+        mutex_lock(&ucastRcvr.mutex);
+            while (ucastRcvr.state == TASK_STARTED) {
 
-            // Excessive output
-            log_debug("Calling poll(): socket=%d, timeout=%d", sock, timeout);
-            mutex_unlock(&ucastRcvr.mutex);
-                status = poll(&pfd, 1, timeout); // poll() is async-signal safe
-            mutex_lock(&ucastRcvr.mutex);
+                // Excessive output
+                log_debug("Calling poll(): socket=%d, timeout=%d", sock,
+                        timeout);
+                mutex_unlock(&ucastRcvr.mutex);
+                    // poll() is async-signal safe
+                    status = poll(&pfd, 1, timeout);
+                mutex_lock(&ucastRcvr.mutex);
 
-            if (0 == status) {
-                log_debug("Timeout");
-                continue; // Timeout
-            }
-
-            if (status < 0) {
-                if (errno == EINTR) {
-                    log_debug("poll() was interrupted");
-                    /*
-                     * Might not be meaningful. For example, the GNUlib
-                     * seteuid() function generates a non-standard signal in
-                     * order to synchronize UID changes amongst threads.
-                     */
-                    status = 0;
-                    continue;
+                if (0 == status) {
+                    log_debug("Timeout");
+                    continue; // Timeout
                 }
-                log_debug("poll() failure");
-                log_add_syserr("poll() failure on socket %d to upstream LDM7 "
-                        "%s", sock, ucastRcvr.remoteStr);
-                status = LDM7_SYSTEM;
-                break;
-            }
 
-            if (pfd.revents & POLLERR) {
-                log_debug("Socket failure");
-                log_add("Error on socket %d to upstream LDM7 %s", sock,
-                        ucastRcvr.remoteStr);
-                status = LDM7_SYSTEM;
-                break;
-            }
-
-            if (pfd.revents & POLLHUP) {
-                log_debug("Socket closed");
-                log_add_syserr("Socket %d to upstream LDM7 %s was closed", sock,
-                        ucastRcvr.remoteStr);
-                status = LDM7_SYSTEM;
-                break;
-            }
-
-            if (pfd.revents & (POLLIN | POLLRDNORM)) {
-                /*
-                 * Processes RPC message. Calls select(). Calls `ldmprog_7()`.
-                 * Calls `svc_destroy(ucastRcvr.xprt)` on error.
-                 */
-                log_debug("Got RPC message");
-                svc_getreqsock(sock);
-
-                if (!FD_ISSET(sock, &svc_fdset)) {
-                    log_debug("Transport destroyed");
-                    // `svc_getreqsock()` destroyed `ucastRcvr.xprt`
-                    log_add("Connection to upstream LDM7 %s was closed by RPC "
-                            "layer", ucastRcvr.remoteStr);
-                    ucastRcvr.xprt = NULL; // To inform others
-                    status = LDM7_RPC;
+                if (status < 0) {
+                    if (errno == EINTR) {
+                        log_debug("poll() was interrupted");
+                        /*
+                         * Might not be meaningful. For example, the GNUlib
+                         * seteuid() function generates a non-standard signal in
+                         * order to synchronize UID changes amongst threads.
+                         */
+                        status = 0;
+                        continue;
+                    }
+                    log_debug("poll() failure");
+                    log_add_syserr("poll() failure on socket %d to upstream "
+                            "LDM7 %s", sock, ucastRcvr.remoteStr);
+                    status = LDM7_SYSTEM;
                     break;
                 }
-                else {
-                    log_debug("RPC message processed");
-                    status = 0;
+
+                if (pfd.revents & POLLERR) {
+                    log_debug("Socket failure");
+                    log_add("Error on socket %d to upstream LDM7 %s", sock,
+                            ucastRcvr.remoteStr);
+                    status = LDM7_SYSTEM;
+                    break;
                 }
-            } // Input is available
-        } // Input loop
-    mutex_unlock(&ucastRcvr.mutex);
 
-    if (status)
-        log_flush_error();
+                if (pfd.revents & POLLHUP) {
+                    log_debug("Socket closed");
+                    log_add_syserr("Socket %d to upstream LDM7 %s was closed",
+                            sock, ucastRcvr.remoteStr);
+                    status = LDM7_SYSTEM;
+                    break;
+                }
 
-    log_debug("Calling downlet_taskCompleted(%d)", status);
-    downlet_taskCompleted(status);
+                if (pfd.revents & (POLLIN | POLLRDNORM)) {
+                    /*
+                     * Processes RPC message. Calls select(). Calls
+                     * `ldmprog_7()`. Calls `svc_destroy(ucastRcvr.xprt)` on
+                     * error.
+                     */
+                    log_debug("Got RPC message");
+                    svc_getreqsock(sock);
 
-    unblockSigs(SIGCONT, SIGALRM, 0);
+                    if (!FD_ISSET(sock, &svc_fdset)) {
+                        log_debug("Transport destroyed");
+                        // `svc_getreqsock()` destroyed `ucastRcvr.xprt`
+                        log_add("Connection to upstream LDM7 %s was closed by "
+                                "RPC layer", ucastRcvr.remoteStr);
+                        ucastRcvr.xprt = NULL; // To inform others
+                        status = LDM7_RPC;
+                        break;
+                    }
+                    else {
+                        log_debug("RPC message processed");
+                        status = 0;
+                    }
+                } // Input is available
+            } // Input loop
+        mutex_unlock(&ucastRcvr.mutex);
+
+        if (status)
+            log_flush_error();
+
+        log_debug("Calling downlet_taskCompleted(%d)", status);
+        downlet_taskCompleted(status);
+
+        unblockSigs(SIGCONT, SIGALRM, 0);
+    }
 
     log_debug("Returning");
     log_free(); // Because end of thread
@@ -956,9 +968,6 @@ ucastRcvr_start(const int sock)
         mutex_lock(&ucastRcvr.mutex);
             status = pthread_create(&ucastRcvr.thread, NULL, ucastRcvr_run,
                     NULL);
-
-            if (status == 0)
-                ucastRcvr.state = TASK_STARTED;
         mutex_unlock(&ucastRcvr.mutex);
 
         if (status) {
@@ -992,10 +1001,7 @@ ucastRcvr_stop(void)
             // Interrupts `poll()`
             status = pthread_kill(ucastRcvr.thread, SIGTERM);
 
-            /*
-             * Apparently, between the time a thread completes and the thread is
-             * joined, the thread cannot be sent a signal.
-             */
+            // Apparently, a terminated thread cannot be sent a signal.
             if (status && status != ESRCH) {
                 log_add_errno(status, "Couldn't kill unicast receiver");
                 log_flush_error();
@@ -1110,8 +1116,7 @@ vlanIface_destroy(
  ******************************************************************************/
 
 typedef struct backlogger {
-    signaturet      before;     ///< Signature of first product received via
-                                ///< multicast
+    BacklogSpec     backlog;    ///< Backlog specification
     pthread_t       thread;     ///< `backlogger_run()` thread
     pthread_mutex_t mutex;      ///< Mutex
     TaskState       state;      ///< State of task
@@ -1123,11 +1128,14 @@ static Backlogger backlogger;
  * that were missed since the end of the previous downstream LDM7 session.
  *
  * @param[in]  before       Signature of first product received via multicast
+ * @param[in]  mrm          Persistent, multicast-receiver memory
  * @retval     0            Success
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static int
-backlogger_init(const signaturet before)
+backlogger_init(
+        const signaturet                    before,
+        McastReceiverMemory* const restrict mrm)
 {
     log_debug("Entered");
 
@@ -1142,7 +1150,16 @@ backlogger_init(const signaturet before)
         status = LDM7_SYSTEM;
     }
     else {
-        (void)memcpy(backlogger.before, before, sizeof(signaturet));
+        BacklogSpec* const spec = &backlogger.backlog;
+
+        spec->afterIsSet = mrm_getLastMcastProd(mrm, spec->after);
+        if (!spec->afterIsSet)
+            (void)memset(spec->after, 0, sizeof(signaturet));
+        (void)memcpy(spec->before, before, sizeof(signaturet));
+        spec->timeOffset = getTimeOffset();
+
+        log_debug("after=%s", s_signaturet(NULL, 0, spec->after));
+        log_debug("before=%s", s_signaturet(NULL, 0, spec->before));
 
         backlogger.state = TASK_INITIALIZED;
     }
@@ -1173,7 +1190,7 @@ backlogger_destroy()
 
 // Forward declaration
 static Ldm7Status
-downlet_requestBacklog(const signaturet before);
+downlet_requestBacklog(const BacklogSpec* backlog);
 
 /**
  * Executes the concurrent task that requests the backlog of data-products
@@ -1193,15 +1210,22 @@ backlogger_run(void* const arg)
     log_debug("Entered");
 
     mutex_lock(&backlogger.mutex);
-        log_assert(backlogger.state == TASK_STARTED); // Blocks signals
+        const bool run = backlogger.state == TASK_INITIALIZED;
+
+        if (run)
+            backlogger.state = TASK_STARTED;
     mutex_unlock(&backlogger.mutex);
 
-    int status = downlet_requestBacklog(backlogger.before); // SIGTERM sensitive
+    if (run) {
+        // SIGTERM sensitive
+        int status = downlet_requestBacklog(&backlogger.backlog);
 
-    log_debug("Calling downlet_taskCompleted(%d)", status);
-    downlet_taskCompleted(status);
+        log_debug("Calling downlet_taskCompleted(%d)", status);
+        downlet_taskCompleted(status);
 
-    log_flush_error(); // Just in case
+        log_flush_error(); // Just in case
+    }
+
     log_debug("Returning");
     log_free();        // Because end of thread
 
@@ -1212,18 +1236,21 @@ backlogger_run(void* const arg)
  * Starts the concurrent task that requests the backlog of missed data-products.
  *
  * @param[in]  before       Signature of first product received via multicast
+ * @param[in]  mrm          Persistent, multicast-receiver memory
  * @retval     0            Success
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
-backlogger_start(const signaturet before)
+backlogger_start(
+        const signaturet                    before,
+        McastReceiverMemory* const restrict mrm)
 {
     log_debug("Entered");
 
     log_assert(before);
     log_assert(backlogger.state == TASK_UNINITIALIZED);
 
-    int status = backlogger_init(before);
+    int status = backlogger_init(before, mrm);
 
     if (status) {
         log_add("Couldn't initialize backlogger");
@@ -1232,9 +1259,6 @@ backlogger_start(const signaturet before)
         mutex_lock(&backlogger.mutex);
             status = pthread_create(&backlogger.thread, NULL, backlogger_run,
                     NULL);
-
-            if (status == 0)
-                backlogger.state = TASK_STARTED;
         mutex_unlock(&backlogger.mutex);
 
         if (status) {
@@ -1271,10 +1295,7 @@ backlogger_stop(void)
 
             status = pthread_kill(backlogger.thread, SIGTERM);
 
-            /*
-             * Apparently, between the time a thread completes and the thread is
-             * joined, the thread cannot be sent a signal.
-             */
+            // Apparently, a terminated thread cannot be sent a signal.
             if (status && status != ESRCH) {
                 log_add_errno(status, "Couldn't kill backlog requester");
                 log_flush_error();
@@ -1431,23 +1452,28 @@ mcastRcvr_run(void* const arg)
     log_debug("Entered");
 
     mutex_lock(&mcastRcvr.mutex);
-        log_assert(mcastRcvr.state == TASK_STARTED); // Blocks signals
+        const bool run = mcastRcvr.state == TASK_INITIALIZED;
+
+        if (run)
+            mcastRcvr.state = TASK_STARTED;
     mutex_unlock(&mcastRcvr.mutex);
 
-    int status = mlr_run(mcastRcvr.mlr);
-    /*
-     * LDM7_INVAL     Invalid argument. `log_add()` called.
-     * LDM7_MCAST     Multicast error. `log_add()` called.
-     * LDM7_SHUTDOWN  Shutdown requested
-     */
+    if (run) {
+        int status = mlr_run(mcastRcvr.mlr);
+        /*
+         * LDM7_INVAL     Invalid argument. `log_add()` called.
+         * LDM7_MCAST     Multicast error. `log_add()` called.
+         * LDM7_SHUTDOWN  Shutdown requested
+         */
 
-    log_debug("Calling downlet_taskCompleted(%d)", status);
-    downlet_taskCompleted(status);
+        log_debug("Calling downlet_taskCompleted(%d)", status);
+        downlet_taskCompleted(status);
 
-    log_flush_error(); // Just in case
+        log_flush_error(); // Just in case
+    }
+
     log_debug("Returning");
     log_free();        // Because end of thread
-
     return NULL;
 }
 
@@ -1489,9 +1515,6 @@ mcastRcvr_start(
         mutex_lock(&mcastRcvr.mutex);
             status = pthread_create(&mcastRcvr.thread, NULL, mcastRcvr_run,
                     NULL);
-
-            if (status == 0)
-                mcastRcvr.state = TASK_STARTED;
         mutex_unlock(&mcastRcvr.mutex);
 
         if (status) {
@@ -1544,11 +1567,14 @@ mcastRcvr_stop(void)
  * Accepts notification of the last data-product to be received via multicast.
  *
  * @param[in] signature    MD5 checksum of the data-product
+ * @param[in] mrm          Persistent, multicast-receiver memory
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static int
-mcastRcvr_lastReceived(const signaturet signature)
+mcastRcvr_lastReceived(
+        const signaturet                    signature,
+        McastReceiverMemory* const restrict mrm)
 {
     log_assert(signature);
 
@@ -1563,7 +1589,7 @@ mcastRcvr_lastReceived(const signaturet signature)
                 status = 0;
             }
             else {
-                status = backlogger_start(signature);
+                status = backlogger_start(signature, mrm);
 
                 if (status) {
                     log_add("Couldn't start backlog-requesting task");
@@ -1765,23 +1791,16 @@ downlet_taskCompleted(const Ldm7Status status)
 /**
  * Called by `backlogger_run()`.
  *
- * @param[in] before    Signature of first product received via multicast
+ * @param[in] backlog   Backlog specification
  * @retval    0         Success
  * @retval    LDM7_RPC  Error in RPC layer. `log_add()` called.
  */
 static Ldm7Status
-downlet_requestBacklog(const signaturet before)
+downlet_requestBacklog(const BacklogSpec* backlog)
 {
     int         status;
-    BacklogSpec spec;
 
-    spec.afterIsSet = mrm_getLastMcastProd(down7.mrm, spec.after);
-    if (!spec.afterIsSet)
-        (void)memset(spec.after, 0, sizeof(signaturet));
-    (void)memcpy(spec.before, before, sizeof(signaturet));
-    spec.timeOffset = getTimeOffset();
-
-    status = up7Proxy_requestBacklog(&spec);
+    status = up7Proxy_requestBacklog(backlog);
 
     if (status)
         log_add("Couldn't request session backlog");
@@ -2078,7 +2097,10 @@ downlet_run()
                             "%s", downlet.feedId, isa_toString(down7.ldmSrvr));
                 }
                 else {
-                    // Returns when a concurrent task terminates with an error
+                    /*
+                     * Returns when `down7_signal()` is called, either
+                     * internally on a subtask's thread or externally.
+                     */
                     status = downlet_wait();
 
                     log_debug("Status changed");
@@ -2211,6 +2233,8 @@ downlet_missedProduct(const FmtpProdIndex iProd)
      * should result.
      */
     (void)mrm_addMissedFile(down7.mrm, iProd);
+
+    log_debug("Returning");
 }
 
 /**
@@ -2231,9 +2255,8 @@ downlet_missedProduct(const FmtpProdIndex iProd)
 void
 downlet_lastReceived(const prod_info* const restrict last)
 {
-    mrm_setLastMcastProd(down7.mrm, last->signature);
-
-    int status = mcastRcvr_lastReceived(last->signature);
+    // Calls mrm_getLastMcastProd()
+    int status = mcastRcvr_lastReceived(last->signature, down7.mrm);
 
     if (status) {
         mutex_lock(&downlet.mutex);
@@ -2242,6 +2265,13 @@ downlet_lastReceived(const prod_info* const restrict last)
 
         (void)downlet_stopTasks();
         log_flush_error();
+    }
+    else {
+        /*
+         * Because mcastRcvr_lastReceived() calls mrm_getLastMcastProd(), the
+         * following *must* be after mcastRcvr_lastReceived()
+         */
+        mrm_setLastMcastProd(down7.mrm, last->signature);
     }
 }
 
@@ -2530,6 +2560,8 @@ down7_run()
             mutex_unlock(&down7.mutex);
 
             status = downlet_execute(); // Indefinite execution
+
+            mrm_restart(down7.mrm);
 
             if (status == LDM7_TIMEDOUT) {
                 log_flush_notice();
