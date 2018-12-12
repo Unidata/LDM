@@ -118,6 +118,9 @@ static CLIENT*            clnt = NULL;
 /// Feedtype of the subscription:
 static feedtypet          feedtype = NONE;
 
+/// Information on multicast
+static McastInfo*         mcastInfo;
+
 /// IP address of the client FMTP component:
 static in_addr_t          fmtpClntAddr = INADDR_ANY;
 
@@ -429,8 +432,6 @@ destroyXprt()
  *   - Sets the reply to the RPC client
  *   - Sets `isInitialized` to true
  *
- * @param[in]  mcastInfo     Multicast information. On success, caller must not
- *                           destroy.
  * @param[in]  fmtpClntCidr  Address for FMTP client
  * @param[out] reply         RPC reply. Only modified on success.
  * @retval     0             Success. `*reply` is set.
@@ -440,8 +441,7 @@ destroyXprt()
  * @retval     LDM7_SYSTEM   System error. `log_add()` called.
  */
 static int
-init2(  const McastInfo* restrict         mcastInfo,
-        const CidrAddr* const restrict    fmtpClntCidr,
+init2(  const CidrAddr* const restrict    fmtpClntCidr,
         SubscriptionReply* const restrict reply)
 {
     // The cleanup() function in ldmd.c destroys this instance
@@ -565,19 +565,19 @@ init(   struct SVCXPRT* const restrict    xprt,
                         s_feedtypet(reducedFeed));
             }
             else {
-                McastInfo mcastInfo;
-
-                if (!mi_init(&mcastInfo, reducedFeed,
+                if (mi_new(&mcastInfo, reducedFeed,
                         isa_toString(smi_getMcastGrp(smi)),
                         isa_toString(smi_getFmtpSrvr(smi)))) {
                     log_add("Couldn't set multicast information");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    status = init2(&mcastInfo, &fmtpClntCidr, reply);
+                    status = init2(&fmtpClntCidr, reply);
 
-                    if (status)
-                        mi_destroy(&mcastInfo);
+                    if (status) {
+                        mi_free(mcastInfo);
+                        mcastInfo = NULL;
+                    }
                 } // Multicast information initialized
 
                 if (status)
@@ -601,7 +601,15 @@ destroy(void)
 {
     log_debug("Entered");
 
-    if (initialized) {
+
+   if (initialized) {
+        destroyClient(); // Closes socket
+        closePq();
+        closeProdIndexMap();
+
+        mi_free(mcastInfo);
+        mcastInfo = NULL;
+
         (void)umm_unsubscribe(feedtype, fmtpClntAddr);
         log_clear();
 
@@ -615,9 +623,6 @@ destroy(void)
          * svc_destroy() on it, and that function must only be called once per
          * transport
          */
-
-        destroyClient(); // Closes socket
-        closeProdIndexMap();
 
         isDone = false;
         initialized = false;
