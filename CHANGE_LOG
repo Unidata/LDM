@@ -1,3 +1,6 @@
+6.13.7.89
+    Added some debug messages.
+
 6.13.7.88	2018-12-06T14:17:23-0700
     Change "ldm_config_file.h" to "LdmConfFile.h" in scanner.c and parser.c
 
