@@ -40,7 +40,7 @@ public:
      *                       data. If `*data == nullptr`, then the data-product
      *                       should be ignored.
      */
-    virtual void notify_of_bop(
+    virtual void startProd(
             const struct timespec& start,
             uint32_t               iProd,
             size_t                 prodSize,
@@ -55,7 +55,7 @@ public:
      * @param[in] stop   Time of arrival of end-of-product packet
      * @param[in] iProd  FMTP product-index
      */
-    virtual void notify_of_eop(
+    virtual void endProd(
             const struct timespec& stop,
             uint32_t               iProd) = 0;
 
@@ -65,7 +65,7 @@ public:
      *
      * @param[in] prodIndex  Index of the missed product.
      */
-    virtual void notify_of_missed_prod(uint32_t prodIndex) = 0;
+    virtual void missedProd(uint32_t prodIndex) = 0;
 };
 
 

@@ -57,7 +57,7 @@ public:
             Mlr*            mlr);
 
     ~ProdNotifier() {}
-    void notify_of_bop(
+    void startProd(
             const struct timespec& startTime,
             const FmtpProdIndex    iProd,
             size_t                 prodSize,
@@ -69,10 +69,10 @@ public:
      * @param[in] prodIndex        The FMTP index of the product.
      * @throws std::runtime_error  Receiving application error.
      */
-    void notify_of_eop(
+    void endProd(
             const struct timespec& stopTime,
             const FmtpProdIndex    prodIndex);
-    void notify_of_missed_prod(FmtpProdIndex prodIndex);
+    void missedProd(FmtpProdIndex prodIndex);
 
 private:
     /**

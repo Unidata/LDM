@@ -19,6 +19,7 @@
 #include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"
+
 #include <stdlib.h>
 #include <stdexcept>
 #include <strings.h>
@@ -99,7 +100,7 @@ ProdNotifier::ProdNotifier(
  * @throws      std::runtime_error    if the receiving application indicates
  *                                    an error.
  */
-void ProdNotifier::notify_of_bop(
+void ProdNotifier::startProd(
         const struct timespec& startTime,
         const FmtpProdIndex    iProd,
         const size_t           prodSize,
@@ -115,11 +116,10 @@ void ProdNotifier::notify_of_bop(
     log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
             "metadata=%s", (unsigned long)iProd, prodSize, metaSize, sigStr);
 
-    if (bop_func(mlr, prodSize, metadata, metaSize, pqRegion,
-            &pqeIndex)) {
+    if (bop_func(mlr, prodSize, metadata, metaSize, pqRegion, &pqeIndex)) {
         log_free(); // to prevent memory leak by FMTP thread
-        throw std::runtime_error(
-                "Error notifying receiving application about beginning-of-product");
+        throw std::runtime_error( "Error notifying receiving application about "
+                "beginning-of-product");
     }
 
     if (*pqRegion == nullptr) {
@@ -152,7 +152,7 @@ void ProdNotifier::notify_of_bop(
  * @param[in] prodIndex        The FMTP index of the product.
  * @throws std::runtime_error  Receiving application error.
  */
-void ProdNotifier::notify_of_eop(
+void ProdNotifier::endProd(
         const struct timespec& stopTime,
         const FmtpProdIndex    prodIndex)
 {
@@ -182,7 +182,7 @@ void ProdNotifier::notify_of_eop(
  * @param[in] prodIndex       The FMTP product index.
  * @throws std::out_of_range  `prodIndex` is unknown.
  */
-void ProdNotifier::notify_of_missed_prod(const FmtpProdIndex prodIndex)
+void ProdNotifier::missedProd(const FmtpProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
     void* const                  prodStart = prodInfos[prodIndex].pqRegion;
