@@ -321,6 +321,9 @@ static void signal_handler(
         down7_halt();
 #endif
         return;
+    case SIGHUP:
+        log_notice("SIGHUP received");
+        return;
     case SIGUSR1:
         log_info("SIGUSR1 received");
         log_refresh();
@@ -374,6 +377,7 @@ static void set_sigactions(
     (void)sigaction(SIGALRM, &sigact, NULL);
     (void)sigaction(SIGINT, &sigact, NULL);
     (void)sigaction(SIGTERM, &sigact, NULL);
+    (void)sigaction(SIGHUP, &sigact, NULL);
 
     // Restart after catching these
     sigact.sa_flags |= SA_RESTART;
@@ -391,6 +395,7 @@ static void set_sigactions(
     (void)sigaddset(&sigset, SIGALRM);
     (void)sigaddset(&sigset, SIGINT);
     (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGHUP);
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 

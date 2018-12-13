@@ -290,7 +290,7 @@ up7Proxy_subscribe(
 
         /*
          * WARNING: If a standard RPC implementation is used, then it is likely
-         * that `subscribe_7()` won't return when `SIGTERM` is received because
+         * that `subscribe_7()` won't return when a signal is received because
          * `readtcp()` in `clnt_tcp.c` nominally ignores `EINTR`. The RPC
          * implementation included with the LDM package has been modified to not
          * have this problem. -- Steve Emmerson 2018-03-26
@@ -999,7 +999,7 @@ ucastRcvr_stop(void)
             ucastRcvr.state = TASK_STOPPED;
 
             // Interrupts `poll()`
-            status = pthread_kill(ucastRcvr.thread, SIGTERM);
+            status = pthread_kill(ucastRcvr.thread, SIGHUP);
 
             // Apparently, a terminated thread cannot be sent a signal.
             if (status && status != ESRCH) {
@@ -1217,7 +1217,7 @@ backlogger_run(void* const arg)
     mutex_unlock(&backlogger.mutex);
 
     if (run) {
-        // SIGTERM sensitive
+        // SIGHUP sensitive
         int status = downlet_requestBacklog(&backlogger.backlog);
 
         log_debug("Calling downlet_taskCompleted(%d)", status);
@@ -1293,7 +1293,7 @@ backlogger_stop(void)
         if (stopTask) {
             backlogger.state = TASK_STOPPED;
 
-            status = pthread_kill(backlogger.thread, SIGTERM);
+            status = pthread_kill(backlogger.thread, SIGHUP);
 
             // Apparently, a terminated thread cannot be sent a signal.
             if (status && status != ESRCH) {
@@ -1640,12 +1640,7 @@ static struct {
     int                   pipe[2];          ///< Signaling pipe
     bool                  prevLastMcastSet; ///< `prevLastMcast` set?
     volatile sig_atomic_t terminate;        ///< Termination requested?
-    enum {
-        DOWN7_UNINIT, ///< Uninitialized
-        DOWN7_INIT,   ///< Initialized
-        DOWN7_START,  ///< Started
-        DOWN7_STOP    ///< Stopped
-    }                     state;            ///< State of downstream LDM7
+    TaskState             state;            ///< State of downstream LDM7
 } down7;
 
 /**
@@ -2293,7 +2288,7 @@ down7_wait(void)
     int status;
 
     mutex_lock(&down7.mutex);
-        for (status = 0; status == 0 && down7.state == DOWN7_START;
+        for (status = 0; status == 0 && down7.state == TASK_STARTED;
             status = pthread_cond_wait(&down7.cond, &down7.mutex));
     mutex_unlock(&down7.mutex);
 
@@ -2422,7 +2417,7 @@ down7_init(
                                         down7.feedtype = feed;
                                         down7.mrm = mrm;
                                         down7.terminate = false;
-                                        down7.state = DOWN7_INIT;
+                                        down7.state = TASK_INITIALIZED;
 
                                         sigemptyset(&termMask);
                                         sigaddset(&termMask, SIGTERM);
@@ -2468,14 +2463,14 @@ down7_destroy(void)
 {
     log_debug("Entered");
 
-    if (down7.state != DOWN7_UNINIT) {
+    if (down7.state != TASK_UNINITIALIZED) {
         int status = mutex_lock(&down7.mutex);
             log_assert(status == 0);
 
-            if (down7.state == DOWN7_INIT)
-                down7.terminate = true;
+            if (down7.state == TASK_INITIALIZED)
+                down7.terminate = 1;
 
-            if (down7.state == DOWN7_START) {
+            if (down7.state == TASK_STARTED) {
                 log_error("Module is executing. Stopping module.");
 
                 mutex_unlock(&down7.mutex);
@@ -2500,7 +2495,7 @@ down7_destroy(void)
             isa_free(down7.ldmSrvr);
             down7.ldmSrvr = NULL;
 
-            down7.state = DOWN7_UNINIT;
+            down7.state = TASK_UNINITIALIZED;
         mutex_unlock(&down7.mutex);
         mutex_destroy(&down7.mutex);
     } // Module is not uninitialized
@@ -2530,12 +2525,12 @@ down7_run()
     int  status;
 
     mutex_lock(&down7.mutex);
-        if (down7.state != DOWN7_INIT) {
+        if (down7.state != TASK_INITIALIZED) {
             log_add("Module isn't initialized");
             status = LDM7_LOGIC;
         }
         else {
-            down7.state = DOWN7_START;
+            down7.state = TASK_STARTED;
             down7.thread = pthread_self();
             status = 0;
         }
@@ -2588,7 +2583,7 @@ down7_run()
             sleep(interval); // Problem might be temporary
         } // One-time, downstream LDM7 execution loop
 
-        down7.state = DOWN7_STOP;
+        down7.state = TASK_STOPPED;
         int i = pthread_cond_signal(&down7.cond);
         log_assert(i == 0);
         mutex_unlock(&down7.mutex);
@@ -2649,10 +2644,7 @@ down7_halt()
     if (down7.thread && down7.thread != pthread_self()) {
         int status = pthread_kill(down7.thread, SIGTERM);
 
-        /*
-         * Apparently, between the time a thread completes and the thread is
-         * joined, the thread cannot be sent a signal.
-         */
+        // Apparently, a terminated thread cannot be sent a signal.
         if (status && status != ESRCH) {
             log_add_errno(status, "Couldn't kill downstream LDM7");
             log_flush_error();
