@@ -267,7 +267,7 @@ down6_hereis(
             }
         }
         else {
-            errCode = dh_saveDataProduct(_pq, _info, prod->data, 1, 1);
+            errCode = dh_saveProd(_pq, _info, prod->data, 1, 1);
         }                               /* product in desired class */
     }                                   /* module initialized */
 
@@ -534,7 +534,7 @@ down6_blkdata(
                     _remaining -= got;
 
                     if (0 == _remaining) {
-                        errCode = dh_saveDataProduct(_pq, _info, _datap, 0, 1);
+                        errCode = dh_saveProd(_pq, _info, _datap, 0, 1);
                         _expectBlkdata = 0;
 
                         xd_reset();
