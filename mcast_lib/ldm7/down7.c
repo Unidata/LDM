@@ -2558,7 +2558,7 @@ down7_run()
 
             mrm_restart(down7.mrm);
 
-            if (status == LDM7_TIMEDOUT) {
+            if (status == LDM7_TIMEDOUT || status == LDM7_MCAST) {
                 log_flush_notice();
                 continue;
             }
@@ -2566,18 +2566,18 @@ down7_run()
             mutex_lock(&down7.mutex);
                 if (down7.terminate) {
                     status = 0; // `down7_halt()` was called
-                    break;
-                }
-
-                if (status == LDM7_NOENT || status == LDM7_REFUSED ||
-                        status == LDM7_UNAUTH) {
-                    log_flush_warning();
-                }
-                else {
-                    log_add("Error executing one-time, downstream LDM7");
-                    log_flush_error();
+                    break; // mutex_unlock() will be called
                 }
             mutex_unlock(&down7.mutex);
+
+            if (status == LDM7_NOENT || status == LDM7_REFUSED ||
+                    status == LDM7_UNAUTH) {
+                log_flush_warning();
+            }
+            else {
+                log_add("Error executing one-time, downstream LDM7");
+                log_flush_error();
+            }
 
             log_debug("Sleeping");
             sleep(interval); // Problem might be temporary
