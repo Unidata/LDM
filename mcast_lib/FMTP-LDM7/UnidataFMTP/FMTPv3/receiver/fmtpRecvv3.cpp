@@ -361,24 +361,25 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     if (header.payloadlen < BOPCONST) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): packet too small");
     }
-    const unsigned char* wire = (unsigned char*)FmtpPacketData;
+    const char* wire = FmtpPacketData;
 
-    uint32_t* uint32 = (uint32_t*)wire;
-    BOPmsg.start.host.tv_sec = (time_t)ntohl(*uint32++) << 32;
-    BOPmsg.start.host.tv_sec |= ntohl(*uint32++);
-    BOPmsg.start.host.tv_nsec = ntohl(*uint32++);
-    wire = (unsigned char*)uint32;
+    const uint32_t* uint32p = (const uint32_t*)wire;
+    BOPmsg.start.host.tv_sec = (time_t)(ntohl(*uint32p++)) << 32;
+    BOPmsg.start.host.tv_sec |= ntohl(*uint32p++);
+    BOPmsg.start.host.tv_nsec = ntohl(*uint32p++);
 
-    BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
-    wire += sizeof(BOPmsg.prodsize);
+    BOPmsg.prodsize = ntohl(*uint32p++);
 
-    BOPmsg.metasize = ntohs(*(uint16_t*)wire);
-    wire += sizeof(BOPmsg.metasize);
+    const uint16_t* uint16p = (const uint16_t*)uint32p;
+    BOPmsg.metasize = ntohs(*uint16p++);
 
-    if ((header.payloadlen - BOPCONST) != BOPmsg.metasize) {
-        throw std::runtime_error("fmtpRecvv3::BOPHandler(): metasize "
-                "mismatched payload indicated by header");
-    }
+    if (header.payloadlen < BOPCONST + BOPmsg.metasize)
+        throw std::runtime_error("fmtpRecvv3::BOPHandler(): metadata too big: "
+                "payloadlen (" + std::to_string(header.payloadlen) + ") < "
+                "BOPCONST (" + std::to_string(BOPCONST) + ") + metasize (" +
+                std::to_string(BOPmsg.metasize) + ")");
+
+    wire = (const char*)uint16p;
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
     /**
