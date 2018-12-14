@@ -337,7 +337,7 @@ mldm_exec(
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
-mldm_terminateSenderAndReap()
+mldm_stopSndr()
 {
     int status;
 
@@ -452,7 +452,7 @@ mldm_spawn(
                         "%s", id);
                 free(id);
 
-                (void)mldm_terminateSenderAndReap(); // Uses `childPid`
+                (void)mldm_stopSndr(); // Uses `childPid`
                 childPid = 0;
             }
         } // Parent process
@@ -545,7 +545,7 @@ mldm_ensureExec(
                             "%s. Terminating that process.", id);
                     free(id);
 
-                    (void)mldm_terminateSenderAndReap(); // Uses `childPid`
+                    (void)mldm_stopSndr(); // Uses `childPid`
                     childPid = 0;
                 }
             } // Multicast LDM sender spawned
@@ -1134,7 +1134,7 @@ me_compareOrConflict(
  * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-me_startIfNecessary(
+me_startIfNot(
         McastEntry* const entry,
         const float       retxTimeout)
 {
@@ -1267,7 +1267,7 @@ me_subscribe(
          * Sets the port numbers of the FMTP server & RPC-command server of
          * the multicast LDM sender process
          */
-        status = me_startIfNecessary(entry, retxTimeout);
+        status = me_startIfNot(entry, retxTimeout);
 
         if (status) {
             log_add("Couldn't ensure running multicast sender");
@@ -1406,7 +1406,7 @@ umm_setWrkGrpName(const char* const name)
 }
 
 Ldm7Status
-umm_addPotentialSender(
+umm_addSndr(
     const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict mcastInfo,
     const unsigned short               ttl,
@@ -1518,7 +1518,7 @@ umm_terminated(
 }
 
 pid_t
-umm_getMldmSenderPid(void)
+umm_getSndrPid(void)
 {
     return mldm_getMldmSenderPid();
 }

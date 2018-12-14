@@ -122,7 +122,7 @@ umm_setWrkGrpName(const char* name);
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  */
 Ldm7Status
-umm_addPotentialSender(
+umm_addSndr(
     const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict mcastInfo,
     const unsigned short               ttl,
@@ -182,7 +182,7 @@ umm_terminated(const pid_t pid);
  * @threadsafety  Safe
  */
 pid_t
-umm_getMldmSenderPid(void);
+umm_getSndrPid(void);
 
 /**
  * Releases the IP address reserved for the FMTP TCP connection in a downstream
