@@ -269,7 +269,7 @@ static void stream_log(
 
                 // Process
                 int nbytes = snprintf(NULL, 0, "%s[%d]", ident, pid);
-                (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(24-nbytes),
+                (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(27-nbytes),
                         "", ident, pid);
 
                 // Location
