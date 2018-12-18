@@ -20,12 +20,28 @@
 #include <sys/types.h>
 #include "MldmRcvr.h"
 
-typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
-                        unsigned metaSize, void** data, pqe_index* pqeIndex);
-typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
-                        pqe_index* pqeIndex, const double duration);
-typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
-                        pqe_index* pqeIndex);
+/**
+ * @retval         0            Success. `*data` is set. If `NULL`, then
+ *                              data-product is already in LDM product-queue.
+ * @retval         -1           Failure. `log_add()` called.
+ */
+typedef int     (*BopFunc)(
+                    Mlr* const restrict        mlr,
+                    const size_t               prodSize,
+                    const void* const restrict metadata,
+                    const unsigned             metaSize,
+                    void** const restrict      data,
+                    pqe_index* const restrict  pqeIndex);
+typedef int     (*EopFunc)(
+                    Mlr* const restrict             mlr,
+                    void* const restrict            prod,
+                    const size_t                    prodSize,
+                    const pqe_index* const restrict pqeIndex,
+                    const double                    duration);
+typedef void    (*MissedProdFunc)(
+                    void* const restrict            obj,
+                    const FmtpProdIndex             iProd,
+                    const pqe_index* const restrict pqeIndex);
 
 #ifdef __cplusplus
 

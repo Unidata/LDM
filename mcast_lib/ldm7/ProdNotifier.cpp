@@ -94,9 +94,9 @@ ProdNotifier::ProdNotifier(
  *                                    `metaSize == 0`.
  * @param[in]   metaSize              The size of the product's metadata in
  *                                    bytes.
- * @param[out]  prodStart             The start location for writing the
- *                                    product.
- * @retval      0                     Success.
+ * @param[out]  pqRegion              The start location for writing the
+ *                                    product or `NULL`, in which case the
+ *                                    product should be ignored
  * @throws      std::runtime_error    if the receiving application indicates
  *                                    an error.
  */
@@ -109,40 +109,44 @@ void ProdNotifier::startProd(
         void** const           pqRegion)
 {
     pqe_index pqeIndex;
+    char      sigStr[2*sizeof(signaturet)+1];
 
-    char sigStr[2*sizeof(signaturet)+1];
-    (void)sprint_signaturet(sigStr, sizeof(sigStr),
-            (const unsigned char*)metadata);
-    log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
-            "metadata=%s", (unsigned long)iProd, prodSize, metaSize, sigStr);
+    if (log_is_enabled_debug || log_is_enabled_info) {
+        (void)sprint_signaturet(sigStr, sizeof(sigStr),
+                (const unsigned char*)metadata);
+        log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
+                "metadata=%s", (unsigned long)iProd, prodSize, metaSize,
+                sigStr);
+    }
 
     if (bop_func(mlr, prodSize, metadata, metaSize, pqRegion, &pqeIndex)) {
-        log_free(); // to prevent memory leak by FMTP thread
-        throw std::runtime_error( "Error notifying receiving application about "
-                "beginning-of-product");
-    }
-
-    if (*pqRegion == nullptr) {
-        log_info("Duplicate product: prodIndex=%lu, prodSize=%zu, "
-                "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
-                metaSize, sigStr);
+        log_warning("Error notifying receiving application about "
+                "beginning of product %lu", (unsigned long)iProd);
+        *pqRegion = nullptr; // Tells FMTP module to ignore this product
     }
     else {
-        std::unique_lock<std::mutex> lock(mutex);
-        if (prodInfos.count(iProd)) {
-            // Exists
-            log_info("Duplicate BOP: prodIndex=%lu, prodSize=%u",
-                    (unsigned long)iProd, prodSize);
+        if (*pqRegion == nullptr) {
+            log_info("Duplicate product: prodIndex=%lu, prodSize=%zu, "
+                    "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
+                    metaSize, sigStr);
         }
         else {
-            // Doesn't exist
-            ProdInfo& prodInfo = prodInfos[iProd];
-            prodInfo.pqRegion = *pqRegion; // can't be nullptr
-            prodInfo.startTime = startTime;
-            prodInfo.size = prodSize;
-            prodInfo.index = pqeIndex;
-        }
-    }
+            std::unique_lock<std::mutex> lock(mutex);
+            if (prodInfos.count(iProd)) {
+                // Exists
+                log_info("Duplicate BOP: prodIndex=%lu, prodSize=%u",
+                        (unsigned long)iProd, prodSize);
+            }
+            else {
+                // Doesn't exist
+                ProdInfo& prodInfo = prodInfos[iProd];
+                prodInfo.pqRegion = *pqRegion; // can't be nullptr
+                prodInfo.startTime = startTime;
+                prodInfo.size = prodSize;
+                prodInfo.index = pqeIndex;
+            }
+        } // Product is not in the product-queue
+    } // `bop_func()` was successful
 
     log_free(); // to prevent memory leak by FMTP thread
 }
