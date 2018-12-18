@@ -387,7 +387,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
      * trackermap and BlockMNG would not be overwritten by duplicate BOP.
      * By design, a product should exist in both the trackermap and
      * BlockMNG or neither, which is the condition of executing all the
-     * initialization. Also, notify_of_bop() will only be called for a
+     * initialization. Also, startProd() will only be called for a
      * fresh new BOP. All the duplicate calls will be suppressed.
      */
     bool insertion = pSegMNG->addProd(header.prodindex, BOPmsg.prodsize);
