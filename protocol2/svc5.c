@@ -342,7 +342,7 @@ clr_pip_5(void)
 {
         if(!pqeIsNone(idx))
         {
-                (void) pqe_discard(pq, idx);
+                (void) pqe_discard(pq, &idx);
                 idx = PQE_NONE;
         }
 }
@@ -373,7 +373,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
         {
                 log_error_q("%s: never completed",
                         s_signaturet(NULL, 0, idx.signature));
-                (void) pqe_discard(pq, idx);
+                (void) pqe_discard(pq, &idx);
                 idx = PQE_NONE;
         }
 
@@ -496,7 +496,7 @@ comingsoon_5_svc(comingsoon_args *argsp, struct svc_req *rqstp)
          * The data-product isn't in the product-queue.  Setup for
          * receiving the product's data via BLKDATA messages.
          */
-        (void)pqe_discard(pq, idx);
+        (void)pqe_discard(pq, &idx);
 
         /*
          * Use the growable buffer of the "XDR-data" module as the location

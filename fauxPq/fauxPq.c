@@ -301,8 +301,8 @@ int pqe_discard(
  *   errno.h:EINVAL  if the queue is NULL or not open.
  */
 int pqe_insert(
-    pqueue*   pq,
-    pqe_index index)
+    pqueue* const restrict          pq,
+    const pqe_index* const restrict index)
 {
     return pqe_discard(pq, index);
 }

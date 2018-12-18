@@ -4854,7 +4854,7 @@ pq2_del_oldest(
  * Free a region, by offset
  */
 static int
-rpqe_free(pqueue *pq, off_t offset, signaturet signature)
+rpqe_free(pqueue *pq, off_t offset, const signaturet signature)
 {
         region *rp = NULL;
         size_t rlix;
@@ -9009,11 +9009,13 @@ pqe_newDirect(
  * @return               <errno.h> error code.
  */
 int
-pqe_discard(pqueue *pq, pqe_index index)
+pqe_discard(
+        pqueue* const restrict          pq,
+        const pqe_index* const restrict index)
 {
     pq_lockIf(pq);
         int   status;
-        off_t offset = pqeOffset(index);
+        off_t offset = pqeOffset(*index);
 
         status = (pq->mtof)(pq, offset, 0);
         if(status == ENOERR) {
@@ -9022,7 +9024,7 @@ pqe_discard(pqueue *pq, pqe_index index)
              */
             status = ctl_get(pq, RGN_WRITE);
             if(status == ENOERR) {
-                status = rpqe_free(pq, offset, index.signature);
+                status = rpqe_free(pq, offset, index->signature);
                 (void)ctl_rel(pq, RGN_MODIFIED);
                 pq->pqe_count--;
             }
@@ -9117,8 +9119,8 @@ unwind_lock:
 }
 
 /**
- * Inserts the data-product reserved by a prior call to `pqe_new()` or
- * `pqe_newDirect()` and sends a SIGCONT to the process group.
+ * Finalizes insertion of the data-product reserved by a prior call to
+ * `pqe_new()` or `pqe_newDirect()` and sends a SIGCONT to the process group.
  *
  * @param[in] pq     The product-queue.
  * @param[in] index  The data-product reference returned by `pqe_new()` or
@@ -9139,7 +9141,9 @@ unwind_lock:
  *                      `log_error_q()` called.
  */
 int
-pqe_insert(pqueue *pq, pqe_index index)
+pqe_insert(
+        pqueue* const restrict          pq,
+        const pqe_index* const restrict index)
 {
     int  status;
 
@@ -9147,7 +9151,7 @@ pqe_insert(pqueue *pq, pqe_index index)
     pq_lockIf(pq);
         riu* rp;
 
-        if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
+        if (riul_r_find(pq->riulp, index->offset, &rp) == 0) {
             log_error_q("riul_r_find() failed");
             status = PQ_NOTFOUND;
         }
@@ -9168,7 +9172,7 @@ pqe_insert(pqueue *pq, pqe_index index)
                         (unsigned long)info->sz, (unsigned long)rp->extent);
                 status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
             }
-            else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
+            else if (pq->mtof(pq, index->offset, RGN_MODIFIED)) {
                 log_error_q("pq->mtof() failed");
                 status = PQ_SYSTEM;
             }
@@ -9178,7 +9182,7 @@ pqe_insert(pqueue *pq, pqe_index index)
             }
             else {
                 log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
-                if (tq_add(pq->tqp, index.offset)) {
+                if (tq_add(pq->tqp, index->offset)) {
                     log_error_q("tq_add() failed");
                     status = PQ_SYSTEM;
                 }

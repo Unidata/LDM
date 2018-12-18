@@ -118,11 +118,11 @@ static int insert_prod_reserve_no_sig(
         xdrmem_create(&xdrs, space, extent, XDR_ENCODE);
         if (!xdr_product(&xdrs, prod)) {
             log_add("xdr_product() failed");
-            (void)pqe_discard(pq, pqe_index);
+            (void)pqe_discard(pq, &pqe_index);
             status = -1;
         }
         else {
-            status = pqe_insert(pq, pqe_index);
+            status = pqe_insert(pq, &pqe_index);
             if (status)
                 log_add("pqe_insert() failed");
         }
