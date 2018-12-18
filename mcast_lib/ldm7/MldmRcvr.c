@@ -100,9 +100,9 @@ allocateSpace(
 }
 
 /**
- * Accepts notification of the beginning of a FMTP product. Allocates a region
- * in the LDM product-queue to receive the FMTP product, which is an
- * XDR-encoded LDM data-product. Called by FMTP layer.
+ * Accepts notification from the FMTP component of the beginning of a product.
+ * Allocates a region in the LDM product-queue to receive the product,
+ * which is an XDR-encoded LDM data-product. Called by FMTP component.
  *
  * @param[in,out]  mlr          The associated multicast LDM receiver.
  * @param[in]      prodSize     Size of the product in bytes.
@@ -130,12 +130,12 @@ bop_func(
      */
     int  status;
 
-    log_debug("prodSize=%zu, metaSize=%u, prod=%p",
-            prodSize, metaSize, prod);
+    log_debug("Entered: prodSize=%zu, metaSize=%u, prod=%p", prodSize, metaSize,
+            prod);
 
     if (sizeof(signaturet) > metaSize) {
-        log_add("Product metadata too small for signature: %u bytes",
-                metaSize);
+        log_add("Metadata of product {prodSize=%zu, metaSize=%u} is too small "
+                "for signature", prodSize, metaSize);
         status = -1;
     }
     else {
@@ -149,8 +149,7 @@ bop_func(
     if (status)
         log_flush_error(); // because called by FMTP layer
 
-    log_debug("Returning: prod=%p, prodSize=%zu",
-            *prod, prodSize);
+    log_debug("Returning: *prod=%p, prodSize=%zu", *prod, prodSize);
 
     return status;
 }
@@ -167,10 +166,10 @@ bop_func(
  */
 static int
 tryToInsert(
-        Mlr* const restrict       mlr,
-        pqe_index* const restrict pqeIndex)
+        Mlr* const restrict             mlr,
+        const pqe_index* const restrict pqeIndex)
 {
-    int status = pqe_insert(mlr->pq, *pqeIndex);
+    int status = pqe_insert(mlr->pq, pqeIndex);
 
     if (status != 0) {
         log_add("Couldn't insert data-product into product-queue");
@@ -220,7 +219,7 @@ static int
 finishInsertion(
         Mlr* const restrict             mlr,
         const prod_info* const restrict info,
-        pqe_index* const restrict       pqeIndex,
+        const pqe_index* const restrict pqeIndex,
         const double                    duration)
 {
     int status = tryToInsert(mlr, pqeIndex);
@@ -261,11 +260,11 @@ finishInsertion(
  */
 static int
 eop_func(
-        Mlr* const restrict  mlr,
-        void* const restrict prodStart,
-        const size_t         prodSize,
-        pqe_index* const     pqeIndex,
-        const double         duration)
+        Mlr* const restrict             mlr,
+        void* const restrict            prodStart,
+        const size_t                    prodSize,
+        const pqe_index* const restrict pqeIndex,
+        const double                    duration)
 {
     /*
      * This function is called on both the FMTP multicast and unicast threads.
@@ -288,7 +287,7 @@ eop_func(
             log_add("Couldn't decode LDM product metadata from %zu-byte "
                     "FMTP product", prodSize);
             status = -1;
-            pqe_discard(mlr->pq, *pqeIndex);
+            pqe_discard(mlr->pq, pqeIndex);
         }
         else {
             status = finishInsertion(mlr, info, pqeIndex, duration);
@@ -316,9 +315,9 @@ eop_func(
  */
 static void
 missed_prod_func(
-        void* const restrict      obj,
-        const FmtpProdIndex       iProd,
-        pqe_index* const restrict pqeIndex)
+        void* const restrict            obj,
+        const FmtpProdIndex             iProd,
+        const pqe_index* const restrict pqeIndex)
 {
     /*
      * This function is called on both the FMTP multicast and unicast threads.
@@ -327,7 +326,7 @@ missed_prod_func(
     Mlr* mlr = obj;
 
     if (pqeIndex)
-        (void)pqe_discard(mlr->pq, *pqeIndex);
+        (void)pqe_discard(mlr->pq, pqeIndex);
 
     downlet_missedProduct(iProd);
 }
@@ -339,7 +338,7 @@ missed_prod_func(
  * @param[in]  mcastInfo      Pointer to information on the multicast group.
  * @param[in]  iface          IPv4 address of interface to use for receiving
  *                            multicast and unicast packets. Caller may free.
- * @param[in]  pq             Product queue. Must exist until `deinit()`
+ * @param[in]  pq             Product queue. Must exist until `destroy()`
  *                            returns.
  * @retval     0              Success.
  * @retval     LDM7_SYSTEM    System error. `log_add()` called.
