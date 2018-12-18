@@ -191,7 +191,8 @@ void fmtpRecvv3::Start()
                                 this);
     if (status) {
         Stop();
-        throw std::runtime_error("fmtpRecvv3::Start(): Couldn't start "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::Start(): Couldn't start "
                 "multicast-receiving thread, failed with status = "
                 + std::to_string(status));
     }
@@ -297,7 +298,8 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
     const ssize_t nbytes = recv(mcastSock, pktBuf, bufsize, 0);
 
     if (nbytes < 0) {
-        throw std::runtime_error("fmtpRecvv3::mcastBOPHandler() recv() got less"
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::mcastBOPHandler() recv() got less"
                 "than 0 bytes returned.");
     }
 
@@ -765,8 +767,8 @@ void fmtpRecvv3::mcastHandler()
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
 
         if (nbytes < 0) {
-            throw std::runtime_error("fmtpRecvv3::mcastHandler() recv() less "
-                    "than zero bytes.");
+            throw std::system_error(errno, std::system_category(),
+                    "fmtpRecvv3::mcastHandler() recv() less than zero bytes.");
         }
         if (nbytes != sizeof(header)) {
             throw std::runtime_error("fmtpRecvv3::mcastHandler() Invalid packet "
@@ -821,8 +823,8 @@ void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
     const ssize_t nbytes = recv(mcastSock, pktBuf, FMTP_HEADER_LEN, 0);
 
     if (nbytes < 0) {
-        throw std::runtime_error("fmtpRecvv3::mcastEOPHandler() recv() less than "
-                "zero bytes.");
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::mcastEOPHandler() recv() less than zero bytes.");
     }
 
     #ifdef MODBASE
@@ -1422,7 +1424,8 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
     }
 
     if (nbytes == -1) {
-        throw std::runtime_error("fmtpRecvv3::readMcastData(): readv() EOF.");
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::readMcastData(): readv() EOF.");
     }
     else {
         checkPayloadLen(header, nbytes);
@@ -1808,7 +1811,8 @@ void fmtpRecvv3::stopJoinRetxRequester()
 
     int status = pthread_join(retx_rq, NULL);
     if (status) {
-        throw std::runtime_error("fmtpRecvv3::stopJoinRetxRequester() Couldn't "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::stopJoinRetxRequester() Couldn't "
                 "join retransmission-request thread");
     }
 }
@@ -1848,12 +1852,14 @@ void fmtpRecvv3::stopJoinRetxHandler()
     if (!retxHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(retx_t);
         if (status && status != ESRCH) {
-            throw std::runtime_error("fmtpRecvv3::stopJoinMcastHandler() "
+            throw std::system_error(errno, std::system_category(),
+                    "fmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel retransmission-reception thread");
         }
         status = pthread_join(retx_t, NULL);
         if (status && status != ESRCH) {
-            throw std::runtime_error("fmtpRecvv3::stopJoinRetxHandler() "
+            throw std::system_error(errno, std::system_category(),
+                    "fmtpRecvv3::stopJoinRetxHandler() "
                     "Couldn't join retransmission-reception thread");
         }
     }
@@ -1892,12 +1898,14 @@ void fmtpRecvv3::stopJoinMcastHandler()
     if (!mcastHandlerCanceled.test_and_set()) {
         int status = pthread_cancel(mcast_t);
         if (status && status != ESRCH) {
-            throw std::runtime_error("fmtpRecvv3::stopJoinMcastHandler() "
+            throw std::system_error(errno, std::system_category(),
+                    "fmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't cancel multicast thread");
         }
         status = pthread_join(mcast_t, NULL);
         if (status && status != ESRCH) {
-            throw std::runtime_error("fmtpRecvv3::stopJoinMcastHandler() "
+            throw std::system_error(errno, std::system_category(),
+                    "fmtpRecvv3::stopJoinMcastHandler() "
                     "Couldn't join multicast thread");
         }
     }
@@ -1919,7 +1927,7 @@ void fmtpRecvv3::StartRetxProcedure()
     int retval = pthread_create(&retx_t, NULL, &fmtpRecvv3::StartRetxHandler,
                                 this);
     if(retval != 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
             "fmtpRecvv3::StartRetxProcedure() pthread_create() error");
     }
 
@@ -1930,7 +1938,8 @@ void fmtpRecvv3::StartRetxProcedure()
             stopJoinRetxHandler();
         }
         catch (...) {}
-        throw std::runtime_error("fmtpRecvv3::StartRetxProcedure() "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::StartRetxProcedure() "
                 "pthread_create() failed with retval = "
                 + std::to_string(retval));
     }
@@ -1948,7 +1957,8 @@ void fmtpRecvv3::startTimerThread()
             this);
 
     if(retval != 0) {
-        throw std::runtime_error("fmtpRecvv3::startTimerThread() "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::startTimerThread() "
                 "pthread_create() failed with retval = " + std::to_string(retval));
     }
 }
@@ -1972,7 +1982,8 @@ void fmtpRecvv3::stopJoinTimerThread()
 
     int status = pthread_join(timer_t, NULL);
     if (status) {
-        throw std::runtime_error("fmtpRecvv3::stopJoinTimerThread() "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::stopJoinTimerThread() "
                 "Couldn't join timer thread");
     }
 }
@@ -2093,7 +2104,8 @@ void fmtpRecvv3::WriteToLog(const std::string& content)
     int         status = mkdir("logs", 0755);
 
     if (status && status != EEXIST)
-        throw std::runtime_error("fmtpRecvv3::WriteToLog(): unable to create "
+        throw std::system_error(errno, std::system_category(),
+                "fmtpRecvv3::WriteToLog(): unable to create "
                 "logs directory. This could be a permissions issue.");
 
     /* allocate a large enough buffer in case some long hostnames */

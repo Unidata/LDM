@@ -86,7 +86,7 @@ void UdpSend::Init()
     struct in_addr interfaceIP;
     /** create a UDP datagram socket. */
     if((sock_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::Init() Couldn't create UDP socket");
     }
 
@@ -102,7 +102,7 @@ void UdpSend::Init()
     int reuseaddr = true;
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr,
                    sizeof(reuseaddr)) < 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::Init() Couldn't enable IP address reuse");
     }
 
@@ -110,14 +110,14 @@ void UdpSend::Init()
     int reuseport = true;
     if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &reuseport,
                    sizeof(reuseport)) < 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::Init() Couldn't enable port number reuse");
     }
 #endif
 
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &newttl,
                 sizeof(newttl)) < 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::Init() Couldn't set UDP socket time-to-live "
                 "option to " + std::to_string(ttl));
     }
@@ -125,9 +125,9 @@ void UdpSend::Init()
     interfaceIP.s_addr = inet_addr(ifAddr.c_str());
     if (setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_IF, &interfaceIP,
                    sizeof(interfaceIP)) < 0) {
-        throw std::runtime_error(std::string(
-                "UdpSend::Init() Couldn't set UDP socket multicast interface "
-                "to \"") + ifAddr.c_str() + "\"");
+        throw std::system_error(errno, std::system_category(),
+                std::string("UdpSend::Init() Couldn't set UDP socket multicast "
+                        "interface to \"") + ifAddr.c_str() + "\"");
     }
 }
 
@@ -167,11 +167,11 @@ ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
 
     ssize_t ret = sendmsg(sock_fd, &msg, 0);
     if (ret == -1) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendData() error occurred when calling sendmsg()");
     }
     else if (ret != (headerLen + dataLen)) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendData() bytes sent on wire not equal "
                 "to expectation.");
     }
@@ -194,11 +194,11 @@ ssize_t UdpSend::SendTo(const void* buff, size_t len)
                             (struct sockaddr *)&recv_addr, sizeof(recv_addr));
 
     if (nbytes == -1) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendTo() error occurred when calling sendto()");
     }
     else if (nbytes != len) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendTo() bytes sent on wire not equal "
                 "to expectation.");
     }
@@ -236,11 +236,11 @@ ssize_t UdpSend::SendTo(struct iovec* const iovec, const int nvec)
     }
 
     if (nbytes == -1) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendTo() error occurred when calling sendmsg()");
     }
     else if (nbytes != expbytes) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "UdpSend::SendTo() nbytes sent on wire not equal "
                 "to expbytes.");
     }

@@ -331,7 +331,7 @@ void fmtpSendv3::Start()
 
     int retval = pthread_create(&timer_t, NULL, &fmtpSendv3::timerWrapper, this);
     if(retval != 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "fmtpSendv3::Start() pthread_create() timerWrapper error with"
                 " retval = " + std::to_string(retval));
     }
@@ -339,7 +339,7 @@ void fmtpSendv3::Start()
     retval = pthread_create(&coor_t, NULL, &fmtpSendv3::coordinator, this);
     if(retval != 0) {
         (void)pthread_cancel(timer_t);
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "fmtpSendv3::Start() pthread_create() coordinator error with"
                 " retval = " + std::to_string(retval));
     }

@@ -438,7 +438,9 @@ void TcpSend::updatePathMTU(int sockfd)
      * The fix simply handles the return value and throws a runtime error should the return value be -1
      */
     if (getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen)){
-	throw std::runtime_error("fmtpRecvv3::updatePathMTU() getsockopt failed with return value -1 in an attempt to obtain MTU.");
+	throw std::system_error(errno, std::system_category(),
+	        "fmtpRecvv3::updatePathMTU() getsockopt failed with return "
+	        "value -1 in an attempt to obtain MTU.");
     }
     if (mtu <= 0) {
         throw std::system_error(errno, std::system_category(),
