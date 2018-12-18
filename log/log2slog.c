@@ -255,10 +255,6 @@ static void stream_log(
         sigset_t prevSigs;
         blockSigs(&prevSigs);
             while (*msg) {
-                const char* const newline = strchr(msg, '\n');
-                const size_t      msglen =
-                        newline ? newline - msg : strlen(msg);
-
                 // Timestamp
                 (void)fprintf(dest->stream,
                         "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
@@ -281,13 +277,13 @@ static void stream_log(
                 (void)fprintf(dest->stream, "%-5s ", levelId);
 
                 // Message
-                (void)fprintf(dest->stream, "%s\n", msg);
+                const char* const newline = strchr(msg, '\n');
+                const int         msglen =
+                        newline ? newline - msg : strlen(msg);
+                (void)fprintf(dest->stream, "%.*s\n", msglen, msg);
 
-                if (newline) {
+                if (newline)
                     msg = newline + 1;
-                    continue;
-                }
-                break;
             } // Output-line loop
 
             dest->flush(dest);
