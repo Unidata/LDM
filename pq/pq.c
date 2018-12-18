@@ -4671,9 +4671,8 @@ pq2_set_mvrt(
 
         if (tvIsNone(pq->ctlp->minVirtResTime) ||
                 TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)) {
-            log_info_q("pq_set_mvrt(): MVRT product: %s",
-                    s_prod_info(NULL, 0, info,
-                            log_is_enabled_debug));
+            log_info("MVRT product: %s",
+                    s_prod_info(NULL, 0, info, log_is_enabled_debug));
             pq->ctlp->minVirtResTime = virtResTime;
             pq->ctlp->mvrtSize = pq->rlp->nbytes;
             pq->ctlp->mvrtSlots = pq->rlp->nelems;
@@ -4799,7 +4798,7 @@ pq2_del_oldest(
 
                 if (tvIsNone(pq->ctlp->minVirtResTime) ||
                         (TV_CMP_LT(virtResTime, pq->ctlp->minVirtResTime)))  {
-                    log_info_q("pq_del_oldest(): MVRT product: %s",
+                    log_info("MVRT product: %s",
                             s_prod_info(NULL, 0, &infoBuf.info, ulogIsDebug()));
                     pq->ctlp->minVirtResTime = virtResTime;
                     pq->ctlp->mvrtSize = pq->rlp->nbytes;
@@ -5196,7 +5195,7 @@ ctl_init(pqueue *const pq, size_t const align)
 #ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
-                log_notice_q("EIO => remote file system");
+                log_notice("EIO => remote file system");
                 /* try again */
                 pq->ftom = f_ftom;
                 pq->mtof = f_mtof;
@@ -5352,7 +5351,7 @@ remap:
 #ifdef HAVE_MMAP
         if(status == EIO && (pq->ftom == mm_ftom || pq->ftom == mm0_ftom))
         {
-                log_warning_q("Product-queue can't be memory-mapped!  "
+                log_warning("Product-queue can't be memory-mapped!  "
                     "Continuing with slower read/write I/O.");
                 /* try again */
                 pq->ftom = f_ftom;
@@ -6248,7 +6247,7 @@ vetCreationTime(
                 time_t          now = time(NULL);
 
                 if (entry->start <= now) {
-                    log_warning_q("Future product from \"%s\". "
+                    log_warning("Future product from \"%s\". "
                             "Fix local or ingest clock. %s", entry->hostname,
                             s_prod_info(NULL, 0, info, 0));
 
@@ -6258,7 +6257,7 @@ vetCreationTime(
             else {
                 FutureEntry*    newEntry = malloc(sizeof(FutureEntry));
 
-                log_warning_q("Future product from \"%s\". "
+                log_warning("Future product from \"%s\". "
                         "Fix local or ingest clock. %s", targetEntry.hostname,
                     s_prod_info(NULL, 0, info, 0));
 
@@ -7165,7 +7164,7 @@ pq_getMetadataFromOffset(
              * Decode the data-product's metadata.
              */
             if (!xdr_prod_info(&xdrs, info)) {
-                log_error_q("xdr_prod_info() failed");
+                log_error("xdr_prod_info() failed");
 
                 status = EIO;
             }
@@ -8404,7 +8403,7 @@ pq_seqdel(
          * else, Doit
          */
         if(log_is_enabled_info)
-            log_info_q(" del %s", s_prod_info(NULL, 0, info, 1));
+            log_info("del %s", s_prod_info(NULL, 0, info, 1));
 
         /* return extent value */
         if(extentp)
