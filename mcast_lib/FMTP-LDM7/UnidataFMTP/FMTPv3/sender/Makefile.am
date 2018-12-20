@@ -14,4 +14,6 @@ lib_la_SOURCES		= ProdIndexDelayQueue.cpp ProdIndexDelayQueue.h \
 			  TcpSend.cpp TcpSend.h \
 			  UdpSend.cpp UdpSend.h \
 			  fmtpSendv3.cpp fmtpSendv3.h
-lib_la_CPPFLAGS		= -I$(srcdir)/..
+lib_la_CPPFLAGS		= -I$(srcdir)/.. \
+			  -I/home/steve/Projects/ldm/src/log \
+			  -I/home/steve/Projects/ldm/src

@@ -29,6 +29,8 @@
 
 
 #include "fmtpSendv3.h"
+#include "log.h"
+
 
 #include <algorithm>
 #include <unistd.h>
@@ -919,6 +921,11 @@ void fmtpSendv3::retransBOP(
         throw std::runtime_error(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
+
+    log_debug("Retransmitted BOP {header={index=%lu, payload=%u}, "
+            "bop={prodsize=%lu, metasize=%u}}",
+            (unsigned long)recvheader->prodindex, ntohs(sendheader.payloadlen),
+            (unsigned long)retxMeta->prodLength, retxMeta->metaSize);
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;
