@@ -19,7 +19,7 @@ AC_PROG_LIBTOOL
 
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
-    AC_SUBST([AM_CXXFLAGS], [-std=c++0x])
+    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
 fi
 
 # Check for the CUNIT unit-testing package
