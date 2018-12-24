@@ -517,7 +517,8 @@ piq_cancel(
  * has been called. Idempotent.
  *
  * @param[in] fiq     Queue to be restarted
- * @return    EINVAL  `fiq == NULL`
+ * @retval    0       Success
+ * @retval    EINVAL  `fiq == NULL`
  */
 int
 piq_restart(ProdIndexQueue* const fiq)
@@ -529,6 +530,8 @@ piq_restart(ProdIndexQueue* const fiq)
         fiq->isCancelled = 0;
         (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
     unlock(fiq);
+
+    return 0;
 }
 
 /**
