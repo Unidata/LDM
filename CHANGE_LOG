@@ -1,3 +1,22 @@
+6.13.7.91
+    Documentation:
+        - Document new format for log messages
+        - Correct long instructions for installing from source using pax(1) by
+          removing use of mv(1)
+
+    Logging:
+        - Increase width of process field.
+        - Eliminate trailing newline
+
+    Shorten some function names
+
+    FMTP:
+        - Add system error messages to FMTP messages
+        - Add Serializer to fmtpSendv3
+
+    Product-queue:
+        Improve log messages
+
 6.13.7.90	2018-12-12T14:52:13-0700
     Upstream LDM7:
         - Improve documentation
