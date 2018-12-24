@@ -143,7 +143,7 @@ void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
 
 /**
  * Writes a given number of bytes to a given streaming socket. Returns when that
- * number is written or an error occurs. This is the static memeber function in
+ * number is written or an error occurs. This is the static member function in
  * alternative to the member function sendall().
  *
  * @param[in] sock    The streaming socket.
