@@ -195,9 +195,9 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     txdone(false),
     /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
     notifyprodidx(0),
-    suppressor(0)
+    suppressor(0),
+    udpSerializer{udpsend}
 {
-    udpSerializer = udpsend;
 }
 
 

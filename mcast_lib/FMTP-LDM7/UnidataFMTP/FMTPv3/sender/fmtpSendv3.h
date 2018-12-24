@@ -114,7 +114,6 @@ class fmtpSendv3
 
         void flush();
     };
-    UdpSerializer udpSerializer;
 
 public:
     explicit fmtpSendv3(
@@ -305,6 +304,9 @@ private:
     std::chrono::high_resolution_clock::time_point start_t;
     std::chrono::high_resolution_clock::time_point end_t;
     /* member variables for measurement use ends */
+
+    /// Serializes objects for multicasting
+    UdpSerializer       udpSerializer;
 };
 
 
