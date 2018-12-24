@@ -29,6 +29,7 @@
 
 
 #include "fmtpRecvv3.h"
+#include "log.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -278,6 +279,7 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  */
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 {
+    log_debug("Entered");
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -309,6 +311,7 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
      * between last logged prodindex and currently received prodindex.
      */
     requestMissingBopsExclusive(header.prodindex);
+    log_debug("Returning");
 }
 
 
@@ -321,6 +324,7 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
                                  const char* const  FmtpPacketData)
 {
+    log_debug("Entered");
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -336,6 +340,7 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
     #endif
 
     BOPHandler(header, FmtpPacketData);
+    log_debug("Returning");
 }
 
 
@@ -381,6 +386,11 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
 
     wire = (const char*)uint16p;
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
+
+    log_debug("Received BOP {header={index=%lu, payload=%u}, "
+            "bop={prodsize=%lu, metasize=%u}}",
+            (unsigned long)header.prodindex, header.payloadlen,
+            (unsigned long)BOPmsg.prodsize, BOPmsg.metasize);
 
     /**
      * Here a strict check is performed to make sure the information in
@@ -978,7 +988,7 @@ void fmtpRecvv3::retxHandler()
         }
         else {
             /* TcpRecv::recvData() will return requested number of bytes */
-            /*This should initialize header: Check Coverity check #3 below. 
+            /* This should initialize header: Check Coverity check #3 below.
  	     * Coverity only complained about header being uninitialized there. 
  	     */
 	    decodeHeader(pktHead, header);
