@@ -51,16 +51,22 @@ struct mlr {
  * @param[out] prodStart  Start of the region in the product-queue to which to
  *                        write the product.
  * @param[out] pqeIndex   Reference to reserved space in product-queue.
- * @retval     0          Success. `prodStart` is set. If `NULL`, then the
- *                        data-product is already in the LDM product-queue.
- * @retval    -1          Failure. `log_add()` called.
+ * @retval     0          Success. `*prodStart` is set.
+ * @retval     EINVAL     `prodStart == NULL || pqeIndex == NULL`. `log_add()`
+ *                        called.
+ * @retval     EEXIST     The data-product is already in the LDM product-queue.
+ *                        `*prodStart` is not set. `log_add()` called.
+ * @retval     E2BIG      Product is too large for the queue. `*prodStart` is
+ *                        not set. `log_add()` called.
+ * @return                <errno.h> error code. `*prodStart` is not set.
+ *                        `log_add()` called.
  */
 static int
 allocateSpace(
         Mlr* const restrict       mlr,
         const signaturet          signature,
         const size_t              prodSize,
-        char** const restrict     prodStart,
+        void** const restrict     prodStart,
         pqe_index* const restrict pqeIndex)
 {
     log_debug("Entered: prodSize=%zu", prodSize);
@@ -70,19 +76,20 @@ allocateSpace(
             pqeIndex);
 
     if (status) {
-        if (status == PQUEUE_DUP) {
+        if (status == PQ_DUP) {
+            // `log_add()` was not called
             if (log_is_enabled_info) {
                 (void)sprint_signaturet(sigStr, sizeof(sigStr), signature);
-                log_info_q("Duplicate product: sig=%s, size=%zu", sigStr,
+                log_add("Duplicate product: sig=%s, size=%zu", sigStr,
                         prodSize);
             }
-            *prodStart = NULL;
-            status = 0;
+            status = EEXIST;
+        }
+        else if (status == PQ_BIG) {
+            status = E2BIG;
         }
         else {
-            log_add("Couldn't allocate region for %zu-byte data-product",
-                    prodSize);
-            status = -1;
+            log_add("pqe_newDirect() failure");
         }
     }
     else {
@@ -93,8 +100,8 @@ allocateSpace(
         }
     } /* region allocated in product-queue */
 
-    log_debug("Returning: prodStart=%p, prodSize=%zu", *prodStart,
-            prodSize);
+    log_debug("Returning: status=%d, prodStart=%p, prodSize=%zu", status,
+            *prodStart, prodSize);
 
     return status;
 }
@@ -111,9 +118,17 @@ allocateSpace(
  * @param[out]     prod         Starting location for product or `NULL` if
  *                              duplicate product.
  * @param[out]     pqeIndex     Reference to reserved space in product-queue.
- * @retval         0            Success. `*prod` is set. If NULL, then
- *                              data-product is already in LDM product-queue.
- * @retval         -1           Failure. `log_add()` called.
+ * @retval         0            Success. `*prod` is set.
+ * @retval         EINVAL       `prod == NULL || pqeIndex == NULL || metaSize <
+ *                              sizeof(signaturet)`. `*prod` is not set.
+ *                              `log_add()` called.
+ * @retval         EEXIST       The data-product is already in the LDM
+ *                              product-queue. `*prod` is not set. `log_add()`
+ *                              called.
+ * @retval         E2BIG        Product is too large for the queue. `*prod` is
+ *                              not set. `log_add()` called.
+ * @return                      <errno.h> error code. `*prod` is not set.
+ *                              `log_add()` called.
  */
 static int
 bop_func(
@@ -128,56 +143,23 @@ bop_func(
      * This function is called on both the multicast and unicast threads of the
      * FMTP module.
      */
-    int  status;
 
     log_debug("Entered: prodSize=%zu, metaSize=%u, prod=%p", prodSize, metaSize,
             prod);
+    log_assert(mlr && metadata && prod && pqeIndex);
+
+    int  status;
 
     if (sizeof(signaturet) > metaSize) {
         log_add("Metadata of product {prodSize=%zu, metaSize=%u} is too small "
                 "for signature", prodSize, metaSize);
-        status = -1;
+        status = EINVAL;
     }
     else {
-        char* prodStart;
-        status = allocateSpace(mlr, metadata, prodSize, &prodStart, pqeIndex);
-
-        if (status == 0)
-            *prod = prodStart; // will be `NULL` if duplicate product
+        status = allocateSpace(mlr, metadata, prodSize, prod, pqeIndex);
     }
 
-    if (status)
-        log_flush_error(); // because called by FMTP layer
-
-    log_debug("Returning: *prod=%p, prodSize=%zu", *prod, prodSize);
-
-    return status;
-}
-
-/**
- * Tries to insert a data-product in its allocated product-queue region
- * that was received via multicast.
- *
- * @param[in] mlr       Pointer to the multicast LDM receiver.
- * @param[in] pqeIndex  Pointer to the reference to allocated space in the
- *                      product-queue.
- * @retval    0         Success.
- * @retval    -1        Error. `log_add()` called.
- */
-static int
-tryToInsert(
-        Mlr* const restrict             mlr,
-        const pqe_index* const restrict pqeIndex)
-{
-    int status = pqe_insert(mlr->pq, pqeIndex);
-
-    if (status != 0) {
-        log_add("Couldn't insert data-product into product-queue");
-        status = -1;
-    }
-    else {
-        downlet_incNumProds();
-    }
+    log_debug("Returning: status=%d, *prod=%p", status, *prod);
 
     return status;
 }
@@ -198,46 +180,6 @@ lastReceived(
     downlet_lastReceived(info);
 }
 
-/**
- * Finishes inserting a received FMTP product into an LDM product-queue as an
- * LDM data-product.
- *
- * @param[in] mlr          Pointer to the multicast LDM receiver.
- * @param[in] info         LDM data-product metadata. Caller may free when it's
- *                         no longer needed.
- * @param[in] dataSize     Maximum possible size of the data component of the
- *                         data-product in bytes.
- * @param[in] pqeIndex     Pointer to the reference to the allocated space in
- *                         the product-queue.
- * @param[in] duration     Amount of time, in seconds, it took to transmit the
- *                         product
- * @retval    0            Success.
- * @retval    -1           Error. `log_add()` called. The allocated region in
- *                         the product-queue was released.
- */
-static int
-finishInsertion(
-        Mlr* const restrict             mlr,
-        const prod_info* const restrict info,
-        const pqe_index* const restrict pqeIndex,
-        const double                    duration)
-{
-    int status = tryToInsert(mlr, pqeIndex);
-    if (status) {
-        log_add("Couldn't insert %u-byte data-product \"%s\"", info->sz,
-                info->ident);
-    }
-    else {
-        char infoStr[LDM_INFO_MAX];
-
-        log_info("Received in %.7f s: %s", duration,
-                s_prod_info(infoStr, sizeof(infoStr), info,
-                        log_is_enabled_debug));
-
-        lastReceived(mlr, info);
-    }
-    return status;
-}
 
 /**
  * Accepts notification from the FMTP layer of the complete reception of a
@@ -254,9 +196,11 @@ finishInsertion(
  *                           queue. Ignored if `prodStart == NULL`.
  * @param[in]      duration  Amount of time, in seconds, it took to transmit the
  *                           product
- * @retval         0         Success.
- * @retval         -1        Error. `log_add()` called. The allocated space
- *                           in the LDM product-queue was released.
+ * @retval         0         Success. `pqe_discard()` called.
+ * @retval         EPROTO    RPC decode error. `pqe_discard()` called.
+ *                           `log_add()` called.
+ * @retval         EIO       Product-queue error. `pqe_discard()` called.
+ *                           `log_add()` called.
  */
 static int
 eop_func(
@@ -269,6 +213,8 @@ eop_func(
     /*
      * This function is called on both the FMTP multicast and unicast threads.
      */
+
+    log_assert(mlr && pqeIndex);
 
     int status;
 
@@ -284,20 +230,33 @@ eop_func(
         xdrmem_create(&xdrs, prodStart, prodSize, XDR_DECODE);
 
         if (!xdr_prod_info(&xdrs, info)) {
-            log_add("Couldn't decode LDM product metadata from %zu-byte "
-                    "FMTP product", prodSize);
-            status = -1;
-            pqe_discard(mlr->pq, pqeIndex);
+            log_add("Couldn't decode LDM product metadata from %zu-byte FMTP "
+                    "product", prodSize);
+            (void)pqe_discard(mlr->pq, pqeIndex);
+            status = EPROTO;
         }
         else {
-            status = finishInsertion(mlr, info, pqeIndex, duration);
-        }                                       // "info" allocated
+            status = pqe_insert(mlr->pq, pqeIndex);
+
+            if (status) {
+                log_add("Couldn't insert %u-byte data-product \"%s\"", info->sz,
+                        info->ident);
+                status = EIO;
+            }
+            else {
+                downlet_incNumProds();
+                lastReceived(mlr, info);
+
+                char infoStr[LDM_INFO_MAX];
+                log_info("Received in %.7f s: %s", duration,
+                        s_prod_info(infoStr, sizeof(infoStr), info,
+                                log_is_enabled_debug));
+
+            } // Product successfully inserted into product-queue
+        } // "info" initialized
 
         xdr_destroy(&xdrs);
-    }
-
-    if (status)
-        log_flush_error(); // because called by FMTP layer
+    } // Not a duplicate product
 
     return status;
 }
