@@ -12,5 +12,5 @@ lib_la_SOURCES		= TcpRecv.cpp TcpRecv.h fmtpRecvv3.cpp fmtpRecvv3.h \
 			  RecvProxy.h ProdSegMNG.cpp ProdSegMNG.h Measure.cpp \
 			  Measure.h
 lib_la_CPPFLAGS		= -I$(srcdir)/.. \
-			  -I../../../../../log \
-			  -I../../../../..
+			  -I$(top_srcdir)/../../../log \
+			  -I$(top_srcdir)/../../..
