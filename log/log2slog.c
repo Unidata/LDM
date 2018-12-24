@@ -278,12 +278,15 @@ static void stream_log(
 
                 // Message
                 const char* const newline = strchr(msg, '\n');
-                const int         msglen =
-                        newline ? newline - msg : strlen(msg);
-                (void)fprintf(dest->stream, "%.*s\n", msglen, msg);
-
-                if (newline)
+                if (newline) {
+                    (void)fprintf(dest->stream, "%.*s\n", (int)(newline-msg),
+                            msg);
                     msg = newline + 1;
+                }
+                else {
+                    (void)fprintf(dest->stream, "%s\n", msg);
+                    break;
+                }
             } // Output-line loop
 
             dest->flush(dest);
