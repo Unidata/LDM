@@ -1,3 +1,8 @@
+6.13.7.92
+    FMTP:
+        Make reference to logging directory independent of workspace directory
+        hierarchy
+
 6.13.7.91	2018-12-24T10:37:51-0700
     Down7:
         Use SIGHUP instead of SIGTERM to interrupt Down7 threads beacause an
