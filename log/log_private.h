@@ -12,8 +12,6 @@
 #ifndef ULOG_LOG_INTERNAL_H_
 #define ULOG_LOG_INTERNAL_H_
 
-#include "config.h"
-
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>

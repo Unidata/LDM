@@ -12,8 +12,6 @@
 #ifndef LOG_LOG_H_
 #define LOG_LOG_H_
 
-#include "config.h"
-
 #include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
