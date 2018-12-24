@@ -108,46 +108,70 @@ void ProdNotifier::startProd(
         const unsigned         metaSize,
         void** const           pqRegion)
 {
-    pqe_index pqeIndex;
-    char      sigStr[2*sizeof(signaturet)+1];
+    try {
+        if (log_is_enabled_debug) {
+            char      sigStr[2*sizeof(signaturet)+1];
+            (void)sprint_signaturet(sigStr, sizeof(sigStr),
+                    (const unsigned char*)metadata);
+            log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
+                    "metadata=%s", (unsigned long)iProd, prodSize, metaSize,
+                    sigStr);
+        }
 
-    if (log_is_enabled_debug || log_is_enabled_info) {
-        (void)sprint_signaturet(sigStr, sizeof(sigStr),
-                (const unsigned char*)metadata);
-        log_debug("Entered: prodIndex=%lu, prodSize=%zu, metaSize=%u, "
-                "metadata=%s", (unsigned long)iProd, prodSize, metaSize,
-                sigStr);
-    }
+        bool      found;
+        ProdInfo* prodInfo;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            auto                         iter = prodInfos.find(iProd);
 
-    if (bop_func(mlr, prodSize, metadata, metaSize, pqRegion, &pqeIndex)) {
-        log_warning("Error notifying receiving application about "
-                "beginning of product %lu", (unsigned long)iProd);
-        *pqRegion = nullptr; // Tells FMTP module to ignore this product
-    }
-    else {
-        if (*pqRegion == nullptr) {
-            log_info("Duplicate product: prodIndex=%lu, prodSize=%zu, "
-                    "metaSize=%u, metadata=%s", (unsigned long)iProd, prodSize,
-                    metaSize, sigStr);
+            found = iter != prodInfos.end();
+            prodInfo = found ? &iter->second : &prodInfos[iProd];
+        }
+
+        if (found) {
+            if (    prodInfo->startTime.tv_sec != startTime.tv_sec ||
+                    prodInfo->startTime.tv_nsec != startTime.tv_nsec ||
+                    prodInfo->size != prodSize ||
+                    ::memcmp(prodInfo->index.signature, metadata,
+                            sizeof(signaturet))) {
+                throw std::runtime_error("ProdNotifier::startProd() "
+                        "Product " + std::to_string(iProd) +
+                        " BOP doesn't match previous BOP");
+            }
         }
         else {
-            std::unique_lock<std::mutex> lock(mutex);
-            if (prodInfos.count(iProd)) {
-                // Exists
-                log_info("Duplicate BOP: prodIndex=%lu, prodSize=%u",
-                        (unsigned long)iProd, prodSize);
+            pqe_index pqeIndex;
+            int       status = bop_func(mlr, prodSize, metadata, metaSize,
+                    pqRegion, &pqeIndex);
+
+            if (status) {
+                log_add("bop_func() failure on product %lu",
+                        (unsigned long)iProd);
+
+                if (status == E2BIG || status == EEXIST) {
+                    log_flush_warning();
+                    *pqRegion = nullptr; // Ignore this product
+                }
+                else {
+                    log_flush_error();
+                    throw std::runtime_error("ProdNotifier::startProd() Error "
+                            "notifying LDM7 of beginning-of-product");
+                }
             }
             else {
-                // Doesn't exist
-                ProdInfo& prodInfo = prodInfos[iProd];
-                prodInfo.pqRegion = *pqRegion; // can't be nullptr
-                prodInfo.startTime = startTime;
-                prodInfo.size = prodSize;
-                prodInfo.index = pqeIndex;
-            }
-        } // Product is not in the product-queue
-    } // `bop_func()` was successful
+                prodInfo->pqRegion = *pqRegion; // Can't be `nullptr`
+                prodInfo->startTime = startTime;
+                prodInfo->size = prodSize;
+                prodInfo->index = pqeIndex;
+            } // `bop_func()` was successful
+        } // No previous BOP for this product
+    }
+    catch (const std::exception& e) {
+        log_free(); // to prevent memory leak by FMTP thread
+        throw;
+    }
 
+    log_debug("Returning");
     log_free(); // to prevent memory leak by FMTP thread
 }
 
@@ -162,23 +186,33 @@ void ProdNotifier::endProd(
 {
     log_debug("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
-    std::unique_lock<std::mutex> lock(mutex);
     try {
-        ProdInfo& prodInfo = prodInfos.at(prodIndex);
-        double    duration = (stopTime.tv_sec - prodInfo.startTime.tv_sec) +
+        ProdInfo prodInfo;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            prodInfo = prodInfos.at(prodIndex);
+            (void)prodInfos.erase(prodIndex);
+        }
+        double   duration =
+                (stopTime.tv_sec - prodInfo.startTime.tv_sec) +
                 (stopTime.tv_nsec - prodInfo.startTime.tv_nsec)/1e9;
+
         if (eop_func(mlr, prodInfo.pqRegion, prodInfo.size, &prodInfo.index,
                 duration)) {
+            log_flush_error();
             log_free(); // to prevent memory leak by FMTP thread
             throw std::runtime_error(
                     "Error notifying receiving application about end-of-product");
         }
-        (void)prodInfos.erase(prodIndex);
     }
     catch (const std::out_of_range& e) {
-        log_warning("Unknown product-index: %lu", (unsigned long)prodIndex);
+        log_add("Unknown product-index: %lu", (unsigned long)prodIndex);
+        log_flush_error();
+        log_free(); // to prevent memory leak by FMTP thread
+        throw;
     }
 
+    log_debug("Returning");
     log_free(); // to prevent memory leak by FMTP thread
 }
 
@@ -188,16 +222,35 @@ void ProdNotifier::endProd(
  */
 void ProdNotifier::missedProd(const FmtpProdIndex prodIndex)
 {
-    std::unique_lock<std::mutex> lock(mutex);
-    void* const                  prodStart = prodInfos[prodIndex].pqRegion;
+    log_debug("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
-    log_info("Missed product: prodIndex=%lu, prodStart=%p",
-            (unsigned long)prodIndex, prodStart);
+    try {
+        void*     prodStart;
+        pqe_index pqeIndex;
+        bool      found;
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            auto                         iter = prodInfos.find(prodIndex);
 
-    missed_prod_func(mlr, prodIndex,
-            prodStart ? &prodInfos[prodIndex].index : nullptr);
+            found = iter != prodInfos.end();
 
-    (void)prodInfos.erase(prodIndex);
+            if (found) {
+                prodStart = iter->second.pqRegion;
+                pqeIndex = iter->second.index;
+                prodInfos.erase(iter);
+            }
+        }
 
+        log_info("Missed product: prodIndex=%lu, prodStart=%p",
+                (unsigned long)prodIndex, prodStart);
+        missed_prod_func(mlr, prodIndex, found ? &pqeIndex : nullptr);
+    }
+    catch (const std::exception& e) {
+        log_free(); // to prevent memory leak by FMTP thread
+        throw;
+    }
+
+    log_flush_error(); // Just in case
+    log_debug("Returning");
     log_free(); // to prevent memory leak by FMTP thread
 }

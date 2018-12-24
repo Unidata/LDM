@@ -21,9 +21,27 @@
 #include "MldmRcvr.h"
 
 /**
- * @retval         0            Success. `*data` is set. If `NULL`, then
- *                              data-product is already in LDM product-queue.
- * @retval         -1           Failure. `log_add()` called.
+ * Accepts notification from the FMTP component of the beginning of a product.
+ * Allocates a region in the LDM product-queue to receive the product,
+ * which is an XDR-encoded LDM data-product. Called by FMTP component.
+ *
+ * @param[in,out]  mlr          The associated multicast LDM receiver.
+ * @param[in]      prodSize     Size of the product in bytes.
+ * @param[in]      metadata     Information about the product.
+ * @param[in]      metaSize     Size of the information.
+ * @param[out]     prod         Starting location for product or `NULL` if
+ *                              duplicate product.
+ * @param[out]     pqeIndex     Reference to reserved space in product-queue.
+ * @retval         0            Success. `*prod` is set.
+ * @retval         EINVAL       `prodStart == NULL || pqeIndex == NULL`.
+ *                              `log_add()` called.
+ * @retval         EEXIST       The data-product is already in the LDM
+ *                              product-queue. `*prodStart` is not set.
+ *                              `log_add()` called.
+ * @retval         E2BIG        Product is too large for the queue. `*prodStart`
+ *                              is not set. `log_add()` called.
+ * @return                      <errno.h> error code. `*prodStart` is not set.
+ *                              `log_add()` called.
  */
 typedef int     (*BopFunc)(
                     Mlr* const restrict        mlr,
