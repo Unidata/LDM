@@ -59,7 +59,7 @@ struct StartTimerInfo
 {
     uint32_t     prodindex;  /*!< product index */
     float        seconds;    /*!< product index */
-    fmtpRecvv3* receiver;   /*!< a poniter to the fmtpRecvv3 instance */
+    fmtpRecvv3* receiver;   /*!< a pointer to the fmtpRecvv3 instance */
 };
 
 struct ProdTracker

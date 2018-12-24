@@ -29,6 +29,7 @@
 
 
 #include "fmtpRecvv3.h"
+#include "log.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -279,6 +280,7 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  */
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 {
+    log_debug("Entered");
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -311,6 +313,7 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
      * between last logged prodindex and currently received prodindex.
      */
     requestMissingBopsExclusive(header.prodindex);
+    log_debug("Returning");
 }
 
 
@@ -323,6 +326,7 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
                                  const char* const  FmtpPacketData)
 {
+    log_debug("Entered");
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -338,6 +342,7 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
     #endif
 
     BOPHandler(header, FmtpPacketData);
+    log_debug("Returning");
 }
 
 
@@ -363,32 +368,38 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     if (header.payloadlen < BOPCONST) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): packet too small");
     }
-    const unsigned char* wire = (unsigned char*)FmtpPacketData;
+    const char* wire = FmtpPacketData;
 
-    uint32_t* uint32 = (uint32_t*)wire;
-    BOPmsg.start.host.tv_sec = (time_t)ntohl(*uint32++) << 32;
-    BOPmsg.start.host.tv_sec |= ntohl(*uint32++);
-    BOPmsg.start.host.tv_nsec = ntohl(*uint32++);
-    wire = (unsigned char*)uint32;
+    const uint32_t* uint32p = (const uint32_t*)wire;
+    BOPmsg.start.host.tv_sec = (time_t)(ntohl(*uint32p++)) << 32;
+    BOPmsg.start.host.tv_sec |= ntohl(*uint32p++);
+    BOPmsg.start.host.tv_nsec = ntohl(*uint32p++);
 
-    BOPmsg.prodsize = ntohl(*(uint32_t*)wire);
-    wire += sizeof(BOPmsg.prodsize);
+    BOPmsg.prodsize = ntohl(*uint32p++);
 
-    BOPmsg.metasize = ntohs(*(uint16_t*)wire);
-    wire += sizeof(BOPmsg.metasize);
+    const uint16_t* uint16p = (const uint16_t*)uint32p;
+    BOPmsg.metasize = ntohs(*uint16p++);
 
-    if ((header.payloadlen - BOPCONST) != BOPmsg.metasize) {
-        throw std::runtime_error("fmtpRecvv3::BOPHandler(): metasize "
-                "mismatched payload indicated by header");
-    }
+    if (header.payloadlen < BOPCONST + BOPmsg.metasize)
+        throw std::runtime_error("fmtpRecvv3::BOPHandler(): metadata too big: "
+                "payloadlen (" + std::to_string(header.payloadlen) + ") < "
+                "BOPCONST (" + std::to_string(BOPCONST) + ") + metasize (" +
+                std::to_string(BOPmsg.metasize) + ")");
+
+    wire = (const char*)uint16p;
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
+
+    log_debug("Received BOP {header={index=%lu, payload=%u}, "
+            "bop={prodsize=%lu, metasize=%u}}",
+            (unsigned long)header.prodindex, header.payloadlen,
+            (unsigned long)BOPmsg.prodsize, BOPmsg.metasize);
 
     /**
      * Here a strict check is performed to make sure the information in
      * trackermap and BlockMNG would not be overwritten by duplicate BOP.
      * By design, a product should exist in both the trackermap and
      * BlockMNG or neither, which is the condition of executing all the
-     * initialization. Also, notify_of_bop() will only be called for a
+     * initialization. Also, startProd() will only be called for a
      * fresh new BOP. All the duplicate calls will be suppressed.
      */
     bool insertion = pSegMNG->addProd(header.prodindex, BOPmsg.prodsize);
@@ -979,7 +990,7 @@ void fmtpRecvv3::retxHandler()
         }
         else {
             /* TcpRecv::recvData() will return requested number of bytes */
-            /*This should initialize header: Check Coverity check #3 below. 
+            /* This should initialize header: Check Coverity check #3 below.
  	     * Coverity only complained about header being uninitialized there. 
  	     */
 	    decodeHeader(pktHead, header);

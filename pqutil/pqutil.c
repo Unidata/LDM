@@ -862,7 +862,7 @@ read_file(pqueue *pq,
             MD5Update(md5ctxp, (const unsigned char *)dbuf, prodrec->info.sz);
             MD5Final((unsigned char*)prodrec->info.signature, md5ctxp);
 
-            status = pqe_insert(pq, idx);
+            status = pqe_insert(pq, &idx);
             if (status) {
                 log_error_q("pqe_insert() returned %d", status);
                 close(fd);
@@ -1043,7 +1043,7 @@ big_product(pqueue      *pq,
         MD5Update(md5ctxp, (const unsigned char *)dbuf, prod_sz);
         MD5Final((unsigned char*)prec->info.signature, md5ctxp);
 
-        status = pqe_insert(pq, idx);
+        status = pqe_insert(pq, &idx);
         if (status) {
             log_error_q("%s:big_product(): pqe_insert() failure");
             return;
@@ -1060,7 +1060,7 @@ big_product(pqueue      *pq,
             return;
         }
 
-        status = pqe_discard(pq, idx);
+        status = pqe_discard(pq, &idx);
         if (status) {
             log_error_q("pqe_discard: %s", strerror(status));
             return;

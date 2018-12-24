@@ -1,21 +1,42 @@
-6.13.7.91
+6.13.7.92
     Documentation:
         - Document new format for log messages
         - Correct long instructions for installing from source using pax(1) by
           removing use of mv(1)
 
     Logging:
-        - Increase width of process field.
-        - Eliminate trailing newline
-
-    Shorten some function names
+        Increase width of process field.
 
     FMTP:
         - Add system error messages to FMTP messages
-        - Add Serializer to fmtpSendv3
+        - Create Serializer and add to fmtpSendv3
 
     Product-queue:
         Improve log messages
+
+    Misc:
+        Shorten some function names
+
+6.13.7.91	2018-12-24T10:37:51-0700
+    Down7:
+        Use SIGHUP instead of SIGTERM to interrupt Down7 threads beacause an
+        external SIGTERM must terminate the process and figuring out if one is
+        external or internal is more complicated
+
+        Have Down7 re-connect immediately on multicast error
+
+    FMTPRecvv3:
+        Accept longer BOP-s and improve exception message
+
+    Product-queue:
+        Make "pqe_index" argument a pointer
+
+    Logging:
+        Eliminate trailing newline in log message
+
+    ProdNotifier:
+        - Improve handling of start-of bad data-product
+        - Improve code to insert multicast product
 
 6.13.7.90	2018-12-12T14:52:13-0700
     Upstream LDM7:

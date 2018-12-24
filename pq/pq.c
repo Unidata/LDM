@@ -4853,7 +4853,7 @@ pq2_del_oldest(
  * Free a region, by offset
  */
 static int
-rpqe_free(pqueue *pq, off_t offset, signaturet signature)
+rpqe_free(pqueue *pq, off_t offset, const signaturet signature)
 {
         region *rp = NULL;
         size_t rlix;
@@ -8928,11 +8928,11 @@ unwind_lock:
  */
 int
 pqe_newDirect(
-    pqueue* const     pq,
-    const size_t      size,
-    const signaturet  signature,
-    char** const      ptrp,
-    pqe_index* const  indexp)
+    pqueue* const restrict pq,
+    const size_t              size,
+    const signaturet          signature,
+    void** const restrict     ptrp,
+    pqe_index* const restrict indexp)
 {
     int status;
 
@@ -8969,7 +8969,7 @@ pqe_newDirect(
                     /*
                      * Obtain a new region.
                      */
-                    status = rpqe_new(pq, size, signature, (void**)ptrp, &sxep);
+                    status = rpqe_new(pq, size, signature, ptrp, &sxep);
                     if (status) {
                         if (status != PQ_DUP)
                             log_add("rpqe_new() failure");
@@ -9008,11 +9008,13 @@ pqe_newDirect(
  * @return               <errno.h> error code.
  */
 int
-pqe_discard(pqueue *pq, pqe_index index)
+pqe_discard(
+        pqueue* const restrict          pq,
+        const pqe_index* const restrict index)
 {
     pq_lockIf(pq);
         int   status;
-        off_t offset = pqeOffset(index);
+        off_t offset = pqeOffset(*index);
 
         status = (pq->mtof)(pq, offset, 0);
         if(status == ENOERR) {
@@ -9021,7 +9023,7 @@ pqe_discard(pqueue *pq, pqe_index index)
              */
             status = ctl_get(pq, RGN_WRITE);
             if(status == ENOERR) {
-                status = rpqe_free(pq, offset, index.signature);
+                status = rpqe_free(pq, offset, index->signature);
                 (void)ctl_rel(pq, RGN_MODIFIED);
                 pq->pqe_count--;
             }
@@ -9116,29 +9118,31 @@ unwind_lock:
 }
 
 /**
- * Inserts the data-product reserved by a prior call to `pqe_new()` or
- * `pqe_newDirect()` and sends a SIGCONT to the process group.
+ * Finalizes insertion of the data-product reserved by a prior call to
+ * `pqe_new()` or `pqe_newDirect()` and sends a SIGCONT to the process group on
+ * success. If the reference to the data-product is valid and an error occurs,
+ * then the product is not inserted: its data-region and signature are freed.
  *
- * @param[in] pq     The product-queue.
- * @param[in] index  The data-product reference returned by `pqe_new()` or
- *                   `pqe_newDirect()`.
- * @retval 0            Success.
- * @retval PQ_BIG       According to its metadata, the data-product is larger
- *                      than the space allocated for it by `pqe_new()` or
- *                      `pqe_newDirect()`. An attempt was made to revert the
- *                      product-queue to a consistent state. `log_error_q()` called.
- * @retval PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
- *                      `log_error_q()` called.
- * @retval PQ_CORRUPT   The metadata of the data-product referenced by `index`
- *                      couldn't be deserialized. The data-product isn't
- *                      inserted. An attempt was made to revert the
- *                      product-queue to a consistent state. `log_error_q()` called.
- * @retval PQ_SYSTEM    System failure. The data-product isn't inserted.
- *                      The state of the product-queue is unspecified.
- *                      `log_error_q()` called.
+ * @param[in] pq           The product-queue.
+ * @param[in] index        The data-product reference returned by `pqe_new()` or
+ *                         `pqe_newDirect()`.
+ * @retval    0            Success. `SIGCONT` sent to process-group.
+ * @retval    PQ_BIG       According to its metadata, the data-product is larger
+ *                         than the space allocated for it by `pqe_new()` or
+ *                         `pqe_newDirect()`. `pqe_discard()` called.
+ *                         `log_flush_error()` called.
+ * @retval    PQ_CORRUPT   The metadata of the data-product referenced by
+ *                         `index` couldn't be deserialized. `pqe_discard()`
+ *                         called. `log_flush_error()` called.
+ * @retval    PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
+ *                         `log_flush_error()` called.
+ * @retval    PQ_SYSTEM    System failure. `pq_discard()` called.
+ *                         `log_flush_error()` called.
  */
 int
-pqe_insert(pqueue *pq, pqe_index index)
+pqe_insert(
+        pqueue* const restrict          pq,
+        const pqe_index* const restrict index)
 {
     int  status;
 
@@ -9146,7 +9150,7 @@ pqe_insert(pqueue *pq, pqe_index index)
     pq_lockIf(pq);
         riu* rp;
 
-        if (riul_r_find(pq->riulp, index.offset, &rp) == 0) {
+        if (riul_r_find(pq->riulp, index->offset, &rp) == 0) {
             log_error_q("riul_r_find() failed");
             status = PQ_NOTFOUND;
         }
@@ -9158,16 +9162,16 @@ pqe_insert(pqueue *pq, pqe_index index)
             if (!xdr_prod_info(&xdrs, info)) {
                 log_error_q("xdr_prod_info() failed; "
                         "product-queue might now be corrupt");
-                status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_CORRUPT;
+                status = PQ_CORRUPT;
             }
             else if (xlen_prod_i(info) > rp->extent) {
                 log_error_q("Product larger than allocated space; "
                         "product-queue now likely corrupted: "
                         "info->sz=%lu, rp->extent=%lu",
                         (unsigned long)info->sz, (unsigned long)rp->extent);
-                status = pqe_discard(pq, index) ? PQ_SYSTEM : PQ_BIG;
+                status = PQ_BIG;
             }
-            else if (pq->mtof(pq, index.offset, RGN_MODIFIED)) {
+            else if (pq->mtof(pq, index->offset, RGN_MODIFIED)) {
                 log_error_q("pq->mtof() failed");
                 status = PQ_SYSTEM;
             }
@@ -9177,7 +9181,7 @@ pqe_insert(pqueue *pq, pqe_index index)
             }
             else {
                 log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
-                if (tq_add(pq->tqp, index.offset)) {
+                if (tq_add(pq->tqp, index->offset)) {
                     log_error_q("tq_add() failed");
                     status = PQ_SYSTEM;
                 }
@@ -9194,6 +9198,9 @@ pqe_insert(pqueue *pq, pqe_index index)
                 (void)ctl_rel(pq, RGN_MODIFIED);
             } // `ctl_get()` succeeded
             xdr_destroy(&xdrs);
+
+            if (status)
+                (void)pqe_discard(pq, index);
         } // data-product was found in region-in-use list
 
     pq_unlockIf(pq);

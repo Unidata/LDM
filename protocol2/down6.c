@@ -389,7 +389,7 @@ down6_comingsoon(
                  * The data-product isn't in the product-queue.  Setup for
                  * receiving the product's data via BLKDATA messages.
                  */
-                (void)pqe_discard(_pq, idx);
+                (void)pqe_discard(_pq, &idx);
                 _expectBlkdata = 1;
 
                 /*

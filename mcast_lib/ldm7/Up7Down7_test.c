@@ -152,6 +152,9 @@ static void sigHandler(
     case SIGTERM:
         log_notice("SIGTERM");
         return;
+    case SIGHUP:
+        log_notice("SIGHUP");
+        return;
     case SIGUSR1:
         log_notice("SIGUSR1");
         log_refresh();
@@ -169,7 +172,8 @@ static void sigHandler(
 static int
 setSignalHandling(void)
 {
-    static const int interuptSigs[] = { SIGIO, SIGPIPE, SIGINT, SIGTERM };
+    static const int interuptSigs[] = { SIGIO, SIGPIPE, SIGINT, SIGTERM,
+            SIGHUP};
     static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1, SIGUSR2 };
     int              status;
     struct sigaction sigact = {}; // Zero initialization

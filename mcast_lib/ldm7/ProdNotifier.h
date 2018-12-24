@@ -20,12 +20,46 @@
 #include <sys/types.h>
 #include "MldmRcvr.h"
 
-typedef int     (*BopFunc)(Mlr* mlr, size_t prodSize, const void* metadata,
-                        unsigned metaSize, void** data, pqe_index* pqeIndex);
-typedef int     (*EopFunc)(Mlr* mlr, void* prod, size_t prodSize,
-                        pqe_index* pqeIndex, const double duration);
-typedef void    (*MissedProdFunc)(void* obj, const FmtpProdIndex iProd,
-                        pqe_index* pqeIndex);
+/**
+ * Accepts notification from the FMTP component of the beginning of a product.
+ * Allocates a region in the LDM product-queue to receive the product,
+ * which is an XDR-encoded LDM data-product. Called by FMTP component.
+ *
+ * @param[in,out]  mlr          The associated multicast LDM receiver.
+ * @param[in]      prodSize     Size of the product in bytes.
+ * @param[in]      metadata     Information about the product.
+ * @param[in]      metaSize     Size of the information.
+ * @param[out]     prod         Starting location for product or `NULL` if
+ *                              duplicate product.
+ * @param[out]     pqeIndex     Reference to reserved space in product-queue.
+ * @retval         0            Success. `*prod` is set.
+ * @retval         EINVAL       `prodStart == NULL || pqeIndex == NULL`.
+ *                              `log_add()` called.
+ * @retval         EEXIST       The data-product is already in the LDM
+ *                              product-queue. `*prodStart` is not set.
+ *                              `log_add()` called.
+ * @retval         E2BIG        Product is too large for the queue. `*prodStart`
+ *                              is not set. `log_add()` called.
+ * @return                      <errno.h> error code. `*prodStart` is not set.
+ *                              `log_add()` called.
+ */
+typedef int     (*BopFunc)(
+                    Mlr* const restrict        mlr,
+                    const size_t               prodSize,
+                    const void* const restrict metadata,
+                    const unsigned             metaSize,
+                    void** const restrict      data,
+                    pqe_index* const restrict  pqeIndex);
+typedef int     (*EopFunc)(
+                    Mlr* const restrict             mlr,
+                    void* const restrict            prod,
+                    const size_t                    prodSize,
+                    const pqe_index* const restrict pqeIndex,
+                    const double                    duration);
+typedef void    (*MissedProdFunc)(
+                    void* const restrict            obj,
+                    const FmtpProdIndex             iProd,
+                    const pqe_index* const restrict pqeIndex);
 
 #ifdef __cplusplus
 
