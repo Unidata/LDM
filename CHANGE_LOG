@@ -1,3 +1,9 @@
+6.13.7.93
+    Add missing return to piq_restart()
+
+    Up7:
+        Correct socket closure in initXprt()
+
 6.13.7.92	2018-12-24T11:29:49-0700
     FMTP:
         Make reference to logging directory independent of workspace directory
