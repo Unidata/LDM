@@ -379,31 +379,31 @@ initXprt(const SVCXPRT* const xprt)
         status = LDM7_SYSTEM;
     }
     else {
-        svcXprt = svcfd_create(xprt->xp_sock, 0, 0);
+        bool closeSocket = true; // Close socket on error?
+
+        svcXprt = svcfd_create(sock, 0, 0);
 
         if (svcXprt == NULL) {
             log_add("svcfd_create() failure");
             status = LDM7_RPC;
         }
         else {
+            closeSocket = false; // `svc_destroy(svcXprt)` will close socket
             svcXprt->xp_raddr = xprt->xp_raddr;
             svcXprt->xp_addrlen = sizeof(xprt->xp_raddr);
 
             if (!svc_register(svcXprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
                 log_add("svc_register() failure");
+                svc_destroy(svcXprt); // Closes `sock`
+                svcXprt = NULL;
                 status = LDM7_RPC;
             }
             else {
                 status = 0;
             }
-
-            if (status) {
-                svc_destroy(svcXprt);
-                svcXprt = NULL;
-            }
         } // Separate, server-side RPC transport created
 
-        if (status && svcXprt) // svc_destroy() closes socket
+        if (status && closeSocket) // svc_destroy() closes socket
             (void)close(sock);
     } // Socket duplicated
 
