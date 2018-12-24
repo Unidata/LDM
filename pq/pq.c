@@ -7426,7 +7426,6 @@ pq_setCursorFromSignature(
              */
             (void)ctl_rel(pq, 0);
         }                                   /* control region locked */
-
     pq_unlockIf(pq);
 
     return status;
