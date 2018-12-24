@@ -1,4 +1,4 @@
-6.13.7.92
+6.13.7.92	2018-12-24T11:29:49-0700
     FMTP:
         Make reference to logging directory independent of workspace directory
         hierarchy
