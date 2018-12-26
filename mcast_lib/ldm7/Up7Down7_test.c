@@ -345,181 +345,36 @@ createEmptyProductQueue(
     return status;
 }
 
-/**
- * @param[in] up7        The upstream LDM-7 to be initialized.
- * @param[in] sock       The socket for the upstream LDM-7.
- * @param[in] termFd     Termination file-descriptor.
- */
 static void
-myUp7_init(
-        MyUp7* const myUp7,
-        const int    sock)
+sndr_init(Sender* const sender)
 {
-    /*
-     * 0 => use default read/write buffer sizes.
-     * `sock` will be closed by `svc_destroy()`.
-     */
-    SVCXPRT* const xprt = svcfd_create(sock, 0, 0);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(xprt);
+    CU_ASSERT_EQUAL_FATAL(mutex_init(&sender->mutex,
+            PTHREAD_MUTEX_ERRORCHECK, true), 0);
+    CU_ASSERT_EQUAL_FATAL(pthread_cond_init(&sender->cond, NULL), 0);
 
-    /*
-     * Set the remote address in the RPC server-side transport because
-     * `svcfd_create()` doesn't.
-     */
-    {
-        struct sockaddr_in addr;
-        socklen_t          addrLen = sizeof(addr);
+    int sck = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    CU_ASSERT_NOT_EQUAL_FATAL(sck, -1);
 
-        int status = getpeername(sock, &addr, &addrLen);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
-        CU_ASSERT_EQUAL_FATAL(addrLen, sizeof(addr));
-        CU_ASSERT_EQUAL_FATAL(addr.sin_family, AF_INET);
-        xprt->xp_raddr = addr;
-        xprt->xp_addrlen = addrLen;
-    }
+    int                on = 1;
+    struct sockaddr_in addr;
 
-    // Last argument == 0 => don't register with portmapper
-    CU_ASSERT_TRUE_FATAL(svc_register(xprt, LDMPROG, 7, ldmprog_7, 0));
+    (void)setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
 
-    myUp7->xprt = xprt;
-}
+    (void)memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(LOCAL_HOST);
+    addr.sin_port = htons(0); // let O/S assign port
 
-static void
-myUp7_destroy(MyUp7* const myUp7)
-{
-    svc_unregister(LDMPROG, 7);
+    int status = bind(sck, (struct sockaddr*)&addr, sizeof(addr));
+    CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    if (myUp7->xprt) // Might have been destroyed by RPC layer
-        svc_destroy(myUp7->xprt);
-}
+    status = listen(sck, 1);
+    CU_ASSERT_EQUAL_FATAL(status, 0);
 
-/**
- * Returns a new upstream LDM7.
- *
- * @param[in] sock  Socket descriptor with downstream LDM7
- * @return          New upstream LDM7
- * @see `myUp7_delete()`
- */
-static MyUp7*
-myUp7_new(int sock)
-{
-    MyUp7* myUp7 = malloc(sizeof(MyUp7));
-    CU_ASSERT_PTR_NOT_NULL_FATAL(myUp7);
-    myUp7_init(myUp7, sock);
-    return myUp7;
-}
-
-/**
- * Deletes an upstream LDM7 instance. Inverse of `myUp7_new()`.
- *
- * @param[in] myUp7  Upstream LDM7
- * @see `myUp7_new()`
- */
-static void
-myUp7_free(MyUp7* const myUp7)
-{
-    myUp7_destroy(myUp7);
-    free(myUp7);
-}
-
-/**
- * Always destroys the server-side RPC transport.
- *
- * @param[in] up7          Upstream LDM-7.
- */
-static void
-myUp7_run(MyUp7* const myUp7)
-{
-    const int sock = myUp7->xprt->xp_sock;
-
-#if 1
-    // The following is taken from "ldmd.c:childLdm_run()"
-
-    const unsigned TIMEOUT = 2*interval;
-
-    int status = one_svc_run(sock, TIMEOUT);
-
-    if (status == ECONNRESET) {
-        log_add("Connection with LDM client lost");
-        // one_svc_run() called svc_getreqset(), which called svc_destroy()
-    }
-    else {
-        if (status == ETIMEDOUT)
-            log_add("Connection from client LDM silent for %u seconds",
-                    TIMEOUT);
-
-        svc_destroy(myUp7->xprt);
-        myUp7->xprt = NULL;
-    }
-#else
-    int       status;
-    struct    pollfd fds;
-
-    fds.fd = sock;
-    fds.events = POLLRDNORM;
-
-    umm_setWrkGrpName("UCAR LDM7");
-
-    /**
-     * The `up7.c` module needs to tell this function to return when a error
-     * occurs that prevents continuation. The following mechanisms were
-     * considered:
-     * - Using a thread-specific signaling value. This was rejected because
-     *   that would increase the coupling between this function and the
-     *   `up7.c` module by
-     *   - Requiring the `up7_..._7_svc()` functions use this mechanism; and
-     *   - Requiring that the thread-specific data-key be publicly visible.
-     * - Closing the socket in the `up7.c` module. This was rejected because
-     *   of the race condition between closing the socket and the file
-     *   descriptor being reused by another thread.
-     * - Having `up7.c` call `svc_unregister()` and then checking `svc_fdset`
-     *   in this function. This was rejected because the file description
-     *   can also be removed from `svc_fdset` by `svc_getreqsock()`, except
-     *   that the latter also destroys the transport.
-     * - Having `up7.c` call `svc_destroy()` and then checking `svc_fdset`
-     *   in this function. This was rejected because it destroys the
-     *   transport, which is dereferenced by `ldmprog_7`.
-     * - Creating and using the function `up7_isDone()`. This was chosen.
-     */
-    for (;;) {
-        log_debug("Calling poll()");
-
-        sigset_t prevSigMask;
-        CU_ASSERT_EQUAL_FATAL(pthread_sigmask(SIG_SETMASK, &mostSigMask,
-                &prevSigMask), 0);
-
-        errno = 0;
-        status = poll(&fds, 1, -1); // `-1` => indefinite timeout
-
-        CU_ASSERT_EQUAL_FATAL(pthread_sigmask(SIG_SETMASK, &prevSigMask, NULL),
-                0);
-
-        if (0 > status) {
-            if (errno == EINTR) {
-                log_debug("poll() interrupted");
-            }
-            else {
-                log_debug("poll() failure");
-                CU_ASSERT_EQUAL_FATAL(errno, EINTR);
-            }
-            break;
-        }
-
-        CU_ASSERT_TRUE_FATAL(fds.revents & POLLRDNORM)
-
-        log_debug("Calling svc_getreqsock()");
-        svc_getreqsock(sock); // Calls `ldmprog_7()`. *Might* destroy `xprt`.
-
-        if (!FD_ISSET(sock, &svc_fdset)) {
-            log_debug("Socket was closed by RPC layer");
-            // RPC layer called `svc_destroy()` on `myUp7->xprt`
-            myUp7->xprt = NULL; // Let others know
-            break;
-        }
-    } // While not done loop
-#endif
-
-    up7_destroy();
+    sender->sock = sck;
+    sender->executing = false;
+    sender->done = false;
+    sender->myUp7 = NULL;
 }
 
 static void
@@ -566,9 +421,11 @@ killMcastSndr(void)
 /**
  * Executes a sender. Notifies `sender_start()`.
  *
- * @param[in]  arg     Pointer to sender.
- * @param[out] result  Ignored
- * @retval     0       Success
+ * @param[in]  arg         Pointer to sender.
+ * @param[out] result      Ignored
+ * @retval     0           Success
+ * @retval     ECONNRESET  Connection reset by client
+ * @retval     ETIMEDOUT   Connection timed-out
  */
 static int
 sndr_run(
@@ -576,55 +433,74 @@ sndr_run(
         void** const restrict result)
 {
     Sender* const sender = (Sender*)arg;
-    static int    status;
+    static int    status = 0; // Success
     const int     servSock = sender->sock;
-    struct pollfd fds;
-
-    fds.fd = servSock;
-    fds.events = POLLIN;
 
     sndr_lock(sender);
         sender->executing = true;
         CU_ASSERT_EQUAL_FATAL(pthread_cond_signal(&sender->cond), 0);
+        bool done = sender->done;
     sndr_unlock(sender);
 
-    for (;;) {
-        sndr_lock(sender);
-        if (sender->done) {
-            sndr_unlock(sender);
-            break;
-        }
-        sndr_unlock(sender);
-
-        /* NULL-s => not interested in receiver's address */
-        int sock = accept(servSock, NULL, NULL);
+    if (!done) {
+        struct sockaddr addr;
+        socklen_t       addrlen = sizeof(addr);
+        int             sock = accept(servSock, &addr, &addrlen);
 
         if (sock == -1) {
             CU_ASSERT_EQUAL(errno, EINTR);
-            break;
         }
         else {
+            CU_ASSERT_EQUAL_FATAL(addr.sa_family, AF_INET);
+
             sndr_lock(sender);
+                done = sender->done;
+            sndr_unlock(sender);
 
-            if (sender->done) {
-                sndr_unlock(sender);
-            }
-            else {
-                // Initializes `sender->myUp7.xprt`
-                sender->myUp7 = myUp7_new(sock);
+            if (!done) {
+                /*
+                 * 0 => use default read/write buffer sizes.
+                 * `sock` will be closed by `svc_destroy()`.
+                 */
+                SVCXPRT* xprt = svcfd_create(sock, 0, 0);
+                CU_ASSERT_PTR_NOT_NULL_FATAL(xprt);
+                xprt->xp_raddr = *(struct sockaddr_in*)&addr;
+                xprt->xp_addrlen = addrlen;
 
-                sndr_unlock(sender);
+                // Last argument == 0 => don't register with portmapper
+                CU_ASSERT_TRUE_FATAL(svc_register(xprt, LDMPROG, 7, ldmprog_7,
+                        0));
 
-                myUp7_run(sender->myUp7);
-                myUp7_free(sender->myUp7);
-            }
-        }
-    }
+                const unsigned TIMEOUT = 2*interval;
+
+                status = one_svc_run(sock, TIMEOUT);
+
+                if (status == ECONNRESET) {
+                    /*
+                     * one_svc_run() called svc_getreqset(), which called
+                     * svc_destroy()
+                     */
+                    log_add("Connection with LDM client lost");
+                }
+                else {
+                    if (status == ETIMEDOUT)
+                        log_add("Connection from client LDM silent for %u "
+                                "seconds", TIMEOUT);
+
+                    svc_destroy(xprt);
+                    xprt = NULL;
+                }
+
+                svc_unregister(LDMPROG, 7);
+            } // Not done
+        } // Connection accepted
+    } // Not done
 
     log_flush_error();
-    log_debug("Returning &%d", status);
+    log_debug("Returning %d", status);
+    log_free(); // Because end of thread
 
-    return 0;
+    return status;
 }
 
 /**
@@ -648,41 +524,11 @@ sndr_halt(
     sndr_lock(sender);
         sender->done = true;
 
-        CU_ASSERT_EQUAL_FATAL(pthread_kill(thread, SIGTERM), 0);
+        int status = pthread_kill(thread, SIGTERM);
+        CU_ASSERT_TRUE_FATAL(status == 0 || status == ESRCH);
     sndr_unlock(sender);
 
     log_debug("Returning");
-
-    return 0;
-}
-
-static int
-sndr_initSock(
-        int* const sock)
-{
-    int status;
-    int sck = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-    CU_ASSERT_NOT_EQUAL_FATAL(sck, -1);
-
-    int                on = 1;
-    struct sockaddr_in addr;
-
-    (void)setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
-
-    (void)memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(LOCAL_HOST);
-    addr.sin_port = htons(0); // let O/S assign port
-
-    status = bind(sck, (struct sockaddr*)&addr, sizeof(addr));
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-
-    status = listen(sck, 1);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    *sock = sck;
 
     return 0;
 }
@@ -788,9 +634,7 @@ sndr_start(
 {
     int status;
 
-    CU_ASSERT_EQUAL_FATAL(mutex_init(&sender->mutex,
-            PTHREAD_MUTEX_ERRORCHECK, true), 0);
-    CU_ASSERT_EQUAL_FATAL(pthread_cond_init(&sender->cond, NULL), 0);
+    sndr_init(sender);
 
     // Ensure that the first product-index will be 0
     CU_ASSERT_EQUAL_FATAL(pim_delete(NULL, feed), 0);
@@ -834,23 +678,17 @@ sndr_start(
         CU_FAIL_FATAL("");
     }
 
-    CU_ASSERT_EQUAL_FATAL(sndr_initSock(&sender->sock), 0);
-
     char* upAddr = ipv4Sock_getLocalString(sender->sock);
     char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(localVcEnd);
     char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-    log_notice("LDM7 server starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
+    log_notice("LDM7 sender starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
             "localVcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
             vcEndPointStr, fmtpSubnetStr);
     free(fmtpSubnetStr);
     free(vcEndPointStr);
     free(mcastInfoStr);
     free(upAddr);
-
-    sender->executing = false;
-    sender->done = false;
-    sender->myUp7 = NULL;
 
     // Starts the sender on a new thread
     sender->future = executor_submit(executor, sender, sndr_run, sndr_halt);
@@ -877,8 +715,10 @@ sndr_stop(Sender* const sender)
     log_debug("Entered");
 
     CU_ASSERT_EQUAL(future_cancel(sender->future), 0);
-    CU_ASSERT_EQUAL(future_getAndFree(sender->future, NULL), ECANCELED);
+    int status = future_getAndFree(sender->future, NULL);
+    CU_ASSERT_TRUE(status == ECANCELED || status == EPERM);
 
+    up7_destroy();
     CU_ASSERT_EQUAL_FATAL(close(sender->sock), 0);
 
     CU_ASSERT_EQUAL(pq_close(pq), 0);
@@ -1074,7 +914,8 @@ rqstr_halt(
 
     mutex_lock(&requester->mutex);
         requester->done = true;
-        CU_ASSERT_EQUAL(pthread_kill(thread, SIGTERM), 0);
+        int status = pthread_kill(thread, SIGTERM);
+        CU_ASSERT_TRUE(status == 0 || status == ESRCH);
     mutex_unlock(&requester->mutex);
 }
 

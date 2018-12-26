@@ -358,7 +358,9 @@ reduceFeed(
 
 /**
  * Initializes the separate, server-side RPC transport. A separate transport is
- * created because `svc_getreqsock()` and `svc_getreqset()` mustn't be nested.
+ * created because `svc_getreqsock()` and `svc_getreqset()` mustn't be nested
+ * because they destroy the transport on error and the outer one will,
+ * consequently, cause a segfault.
  *
  * @param[in] xprt         Initial, server-side RPC transport
  * @retval    0            Success
@@ -379,32 +381,22 @@ initXprt(const SVCXPRT* const xprt)
         status = LDM7_SYSTEM;
     }
     else {
-        bool closeSocket = true; // Close socket on error?
-
         svcXprt = svcfd_create(sock, 0, 0);
 
         if (svcXprt == NULL) {
             log_add("svcfd_create() failure");
+            (void)close(sock);
             status = LDM7_RPC;
         }
         else {
-            closeSocket = false; // `svc_destroy(svcXprt)` will close socket
+            // svcfd_create() doesn't initialize remote address
             svcXprt->xp_raddr = xprt->xp_raddr;
             svcXprt->xp_addrlen = sizeof(xprt->xp_raddr);
 
-            if (!svc_register(svcXprt, LDMPROG, SEVEN, ldmprog_7, 0)) {
-                log_add("svc_register() failure");
-                svc_destroy(svcXprt); // Closes `sock`
-                svcXprt = NULL;
-                status = LDM7_RPC;
-            }
-            else {
-                status = 0;
-            }
-        } // Separate, server-side RPC transport created
+            // `ldmprog_7()` is already registered with RPC module
 
-        if (status && closeSocket) // svc_destroy() closes socket
-            (void)close(sock);
+            status = 0;
+        } // Separate, server-side RPC transport created
     } // Socket duplicated
 
     log_debug("Returning %d", status);
@@ -412,12 +404,13 @@ initXprt(const SVCXPRT* const xprt)
 }
 
 /**
- * Destroys the separate, server-side RPC transport. Idempotent.
+ * Destroys the separate, server-side RPC transport if appropriate. Idempotent.
  */
 static void
 destroyXprt()
 {
     if (svcXprt) {
+        // NB: svc_destroy() must only be called once per transport
         svc_destroy(svcXprt);
         svcXprt = NULL;
     }
@@ -534,61 +527,61 @@ init(   struct SVCXPRT* const restrict    xprt,
     log_assert(rmtVcEnd);
     log_assert(reply);
 
-    int status = initXprt(xprt);
+    int                         status;
+    struct sockaddr_in* const   sockAddr = svc_getcaller(xprt);
+    const struct in_addr* const hostAddr = &sockAddr->sin_addr;
+    const feedtypet             reducedFeed = reduceFeed(desiredFeed, hostAddr);
 
-    if (status == 0) {
-        struct sockaddr_in* const   sockAddr = svc_getcaller(xprt);
-        const struct in_addr* const hostAddr = &sockAddr->sin_addr;
+    if (reducedFeed == NONE) {
+        log_notice("Host %s isn't allowed to receive any part of feed %s",
+                remote_name(), s_feedtypet(desiredFeed));
+        reply->status = LDM7_UNAUTH;
+        status = 0;
+    }
+    else {
+        const SepMcastInfo* smi;
+        CidrAddr            fmtpClntCidr;
 
-        const feedtypet reducedFeed = reduceFeed(desiredFeed, hostAddr);
+        status = umm_subscribe(reducedFeed, hostAddr->s_addr, rmtVcEnd, &smi,
+                &fmtpClntCidr);
 
-        if (reducedFeed == NONE) {
-            log_notice("Host %s isn't allowed to receive any part of feed %s",
-                    remote_name(), s_feedtypet(desiredFeed));
-            reply->status = LDM7_UNAUTH;
+        if (LDM7_NOENT == status) {
+            log_flush_notice();
+            reply->status = LDM7_NOENT;
             status = 0;
         }
+        else if (status) {
+            log_add("Couldn't subscribe host %s to feed %s", remote_name(),
+                    s_feedtypet(reducedFeed));
+        }
         else {
-            const SepMcastInfo* smi;
-            CidrAddr            fmtpClntCidr;
-
-            status = umm_subscribe(reducedFeed, hostAddr->s_addr, rmtVcEnd,
-                    &smi, &fmtpClntCidr);
-
-            if (LDM7_NOENT == status) {
-                log_flush_notice();
-                reply->status = LDM7_NOENT;
-                status = 0;
-            }
-            else if (status) {
-                log_add("Couldn't subscribe host %s to feed %s", remote_name(),
-                        s_feedtypet(reducedFeed));
+            if (mi_new(&mcastInfo, reducedFeed,
+                    isa_toString(smi_getMcastGrp(smi)),
+                    isa_toString(smi_getFmtpSrvr(smi)))) {
+                log_add("Couldn't set multicast information");
+                status = LDM7_SYSTEM;
             }
             else {
-                if (mi_new(&mcastInfo, reducedFeed,
-                        isa_toString(smi_getMcastGrp(smi)),
-                        isa_toString(smi_getFmtpSrvr(smi)))) {
-                    log_add("Couldn't set multicast information");
-                    status = LDM7_SYSTEM;
-                }
-                else {
+                status = initXprt(xprt); // Initializes `svcXprt`
+
+                if (status == 0) {
                     status = init2(&fmtpClntCidr, reply);
 
-                    if (status) {
-                        mi_free(mcastInfo);
-                        mcastInfo = NULL;
-                    }
-                } // Multicast information initialized
+                    if (status)
+                        destroyXprt(); // Destroys `svcXprt`
+                } // Separate, server-side RPC transport initialized
 
-                if (status)
-                    (void)umm_unsubscribe(reducedFeed,
-                            cidrAddr_getAddr(&fmtpClntCidr));
-            } // `umm_subscribe()` successful
-        } // Client is allowed to receive something
+                if (status) {
+                    mi_free(mcastInfo);
+                    mcastInfo = NULL;
+                }
+            } // Multicast information initialized
 
-        if (status)
-            destroyXprt();
-    } // Separate, server-side RPC transport initialized
+            if (status)
+                (void)umm_unsubscribe(reducedFeed,
+                        cidrAddr_getAddr(&fmtpClntCidr));
+        } // `umm_subscribe()` successful
+    } // Client is allowed to receive something
 
     return status;
 }
@@ -601,8 +594,7 @@ destroy(void)
 {
     log_debug("Entered");
 
-
-   if (initialized) {
+    if (initialized) {
         destroyClient(); // Closes socket
         closePq();
         closeProdIndexMap();
@@ -618,11 +610,8 @@ destroy(void)
             subReply = NULL;
         }
 
-        /*
-         * `svcXprt` is not destroyed because ldmd(1) might have called
-         * svc_destroy() on it, and that function must only be called once per
-         * transport
-         */
+        // NB: svc_destroy() must only be called once per transport
+        destroyXprt(); // Ensures destruction if appropriate
 
         isDone = false;
         initialized = false;
@@ -633,7 +622,7 @@ destroy(void)
 
 /**
  * Runs the upstream LDM server. The server-side RPC transport is always
- * destroyed.
+ * destroyed on return.
  *
  * @retval    ECONNRESET     The connection to the client LDM was lost.
  *                           `svc_destroy(svcXprt)` called. `log_add()` called.
@@ -729,13 +718,11 @@ subscribe(
         svcerr_systemerr(xprt);
     }
     else {
-        const bool serve = result->status == LDM7_OK;
-
-        if (serve) {
+        if (result->status == LDM7_OK) {
             if (!svc_sendreply(xprt, (xdrproc_t)xdr_SubscriptionReply,
                     (char*)result)) {
                 log_error("Couldn't send subscription reply to client");
-                svcerr_systemerr(svcXprt);
+                svcerr_systemerr(xprt);
             }
             else {
                 runSvc();

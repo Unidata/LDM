@@ -41,6 +41,17 @@
    ...
 }
 {
+   my_xdrrec_endofrecord
+   Memcheck:Param
+   write(buf)
+   obj:/usr/lib64/libpthread-2.17.so
+   fun:writetcp
+   fun:flush_out
+   fun:my_xdrrec_endofrecord
+   fun:clnttcp_call
+   ...
+}
+{
    parseXmlFile
    Memcheck:Leak
    match-leak-kinds: reachable
