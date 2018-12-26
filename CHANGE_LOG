@@ -1,4 +1,4 @@
-6.13.7.95
+6.13.7.95	2018-12-26T15:48:07-0700
     Documentation:
         - Document new format for log messages
         - Correct long instructions for installing from source using pax(1) by
