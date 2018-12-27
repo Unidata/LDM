@@ -143,7 +143,7 @@ dh_setInfo(
  *      DOWN6_UNWANTED          Data-product already in product-queue.
  */
 int
-dh_saveDataProduct(
+dh_saveProd(
     struct pqueue* const        pq,
     const prod_info* const      info,
     void* const                 data,

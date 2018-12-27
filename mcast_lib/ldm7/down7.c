@@ -2171,7 +2171,7 @@ downlet_incNumProds()
 static int
 downlet_recvProd(product* const restrict prod)
 {
-    // Products are also inserted on the multicast-receiver threads
+    // Products are also inserted on the multicast-receiver thread
     pqueue* const restrict  pq = down7.pq;
     int                     status = pq_insert(pq, prod);
 

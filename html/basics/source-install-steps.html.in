@@ -104,7 +104,6 @@ For example:
 <blockquote><pre>
 cd                                                  # go to the LDM user's home-directory
 gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
-mv @PACKAGE@-@VERSION@ src                                  # rename the source directory
 </pre></blockquote>
 
 <b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then replace the

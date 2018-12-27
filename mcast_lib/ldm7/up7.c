@@ -1159,7 +1159,7 @@ up7_destroy(void)
 pid_t
 up7_mldmSndrPid(void)
 {
-    return initialized ? umm_getMldmSenderPid() : 0;
+    return initialized ? umm_getSndrPid() : 0;
 }
 
 /**

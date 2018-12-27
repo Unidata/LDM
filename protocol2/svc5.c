@@ -148,7 +148,7 @@ hereis_5_svc(product *prod, struct svc_req *rqstp)
                 replyPtr = NULL;
             }
             else {
-                status = dh_saveDataProduct(pq, getNewInfo(), prod->data, 1, 0);
+                status = dh_saveProd(pq, getNewInfo(), prod->data, 1, 0);
 
                 if (status && DOWN6_UNWANTED != status &&
                         DOWN6_PQ_BIG != status && DOWN6_PQ_NO_ROOM != status) {
@@ -563,7 +563,7 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
                 remaining -= got;
 
                 if(remaining == 0) {
-                    error = dh_saveDataProduct(pq, getNewInfo(), datap, 0, 0);
+                    error = dh_saveProd(pq, getNewInfo(), datap, 0, 0);
 
                     if (error && DOWN6_UNWANTED != error &&
                                 DOWN6_PQ_BIG != error &&

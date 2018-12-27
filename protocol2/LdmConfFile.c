@@ -2874,7 +2874,7 @@ lcf_addMulticast(
         status = LDM7_INVAL;
     }
     else {
-        status = umm_addPotentialSender(
+        status = umm_addSndr(
                 ((struct sockaddr_in*)mcastIface)->sin_addr, mcastInfo, ttl,
                 vcEnd, fmtpSubnet, pqPathname);
         if (0 == status) {

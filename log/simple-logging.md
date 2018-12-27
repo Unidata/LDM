@@ -226,9 +226,8 @@ where:
     log_init(), log_set_id(), or log_set_upstream_id(), and <em>pid</em> is the
     system's numeric process-identifier.
 <dt><em>loc</em> <dd>Is the location where the message was created in the form
-    <em>file</em>:<em>line</em>, where <em>file</em> is the name
-    of the file where the message was generated and <em>line</em> is the line
-    number.
+    <em>file</em>:<em>func</em>, where <em>file</em> and <em>func</em> are,
+    respectively, the names of the file and function that generated the message.
 <dt><em>level</em> <dd>Is the logging-level (i.e., priority) of the message. One
     of `DEBUG`, `INFO`, `NOTE`, `WARN`, or `ERROR`.
 <dt><em>msg</em> <dd>Is the actual message given to one of the logging

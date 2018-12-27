@@ -29,6 +29,8 @@
 
 
 #include "fmtpSendv3.h"
+#include "log.h"
+
 
 #include <algorithm>
 #include <unistd.h>
@@ -68,6 +70,84 @@ inline static void logMsg(const std::exception& ex)
     }
     logMsg(ex.what());
 #endif
+}
+
+inline void fmtpSendv3::UdpSerializer::reset()
+{
+    iovIndex = 0;
+    start = next = buf;
+}
+
+fmtpSendv3::UdpSerializer::UdpSerializer(UdpSend* const udpSend)
+    : udpSend{udpSend}
+    , end{buf + sizeof(buf)}
+{
+    reset();
+}
+
+inline void fmtpSendv3::UdpSerializer::vetSeg()
+{
+    if (iovIndex >= IOV_MAX)
+        throw std::length_error("UdpSerializer::vetSeg() Too many segments");
+}
+
+void fmtpSendv3::UdpSerializer::add(
+        const void* bytes,
+        unsigned    nbytes)
+{
+    if (next + nbytes > end)
+        throw std::length_error("UdpSerializer::add() Addition would overflow "
+                "buffer");
+
+    ::memcpy(next, bytes, nbytes);
+
+    next += nbytes;
+}
+
+void fmtpSendv3::UdpSerializer::add(const uint16_t value)
+{
+    vetSeg();
+    add(&value, 2);
+}
+
+void fmtpSendv3::UdpSerializer::add(const uint32_t value)
+{
+    vetSeg();
+    add(&value, 4);
+}
+
+void fmtpSendv3::UdpSerializer::nextBufSeg()
+{
+    const ptrdiff_t nbytes = next - start;
+
+    if (nbytes) {
+        iovec[iovIndex].iov_base = start;
+        iovec[iovIndex].iov_len = nbytes;
+        ++iovIndex;
+        start = next;
+    }
+}
+
+void fmtpSendv3::UdpSerializer::encode(
+        const void* bytes,
+        unsigned    nbytes)
+{
+    if (nbytes) {
+        nextBufSeg();
+        vetSeg();
+
+        iovec[iovIndex].iov_base = const_cast<void*>(bytes);
+        iovec[iovIndex].iov_len = nbytes;
+
+        ++iovIndex;
+    }
+}
+
+void fmtpSendv3::UdpSerializer::flush()
+{
+    nextBufSeg();
+    udpSend->SendTo(iovec, iovIndex);
+    reset();
 }
 
 /**
@@ -115,7 +195,8 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     txdone(false),
     /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
     notifyprodidx(0),
-    suppressor(0)
+    suppressor(0),
+    udpSerializer{udpsend}
 {
 }
 
@@ -331,7 +412,7 @@ void fmtpSendv3::Start()
 
     int retval = pthread_create(&timer_t, NULL, &fmtpSendv3::timerWrapper, this);
     if(retval != 0) {
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "fmtpSendv3::Start() pthread_create() timerWrapper error with"
                 " retval = " + std::to_string(retval));
     }
@@ -339,7 +420,7 @@ void fmtpSendv3::Start()
     retval = pthread_create(&coor_t, NULL, &fmtpSendv3::coordinator, this);
     if(retval != 0) {
         (void)pthread_cancel(timer_t);
-        throw std::runtime_error(
+        throw std::system_error(errno, std::system_category(),
                 "fmtpSendv3::Start() pthread_create() coordinator error with"
                 " retval = " + std::to_string(retval));
     }
@@ -912,13 +993,20 @@ void fmtpSendv3::retransBOP(
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
-    /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is corret */
+    /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is correct */
+    // TODO: This is incorrect. `bopMsg` mustn't be sent
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                ntohs(sendheader.payloadlen));
     if (retval < 0) {
         throw std::runtime_error(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
+
+    log_debug("Sent BOP {header={prodindex=%lu, payloadlen=%u}, "
+            "bop={prodsize=%lu, metasize=%u}}",
+            (unsigned long)ntohl(sendheader.prodindex),
+            ntohs(sendheader.payloadlen),
+            (unsigned long)ntohl(bopMsg.prodsize), ntohs(bopMsg.metasize));
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;
@@ -994,6 +1082,25 @@ void fmtpSendv3::retransEOP(
 void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const uint16_t metaSize)
 {
+#if 1
+    udpSerializer.encode(prodIndex);
+    udpSerializer.encode(static_cast<uint32_t>(0));
+    udpSerializer.encode(static_cast<uint16_t>(
+            metaSize + static_cast<uint16_t>(FMTP_DATA_LEN - AVAIL_BOP_LEN)));
+    udpSerializer.encode(static_cast<uint16_t>(FMTP_BOP));
+
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    udpSerializer.encode(static_cast<uint64_t>(now.tv_sec));
+    udpSerializer.encode(static_cast<uint32_t>(now.tv_nsec));
+
+    udpSerializer.encode(prodSize);
+
+    udpSerializer.encode(metaSize);
+    udpSerializer.encode(metadata, metaSize);
+
+    udpSerializer.flush();
+#else
     FmtpHeader    header;
     BOPMsg        bopMsg;
     struct iovec  ioVec[5];
@@ -1068,6 +1175,7 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
         std::cout << debugmsg << std::endl;
         WriteToLog(debugmsg);
     #endif
+#endif
 #endif
 }
 

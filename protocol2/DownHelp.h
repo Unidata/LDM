@@ -11,7 +11,7 @@ dh_setInfo(
     const char* const		hostId);
 
 int
-dh_saveDataProduct(
+dh_saveProd(
     struct pqueue*		pq,
     const prod_info* const	info,
     void* const			data,

@@ -114,13 +114,13 @@ static void
 test_conflict()
 {
     // Depends on `init()`
-    int status = umm_addPotentialSender(mcastIface, mcastInfo_1, 0, NULL,
+    int status = umm_addSndr(mcastIface, mcastInfo_1, 0, NULL,
             PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
-    status = umm_addPotentialSender(mcastIface, mcastInfo_1, 0, NULL,
+    status = umm_addSndr(mcastIface, mcastInfo_1, 0, NULL,
             PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(LDM7_DUP, status);
-    status = umm_addPotentialSender(mcastIface, mcastInfo_2, 0, NULL,
+    status = umm_addSndr(mcastIface, mcastInfo_2, 0, NULL,
             PQ_PATHNAME);
     OP_ASSERT_EQUAL_INT(0, status);
     log_clear();

@@ -394,7 +394,7 @@ killMcastSndr(void)
 {
     log_debug("Entered");
 
-    pid_t pid = umm_getMldmSenderPid();
+    pid_t pid = umm_getSndrPid();
 
     if (pid) {
         log_debug("Sending SIGTERM to multicast LDM sender process");
@@ -669,7 +669,9 @@ sndr_start(
 
     const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
 
-    status = umm_addPotentialSender(mcastIface, mcastInfo, 2, localVcEnd,
+    // The upstream multicast manager takes responsibility for freeing
+    // `mcastInfo`
+    status = umm_addSndr(mcastIface, mcastInfo, 2, localVcEnd,
             fmtpSubnet, UP7_PQ_PATHNAME);
     if (status) {
         log_flush_error();

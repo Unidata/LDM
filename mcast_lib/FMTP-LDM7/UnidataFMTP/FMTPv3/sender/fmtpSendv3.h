@@ -49,6 +49,7 @@
 #include "TcpSend.h"
 #include "UdpSend.h"
 #include "fmtpBase.h"
+#include "Serializer.h"
 
 
 class fmtpSendv3;
@@ -81,10 +82,39 @@ struct StartTimerThreadInfo
 
 
 /**
- * sender side class handling the multicasting, restransmission and timeout.
+ * sender side class handling the multicasting, retransmission and timeout.
  */
 class fmtpSendv3
 {
+    class UdpSerializer : public Serializer
+    {
+        UdpSend*     udpSend;                  /// UDP sender
+        char         buf[MAX_FMTP_PACKET_LEN]; /// Network byte-order buffer
+        char* const  end;                      /// One beyond `buf`
+        char*        start;                    /// Start of current segment
+        char*        next;                     /// Next position in current segment
+        struct iovec iovec[IOV_MAX+1];         /// Gather write vector
+        int          iovIndex;                 /// Current `iovec` element
+
+        void  reset();
+        void  nextBufSeg();
+        void  vetSeg();
+        void  add(const void* value, unsigned nbytes);
+
+    protected:
+        void add(const uint16_t value);
+        void add(const uint32_t value);
+
+    public:
+        using Serializer::encode;
+
+        UdpSerializer(UdpSend* udpSend);
+
+        void encode(const void* bytes, unsigned nbytes);
+
+        void flush();
+    };
+
 public:
     explicit fmtpSendv3(
                  const char*           tcpAddr,
@@ -274,6 +304,9 @@ private:
     std::chrono::high_resolution_clock::time_point start_t;
     std::chrono::high_resolution_clock::time_point end_t;
     /* member variables for measurement use ends */
+
+    /// Serializes objects for multicasting
+    UdpSerializer       udpSerializer;
 };
 
 

@@ -1,6 +1,25 @@
-6.13.7.95
+6.13.7.96
     FMTP:
         Make logging directory reference independent of home
+
+6.13.7.95	2018-12-26T15:48:07-0700
+    Documentation:
+        - Document new format for log messages
+        - Correct long instructions for installing from source using pax(1) by
+          removing use of mv(1)
+
+    Logging:
+        Increase width of process field.
+
+    FMTP:
+        - Add system error messages to FMTP messages
+        - Create Serializer and add to fmtpSendv3
+
+    Product-queue:
+        Improve log messages
+
+    Misc:
+        Shorten some function names
 
 6.13.7.94	2018-12-26T15:15:54-0700
     Up7:
