@@ -1,3 +1,7 @@
+6.13.7.95
+    FMTP:
+        Make logging directory reference independent of home
+
 6.13.7.94	2018-12-26T15:15:54-0700
     Up7:
         Simplified initXprt() & ensured destroyXprt() called
