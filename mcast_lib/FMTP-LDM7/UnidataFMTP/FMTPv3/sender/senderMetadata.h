@@ -64,7 +64,7 @@ struct RetxMetadata {
     /* indicates the RetxMetadata should be removed */
     bool            remove;
 
-    RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
+    RetxMetadata(): startTime{0}, prodindex(0), prodLength(0), metaSize(0),
                     metadata(NULL), retxTimeoutPeriod(99999999999.0),
                     dataprod_p(NULL), inuse(false), remove(false) {}
     ~RetxMetadata() {
