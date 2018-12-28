@@ -54,6 +54,13 @@
 
 #define DROPSEQ 0*FMTP_DATA_LEN
 
+#ifdef LDM_LOGGING
+static void freeLogging(void* arg)
+{
+    log_free();
+}
+#endif
+
 // This function is for debugging purposes only
 inline static void logMsg(const std::string& msg)
 {
@@ -533,6 +540,9 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
  */
 void* fmtpSendv3::coordinator(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     logMsg("fmtpSendv3::coordinator(): Entered");
     fmtpSendv3* sendptr = static_cast<fmtpSendv3*>(ptr);
     try {
@@ -567,6 +577,9 @@ void* fmtpSendv3::coordinator(void* ptr)
     catch (std::runtime_error& e) {
         sendptr->taskExit(e);
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
@@ -1405,6 +1418,9 @@ void fmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  */
 void* fmtpSendv3::StartRetxThread(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     logMsg("fmtpSendv3::StartRetxThread(): Entered");
     StartRetxThreadInfo* newptr = static_cast<StartRetxThreadInfo*>(ptr);
     try {
@@ -1421,6 +1437,9 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
         pthread_t thisThread = ::pthread_self();
         newptr->retxmitterptr->retxThreadList.remove(thisThread);
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
@@ -1529,6 +1548,9 @@ void fmtpSendv3::timerThread()
  */
 void* fmtpSendv3::timerWrapper(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     fmtpSendv3* const sender = static_cast<fmtpSendv3*>(ptr);
     try {
         sender->timerThread();
@@ -1536,6 +1558,9 @@ void* fmtpSendv3::timerWrapper(void* ptr)
     catch (std::runtime_error& e) {
         sender->taskExit(e);
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 

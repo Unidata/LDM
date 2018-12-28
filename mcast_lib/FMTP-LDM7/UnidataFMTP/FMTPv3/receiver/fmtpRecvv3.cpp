@@ -52,6 +52,12 @@
 
 #define Frcv 20
 
+#ifdef LDM_LOGGING
+static void freeLogging(void* arg)
+{
+    log_free();
+}
+#endif
 
 /**
  * Constructs the receiver side instance (for integration with LDM).
@@ -1713,6 +1719,9 @@ bool fmtpRecvv3::reqEOPifMiss(const uint32_t prodindex)
  */
 void* fmtpRecvv3::runTimerThread(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     fmtpRecvv3* const recvr = static_cast<fmtpRecvv3*>(ptr);
     try {
         recvr->timerThread();
@@ -1720,6 +1729,9 @@ void* fmtpRecvv3::runTimerThread(void* ptr)
     catch (std::runtime_error& e) {
         recvr->taskExit(std::current_exception());
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
@@ -1810,6 +1822,9 @@ bool fmtpRecvv3::sendRetxEnd(uint32_t prodindex)
  */
 void* fmtpRecvv3::StartRetxRequester(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     fmtpRecvv3* const recvr = static_cast<fmtpRecvv3*>(ptr);
     try {
         recvr->retxRequester();
@@ -1817,6 +1832,9 @@ void* fmtpRecvv3::StartRetxRequester(void* ptr)
     catch (std::runtime_error& e) {
         recvr->taskExit(std::current_exception());
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
@@ -1855,6 +1873,9 @@ void fmtpRecvv3::stopJoinRetxRequester()
  */
 void* fmtpRecvv3::StartRetxHandler(void* ptr)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     fmtpRecvv3* const recvr = static_cast<fmtpRecvv3*>(ptr);
     try {
         recvr->retxHandler();
@@ -1862,6 +1883,9 @@ void* fmtpRecvv3::StartRetxHandler(void* ptr)
     catch (std::exception& e) {
         recvr->taskExit(std::current_exception());
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
@@ -1904,6 +1928,9 @@ void fmtpRecvv3::stopJoinRetxHandler()
 void* fmtpRecvv3::StartMcastHandler(
         void* const arg)
 {
+#ifdef LDM_LOGGING
+    pthread_cleanup_push(freeLogging, nullptr);
+#endif
     fmtpRecvv3* const recvr = static_cast<fmtpRecvv3*>(arg);
     try {
         recvr->mcastHandler();
@@ -1911,6 +1938,9 @@ void* fmtpRecvv3::StartMcastHandler(
     catch (const std::exception& e) {
         recvr->taskExit(std::current_exception());
     }
+#ifdef LDM_LOGGING
+    pthread_cleanup_pop(true);
+#endif
     return NULL;
 }
 
