@@ -74,7 +74,7 @@ protected:
      * @throws std::system_error  if an error is encountered writing to the
      *                            socket.
      */
-    void sendall(const int sock, void* const buf, size_t nbytes);
+    void sendall(const int sock, const void* const buf, size_t nbytes);
     /* the static member function version of sendall() */
     static void sendallstatic(const int sock, void* const buf, size_t nbytes);
 

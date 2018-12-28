@@ -124,7 +124,7 @@ size_t TcpBase::recvall(void* const buf, const size_t nbytes)
  * @throws std::system_error  if an error is encountered writing to the
  *                            socket.
  */
-void TcpBase::sendall(const int sock, void* const buf, size_t nbytes)
+void TcpBase::sendall(const int sock, const void* const buf, size_t nbytes)
 {
     char*  ptr = (char*) buf;
 
