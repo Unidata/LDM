@@ -363,7 +363,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    const size_t BOPCONST = sizeof(BOPmsg.start.wire) + sizeof(BOPmsg.prodsize)
+    const size_t BOPCONST = sizeof(BOPmsg.startTime) + sizeof(BOPmsg.prodsize)
             + sizeof(BOPmsg.metasize);
     if (header.payloadlen < BOPCONST) {
         throw std::runtime_error("fmtpRecvv3::BOPHandler(): packet too small");
@@ -371,9 +371,9 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     const char* wire = FmtpPacketData;
 
     const uint32_t* uint32p = (const uint32_t*)wire;
-    BOPmsg.start.host.tv_sec = (time_t)(ntohl(*uint32p++)) << 32;
-    BOPmsg.start.host.tv_sec |= ntohl(*uint32p++);
-    BOPmsg.start.host.tv_nsec = ntohl(*uint32p++);
+    BOPmsg.startTime[0] = ntohl(*uint32p++);
+    BOPmsg.startTime[1] = ntohl(*uint32p++);
+    BOPmsg.startTime[2] = ntohl(*uint32p++);
 
     BOPmsg.prodsize = ntohl(*uint32p++);
 
@@ -410,7 +410,12 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     }
     if (insertion && !inTracker) {
         if(notifier) {
-            notifier->startProd(BOPmsg.start.host, header.prodindex,
+            struct timespec startTime;
+            startTime.tv_sec =
+                    (static_cast<uint64_t>(BOPmsg.startTime[0]) << 32) |
+                    BOPmsg.startTime[1];
+            startTime.tv_nsec = BOPmsg.startTime[2];
+            notifier->startProd(startTime, header.prodindex,
                     BOPmsg.prodsize, BOPmsg.metadata, BOPmsg.metasize,
                     &prodptr);
         }

@@ -49,19 +49,20 @@
 typedef std::chrono::high_resolution_clock HRclock;
 
 struct RetxMetadata {
-    uint32_t       prodindex;
+    struct timespec startTime;         ///< Time product given to FMTP
+    uint32_t        prodindex;
     /* recording the whole product size (for timeout factor use) */
-    uint32_t       prodLength;
-    uint16_t       metaSize;          /*!< metadata size               */
-    void*          metadata;          /*!< metadata pointer            */
-    double         retxTimeoutPeriod; /*!< timeout time in seconds     */
-    void*          dataprod_p;        /*!< pointer to the data product */
+    uint32_t        prodLength;
+    uint16_t        metaSize;          /*!< metadata size               */
+    void*           metadata;          /*!< metadata pointer            */
+    double          retxTimeoutPeriod; /*!< timeout time in seconds     */
+    void*           dataprod_p;        /*!< pointer to the data product */
     /* unfinished receiver set indexed by socket id */
-    std::set<int>  unfinReceivers;
+    std::set<int>   unfinReceivers;
     /* indicates the RetxMetadata is in use */
-    bool           inuse;
+    bool            inuse;
     /* indicates the RetxMetadata should be removed */
-    bool           remove;
+    bool            remove;
 
     RetxMetadata(): prodindex(0), prodLength(0), metaSize(0),
                     metadata(NULL), retxTimeoutPeriod(99999999999.0),

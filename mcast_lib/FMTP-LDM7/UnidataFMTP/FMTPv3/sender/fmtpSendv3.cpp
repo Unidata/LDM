@@ -80,10 +80,13 @@ inline void fmtpSendv3::UdpSerializer::reset()
 
 fmtpSendv3::UdpSerializer::UdpSerializer(UdpSend* const udpSend)
     : udpSend{udpSend}
+    , buf{}
     , end{buf + sizeof(buf)}
-{
-    reset();
-}
+    , start{buf}
+    , next{buf}
+    , iovec{}
+    , iovIndex{0}
+{}
 
 inline void fmtpSendv3::UdpSerializer::vetSeg()
 {
@@ -335,12 +338,15 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         }
 
         /* Add a retransmission metadata entry */
+        struct timespec now;
+        clock_gettime(CLOCK_REALTIME, &now);
         RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
-                                                       metadata, metaSize);
+                                                       metadata, metaSize,
+                                                       &now);
         // TODO: use latest MTU for file to be sent
         // TcpSend::getMinPathMTU()
         /* send out BOP message */
-        SendBOPMessage(dataSize, metadata, metaSize);
+        SendBOPMessage(dataSize, metadata, metaSize, now);
         /* Send the data */
         sendData(data, dataSize);
         /* Send out EOP message */
@@ -453,17 +459,21 @@ void fmtpSendv3::Stop()
 
 
 /**
- * Adds and entry for a data-product to the retransmission set.
+ * Adds an entry for a data-product to the retransmission set.
  *
- * @param[in] data      The data-product.
- * @param[in] dataSize  The size of the data-product in bytes.
- * @return              The corresponding retransmission entry.
+ * @param[in] data       The data-product.
+ * @param[in] dataSize   The size of the data-product in bytes.
+ * @param[in] metadata   Product-specific metadata
+ * @param[in] metaSize   Size of `metadata` in bytes
+ * @param[in] startTime  Time product given to FMTP layer for transmission
+ * @return               The corresponding retransmission entry.
  * @throw std::runtime_error  if a retransmission entry couldn't be created.
  */
 RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
                                            const uint32_t dataSize,
                                            void* const metadata,
-                                           const uint16_t metaSize)
+                                           const uint16_t metaSize,
+                                           const struct timespec* const startTime)
 {
     /* Create a new RetxMetadata struct for this product */
     RetxMetadata* senderProdMeta = new RetxMetadata();
@@ -471,6 +481,8 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
         throw std::runtime_error(
                 "fmtpSendv3::addRetxMetadata(): create RetxMetadata error");
     }
+
+    senderProdMeta->startTime = *startTime;
 
     /**
      * Since the metadata pointer is not guaranteed to be persistent,
@@ -979,7 +991,7 @@ void fmtpSendv3::retransBOP(
         const int                 sock)
 {
     FmtpHeader   sendheader;
-    BOPMsg        bopMsg;
+    BOPMsg       bopMsg;
 
     /* Set the FMTP packet header. */
     sendheader.prodindex  = htonl(recvheader->prodindex);
@@ -989,12 +1001,17 @@ void fmtpSendv3::retransBOP(
     sendheader.flags      = htons(FMTP_RETX_BOP);
 
     /* Set the FMTP BOP message. */
+    bopMsg.startTime[0] =
+            htonl(static_cast<uint64_t>(retxMeta->startTime.tv_sec) >> 32);
+    bopMsg.startTime[1] =
+            htonl(static_cast<uint32_t>(retxMeta->startTime.tv_sec));
+    bopMsg.startTime[2] =
+            htonl(static_cast<uint32_t>(retxMeta->startTime.tv_nsec));
     bopMsg.prodsize = htonl(retxMeta->prodLength);
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is correct */
-    // TODO: This is incorrect. `bopMsg` mustn't be sent
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                ntohs(sendheader.payloadlen));
     if (retval < 0) {
@@ -1077,10 +1094,12 @@ void fmtpSendv3::retransEOP(
  *                           data. May be 0, in which case no metadata is sent.
  * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
  *                           case no metadata is sent.
+ * @param[in] startTime      Time product given to FMTP for transmission
  * @throw std::runtime_error  if the UdpSend::SendTo() fails.
  */
 void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
-                                 const uint16_t metaSize)
+                                 const uint16_t metaSize,
+                                 const struct timespec& startTime)
 {
 #if 1
     udpSerializer.encode(prodIndex);
@@ -1089,10 +1108,8 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
             metaSize + static_cast<uint16_t>(FMTP_DATA_LEN - AVAIL_BOP_LEN)));
     udpSerializer.encode(static_cast<uint16_t>(FMTP_BOP));
 
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    udpSerializer.encode(static_cast<uint64_t>(now.tv_sec));
-    udpSerializer.encode(static_cast<uint32_t>(now.tv_nsec));
+    udpSerializer.encode(static_cast<uint64_t>(startTime.tv_sec));
+    udpSerializer.encode(static_cast<uint32_t>(startTime.tv_nsec));
 
     udpSerializer.encode(prodSize);
 
@@ -1162,9 +1179,9 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
      */
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
-    bopMsg.start.wire[0] = htonl(now.tv_sec >> 32);
-    bopMsg.start.wire[1] = htonl(now.tv_sec & UINT32_MAX);
-    bopMsg.start.wire[2] = htonl(now.tv_nsec);
+    bopMsg.startTime[0] = htonl(static_cast<uint64_t>(now.tv_sec) >> 32);
+    bopMsg.startTime[1] = htonl(static_cast<uint32_t>(now.tv_sec));
+    bopMsg.startTime[2] = htonl(static_cast<uint32_t>(now.tv_nsec));
 
     /* Send the BOP message on multicast socket */
     udpsend->SendTo(ioVec, 5);

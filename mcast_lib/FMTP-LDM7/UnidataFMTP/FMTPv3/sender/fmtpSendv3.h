@@ -158,13 +158,17 @@ private:
     /**
      * Adds and entry for a data-product to the retransmission set.
      *
-     * @param[in] data      The data-product.
-     * @param[in] dataSize  The size of the data-product in bytes.
+     * @param[in] data       The data-product.
+     * @param[in] dataSize   The size of the data-product in bytes.
+     * @param[in] metadata   Product-specific metadata
+     * @param[in] metaSize   Size of `metadata` in bytes
+     * @param[in] startTime  Time product given to FMTP layer for transmission
      * @return              The corresponding retransmission entry.
      * @throw std::runtime_error  if a retransmission entry couldn't be created.
      */
     RetxMetadata* addRetxMetadata(void* const data, const uint32_t dataSize,
-                                  void* const metadata, const uint16_t metaSize);
+                                  void* const metadata, const uint16_t metaSize,
+                                  const struct timespec* startTime);
     static uint32_t blockIndex(uint32_t start) {return start/FMTP_DATA_LEN;}
     /** new coordinator thread */
     static void* coordinator(void* ptr);
@@ -239,7 +243,8 @@ private:
      */
     void retransEOP(const FmtpHeader* const  recvheader, const int sock);
     void SendBOPMessage(uint32_t prodSize, void* metadata,
-                        const uint16_t metaSize);
+                        const uint16_t metaSize,
+                        const struct timespec& startTime);
     /**
      * Multicasts the data of a data-product.
      *
