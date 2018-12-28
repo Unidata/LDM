@@ -29,7 +29,9 @@
 
 
 #include "fmtpSendv3.h"
+#ifdef LDM_LOGGING
 #include "log.h"
+#endif
 
 
 #include <algorithm>
@@ -1019,11 +1021,13 @@ void fmtpSendv3::retransBOP(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
 
+#ifdef LDM_LOGGING
     log_debug("Sent BOP {header={prodindex=%lu, payloadlen=%u}, "
             "bop={prodsize=%lu, metasize=%u}}",
             (unsigned long)ntohl(sendheader.prodindex),
             ntohs(sendheader.payloadlen),
             (unsigned long)ntohl(bopMsg.prodsize), ntohs(bopMsg.metasize));
+#endif
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;

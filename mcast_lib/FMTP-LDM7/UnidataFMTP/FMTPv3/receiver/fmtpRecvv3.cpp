@@ -29,7 +29,9 @@
 
 
 #include "fmtpRecvv3.h"
+#ifdef LDM_LOGGING
 #include "log.h"
+#endif
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -280,7 +282,9 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  */
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 {
+#ifdef LDM_LOGGING
     log_debug("Entered");
+#endif
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -313,7 +317,9 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
      * between last logged prodindex and currently received prodindex.
      */
     requestMissingBopsExclusive(header.prodindex);
+#ifdef LDM_LOGGING
     log_debug("Returning");
+#endif
 }
 
 
@@ -326,7 +332,9 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
                                  const char* const  FmtpPacketData)
 {
+#ifdef LDM_LOGGING
     log_debug("Entered");
+#endif
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
     #else
@@ -342,7 +350,9 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
     #endif
 
     BOPHandler(header, FmtpPacketData);
+#ifdef LDM_LOGGING
     log_debug("Returning");
+#endif
 }
 
 
@@ -389,10 +399,12 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     wire = (const char*)uint16p;
     (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
+#ifdef LDM_LOGGING
     log_debug("Received BOP {header={index=%lu, payload=%u}, "
             "bop={prodsize=%lu, metasize=%u}}",
             (unsigned long)header.prodindex, header.payloadlen,
             (unsigned long)BOPmsg.prodsize, BOPmsg.metasize);
+#endif
 
     /**
      * Here a strict check is performed to make sure the information in
