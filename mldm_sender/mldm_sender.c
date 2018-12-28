@@ -823,13 +823,18 @@ mls_startMulticasting(void)
 static void*
 runMldmSrvr(void* mldmSrvr)
 {
-    if (mldmSrvr_run(mldmSrvr))
-        log_error_q("Multicast LDM RPC server returned");
+    if (mldmSrvr_run(mldmSrvr)) {
+        log_error("Multicast LDM RPC server returned");
+        log_flush_error();
+    }
+
+    log_free(); // Because end of thread
+
     return NULL;
 }
 
 /**
- * Starts the FMTP client authorization prcess.
+ * Starts the FMTP client authorization process.
  *
  * @param[in] fmtpSubnet   Subnet for FMTP clients
  * @retval    0            Success
