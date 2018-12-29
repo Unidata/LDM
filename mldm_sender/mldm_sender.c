@@ -677,12 +677,11 @@ mls_mcastProd(
                 status = LDM7_MCAST;
             }
             else {
-                if (log_is_enabled_info) {
-                    char buf[LDM_INFO_MAX];
-                    log_info_q("Sent: prodIndex=%lu, prodInfo=\"%s\"",
-                            (unsigned long)iProd,
-                            s_prod_info(buf, sizeof(buf), info, 1));
-                }
+                char buf[LDM_INFO_MAX];
+                log_info_q("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                        (unsigned long)iProd,
+                        s_prod_info(buf, sizeof(buf), info,
+                                log_is_enabled_debug));
             }
         }
     }
