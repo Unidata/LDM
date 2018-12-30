@@ -197,8 +197,8 @@ void ProdNotifier::endProd(
                 (stopTime.tv_sec - prodInfo.startTime.tv_sec) +
                 (stopTime.tv_nsec - prodInfo.startTime.tv_nsec)/1e9;
 
-        if (eop_func(mlr, prodInfo.pqRegion, prodInfo.size, &prodInfo.index,
-                duration)) {
+        if (eop_func(mlr, prodIndex, prodInfo.pqRegion, prodInfo.size,
+                &prodInfo.index, duration)) {
             log_flush_error();
             log_free(); // to prevent memory leak by FMTP thread
             throw std::runtime_error(

@@ -187,6 +187,7 @@ lastReceived(
  * data-product) into the associated LDM product-queue.
  *
  * @param[in,out]  mlr       Pointer to the associated multicast LDM receiver.
+ * @param[in]      prodIndex FMTP product-index
  * @param[in]      prodStart Pointer to the start of the XDR-encoded
  *                           data-product in the product-queue or NULL,
  *                           indicating a duplicate product.
@@ -205,6 +206,7 @@ lastReceived(
 static int
 eop_func(
         Mlr* const restrict             mlr,
+        const FmtpProdIndex             prodIndex,
         void* const restrict            prodStart,
         const size_t                    prodSize,
         const pqe_index* const restrict pqeIndex,
@@ -248,7 +250,8 @@ eop_func(
                 lastReceived(mlr, info);
 
                 char infoStr[LDM_INFO_MAX];
-                log_info("Received in %.7f s: %s", duration,
+                log_info("Received in %.7f s: index=%lu, info=\"%s\"",
+                        duration, (unsigned long)prodIndex,
                         s_prod_info(infoStr, sizeof(infoStr), info,
                                 log_is_enabled_debug));
 

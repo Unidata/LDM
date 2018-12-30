@@ -52,6 +52,7 @@ typedef int     (*BopFunc)(
                     pqe_index* const restrict  pqeIndex);
 typedef int     (*EopFunc)(
                     Mlr* const restrict             mlr,
+                    const FmtpProdIndex             prodIndex,
                     void* const restrict            prod,
                     const size_t                    prodSize,
                     const pqe_index* const restrict pqeIndex,
