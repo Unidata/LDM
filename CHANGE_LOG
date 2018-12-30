@@ -1,3 +1,11 @@
+6.13.7.99	2018-12-30T10:31:18-0700
+    FMTP:
+        - Make LDM logging cpp(1)-conditional (macro "LDM_LOGGING")
+        - Ensure calls to log_free() on thread termination
+
+    mldm_sender(1):
+        Remove signature from "Sent:" log message
+
 6.13.7.98	2018-12-28T12:26:51-0700
     FMTP:
         Initialize RetxMetadata::startTime
