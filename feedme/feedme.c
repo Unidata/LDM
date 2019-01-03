@@ -1,8 +1,12 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ * This file implements a program that requests a feed from an upstream LDM.
+ *
+ * **THIS PROGRAM IS DEPRECATED**
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
-/* $Id: feedme.c,v 1.61.12.9 2007/02/22 19:43:15 steve Exp $ */
 
 /* 
  * listens for data

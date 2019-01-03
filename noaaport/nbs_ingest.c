@@ -1,13 +1,12 @@
 /**
+ * Ingests a NOAAPORT data stream into an LDM product-queue.
+ *
  * Copyright 2016 University Corporation for Atmospheric Research. All rights
  * reserved. See the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
  *   @file: nbs_ingest.c
  * @author: Steven R. Emmerson
- *
- * This program reads a NOAAPORT data stream, creates LDM data-products from the
- * stream, and inserts the data-products into an LDM product-queue.
  */
 
 #include "config.h"
@@ -257,12 +256,9 @@ static void install_signal_handlers(void)
     sigact.sa_flags = SA_RESTART;
     sigact.sa_handler = signal_handler;
 
-    int status = sigaction(SIGINT, &sigact, NULL);
-    log_assert(status == 0);
-    status = sigaction(SIGTERM, &sigact, NULL);
-    log_assert(status == 0);
-    status = sigaction(SIGUSR1, &sigact, NULL);
-    log_assert(status == 0);
+    (void)sigaction(SIGINT, &sigact, NULL);
+    (void)sigaction(SIGTERM, &sigact, NULL);
+    (void)sigaction(SIGUSR1, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);

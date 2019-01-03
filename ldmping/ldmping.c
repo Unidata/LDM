@@ -1,8 +1,10 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ * Ping an LDM server.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
-/* $Id: ldmping.c,v 1.20.18.3 2007/04/05 21:41:58 steve Exp $ */
 
 /* 
  * pings remote host
@@ -10,17 +12,18 @@
 
 #include "config.h"
 
+#include "globals.h"
+#include "h_clnt.h"
+#include "ldm5.h"
+#include "ldm5_clnt.h"
+#include "log.h"
+
 #include <errno.h>
 #include <rpc/rpc.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "h_clnt.h"
-#include "ldm5.h"
-#include "ldm5_clnt.h"
-#include "log.h"
 
 
 #define DEFAULT_INTERVAL 25
@@ -108,6 +111,67 @@ char *av0 ; /*  id string */
         exit(1);
 }
 
+/**
+ * Called upon receipt of signals. This callback routine is registered in
+ * set_sigactions().
+ *
+ * @param[in] sig  Delivered signal
+ */
+static void
+signal_handler(const int sig)
+{
+    switch(sig) {
+    case SIGINT :
+        /*FALLTHROUGH*/
+    case SIGTERM:
+        done = 1;
+        return;
+    case SIGUSR1:
+        log_refresh();
+        return;
+    case SIGUSR2:
+        log_roll_level();
+        return;
+    default:
+        return;
+    }
+}
+
+/**
+ * Sets signal handling for this program.
+ */
+static void
+set_sigactions(void)
+{
+    struct sigaction sigact;
+    (void)sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+
+    // Ignore the following
+    sigact.sa_handler = SIG_IGN;
+    (void) sigaction(SIGPIPE, &sigact, NULL);
+
+    // Handle the following
+    sigact.sa_handler = signal_handler;
+
+    // Don't restart the following
+    (void) sigaction(SIGINT, &sigact, NULL);
+    (void) sigaction(SIGTERM, &sigact, NULL);
+
+    // Restart the following
+    sigact.sa_flags = SA_RESTART;
+    (void) sigaction(SIGUSR1, &sigact, NULL);
+    (void) sigaction(SIGUSR2, &sigact, NULL);
+
+    sigset_t sigset;
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGINT);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
+    (void)sigaddset(&sigset, SIGUSR2);
+    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+}
 
 int main(ac,av)
 int ac ;
@@ -232,7 +296,7 @@ char *av[] ;
         /*
          * set up signal handlers
          */
-        (void) signal(SIGPIPE, SIG_IGN) ;
+        set_sigactions();
 
         if(verbose)
                 print_label() ;

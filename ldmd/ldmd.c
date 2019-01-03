@@ -354,7 +354,6 @@ static void set_sigactions(
         void)
 {
     struct sigaction sigact;
-
     (void) sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
 

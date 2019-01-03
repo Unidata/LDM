@@ -1,14 +1,12 @@
 /**
- * Copyright 2017 University Corporation for Atmospheric Research. All rights
- * reserved. See the the file COPYRIGHT in the top-level source-directory for
- * licensing conditions.
+ * Multicast LDM data-products from the queue to a multicast group.
  *
  *   @file: mldm_sender.c
  * @author: Steven R. Emmerson
  *
- * This file implements the multicast LDM sender, which is a program for
- * multicasting LDM data-products from the LDM product-queue to a multicast
- * group using FMTP.
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * reserved. See the the file COPYRIGHT in the top-level source-directory for
+ * licensing conditions.
  */
 
 #include "config.h"
@@ -400,36 +398,33 @@ mls_decodeCommandLine(
 }
 
 /**
- * Handles a signal by rotating the logging level.
- *
- * @param[in] sig  Signal to be handled. Ignored.
- */
-static void
-mls_rotateLoggingLevel(
-        const int sig)
-{
-    log_roll_level();
-}
-
-/**
- * Handles a signal by setting the `done` flag.
+ * Handles a signal.
  *
  * @param[in] sig  Signal to be handled.
  */
 static void
-mls_setDoneFlag(
+mls_handleSignal(
         const int sig)
 {
-    if (sig == SIGTERM) {
-        log_notice_q("SIGTERM");
+    switch (sig) {
+        case SIGTERM:
+            log_notice("SIGTERM");
+            done = 1;
+            break;
+        case SIGINT:
+            log_notice("SIGINT");
+            done = 1;
+            break;
+        case SIGUSR1:
+            log_refresh();
+            break;
+        case SIGUSR2:
+            log_roll_level();
+            break;
+        default:
+            log_error("Signal %d", sig);
     }
-    else if (sig == SIGINT) {
-        log_notice_q("SIGINT");
-    }
-    else {
-        log_notice_q("Signal %d", sig);
-    }
-    done = 1;
+    return;
 }
 
 /**
@@ -438,34 +433,25 @@ mls_setDoneFlag(
 static void
 mls_setSignalHandling(void)
 {
-    /*
-     * Initialize signal-set for termination signals.
-     */
+    // Initialize signal-set for termination signals.
     (void)sigemptyset(&termSigSet);
     for (int i = 0; i < NELT(termSigs); i++)
         (void)sigaddset(&termSigSet, termSigs[i]);
 
-    /*
-     * Establish signal handlers.
-     */
     struct sigaction sigact;
-
     (void)sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
 
-    /*
-     * Register termination signal-handler.
-     */
-    sigact.sa_handler = mls_setDoneFlag;
+    // Handle the following
+    sigact.sa_handler = mls_handleSignal;
+
+    // Don't restart the following
     (void)sigaction(SIGINT, &sigact, NULL);
     (void)sigaction(SIGTERM, &sigact, NULL);
 
-    /*
-     * Register logging-level signal-handler. Ensure that it only affects
-     * logging by restarting any interrupted system call.
-     */
+    // Restart the following
     sigact.sa_flags |= SA_RESTART;
-    sigact.sa_handler = mls_rotateLoggingLevel;
+    (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
 }
 

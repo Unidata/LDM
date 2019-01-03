@@ -1,13 +1,13 @@
 /**
- *   Copyright © 2014, University Corporation for Atmospheric Research.
- *   See COPYRIGHT file for copying and redistribution conditions.
+ * This file contains the code for the `noaaportIngester(1)` program. This
+ * program reads NOAAPORT data from a file or multicast packet stream,
+ * creates LDM data-products, and writes the data-products into an LDM
+ * product-queue.
  *
- *   @file noaaportIngester.c
+ * Copyright © 2014, University Corporation for Atmospheric Research.
+ * See COPYRIGHT file for copying and redistribution conditions.
  *
- *   This file contains the code for the \c noaaportIngester(1) program. This
- *   program reads NOAAPORT data from a file or multicast packet stream,
- *   creates LDM data-products, and writes the data-products into an LDM
- *   product-queue.
+ * @file noaaportIngester.c
  */
 #include <config.h>
 
@@ -57,15 +57,14 @@ typedef struct {
     struct timeval    reportTime;
 } StatsStruct;
 
-static const int	USAGE_ERROR = 1;
-static const int	SYSTEM_FAILURE = 2;
-static const int	SCHED_POLICY = SCHED_FIFO;
-static Fifo*		fifo;
-static bool		reportStatistics;
-static pthread_mutex_t	mutex;
-static pthread_cond_t	cond = PTHREAD_COND_INITIALIZER;
-int			inflateFrame;
-int			fillScanlines;
+static const int	        USAGE_ERROR = 1;
+static const int	        SYSTEM_FAILURE = 2;
+static const int	        SCHED_POLICY = SCHED_FIFO;
+static Fifo*		        fifo;
+static pthread_t                reporterThread = {0};
+static volatile sig_atomic_t	reportStatistics;
+int			        inflateFrame;
+int			        fillScanlines;
 
 /**
  * Decodes the command-line.
@@ -342,41 +341,13 @@ tryLockingProcessInMemory(void)
 }
 
 /**
- * Handles SIGUSR1 by reporting statistics and refreshing logging.
- *
- * @param[in] sig  The signal. Should be SIGUSR1.
- * @pre            {The input reader has been created.}
- */
-static void
-sigusr1_handler(
-        const int sig)
-{
-    if (SIGUSR1 == sig) {
-        log_notice_q("SIGUSR1 received");
-        (void)pthread_mutex_lock(&mutex);
-        reportStatistics = true;
-        (void)pthread_cond_signal(&cond);
-        (void)pthread_mutex_unlock(&mutex);
-        log_refresh();
-    }
-}
-
-/**
  * Handles a signal.
  *
- * @param[in] sig  The signal to be handled. Should be SIGTERM or SIGUSR2.
+ * @param[in] sig  The signal to be handled.
  */
 static void signal_handler(
         const int       sig)
 {
-#ifdef SVR3SIGNALS
-    /*
-     * Some systems reset handler to SIG_DFL upon entry to handler.
-     * In that case, we reregister our handler.
-     */
-    (void)signal(sig, signal_handler);
-#endif
-
     switch (sig) {
         case SIGTERM:
             log_notice_q("SIGTERM received");
@@ -384,19 +355,25 @@ static void signal_handler(
             if (fifo)
                 fifo_close(fifo); // will cause input-reader to terminate
             break;
+        case SIGUSR1:
+            reportStatistics = true;
+            if (reporterThread != pthread_self())
+                (void)pthread_kill(reporterThread, SIGUSR1);
+            log_refresh();
+            break;
         case SIGUSR2:
-            log_notice_q("SIGUSR2 received");
+            log_notice("SIGUSR2 received");
             (void)log_roll_level();
             break;
         default:
-            log_notice_q("Unexpected signal received: %d", sig);
+            log_notice("Unexpected signal received: %d", sig);
     }
 
     return;
 }
 
 /**
- * Registers the SIGUSR1 handler.
+ * Enables or disables the handling of SIGUSR1.
  *
  * @param[in] enable  Whether or not to enable SIGUSR1 handling.
  */
@@ -408,12 +385,10 @@ enableSigUsr1(
 
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
-    sigact.sa_handler = enable ? sigusr1_handler : SIG_IGN;
+    sigact.sa_handler = enable ? signal_handler : SIG_IGN;
 
-#ifdef SA_RESTART   /* SVR4, 4.3+ BSD */
-    /* Restart system calls for these */
+    /* Restart system calls */
     sigact.sa_flags |= SA_RESTART;
-#endif
 
     (void)sigaction(SIGUSR1, &sigact, NULL);
 
@@ -429,27 +404,28 @@ enableSigUsr1(
 static void set_sigactions(void)
 {
     struct sigaction sigact;
-
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
 
-    /* Ignore these */
+    /* Ignore the following */
     sigact.sa_handler = SIG_IGN;
     (void)sigaction(SIGALRM, &sigact, NULL);
     (void)sigaction(SIGCHLD, &sigact, NULL);
     (void)sigaction(SIGCONT, &sigact, NULL);
 
-    /* Handle these */
+    /* Handle the following */
+    sigact.sa_handler = signal_handler;
+
     /*
+     * Don't restart the following.
+     *
      * SIGTERM must be handled in order to cleanly close the product-queue
      * (i.e., return the writer-counter of the product-queue to zero).
      */
-    sigact.sa_handler = signal_handler;
     (void)sigaction(SIGTERM, &sigact, NULL);
-#ifdef SA_RESTART   /* SVR4, 4.3+ BSD */
-    /* Restart system calls for these */
+
+    /* Restart the following */
     sigact.sa_flags |= SA_RESTART;
-#endif
     (void)sigaction(SIGUSR2, &sigact, NULL);
 
     sigset_t sigset;
@@ -779,19 +755,27 @@ static void reportStats(
  */
 static void* startReporter(void* arg)
 {
-    StatsStruct         ss = *(StatsStruct*)arg;
+    StatsStruct ss = *(StatsStruct*)arg;
 
-    (void)pthread_mutex_lock(&mutex);
+    sigset_t tmpMask;
+    (void)sigemptyset(&tmpMask);
+    (void)sigaddset(&tmpMask, SIGUSR1);
 
-    do {
+    sigset_t entryMask;
+    (void)pthread_sigmask(SIG_BLOCK, &tmpMask, &entryMask);
+
+    tmpMask = entryMask;
+    (void)sigdelset(&tmpMask, SIGUSR1);
+
+    while (!done) {
         while (!reportStatistics)
-            (void)pthread_cond_wait(&cond, &mutex);
+            (void)sigsuspend(&tmpMask);
 
         reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
         reportStatistics = false;
-    } while (!done);
+    }
 
-    (void)pthread_mutex_unlock(&mutex);
+    (void)pthread_sigmask(SIG_SETMASK, &entryMask, NULL);
 
     return NULL;
 }
@@ -1065,34 +1049,19 @@ runInner(
     pthread_t   readerThread;
     int         status = startReader(isMcastInput, policy, priority, mcastSpec,
             interface, &reader, &readerThread);
-    pthread_t   reporterThread;
     bool        reporterRunning = false;
 
     if (status) {
         log_add("Couldn't start input-reader");
     }
     else {
-        pthread_mutexattr_t attr;
-        status = pthread_mutexattr_init(&attr);
-        if (status) {
-            log_errno_q(status, "Couldn't initialize mutex attributes");
-        }
-        else {
-            // At most one lock per thread
-            (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-            // Prevent priority inversion
-            (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
-            (void)pthread_mutex_init(&mutex, &attr);
-            (void)pthread_mutexattr_destroy(&attr);
+        StatsStruct ss;
+        ss_init(&ss, productMaker, reader);
+        (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
+        reporterRunning = true;
 
-            StatsStruct ss;
-            ss_init(&ss, productMaker, reader);
-            (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
-            reporterRunning = true;
-
-            enableSigUsr1(true);  // enable stats reporting; requires reader
-            status = waitOnReader(readerThread);
-        } // `attr` initialized
+        enableSigUsr1(true);  // enable stats reporting; requires reader
+        status = waitOnReader(readerThread);
     } // input-reader started
 
     // Ensures `pmThread` termination; idempotent => can't hurt

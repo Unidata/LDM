@@ -1,8 +1,10 @@
-/*
- *   Copyright 2011, University Corporation for Atmospheric Research
+/**
+ * This file implements a program that creates LDM data-products from numerical
+ * model output and inserts them into the LDM product-queue.
  *
- *   See file COPYRIGHT in the top-level source-directory for copying and
- *   redistribution conditions.
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 #include <config.h>
 
@@ -89,13 +91,6 @@ cleanup (void)
 static void
 signal_handler (int sig)
 {
-#ifdef SVR3SIGNALS
-  /*
-   * Some systems reset handler to SIG_DFL upon entry to handler.
-   * In that case, we reregister our handler.
-   */
-  (void) signal (sig, signal_handler);
-#endif
   switch (sig)
     {
     case SIGINT:
@@ -105,6 +100,9 @@ signal_handler (int sig)
     case SIGPIPE:
       log_debug("SIGPIPE");
       exit (1);
+    case SIGUSR1:
+      log_refresh();
+      return;
     }
   log_debug("signal_handler: unhandled signal: %d", sig);
 }
@@ -113,49 +111,37 @@ signal_handler (int sig)
 static void
 set_sigactions (void)
 {
-#ifndef NO_POSIXSIGNALS
   struct sigaction sigact;
 
   sigemptyset (&sigact.sa_mask);
   sigact.sa_flags = 0;
 
-  /* Ignore these */
+  /* Ignore the following */
   sigact.sa_handler = SIG_IGN;
-  (void) sigaction (SIGALRM, &sigact, NULL);
-  (void) sigaction (SIGCHLD, &sigact, NULL);
+  (void)sigaction(SIGALRM, &sigact, NULL);
+  (void)sigaction(SIGCHLD, &sigact, NULL);
 
-  /* Handle these */
-#ifdef SA_RESTART		/* SVR4, 4.3+ BSD */
-  /* usually, restart system calls */
-  sigact.sa_flags |= SA_RESTART;
-#endif
+  /* Handle the following */
   sigact.sa_handler = signal_handler;
-  (void) sigaction (SIGTERM, &sigact, NULL);
-  (void) sigaction (SIGPIPE, &sigact, NULL);
-  /* Don't restart after interrupt */
-  sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT		/* SunOS 4.x */
-  sigact.sa_flags |= SA_INTERRUPT;
-#endif
-  (void) sigaction (SIGINT, &sigact, NULL);
-#else
 
-  (void) signal (SIGHUP, SIG_IGN);
-  (void) signal (SIGALRM, SIG_IGN);
-  (void) signal (SIGCHLD, SIG_IGN);
+  /* Don't restart the following*/
+  (void)sigaction(SIGINT, &sigact, NULL);
+  (void)sigaction(SIGTERM, &sigact, NULL);
+  (void)sigaction(SIGPIPE, &sigact, NULL);
 
-  (void) signal (SIGTERM, signal_handler);
-  (void) signal (SIGPIPE, signal_handler);
-  (void) signal (SIGINT, signal_handler);
-#endif
-    sigset_t sigset;
-    (void)sigemptyset(&sigset);
-    (void)sigaddset(&sigset, SIGINT);
-    (void)sigaddset(&sigset, SIGPIPE);
-    (void)sigaddset(&sigset, SIGTERM);
-    (void)sigaddset(&sigset, SIGALRM);
-    (void)sigaddset(&sigset, SIGCHLD);
-    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+  /* Restart the following*/
+  sigact.sa_flags |= SA_RESTART;
+  (void)sigaction(SIGUSR1, &sigact, NULL);
+
+  sigset_t sigset;
+  (void)sigemptyset(&sigset);
+  (void)sigaddset(&sigset, SIGINT);
+  (void)sigaddset(&sigset, SIGPIPE);
+  (void)sigaddset(&sigset, SIGTERM);
+  (void)sigaddset(&sigset, SIGALRM);
+  (void)sigaddset(&sigset, SIGCHLD);
+  (void)sigaddset(&sigset, SIGUSR1);
+  (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 static int

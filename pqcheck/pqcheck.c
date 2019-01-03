@@ -1,7 +1,9 @@
 /**
- *   Copyright 2018, University Corporation for Atmospheric Research
- *   See file COPYRIGHT in the top-level source-directory for copying and
- *   redistribution conditions.
+ * Vets an LDM product-queue.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * See file COPYRIGHT in the top-level source-directory for copying and
+ * redistribution conditions.
  */
 
 /* 

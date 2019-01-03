@@ -1,7 +1,9 @@
-/* 
+/**
  * Sends files to an LDM as data-products.
  *
- * See file ../COPYRIGHT for copying and redistribution conditions.
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 
 #define TIRPC
@@ -83,49 +85,42 @@ cleanup(void)
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-    /* 
-     * Some systems reset handler to SIG_DFL upon entry to handler.
-     * In that case, we reregister our handler.
-     */
-    (void) signal(sig, signal_handler);
-#endif
     switch(sig) {
-      case SIGINT :
-         exit(1);
-         return;
-      case SIGTERM :
-         done = 1;
-         return;
-      case SIGPIPE :
-         exit(1);
+        case SIGINT:
+            exit(1);
+            return;
+        case SIGTERM:
+            done = 1;
+            return;
+        case SIGPIPE:
+            exit(1);
+        case SIGUSR1:
+            log_refresh();
     }
 }
 
 static void
 set_sigactions(void)
 {
-#ifdef HAVE_SIGACTION
     struct sigaction sigact;
-
-    sigact.sa_handler = signal_handler;
     sigemptyset(&sigact.sa_mask);
-
     sigact.sa_flags = 0;
+
+    // Ignore the following
+    sigact.sa_handler = SIG_IGN;
+    (void) sigaction(SIGALRM, &sigact, NULL);
+
+    // Handle the following
+    sigact.sa_handler = signal_handler;
+
+    // Don't restart the following
     (void) sigaction(SIGINT, &sigact, NULL);
 
+    // Restart the following
     sigact.sa_flags |= SA_RESTART;
     (void) sigaction(SIGTERM, &sigact, NULL);
     (void) sigaction(SIGPIPE, &sigact, NULL);
-
-    sigact.sa_handler = SIG_IGN;
-    (void) sigaction(SIGALRM, &sigact, NULL);
-#else
-    (void) signal(SIGINT, signal_handler);
-    (void) signal(SIGTERM, signal_handler);
-    (void) signal(SIGPIPE, signal_handler);
-    (void) signal(SIGALRM, SIG_IGN);
-#endif
+    (void) sigaction(SIGUSR1, &sigact, NULL);
 }
 
 static int

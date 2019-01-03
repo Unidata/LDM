@@ -1,8 +1,9 @@
-/*
- * Copyright 2009 University Corporation for Atmospheric Research.
- * See file ../COPYRIGHT for copying and redistribution conditions.
+/**
+ * Accesses the LDM registry.
  *
- * This program is the registry utility.
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 #include <config.h>
 

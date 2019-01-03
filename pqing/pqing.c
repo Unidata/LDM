@@ -1,7 +1,9 @@
-/*
- *   Copyright 2017, University Corporation for Atmospheric Research
- *   All Rights Reserved.
- *   See file ../COPYRIGHT for copying and redistribution conditions.
+/**
+ * Ingests data-products from a serial port into an LDM product-queue.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 
 #include <config.h>
@@ -169,33 +171,27 @@ signal_handler(int sig)
 static void
 set_sigactions(void)
 {
-        struct sigaction sigact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
 
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = 0;
+    /* Ignore the following */
+    sigact.sa_handler = SIG_IGN;
+    (void) sigaction(SIGALRM, &sigact, NULL);
+    (void) sigaction(SIGCHLD, &sigact, NULL);
 
-        /* Ignore these */
-        sigact.sa_handler = SIG_IGN;
-        (void) sigaction(SIGALRM, &sigact, NULL);
-        (void) sigaction(SIGCHLD, &sigact, NULL);
+    /* Handle the following */
+    sigact.sa_handler = signal_handler;
 
-        /* Handle these */
-#ifdef SA_RESTART       /* SVR4, 4.3+ BSD */
-        /* restart system calls for non-termination signals */
-        sigact.sa_flags |= SA_RESTART;
-#endif
-        sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGUSR1, &sigact, NULL);
-        (void) sigaction(SIGUSR2, &sigact, NULL);
+    /* Don't restart the following */
+    (void) sigaction(SIGTERM, &sigact, NULL);
+    (void) sigaction(SIGINT, &sigact, NULL);
+    (void) sigaction(SIGPIPE, &sigact, NULL);
 
-        /* Don't restart after termination or input interrupt */
-        sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT     /* SunOS 4.x */
-        sigact.sa_flags |= SA_INTERRUPT;
-#endif
-        (void) sigaction(SIGTERM, &sigact, NULL);
-        (void) sigaction(SIGINT, &sigact, NULL);
-        (void) sigaction(SIGPIPE, &sigact, NULL);
+    /* Restart the following */
+    sigact.sa_flags |= SA_RESTART;
+    (void) sigaction(SIGUSR1, &sigact, NULL);
+    (void) sigaction(SIGUSR2, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);

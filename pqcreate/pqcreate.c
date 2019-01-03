@@ -1,8 +1,10 @@
-/*
- *   Copyright 1994, University Corporation for Atmospheric Research
- *   See top level COPYRIGHT file for copying and redistribution conditions.
+/**
+ * Creats an LDM product-queue.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
-/* $Id: pqcreate.c,v 1.13.16.1.2.2 2007/02/12 20:38:54 steve Exp $ */
 
 /*
  * Create an empty ldm product queue of a given size

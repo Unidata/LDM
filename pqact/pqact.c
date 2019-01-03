@@ -1,8 +1,9 @@
-/*
- *   Copyright 2012 University Corporation for Atmospheric Research
+/**
+ * Process data-products from the LDM product-queue.
  *
- *   See file COPYRIGHT in the top-level source-directory for copying and
- *   redistribution conditions.
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 
 /* 
@@ -190,41 +191,35 @@ signal_handler(int sig)
 static void
 set_sigactions(void)
 {
-        struct sigaction sigact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
 
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = 0;
+    /* Ignore the following */
+    sigact.sa_handler = SIG_IGN;
+    (void) sigaction(SIGPIPE, &sigact, NULL);
+    (void) sigaction(SIGXFSZ, &sigact, NULL);       /* file too large */
 
-        /* Ignore these */
-        sigact.sa_handler = SIG_IGN;
-        (void) sigaction(SIGPIPE, &sigact, NULL);
-        (void) sigaction(SIGXFSZ, &sigact, NULL);       /* file too large */
+    /* Handle the following */
+    sigact.sa_handler = signal_handler;
 
-        /* Handle these */
-#ifdef SA_RESTART       /* SVR4, 4.3+ BSD */
-        /* usually, restart system calls */
-        sigact.sa_flags |= SA_RESTART;
-        /*
-         * NOTE: The OSF/1 operating system doesn't conform to the UNIX standard
-         * in this regard: the SA_RESTART flag does not affect writes to regular
-         * files or, apparently, pipes.  Consequently, interrupted writes must
-         * be handled explicitly.  See the discussion of the SA_RESTART option
-         * at http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
-         */
-#endif
-        sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGHUP,  &sigact, NULL);
-        (void) sigaction(SIGTERM, &sigact, NULL);
-        (void) sigaction(SIGUSR1, &sigact, NULL);
-        (void) sigaction(SIGUSR2, &sigact, NULL);
-        (void) sigaction(SIGALRM, &sigact, NULL);
+    /* Don't restart the following */
+    (void) sigaction(SIGINT, &sigact, NULL);
 
-        /* Don't restart after interrupt */
-        sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT     /* SunOS 4.x */
-        sigact.sa_flags |= SA_INTERRUPT;
-#endif
-        (void) sigaction(SIGINT, &sigact, NULL);
+    /* Restart the following */
+    sigact.sa_flags |= SA_RESTART;
+    /*
+     * NOTE: The OSF/1 operating system doesn't conform to the UNIX standard
+     * in this regard: the SA_RESTART flag does not affect writes to regular
+     * files or, apparently, pipes.  Consequently, interrupted writes must
+     * be handled explicitly.  See the discussion of the SA_RESTART option
+     * at http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
+     */
+    (void) sigaction(SIGHUP,  &sigact, NULL);
+    (void) sigaction(SIGTERM, &sigact, NULL);
+    (void) sigaction(SIGUSR1, &sigact, NULL);
+    (void) sigaction(SIGUSR2, &sigact, NULL);
+    (void) sigaction(SIGALRM, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);

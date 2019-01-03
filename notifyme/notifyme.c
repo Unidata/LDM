@@ -1,8 +1,10 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ * Requests notification of available data-products from an LDM.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
-/* $Id: notifyme.c,v 1.63.12.8 2008/04/15 16:34:07 steve Exp $ */
 
 /* 
  * get notification
@@ -106,27 +108,22 @@ signal_handler(int sig)
 static void
 set_sigactions(void)
 {
-#ifdef HAVE_SIGACTION
-        struct sigaction sigact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
 
-        sigact.sa_handler = signal_handler;
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = SA_RESTART;
+    // Handle the following
+    sigact.sa_handler = signal_handler;
 
-        (void) sigaction(SIGUSR1, &sigact, NULL);
-        (void) sigaction(SIGUSR2, &sigact, NULL);
+    // Don't restart the following
+    (void) sigaction(SIGINT,  &sigact, NULL);
+    (void) sigaction(SIGTERM, &sigact, NULL);
+    (void) sigaction(SIGPIPE, &sigact, NULL);
 
-        sigact.sa_flags = 0;
-        (void) sigaction(SIGINT,  &sigact, NULL);
-        (void) sigaction(SIGTERM, &sigact, NULL);
-        (void) sigaction(SIGPIPE, &sigact, NULL);
-#else
-        (void) signal(SIGINT, signal_handler);
-        (void) signal(SIGTERM, signal_handler);
-        (void) signal(SIGUSR1, signal_handler);
-        (void) signal(SIGUSR2, signal_handler);
-        (void) signal(SIGPIPE, signal_handler);
-#endif
+    // Restart the following
+    sigact.sa_flags = SA_RESTART;
+    (void) sigaction(SIGUSR1, &sigact, NULL);
+    (void) sigaction(SIGUSR2, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);

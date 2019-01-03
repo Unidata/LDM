@@ -1,6 +1,9 @@
-/*
- *   Copyright 2016, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ * Separates a compound WMO bulletin into individual bulletins.
+ *
+ * Copyright 2018, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 
 /*
@@ -428,33 +431,27 @@ signal_handler(int sig)
 static void
 set_sigactions(void)
 {
-        struct sigaction sigact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
 
-        sigemptyset(&sigact.sa_mask);
-        sigact.sa_flags = 0;
+    /* Ignore the following */
+    sigact.sa_handler = SIG_IGN;
+    (void) sigaction(SIGPIPE, &sigact, NULL);
+    (void) sigaction(SIGALRM, &sigact, NULL);
 
-        /* Ignore these */
-        sigact.sa_handler = SIG_IGN;
-        (void) sigaction(SIGPIPE, &sigact, NULL);
-        (void) sigaction(SIGALRM, &sigact, NULL);
+    /* Handle the following */
+    sigact.sa_handler = signal_handler;
 
-        /* Handle these */
-#ifdef SA_RESTART       /* SVR4, 4.3+ BSD */
-        /* usually, restart system calls */
-        sigact.sa_flags |= SA_RESTART;
-#endif
-        sigact.sa_handler = signal_handler;
-        (void) sigaction(SIGTERM, &sigact, NULL);
-        (void) sigaction(SIGUSR1, &sigact, NULL);
-        (void) sigaction(SIGUSR2, &sigact, NULL);
-        (void) sigaction(SIGCHLD, &sigact, NULL);
+    /* Don't restart the following */
+    (void) sigaction(SIGINT, &sigact, NULL);
 
-        /* Don't restart after interrupt */
-        sigact.sa_flags = 0;
-#ifdef SA_INTERRUPT     /* SunOS 4.x */
-        sigact.sa_flags |= SA_INTERRUPT;
-#endif
-        (void) sigaction(SIGINT, &sigact, NULL);
+    /* Restart the following */
+    sigact.sa_flags |= SA_RESTART;
+    (void) sigaction(SIGTERM, &sigact, NULL);
+    (void) sigaction(SIGUSR1, &sigact, NULL);
+    (void) sigaction(SIGUSR2, &sigact, NULL);
+    (void) sigaction(SIGCHLD, &sigact, NULL);
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);
