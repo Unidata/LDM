@@ -12,6 +12,7 @@
 #ifndef ULOG_LOG_INTERNAL_H_
 #define ULOG_LOG_INTERNAL_H_
 
+#include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
@@ -64,7 +65,7 @@ typedef struct message {
 /**
  *  Logging level.
  */
-extern volatile log_level_t log_level;
+extern volatile sig_atomic_t log_level;
 
 /**
  * The persistent destination specification.

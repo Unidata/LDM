@@ -32,7 +32,7 @@
  *         - _priority_: DEBUG | INFO | NOTE | WARN | ERROR
  *         - _location_: _file_:_func()_:_line_
  *       - Example: 20160113T150106.734013Z noaaportIngester[26398] NOTE process_prod.c:process_prod():216 SDUS58 PACR 062008 /pN0RABC inserted
- *   - Enable log file rotation by refreshing destination upon SIGUSR1 reception
+ *   - Enable log file rotation
  */
 #include <config.h>
 
@@ -95,18 +95,6 @@ static bool                  avoid_stderr;
  */
 static volatile sig_atomic_t refresh_needed;
 /**
- * The SIGUSR1 signal set.
- */
-static sigset_t              usr1_sigset;
-/**
- * The SIGUSR1 action for this module.
- */
-static struct sigaction      usr1_sigaction;
-/**
- * The previous SIGUSR1 action when this module's SIGUSR1 action is registered.
- */
-static struct sigaction      prev_usr1_sigaction;
-/**
  * The signal mask of all signals.
  */
 static sigset_t              all_sigset;
@@ -144,25 +132,6 @@ static void restoreSigs(
         const sigset_t* const sigset)
 {
     (void)pthread_sigmask(SIG_SETMASK, sigset, NULL);
-}
-
-/**
- * Handles SIGUSR1 delivery. Sets variable `refresh_needed` and ensures that any
- * previously-registered SIGUSR1 handler is called.
- *
- * @param[in] sig  SIGUSR1.
- */
-static void handle_sigusr1(
-        const int sig)
-{
-    refresh_needed = 1;
-    if (prev_usr1_sigaction.sa_handler != SIG_DFL &&
-            prev_usr1_sigaction.sa_handler != SIG_IGN) {
-        (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
-        raise(SIGUSR1);
-        (void)sigprocmask(SIG_UNBLOCK, &usr1_sigset, NULL);
-        (void)sigaction(SIGUSR1, &usr1_sigaction, NULL);
-    }
 }
 
 /**
@@ -495,16 +464,6 @@ static int init(void)
         status = EPERM;
     }
     else {
-        (void)sigfillset(&all_sigset);
-        (void)sigemptyset(&usr1_sigset);
-        (void)sigaddset(&usr1_sigset, SIGUSR1);
-
-        usr1_sigaction.sa_mask = usr1_sigset;
-        usr1_sigaction.sa_flags = SA_RESTART;
-        usr1_sigaction.sa_handler = handle_sigusr1;
-
-        (void)sigaction(SIGUSR1, &usr1_sigaction, &prev_usr1_sigaction);
-
         /*
          * The following mutex isn't error-checking or recursive because a
          * glibc-created child process can't release such mutexes because the
@@ -620,7 +579,7 @@ char log_dest[_XOPEN_PATH_MAX];
 /**
  *  Logging level.
  */
-volatile log_level_t log_level = LOG_LEVEL_NOTICE;
+volatile sig_atomic_t log_level = LOG_LEVEL_NOTICE;
 
 /**
  * The mapping from `log` logging levels to system logging daemon priorities:
@@ -646,7 +605,8 @@ int logl_level_to_priority(
 /**
  * Acquires this module's lock.
  *
- * This function is thread-safe and async-signal-safe.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void logl_lock(void)
 {
@@ -1204,7 +1164,7 @@ void log_avoid_stderr(void)
  * error stream, then it will continue to be if log_avoid_stderr() hasn't been
  * called; otherwise, logging will be to the provider default.
  *
- * This function is async-signal-safe.
+ * @asyncsignalsafety  Safe
  */
 void log_refresh(void)
 {
@@ -1361,15 +1321,15 @@ int log_set_level(
 
 /**
  * Lowers the logging threshold by one. Wraps at the bottom.
+ *
+ * @asyncsignalsafety  Safe
  */
 void log_roll_level(void)
 {
-    logl_lock();
-        log_level = (log_level == LOG_LEVEL_DEBUG)
-                ? LOG_LEVEL_ERROR
-                : log_level - 1;
-        logi_set_level();
-    logl_unlock();
+    log_level = (log_level == LOG_LEVEL_DEBUG)
+            ? LOG_LEVEL_ERROR
+            : log_level - 1;
+    logi_set_level();
 }
 
 /**
@@ -1436,10 +1396,8 @@ int log_fini_located(
     if (status == 0) {
         status = pthread_mutex_destroy(&log_mutex);
 
-        if (status == 0) {
-            (void)sigaction(SIGUSR1, &prev_usr1_sigaction, NULL);
+        if (status == 0)
             isInitialized = false;
-        }
     }
 
     return status ? -1 : 0;

@@ -483,37 +483,6 @@ static void test_log_refresh(void)
     CU_ASSERT_EQUAL(status, 0);
 }
 
-static void test_sighup_log(void)
-{
-    (void)unlink(tmpPathname);
-    int status = log_init(progname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-    status = log_set_destination(tmpPathname);
-    CU_ASSERT_EQUAL(status, 0);
-    status = log_set_level(LOG_LEVEL_DEBUG);
-    CU_ASSERT_EQUAL(status, 0);
-
-    logMessages();
-    int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
-
-    status = rename(tmpPathname, tmpPathname1);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
-
-    (void)raise(SIGUSR1);
-
-    logMessages();
-    n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
-
-    log_fini();
-
-    status = unlink(tmpPathname);
-    CU_ASSERT_EQUAL(status, 0);
-    status = unlink(tmpPathname1);
-    CU_ASSERT_EQUAL(status, 0);
-}
-
 static void signal_handler(
         const int sig)
 {
@@ -521,7 +490,7 @@ static void signal_handler(
         log_refresh();
 }
 
-static void test_sighup_prog(void)
+static void test_sigusr1_prog(void)
 {
     (void)unlink(tmpPathname);
     int status = log_init(progname);
@@ -836,8 +805,7 @@ int main(
                     && CU_ADD_TEST(testSuite, test_log_add)
                     && CU_ADD_TEST(testSuite, test_log_syserr)
                     && CU_ADD_TEST(testSuite, test_log_refresh)
-                    && CU_ADD_TEST(testSuite, test_sighup_log)
-                    && CU_ADD_TEST(testSuite, test_sighup_prog)
+                    && CU_ADD_TEST(testSuite, test_sigusr1_prog)
                     && CU_ADD_TEST(testSuite, test_change_file)
                     && CU_ADD_TEST(testSuite, test_fork)
                     /*

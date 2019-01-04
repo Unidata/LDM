@@ -251,9 +251,9 @@ static void stream_log(
     const char* const basename = logl_basename(loc->file);
     const char* const levelId = level_to_string(level);
 
-    (void)dest->lock(dest);
-        sigset_t prevSigs;
-        blockSigs(&prevSigs);
+    sigset_t prevSigs;
+    blockSigs(&prevSigs);
+        (void)dest->lock(dest);
             while (*msg) {
                 // Timestamp
                 (void)fprintf(dest->stream,
@@ -290,8 +290,8 @@ static void stream_log(
             } // Output-line loop
 
             dest->flush(dest);
-        unblockSigs(&prevSigs);
-    (void)dest->unlock(dest);
+        (void)dest->unlock(dest);
+    unblockSigs(&prevSigs);
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 University Corporation for Atmospheric Research. All rights
+ * Copyright 2018 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
