@@ -1,3 +1,24 @@
+6.13.7.101	2019-01-04T15:35:43-0700
+    ldmd.conf(5):
+        Add <mcastIface> argument to MULITICAST description
+
+    noaaportIngester(1):
+        - Replace call to fifo_close() in signal handler with sending of SIGUSR1
+          to reader thread
+        - Use sigwait() instead of sigsuspend()
+        - Eliminate now-unnecessary `reportStatistics` variables
+        - Remove logging calls from signal handler
+
+    Logging:
+        - Remove SIGUSR1 handling from logging module
+        - Change `log_level` from log_level_t to sig_atomic_t
+        - Remove locking from log_roll_level to make it async-signal-safe
+        - Change lock-then-block to block-then-lock in stream_log()
+
+    Misc:
+        Remove all logging calls from signal handlers because the functions are
+        not async-signal-safe
+
 6.13.7.100	2018-12-31T11:02:44-0700
     Down7:
         Add product-index to eop_func() and print in INFO message
