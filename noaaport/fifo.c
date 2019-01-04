@@ -1,10 +1,11 @@
 /**
- * Copyright 2014, University Corporation for Atmospheric Research. See file
+ * Implements a fixed-size FIFO that's filled from a file descriptor. This
+ * implementation is constrained to *one* writer thread and *one* reader thread.
+ * Any other usage results in undefined behavior.
+ *
+ * Copyright 2019, University Corporation for Atmospheric Research. See file
  * COPYRIGHT in the top-level source-directory for copying and redistribution
  * conditions.
- *
- * This module implements a FIFO queue that is designed for *one* writer thread
- * and *one* reader thread. Any other usage results in undefined behavior.
  */
 #include "config.h"
 
@@ -564,11 +565,11 @@ fifo_getFullCount(
 }
 
 /**
- * Closes a FIFO.
+ * Closes a FIFO. Idempotent.
  *
- * This function is thread-safe and idempotent.
- *
- * @param[in] fifo  FIFO to be closed.
+ * @param[in] fifo     FIFO to be closed.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void
 fifo_close(

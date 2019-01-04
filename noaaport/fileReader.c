@@ -1,6 +1,8 @@
-/*
- *   Copyright 2013, University Corporation for Atmospheric Research.
- *   See file COPYRIGHT for copying and redistribution conditions.
+/**
+ * Reads data from a file into a FIFO.
+ *
+ * Copyright © 2019, University Corporation for Atmospheric Research.
+ * See COPYRIGHT file for copying and redistribution conditions.
  */
 #include "config.h"
 #include "log.h"
@@ -17,20 +19,20 @@
 
 /**
  * Returns a new file-reader.
+ * @param[in]  pathname   Pathname of file to read or NULL to read standard
+ *                        input stream
+ * @param[in]  fifo       Pointer to FIFO into which to put data
+ * @param[out] reader     Pointer to pointer to address of reader
  *
- * This function is thread-safe.
- *
- * @retval 0    Success.
- * @retval 1    Precondition failure. \c log_add() called.
- * @retval 2    O/S failure. \c log_add() called.
+ * @retval     0          Success.
+ * @retval     1          Precondition failure. `log_add()` called.
+ * @retval     2          O/S failure. `log_add()` called.
+ * @threadsafety          Safe
  */
 int fileReaderNew(
-    const char* const   pathname,   /**< [in] Pathname of file to read or
-                                      *  NULL to read standard input stream */
-    Fifo* const         fifo,       /**< [in] Pointer to FIFO into which to put
-                                      *  data */
-    Reader** const      reader)     /**< [out] Pointer to pointer to address of
-                                      *  reader */
+    const char* const   pathname,
+    Fifo* const         fifo,
+    Reader** const      reader)
 {
     int status = 0;                 /* default success */
     int fd;                         /* input file descriptor */

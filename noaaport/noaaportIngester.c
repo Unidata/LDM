@@ -61,8 +61,8 @@ static const int	        USAGE_ERROR = 1;
 static const int	        SYSTEM_FAILURE = 2;
 static const int	        SCHED_POLICY = SCHED_FIFO;
 static Fifo*		        fifo;
+static pthread_t                readerThread = {0};
 static pthread_t                reporterThread = {0};
-static volatile sig_atomic_t	reportStatistics;
 int			        inflateFrame;
 int			        fillScanlines;
 
@@ -350,23 +350,17 @@ static void signal_handler(
 {
     switch (sig) {
         case SIGTERM:
-            log_notice_q("SIGTERM received");
             done = 1;
-            if (fifo)
-                fifo_close(fifo); // will cause input-reader to terminate
+            if (readerThread != pthread_self())
+                (void)pthread_kill(readerThread, SIGTERM);
             break;
         case SIGUSR1:
-            reportStatistics = true;
             if (reporterThread != pthread_self())
                 (void)pthread_kill(reporterThread, SIGUSR1);
-            log_refresh();
             break;
         case SIGUSR2:
-            log_notice("SIGUSR2 received");
             (void)log_roll_level();
             break;
-        default:
-            log_notice("Unexpected signal received: %d", sig);
     }
 
     return;
@@ -746,8 +740,8 @@ static void reportStats(
 }
 
 /**
- * Reports statistics when the condition-variable is signaled. May be called by
- * `pthread_create()`.
+ * Reports statistics when the current thread receives a `SIGUSR1`. May be
+ * called by `pthread_create()`.
  *
  * @param[in] arg   Pointer to the relevant `StatsStruct`. The caller must not
  *                  modify or free.
@@ -757,25 +751,22 @@ static void* startReporter(void* arg)
 {
     StatsStruct ss = *(StatsStruct*)arg;
 
-    sigset_t tmpMask;
-    (void)sigemptyset(&tmpMask);
-    (void)sigaddset(&tmpMask, SIGUSR1);
+    sigset_t    usr1Mask;
+    (void)sigemptyset(&usr1Mask);
+    (void)sigaddset(&usr1Mask, SIGUSR1);
 
-    sigset_t entryMask;
-    (void)pthread_sigmask(SIG_BLOCK, &tmpMask, &entryMask);
-
-    tmpMask = entryMask;
-    (void)sigdelset(&tmpMask, SIGUSR1);
+    sigset_t prevMask;
+    (void)pthread_sigmask(SIG_BLOCK, &usr1Mask, &prevMask);
 
     while (!done) {
-        while (!reportStatistics)
-            (void)sigsuspend(&tmpMask);
+        int sig;
 
+        (void)sigwait(&usr1Mask, &sig);
         reportStats(ss.productMaker, &ss.startTime, &ss.reportTime, ss.reader);
-        reportStatistics = false;
+        log_refresh();
     }
 
-    (void)pthread_sigmask(SIG_SETMASK, &entryMask, NULL);
+    (void)pthread_sigmask(SIG_SETMASK, &prevMask, NULL);
 
     return NULL;
 }
@@ -1046,7 +1037,6 @@ runInner(
         const char* const restrict   interface)
 {
     Reader*     reader;
-    pthread_t   readerThread;
     int         status = startReader(isMcastInput, policy, priority, mcastSpec,
             interface, &reader, &readerThread);
     bool        reporterRunning = false;
@@ -1074,8 +1064,9 @@ runInner(
      * variability in the output -- which can affect testing.
      */
     if (reporterRunning) {
-        done = 1;  // causes reporting thread to terminate
-        raise(SIGUSR1);  // reports statistics; requires reader
+        done = 1;  // Causes reporting thread to terminate
+        // Reports statistics; requires reader
+        (void)pthread_kill(reporterThread, SIGUSR1);
         (void)pthread_join(reporterThread, NULL);
         readerFree(reader);
     }
