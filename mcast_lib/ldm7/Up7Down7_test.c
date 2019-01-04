@@ -135,36 +135,24 @@ static void sigHandler(
 {
     switch (sig) {
     case SIGCHLD:
-        log_notice("SIGCHLD");
         return;
     case SIGCONT:
-        log_notice("SIGCONT");
         return;
     case SIGIO:
-        log_notice("SIGIO");
         return;
     case SIGPIPE:
-        log_notice("SIGPIPE");
         return;
     case SIGINT:
-        log_notice("SIGINT");
         return;
     case SIGTERM:
-        log_notice("SIGTERM");
         return;
     case SIGHUP:
-        log_notice("SIGHUP");
         return;
     case SIGUSR1:
-        log_notice("SIGUSR1");
         log_refresh();
         return;
     case SIGUSR2:
-        log_notice("SIGUSR2");
         log_refresh();
-        return;
-    default:
-        log_notice("Unexpected signal %d", sig);
         return;
     }
 }
@@ -173,8 +161,8 @@ static int
 setSignalHandling(void)
 {
     static const int interuptSigs[] = { SIGIO, SIGPIPE, SIGINT, SIGTERM,
-            SIGHUP};
-    static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1, SIGUSR2 };
+            SIGHUP, 0};
+    static const int restartSigs[] = { SIGCHLD, SIGCONT, SIGUSR1, SIGUSR2, 0 };
     int              status;
     struct sigaction sigact = {}; // Zero initialization
 
@@ -184,19 +172,19 @@ setSignalHandling(void)
      */
     sigact.sa_mask = mostSigMask;
 
-    // Catch all following signals
+    // Handle the following
     sigact.sa_handler = sigHandler;
 
-    // Interrupt system calls for these signals
-    for (int i = 0; i < sizeof(interuptSigs)/sizeof(interuptSigs[0]); ++i) {
+    // Interrupt system calls for the following
+    for (int i = 0; interuptSigs[i]; ++i) {
         status = sigaction(interuptSigs[i], &sigact, NULL);
         // `errno == EINVAL` for `SIGKILL` & `SIGSTOP`, at least
         assert(status == 0 || errno == EINVAL);
     }
 
-    // Restart system calls for these signals
+    // Restart system calls for the following
     sigact.sa_flags = SA_RESTART;
-    for (int i = 0; i < sizeof(restartSigs)/sizeof(restartSigs[0]); ++i) {
+    for (int i = 0; restartSigs[i]; ++i) {
         status = sigaction(restartSigs[i], &sigact, NULL);
         assert(status == 0);
     }
