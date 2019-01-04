@@ -179,33 +179,26 @@ cleanup(void)
         log_fini();
 }
 
-static int stats_req = 0;
+static volatile sig_atomic_t stats_req = 0;
 
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-        /* 
-         * Some systems reset handler to SIG_DFL upon entry to handler.
-         * In that case, we reregister our handler.
-         */
-        (void) signal(sig, signal_handler);
-#endif
-        switch(sig) {
-        case SIGINT :
-                exit(0);
-        case SIGTERM :
-                done = !0;      
-                sleep(0); /* redundant on many systems, needed on others */
-                return;
-        case SIGUSR1 :
-                log_refresh();
-                stats_req = !0;
-                return;
-        case SIGUSR2 :
-                log_roll_level();
-                return;
-        }
+    switch(sig) {
+    case SIGINT :
+        exit(0);
+    case SIGTERM :
+        done = 1;
+        sleep(0); /* redundant on many systems, needed on others */
+        return;
+    case SIGUSR1 :
+        log_refresh();
+        stats_req = 1;
+        return;
+    case SIGUSR2 :
+        log_roll_level();
+        return;
+    }
 }
 
 

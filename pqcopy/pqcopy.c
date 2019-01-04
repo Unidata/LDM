@@ -43,11 +43,11 @@
 #define DEFAULT_FEEDTYPE ANY
 #endif
 
-static volatile int     intr;
-static volatile int     stats_req;
-static pqueue           *inPq;
-static pqueue           *outPq;
-static int              nprods;
+static volatile int          intr;
+static volatile sig_atomic_t stats_req;
+static pqueue*               inPq;
+static pqueue*               outPq;
+static int                   nprods;
 
 
 static void
@@ -132,27 +132,20 @@ cleanup(void)
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-    /* 
-     * Some systems reset handler to SIG_DFL upon entry to handler.
-     * In that case, we reregister our handler.
-     */
-    (void) signal(sig, signal_handler);
-#endif
     switch(sig) {
     case SIGINT :
-            intr = !0;
-            exit(0);
+        intr = !0;
+        exit(0);
     case SIGTERM :
-            done = !0;      
-            return;
+        done = !0;
+        return;
     case SIGUSR1 :
-            log_refresh();
-            stats_req = !0;
-            return;
+        log_refresh();
+        stats_req = !0;
+        return;
     case SIGUSR2 :
-            log_roll_level();
-            return;
+        log_roll_level();
+        return;
     }
 }
 

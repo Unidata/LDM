@@ -300,20 +300,11 @@ static void cleanup(
 static void signal_handler(
         int sig)
 {
-#ifdef SVR3SIGNALS
-    /*
-     * Some systems reset handler to SIG_DFL upon entry to handler.
-     * In that case, we reregister our handler.
-     */
-    (void) signal(sig, signal_handler);
-#endif
     switch (sig) {
     case SIGINT:
-        log_notice("SIGINT received");
         exit(exit_status);
         /*NOTREACHED*/
     case SIGTERM:
-        log_notice("SIGTERM received");
         done = 1;
         up6_close();
         req6_close();
@@ -322,27 +313,20 @@ static void signal_handler(
 #endif
         return;
     case SIGHUP:
-        log_notice("SIGHUP received");
         return;
     case SIGUSR1:
-        log_info("SIGUSR1 received");
         log_refresh();
         return;
     case SIGUSR2:
-        log_info("SIGUSR2 received");
         log_roll_level();
         return;
     case SIGPIPE:
-        log_notice("SIGPIPE received");
         return;
     case SIGCHLD:
-        log_notice("SIGCHLD received");
         return;
     case SIGALRM:
-        log_debug("SIGALRM received");
         return;
     default:
-        log_debug("Signal %d received", sig);
         return;
     }
 }

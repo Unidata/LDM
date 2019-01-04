@@ -90,14 +90,6 @@ static void mypriv_stats(void)
 static void signal_handler(
         const int       sig)
 {
-#ifdef SVR3SIGNALS
-    /*
-     * Some systems reset handler to SIG_DFL upon entry to handler.
-     * In that case, we reregister our handler.
-     */
-    (void)signal(sig, signal_handler);
-#endif
-
     switch (sig) {
     case SIGINT:
         exit(0);

@@ -70,8 +70,8 @@ static int skipLeadingCtlString = 1;
 
 static int ifd = -1; 
 
-static volatile int intr = 0;
-static volatile int stats_req = 0;
+static volatile sig_atomic_t intr = 0;
+static volatile sig_atomic_t stats_req = 0;
 
 static void (*prod_stats)(void) = wmo_stats;
 static unsigned long ndups = 0;
@@ -132,36 +132,27 @@ cleanup(void)
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-        /* 
-         * Some systems reset handler to SIG_DFL upon entry to handler.
-         * In that case, we reregister our handler.
-         */
-        (void) signal(sig, signal_handler);
-#endif
-        switch(sig) {
-        case SIGINT :
-                intr = !0;
-                exit(0);
-        case SIGTERM :
-                done = !0;
-                return;
-        case SIGPIPE :
+    switch(sig) {
+    case SIGINT :
+        intr = !0;
+        exit(0);
+    case SIGTERM :
+        done = 1;
+        return;
+    case SIGPIPE :
 #if NET
-                if(INPUT_IS_SOCKET)
-                {
-                        port_error = !0;
-                }
+        if(INPUT_IS_SOCKET)
+            port_error = !0;
 #endif
-                return;
-        case SIGUSR1 :
-                log_refresh();
-                stats_req = !0;
-                return;
-        case SIGUSR2 :
-                log_roll_level();
-                return;
-        }
+        return;
+    case SIGUSR1 :
+        log_refresh();
+        stats_req = 1;
+        return;
+    case SIGUSR2 :
+        log_roll_level();
+        return;
+    }
 }
 
 

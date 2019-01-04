@@ -408,11 +408,9 @@ mls_handleSignal(
 {
     switch (sig) {
         case SIGTERM:
-            log_notice("SIGTERM");
             done = 1;
             break;
         case SIGINT:
-            log_notice("SIGINT");
             done = 1;
             break;
         case SIGUSR1:
@@ -421,8 +419,6 @@ mls_handleSignal(
         case SIGUSR2:
             log_roll_level();
             break;
-        default:
-            log_error("Signal %d", sig);
     }
     return;
 }

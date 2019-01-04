@@ -156,32 +156,25 @@ cleanup(void)
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-        /* 
-         * Some systems reset handler to SIG_DFL upon entry to handler.
-         * In that case, we reregister our handler.
-         */
-        (void) signal(sig, signal_handler);
-#endif
-        switch(sig) {
-        case SIGHUP :
-                hupped = 1;
-                return;
-        case SIGINT :
-                exit(0);
-                /*NOTREACHED*/
-        case SIGTERM :
-                done = 1;
-                return;
-        case SIGUSR1 :
-                log_refresh();
-                return;
-        case SIGUSR2 :
-                log_roll_level();
-                return;
-        case SIGALRM :
-                return;
-        }
+    switch(sig) {
+    case SIGHUP :
+            hupped = 1;
+            return;
+    case SIGINT :
+            exit(0);
+            /*NOTREACHED*/
+    case SIGTERM :
+            done = 1;
+            return;
+    case SIGUSR1 :
+            log_refresh();
+            return;
+    case SIGUSR2 :
+            log_roll_level();
+            return;
+    case SIGALRM :
+            return;
+    }
 }
 
 

@@ -45,8 +45,8 @@ extern int usePil;  /* 1/0 flag to signal use of AFOS like pil identifier */
 #define DEFAULT_INTERVAL 15
 #endif
 
-static volatile int intr = 0;
-static volatile int stats_req = 0;
+static volatile sig_atomic_t intr = 0;
+static volatile sig_atomic_t stats_req = 0;
 
 #ifndef DEFAULT_PATTERN
 #define DEFAULT_PATTERN  "^S[AIMNP]"
@@ -397,31 +397,24 @@ cleanup(void)
 static void
 signal_handler(int sig)
 {
-#ifdef SVR3SIGNALS
-        /* 
-         * Some systems reset handler to SIG_DFL upon entry to handler.
-         * In that case, we reregister our handler.
-         */
-        (void) signal(sig, signal_handler);
-#endif
-        switch(sig) {
-        case SIGINT :
-                intr = !0;
-                exit(0);
-        case SIGTERM :
-                done = !0;      
-                return;
-        case SIGUSR1 :
-                log_refresh();
-                stats_req = !0;
-                return;
-        case SIGUSR2 :
-                log_roll_level();
-                return;
-        case SIGCHLD :
-                /* usually calls exit */
-                return;
-        }
+    switch(sig) {
+    case SIGINT :
+        intr = 1;
+        exit(0);
+    case SIGTERM :
+        done = 1;
+        return;
+    case SIGUSR1 :
+        log_refresh();
+        stats_req = 1;
+        return;
+    case SIGUSR2 :
+        log_roll_level();
+        return;
+    case SIGCHLD :
+        /* usually calls exit */
+        return;
+    }
 }
 
 

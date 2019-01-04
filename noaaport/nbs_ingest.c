@@ -236,12 +236,11 @@ static void signal_handler(
             signal_stats_thread(STATS_THREAD_PRINT);
             break;
         case SIGINT:
+            // FALLTHROUGH
         case SIGTERM:
             signal_stats_thread(STATS_THREAD_TERMINATE);
             (void)close(sock); // Closes input
             break;
-        default:
-            log_error_q("Unhandled signal: %d", sig);
     }
 }
 

@@ -91,20 +91,17 @@ cleanup (void)
 static void
 signal_handler (int sig)
 {
-  switch (sig)
-    {
+    switch (sig) {
     case SIGINT:
-      exit (1);
+        exit (1);
     case SIGTERM:
-      exit (1);
+        exit (1);
     case SIGPIPE:
-      log_debug("SIGPIPE");
-      exit (1);
+        exit (1);
     case SIGUSR1:
-      log_refresh();
-      return;
+        log_refresh();
+        return;
     }
-  log_debug("signal_handler: unhandled signal: %d", sig);
 }
 
 
