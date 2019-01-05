@@ -351,8 +351,11 @@ static void signal_handler(
     switch (sig) {
         case SIGTERM:
             done = 1;
-            if (readerThread != pthread_self())
-                (void)pthread_kill(readerThread, SIGTERM);
+            /*
+             * The ProductMaker will continue to call `fifo_getBytes()` on the
+             * product-maker thread until the FIFO has no more data.
+             */
+            fifo_close(fifo); // Async-signal-safe
             break;
         case SIGUSR1:
             if (reporterThread != pthread_self())
@@ -420,6 +423,7 @@ static void set_sigactions(void)
 
     /* Restart the following */
     sigact.sa_flags |= SA_RESTART;
+    (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
 
     sigset_t sigset;
@@ -428,6 +432,7 @@ static void set_sigactions(void)
     (void)sigaddset(&sigset, SIGCHLD);
     (void)sigaddset(&sigset, SIGCONT);
     (void)sigaddset(&sigset, SIGTERM);
+    (void)sigaddset(&sigset, SIGUSR1);
     (void)sigaddset(&sigset, SIGUSR2);
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
@@ -1046,6 +1051,7 @@ runInner(
     }
     else {
         StatsStruct ss;
+
         ss_init(&ss, productMaker, reader);
         (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
         reporterRunning = true;
@@ -1055,7 +1061,7 @@ runInner(
     } // input-reader started
 
     // Ensures `pmThread` termination; idempotent => can't hurt
-    fifo_close(fifo);
+    fifo_shutdown(fifo); // Signals `fifo_getBytes()`
     (void)pthread_join(pmThread, NULL);
 
     /*
