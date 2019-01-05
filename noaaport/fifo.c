@@ -20,18 +20,18 @@
 #include <unistd.h>
 
 struct fifo {
-    unsigned char*   buf;          ///< Pointer to start of buffer
-    size_t           nextWrite;    ///< Offset to next byte to write
-    size_t           nbytes;       ///< Number of bytes in the buffer
-    size_t           size;         ///< Size of buffer in bytes
+    unsigned char*        buf;          ///< Pointer to start of buffer
+    size_t                nextWrite;    ///< Offset to next byte to write
+    size_t                nbytes;       ///< Number of bytes in the buffer
+    size_t                size;         ///< Size of buffer in bytes
     /**
      * Number of times `fifo_readFd()` had to wait until sufficient space was
      * available.
      */
-    size_t           fullCount;
-    pthread_mutex_t  mutex;        ///< Mutual exclusion object
-    pthread_cond_t   cond;         ///< Condition variable
-    bool             isClosed;     ///< FIFO is closed?
+    size_t                fullCount;
+    pthread_mutex_t       mutex;        ///< Mutual exclusion object
+    pthread_cond_t        cond;         ///< Condition variable
+    volatile sig_atomic_t isClosed;     ///< FIFO is closed?
 };
 
 /**
@@ -143,24 +143,6 @@ fifo_signal(
 }
 
 /**
- * Waits for a change in a FIFO's state.
- *
- * @pre             The FIFO's mutex is locked.
- * @param[in] fifo  The FIFO.
- * @post            The FIFO's mutex is locked.
- */
-static inline void
-fifo_wait(
-        Fifo* const fifo)
-{
-    /*
-     * Failure isn't possible because `fifo->cond` and `fifo->mutex` are valid
-     * and the mutex is locked by the current thread.
-     */
-    (void)pthread_cond_wait(&fifo->cond, &fifo->mutex);
-}
-
-/**
  * Blocks while a FIFO is in a particular state.
  *
  * @pre                   The FIFO is locked.
@@ -180,7 +162,11 @@ fifo_waitWhile(
     int didWait = 0;
 
     while (whilePred(fifo, nbytes)) {
-       fifo_wait(fifo);
+        /*
+         * Failure isn't possible because `fifo->cond` and `fifo->mutex` are valid
+         * and the mutex is locked by the current thread.
+         */
+        (void)pthread_cond_wait(&fifo->cond, &fifo->mutex);
        didWait = 1;
     }
 
@@ -456,7 +442,8 @@ fifo_free(
 
 /**
  * Transfers bytes from a file descriptor to a FIFO. Blocks until space is
- * available. This function is thread-safe with respect to `fifo_getBytes()`.
+ * available. This function is thread-safe with respect to `fifo_getBytes()` and
+ * should continue to be called after `fifo_close()` has been called.
  *
  * @param[in]  fifo      FIFO.
  * @param[in]  fd        File descriptor from which to obtain bytes.
@@ -466,6 +453,10 @@ fifo_free(
  * @retval     1         Usage error. `log_add()` called.
  * @retval     2         System error. `log_add()` called.
  * @retval     3         `fifo_close()` was called.
+ * @asyncsignalsafety    Unsafe
+ * @threadsafety         Safe
+ * @see                  fifo_getBytes()
+ * @see                  fifo_close()
  */
 int
 fifo_readFd(
@@ -503,14 +494,19 @@ fifo_readFd(
  * Removes bytes from a FIFO. Blocks while insufficient data exists and
  * `fifo_close()` hasn't been called. Returns data if possible -- even if
  * `fifo_close()` has been called. This function is thread-safe with respect to
- * `fifo_readFd()`.
+ * `fifo_readFd()` and should continue to be called after `fifo_close()` has
+ * been called.
  *
- * @param[in] fifo    FIFO.
- * @param[in] buf     Buffer into which to put bytes.
- * @param[in[ nbytes  Number of bytes to remove.
- * @retval    0       Success.
- * @retval    1       Usage error. `log_add()` called.
- * @retval    3       `fifo_close()` was called and insufficient data exists.
+ * @param[in] fifo     FIFO.
+ * @param[in] buf      Buffer into which to put bytes.
+ * @param[in[ nbytes   Number of bytes to remove.
+ * @retval    0        Success.
+ * @retval    1        Usage error. `log_add()` called.
+ * @retval    3        `fifo_close()` was called and insufficient data exists.
+ * @asyncsignalsafety  Unsafe
+ * @threadsafety       Safe
+ * @see                fifo_readFd()
+ * @see                fifo_close()
  */
 int
 fifo_getBytes(
@@ -565,18 +561,36 @@ fifo_getFullCount(
 }
 
 /**
- * Closes a FIFO. Idempotent.
+ * Closes a FIFO. Idempotent. The caller should continue to call
+ * `fifo_getBytes()` to avoid `fifo_readFd()` waiting indefinitely.
  *
  * @param[in] fifo     FIFO to be closed.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
+ * @see                fifo_getBytes()
+ * @see                fifo_readFd()
+ */
+void
+fifo_close(
+    Fifo* const fifo)
+{
+    fifo->isClosed = true;
+}
+
+/**
+ * Shuts down a FIFO. Idempotent. The caller needn't continue to call
+ * `fifo_getBytes()`.
+ *
+ * @param[in] fifo     FIFO to be shut down.
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
 void
-fifo_close(
-    Fifo* const fifo)       /**< [in/out] Pointer to FIFO */
+fifo_shutdown(
+    Fifo* const fifo)
 {
     fifo_lock(fifo);
-    fifo->isClosed = true;
-    fifo_signal(fifo);
+        fifo_close(fifo);
+        fifo_signal(fifo);
     fifo_unlock(fifo);
 }
