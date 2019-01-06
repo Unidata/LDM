@@ -468,23 +468,25 @@ fifo_readFd(
     int status;
 
     fifo_lock(fifo);
-
-    if (fifo_isInvalidSize(fifo, maxBytes)) {
-        status = 1;
-    }
-    else {
-        fifo->fullCount += fifo_waitWhile(fifo, fifo_isOpenAndNotWritable,
-                maxBytes);
-
-        if (fifo->isClosed) {
-            status = 3;
+        if (fifo_isInvalidSize(fifo, maxBytes)) {
+            status = 1;
         }
         else {
-            status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
+            fifo->fullCount += fifo_waitWhile(fifo, fifo_isOpenAndNotWritable,
+                    maxBytes);
+
+            if (fifo->isClosed) {
+                status = 3;
+            }
+            else {
+                status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
+
+                if (status || *nbytes == 0)
+                    fifo->isClosed = 1;
+            }
+
             fifo_signal(fifo);
         }
-    }
-
     fifo_unlock(fifo);
 
     return status;
@@ -575,22 +577,4 @@ fifo_close(
     Fifo* const fifo)
 {
     fifo->isClosed = true;
-}
-
-/**
- * Shuts down a FIFO. Idempotent. The caller needn't continue to call
- * `fifo_getBytes()`.
- *
- * @param[in] fifo     FIFO to be shut down.
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-void
-fifo_shutdown(
-    Fifo* const fifo)
-{
-    fifo_lock(fifo);
-        fifo_close(fifo);
-        fifo_signal(fifo);
-    fifo_unlock(fifo);
 }

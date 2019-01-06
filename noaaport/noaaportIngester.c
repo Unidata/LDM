@@ -1056,12 +1056,10 @@ runInner(
         (void)pthread_create(&reporterThread, NULL, startReporter, &ss);
         reporterRunning = true;
 
-        enableSigUsr1(true);  // enable stats reporting; requires reader
+        enableSigUsr1(true);  // enable stats reporting; requires reader object
         status = waitOnReader(readerThread);
     } // input-reader started
 
-    // Ensures `pmThread` termination; idempotent => can't hurt
-    fifo_shutdown(fifo); // Signals `fifo_getBytes()`
     (void)pthread_join(pmThread, NULL);
 
     /*
@@ -1070,10 +1068,11 @@ runInner(
      * variability in the output -- which can affect testing.
      */
     if (reporterRunning) {
+        // Reports statistics; requires reader object
         done = 1;  // Causes reporting thread to terminate
-        // Reports statistics; requires reader
         (void)pthread_kill(reporterThread, SIGUSR1);
         (void)pthread_join(reporterThread, NULL);
+
         readerFree(reader);
     }
 
