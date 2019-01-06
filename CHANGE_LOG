@@ -1,3 +1,8 @@
+6.13.7.103	2019-01-06T11:26:35-0700
+    noaaportIngester(1):
+        Have fifo_getBytes() always learn if either fifo_close() was called or
+        if an EOF was encountered
+
 6.13.7.102	2019-01-05T12:26:19-0700
     Logging:
         Create log_errno()
