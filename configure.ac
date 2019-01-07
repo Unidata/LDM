@@ -47,7 +47,7 @@ if test "$ac_cv_prog_cc_c99" = "no"; then
 fi
 AC_USE_SYSTEM_EXTENSIONS
 # NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 #if test "$GCC" = "yes"; then
 #    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
 #    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
@@ -574,6 +574,7 @@ AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
 AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
 strdup seteuid setenv mmap sigaction])
+AC_CHECK_FUNCS([getline])
 UD_SIG_ATOMIC_T
 AC_C_CONST
 AC_STRUCT_ST_BLKSIZE
