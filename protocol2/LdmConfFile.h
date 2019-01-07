@@ -11,7 +11,9 @@
 #include "ldm.h"
 
 #include "InetSockAddr.h"
+#if WANT_MULTICAST
 #include "mcast_info.h"
+#endif
 #include "peer_info.h"
 #include "UpFilter.h"
 #include "wordexp.h"

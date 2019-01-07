@@ -11,7 +11,6 @@
 #include <config.h>
 
 #include <arpa/inet.h>
-#include <log.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>             /* UINT_MAX */
@@ -31,6 +30,7 @@
 #include "atofeedt.h"
 #include "autoshift.h"
 #include "down6.h"
+#include "log.h"
 #include "LdmConfFile.h"
 #if WANT_MULTICAST
     #include "down7_manager.h"
@@ -3246,6 +3246,8 @@ decodeFeedtype(
     return error;
 }
 
+#ifdef WANT_MULTICAST
+
 int
 decodeMulticastEntry(
     const char* const   feedStr,
@@ -3444,3 +3446,5 @@ decodeReceiveEntry(
 
     return status;
 }
+
+#endif // WANT_MULTICAST
