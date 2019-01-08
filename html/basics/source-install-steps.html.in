@@ -102,7 +102,7 @@ using the <code>gunzip(1)</code> and <code>pax(1)</code>
 utilities.
 For example:
 <blockquote><pre>
-cd                                                  # go to the LDM user's home-directory
+cd # go to the LDM user's home-directory
 gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
 </pre></blockquote>
 
@@ -111,7 +111,7 @@ gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distrib
 
 <pre>
     gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
-    cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
+        cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
 </pre>
 
 <p>The reason for creating the additional <code>src/</code> subdirectory is
