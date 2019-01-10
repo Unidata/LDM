@@ -21,9 +21,13 @@
 #include "priv.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <wait.h>
@@ -45,57 +49,45 @@ static const int MAGIC;
 
 // The getline() function isn't part of _XOPEN_SOURCE=600
 
-/* Copyright (C) 1991 Free Software Foundation, Inc.
-This file is part of the GNU C Library.
-
-The GNU C Library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Library General Public License as
-published by the Free Software Foundation; either version 2 of the
-License, or (at your option) any later version.
-
-The GNU C Library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Library General Public License for more details.
-
-You should have received a copy of the GNU Library General Public
-License along with the GNU C Library; see the file COPYING.LIB.  If
-not, write to the Free Software Foundation, Inc., 675 Mass Ave,
-Cambridge, MA 02139, USA.  */
-
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-
-/* Read up to (and including) a newline from STREAM into *LINEPTR
-   (and null-terminate it). *LINEPTR is a pointer returned from malloc (or
-   NULL), pointing to *N characters of space.  It is realloc'd as
-   necessary.  Returns the number of characters read (not including the
-   null terminator), or -1 on error or EOF.  */
+/**
+ * Read up to (and including) a newline from a stream and null-terminate it.
+ *
+ * @param[in,out] lineptr  Input line buffer. `*lineptr` must be `NULL` or a
+ *                         pointer returned by `malloc()` or `realloc()` that
+ *                         points to `size` bytes of space. Will point to
+ *                         allocated space on successful return. Caller should
+ *                         free `*lineptr` when it's no longer needed.
+ * @param[in,out] size     Number of bytes `*lineptr` points to if not NULL;
+ *                         otherwise ignored. Will contain number of bytes
+ *                         `*lineptr` points to on successful return.
+ * @param[in]     stream   Stream from which to read a line of input
+ * @retval        -1       Error or EOF
+ * @return                 Number of bytes read -- excluding the terminating
+ *                         NUL. `*lineptr` and `*size` are set.
+ */
 
 static ssize_t
-getline(char** restrict const  lineptr,
-        size_t* restrict const n,
-        FILE* restrict const   stream)
+getline(char** const restrict  lineptr,
+        size_t* const restrict size,
+        FILE* const restrict   stream)
 {
-    if (lineptr == NULL || n == NULL) {
+    ssize_t nbytes = -1;
+
+    if (lineptr == NULL || size == NULL) {
         errno = EINVAL;
-        return -1;
+    }
+    else {
+        static const int SIZE = _POSIX_MAX_CANON + 1;
+        char*            line = realloc(*lineptr, SIZE);
+
+        if (line && fgets(line, SIZE, stream)) {
+            *lineptr = line;
+            *size = SIZE;
+            nbytes = strlen(line);
+        }
     }
 
-    char* line = realloc(*lineptr, 256);
-
-    if (line == NULL)
-        return -1;
-
-    if (fgets(line, 256, stream) == NULL)
-        return -1;
-
-    *lineptr = line;
-    *n = 256;
-
-    return strlen(line);
+    return nbytes;
 }
 
 /**
