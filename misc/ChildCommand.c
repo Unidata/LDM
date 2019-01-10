@@ -43,7 +43,7 @@ struct child_cmd {
 
 static const int MAGIC;
 
-#ifndef HAVE_GETLINE
+// The getline() function isn't part of _XOPEN_SOURCE=600
 
 /* Copyright (C) 1991 Free Software Foundation, Inc.
 This file is part of the GNU C Library.
@@ -79,42 +79,24 @@ getline(char** restrict const  lineptr,
         size_t* restrict const n,
         FILE* restrict const   stream)
 {
-    static char  line[256];
-    char*        ptr;
-    unsigned int len;
-
     if (lineptr == NULL || n == NULL) {
         errno = EINVAL;
         return -1;
     }
 
-    if (ferror(stream))
+    char* line = realloc(*lineptr, 256);
+
+    if (line == NULL)
         return -1;
 
-    if (feof(stream))
+    if (fgets(line, 256, stream) == NULL)
         return -1;
 
-    fgets(line, 256, stream);
+    *lineptr = line;
+    *n = 256;
 
-    ptr = strchr(line,'\n');
-    if (ptr)
-        *ptr = '\0';
-
-    len = strlen(line);
-
-    if ((len+1) < 256) {
-        ptr = realloc(*lineptr, 256);
-        if (ptr == NULL)
-            return(-1);
-        *lineptr = ptr;
-        *n = 256;
-    }
-
-    strcpy(*lineptr,line);
-    return(len);
+    return strlen(line);
 }
-
-#endif // HAVE_GETLINE
 
 /**
  * Logs the standard error stream of a child command.
