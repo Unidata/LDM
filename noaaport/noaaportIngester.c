@@ -4,7 +4,7 @@
  * creates LDM data-products, and writes the data-products into an LDM
  * product-queue.
  *
- * Copyright © 2014, University Corporation for Atmospheric Research.
+ * Copyright © 2019, University Corporation for Atmospheric Research.
  * See COPYRIGHT file for copying and redistribution conditions.
  *
  * @file noaaportIngester.c
@@ -14,11 +14,10 @@
 #include "ldm.h"
 #include "log.h"
 #include "fifo.h"
-#include "fileReader.h"
 #include "getFacilityName.h"
 #include "globals.h"
 #include "ldmProductQueue.h"
-#include "multicastReader.h"
+#include "noaaport_socket.h"
 #include "productMaker.h"
 #include "reader.h"
 
@@ -61,7 +60,6 @@ static const int	        USAGE_ERROR = 1;
 static const int	        SYSTEM_FAILURE = 2;
 static const int	        SCHED_POLICY = SCHED_FIFO;
 static Fifo*		        fifo;
-static pthread_t                readerThread = {0};
 static pthread_t                reporterThread = {0};
 int			        inflateFrame;
 int			        fillScanlines;
@@ -76,7 +74,7 @@ int			        fillScanlines;
  * @param[out] mcastSpec      Specification of multicast group.
  * @param[out] interface      Specification of interface on which to listen.
  * @retval     0              Success.
- * @retval     1              Error. `log_add()` called.
+ * @retval     EINVAL         Error. `log_add()` called.
  */
 static int
 decodeCommandLine(
@@ -108,7 +106,7 @@ decodeCommandLine(
                         optarg[nbytes] != 0) {
                     log_syserr_q("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
-                    status = 1;
+                    status = EINVAL;
                 }
                 else {
                     *npages = n;
@@ -126,7 +124,7 @@ decodeCommandLine(
                 break;
             case 'l':
                 if (log_set_destination(optarg))
-                    status = 1;
+                    status = EINVAL;
                 break;
             case 'm':
                 *mcastSpec = optarg;
@@ -221,7 +219,7 @@ decodeCommandLine(
                      /** Using MHS for communication with NCF  **/
                 }else{
                      log_add("No other mechanism other than MHS is currently supported\n");
-                     status  = 1;
+                     status  = EINVAL;
                 }
 #endif
                 break;
@@ -230,7 +228,7 @@ decodeCommandLine(
 
                 if (0 > i || 7 < i) {
                     log_add("Invalid system logging facility number: %d", i);
-                    status = 1;
+                    status = EINVAL;
                 }
                 else {
                     static int  logFacilities[] = {LOG_LOCAL0, LOG_LOCAL1,
@@ -239,7 +237,7 @@ decodeCommandLine(
                     // NB: Specifying syslog facility implies logging to syslog
                     if (log_set_facility(logFacilities[i]) ||
                             log_set_destination(""))
-                        status = 1;
+                        status = EINVAL;
                 }
 
                 break;
@@ -257,7 +255,7 @@ decodeCommandLine(
                 /* no break */
             case '?': {
                 log_add("Unknown option: \"%c\"", optopt);
-                status = 1;
+                status = EINVAL;
                 break;
             }
         }                               /* option character switch */
@@ -266,7 +264,7 @@ decodeCommandLine(
     if (0 == status) {
         if (optind < argc) {
             log_add("Extraneous command-line argument: \"%s\"", argv[optind]);
-            status = 1;
+            status = EINVAL;
         }
     }
 
@@ -467,6 +465,47 @@ unblockTermSignals(void)
     (void)sigaddset(&sigSet, SIGTERM);
 
     (void)pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+}
+
+/**
+ * Returns a file descriptor to the input. Sets `isMcastInput`.
+ *
+ * @param[in] mcastSpec      Specification of multicast group or NULL to read
+ *                           from the standard input stream.
+ * @param[in] interface      IPv4 address of interface on which to listen for
+ *                           multicast NOAAPort packets or NULL to listen on all
+ *                           interfaces. Ignored iff `mcastSpec == NULL`.
+ * @param[out] isMcastInput  Is input from NOAAPort multicast?
+ * @retval    -1             Failure. `log_add()` called.
+ * @return                   Input file descriptor. `*isMcastInput` is set.
+ * @threadsafety             Safe
+ */
+static int
+getInputFd(
+        const char* const restrict mcastSpec,
+        const char* const restrict interface,
+        bool* const restrict       isMcastInput)
+{
+    int fd; // Input file descriptor
+    bool mcastInput = mcastSpec != NULL;
+
+
+    if (!mcastInput) {
+        fd = fileno(stdin);
+
+        if (fd == -1)
+            log_add_syserr(
+                    "Couldn't get file-descriptor of standard input stream");
+    }
+    else if (nportSock_init(&fd, mcastSpec, interface)) {
+        log_add("Couldn't open NOAAPort socket");
+        fd = -1;
+    }
+
+    if (fd != -1)
+        *isMcastInput = mcastInput;
+
+    return fd;
 }
 
 /**
@@ -800,10 +839,10 @@ ss_init(
  * Initializes thread attributes. The scheduling inheritance mode will be
  * explicit and the scheduling contention scope will be system-wide.
  *
+ * @param     isMcastInput    Input is from NOAAPort multicast?
  * @param[in] attr            Pointer to uninitialized thread attributes object.
  *                            Caller should call `pthread_attr_destroy(*attr)`
  *                            when it's no longer needed.
- * @param[in] isMcastInput    Is input from multicast?
  * @param[in] policy          Scheduling policy. Ignored if input isn't from
  *                            multicast.
  * @param[in] priority        Thread priority. Ignored if input isn't from
@@ -814,9 +853,9 @@ ss_init(
  */
 static int
 initThreadAttr(
+        const bool            isMcastInput,
         pthread_attr_t* const attr,
         const int             policy,
-        const bool            isMcastInput,
         const int             priority)
 {
     int status = pthread_attr_init(attr);
@@ -859,8 +898,8 @@ initThreadAttr(
  */
 static void
 initRetransSupport(
-        const bool                 isMcastInput,
-        const char* const restrict mcastSpec)
+        const bool        isMcastInput,
+        const char* const mcastSpec)
 {
     #ifdef RETRANS_SUPPORT
         if (isMcastInput && retrans_xmit_enable == OPTION_ENABLE) {
@@ -890,65 +929,14 @@ destroyRetransSupport(
 }
 
 /**
- * Creates an input-reader and runs it in a new thread.
- *
- * @param[in]  attr            Pointer to thread-creation attributes
- * @param[out] thread          Pointer to created thread.
- * @param[in]  mcastSpec       Specification of multicast group or NULL if
- *                             input is from the standard input stream.
- * @param[in]  interface       Specification of interface on which to listen or
- *                             NULL to listen on all interfaces.
- * @param[out] reader          Reader of input. Caller should call
- *                             `readerFree(*reader)` when it's no longer needed.
- * @retval     0               Success. `*reader` is set.
- * @retval     USAGE_ERROR     Usage error. `log_add()` called.
- * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
- */
-static int
-spawnReader(
-    const pthread_attr_t* const restrict attr,
-    pthread_t* const restrict            thread,
-    const char* const restrict           mcastSpec,
-    const char* const restrict           interface,
-    Reader** const restrict              reader)
-{
-    Reader* rdr;
-    int     status = mcastSpec
-            ? mcastReader_new(&rdr, mcastSpec, interface, fifo)
-            : fileReaderNew(NULL, fifo, &rdr);
-
-    if (status) {
-        log_add("Couldn't create input-reader");
-    }
-    else {
-        status = pthread_create(thread, attr, readerStart, rdr);
-
-        if (status) {
-            log_errno_q(status, "Couldn't create input-reader thread");
-            readerFree(rdr);
-            status = SYSTEM_FAILURE;
-        }
-        else {
-            *reader = rdr;
-        }
-    } // `rdr` is set
-
-    return status;
-}
-
-/**
  * Creates and starts an input-reader on a separate thread.
  *
- * @param[in]  isMcastInput    Is the input from multicast?
+ * @param[in]  isMcastInput    Input is from NOAAPort multicast?
  * @param[in]  policy          Scheduling policy for the reader thread. Ignored
  *                             if the input isn't from multicast.
  * @param[in]  priority        Scheduling priority for the reader thread.
  *                             Ignored if the input isn't from multicast. Must
  *                             be consonant with `policy`.
- * @param[in]  mcastSpec       Specification of multicast group or NULL if input
- *                             is from the standard input stream.
- * @param[in]  interface       Specification of interface on which to listen or
- *                             NULL to listen on all interfaces.
  * @param[out] reader          Reader of input. Caller should call
  *                             `readerFree(*reader)` when it's no longer needed.
  * @param[out] thread          Thread on which the input-reader is executing.
@@ -961,18 +949,57 @@ startReader(
         const bool                 isMcastInput,
         const int                  policy,
         const int                  priority,
-        const char* const restrict mcastSpec,
-        const char* const restrict interface,
         Reader** const restrict    reader,
         pthread_t* const restrict  thread)
 {
+    log_assert(reader);
+    log_assert(thread);
+
     pthread_attr_t attr;
-    int            status = initThreadAttr(&attr, isMcastInput, policy,
+    int            status = initThreadAttr(isMcastInput, &attr, policy,
             priority);
 
     if (0 == status) {
         unblockTermSignals();
-        status = spawnReader(&attr, thread, mcastSpec, interface, reader);
+            /*
+             * The maximum IPv4 UDP payload is 65507 bytes. The maximum observed
+             * UDP payload, however, should be 5232 bytes, which is the maximum
+             * amount of data in a NESDIS frame (5152 bytes) plus the overhead
+             * of the 3 SBN protocol headers: frame level header (16 bytes) +
+             * product definition header (16 bytes) + AWIPS product specific
+             * header (48 bytes). The maximum size of an ethernet jumbo frame is
+             * around 9000 bytes. Consequently, the maximum amount to read in a
+             * single call is conservatively set to 10000 bytes. 2014-12-30.
+             *
+             * Reverted to 65507 bytes because the number of frames missed by
+             * Chico increased greatly relative to Lenny after the maximum read
+             * size was changed from 65507 to 10000 bytes. Could it be that
+             * NOAAPORT is using large UDP packets and depending on IP
+             * fragmentation? That seems inconsistent, however, with
+             * dvbs_multicast(1) use of 10000 bytes in its call to recvfrom(2).
+             * 2015-01-3.
+             */
+            Reader* rdr = readerNew(fifo,
+                    isMcastInput ? 65507 : sysconf(_SC_PAGESIZE));
+
+            if (rdr == NULL) {
+                log_add("Couldn't create input-reader");
+                status = SYSTEM_FAILURE;
+            }
+            else {
+                status = pthread_create(thread, &attr, readerStart, rdr);
+
+                if (status) {
+                    log_add_errno(status,
+                            "Couldn't create input-reader thread");
+                    readerFree(rdr);
+                    status = SYSTEM_FAILURE;
+                }
+                else {
+                    *reader = rdr;
+                    status = 0;
+                } // Reader thread created
+            } // `rdr` is set
         blockTermSignals();
 
         (void)pthread_attr_destroy(&attr);
@@ -1014,36 +1041,31 @@ waitOnReader(
  * Runs the inner core of this program. The FIFO is closed on return and the
  * product-maker thread is joined. Final statistics are reported on success.
  *
+ * @param      isMcastInput    Input is from NOAAPort multicast?
  * @param[in]  productMaker    The maker of LDM data-products.
  * @param[in]  pmThread        The thread on which the product-maker is
  *                             executing.
- * @param[in]  isMcastInput    Is the input from multicast?
  * @param[in]  policy          Scheduling policy for the reader thread. Ignored
  *                             if the input isn't from multicast.
  * @param[in]  priority        Scheduling priority for the reader thread.
  *                             Ignored if the input isn't from multicast. Must
  *                             be consonant with `policy`.
- * @param[in]  mcastSpec       Specification of multicast group or NULL if input
- *                             is from the standard input stream.
- * @param[in]  interface       Specification of interface on which to listen or
- *                             NULL to listen on all interfaces.
  * @retval     0               Success.
  * @retval     USAGE_ERROR     Usage error. `log_add()` called.
  * @retval     SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
-runInner(
+execute3(
+        const bool                   isMcastInput,
         ProductMaker* const restrict productMaker,
         pthread_t const              pmThread,
-        const bool                   isMcastInput,
         const int                    policy,
-        const int                    priority,
-        const char* const restrict   mcastSpec,
-        const char* const restrict   interface)
+        const int                    priority)
 {
     Reader*     reader;
-    int         status = startReader(isMcastInput, policy, priority, mcastSpec,
-            interface, &reader, &readerThread);
+    pthread_t   readerThread = {0};
+    int         status = startReader(isMcastInput, policy, priority,  &reader,
+            &readerThread);
     bool        reporterRunning = false;
 
     if (status) {
@@ -1073,7 +1095,7 @@ runInner(
         (void)pthread_kill(reporterThread, SIGUSR1);
         (void)pthread_join(reporterThread, NULL);
 
-        readerFree(reader);
+        readerFree(reader); // reporterRunning => reader != NULL
     }
 
     return status;
@@ -1082,25 +1104,20 @@ runInner(
 /**
  * Runs the outer core of this program.
  *
- * @param[in] fifo            Pointer to FIFO object. Will be closed upon
- *                            return.
- * @param[in] prodQueue       Pointer to LDM product-queue object.
+ * @param[in] isMcastInput    Input is from NOAAPort multicast?
  * @param[in] mcastSpec       Specification of multicast group or NULL if
  *                            input is from the standard input stream.
- * @param[in] interface       Specification of interface on which to listen or
- *                            NULL to listen on all interfaces.
+ * @param[in] prodQueue       Pointer to LDM product-queue object.
  * @retval    0               Success.
  * @retval    USAGE_ERROR     Usage error. `log_add()` called.
  * @retval    SYSTEM_FAILURE  System failure. `log_add()` called.
  */
 static int
-runOuter(
-        Fifo* const restrict            fifo,
-        LdmProductQueue* const restrict prodQueue,
-        const char* const restrict      mcastSpec,
-        const char* const restrict      interface)
+execute2(
+        const bool                 isMcastInput,
+        const char* const restrict mcastSpec,
+        LdmProductQueue* const     prodQueue)
 {
-    const bool      isMcastInput = NULL != mcastSpec;
     pthread_attr_t  attr;
     /*
      * If the input is multicast UDP packets, then the product-maker thread
@@ -1108,7 +1125,7 @@ runOuter(
      * of the input thread missing a packet.
      */
     int             maxPriority = sched_get_priority_max(SCHED_POLICY);
-    int             status = initThreadAttr(&attr, isMcastInput, SCHED_POLICY,
+    int             status = initThreadAttr(isMcastInput, &attr, SCHED_POLICY,
             maxPriority-1);
 
     if (0 == status) {
@@ -1125,8 +1142,8 @@ runOuter(
                 &pmThread);
 
         if (0 == status)
-            status = runInner(productMaker, pmThread, isMcastInput,
-                    SCHED_POLICY, maxPriority, mcastSpec, interface);
+            status = execute3(isMcastInput, productMaker, pmThread,
+                    SCHED_POLICY, maxPriority);
 
         pmFree(productMaker);
         destroyRetransSupport(isMcastInput);
@@ -1139,41 +1156,65 @@ runOuter(
 /**
  * Executes this program.
  *
+ * @param[in] mcastSpec       Specification of multicast group or NULL to read
+ *                            from the standard input stream.
+ * @param[in] interface       IPv4 address of interface on which to listen for
+ *                            multicast NOAAPort packets or NULL to listen on
+ *                            all interfaces. Ignored iff `mcastSpec == NULL`.
  * @param[in] npages          Size of the queue in pages.
  * @param[in] prodQueuePath   Pathname of product-queue.
- * @param[in] mcastSpec       Specification of multicast group or NULL if input
- *                            is from the standard input stream.
- * @param[in] interface       Specification of interface on which to listen or
- *                            NULL to listen on all interfaces.
- * @retval    0               Success.
- * @retval    USAGE_ERROR     Usage error. `log_add()` called.
- * @retval    SYSTEM_FAILURE  O/S failure. `log_add()` called.
+ * @retval    1               Couldn't open input. `log_add()` called.
+ * @retval    2               Couldn't create FIFO. `log_add()` called.
+ * @retval    3               Couldn't open product-queue. `log_add()` called.
  */
 static int
-execute(
+execute(const char* const restrict mcastSpec,
+        const char* const restrict interface,
         const size_t               npages,
-        const char* const restrict prodQueuePath,
-        const char* const restrict mcastSpec,
-        const char* const restrict interface)
+        const char* const restrict prodQueuePath)
 {
-    int status = fifo_new(npages, &fifo);
+    log_assert(npages > 0);
+    log_assert(prodQueuePath);
 
-    if (0 == status) {
-        LdmProductQueue*    prodQueue;
+    int  status;
+    bool isMcastInput;
+    int  fd = getInputFd(mcastSpec, interface, &isMcastInput);
 
-        set_sigactions();   // to ensure product-queue is closed cleanly
-        status = lpqGet(prodQueuePath, &prodQueue);
+    if (fd == -1) {
+        log_add("Couldn't open input");
+        status = 1;
+    }
+    else {
+        fifo = fifo_new(fd, npages);
 
-        if (3 == status) {
-            status = USAGE_ERROR;
+        if (fifo == NULL) {
+            log_add("Couldn't create FIFO");
+            status = 2;
         }
-        else if (0 == status) {
-            status = runOuter(fifo, prodQueue, mcastSpec, interface);
-            (void)lpqClose(prodQueue);
-        }                       /* "prodQueue" open */
+        else {
+            set_sigactions();   // Ensures product-queue is closed cleanly
 
-        fifo_free(fifo);
-    }                           /* "fifo" created */
+            LdmProductQueue* prodQueue = NULL;
+
+            status = lpqGet(prodQueuePath, &prodQueue);
+
+            if (status) {
+                log_add("Couldn't open product-queue");
+                status = 3;
+            }
+            else {
+                status = execute2(isMcastInput, mcastSpec, prodQueue);
+
+                (void)lpqClose(prodQueue);
+            } // `prodQueue` open */
+
+            fifo_free(fifo);
+            fifo = NULL;
+        } // `fifo` created
+
+        (void)close(fd);
+        fd = -1;
+    } // `fd` open
 
     return status;
 }
@@ -1246,9 +1287,9 @@ int main(
 
     size_t            npages = 5000;
     char*             prodQueuePath = NULL;
-    char*             mcastSpec = NULL;
-    char*             interface = NULL;
-    const char* const COPYRIGHT_NOTICE = "Copyright (C) 2014 University "
+    char*             mcastSpec = NULL; // Read from standard input stream
+    char*             interface = NULL; // Listen on all interfaces
+    const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 University "
             "Corporation for Atmospheric Research";
     int status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
             &mcastSpec, &interface);
@@ -1258,16 +1299,19 @@ int main(
         usage(progname, npages, COPYRIGHT_NOTICE);
     }
     else {
-        log_notice_q("Starting Up %s", PACKAGE_VERSION);
-        log_notice_q("%s", COPYRIGHT_NOTICE);
+        log_notice("Starting up %s", PACKAGE_VERSION);
+        log_notice("%s", COPYRIGHT_NOTICE);
 
         tryLockingProcessInMemory(); // because NOAAPORT is realtime
-        status = execute(npages, prodQueuePath, mcastSpec, interface);
 
-        if (status)
-            log_error_q("Couldn't ingest NOAAPort data");
+        status = execute(mcastSpec, interface, npages, prodQueuePath);
+
+        if (status) {
+            log_add("Couldn't ingest NOAAPort data");
+            log_flush_error();
+        }
     }                               /* command line decoded */
 
     log_fini();
-    return status;
+    return status ? 1 : 0;
 }
