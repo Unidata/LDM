@@ -1,3 +1,16 @@
+6.13.7.105	2019-01-10T11:01:52-0700
+    Build:
+        Downgrade standard-compliance from _XOPEN_SOURCE=700 to 600 to
+        accomodate Solaris and eliminate reliance on non-standard GNU C
+        functions
+
+    noaaportIngester(1):
+        - Improve FIFO:
+            - Construct with file descriptor and no buffer
+            - Use shutdown() and close() to improve fifo_close()
+        - Incorporate fileReader and multicastReader into noaaportIngester.c
+        - Eliminate file descriptor from input-reader
+
 6.13.7.104	2019-01-07T13:24:06-0700
     Build:
         Make building --without-multicast work
