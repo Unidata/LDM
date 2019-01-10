@@ -22,26 +22,27 @@ struct reader {
     unsigned long         byteCount;
     /// Maximum amount to read in a single call in bytes
     size_t                maxSize;
-    /// File-descriptor to read from
-    int                   fd;
 };
 
 /**
  * Initializes a new reader.
  *
- * @param[in] reader   The reader to be initialized.
- * @param[in] fd       File-descriptor to read from.
- * @param[in] fifo     Pointer to FIFO into which to put data.
- * @param[in] maxSize  Maximum amount to read in a single call in bytes.
- * @retval    0        Success. `*reader` is set.
+ * @param[in] reader   The reader to be initialized
+ * @param[in] fifo     Pointer to FIFO that will read input
+ * @param[in] maxSize  Maximum amount to read in a single call in bytes
+ * @retval    0        Success
  * @retval    2        O/S failure. `log_add()` called.
  */
-static int reader_init(
+static int
+reader_init(
         Reader* const restrict reader,
-        const int              fd,
         Fifo* const restrict   fifo,
         const size_t           maxSize)
 {
+    log_assert(reader);
+    log_assert(fifo);
+    log_assert(maxSize > 0);
+
     pthread_mutexattr_t attr;
     int                 status = pthread_mutexattr_init(&attr);
 
@@ -64,7 +65,6 @@ static int reader_init(
         else {
             reader->byteCount = 0;
             reader->fifo = fifo;
-            reader->fd = fd;
             reader->maxSize = maxSize;
         }
 
@@ -84,41 +84,33 @@ static int reader_init(
  *
  * This function is thread-safe.
  *
- * @param[in]  fd       File-descriptor to read from. Will be closed by
- *                      `readerFree()`.
- * @param[in]  fifo     Pointer to FIFO into which to put data.
+ * @param[in]  fifo     Pointer to FIFO that will read input
  * @param[in]  maxSize  Maximum amount to read in a single call in bytes.
- * @param[out] reader   Returned reader.
- * @retval     0        Success. `*reader` is set.
- * @retval     1        Precondition failure. `log_add()` called.
- * @retval     2        O/S failure. `log_add()` called.
+ * @retval     NULL     Failure. `log_add()` called.
+ * @return              Reader
  */
-int readerNew(
-    const int           fd,
+Reader*
+readerNew(
     Fifo* const         fifo,
-    const size_t        maxSize,
-    Reader** const      reader)
+    const size_t        maxSize)
 {
-    int       status;
-    Reader*   r = (Reader*)malloc(sizeof(Reader));
+    log_assert(fifo);
+    log_assert(maxSize > 0);
 
-    if (NULL == r) {
-        log_syserr_q("Couldn't allocate new reader");
-        status = 2;
-    }
-    else {
-        status = reader_init(r, fd, fifo, maxSize);
+    int       status;
+    Reader*   reader = log_malloc(sizeof(Reader), "input reader");
+
+    if (reader) {
+        status = reader_init(reader, fifo, maxSize);
 
         if (status) {
             log_add("Couldn't initialize reader");
-            free(r);
+            free(reader);
+            reader = NULL;
         }
-        else {
-            *reader = r;
-        }
-    } // `r` allocated
+    } // `reader` allocated
 
-    return status;
+    return reader;
 }
 
 /**
@@ -131,7 +123,6 @@ void readerFree(
     Reader* const   reader)
 {
     if (reader) {
-        (void)close(reader->fd);
         (void)pthread_mutex_destroy(&reader->mutex);
         free(reader);
     }
@@ -159,8 +150,7 @@ readerStart(
     for (;;) {
         size_t nbytes;
 
-        status = fifo_readFd(reader->fifo, reader->fd, reader->maxSize,
-                &nbytes);
+        status = fifo_readFd(reader->fifo, reader->maxSize, &nbytes);
 
         if (status) {
             if (3 == status) {
@@ -181,7 +171,7 @@ readerStart(
         }
 
         (void)pthread_mutex_lock(&reader->mutex);
-        reader->byteCount += nbytes;
+            reader->byteCount += nbytes;
         (void)pthread_mutex_unlock(&reader->mutex);
     }                       /* I/O loop */
 
