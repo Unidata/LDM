@@ -106,7 +106,7 @@ static int insert_prod_reserve_no_sig(
         pqueue* const restrict  pq,
         product* const restrict prod)
 {
-    char*     space;
+    void*     space;
     pqe_index pqe_index;
     size_t    extent = xlen_product(prod);
     int       status = pqe_newDirect(pq, extent, NULL, &space, &pqe_index);

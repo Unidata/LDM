@@ -9,10 +9,11 @@
  *  Created on: Oct 9, 2018
  *      Author: Steven R. Emmerson
  */
+#include "InetId.h"
+
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <sys/socket.h>
-#include "InetId.h"
 
 #ifndef MISC_INETSOCKADDR_H_
 #define MISC_INETSOCKADDR_H_

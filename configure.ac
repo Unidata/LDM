@@ -576,7 +576,6 @@ AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
 AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
 strdup seteuid setenv mmap sigaction])
-AC_CHECK_FUNCS([getline])
 UD_SIG_ATOMIC_T
 AC_C_CONST
 AC_STRUCT_ST_BLKSIZE

@@ -9,7 +9,7 @@
 
 bin_PROGRAMS		= ulogger
 dist_bin_SCRIPTS	= newlog
-CPPFLAGS		= -I$(top_srcdir)/log
+AM_CPPFLAGS		= -I$(top_srcdir)/log
 LDADD			= $(top_builddir)/lib/libldm.la
 TAGS_FILES              = ulogger.c ../log/log.c ../log/log.h \
                           ../log/log_private.h ../log/mutex.h

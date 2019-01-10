@@ -1,21 +1,19 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Notifies the receiving application about FMTP events on a per-product basis.
+ *
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
- * @file PerProdNotifier.cpp
- *
- * This file defines a class that notifies the receiving application about
- * events on a per-product basis.
+ * @file ProdNotifier.cpp
  *
  * @author: Steven R. Emmerson
  */
 
-#include <MldmRcvr.h>
 #include "config.h"
 
+#include "MldmRcvr.h"
 #include "ProdNotifier.h"
-
 #include "fmtp.h"
 #include "ldmprint.h"
 #include "log.h"

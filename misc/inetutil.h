@@ -1,15 +1,13 @@
 /**
  * This file declares functions to make dealing with Internet addresses easier.
  *
- * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  */
 
 #ifndef _INETUTIL_H_
 #define _INETUTIL_H_
-
-#include "config.h"
 
 #include "error.h"
 #include "ldm.h"

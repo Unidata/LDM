@@ -8927,7 +8927,7 @@ unwind_lock:
  */
 int
 pqe_newDirect(
-    pqueue* const restrict pq,
+    pqueue* const restrict    pq,
     const size_t              size,
     const signaturet          signature,
     void** const restrict     ptrp,

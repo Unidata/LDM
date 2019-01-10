@@ -9,8 +9,6 @@
  *  Created on: Oct 6, 2018
  *      Author: Steven R. Emmerson
  */
-#include "config.h"
-
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <sys/socket.h>

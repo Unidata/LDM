@@ -15,7 +15,7 @@ SU			= @SU@
 
 CLEANFILES		= $(BUILT_SOURCES)
 
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
 	-DLDM_SUPPORT \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/noaaport \
@@ -25,8 +25,7 @@ CPPFLAGS		= \
 	-I$(top_srcdir)/ulog \
 	-I$(top_srcdir)/log \
 	-I$(top_srcdir)/misc \
-	-I$(top_srcdir)/registry \
-	@CPPFLAGS@
+	-I$(top_srcdir)/registry
 
 bin_PROGRAMS		= fileIngester
 
