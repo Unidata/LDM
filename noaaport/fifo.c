@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
 
@@ -31,62 +32,84 @@ struct fifo {
     size_t                fullCount;
     pthread_mutex_t       mutex;        ///< Mutual exclusion object
     pthread_cond_t        cond;         ///< Condition variable
+    int                   fd;           ///< Input file descriptor
     volatile sig_atomic_t isClosed;     ///< FIFO is closed?
 };
 
 /**
  * Initializes a FIFO
  *
- * @retval 0    Success
- * @retval 1    Usage error. `log_add()` called.
- * @retval 2    O/S failure. `log_add()` called.
+ * @param[out] fifo     FIFO to be initialized
+ * @param[in]  fd       Input file descriptor
+ * @param[in]  npages   FIFO size in pages
+ * @retval     `true`   Success
+ * @retval     `false`  Failure. `log_add()` called.
  */
-static int
+static bool
 fifo_init(
-    Fifo* const             fifo,   /**< [in/out] Pointer to the FIFO */
-    unsigned char* const    buf,    /**< [in] The buffer */
-    const size_t            size)   /**< [in] Size of the buffer in bytes */
+        Fifo* const  fifo,
+        const int    fd,
+        const size_t npages)
 {
-    int                 status;
-    pthread_mutexattr_t mutexAttr;
+    log_assert(fifo);
+    log_assert(fd >= 0);
+    log_assert(npages);
 
-    if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
-        log_errno_q(status, "Couldn't initialize mutex attributes");
-        status = 2;
+    int                  status;
+    const long           pagesize = sysconf(_SC_PAGESIZE);
+    const size_t         size = npages*pagesize;
+    unsigned char* const buf = log_malloc(size, "FIFO buffer");
+
+    if (buf == NULL) {
+        status = 1;
     }
     else {
-        // At most one lock per thread.
-        (void)pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_ERRORCHECK);
-        // Prevent priority inversion
-        (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
+        pthread_mutexattr_t mutexAttr;
 
-        if ((status = pthread_mutex_init(&fifo->mutex, &mutexAttr)) != 0) {
-            log_errno_q(status, "Couldn't initialize mutex");
-            status = 2;
+        if ((status = pthread_mutexattr_init(&mutexAttr)) != 0) {
+            log_add_errno(status, "Couldn't initialize mutex attributes");
         }
         else {
-            if ((status = pthread_cond_init(&fifo->cond, NULL)) != 0) {
-                log_errno_q(status, "Couldn't initialize condition variable");
-                status = 2;
+            (void)pthread_mutexattr_settype(&mutexAttr,
+                    PTHREAD_MUTEX_ERRORCHECK);
+            (void)pthread_mutexattr_setprotocol(&mutexAttr,
+                    PTHREAD_PRIO_INHERIT);
+
+            status = pthread_mutex_init(&fifo->mutex, &mutexAttr);
+
+            if (status) {
+                log_add_errno(status, "Couldn't initialize mutex");
             }
             else {
-                fifo->buf = buf;
-                fifo->nextWrite = 0;
-                fifo->nbytes = 0;  // indicates startup
-                fifo->size = size;
-                fifo->isClosed = false;
-                fifo->fullCount = 0;
-                status = 0; // success
-            } // `fifo->cond` initialized
+                status = pthread_cond_init(&fifo->cond, NULL);
 
-            if (status)
-                (void)pthread_mutex_destroy(&fifo->mutex);
-        }                       /* "fifo->mutex" initialized */
+                if (status) {
+                    log_add_errno(status,
+                            "Couldn't initialize condition variable");
+                }
+                else {
+                    fifo->fd = fd;
+                    fifo->buf = buf;
+                    fifo->nextWrite = 0;
+                    fifo->nbytes = 0;  // indicates startup
+                    fifo->size = size;
+                    fifo->isClosed = false;
+                    fifo->fullCount = 0;
+                    status = 0; // success
+                } // `fifo->cond` initialized
 
-        (void)pthread_mutexattr_destroy(&mutexAttr);
-    }                                   /* "mutexAttr" initialized */
+                if (status)
+                    (void)pthread_mutex_destroy(&fifo->mutex);
+            } // "fifo->mutex" initialized
 
-    return status;
+            (void)pthread_mutexattr_destroy(&mutexAttr);
+        } // "mutexAttr" initialized
+
+        if (status)
+            free(buf);
+    } // `buf` allocated
+
+    return status == 0;
 }
 
 /**
@@ -281,12 +304,11 @@ fifo_isInvalidSize(
 }
 
 /**
- * Transfers bytes from a file descriptor to a FIFO.
+ * Reads bytes from a FIFO's file descriptor into the FIFO.
  *
  * @pre                  FIFO is locked and not closed
  * @pre                  `availableForWriting(fifo) >= maxBytes`
  * @param[in]  fifo      FIFO.
- * @param[in]  fd        File descriptor.
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
  * @retval     0         Success.
@@ -296,7 +318,6 @@ fifo_isInvalidSize(
 static inline int // `inline` because only called in one place
 fifo_transferFromFd(
         Fifo* const restrict   fifo,
-        const int              fd,
         const size_t           maxBytes,
         size_t* const restrict nbytes)
 {
@@ -309,7 +330,7 @@ fifo_transferFromFd(
     fifo_unlock(fifo);  // allow concurrent reading from FIFO
 
     if (maxBytes <= extent) {
-        nb = read(fd, ptr, maxBytes);
+        nb = read(fifo->fd, ptr, maxBytes);
     }
     else {
         struct iovec iov[2];
@@ -319,19 +340,27 @@ fifo_transferFromFd(
         iov[1].iov_base = buf;
         iov[1].iov_len = maxBytes - extent;
 
-        nb = readv(fd, iov, 2);
+        nb = readv(fifo->fd, iov, 2);
     }
 
     if (-1 == nb) {
-        log_syserr_q("Couldn't read up to %lu bytes from file descriptor %d",
-                (unsigned long)maxBytes, (unsigned long)fd);
-        status = 2;
-        fifo_lock(fifo); // was locked => deadlock not possible
+        if (fifo->isClosed) {
+            log_info("FIFO is closed");
+            *nbytes = 0;
+            status = 0;
+        }
+        else {
+            log_syserr("Couldn't read up to %lu bytes from file descriptor %d",
+                    (unsigned long)maxBytes, fifo->fd);
+            status = 2;
+        }
+
+        fifo_lock(fifo); // was unlocked => deadlock not possible
     }
     else {
         *nbytes = nb;
         status = 0;
-        fifo_lock(fifo); // was locked => deadlock not possible
+        fifo_lock(fifo); // was unlocked => deadlock not possible
         fifo->nbytes += nb;
         fifo->nextWrite = (fifo->nextWrite + nb) % fifo->size;
     }
@@ -381,48 +410,31 @@ fifo_removeBytes(
 /**
  * Returns a FIFO.
  *
- * This function is thread-safe.
- *
- * @retval 0    Success.
- * @retval 1    Usage error. \c log_add() called.
- * @retval 2    O/S failure. \c log_add() called.
+ * @param[in] fd      Input file descriptor
+ * @param[in] npages  FIFO size in pages
+ * @retval    NULL    Failure. `log_add()` called.
+ * @return            FIFO queue
+ * @threadsafety      Safe
  */
-int
+Fifo*
 fifo_new(
-    const size_t        npages,         /**< [in] FIFO size in pages */
-    Fifo** const        fifo)           /**< [out] Pointer to pointer to be set
-                                         *   to address of FIFO */
+        const int    fd,
+        const size_t npages)
 {
-    int   status;
-    Fifo* f = (Fifo*)malloc(sizeof(Fifo));
+    log_assert(fd >= 0);
+    log_assert(npages > 0);
 
-    if (NULL == f) {
-        log_syserr_q("Couldn't allocate FIFO object");
-        status = 2;
-    }
-    else {
-        const long              pagesize = sysconf(_SC_PAGESIZE);
-        const size_t            size = npages*pagesize;
-        unsigned char* const    buf = (unsigned char*)malloc(size);
+    Fifo* fifo = log_malloc(sizeof(Fifo), "FIFO");
 
-        if (NULL == buf) {
-            log_syserr_q("Couldn't allocate %lu bytes for FIFO buffer",
-                    (unsigned long)size);
-            status = 2;
+    if (fifo) {
+        if (!fifo_init(fifo, fd, npages)) {
+            log_add("Couldn't initialize FIFO");
+            free(fifo);
+            fifo = NULL;
         }
-        else {
-            if ((status = fifo_init(f, buf, size)) == 0)
-                *fifo = f;
+    } // `fifo` allocated
 
-            if (status)
-                free(buf);
-        }                               /* "buf" allocated */
-
-        if (status)
-            free(f);
-    }                                   /* "f" allocated */
-
-    return status;
+    return fifo;
 }
 
 /**
@@ -441,12 +453,11 @@ fifo_free(
 }
 
 /**
- * Transfers bytes from a file descriptor to a FIFO. Blocks until space is
- * available. This function is thread-safe with respect to `fifo_getBytes()` and
- * should continue to be called after `fifo_close()` has been called.
+ * Reads bytes from a FIFO's file descriptor into the FIFO. Blocks until space
+ * is available. This function is thread-safe with respect to `fifo_getBytes()`
+ * and should continue to be called after `fifo_close()` has been called.
  *
  * @param[in]  fifo      FIFO.
- * @param[in]  fd        File descriptor from which to obtain bytes.
  * @param[in]  maxBytes  Maximum number of bytes to transfer.
  * @param[out] nbytes    Actual number of bytes transferred.
  * @retval     0         Success. `*nbytes` is set.
@@ -461,7 +472,6 @@ fifo_free(
 int
 fifo_readFd(
         Fifo* const restrict   fifo,
-        const int              fd,
         const size_t           maxBytes,
         size_t* const restrict nbytes)
 {
@@ -479,7 +489,7 @@ fifo_readFd(
                 status = 3;
             }
             else {
-                status = fifo_transferFromFd(fifo, fd, maxBytes, nbytes);
+                status = fifo_transferFromFd(fifo, maxBytes, nbytes);
 
                 if (status || *nbytes == 0)
                     fifo->isClosed = 1;
@@ -577,4 +587,6 @@ fifo_close(
     Fifo* const fifo)
 {
     fifo->isClosed = true;
+    (void)shutdown(fifo->fd, SHUT_RDWR);
+    (void)close(fifo->fd);
 }
