@@ -61,12 +61,11 @@ lib_la_SOURCES	= \
         Executor.c Executor.h \
         Completer.c Completer.h
 AM_CPPFLAGS	= \
+    -I$(top_builddir) -I$(top_srcdir) \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/log \
-    -I$(top_srcdir)/rpc \
-    -I$(top_srcdir) \
     -I$(top_srcdir)/mcast_lib/ldm7
 TAGS_FILES	= \
     ../protocol/*.c ../protocol/*.h \

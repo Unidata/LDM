@@ -38,6 +38,14 @@ AC_ARG_ENABLE([debug],
         AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
     ])
 
+# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
+if test "$GCC" = "yes"; then
+#    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
+#    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
+##    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # doesn't work
+     CPPFLAGS="$CPPFLAGS${CPPFLAGS+ }-std=c99"
+fi
 ccList='c99 gcc'
 test `uname` = Darwin && ccList=gcc
 AC_PROG_CC([$ccList])
@@ -45,14 +53,8 @@ AC_PROG_CC_C99
 if test "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])
 fi
-AC_USE_SYSTEM_EXTENSIONS
-# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
-#if test "$GCC" = "yes"; then
-#    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
-#    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
-##    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # doesn't work
-#fi
+# The following always defines _GNU_SOURCE which conflicts with _XOPEN_SOURCE=600
+#AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CXX
 

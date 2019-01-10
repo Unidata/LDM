@@ -14,6 +14,7 @@
 #include "log.h"
 
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdlib.h>
 #include <unistd.h>
 

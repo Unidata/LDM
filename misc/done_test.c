@@ -15,6 +15,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include <libgen.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>

@@ -16,8 +16,9 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include <stdbool.h>
+#include <libgen.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 /**
  * Only called once.

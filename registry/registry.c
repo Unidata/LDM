@@ -1,32 +1,34 @@
 /*
- *   See file ../COPYRIGHT for copying and redistribution conditions.
+ * This file implements the API for the registry.  It hides the decision on how
+ * to implement the persistent store. The functions in this file are
+ * thread-compatible but not thread-safe.
  *
- *   This file implements the API for the registry.
- *
- *   This module hides the decision on how to implement the persistent store.
- *
- *   The functions in this file are thread-compatible but not thread-safe.
+ * Copyright 2019, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 #include <config.h>
 
 #undef NDEBUG
+
+#include "backend.h"
+#include "globals.h"
+#include "ldmprint.h"
+#include "log.h"
+#include "misc.h"
+#include "node.h"
+#include "registry.h"
+#include "stringBuf.h"
+#include "timestamp.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <search.h>
-
-#include "backend.h"
-#include "globals.h"
-#include <ldmprint.h>
-#include <log.h>
-#include "misc.h"
-#include "node.h"
-#include "registry.h"
-#include "stringBuf.h"
-#include <timestamp.h>
 
 #define NOT_SYNCHED     0
 #define SYNCHED         1

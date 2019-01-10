@@ -341,13 +341,6 @@ static void set_sigactions(
     (void) sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;
 
-    if (log_is_enabled_debug) {
-        // Unless otherwise configured, catch all signals
-        sigact.sa_handler = signal_handler;
-        for (int i = 1; i < _NSIG; ++i)
-            (void)sigaction(i, &sigact, NULL);
-    }
-
     // Ignore these
     sigact.sa_handler = SIG_IGN;
     (void)sigaction(SIGPIPE, &sigact, NULL);

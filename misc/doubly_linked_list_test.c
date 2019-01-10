@@ -14,6 +14,8 @@
 #include "doubly_linked_list.h"
 #include "log.h"
 
+#include <libgen.h>
+
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 

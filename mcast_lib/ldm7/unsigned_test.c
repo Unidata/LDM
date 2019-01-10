@@ -14,6 +14,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 

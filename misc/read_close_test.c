@@ -6,14 +6,12 @@
  * This file tests whether closing a socket causes a read() on the socket to
  * return.
  *
- * It does.
+ * FINDING: close() doesn't but shutdown() does
  *
  * @author: Steven R. Emmerson
  */
 
 #include "config.h"
-
-#include "log.h"
 
 #include <arpa/inet.h>
 #include <CUnit/CUnit.h>
@@ -26,6 +24,7 @@
 
 static struct sockaddr_in srvrAddr;    ///< Server socket address
 static int                srvrSd = -1; ///< Server socket descriptor
+static int                connSd;      ///< Server-side connection socket
 static int                clntSd = -1; ///< Client socket descriptor
 
 static int getSocket()
@@ -42,8 +41,14 @@ static int srvr_init()
 
         status = bind(srvrSd, (struct sockaddr*)&srvrAddr, sizeof(srvrAddr));
 
-        if (status == 0)
-            status = listen(srvrSd, 1);
+        if (status == 0) {
+            socklen_t socklen = sizeof(srvrAddr);
+
+            status = getsockname(srvrSd, &srvrAddr, &socklen);
+
+            if (status == 0)
+                status = listen(srvrSd, 1);
+        }
 
         if (status) {
             (void)close(srvrSd);
@@ -65,11 +70,7 @@ static int clnt_init()
 
     if (status != -1) {
         clntSd = status;
-
-        if (status) {
-            (void)close(clntSd);
-            clntSd = -1;
-        }
+        status = 0;
     } // Client socket created
 
     return status;
@@ -117,14 +118,24 @@ static void* srvr_run(void* const arg)
     struct sockaddr clntAddr;
 
     socklen_t addrLen = sizeof(clntAddr);
-    int sd = accept(srvrSd, &clntAddr, &addrLen);
-    CU_ASSERT_NOT_EQUAL(sd, -1);
+    connSd = accept(srvrSd, &clntAddr, &addrLen);
+    CU_ASSERT_NOT_EQUAL(connSd, -1);
 
     char buf[1];
-    int  nbytes = read(sd, buf, sizeof(buf));
-    CU_ASSERT_EQUAL(nbytes, -1);
+    int  nbytes = read(connSd, buf, sizeof(buf));
+    CU_ASSERT_EQUAL(nbytes, 1);
+
+    nbytes = read(connSd, buf, sizeof(buf));
+    CU_ASSERT_EQUAL(nbytes, 0);
+
+    (void)close(connSd);
 
     return NULL;
+}
+
+static int srvr_halt(void)
+{
+    return shutdown(connSd, SHUT_RDWR);
 }
 
 static void* clnt_run(void* const arg)
@@ -132,16 +143,19 @@ static void* clnt_run(void* const arg)
     int status = connect(clntSd, (struct sockaddr*)&srvrAddr, sizeof(srvrAddr));
     CU_ASSERT_EQUAL(status, 0);
 
-    char buf[1];
-    int  nbytes = read(clntSd, buf, sizeof(buf));
-    CU_ASSERT_EQUAL(nbytes, -1);
+    char buf[] = {0};
+    int  nbytes = write(clntSd, buf, sizeof(buf));
+    CU_ASSERT_EQUAL(nbytes, 1);
+
+    nbytes = read(clntSd, buf, sizeof(buf));
+    CU_ASSERT_EQUAL(nbytes, 0);
 
     return NULL;
 }
 
 static int clnt_halt(void)
 {
-    return close(clntSd);
+    return shutdown(clntSd, SHUT_RDWR);
 }
 
 static void test_read_close(void)
@@ -163,15 +177,18 @@ static void test_read_close(void)
     status = pthread_join(clntThread, NULL);
     CU_ASSERT_EQUAL(status, 0);
 
+    status = srvr_halt();
+    CU_ASSERT_TRUE(status == -1 || status == 0);
+
     status = pthread_join(srvrThread, NULL);
     CU_ASSERT_EQUAL(status, 0);
 }
 
 int main(
-        const int argc,
-        const char* const * argv)
+        const int          argc,
+        const char* const* argv)
 {
-    int exitCode = 1;
+    int         exitCode = 1;
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
@@ -180,11 +197,11 @@ int main(
             if (CU_ADD_TEST(testSuite, test_read_close)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
-                (void) CU_basic_run_tests();
+                if (CU_basic_run_tests() == 0)
+                    exitCode = CU_get_number_of_tests_failed();
             }
         }
 
-        exitCode = CU_get_number_of_tests_failed();
         CU_cleanup_registry();
     }
 

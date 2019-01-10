@@ -15,6 +15,7 @@
 #include "log.h"
 #include "ldmprint.h"
 
+#include <libgen.h>
 #include <stddef.h>
 
 #include <CUnit/CUnit.h>

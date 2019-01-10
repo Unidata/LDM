@@ -15,7 +15,7 @@ EXTRA_DIST		= ldmd.1.in \
 PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS	= ldmd
 ldmd_SOURCES	= ldmd.c
-CPPFLAGS		= \
+AM_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \

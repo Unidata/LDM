@@ -19,13 +19,11 @@ EXTRA_DIST              = \
 	Doxyfile \
 	extractDecls \
 	fifo.hin \
-	fileReader.hin \
 	getFacilityName.hin \
 	html \
 	ldmProductQueue.hin \
         mainpage.h \
         mrms1.data \
-        multicastReader.hin \
         readnoaaport.slog \
         readnoaaport.ulog \
         noaaportIngester.slog \
@@ -40,10 +38,8 @@ EXTRA_DIST              = \
 
 BUILT_SOURCES		= \
 	fifo.h \
-	fileReader.h \
 	getFacilityName.h \
 	ldmProductQueue.h \
-	multicastReader.h \
 	productMaker.h \
 	reader.h \
 	shmfifo.h
@@ -116,11 +112,9 @@ readnoaaport_SOURCES	= readnoaaport.c $(SHMFIFO_SOURCES) $(COMMON_SOURCES)
 
 noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	fifo.c fifo.h \
-	fileReader.c fileReader.h \
 	getFacilityName.c getFacilityName.h \
 	goes.h \
 	lockProcessInMemory.c \
-	multicastReader.c multicastReader.h \
 	noaaport_socket.c noaaport_socket.h \
 	productMaker.c productMaker.h \
 	reader.c reader.h
@@ -157,11 +151,9 @@ shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
 ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
 fifo.h:			fifo.c fifo.hin extractDecls
 reader.h:		reader.c reader.hin extractDecls
-fileReader.h:		fileReader.c fileReader.hin extractDecls
 getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
 Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin extractDecls
 ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
-multicastReader.h:	multicastReader.c multicastReader.hin extractDecls
 productMaker.h:		productMaker.c productMaker.hin extractDecls
 
 .c.i:

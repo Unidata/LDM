@@ -43,31 +43,37 @@ isa_newFromId(
 
         if (isa) {
             int         status;
-            const char* fmt = (inetSockId[0] == '[')
-                    ? "[%m[^\]]]:%" SCNu16
-                    : "%m[^:]:%" SCNu16;
-            char*       addrId;
+            char*       addrId = log_malloc(strlen(inetSockId) + 1,
+                    "Internet address"); // Because `_XOPEN_SOURCE < 700`
 
-            int numAssigned = sscanf(inetSockId, fmt, &addrId, &port);
-
-            if (numAssigned <= 0) {
-                log_add("Can't decode \"%s\"", inetSockId);
-                status = EINVAL;
+            if (addrId == NULL) {
+                status = ENOMEM;
             }
             else {
-                isa->port = port;
-                isa->inetId = inetId_newFromStr(addrId);
+                const char* fmt = (inetSockId[0] == '[')
+                        ? "[%[^]]]:%" SCNu16
+                        : "%[^:]:%" SCNu16;
 
-                if (isa->inetId == NULL) {
-                    log_add("inetId_newFromId() failure");
-                    status = -1;
+                if (sscanf(inetSockId, fmt, addrId, &port) <= 0) {
+                    log_add("Can't decode \"%s\"", inetSockId);
+                    status = EINVAL;
                 }
                 else {
-                    status = 0;
-                }
+                    isa->port = port;
+                    isa->inetId = inetId_newFromStr(addrId);
 
-                free(addrId);
-            } // Address ID allocated
+                    if (isa->inetId == NULL) {
+                        log_add("inetId_newFromId() failure");
+                        status = -1;
+                    }
+                    else {
+                        status = 0;
+                    }
+                } // Decoding successful
+
+                if (status)
+                    free(addrId);
+            } // `addrId` allocated
 
             if (status) {
                 free(isa);
@@ -348,30 +354,34 @@ isa_initFromId(
         status = EINVAL;
     }
     else {
-        const char* fmt = (id[0] == '[')
-                ? "[%m[^\]]]:%u"
-                : "%m[^:]:%u";
-        char*       inetId;
+        // Because `_XOPEN_SOURCE < 700`
+        char* inetId = log_malloc(strlen(id) + 1, "Internet address");
 
-        int numAssigned = sscanf(id, fmt, &inetId, &port);
-
-        if (numAssigned <= 0) {
-            log_add("Can't decode \"%s\"", id);
-            status = EINVAL;
+        if (inetId == NULL) {
+            status = ENOMEM;
         }
         else {
-            status = 0;
+            // Because `_XOPEN_SOURCE < 700`
+            const char* fmt = (id[0] == '[')
+                    ? "[%[^]]]:%u"
+                    : "%[^:]:%u";
 
-            if (numAssigned == 2 && port > UINT16_MAX) {
+            int numAssigned = sscanf(id, fmt, inetId, &port);
+
+            if (numAssigned <= 0) {
+                log_add("Can't decode \"%s\"", id);
+                status = EINVAL;
+            }
+            else if (numAssigned == 2 && port > UINT16_MAX) {
                 log_add("Invalid port number: %u", port);
                 status = EINVAL;
             }
-
-            if (status == 0) {
+            else {
                 status = isa_initFromInetId(sockAddr, inetId, family, forBind);
 
                 if (status) {
-                    log_add("Couldn't initialize sockaddr from \"%s\"", inetId);
+                    log_add("Couldn't initialize socket address from \"%s\"",
+                            inetId);
                 }
                 else {
                     if (sockAddr->sa_family == AF_INET) {
@@ -380,11 +390,11 @@ isa_initFromId(
                     else {
                         ((struct sockaddr_in6*)sockAddr)->sin6_port = port;
                     }
-                }
-            }
+                } // `sockAddr` initialized
+            } // Decoding successful and valid port number
 
             free(inetId);
-        } // Internet ID allocated
+        } // `inetId` allocated
     } // Valid arguments
 
     return status;
@@ -393,21 +403,28 @@ isa_initFromId(
 char*
 isa_getIpAddrId(const char* const sockAddrId)
 {
-    char* ipAddrId = NULL;
+    char* ipAddrId;
 
     if (sockAddrId == NULL) {
         log_add("NULL argument");
+        ipAddrId = NULL;
     }
     else {
-        const char* const fmt = (sockAddrId[0] == '[')
-                ? "[%m[^\]]]"
-                : "%m[^:]";
+        // Because `_XOPEN_SOURCE < 700`
+        ipAddrId = log_malloc(strlen(sockAddrId) + 1, "Internet address");
 
-        int numAssigned = sscanf(sockAddrId, fmt, &ipAddrId);
+        if (ipAddrId) {
+            const char* const fmt = (sockAddrId[0] == '[')
+                    ? "[%[^]]]"
+                    : "%[^:]";
 
-        if (numAssigned < 1)
-            log_add("Invalid socket address ID: \"%s\"", sockAddrId);
-    }
+            if (sscanf(sockAddrId, fmt, ipAddrId) < 1) {
+                log_add("Invalid socket address: \"%s\"", sockAddrId);
+                free(ipAddrId);
+                ipAddrId = NULL;
+            }
+        } // `ipAddrId` allocated
+    } // Valid argument
 
     return ipAddrId;
 }

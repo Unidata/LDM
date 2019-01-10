@@ -15,6 +15,7 @@
 #include "executor.h"
 
 #include <errno.h>
+#include <libgen.h>
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>

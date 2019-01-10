@@ -15,6 +15,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include <errno.h>
+#include <libgen.h>
 #include <string.h>
 #include <unistd.h>
 

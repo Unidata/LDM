@@ -1,0 +1,25 @@
+{
+   CU_add_test
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:CU_add_test
+   ...
+}
+{
+   CU_add_suite
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:CU_add_suite
+   ...
+}
+{
+   CU_create_new_registry
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:CU_create_new_registry
+   fun:CU_initialize_registry
+   ...
+}

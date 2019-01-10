@@ -14,6 +14,7 @@
 #include "log.h"
 
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
@@ -586,6 +587,7 @@ static void test_fork(void)
     if (pid == 0) {
         // Child
         logMessages();
+        log_fini();
         exit(0);
     }
     else {
@@ -815,11 +817,11 @@ int main(
                     && CU_ADD_TEST(testSuite, test_performance)
                     */) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
-                (void) CU_basic_run_tests();
+                if (CU_basic_run_tests() == 0)
+                    exitCode = CU_get_number_of_tests_failed();
             }
         }
 
-        exitCode = CU_get_number_of_tests_failed();
         CU_cleanup_registry();
     }
 

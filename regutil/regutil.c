@@ -1,25 +1,27 @@
 /**
  * Accesses the LDM registry.
  *
- * Copyright 2018, University Corporation for Atmospheric Research
+ * Copyright 2019, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  */
 #include <config.h>
 
 #undef NDEBUG
+
+#include "globals.h"
+#include "ldmprint.h"
+#include "log.h"
+#include "registry.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
-
-#include "globals.h"
-#include "registry.h"
-#include "log.h"
-#include "ldmprint.h"
 
 typedef enum {
     COMMAND_SYNTAX = 1,

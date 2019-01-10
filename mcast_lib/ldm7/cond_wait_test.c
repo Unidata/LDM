@@ -73,7 +73,7 @@ static void sigHandler(
 
 static void test_cond_wait(void)
 {
-    sighandler_t prevHandler = signal(SIGINT, sigHandler);
+    void (*prevHandler)(int) = signal(SIGINT, sigHandler);
     CU_ASSERT_NOT_EQUAL_FATAL(prevHandler, SIG_ERR);
 
     int status = pthread_mutex_lock(&mutex);

@@ -1,13 +1,16 @@
-/*
- *   Copyright 2016, University Corporation for Atmospheric Research
- *   See file ../COPYRIGHT for copying and redistribution conditions.
- */
-
-/* 
- * Miscellaneous functions to make dealing with Internet addresses easier.
+/**
+ * Miscellaneous functions dealing with Internet addresses.
+ *
+ * Copyright 2019, University Corporation for Atmospheric Research
+ * All rights reserved. See file COPYRIGHT in the top-level source-directory for
+ * copying and redistribution conditions.
  */
 
 #include <config.h>
+
+#ifndef _BSD_SOURCE
+    #define _BSD_SOURCE  // To get `struct ip_mreq` on GNU/Linux. Don't move!
+#endif
 
 #include "error.h"
 #include "inetutil.h"
@@ -15,7 +18,7 @@
 #include "log.h"
 #include "registry.h"
 #include "timestamp.h"
-#include "xdr.h"
+#include "rpc/xdr.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -28,9 +31,6 @@
  * On FreeBSD 4.10-RELEASE-p2 the following order is necessary.
  */
 #include <sys/types.h>
-#ifndef __USE_MISC
-    #define __USE_MISC  // To get `struct ip_mreq` on Linux. Don't move!
-#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -98,7 +98,8 @@ ipv4Sock_getLocalString(const int sock)
 {
     struct sockaddr_in addr;
     socklen_t          sockAddrLen = sizeof(addr);
-    int                status = getsockname(sock, &addr, &sockAddrLen);
+    int                status = getsockname(sock, (struct sockaddr*)&addr,
+            &sockAddrLen);
     return sockAddrIn_format(&addr);
 }
 
@@ -107,7 +108,8 @@ ipv4Sock_getPeerString(const int sock)
 {
     struct sockaddr_in addr;
     socklen_t          sockAddrLen = sizeof(addr);
-    int                status = getpeername(sock, &addr, &sockAddrLen);
+    int                status = getpeername(sock, (struct sockaddr*)&addr,
+            &sockAddrLen);
 
     return status ? NULL : sockAddrIn_format(&addr);
 }

@@ -17,7 +17,7 @@ dist_man3_MANS		= man/man3/log.h.3
 EXTRA_DIST		= Doxyfile $(MAIN_PAGE) html $(dist_man3_MANS)
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
-CLEANFILES		= callgrind.out *.log
+CLEANFILES		= callgrind.out *.log *.vg *.supp
 
 $(srcdir)/html \
 $(srcdir)/$(dist_man3_MANS) \
@@ -56,6 +56,20 @@ log_test_SOURCES	= log_test.c $(lib_la_SOURCES)
 log_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
 log_test_LDADD		= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
 			  @LIBS_CUNIT@
+
+SUFFIXES:	.vg .sup .supp
+
+# Precursor to Valgrind suppression file
+%.supp:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
+	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
+            --show-reachable=yes $${supOpt} --gen-suppressions=all ./$< >&$@
+
+# Valgrind output
+%.vg:	%
+	test -e $<.sup && supOpt=--suppressions=$<.sup; \
+	$(LIBTOOL) --mode=execute valgrind --leak-check=full \
+            --show-reachable=yes $${supOpt} ./$< >&$@
 
 valgrind:       log_test
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
