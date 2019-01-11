@@ -366,7 +366,8 @@ bool log_is_level_enabled(
  * Logs a single message at the ERROR level based on a system error code
  * bypassing the message queue.
  *
- * @param[in] ...  Optional arguments of the message.
+ * @param[in] errnum  `errno` error-number
+ * @param[in] ...     Optional arguments of the message.
  */
 #define log_errno(errnum, ...) do {\
     LOG_LOC_DECL(loc);\
