@@ -1174,7 +1174,6 @@ execute(const char* const restrict mcastSpec,
         const char* const restrict prodQueuePath)
 {
     log_assert(npages > 0);
-    log_assert(prodQueuePath);
 
     int  status;
     bool isMcastInput;
