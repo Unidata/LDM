@@ -1,929 +1,210 @@
-6.13.7.107	2019-01-11T09:23:44-0700
-    noaaportIngeter(1):
-        Delete incorrect assertion regarding product-queue path
-
-    logging:
-        Documented `errnum` argument of log_errno()
-
-    Cosmetics
-
-6.13.7.106	2019-01-10T14:17:48-0700
-    ChildCommand(3):
-        Fix static getline()
-
-    Misc:
-        Squash more GNU dependencies
-
-6.13.7.105	2019-01-10T11:01:52-0700
-    Build:
-        Downgrade standard-compliance from _XOPEN_SOURCE=700 to 600 to
-        accomodate Solaris and eliminate reliance on non-standard GNU C
-        functions
+6.13.7
+    Build, installation, & configure(1):
+        * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
+          accomodate Solaris and eliminated reliance on non-standard GNU C
+          functions. Lots small changes as a result.
+        * Made binary installation directory writable by LDM user only to
+          obviate execution of malicious binary with root privileges.
+        * Added "-lstdc++" to shared-library creation.
+        * Added explicit defines of some C macro values to "1" to avoid problems
+          with configure(1) on BSD systems.
+        * Added "--with-delayQueue" option to configure(1).
+        * Made configure(1)'s "--enable-debug" option set CFLAGS & CXXFLAGS.
 
     noaaportIngester(1):
-        - Improve FIFO:
-            - Construct with file descriptor and no buffer
-            - Use shutdown() and close() to improve fifo_close()
-        - Incorporate fileReader and multicastReader into noaaportIngester.c
-        - Eliminate file descriptor from input-reader
+        * Improved responsiveness to external events:
+            * Improved input FIFO:
+                * Made fifo_close() async-signal-safe for calling by the signal
+                  handler
+                * Modified fifo_close() to use shutdown() and close() to improve
+                  responsiveness
+                * fifo_getBytes() is now notified if either fifo_close() is
+                  called or if an EOF is encountered
+                * Added file descriptor to construction and deleted buffer
+            * Modified signal handler to only use async-signal-safe functions
+            * Modified statistics-reporting thread to use sigwait() and
+              eliminated now-unnecessary `reportStatistics` variables
+            * Incorporated fileReader and multicastReader components into
+              noaaportIngester.c
+            * Eliminated file descriptor from input-reader component
+        * Improved construction of LDM identifier:
+            * Enabled creation of a complete LDM product-identifier even if the
+              forecast time-interval of a GRIB2 field can't be decoded due to an
+              unknown PDTN.
+            * Added requirement that the GRIB2 version number not be missing
+              (255) and the local version number be 0 or missing (255) in order
+              to obtain the WMO GEMPAK vertical coordinate table.
+            * Made the decision to use GEMPAK's WMO parameter table more robust
+              by requiring that the Local Table number be 0 or 255 (missing).
+            * Modified how GEMPAK finds a parameter entry:
+                * Replaced linear search with binary search
+                * Allowed use of parameter with same discipline, category, and
+                  ID but different parameter definition template number if an
+                  exact match doesn't exist. An ERROR-level message will be
+                  logged in this case.
+            * Added some error-checking to GRIB2 and GEMPAK libraries
+        * Changed default logging level of noaaportIngester(1) from ERROR to
+          WARN
 
-6.13.7.104	2019-01-07T13:24:06-0700
-    Build:
-        Make building --without-multicast work
+    LDM registry and regutil(1):
+        * Simplified log messages about missing registry parameters and changed
+          logging level from error to warning.
+    	* Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
+    	  `pool.ntp.org`.
 
-6.13.7.103	2019-01-06T11:26:35-0700
-    noaaportIngester(1):
-        Have fifo_getBytes() always learn if either fifo_close() was called or
-        if an EOF was encountered
-
-6.13.7.102	2019-01-05T12:26:19-0700
-    Logging:
-        Create log_errno()
-
-    noaaportIngester(1):
-        - Make fifo_close() async-signal-safe for calling by the signal handler
-        - Create fifo_shutdown() and have it signal fifo_getBytes()
-        - Replace fifo_close() in runInner() with fifo_shutdown()
-        - Add handling of SIGUSR1 
-
-6.13.7.101	2019-01-04T15:35:43-0700
-    ldmd.conf(5):
-        Add <mcastIface> argument to MULITICAST description
-
-    noaaportIngester(1):
-        - Replace call to fifo_close() in signal handler with sending of SIGUSR1
-          to reader thread
-        - Use sigwait() instead of sigsuspend()
-        - Eliminate now-unnecessary `reportStatistics` variables
-        - Remove logging calls from signal handler
-
-    Logging:
-        - Remove SIGUSR1 handling from logging module
-        - Change `log_level` from log_level_t to sig_atomic_t
-        - Remove locking from log_roll_level to make it async-signal-safe
-        - Change lock-then-block to block-then-lock in stream_log()
-
-    Misc:
-        Remove all logging calls from signal handlers because the functions are
-        not async-signal-safe
-
-6.13.7.100	2018-12-31T11:02:44-0700
-    Down7:
-        Add product-index to eop_func() and print in INFO message
-
-6.13.7.99	2018-12-30T10:31:18-0700
-    FMTP:
-        - Make LDM logging cpp(1)-conditional (macro "LDM_LOGGING")
-        - Ensure calls to log_free() on thread termination
-
-    mldm_sender(1):
-        Remove signature from "Sent:" log message
-
-6.13.7.98	2018-12-28T12:26:51-0700
-    FMTP:
-        Initialize RetxMetadata::startTime
-
-6.13.7.97	2018-12-28T10:45:15-0700
-    FMTP:
-        Improve start-time handling and serialization
-
-    mldm_sender(1):
-        Ensure log_free() called at end of RPC server thread
-
-6.13.7.96	2018-12-27T11:01:13-0700
-    FMTP:
-        Make logging directory reference independent of home
-
-6.13.7.95	2018-12-26T15:48:07-0700
-    Documentation:
-        - Document new format for log messages
-        - Correct long instructions for installing from source using pax(1) by
-          removing use of mv(1)
-
-    Logging:
-        Increase width of process field.
-
-    FMTP:
-        - Add system error messages to FMTP messages
-        - Create Serializer and add to fmtpSendv3
-
-    Product-queue:
-        Improve log messages
-
-    Misc:
-        Shorten some function names
-
-6.13.7.94	2018-12-26T15:15:54-0700
-    Up7:
-        Simplified initXprt() & ensured destroyXprt() called
-
-    Up7Down7_test:
-        Simplified upstream to eliminate segmentation violation
-
-6.13.7.93	2018-12-24T13:03:56-0700
-    Add missing return to piq_restart()
-
-    Up7:
-        Correct socket closure in initXprt()
-
-6.13.7.92	2018-12-24T11:29:49-0700
-    FMTP:
-        Make reference to logging directory independent of workspace directory
-        hierarchy
-
-6.13.7.91	2018-12-24T10:37:51-0700
-    Down7:
-        Use SIGHUP instead of SIGTERM to interrupt Down7 threads beacause an
-        external SIGTERM must terminate the process and figuring out if one is
-        external or internal is more complicated
-
-        Have Down7 re-connect immediately on multicast error
-
-    FMTPRecvv3:
-        Accept longer BOP-s and improve exception message
-
-    Product-queue:
-        Make "pqe_index" argument a pointer
-
-    Logging:
-        Eliminate trailing newline in log message
-
-    ProdNotifier:
-        - Improve handling of start-of bad data-product
-        - Improve code to insert multicast product
-
-6.13.7.90	2018-12-12T14:52:13-0700
-    Upstream LDM7:
-        - Improve documentation
-        - Server-side changes to accomodate RPC assumption that calls to
-          svc_getreqset() and svc_getreqsock() aren't nested
-            - Functions that call svc_getreqset() always destroys transport
-            - Separate, server-side RPC transport created and used
-        - Use "remote.h"
-        - Extract init() and shouldReply() from subscribe_7_svc() into
-          subscribe()
-        - Improve handling of multicast information
-        - Improve destruction
-
-    Downstream LDM7:
-         - Improve handling of task states
-         - Improve Backlogger
-         - Add restart capability to missed-product queue
-         - Shorten method names in RecvProxy & ProdNotifier
-
-    FmtpRecvv3:
-         - Improve re-connection logic by making locally-static
-           mcast-handler-started variable a member
-
-    LDM7:
-        - Move test_connection_7_svc() from Up7 to Down7
-        - Rename "up7_down7_test" to "Up7Down7_test"
-
-6.13.7.89	2018-12-12T13:16:18-0700
-    Added some debug messages.
-
-6.13.7.88	2018-12-06T14:17:23-0700
-    Change "ldm_config_file.h" to "LdmConfFile.h" in scanner.c and parser.c
-
-6.13.7.87	2018-12-06T13:27:55-0700
     ldmd(1):
-        - Decompose server into smaller functions.
+        * Decomposed server into smaller functions.
+        * Eliminated use of portmapper because
+            * Lots of places consider it a security hole
+            * It slowed things down significantly if it wasn't running
+            * It doesn't appear to be used much
+        * Replaced log_*_q() calls with log_*()
 
-    Logging:
-        - Right-justify location and process fields to minimize eye travel
-        - Shorten many file, function, class, and method names to shorten log
-          messages
-
-    Upstream LDM7:
-        - Redo subscribe_7_svc()
-
-    Downstream LDM7:
-        - Correct check of pthread_kill() return value
-
-6.13.7.86	2018-12-03T09:09:54-0700
-    Logging:
-        - Make logging macros not cancellation points
-        - Replace line number with function name in simple logging
-
-    uldb.c:
-        - Make object in validity-test static
-
-    down7.c:
-        - Error-return if poll() error-returns only if errno != EINTR to
-          accomodate Linux's non-standard signaling when seteuid() is called
-        - Don't error-return if pthread_kill(SIGTERM) fails with ESRCH because
-          completed threads can't be signaled
-        - Improve concurrency:
-            - Add task states
-            - Improve inter-thread signaling
-        - Misc:
-            - Block SIGCONT & SIGALRM
-            - Add debug statements
-            - Add assertions
-
-    ldmd.c:
-        - Add down7_destroy() to cleanup()
-        - Replace log_*_q() with log*()
-        - Log all caught signals
-        - Catch all signals
-
-    up7_down7_test:
-        - Add down7_destroy() to cleanup()
-        - Replace log_*_q() with log*()
-        - Log all caught signals
-        - Catch all signals
-
-6.13.7.85	2018-11-21T14:33:29-0700
-    PerProdSendingNotifier:
-        Rename to SendingNotifier
-
-    FmtpClntAddrs:
-        Add debug message and improve exception message
-
-    ldmd:
-        Clear log messages if umm_remove() returns "no entry"
-
-    mldm_sender_map:
-        Improve and correct
-
-    up7:
-        Add debug messages
-
-    UpMcastMgr:
-        Improve
->>>>>>> branch 'master' of git@github.com:Unidata/LDM.git
-
-6.13.7.84	2018-11-19T09:54:34-0700
-    Port priv.h to C++
-
-    Correct fmtprecvv3::joinGroup() name
-
-    Add ability for fmtp.c to join mcasticast group with port number < 1024
-
-6.13.7.83	2018-11-16T15:42:35-0700
-    Note in ldmd.conf that multicast feeds must be disjoint.
-
-    Improve logic of mldm_ensureRunning().
-
-6.13.7.82	2018-11-16T15:22:15-0700
-    If the subscription reply from the LDM7 server says that the FMTP server's
-    address is "0.0.0.0", then set it to the LDM7 server's address.
-
-6.13.7.81	2018-11-16T10:19:42-0700
-    Remove indefinite loop from TcpRecv::initSocket() because failure should be
-    handled by the application.
-
-6.13.7.80	2018-11-16T08:24:03-0700
-    parser:
-        Call umm_init() before yyparse() in lcf_init() so that the UpMcastMgr
-        module is initialized before being used.
-
-6.13.7.79	2018-11-15T15:58:46-0700
-    ldmd(1):
-        - Call down7_halt() from signal handler
-        
-    down7:
-        - Prevent down7_halt() from sending SIGTERM to down7.thread if same
-          thread
-
-6.13.7.78	2018-11-15T13:39:54-0700
-    down7_manager:
-        - Allowed NULL FMTP interface
-        - Created elt_toString()
-        - Changed d7mgr_destroy() to d7mgr_free()
-        
-    Downstream LDM7 (down7):
-        - Eliminate thread argument of down7_halt()
-
-    Multicast LDM sender map:
-        - Added `final` argument to msm_destroy()
-        - Replaced use of SHM REALTIME API with XSI
-
-    Upstream multicast manager:
-        - Added umm_init() and checks for initialization.
-        - umm_destroy() now calls msm_destroy()
-
-    ldmd(1) and LDM Configuration-file:
-        - Made initialization and execution into separate functions.
-        - Moved upstream LDM management into configuration-file module
-        - Removed down7_halt() from SIGTERM handler
-        - lcf_destroy() now calls umm_destroy()
-        - Relinquished root privileges immediately
-
-    Upstream LDM database:
-        Set allowed product-class only if non-NULL in uldb_addProcess().
-
-    Upstream LDM7:
-        Added upstream LDM7 to upstream LDM database.
-
-    pqact(1):
-        Improved logging.
-        
-    Removed Coverity Scan lint.
-
-6.13.7.77	2018-11-08T12:01:22-0700
-    isa_getHostId() -> isa_getInetId()
-
-6.13.7.76	2018-11-07T15:46:10-0700
-    Created hostId_compare() and isa_compare().
-
-    Corrected isa_getSockAddr() usage in ldm_config_file.c and freed
-    mcastIfaceSockAddr.
-    
-    Created isa_getHostId().
-    
-    Corrected me_doConflict(), me_compareOrConflict(), and
-    umm_addPotentialSender().
-    
-    Changed HostId to InetId.
-
-6.13.7.75	2018-11-05T16:18:15-0700
-    XDR:
-        Eliminated some compiler warnings.
-
-    vlanUtil(1):
-        Changed "ip route show ..." to "ip route get ...".
-
-    Networking:
-        - Changed "int" to "sa_family_t".
-        - Added isa_getSockAddr()
-
-    LDM configuration-file:
-        Modify decodeMulticastEntry() to allow NULL arguments.
-
-6.13.7.74	2018-11-05T10:44:50-0700
-    XDR:
-        Eliminated some compiler warnings.
-
-    LDM configuration-file:
-        - Moved some functions from "parser.y" to "ldm_config_file.c"
-        - Adapted some arguments to new "InetSockAddr" and "SepMcastInfo" tyeps
-
-6.13.7.73	2018-11-03T10:43:46-0600
-    Removed Coverity Scan lint.
-
-6.13.7.72	2018-11-02T15:58:13-0600
-    Corrected some `cidrAddr_delete()`s to `cidrAddr_free()`.
-
-6.13.7.71	2018-11-02T15:45:25-0600
-    Multicast:
-        - Changed "-m <interface>" option to "-i <interface>" in mldm_sender(1).
-        - Changed specification of FMTP subnet to mldm_sender(1) from operand to
-          option-argument (default is no subnet).
-        - Moved addition of FMTP client to multipoint VLAN from module "up7" to
-          module "UpMcastMgr".
-
-6.13.7.70	2018-10-26T14:55:35-0600
-    Merged receiver changes. "make check" succeeds.
-
-6.13.7.69	2018-10-26T08:45:30-0600
-    inetutil:
-        Remove AF_INET6 test of ServiceAddr because it didn't work on Travis CI
-
-    Travis CI:
-        Re-enable Coverity Scan
-
-6.13.7.68	2018-10-26T08:29:54-0600
-    NOAAPort:
-        Enable creation of a complete LDM product-identifier even if the
-        forecast time-interval of a GRIB2 field can't be decoded due to an
-        unknown PDTN.
-
-    Eliminated memory-leaks found by valgrind(1).
-
-6.13.7.67	2018-10-24T11:27:14-0600
-    Removed Coverity Scan lint
-
-6.13.7.66	2018-10-24T10:42:34-0600
-    HostId and InetSockAddr:
-        - Created
-        - Modified code to use
-
-    Multicast Information:
-        - Replaced ServiceAddr-based implementation of `McastInfo` with
-          string-based one
-        - Created `SepMcastInfo` and modified code to use
-
-6.13.7.65	2018-10-23T09:35:33-0600
-    g2varsncep.tbl, g2varswmo.tbl, & g2vcrdwmo.tbl:
-        - Added entries from Gilbert and Leno (duplicated by NOAA). Gave to
-          NOAA.
-        - Added "Surface to reserved" (yes, that's "reserved"), (001, 000)
-          to "g2vcrdwmo.tbl" -- for all the good it will do.
-
-6.13.7.64	2018-10-05T10:35:50-0600
-    Added support for non-AL2S RECEIVE.
-
-6.13.7.63	2018-10-02T13:26:54-0600
-    down7:
-        Replaced process termination request and task termination signalling
-        mechanism with one that uses async-signal-safe read/write calls on a
-        pipe. This now works for both regular and signal-handler calls to
-        down7_halt().
-
-6.13.7.62	2018-09-29T12:30:26-0600
-    Removed Coverity Scan lint.
-    
-    down7:
-        Added initial zeroing of component structures during initialization.
-
-6.13.7.61	2018-09-29T10:08:04-0600
-    Removed Coverity Scan lint.
-
-6.13.7.60	2018-09-28T16:04:53-0600
-    down7:
-        - Converted it and subcomponents into singletons.
-        - Fixed termination.
-
-    svc_tcp:
-        Allow signals to interrupt readtcp() so that a concurrent thread can be
-        terminated via pthread_kill().
-        
-    down6:
-        Stopped exiting of downstream LDM6 if room in the product-queue can't be
-        made because all products are locked.
-        
-    g2varsncep.tbl:
-        Added (0,1,29,{9,10,12}), ASNOW, and corrected unit for that parameter
-        from "kg m-3" to "m".
-
-6.13.7.59	2018-09-19T15:43:49-0600
-    configure:
-        Added "--with-delayQueue" option.
-
-    Future & Executor:
-        Cleaned-up typedef dependencies.
-
-    mcast_lib/ldm7/Makefile:
-        Reverted -I includes to make "make Distclean" work.
-
-    Completer:
-        Added determination of valid structure.
-
-    down7:
-        Have down7 call downlet direcly (eliminate executor).
-
-6.13.7.58	2018-09-18T13:06:24-0600
-    up7:
-        Improve argument-logic of oess_provision().
-
-6.13.7.57	2018-09-18T11:01:44-0600
     uldbutil(1):
-        Reduced number of error messages LDM isn't running.
+        Reduced number of error messages if the LDM isn't running.
 
-    up7:
-        Improved invalid argument message from oess_provision().
-
-    Documentation:
-        Updated simple logging documentation regarding SIGUSR1.
-
-6.13.7.56	2018-09-14T14:34:26-0600
-    up7:
-        Removed Coverity Scan lint.
-
-    ldmd:
-        Eliminate use of portmapper because
-            - Lots of places consider it a security hole
-            - It slowed things down significantly
-            - It doesn't appear to be used much
-
-    down7:
-        - Ensured logging by async jobs
-        - Moved "starting up" message from downlet to down7
-
-6.13.7.55	2018-09-14T08:52:53-0600
-    Added depth below sea level, (160,255), to GEMPAK NCEP vertical coordinate
-    table.
-
-    up7:
-        - Added some argument-checking
-        - Added use of vcEndPoint_free()
-        - Improved commentary
-
-    down7:
-        - Handled EHOSTUNREACH to handle offline upstream LDM7
-        - Used "done" variable for SIGTERM termination
-        - Replaced stopFlag_timedWait() with sleep() because the former can't be
-          async-signal-safe
-
-    PerProdNotifier:
-        - Document `stopTime` in notify_of_eop()
-
-    StopFlag:
-        - Added optional external "done" function
-
-6.13.7.54	2018-09-04T13:49:02-0600
-    Modified logging to not emit empty last line.
-
-    Created sockaddr_format().
-
-    Modified down7.c to use sockaddr_format and perform more argument checking.
-
-6.13.7.53	2018-09-04T08:43:06-0600
-    Improved error-messaging.
-    
-    Corrected return code from downstream LDM7 manager.
-    
-    Added flushing to single log messages.
-    
-    Added missing vertical coordinates to GEMPAK's NCEP table to accomodate
-    invalid GRIB2 messages (i.e., WMO version number != 255 yet local version
-    number != 0).
-    
-    Moved blocking of signals to after locking of stream in simple logging
-    module.
-
-6.13.7.52	2018-08-31T08:31:35-0600
-    Added creation of missing symbolic link, g2vcrdnssl1.tbl -> g2vcrdnssl.tbl,
-    to "make install".
-
-6.13.7.51	2018-08-30T16:16:51-0600
-    Added missing vertical coordinates to WMO and NCEP GEMPAK tables.
-    
-    Added requirement that the GRIB2 version number not be missing (255) and the
-    local version number be 0 or missing (255) in order to obtain the WMO GEMPAK
-    vertical coordinate table.
-    
-    Created a GEMPAK table for GRIB2 vertical coordinates from NSSL, 
-    "g2vcrdnssl.tbl". This table is installed and linked-to from
-    "g2vcrdnssl1.tbl". As a consequence of this and the previous change. 
-    noaaportIngester(1) might now miss some vertical coordinates from NSSL GRIB2
-    products.
-
-6.13.7.50	2018-08-30T10:37:27-0600
-    Stopped passing error messages from check of file "ldmd.conf" by
-    "ldmadmin start" to fmt(1).
-
-    Told git(1) to ignore file "delayQueue/delayQueue".
-
-6.13.7.49	2018-08-30T09:25:27-0600
-    Removed Coverity Scan lint: initialized startTime in default constructor of
-    PerProdNotifier::ProdInfo.
-
-6.13.7.48	2018-08-29T15:13:38-0600
-    Modified LDM7 to log duration of multicast product transmission for
-    throughput calculation:
-        - Added start-of-transmission time to beginning-of-product packet and
-          to LDM7 BOP function;
-        - Added reception-time to LDM7 EOP function and logging of duration of
-          transmission.
-
-    Converted mcast_lib/FMTP_LDM7/ and OESS/ from git submodules into git
-    subtrees.
-
-6.13.7.47	2018-08-27T14:48:09-0600
-    Moved sudo() from down7.c to ChildCommand.c
-
-    Execute OESS provisioning script with root privileges.
-
-6.13.7.46	2018-08-25T11:26:11-0600
-    Added command-string to ChildCommand.
-
-    Added log_syserr() and signal blocking to logging module.
-
-    Removed extraneous newlines from log messages in product-queue.
-
-    Got up7_down7_test(1) working.
-
-6.13.7.45	2018-08-15T10:14:37-0600
-    Stopped making vlanUtil(1) setuid root because such scripts no longer work
-    on Linux systems. Instead, made down7.c execute vlanUtil(1) with root
-    privileges.
-
-    Made binary installation directory writable by LDM user only to obviate
-    execution of malicious binary with root privileges.
-
-6.13.7.44	2018-08-14T11:43:45-0600
-    Made vlanUtil(1) more robust. Added error messages.
-
-6.13.7.43	2018-08-14T10:53:29-0600
-    Modified push(1) to take a commit message so that GitHub things like "Fixes
-    #70" are possible.
-    
-    Made vlanUtil(1) usable by the sender as well as the receiver.
-    
-    Added missing GRIB2 parameter 10.3.192.9 (storm surge).
-
-6.13.7.42	2018-08-09T17:47:41-0600
-    Added "eval" to pathname expansion in plotMetrics(1) to accomodate patterns
-    containing things like "metrics.txt{,.[1-4]}".
-    
-    Modify usage message of vlanUtil(1) to use basename of program.
-
-6.13.7.41	2018-08-07T11:06:33-0600
-    Corrected "ldmadmin addmetrics":
-        - Corrected bug in appending to metrics file introduced in 6.13.7.39;
-        - Corrected space-usage numbers on CentOS 7 from free(1).
-    
-    Added "-o  <template>" option to plotMetrics(1) to output PNG files.
-
-6.13.7.40	2018-08-02T10:57:50-0600
-    Removed Coverity lint.
-
-6.13.7.39	2018-08-02T09:57:11-0600
-    Added non-blocking locking of metrics file to eliminate concurrent writes by
-    multiple "ldmadmin addmetrics" when under severe load.
-
-    Changed printing of multi-line log messages: each line will have the same
-    timestamp, process ID, location, and logging level.
-
-6.13.7.38	2018-07-30T11:11:19-0600
-    Logging:
-        Made location and message canonically start at explicit positions
-        rather than have fixed widths for process ID, and location fields.
-
-        Eliminated function name from location field because the benefit of
-        seeing the name wasn't worth the cost of longer log messages.
-
-        Unconditionally log missing time-off parameter at warning level.
-
-        Simplified log messages about missing registry parameters and changed
-        logging level from error to warning.
-
-    Added missing parameter to GEMPAK's NCEP parameter table.
-
-    Adapted NOAAPort checks to logging changes.
-
-6.13.7.37	2018-07-28T11:00:00-0600
-    Added entries to GEMPAK's NCEP parameter table.
-    
-    Changed default logging level of noaaportIngester(1) from ERROR to WARN and
-    changed logging level of missed-parameter messages from ERROR to WARN.
-
-6.13.7.36	2018-07-27T10:35:41-0600
-    Added entries to GEMPAK's NCEP parameter table.
-
-6.13.7.35	2018-07-27T09:05:22-0600
-    Added entries to GEMPAK's NCEP parameter table.
-
-6.13.7.34	2018-07-26T13:56:17-0600
-    Added g2varswmo0.tbl and g2vcrdwmo0.tbl symbolic links during installation.
-
-    Replaced log_notice_q() with log_add() in gb2param.c because calling
-    function logs at error level.
-
-    Made the decision to use GEMPAK's WMO parameter table more robust by 
-    requiring that the Local Table number be 0 or 255 (missing).
-
-    Added entries to GEMPAK's parameter table for NCEP.
-
-    Modified how GEMPAK finds a parameter entry: replaced linear search with
-    binary search. Also allowed use of parameter with same discipline, category,
-    and ID but different parameter definition template number if an exact match
-    doesn't exist. An ERROR-level message will be logged in this case.
-
-6.13.7.33	2018-07-24T09:44:27-0600
-    In order to allow unit testing, up7.c and down7.c were modified to ignore
-    VLAN-creation errors if the switch or port identifiers of the AL2S
-    end-points start with "dummy".
-
-6.13.7.32	2018-07-20T09:46:55-0600
-    Removed Coverity Scan lint.
-
-6.13.7.31	2018-07-20T08:40:34-0600
-    Added checking of number of submitted jobs to Completer.
-
-6.13.7.30	2018-07-19T17:25:54-0600
-    Improved implemenation of Future and Executor.
-
-6.13.7.29	2018-07-18T16:15:31-0600
-    Eliminate Coverity Scan lint.
-
-6.13.7.28	2018-07-18T15:33:52-0600
-    Added OESS makefiles.
-
-    Modified the isrunning() function in ldmadmin(1): replaced use of kill(1)
-    with ps(1) because some systems misreported success.
-
-    Created ChildCommand for executing a command in a child process and 
-    enabling the parent process to write to the child's standard input stream
-    and read from the child's standard output stream while automatically logging
-    the child's standard error stream
-
-    Reverted gempak/ctbg2rdvar.c to version that doesn't check the return value
-    of sscanf(3) to handle "missing" entries like this (in g2varswmo.tbl):
-
-        010 191 255 000 Missing                                                                0  -9999.00
-
-    Remove lint found by Coverity Scan.
-    
-    Merged Future's Task into Executor's Job and simplified both Future and
-    Executor.
-    
-    Made childCmd_new() return NULL on failure.
-    
-    Deleted Future_test.
-    
-    Have Coverity Scan run on every push to master.
-
-6.13.7.27	2018-07-09T16:24:41-0600
-    Added ability to ignore vlanUtil(1) exit status and got up7_down7_test
-    working again. Added multicast back into "make distcheck".
-
-6.13.7.26	2018-07-06T13:06:30-0600
-    Fixed Coverity Scan lint.
-
-    Removed compiler-caught lint.
-    
-    Switched from execlp(2) to execvp(2) to execute vlanUtil(1).
-
-6.13.7.25	2018-07-06T10:32:05-0600
-    Fixed Coverity Scan lint.
-
-6.13.7.24	2018-07-06T08:37:59-0600
-    Fixed 2 compiler-caught bugs.
-
-6.13.7.23	2018-07-05T17:19:18-0600
-    Start on creating virtual interface (vlanUtil(1)).
-
-    Some *_delete() -> *_free().
-
-    Made "--enable-debug" set CFLAGS & CXXFLAGS.
-
-    Moved "mcast_lib/ldm7/FixedDelayQueue.h" to "misc/".
-
-    Created delayQueue(1) for Tom to use with GOES-16 ingest.
-
-    Added "-lstdc++" to shared-library creation.
-
-    Removed inappropriate pq_lockIf() calls.
-
-    Don't have "make distcheck" check multicast because it's impossible to test.
-
-    Created vlanUtil(1).
-
-    Modified down7.c to use an `in_addr_t` for the VLAN virtual interface
-    address instead of a `CidrAddr`.
-
-6.13.7.22	2018-06-27T09:03:08-0600
-    Removed OESS from .git/config and changed OESS URL in .gitmodules from
-    `git@` to `htpps://` form.
-
-6.13.7.21	2018-06-26T16:53:59-0600
-    Added OESS submodule.
-
-6.13.7.20	2018-06-26T16:08:59-0600
-    Added Coverity modeling file.
-
-    Added verification test for unsigned arithmetic.
-
-    Some `_delete()` -> `_free()`.
-
-    Improved commentary.
-
-    Removed abort() from down7_manager.
-
-6.13.7.19	2018-06-24T10:32:15-0600
-    Squashed bugs found by Coverity Scan.
-
-    Added some error-checking to grib2/ and gempak/.
-
-    New FMTP.
-    
-    Updated Coverity Scan badge.
-
-6.13.7.18	2018-06-22T13:18:45-0600
-    Fix project in Coverity Scan and configure .travis.yml.
-
-6.13.7.17	2018-06-19T16:02:04-0600
-    Remove warnings/lint revealed by Travis build. Including updating Doxyfile.
-
-    Back to "make distclean" in Travis build.
-
-6.13.7.16	2018-06-19T15:13:11-0600
-    vcEndPoint_delete() -> vcEndPoint_free() in parser.y.
-
-    mi_delete() -> mi_free().
-
-6.13.7.15	2018-06-19T13:43:04-0600
-    .travis.yml:
-        - Removed test of /dev/random.
-        - Replaced execution of log_test with "make all check". Random and
-          performance tests are still commented-out.
-
-6.13.7.14	2018-06-19T12:22:58-0600
-    Eliminated random and performance tests from log_test to eliminate Travis
-    hanging. It worked. Sigh.
-
-6.13.7.13	2018-06-19T11:49:09-0600
-    Modified log_test to 
-      - Close /dev/random
-      - Explicitly set sleep seconds to 0
-      - Use fewer random messages
-
-    Modified .travis.yml to test /dev/random.
-
-6.13.7.12	2018-06-19T11:24:06-0600
-    Modify .travis.yml to execute log_test in an attempt to see what's causing
-    the hanging.
-
-6.13.7.11	2018-06-19T10:51:21-0600
-    Removed logging to system logging daemon in case that is causing the Travis
-    build to hang. It's not.
-
-6.13.7.10	2018-06-19T10:15:11-0600
-    Enhanced `log_test` to see if deadlock in that unit-test caused the Travis
-    build to hang. It doesn't.
-    
-    Corrected handling of `pq_test` output.
-
-6.13.7.9	2018-06-18T10:45:33-0600
-    Remove "-O0" from CFLAGS and CXXFLAGS in .travis.yml because they don't
-    affect the "make distcheck" build.
-
-    Improved efficiency of pq_test(1) so that it doesn't take so long.
-    
-    Added disabling of iptables(1) rules when building on Travis CI to see if
-    that caused the build to hang. It doesn't.
-
-6.13.7.8	2018-06-15T09:10:38-0600
-    Changed the example LDM home-directory from "/usr/local/ldm" to "/opt/ldm"
-    to conform to the Linux Filesystem Hierarchy Standard
-    <https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard>.
-
-    Removed "--enable-debug" from Travis build because "-O2" was still being
-    used.
-
-6.13.7.7	2018-06-14T17:00:30-0600
-    Capitalized some words in variable descriptions in GEMPAK parameter tables.
-
-    Added "-g -O0" to Travis build.
-
-6.13.7.6	2018-06-14T15:59:17-0600
-    Got "make distcheck" to work.
-
-6.13.7.5	2018-06-13T14:00:37-0600
-    Reduced number of messages in logging performance test because Travis was
-    timing-out.
-
-6.13.7.4	2018-06-13T13:36:31-0600
-    Removed `distcheck.log` from .travis.yml because the lack of output caused
-    Travis to abort.
-
-6.13.7.3	2018-06-13T08:38:28-0600
-    Logging:
-        Increased width of location field in log messages.
-        
-        Eliminated overlap of simultaneous writes from multiple threads to the
-        standard error stream.
-
-6.13.7.2	2018-05-31T16:37:09-0600
-    Logging:
-        Made the width of the location field in log messages to a file or the
-        standard error stream for the default logging module match the longest
-        location field seen. This should make viewing log messages easier.
-        
-        Improved currency management in the default logging module: simultaneous
-        log messages from the same or different process should no longer
-        overlap.
-
-6.13.7.1	2018-04-19T15:26:05-0600
-    Build:
-        Added explicit defines of some C macro values to "1" to avoid problems
-        with configure(1) on BSD systems.
-        
     ldmadmin(1):
-    	Changed how the PATH environment variable is modified to favor version-
-    	specific utilities to accommodate non-standard installations that don't
-    	have a version-specific subdirectory.
-    	
-    	Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
-    	`pool.ntp.org`.
+        * "addmetrics" command:
+            * Corrected space-usage numbers on CentOS 
+            * Added non-blocking locking of metrics file to eliminate concurrent
+              writes by multiple "ldmadmin addmetrics" processes when under
+              severe load.
+        * "isrunning" command:
+            * Replaced use of kill(1) with ps(1) because some systems
+              misreported success.
+    	* Changed how the PATH environment variable is modified to favor
+    	  version-specific utilities to accommodate non-standard installations
+    	  that don't have a version-specific subdirectory.
+
+    plotMetrics(1) (used by "ldmadmin plotmetrics"):
+        * Added "eval" to pathname expansion to accomodate patterns containing
+          things like "metrics.txt{,.[1-4]}".
+        * Added "-o  <template>" option to output PNG files.
 
     pqing(1):
-        Added "-F" option to enable XON/XOFF software flow control for TTY
-        input.
+        * Added "-F" option to enable XON/XOFF software flow control for TTY
+          input.
+        * Changed behavior of system-calls on receipt of SIGTERM from restart to
+          interrupt in order to ensure proper response to an "ldmadmin stop".
+        * Added O_TTY_INIT to open of a TTY to ensure conforming TTY behavior.
 
-        Changed behavior of system-calls on receipt of SIGTERM from restart to
-        interrupt in order to ensure proper response to an "ldmadmin stop".
-        
-        Added O_TTY_INIT to open of a TTY to ensure conforming TTY behavior.
-        
-    pq(3) (product-queue):
-        Refactored the code that allows an application to reserve space in the
-        product-queue for a data-product that will be written in pieces because
-        the code wasn't sufficiently thread-safe.
-        
-    NOAAPort Ingest:
-        Tom added entries to the GEMPAK Grib2 tables for some, otherwise,
-        unknown parameters.
+    pqact(1):
+        Improved log messages
 
-    Feedtypes:
-        Repurposed the unused DIFAX feed to SATELLITE for satellite imagery.
+    delayQueue(1):
+        Created for Tom to use with GOES-16 ingest.
 
-    Documentation:
-        Additions to pqact(1) configuration-file documentation:
-            - The string "(seq)" in the argument of a pqact(1) FILE or PIPE
-              action is replaced with the sequence-number of the data-product.
+    Product-queue:
+        * Made "pqe_index" argument a pointer
+        * Improved log messages
+        * Removed extraneous newlines from log messages
+        * Removed inappropriate pq_lockIf() calls.
+        * Refactored the code that allows an application to reserve space in the
+          product-queue for a data-product that will be written in pieces
+          because the code wasn't sufficiently thread-safe.
 
-            - Replacements based on data-product creation-time are based on
-              `strftime()`, which *might* have additional replacement strings
-              (e.g., "%N" for nanoseconds).
+    Logging:
+        * Changed printing of multi-line log messages: each line will have the
+          same timestamp, process ID, location, and logging level.
+        * Reduced occurence of overlapping log messages:
+            * Added output file locking to prevent overlaping log messages to a
+              regular file.
+            * Added signal blocking and mutex locking for concurrent threads
+        * Removed SIGUSR1 handling from logging module
+        * Changed `log_level` from log_level_t to sig_atomic_t
+        * Removed locking from log_roll_level to make it async-signal-safe
+        * Eliminated trailing newline in log message
+        * Right-justified location and process fields to minimize eye travel
+        * Made logging macros not cancellation points
+        * Replaced line number with function name in default logging
+        * Eliminated empty last line.
+        * Created log_errno() and log_syserr()
+
+    GEMPAK Tables:
+        * Added entries from Gilbert and Leno (duplicated by NOAA). Gave to
+          NOAA. In particular:
+            * g2vcrdwmo.tbl:
+                Added "Surface to reserved" (yes, that's "reserved"), (001, 000)
+                -- for all the good it will do.
+            * g2varsncep.tbl:
+                Added (0,1,29,{9,10,12}), ASNOW, and corrected unit for that
+                parameter from "kg m-3" to "m".
+            * g2vcrdncep.tbl:
+                * Added depth below sea level, (160,255)
+                * Added other missing vertical coordinates to GEMPAK's NCEP
+                  table to accomodate invalid GRIB2 messages (i.e., WMO version
+                  number != 255 yet local version number != 0).
+        * Added missing GRIB2 parameter 10.3.192.9 (storm surge).
+        * Created a GEMPAK table for GRIB2 vertical coordinates from NSSL, 
+          "g2vcrdnssl.tbl". This table is installed and linked-to from
+          "g2vcrdnssl1.tbl". As a consequence, noaaportIngester(1) might now
+          miss some vertical coordinates from NSSL GRIB2 products.
+        * Added creation of missing symbolic link, g2vcrdnssl1.tbl ->
+          g2vcrdnssl.tbl, to "make install".
+        * Changed logging level of missed-parameter messages from ERROR to WARN.
+        * Added g2varswmo0.tbl and g2vcrdwmo0.tbl symbolic links during
+          installation.
+        * Reverted gempak/ctbg2rdvar.c to version that doesn't check the return
+          value of sscanf(3) to handle "missing" entries like this (in
+          g2varswmo.tbl):
+
+              010 191 255 000 Missing                                                                0  -9999.00
+
+    LdmConfFile(3):
+        * Renamed from "ldm_config_file"
+        * Adapted "scanner.c" and "parser.c"
+        * Corrected isa_getSockAddr() usage
+        * Moved some functions from "parser.y" to "LdmConfFile.c"
+        * Adapted some arguments to new "InetSockAddr" types
+
+    ChildCommand(3):
+        Created this object for executing a command in a child process and
+        enabling the parent process to write to the child's standard input
+        stream and read from the child's standard output stream while
+        concurrently logging the child's standard error stream
+
+    Networking:
+        * Changed some "int"s to "sa_family_t"s.
+        * Created HostId and InetSockAddr objects and modified code to use
+        * Created isa_getInetId(), isa_getSockAddr(), and sockaddr_format().
+        * RPC:
+            Allow signals to interrupt readtcp() svc_tcp.c so that a
+            concurrent thread can be terminated via pthread_kill().
+        * XDR:
+            Eliminated some compiler warnings.
+
+    Concurrency:
+        Created Future, Executor, Completer, and StopFlag objects:
 
     Misc:
-        Migrated FMTP repository and codebase from Unidata to UVA.
+        * Repurposed the unused DIFAX feed to SATELLITE for satellite imagery.
+        * Removed all logging calls from signal handlers because the logging
+          functions are not async-signal-safe
+        * Shortened many file, function, class, and method names to shorten log
+          messages
+        * Shortened or changed some function names. In particular:
+            * isa_getHostId() -> isa_getInetId()
+        * Added some debug messages.
+        * Ported priv.h to C++
+        * Renamed some *_delete() functions to *_free().
+        * Replaced use of obsolete gethostbyaddr(3) with getnameinfo(3).
+        * Removed Coverity Scan lint.
+        * Eliminated memory-leaks found by valgrind(1).
 
-        Replaced use of obsolete gethostbyaddr(3) with getnameinfo(3).
+    Documentation:
+        * Documented new format for log messages
+        * Corrected long instructions for installing from source using pax(1) by
+          removing use of mv(1)
+        * Updated simple logging documentation regarding SIGUSR1.
+        * Changed the example LDM home-directory from "/usr/local/ldm" to
+          "/opt/ldm" to conform to the Linux Filesystem Hierarchy Standard
+          <https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard>.
+        * Added to pqact(1) configuration-file documentation:
+            * The string "(seq)" in the argument of a pqact(1) FILE or PIPE
+              action is replaced with the sequence-number of the data-product.
+            * Replacements based on data-product creation-time are based on
+              `strftime()`, which *might* have additional replacement strings
+              (e.g., "%N" for nanoseconds).
 
 6.13.6	2017-01-19T16:37:43-0700
     Slightly improved HTML Documentation based on latest workshop and added
