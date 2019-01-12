@@ -55,7 +55,21 @@ public:
      */
     TcpRecv(const std::string& tcpaddr,
             unsigned short     tcpport,
-            const in_addr_t    iface = htonl(INADDR_ANY));
+            const in_addr_t    iface);
+
+    /**
+     * Constructs. The IPv4 address of the local interface to use will be
+     * `htonl(INADDR_ANY)`.
+     * @param[in] tcpaddr  The address of the TCP server: either an IPv4
+     *                     address in dotted-decimal format or an Internet
+     *                     host name.
+     * @param[in] tcpport  The port number of the TCP connection in host
+     *                     byte-order.
+     * @param[in] iface    IPv4 address of local interface to use in network
+     *                     byte-order. Default is `htonl(INADDR_ANY)`.
+     */
+    TcpRecv(const std::string& tcpaddr,
+            unsigned short     tcpport);
 
     void Init();  /*!< the start point which upper layer should call */
     /**

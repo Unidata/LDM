@@ -48,6 +48,17 @@ TcpRecv::TcpRecv(
 {
 }
 
+/*
+ * A default `iface` argument isn't used because statement-expressions are not
+ * allowed outside functions nor in template-argument lists
+ */
+TcpRecv::TcpRecv(
+        const std::string& tcpaddr,
+        unsigned short     tcpport)
+    : TcpRecv(tcpaddr, tcpport, htonl(INADDR_ANY))
+{
+}
+
 
 /**
  * Establishes a TCP connection to the sender.
