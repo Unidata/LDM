@@ -1,4 +1,4 @@
-6.13.7
+6.13.7.108	2019-01-12T12:04:05-0700
     Build, installation, & configure(1):
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
@@ -205,6 +205,9 @@
             * Replacements based on data-product creation-time are based on
               `strftime()`, which *might* have additional replacement strings
               (e.g., "%N" for nanoseconds).
+              
+    Multicast:
+        Eliminated use of htonl() in TcpRecv constructor by duplicating it
 
 6.13.6	2017-01-19T16:37:43-0700
     Slightly improved HTML Documentation based on latest workshop and added
