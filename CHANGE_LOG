@@ -1,5 +1,5 @@
-6.13.7.108	2019-01-12T12:04:05-0700
-    Build, installation, & configure(1):
+6.13.7.109
+    Build, installation, & configure(1) script:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
           functions. Lots small changes as a result.
@@ -190,6 +190,7 @@
         * Replaced use of obsolete gethostbyaddr(3) with getnameinfo(3).
         * Removed Coverity Scan lint.
         * Eliminated memory-leaks found by valgrind(1).
+        * Collapsed CHANGE_LOG entries for 6.13.7
 
     Documentation:
         * Documented new format for log messages
@@ -207,7 +208,9 @@
               (e.g., "%N" for nanoseconds).
               
     Multicast:
-        Eliminated use of htonl() in TcpRecv constructor by duplicating it
+        Eliminated use of htonl() in TcpRecv constructor by duplicating the
+        constructor. Apparently, its use in assigning a default value violates
+        the C++ standard.
 
 6.13.6	2017-01-19T16:37:43-0700
     Slightly improved HTML Documentation based on latest workshop and added
