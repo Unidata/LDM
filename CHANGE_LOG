@@ -1,4 +1,4 @@
-6.13.7.109
+6.13.7.109	2019-01-16T15:18:07-0700
     Build, installation, & configure(1) script:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
@@ -207,10 +207,170 @@
               `strftime()`, which *might* have additional replacement strings
               (e.g., "%N" for nanoseconds).
               
-    Multicast:
-        Eliminated use of htonl() in TcpRecv constructor by duplicating the
-        constructor. Apparently, its use in assigning a default value violates
-        the C++ standard.
+    Multicast (LDM7) DO NOT USE YET!:
+        vlanUtil(1):
+            * Created for creating and provisioning the multipoint VLAN
+            * Modify usage message of vlanUtil(1) to use basename of program.
+            * Made vlanUtil(1) usable by the sender as well as the receiver.
+            * Made more robust. Added error messages.
+            * Changed "ip route show ..." to "ip route get ...".
+            * Stopped making vlanUtil(1) setuid root because such scripts no
+              longer work on Linux systems.
+
+        ChildCommand(3):
+            Fix static getline()
+
+        ldmd.conf(5):
+            Add <mcastIface> argument to MULITICAST description
+
+        mcast_lib:
+            Multicast Information:
+                * Replaced ServiceAddr-based implementation of `McastInfo` with
+                  string-based one
+                * Created `SepMcastInfo` and modified code to use
+
+            down7_manager:
+                * Allowed NULL FMTP interface
+                * Created elt_toString()
+
+            Multicast LDM sender map:
+                * Replaced use of SHM REALTIME API with XSI
+
+            Down7:
+                * Modified down7.c to use an `in_addr_t` for the VLAN virtual
+                  interface address instead of a `CidrAddr`.
+                * Execute vlanUtil(1) with root privileges because such scripts
+                  no longer work under Linux.
+                * Added reception-time to LDM7 EOP function and logging of
+                  duration of transmission.
+                * Handled EHOSTUNREACH to handle offline upstream LDM7
+                * Used "done" variable for SIGTERM termination
+                * Have down7 call downlet direcly (eliminate executor).
+                * Stopped exiting of downstream LDM6 if room in the product-queue
+                  can't be made because all products are locked.
+                * Converted it and subcomponents into singletons.
+                * Added initial zeroing of component structures during
+                * initialization.
+                * Replaced process termination request and task termination
+                  signalling mechanism with one that uses async-signal-safe
+                  read/write calls on a pipe. This now works for both regular
+                  and signal-handler calls to down7_halt().
+                * Eliminate thread argument of down7_halt()
+                * Prevent down7_halt() from sending SIGTERM to down7.thread if
+                  same thread
+                * Error-return if poll() error-returns only if errno != EINTR to
+                  accomodate Linux's non-standard signaling when seteuid() is
+                  called
+                * Don't error-return if pthread_kill(SIGTERM) fails with ESRCH
+                  because completed threads can't be signaled
+                * Improve concurrency:
+                    - Add task states
+                    - Improve inter-thread signaling
+                * Block SIGCONT & SIGALRM
+                * Add debug statements
+                * Add assertions
+                * Add product-index to eop_func() and print in INFO message
+                * Use SIGHUP instead of SIGTERM to interrupt Down7 threads
+                  beacause an external SIGTERM must terminate the process and
+                  figuring out if one is external or internal is more
+                  complicated
+                * Have Down7 re-connect immediately on multicast error
+                * Improve handling of task states
+                * Improve Backlogger
+                * Add restart capability to missed-product queue
+                * Shorten method names in RecvProxy & ProdNotifier
+                * Move test_connection_7_svc() from Up7 to Down7
+
+            Upstream multicast manager:
+                * Added umm_init() and checks for initialization.
+                * umm_destroy() now calls msm_destroy()
+                * Moved addition of FMTP client to multipoint VLAN from module
+                  "up7" to this module
+
+            Up7:
+                * Added upstream LDM7 to upstream LDM database.
+                * Improve logic of mldm_ensureRunning().
+                * Improve documentation
+                * Server-side changes to accomodate RPC assumption that calls to
+                  svc_getreqset() and svc_getreqsock() aren't nested
+                    * Functions that call svc_getreqset() always destroys
+                      transport
+                    * Separate, server-side RPC transport created and used
+                * Use "remote.h"
+                * Extract init() and shouldReply() from subscribe_7_svc() into
+                  subscribe()
+                * Improve handling of multicast information
+                * Improve destruction
+                * Simplified initXprt() & ensured destroyXprt() called
+                * Correct socket closure in initXprt()
+
+            ProdNotifier:
+                * Improve handling of start-of bad data-product
+                * Improve code to insert multicast product
+
+            Misc:
+                * In order to allow unit testing, up7.c and down7.c were
+                  modified to ignore VLAN-creation errors if the switch or port
+                  identifiers of the AL2S end-points start with "dummy".
+                * Added ability to ignore vlanUtil(1) exit status and got
+                * up7_down7_test
+                * Execute OESS provisioning script with root privileges.
+                * Modified LDM7 to log duration of multicast product
+                  transmission for throughput calculation
+                * Allow signals to interrupt XDR's readtcp() so that a
+                  concurrent thread can be terminated via pthread_kill().
+                * Added support for non-AL2S RECEIVE.
+                * Add ability for fmtp.c to join mcasticast group with port
+                  number < 1024
+                * Add debug message and improve exception message in 
+                  FmtpClntAddrs
+                * If the subscription reply from the LDM7 server says that the
+                  FMTP server's address is "0.0.0.0", then set it to the LDM7
+                  server's address.
+
+        mldm_sender(1):
+            * Changed "-m <interface>" option to "-i <interface>" in
+              mldm_sender(1).
+            * Changed specification of FMTP subnet to mldm_sender(1) from
+              operand to option-argument (default is no subnet).
+            * Remove signature from "Sent:" log message
+            * Ensure log_free() called at end of RPC server thread
+
+        FMTP:
+            * Added start-of-transmission time to beginning-of-product packet
+            * Make LDM logging cpp(1)-conditional (macro "LDM_LOGGING")
+            * Ensure calls to log_free() on thread termination
+            * Improve start-time handling and serialization: initialize
+              RetxMetadata::startTime
+            * Make reference to logging directory independent of workspace
+              directory hierarchy
+            * Add system error messages to FMTP messages
+            * Create Serializer and add to fmtpSendv3
+
+            TcpRecv(3):
+              * Improve re-connection logic by making locally-static
+                mcast-handler-started variable a member
+              * Eliminated use of htonl() in constructor by duplicating the
+                constructor. Apparently, its use in assigning a default value
+                violates the C++ standard.
+              * Remove indefinite loop from TcpRecv::initSocket() because
+                failure should be handled by the application.
+
+            FMTPRecvv3:
+                * Added reception-time to LDM7 EOP function and logging of
+                  duration of transmission.
+                * Accept longer BOP-s and improve exception message
+                * Correct fmtprecvv3::joinGroup() name
+
+        LDM:
+            * Modify decodeMulticastEntry() to allow NULL arguments.
+            * Call down7_halt() from signal handler
+            * Note in ldmd.conf that multicast feeds must be disjoint.
+            * Clear log messages if umm_remove() returns "no entry"
+            * Add down7_destroy() to cleanup()
+            * Replace log_*_q() with log*()
+            * Log all caught signals
+            * Catch all signals
 
 6.13.6	2017-01-19T16:37:43-0700
     Slightly improved HTML Documentation based on latest workshop and added
