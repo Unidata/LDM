@@ -1,8 +1,8 @@
-6.13.7.109	2019-01-16T15:18:07-0700
+6.13.7.110	2019-01-22T09:39:23-0700
     Build, installation, & configure(1) script:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
-          functions. Lots small changes as a result.
+          functions. Lots of small changes as a result.
         * Made binary installation directory writable by LDM user only to
           obviate execution of malicious binary with root privileges.
         * Added "-lstdc++" to shared-library creation.

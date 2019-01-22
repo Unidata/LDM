@@ -270,6 +270,9 @@ timestamp:
 
 dist:		configure
 
+distcheck-hook:
+	./distcheckHook
+
 commit-check:	Makefile
 	if git status --untracked-files | grep -Fq 'nothing to commit'; \
 	then \
