@@ -22,87 +22,33 @@
 	Source-Code</A> 
 	</P>
 </UL>
+
 <HR>
+
 <H2><A NAME="general"></A>General Requirements</H2>
-<P>Your computer must 
-</P>
+
+<H3>System Requirements</H3>
 <UL>
-	<LI><P STYLE="margin-bottom: 0in">Run some variant of a UNIX<SUP>&reg;</SUP>
+	<LI><P STYLE="margin-bottom: 0in">Some variant of a UNIX<SUP>&reg;</SUP>
 	operating system. 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in">Have a standard user-shell (<I>e.g.</I>,
+
+	<LI><P STYLE="margin-bottom: 0in">Standard user-shell (<I>e.g.</I>,
 	<TT>sh(1)</TT>, <TT>ksh(1)</TT>, <TT>bash(1)</TT>) . 
 	</P>
-	<LI><P STYLE="margin-bottom: 0in">Have sufficient <em>local</em>
+
+	<LI><P STYLE="margin-bottom: 0in">Sufficient <em>local</em>
         disk-space
 	for the <A HREF="glindex.html#LDM">LDM</A> <A HREF="glindex.html#product-queue">product-queue</A>,
 	which can range from a few megabytes to many gigabytes in size -�-
 	depending on your data requirements. 
 	</P>
 
-	<LI><P STYLE="margin-bottom: 0in">Have <A HREF="http://www.perl.com/">perl</A>
-	5 installed.</P>
-
-	<LI><P STYLE="margin-bottom: 0in">Have the
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> <em>development</em>
-	package installed
-	(look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>
-	<em>and</em> the
-	file <tt>libxml/parser.h</tt>).
-	This package is used by the LDM to parse the 
-	<a href="glindex.html#LDM registry">LDM registry</a>. If this
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).</P>
-    
-	<LI><P STYLE="margin-bottom: 0in">Have the
-	<A HREF="http://www.libpng.org/pub/png/"><tt>PNG</tt></A>
-	<em>development</em> package installed
-	(look for the file <tt>libpng.a</tt> or <tt>libpng.so</tt> <em>and</em>
-	the file <tt>png.h</tt>). This is only necessary if you intend to ingest
-	data via the LDM <a href="glindex.html#NOAAPORT">NOAAPORT</a> system.
-	If the PNG
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).</P>
-    
-	<LI><P STYLE="margin-bottom: 0in">Have the
-	<A HREF="http://zlib.net/"><tt>zlib</tt></A> <em>development</em>
-	package installed
-	(look for the file <tt>libz.a</tt> or <tt>libz.so</tt> <em>and</em> the
-	file <tt>zlib.h</tt>).
-	This package is used by the
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A>  package.
-	If this
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).</P>
-
-	<LI><P STYLE="margin-bottom: 0in">
-	Have the
-	<A HREF="glindex.html#uptime utility"><tt>uptime</tt></A>,
-	<A HREF="glindex.html#vmstat utility"><tt>vmstat</tt></A>,
-	<A HREF="glindex.html#netstat utility"><tt>netstat</tt></A>, and
-	<A HREF="glindex.html#top utility"><tt>top</tt></A>
-	utilities installed if you wish to collect metrics on
-	the performance of the LDM system via the 
-	<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A> addmetrics</tt>
-	command.</P>
-
-	<LI><P STYLE="margin-bottom: 0in">
-	Have the
-	<tt><A HREF="glindex.html#gnuplot">gnuplot</A></tt>
-	utility installed if you wish to plot metrics on
-	the performance of the LDM system via the 
-	<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A>
-	plotmetrics</tt> command, or the
-	<tt><A HREF="glindex.html#plotMetrics">plotMetrics</A></tt>
-	utility.
-	</P>
-
-	<LI><P>Have an accurate and <EM>monotonic</EM> clock.
+	<LI><P>An accurate and <EM>monotonic</EM> clock.
 </UL>
-<P STYLE="margin-bottom: 0in">The last requirement is absolutely
+
+<P STYLE="margin-bottom: 0in">The requirement for an accurate and monotonic
+clock is absolutely
 necessary because the <A HREF="glindex.html#LDM%20protocol">LDM
 protocol</A> depends on accurate clocks on both the <A
 HREF="glindex.html#upstream%20host">upstream host</A> and the <A
@@ -140,6 +86,92 @@ Known Hardware Issues</a> and
 <a href="http://support.ntp.org/bin/view/Support/KnownOsIssues">
 Known Operating System Issues</a>.
 </P>
+
+<H3>Necessary Packages</H3>
+
+<P>The following items must be installed in order to build the LDM.
+</P>
+
+<UL>
+	<LI><P STYLE="margin-bottom: 0in"><A HREF="http://www.perl.com/">perl</A>
+	5 package</P>
+    
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="http://zlib.net/"><tt>zlib</tt></A> <em>development</em>
+	package.
+	Look for the file <tt>libz.a</tt> or <tt>libz.so</tt> <em>and</em> the
+	file <tt>zlib.h</tt>.
+	If this
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).
+	This package is used by the
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A>  package.</P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> <em>development</em>
+	package.
+	Look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>
+	<em>and</em> the
+	file <tt>libxml/parser.h</tt>.
+	If this
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).
+	This package is used by the LDM to parse the 
+	<a href="glindex.html#LDM registry">LDM registry</a>.</P>
+</UL>
+
+<H3>Necessary for 
+<a href="glindex.html#NOAAPORT">NOAAPort</a> Ingestion</H3>
+
+<P>The following item is necessary in order to use the LDM to ingest
+data-products from the <a href="glindex.html#NOAAPORT">NOAAPort</a> satellite
+broadcast system.</P>
+
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="http://www.libpng.org/pub/png/"><tt>PNG</tt></A>
+	<em>development</em> package.
+	Look for the file <tt>libpng.a</tt> or <tt>libpng.so</tt> <em>and</em>
+	the file <tt>png.h</tt>.
+	If the PNG
+	package's library is installed but not its header-file, then you must
+	install the <em>development</em> package (the
+	runtime package doesn't contain the necessary header-files).</P>
+</UL>
+
+<H3>Performance Monitoring</H3>
+
+<P>The following utilities must be available in order to collect metrics on
+the performance of the LDM system via the command
+<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A> addmetrics</tt>.</P>
+
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="glindex.html#uptime utility"><tt>uptime</tt></A></P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="glindex.html#vmstat utility"><tt>vmstat</tt></A></P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="glindex.html#netstat utility"><tt>netstat</tt></A></P>
+
+	<LI><P STYLE="margin-bottom: 0in">
+	<A HREF="glindex.html#top utility"><tt>top</tt></A></P>
+</UL>
+
+<P>The following item is necessary to display the performance metrics of the
+LDM system via the command
+<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A>
+plotmetrics</tt>, or the
+<tt><A HREF="glindex.html#plotMetrics">plotMetrics</A></tt>
+utility.</P>
+
+<UL>
+	<LI><P STYLE="margin-bottom: 0in">
+	<tt><A HREF="glindex.html#gnuplot">gnuplot</A></tt> package</P>
+</UL>
 
 <HR>
 
