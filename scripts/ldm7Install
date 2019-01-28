@@ -1,3 +1,5 @@
+PATH=/usr/bin:/usr/sbin:/bin:sbin
+
 # Exit on error
 set -x
 
@@ -6,13 +8,12 @@ cd `dirname $0`
 cd ..
 
 # Ensure default access to a C++11-compliant version of g++(1)
-if ! g++ -dumpversion | grep -q '4.[89]'; then
-    scl enable devtoolset-2 bash
+if ! g++ -dumpversion | grep -E -q '^(4.[89]|5|6)'; then
+    source /opt/rh/devtoolset-2/enable
 fi
 
 # Configure the build
-./configure --enable-debug --with-multicast --disable-root-actions \
-        --enable-port=38800 CFLAGS='-g -O0' CXXFLAGS='-g -std=c++11' \
+./configure --disable-root-actions --enable-debug --with-multicast \
         >&configure.log && echo Configured
 
 # Build and install the package
