@@ -1,5 +1,5 @@
-6.13.7.110	2019-01-23T11:02:31-0700
-    Build, installation, & configure(1) script:
+6.13.7.111	2019-01-28T12:42:37-0700
+    Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
           functions. Lots of small changes as a result.
@@ -10,6 +10,8 @@
           with configure(1) on BSD systems.
         * Added "--with-delayQueue" option to configure(1).
         * Made configure(1)'s "--enable-debug" option set CFLAGS & CXXFLAGS.
+        * Added OESS-Client module
+        * Created ldm7PreInstall(1) and ldm7Install(1) scripts
 
     noaaportIngester(1):
         * Improved responsiveness to external events:
@@ -27,7 +29,7 @@
             * Incorporated fileReader and multicastReader components into
               noaaportIngester.c
             * Eliminated file descriptor from input-reader component
-        * Improved construction of LDM identifier:
+        * Improved construction of LDM product-identifier:
             * Enabled creation of a complete LDM product-identifier even if the
               forecast time-interval of a GRIB2 field can't be decoded due to an
               unknown PDTN.
@@ -206,6 +208,7 @@
             * Replacements based on data-product creation-time are based on
               `strftime()`, which *might* have additional replacement strings
               (e.g., "%N" for nanoseconds).
+        * Improved section on general platform requirements
               
     Multicast (LDM7) DO NOT USE YET!:
         vlanUtil(1):
