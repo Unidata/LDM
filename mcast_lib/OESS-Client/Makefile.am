@@ -7,3 +7,4 @@
 # Process this file with automake(1) to produce file Makefile.in
 
 SUBDIRS			= OESS-Client-V2
+EXTRA_DIST		= README.md
