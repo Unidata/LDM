@@ -1,11 +1,11 @@
-# This script prepares the package for being released. If the current branch is
-# "master", then it
+# This script releases the package.  If the current branch is "master", then it
 #   - Sets the timestamp in the first line of the file CHANGE_LOG
 #   - Sets the version ID in the file configure.ac
 #   - Sets the version ID in the file delivery/release-vars.sh 
 #   - Commits the above changes
 #   - Tags the commit with the version ID
-#   - Executes a "make distcheck"
+#   - Pushes to the remote repository
+#   - Executes a "make dist"
 
 set -e  # exit upon error
 
@@ -46,6 +46,9 @@ if git branch | grep -w master >/dev/null; then
     # Tag the current version.
     git tag -f "v$versionId"
 
-    # Execute
-    make distcheck
+    # Push to the remote repository
+    git push
+
+    # Create a distribution
+    make dist
 fi
