@@ -1,4 +1,4 @@
-6.13.7.111	2019-01-28T12:54:34-0700
+6.13.7.112	2019-01-29T11:33:25-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
@@ -12,6 +12,8 @@
         * Made configure(1)'s "--enable-debug" option set CFLAGS & CXXFLAGS.
         * Added OESS-Client module
         * Created ldm7PreInstall(1) and ldm7Install(1) scripts
+        * Corrected setting of installation directories in "config.h" that are
+          overridden at configure(1) time
 
     noaaportIngester(1):
         * Improved responsiveness to external events:
