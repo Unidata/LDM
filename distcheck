@@ -5,13 +5,14 @@
 #   - Sets the version ID in the file delivery/release-vars.sh 
 #   - Commits the above changes
 #   - Tags the commit with the version ID
+#   - Executes a "make distcheck"
 
 set -e  # exit upon error
 
 # Go to the top-level directory of the working tree.
 cd `dirname $0`
 
-if git branch | grep '^\* *master$' >/dev/null; then
+if git branch | grep -w master >/dev/null; then
     # The current branch is "master"
     #
     # Get and vet the package version information from the CHANGE_LOG file.
@@ -38,11 +39,13 @@ if git branch | grep '^\* *master$' >/dev/null; then
     sed "/^export *PKG_VERSION=/cexport PKG_VERSION=$versionId" \
             delivery/release-vars.sh >delivery/release-vars.sh.tmp
     mv delivery/release-vars.sh.tmp delivery/release-vars.sh
-    git add delivery/release-vars.sh
 
     # Commit the changes.
     git commit -a -m "v$versionId"
 
     # Tag the current version.
     git tag -f "v$versionId"
+
+    # Execute
+    make distcheck
 fi
