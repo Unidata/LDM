@@ -1250,9 +1250,9 @@ static uldb_Status sm_deleteByKey(
 /**
  * Creates a shared-memory segment.
  *
- * @param sm            [in] Pointer to the shared-memory structure
- * @param key           [in] The IPC key for the shared-memory
- * @param size          [in] The initial size, in bytes, of the data portion of
+ * @param[in] sm        Pointer to the shared-memory structure
+ * @param[in] key       The IPC key for the shared-memory
+ * @param[in] size      The initial size, in bytes, of the data portion of
  *                      the shared-memory segment
  * @retval ULDB_SUCCESS Success
  * @retval ULDB_EXIST   The shared-memory segment already exists. log_add()
@@ -1874,11 +1874,11 @@ static uldb_Status uldb_getKey(
 /**
  * Initializes the database and returns the IPC key.
  *
- * @param path[in]          Pathname of an existing file to associate with
+ * @param[in]  path         Pathname of an existing file to associate with
  *                          the database or NULL to obtain the default
  *                          association. Different pathnames obtain different
  *                          databases.
- * @param key               [out] Pointer to IPC key
+ * @param[out] key          Pointer to IPC key
  * @retval ULDB_SUCCESS     Success
  * @retval ULDB_INIT        Database already open. log_add() called.
  * @retval ULDB_SYSTEM      System error. log_add() called.
