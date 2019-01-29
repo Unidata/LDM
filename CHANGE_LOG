@@ -1,4 +1,4 @@
-6.13.7.112	2019-01-29T11:33:25-0700
+6.13.7.113	2019-01-29T15:09:56-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
