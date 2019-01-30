@@ -1361,7 +1361,7 @@ static McastEntry key;
 /// FMTP retransmission timeout in minutes
 static float retxTimeout = -1.0; // Negative => use FMTP default
 /// Name of AL2S Workgroup
-static const char* wrkGrpName;
+static const char* wrkGrpName = "UCAR-LDM";
 
 /**
  * Returns the multicast entry corresponding to a particular feed.
