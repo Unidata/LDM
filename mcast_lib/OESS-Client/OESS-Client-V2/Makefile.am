@@ -6,4 +6,4 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-dist_bin_SCRIPTS	= provision.py remove.py
+dist_bin_SCRIPTS	= provision.py remove.py edit.py
