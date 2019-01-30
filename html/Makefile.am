@@ -74,6 +74,7 @@ EXTRA_DIST	= \
 BUILT_SOURCES	= CHANGE_LOG COPYRIGHT
 CLEANFILES	= CHANGE_LOG COPYRIGHT
 
+WEBHOST		= www.unidata.ucar.edu
 ALPHADIR	= /web/content/staff/steve/ldm
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
@@ -90,10 +91,10 @@ web-update:	commit-check
 	    ../COPYRIGHT \
 	    *.html \
 	    troubleshooting \
-	    $(WEB_DESTDIR)
-	cd basics && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
-	cd tutorial && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
-	cd workshop && make $@ WEB_DESTDIR=$(WEB_DESTDIR)
+	    $(WEBHOST):$(WEB_DESTDIR)
+	cd basics && make $@ WEBHOST=$(WEBHOST) WEB_DESTDIR=$(WEB_DESTDIR)
+	cd tutorial && make $@ WEBHOST=$(WEBHOST) WEB_DESTDIR=$(WEB_DESTDIR)
+	cd workshop && make $@ WEBHOST=$(WEBHOST) WEB_DESTDIR=$(WEB_DESTDIR)
 
 alpha:
 	$(MAKE) web-update WEB_DESTDIR=$(ALPHADIR)

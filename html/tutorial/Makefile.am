@@ -78,11 +78,12 @@ $(EXTRA_DIST):
 	    -noglossary \
 	    -notclevaluation
 
+WEBHOST		= www.unidata.ucar.edu
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 web-update:	$(EXTRA_DIST)
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    tutorial/ \
-	    $(WEB_DESTDIR)/tutorial
+	    $(WEBHOST):$(WEB_DESTDIR)/tutorial
 
 .PHONY:		web-update tutorial

@@ -252,7 +252,12 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
-FTPDIR	= /web/ftp/pub/$(PACKAGE)
+FTPHOST		= www.unidata.ucar.edu
+FTPDIR		= /web/ftp/pub/$(PACKAGE)
+DOWNLOADHOST	= www.unidata.ucar.edu
+DOWNLOADDIR	= /web/content/downloads/$(PACKAGE)
+WEBHOST		= www.unidata.ucar.edu
+WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 $(FTPDIR):
 	mkdir -p $@
@@ -290,12 +295,6 @@ tag:
 # public
 release:
 	test -z "`git status --porcelain`" || (echo Commit changes first!; exit 1)
-	echo 'PUT VERSION HERE' >CHANGE_LOG.tmp
-	git log --name-status --pretty=full $(LAST_VERSION).. >>CHANGE_LOG.tmp
-	echo '' >>CHANGE_LOG.tmp
-	cat CHANGE_LOG >>CHANGE_LOG.tmp
-	vi CHANGE_LOG.tmp
-	mv CHANGE_LOG.tmp CHANGE_LOG
 	sed -n '1,/^%changelog/p' ldm.spec.in ldm.spec.in >ldm.spec.in.tmp
 	echo >>ldm.spec.in.tmp
 	newVersion=`awk '{print $$1; exit}' CHANGE_LOG`; \
@@ -306,10 +305,7 @@ release:
 	sed '1,/^%changelog/d' ldm.spec.in >>ldm.spec.in.tmp; \
 	vi "+/PUT SUMMARY HERE/" ldm.spec.in.tmp; \
 	mv ldm.spec.in.tmp ldm.spec.in; \
-	sed '/^AC_INIT(/s/\[[0-9][0-9.]*\]/['"$$newVersion"']/' configure.ac \
-	    >configure.ac.tmp; \
-	mv configure.ac.tmp configure.ac
-	$(MAKE) configure Makefile timestamp dist commitAndTag rpm
+#	$(MAKE) rpm
 
 RPM_BUILDDIR	= $$HOME/rpmbuild
 #
@@ -327,24 +323,24 @@ rpmlint:
 	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
 	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
 
-ftp-actual:		dist rpm $(FTPDIR)
-	cp -p $(distArchive) $(FTPDIR)
-	chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
-	rm -f $(FTPDIR)/$(PACKAGE).tar.gz
-	$(LN_S) $(distArchive) $(FTPDIR)/$(PACKAGE).tar.gz
-	cp -p $(PACKAGE)*-$(VERSION)-*.rpm $(FTPDIR)
-	chmod u+rw,g+rw,o=r $(FTPDIR)/$(PACKAGE)*-$(VERSION)-*.rpm 
+ftp-actual:		dist $(FTPDIR) # rpm
+	scp $(distArchive) $(FTPHOST):$(FTPDIR)
+	ssh $(FTPHOST) chmod u+rw,g+rw,o=r $(FTPDIR)/$(distArchive)
+	ssh $(FTPHOST) rm -f $(FTPDIR)/$(PACKAGE).tar.gz
+	ssh $(FTPHOST) $(LN_S) $(distArchive) $(FTPDIR)/$(PACKAGE).tar.gz
+#	cp -p $(PACKAGE)*-$(VERSION)-*.rpm $(FTPDIR)
+#	chmod u+rw,g+rw,o=r $(FTPDIR)/$(PACKAGE)*-$(VERSION)-*.rpm 
 
 download_update:
-	previous=`sed -n 's/.*"%current%" value="\(.*\)".*/\1/p' \
-		 /web/content/downloads/$(PACKAGE)/toc.xml`; \
+	previous=`ssh $(DOWNLOADHOST) sed -n 's/.*"%current%" value="\(.*\)".*/\1/p' \
+		 $(DOWNLOADDIR)/toc.xml`; \
 	if test "$$previous" != "$(VERSION)"; then \
-	    sed -e 's/"%current%" value=".*"/"%current%" value="$(VERSION)"/' \
-	    -e 's/"%previous%" value=".*"/"%previous%" value="'$$previous'"/' \
-		/web/content/downloads/$(PACKAGE)/toc.xml >toc.xml.new; \
-	    cp /web/content/downloads/$(PACKAGE)/toc.xml \
-		/web/content/downloads/$(PACKAGE)/toc.xml.old; \
-	    mv -f toc.xml.new /web/content/downloads/$(PACKAGE)/toc.xml; \
+	    ssh $(DOWNLOADHOST) sed \
+                    -e 's/"%current%" value=".*"/"%current%" value="$(VERSION)"/' \
+                    -e 's/"%previous%" value=".*"/"%previous%" value="'$$previous'"/' \
+                    $(DOWNLOADDIR)/toc.xml >toc.xml.new; \
+	    ssh $(DOWNLOADHOST) cp $(DOWNLOADDIR)/toc.xml $(DOWNLOADDIR)/toc.xml.old; \
+	    ssh $(DOWNLOADHOST) mv -f toc.xml.new $(DOWNLOADDIR)/toc.xml; \
 	fi
 
 ftp:			release
@@ -359,12 +355,16 @@ alpha:
 	cd html && $(MAKE) alpha ALPHADIR=/web/content/staff/steve/ldm
 
 web-update:
-	cd html && $(MAKE) web-update
-	cd noaaport && $(MAKE) web-update
+	cd html && $(MAKE) web-update WEBHOST=$(WEBHOST)
+	cd noaaport && $(MAKE) web-update WEBHOST=$(WEBHOST)
 
 # Make this instead of "release" when the package will be released to the
 # public
 available:	ftp web-update
+
+
+publish:
+	bash delivery/publish $(FTPHOST) $(distArchive)
 
 .PHONY:		\
     alpha \

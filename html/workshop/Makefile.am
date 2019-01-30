@@ -9,9 +9,10 @@ DISTCLEANFILES	= specifics.html
 
 EXTRA_DIST	= $(html_DATA)
 
+WEBHOST		= www.unidata.ucar.edu
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 web-update:
 	rsync $(RSYNC_FLAGS) -aCu --delete --delete-excluded \
 	    *.html \
-	    $(WEB_DESTDIR)/workshop
+	    $(WEBHOST):$(WEB_DESTDIR)/workshop

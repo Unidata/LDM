@@ -258,6 +258,7 @@ failures.html:	$(top_srcdir)/test/results.tab
 		print "</html>"; \
 	    }' >$@
 
+WEBHOST		= www.unidata.ucar.edu
 WEB_DESTDIR	= /web/content/software/ldm/$(PACKAGE)-$(VERSION)
 
 web-update:
@@ -265,9 +266,9 @@ web-update:
 	    *.html \
 	    *.gif \
 	    feedtypes \
-	    $(WEB_DESTDIR)/basics
-	sed -e 's:$(DESTDIR)@LDMHOME@:$$LDMHOME:g' \
+	    $(WEBHOST):$(WEB_DESTDIR)/basics
+	ssh $(WEBHOST) sed -e 's:$(DESTDIR)@LDMHOME@:$$LDMHOME:g' \
 	    $(WEB_DESTDIR)/basics/LDM-registry.html \
-	    >$(WEB_DESTDIR)/basics/LDM-registry.html.new
-	mv $(WEB_DESTDIR)/basics/LDM-registry.html.new \
+	    \>$(WEB_DESTDIR)/basics/LDM-registry.html.new
+	ssh mv $(WEB_DESTDIR)/basics/LDM-registry.html.new \
 	    $(WEB_DESTDIR)/basics/LDM-registry.html 
