@@ -304,7 +304,7 @@ release:
 	echo "- PUT SUMMARY HERE" >>ldm.spec.in.tmp; \
 	sed '1,/^%changelog/d' ldm.spec.in >>ldm.spec.in.tmp; \
 	vi "+/PUT SUMMARY HERE/" ldm.spec.in.tmp; \
-	mv ldm.spec.in.tmp ldm.spec.in; \
+	mv ldm.spec.in.tmp ldm.spec.in;
 #	$(MAKE) rpm
 
 RPM_BUILDDIR	= $$HOME/rpmbuild
