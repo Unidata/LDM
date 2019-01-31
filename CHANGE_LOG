@@ -1,4 +1,4 @@
-6.13.7.115	2019-01-30T13:19:25-0700
+6.13.7.116	2019-01-31T09:40:35-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
@@ -291,6 +291,7 @@
                 * umm_destroy() now calls msm_destroy()
                 * Moved addition of FMTP client to multipoint VLAN from module
                   "up7" to this module
+                * Set AL2S workgroup to "UCAR-LDM"
 
             Up7:
                 * Added upstream LDM7 to upstream LDM database.
