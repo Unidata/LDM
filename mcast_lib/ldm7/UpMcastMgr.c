@@ -18,7 +18,6 @@
 
 #include "log.h"
 #include "inetutil.h"
-//#include "AuthClient.h"
 #include "ChildCommand.h"
 #include "CidrAddr.h"
 #include "fmtp.h"
@@ -30,6 +29,7 @@
 #include "MldmRpc.h"
 #include "mldm_sender_map.h"
 #include "priv.h"
+#include "registry.h"
 #include "StrBuf.h"
 #include "UpMcastMgr.h"
 
@@ -694,7 +694,27 @@ mldm_release(const in_addr_t fmtpClntAddr)
  * OESS-based submodule for creating an AL2S virtual circuit
  ******************************************************************************/
 
-static const char    python[] = "python"; ///< Name of python executable
+static const char python[] = "python"; ///< Name of python executable
+static const char defaultOessPathname[] = LDMHOME "/etc/OESS-account.yaml";
+static char*      oessPathname;
+
+static void
+oess_init(void)
+{
+    if (oessPathname == NULL) {
+        if (reg_getString(REG_OESS_PATHNAME, &oessPathname))
+            oessPathname = defaultOessPathname;
+    }
+}
+
+static void
+oess_destroy(void)
+{
+    if (oessPathname != defaultOessPathname)
+        free(oessPathname);
+
+    oessPathname = NULL;
+}
 
 /**
  * Creates an AL2S virtual circuit between two end-points.
@@ -740,6 +760,7 @@ oess_provision(
         (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
 
         const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
+                oessPathname,
                 end1->switchId, end1->portId, vlanId1,
                 end2->switchId, end2->portId, vlanId2, NULL};
 
@@ -792,6 +813,9 @@ oess_provision(
                 } // Child process terminated unsuccessfully
             } // Child-command was reaped
         } // Couldn't execute child-command
+
+        if (oessPathname != defaultOessPathname)
+            free(oessPathname);
     } // Valid arguments and actual provisioning
 
     return status;
@@ -809,8 +833,8 @@ oess_remove(
         const char* const restrict circuitId)
 {
     int               status;
-    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
-            NULL};
+    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, oessPathname,
+            circuitId, NULL};
     ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
     if (cmd == NULL) {
@@ -1585,6 +1609,8 @@ umm_init(void)
             log_add("Couldn't initialize the multicast sender map");
         }
         else {
+            oess_init();
+
             initialized = true;
         }
     }
@@ -1599,6 +1625,7 @@ umm_destroy(const bool final)
         log_warning("Upstream multicast manager is not initialized");
     }
     else {
+        oess_destroy();
         umm_clear();
         msm_destroy(final);
         initialized = false;
