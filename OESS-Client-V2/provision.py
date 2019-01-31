@@ -10,6 +10,10 @@ values1 = {}
 values2 = {}
 values3 = {}
 link = []
+f = open("/home/yt4xb/etc/OESS-password", 'r+')
+line = f.read().split()
+username = line[0]
+passwd = line[1]
 gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
 values1 = {'method' : 'get_workgroups'}
 values2 = {'method' : 'get_shortest_path', 'node' : [sys.argv[3], sys.argv[6]], 'type' : 'mpls'}
@@ -18,7 +22,7 @@ data2 = urllib.urlencode(values2, doseq=True)
 req1 = urllib2.Request(gh_url, data1)
 req2 = urllib2.Request(gh_url, data2)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url, 'username', 'passwd')
+password_manager.add_password(None, gh_url, username, passwd)
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
 urllib2.install_opener(opener)
@@ -43,7 +47,7 @@ data = urllib.urlencode(values3, doseq=True)
 gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-password_manager.add_password(None, gh_url2, 'username', 'passwd')
+password_manager.add_password(None, gh_url2, username, passwd)
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
 urllib2.install_opener(opener)
