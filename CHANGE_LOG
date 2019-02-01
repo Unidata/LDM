@@ -1,4 +1,4 @@
-6.13.7.116	2019-01-31T09:40:35-0700
+6.13.7.117	2019-02-01T13:58:54-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
           accomodate Solaris and eliminated reliance on non-standard GNU C
@@ -55,6 +55,8 @@
           logging level from error to warning.
     	* Replaced obsolete time-server `timeserver.unidata.ucar.edu` with
     	  `pool.ntp.org`.
+        * Added pathname of file that contains OESS account information to LDM
+          registry
 
     ldmd(1):
         * Decomposed server into smaller functions.
@@ -81,7 +83,7 @@
     	  that don't have a version-specific subdirectory.
 
     plotMetrics(1) (used by "ldmadmin plotmetrics"):
-        * Added "eval" to pathname expansion to accomodate patterns containing
+        * Added "eval" to pathname expansion to accomodate patterns that contain
           things like "metrics.txt{,.[1-4]}".
         * Added "-o  <template>" option to output PNG files.
 
@@ -292,6 +294,8 @@
                 * Moved addition of FMTP client to multipoint VLAN from module
                   "up7" to this module
                 * Set AL2S workgroup to "UCAR-LDM"
+                * Modified code to invoke Python OESS client scripts with
+                  pathname of file that contains OESS account information
 
             Up7:
                 * Added upstream LDM7 to upstream LDM database.
