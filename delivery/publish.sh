@@ -1,22 +1,27 @@
-# Copies an LDM source distribution to the public download directory and ensures
-# the existence of that version's documentation on the package's website. The
-# package is built and installed in "/tmp/ldm-$version" to extract the
-# documentation.
+# Publishes the current LDM source distribution.
+#   - Executes a local "make install"
+#   - Copies the tarball to the public download directory
+#   - Deletes old, bug-fix versions
+#   - Copies the installed documentation on the LDM's website
+#   - Delete old, bug-fix versions
+#   - Adjusts symbolic links on the LDM's website
 #
 # Usage:
-#       $0 <host> <version>
+#       $0 <host>
 # where:
 #       <host>     Name of the host on which the LDM package is made public
 #                  (e.g., "www.unidata.ucar.edu")
-#       <version>  LDM package version (e.g. "6.13.7")
 
 set -e  # exit on failure
 
-test $# -eq 2
-
 host=${1?Host not specified}
-version=${2?Version not specified}
 
+# Ensure that the package is installed so that the documentation can be copied
+# to the website.
+echo Installing package locally
+make install >&install.log
+
+version=`awk 'NR==1{print $1; exit;}'
 tarball=ldm-$version.tar.gz
 ftpdir=/web/ftp/pub/software/ldm
 webdir=/web/content/software/ldm
@@ -45,11 +50,6 @@ ssh -T $host bash --login <<EOF
         fgrep -s \$vers versions || rm -rf ldm-\$vers
     done
 EOF
-
-# Ensure that the package is installed so that the documentation can be copied
-# to the website.
-echo Installing package locally
-make install >&install.log
 
 # Copy the documentation to the package's website
 versionWebDir=$webdir/ldm-$version
