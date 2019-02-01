@@ -7,21 +7,21 @@
 #   - Adjusts symbolic links on the LDM's website
 #
 # Usage:
-#       $0 <host>
+#       $0 [<host>]
 # where:
-#       <host>     Name of the host on which the LDM package is made public
-#                  (e.g., "www.unidata.ucar.edu")
+#       <host>     Name of the host on which the LDM package is made public.
+#                  Default is "www.unidata.ucar.edu".
 
 set -e  # exit on failure
 
-host=${1?Host not specified}
+host=${1:-www.unidata.ucar.edu}
 
 # Ensure that the package is installed so that the documentation can be copied
 # to the website.
 echo Installing package locally
 make install >&install.log
 
-version=`awk 'NR==1{print $1; exit;}'
+version=`awk 'NR==1{print $1; exit;}`
 tarball=ldm-$version.tar.gz
 ftpdir=/web/ftp/pub/software/ldm
 webdir=/web/content/software/ldm
