@@ -1,10 +1,16 @@
 # Publishes the current LDM source distribution.
 #   - Executes a local "make install"
-#   - Copies the tarball to the public download directory
-#   - Deletes old, bug-fix versions
-#   - Copies the installed documentation on the LDM's website
-#   - Delete old, bug-fix versions
-#   - Adjusts symbolic links on the LDM's website
+#   - In the FTP directory:
+#       - Copies the tarball
+#       - Deletes old, bug-fix versions
+#   - In the download directory:
+#       - Ensures a symbolic link to the tarball
+#       - Deletes old, bug-fix symbolic links
+#       - Updates the table-of-contents HTML file
+#   - In the LDM webpage directory:
+#       - Copies the installed documentation
+#       - Delete old, bug-fix versions
+#       - Updates the symbolic links
 #
 # Usage:
 #       $0 [<host>]
@@ -21,24 +27,20 @@ host=${1:-www.unidata.ucar.edu}
 echo Installing package locally
 make install >&install.log
 
-version=`awk 'NR==1{print $1; exit;}`
+version=`awk 'NR==1{print $1; exit;}' CHANGE_LOG`
 tarball=ldm-$version.tar.gz
-ftpdir=/web/ftp/pub/software/ldm
+ftpdir=/web/ftp/pub/ldm
+downloaddir=/web/content/downloads/ldm
 webdir=/web/content/software/ldm
 
-# Ensure that the FTP directory contains the tarball
-if ! ssh $host test -e $ftpdir/$tarball; then
-    #
-    # Copy the tarball to the FTP directory.
-    #
-    echo Copying  $tarbal to $ftpdir
-    trap "ssh $host rm -f $ftpdir/$tarball; `trap -p ERR`" ERR
-    scp $tarball $host:$tarball
-fi
+# Copy the tarball to the FTP directory
+echo Copying $tarball to $host:$ftpdir
+trap "ssh $host rm -f $ftpdir/$tarball; `trap -p ERR`" ERR
+scp $tarball $host:$ftpdir/$tarball
 
 # Purge the FTP directory of bug-fix versions that are older than the latest
 # corresponding minor release.
-echo Purging $ftpdir of bug-fixes older than $tarball
+echo Purging $host:$ftpdir of bug-fixes older than $tarball
 ssh -T $host bash --login <<EOF
     set -ex # Exit on error
     cd $ftpdir
@@ -49,6 +51,41 @@ ssh -T $host bash --login <<EOF
     for vers in \`ls -d ldm-[0-9.]*.tar.gz | sed "s/ldm-//"\`; do
         fgrep -s \$vers versions || rm -rf ldm-\$vers
     done
+EOF
+
+# Ensure that the download directory has a link to the tarball
+echo Creating link to $host:$ftpdir in $downloaddir
+trap "ssh $host rm -f $downloaddir/$tarball; `trap -p ERR`" ERR
+ssh -T $host bash --login <<EOF
+    set -ex # Exit on error
+    cd $downloaddir
+    rm -f $tarball
+    ln -s $ftpdir/$tarball
+EOF
+
+# Purge the download directory of symbolic links that are older than the latest
+# corresponding minor release.
+echo Purging $host:$downloaddir of bug-fixes older than $tarball
+ssh -T $host bash --login <<EOF
+    set -ex # Exit on error
+    cd $downloaddir
+    ls -d ldm-[0-9.]*.tar.gz |
+        sed "s/ldm-//" |
+        sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
+        awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
+    for vers in \`ls -d ldm-[0-9.]*.tar.gz | sed "s/ldm-//"\`; do
+        fgrep -s \$vers versions || rm -rf ldm-\$vers
+    done
+EOF
+
+# Modify the table-of-contents HTML file to reference the tarball's symbolic
+# link
+ssh -T $host bash --login <<EOF
+    set -ex # Exit on error
+    cd $downloaddir
+    sed 's/ldm-[0-9.]*\.tar\.gz/$tarball/g' toc.xml >toc.xml.new
+    cp -f toc.xml toc.xml.old
+    mv -f toc.xml.new toc.xml
 EOF
 
 # Copy the documentation to the package's website
@@ -65,17 +102,18 @@ ssh -T $host bash --login <<EOF
     # Go to the top-level of the package's web-pages.
     cd $webdir
 
-    # Allow group write access to all created files.
+    # Allow group write access to all created files
     umask 02
 
     # Set the hyperlink references to the documentation. For a given major
     # and minor version, keep only the latest bug-fix.
     echo Linking to documentation in $host:`pwd`
-    ls -d ldm-[0-9.]*.tar.gz |
+    ls -d ldm-[0-9.]* |
         sed "s/ldm-//" |
         sort -t. -k 1nr,1 -k 2nr,2 -k 3nr,3 |
         awk -F. '\$1!=ma||\$2!=mi{print}{ma=\$1;mi=\$2}' >versions
-    sed -n '1,/BEGIN VERSION LINKS/p' versions.inc >versions.inc.new for vers in \`cat versions\`; do
+    sed -n '1,/BEGIN VERSION LINKS/p' versions.inc >versions.inc.new
+    for vers in \`cat versions\`; do
         href=ldm-\$vers
         cat <<END_VERS >>versions.inc.new
              <tr>
@@ -102,7 +140,7 @@ END_VERS
 
     # Delete all versions not referenced in the top-level HTML file.
     echo Deleting unreferenced version in $host:`pwd`
-    for vers in \`ls -d ldm-[0-9.]*.tar.gz | sed "s/ldm-//"\`; do
+    for vers in \`ls -d ldm-[0-9.]* | sed "s/ldm-//"\`; do
         fgrep -s \$vers versions || rm -rf ldm-\$vers
     done
 
