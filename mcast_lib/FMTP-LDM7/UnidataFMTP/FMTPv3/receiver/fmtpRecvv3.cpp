@@ -191,7 +191,7 @@ void fmtpRecvv3::Start()
     /** connect to the sender */
     tcprecv->Init();
 
-    joinGroup(mcastAddr, mcastPort);
+    joinGroup(tcpAddr, mcastAddr, mcastPort);
 
     StartRetxProcedure();
     startTimerThread();
@@ -728,13 +728,15 @@ void fmtpRecvv3::initEOPStatus(const uint32_t prodindex)
 /**
  * Join multicast group specified by mcastAddr:mcastPort.
  *
- * @param[in] mcastAddr      Udp multicast address for receiving data products.
- * @param[in] mcastPort      Udp multicast port for receiving data products.
+ * @param[in] srcAddr        IPv4 address of multicast source
+ * @param[in] mcastAddr      IPv4 address of multicast group
+ * @param[in] mcastPort      Port number of multicast group
  * @throw std::runtime_error if the socket couldn't be created.
  * @throw std::runtime_error if the socket couldn't be bound.
  * @throw std::runtime_error if the socket couldn't join the multicast group.
  */
 void fmtpRecvv3::joinGroup(
+        std::string          srcAddr,
         std::string          mcastAddr,
         const unsigned short mcastPort)
 {
@@ -756,12 +758,14 @@ void fmtpRecvv3::joinGroup(
 
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = inet_addr(ifAddr.c_str());
+    mreq.imr_sourceaddr.s_addr = inet_addr(srcAddr.c_str());
 
-    if (::setsockopt(mcastSock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+    if (::setsockopt(mcastSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq,
                    sizeof(mreq)) < 0 )
         throw std::system_error(errno, std::system_category(),
                 "fmtpRecvv3::joinGroup() Couldn't join multicast group " +
-                mcastAddr + " on interface " + ifAddr);
+                mcastAddr + " from source " + srcAddr + " on interface " +
+                ifAddr);
 }
 
 

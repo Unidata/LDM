@@ -135,7 +135,10 @@ private:
     bool getEOPStatus(const uint32_t prodindex);
     bool hasLastBlock(const uint32_t prodindex);
     void initEOPStatus(const uint32_t prodindex);
-    void joinGroup(std::string mcastAddr, const unsigned short mcastPort);
+    void joinGroup(
+            std::string          srcAddr,
+            std::string          mcastAddr,
+            const unsigned short mcastPort);
     /**
      * Handles a multicast BOP message given a peeked-at FMTP header.
      *
@@ -276,7 +279,7 @@ private:
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
     /* struct of multicast object */
-    struct ip_mreq          mreq;
+    struct ip_mreq_source   mreq;
     std::atomic<uint32_t>   prodidx_mcast;
     /* callback function of the receiving application */
     RecvProxy*              notifier;
