@@ -1,3 +1,14 @@
+6.13.8.1	2019-02-04T15:39:20-0700
+    Building and Installing:
+        Made C++ library reference for LDM library conditional on WANT_MULTICAST
+        
+    Multicast:
+        Have fmtpRecvv3::joinGroup join a source-specific multicast group
+        instead of an any-source one
+
+    Developer:
+        Removed mcast_lib/OESS-Client from AC_CONFIG_SUBDIRS()
+
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
