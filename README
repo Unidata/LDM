@@ -1,0 +1,3 @@
+This directory contains GEMPAK tables for variables and vertical coordinates.
+These tables are used by the LDM's NOAAPort ingestion system to create more
+complete LDM product-identifiers.
