@@ -7,12 +7,12 @@
         
     Multicast:
         Made fmtpRecvv3::joinGroup() join a source-specific multicast group
-        instead of an any-source one because not all networks support any-
-        source multicast
+        instead of an any-source one because not all networks support any-source
+        multicast
 
     Developer:
         Removed mcast_lib/OESS-Client from AC_CONFIG_SUBDIRS() to eliminate
-        warning from configure(1) about no "configure.ac" file
+        warning about that directory not having a configure(1) script
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
