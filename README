@@ -1,3 +1,11 @@
-This directory contains GEMPAK tables for variables and vertical coordinates.
-These tables are used by the LDM's NOAAPort ingestion system to create more
-complete LDM product-identifiers.
+This directory contains GEMPAK tables. These tables are used by the LDM's
+NOAAPort ingestion system to create more informative LDM product-identifiers.
+
+Assuming a standard LDM installation, The following -- when executed by the LDM
+user -- will update your installed GEMPAK tables in $HOME/etc:
+
+    git clone git@github.com:Unidata/GEMPAK-Tables.git /tmp/gempak-tables
+    cd $HOME/src/gempak/tables
+    mv -f /tmp/gempak-tables/* .
+    make install >install.log 2>&1 && echo Installed
+    rm -rf /tmp/gempak-tables
