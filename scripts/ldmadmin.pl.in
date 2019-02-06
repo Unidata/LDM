@@ -315,6 +315,7 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
         $status = 3;
     }
     else {
+        system("rm $ldmhome/MldmRpc_*");
 	$status = 0;
     }
 }
@@ -737,7 +738,7 @@ sub start_ldm
         if (-e $pid_file) {
             errmsg("start_ldm(): PID-file \"$pid_file\" exists.  ".
                 "Verify that all is well and then execute ".
-                "\"ldmadmin clean\" to remove the PID-file.");
+                "\"ldmadmin clean\" to clean up.");
             $status = 1;
         }
         else {
