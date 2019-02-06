@@ -439,7 +439,11 @@ public:
      */
     ~Impl() noexcept
     {
-        ::unlink(getSecretFilePathname(srvrSock.getPort()).c_str());
+        std::string pathname{getSecretFilePathname(srvrSock.getPort())};
+
+        if (::unlink(pathname.c_str()))
+            log_syserr("MldmRpc::Impl::~Impl() Couldn't unlink secret file %s",
+                    pathname.c_str());
     }
 
     /**
