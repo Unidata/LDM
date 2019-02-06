@@ -1,4 +1,4 @@
-6.13.8.2
+6.13.8.2	2019-02-06T15:02:01-0700
     Building and Installing:
         Made C++ library reference for LDM library conditional on WANT_MULTICAST
         to obviate the need for that library for a regular build
@@ -9,13 +9,22 @@
         package
 
     Multicast:
-        Made fmtpRecvv3::joinGroup() join a source-specific multicast group
-        instead of an any-source one because not all networks support any-source
-        multicast
+        * Made fmtpRecvv3::joinGroup() join a source-specific multicast group
+          instead of an any-source one because not all networks support
+          any-source multicast
+        * Added error message if MldmRpc::Impl::~Impl can't remove the secret
+          file
+        * Added removal of MldmRpc secret files to "ldmadmin clean"
 
     Developer:
-        Removed mcast_lib/OESS-Client from AC_CONFIG_SUBDIRS() to eliminate
-        warning about that directory not having a configure(1) script
+        * Removed directory "mcast_lib/OESS-Client" from AC_CONFIG_SUBDIRS() to
+          eliminate warning about that directory not having a configure(1)
+          script
+        * Made directory "mcast_lib/OESS-Client" into the subtree "oess-client"
+          because it's a separate repository. (The FMTP repository is already a
+          subtree.)
+        * Added "pull-%" and "push-%" to the top-level makefile for pulling-from
+          and pushing-to subtrees
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
