@@ -366,6 +366,17 @@ available:	ftp web-update
 publish:
 	bash delivery/publish $(FTPHOST) $(distArchive)
 
+pull-%:
+	git fetch $*
+	git merge --strategy=subtree --squash $*/master
+	git commit -m "Pulled GEMPAK tables"
+
+push-%:
+	git checkout -b backport-$* $*/master
+	git merge --strategy=subtree master
+	git push $* HEAD:master
+	git checkout master
+	
 .PHONY:		\
     alpha \
     available \
@@ -389,4 +400,6 @@ publish:
     rpmlint \
     tag \
     timestamp \
-    web-update
+    web-update \
+    pull-% \
+    push-%
