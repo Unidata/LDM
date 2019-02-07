@@ -84,7 +84,6 @@ fmtpRecvv3::fmtpRecvv3(
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
     mcastgroup(),
-    mreq(),
     prodidx_mcast(0xFFFFFFFF),
     ifAddr(ifAddr),
     tcprecv(new TcpRecv(tcpAddr, tcpPort, inet_addr(ifAddr.c_str()))),
@@ -756,6 +755,7 @@ void fmtpRecvv3::joinGroup(
                 "fmtprecvv3::joinGroup(): couldn't bind socket  to multicast "
                 "group " + mcastgroup);
 
+    struct ip_mreq_source  mreq = {}; // Zero fills
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
     mreq.imr_interface.s_addr = inet_addr(ifAddr.c_str());
     mreq.imr_sourceaddr.s_addr = inet_addr(srcAddr.c_str());
@@ -766,6 +766,11 @@ void fmtpRecvv3::joinGroup(
                 "fmtpRecvv3::joinGroup() Couldn't join multicast group " +
                 mcastAddr + " from source " + srcAddr + " on interface " +
                 ifAddr);
+#ifdef LDM_LOGGING
+    log_debug("fmtpRecvv3::joinGroup() Joined multicast group %s from source "
+            "%s on interface %s", mcastAddr.c_str(), srcAddr.c_str(),
+            ifAddr.c_str());
+#endif
 }
 
 

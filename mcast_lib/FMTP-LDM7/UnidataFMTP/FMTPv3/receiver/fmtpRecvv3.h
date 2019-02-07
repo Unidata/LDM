@@ -278,8 +278,6 @@ private:
     int                     mcastSock;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
-    /* struct of multicast object */
-    struct ip_mreq_source   mreq;
     std::atomic<uint32_t>   prodidx_mcast;
     /* callback function of the receiving application */
     RecvProxy*              notifier;
