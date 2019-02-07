@@ -752,8 +752,14 @@ void fmtpRecvv3::joinGroup(
     if (::bind(mcastSock, (struct sockaddr *) &mcastgroup, sizeof(mcastgroup))
             < 0)
         throw std::system_error(errno, std::system_category(),
-                "fmtprecvv3::joinGroup(): couldn't bind socket  to multicast "
-                "group " + mcastgroup);
+                "fmtprecvv3::joinGroup(): Couldn't bind socket " +
+                std::to_string(mcastSock) + " to multicast group " +
+                mcastgroup);
+#ifdef LDM_LOGGING
+    log_debug("fmtpRecvv3::joinGroup() Bound socket %d to multicast group "
+            "address %s:%hu", mcastSock, inet_ntoa(mcastgroup.sin_addr),
+            ntohs(mcastgroup.sin_port));
+#endif
 
     struct ip_mreq_source  mreq = {}; // Zero fills
     mreq.imr_multiaddr.s_addr = inet_addr(mcastAddr.c_str());
