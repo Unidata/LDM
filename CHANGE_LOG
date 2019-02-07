@@ -1,4 +1,4 @@
-6.13.8.2	2019-02-06T15:02:01-0700
+6.13.8.3	2019-02-07T12:58:19-0700
     Building and Installing:
         Made C++ library reference for LDM library conditional on WANT_MULTICAST
         to obviate the need for that library for a regular build
@@ -9,9 +9,13 @@
         package
 
     Multicast:
-        * Made fmtpRecvv3::joinGroup() join a source-specific multicast group
-          instead of an any-source one because not all networks support
-          any-source multicast
+        * fmtpRecvv3::joinGroup()
+            * Replaced joining an any-source multicast group with joining a
+              source-specific one because not all networks support any-source
+              multicast
+            * Converted "struct ip_mreq_source mreq" from class member to local
+              variable
+            * Added debug log message
         * Added error message if MldmRpc::Impl::~Impl can't remove the secret
           file
         * Added removal of MldmRpc secret files to "ldmadmin clean"
