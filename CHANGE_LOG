@@ -1,4 +1,4 @@
-6.13.8.3	2019-02-07T12:58:19-0700
+6.13.8.4	2019-02-07T13:20:49-0700
     Building and Installing:
         Made C++ library reference for LDM library conditional on WANT_MULTICAST
         to obviate the need for that library for a regular build
@@ -15,7 +15,8 @@
               multicast
             * Converted "struct ip_mreq_source mreq" from class member to local
               variable
-            * Added debug log message
+            * Added debug log message for successfully joining multicast group
+            * Added debug log message for successful bind()
         * Added error message if MldmRpc::Impl::~Impl can't remove the secret
           file
         * Added removal of MldmRpc secret files to "ldmadmin clean"
