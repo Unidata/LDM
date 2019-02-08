@@ -7,6 +7,8 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST		= \
+    ldm7PreInstall \
+    ldm7Install \
     ldmadmin.1.in \
     ldmadmin.pl.in \
     ldmfail.in \
