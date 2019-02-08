@@ -2075,11 +2075,11 @@ downlet_run()
 
                     if (status) {
                         log_add("Couldn't change address of FMTP server from "
-                                "INADDR_ANY to that of LDM7 server");
+                                "INADDR_ANY to %s", isa_toString(fmtpSrvr));
                     }
                     else {
                         log_notice("Address of FMTP server changed from "
-                                "INADDR_ANY to that of LDM7 server");
+                                "INADDR_ANY to %s", isa_toString(fmtpSrvr));
                     }
                 }
             }
