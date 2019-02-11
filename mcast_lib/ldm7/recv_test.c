@@ -7,6 +7,8 @@
  *               to compile without warning and work correctly
  *  Modified by: Steve Emmerson (2015-04-03)
  *               to look prettier and include more headers
+ *  Modified by: Steve Emmerson  2019-02-11
+ *               to have better logging
  */
 
 #include "config.h"
@@ -18,6 +20,7 @@
 #include "send_recv_test.h"
 
 #include <arpa/inet.h>
+#include <libgen.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -68,14 +71,14 @@ get_context(
         switch (ch) {
         case 'i': {
             if (inet_pton(AF_INET, optarg, &ifAddr.s_addr) != 1) {
-                perror("Couldn't parse interface IP address");
+                perror("inet_pton() couldn't parse interface IP address");
                 success = false;
             }
             break;
         }
         case 's': {
             if (inet_pton(AF_INET, optarg, &srcAddr.s_addr) != 1) {
-                perror("Couldn't parse source IP address");
+                perror("inet_pton() couldn't parse source IP address");
                 success = false;
             }
             break;
@@ -99,6 +102,19 @@ get_context(
     return success;
 }
 
+static void
+usage(const char* const progname)
+{
+    (void)fprintf(stderr,
+"Usage:\n"
+"    %s [-i <iface>] [-s <srcAddr>] [-v]\n"
+"where:\n"
+"    -i <iface>  IPv4 address of interface to use. Default depends on <srcAddr>.\n"
+"    -s <ttl>    IPv4 address of source. Default is any-source multicast.\n"
+"    -v          Verbose output\n",
+    progname);
+}
+
 static bool
 create_udp_socket(
         int* const sock)
@@ -108,7 +124,7 @@ create_udp_socket(
     // Create a UDP socket
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
-        perror("Couldn't create socket");
+        perror("socket() couldn't create socket");
         success = false;
     }
     else {
@@ -118,7 +134,7 @@ create_udp_socket(
         success = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))
                 == 0;
         if (!success) {
-            perror("Couldn't reuse port number");
+            perror("setsockopt() couldn't reuse port number");
         }
         else {
             *sock = fd;
@@ -148,38 +164,48 @@ join_source_multicast(
 {
     bool                  success;
     struct ip_mreq_source mreq; // NB: Different structure than join_multicast()
+    char                  groupAddrStr[80];
+    char                  ifaceAddrStr[80];
+    char                  sourceAddrStr[80];
 
     mreq.imr_multiaddr = *groupAddr;
     mreq.imr_interface = *ifaceAddr;
     mreq.imr_sourceaddr = *sourceAddr;
 
     if (debug) {
-        char groupAddrStr[80];
         inet_ntop(AF_INET, &mreq.imr_multiaddr.s_addr, groupAddrStr,
                 sizeof(groupAddrStr));
-        char ifaceAddrStr[80];
         inet_ntop(AF_INET, &mreq.imr_interface.s_addr, ifaceAddrStr,
                 sizeof(ifaceAddrStr));
-        char sourceAddrStr[80];
         inet_ntop(AF_INET, &mreq.imr_sourceaddr.s_addr, sourceAddrStr,
                 sizeof(sourceAddrStr));
-        (void)fprintf(stderr, "Joining multicast group %s on interface %s "
-                "with source %s\n", groupAddrStr, ifaceAddrStr,
-                sourceAddrStr);
     }
+
     success = setsockopt(sock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq,
             sizeof(mreq)) == 0;
-    if (!success)
-        perror("Couldn't join source-specific multicast group");
+
+    if (!success) {
+        perror(NULL);
+        (void)fprintf(stderr,
+                "Couldn't join socket %d to source-specific multicast group %s "
+                "on interface %s with source %s", sock,
+                groupAddrStr, ifaceAddrStr, sourceAddrStr);
+    }
+    else if (debug) {
+        (void)fprintf(stderr,
+                "Joined socket %d to source-specific multicast group %s on "
+                "interface %s with source %s\n", sock, groupAddrStr,
+                ifaceAddrStr, sourceAddrStr);
+    }
 
     return success;
 }
 
 /**
- * Joins a socket to a multicast group on a network interface.
+ * Joins a socket to an any-source multicast group on a network interface.
  */
 static bool
-join_multicast(
+join_any_multicast(
         const int                            sock,
         const struct in_addr* const restrict groupAddr,
         const struct in_addr* const restrict ifaceAddr,
@@ -187,24 +213,31 @@ join_multicast(
 {
     bool           success;
     struct ip_mreq mreq;
+    char           groupAddrStr[80];
+    char           ifaceAddrStr[80];
 
     mreq.imr_multiaddr = *groupAddr;
     mreq.imr_interface = *ifaceAddr;
 
-    if (debug) {
-        char groupAddrStr[80];
-        inet_ntop(AF_INET, &mreq.imr_multiaddr.s_addr, groupAddrStr,
-                sizeof(groupAddrStr));
-        char ifaceAddrStr[80];
-        inet_ntop(AF_INET, &mreq.imr_interface.s_addr, ifaceAddrStr,
-                sizeof(ifaceAddrStr));
-        (void)fprintf(stderr, "Joining multicast group %s on interface %s\n",
-                groupAddrStr, ifaceAddrStr);
-    }
+    inet_ntop(AF_INET, &mreq.imr_multiaddr.s_addr, groupAddrStr,
+            sizeof(groupAddrStr));
+    inet_ntop(AF_INET, &mreq.imr_interface.s_addr, ifaceAddrStr,
+            sizeof(ifaceAddrStr));
+
     success = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
             sizeof(mreq)) == 0;
-    if (!success)
-        perror("Couldn't join multicast group");
+
+    if (!success) {
+        perror(NULL);
+        (void)fprintf(stderr,
+                "Couldn't join socket %d to any-source multicast group %s on "
+                "interface %s\n", sock, groupAddrStr, ifaceAddrStr);
+    }
+    else if (debug) {
+        (void)fprintf(stderr,
+                "Joined socket %d to any-source multicast group %s on "
+                "interface %s\n", sock, groupAddrStr, ifaceAddrStr);
+    }
 
     return success;
 }
@@ -229,13 +262,12 @@ configure_socket(
         const bool                               debug)
 {
     bool success;
+    char groupSockAddrStr[80];
 
-    if (debug) {
-        char groupSockAddrStr[80];
+    if (debug)
         (void)sockAddrIn_format(groupSockAddr, groupSockAddrStr,
                 sizeof(groupSockAddrStr));
-        (void)fprintf(stderr, "Binding socket to %s\n", groupSockAddrStr);
-    }
+
     /*
      * Bind the local endpoint of the socket to the address and port number of
      * the multicast group.
@@ -245,13 +277,22 @@ configure_socket(
      * IP address.
      */
     success = bind(sock, groupSockAddr, sizeof(*groupSockAddr)) == 0;
+
     if (!success) {
-        perror("Couldn't bind socket to multicast group address\n");
+        perror(NULL);
+        (void)fprintf(stderr,
+                "Couldn't bind socket %d to multicast group address %s\n", sock,
+                groupSockAddrStr);
     }
     else {
+        if (debug)
+            (void)fprintf(stderr,
+                    "Bound socket %d to multicast group address %s\n", sock,
+                    groupSockAddrStr);
+
         // Have the socket join the multicast group on a network interface.
         success = (sourceAddr->s_addr == INADDR_ANY)
-                ? join_multicast(sock, &groupSockAddr->sin_addr, ifaceAddr,
+                ? join_any_multicast(sock, &groupSockAddr->sin_addr, ifaceAddr,
                         debug)
                 : join_source_multicast(sock, &groupSockAddr->sin_addr,
                         ifaceAddr, sourceAddr, debug);
@@ -345,7 +386,10 @@ main(int argc, char *argv[])
     bool               success = get_context(argc, argv, &groupAddr,
             &ifaceAddr, &sourceAddr, &debug);
 
-    if (success) {
+    if (!success) {
+        usage(basename(argv[0]));
+    }
+    else {
         int sock;
 
         success = create_socket(&sock, &groupAddr, &ifaceAddr, &sourceAddr,

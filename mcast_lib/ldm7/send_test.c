@@ -3,6 +3,7 @@
  *
  *  Created By:  Antony Courtney 25/11/94
  *  Modified By: Steve Emmerson  2015-04-03
+ *               Steve Emmerson  2019-02-11
  */
 
 #include "config.h"
@@ -11,6 +12,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -81,6 +83,19 @@ get_context(
     return status;
 }
 
+static void
+usage(const char* const progname)
+{
+    (void)fprintf(stderr,
+"Usage:\n"
+"    %s [-i <iface>] [-t <ttl>] [-v]\n"
+"where:\n"
+"    -i <iface>  IPv4 address of interface to use. Default is system default.\n"
+"    -t <ttl>    Time-to-live for outgoing packets. Default is 1.\n"
+"    -v          Verbose output\n",
+    progname);
+}
+
 static bool sock_remoteString(
         const int    sd,
         char* const  buf,
@@ -110,8 +125,10 @@ main(int argc, char *argv[])
     bool           verbose;
 
     if (get_context(argc, argv, &groupAddr, &groupPort, &ifaceAddr, &ttl,
-            &verbose))
+            &verbose)) {
+        usage(basename(argv[0]));
         exit(1);
+    }
 
     // Create a UDP socket
     int sd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -155,7 +172,7 @@ main(int argc, char *argv[])
         perror("inet_addr()");
         exit(1);
     }
-    if (connect(sd, &addr, sizeof(addr))) {
+    if (connect(sd, (struct sockaddr*)&addr, sizeof(addr))) {
         perror("connect()");
         exit(1);
     }
