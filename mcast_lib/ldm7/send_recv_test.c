@@ -10,8 +10,6 @@
  * @author: Steven R. Emmerson
  */
 
-#include "config.h"
-
 #include "send_recv_test.h"
 
 #include <arpa/inet.h>

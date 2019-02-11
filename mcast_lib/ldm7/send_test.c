@@ -6,7 +6,9 @@
  *               Steve Emmerson  2019-02-11
  */
 
-#include "config.h"
+#define _XOPEN_SOURCE 600
+#define _GNU_SOURCE     1
+#define __EXTENSIONS__  1
 
 #include "send_recv_test.h"
 
