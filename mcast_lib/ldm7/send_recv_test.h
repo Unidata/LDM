@@ -20,7 +20,7 @@
 #define HELLO_PORT  38800
 //#define HELLO_PORT  1 // Requires superuser privileges
 //#define HELLO_GROUP "239.0.0.37" // Works
-#define HELLO_GROUP "234.128.117.0" // UCAR unicast-based multicast address. Works
+#define HELLO_GROUP "234.128.117.1" // UCAR unicast-based multicast address. Works
 
 
 #ifdef __cplusplus
