@@ -169,7 +169,7 @@ if WANT_ULOG
 READNOAAPORT_LOG                = readnoaaport.ulog
 NOAAPORTINGESTER_LOG            = noaaportIngester.ulog
 NOAAPORTINGESTER_NSSL_LOG       = noaaportIngester-nssl.ulog
-CUT_FIELDS                      = 5-
+CUT_FIELDS                      = 5,7-
 endif
 
 installcheck-local:

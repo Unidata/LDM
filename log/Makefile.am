@@ -1,4 +1,4 @@
-# Copyright 2016 University Corporation for Atmospheric Research
+# Copyright 2019 University Corporation for Atmospheric Research
 #
 # This file is part of the Unidata LDM package.  See the file COPYRIGHT in
 # the top-level source-directory of the package for copying and redistribution
@@ -14,7 +14,8 @@ MAIN_PAGE		= simple-logging.md
 # The Doxygen documentation is part of the distribution so that it doesn't have
 # to be created by the user.
 dist_man3_MANS		= man/man3/log.h.3
-EXTRA_DIST		= Doxyfile $(MAIN_PAGE) html $(dist_man3_MANS)
+EXTRA_DIST		= log2slog.c log2ulog.c mutex.c mutex.h \
+			  Doxyfile $(MAIN_PAGE) html $(dist_man3_MANS)
 DOXYGEN			= @DOXYGEN@
 docdir			= @DOCDIR_LIBRARIES@/simple-logging
 CLEANFILES		= callgrind.out *.log *.vg *.supp
