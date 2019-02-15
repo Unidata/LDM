@@ -4,16 +4,14 @@ import sys
 import time
 import string
 import json
+import account
 from subprocess import call
 global values1, values2, values3
 values1 = {}
 values2 = {}
 values3 = {}
 link = []
-f = open("/home/yt4xb/etc/OESS-password", 'r+')
-line = f.read().split()
-username = line[0]
-passwd = line[1]
+(username,passwd)=account.readAccount(sys.argv[2])
 gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
 values1 = {'method' : 'get_workgroups'}
 values2 = {'method' : 'get_shortest_path', 'node' : [sys.argv[3], sys.argv[6]], 'type' : 'mpls'}
