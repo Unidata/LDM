@@ -32,6 +32,11 @@
  ******************************************************************************/
 
 /**
+ * The persistent destination specification.
+ */
+char log_dest[_XOPEN_PATH_MAX];
+
+/**
  * Re-initializes the logging module based on its current state.
  *
  * @retval    0        Success.
@@ -56,7 +61,6 @@ static int reinit(void)
  *   - ""  if the process is a daemon
  *   - "-" otherwise
  * - `log_get_facility()` will return `LOG_LDM`.
- * - `log_get_level()` will return `LOG_LEVEL_NOTICE`.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
@@ -67,10 +71,15 @@ int logi_init(
         const char* const id)
 {
     const char* const progname = logl_basename(id);
-    int status = openulog(progname, LOG_PID, LOG_LDM, log_dest);
-    if (status != -1)
-        status = log_set_level(LOG_LEVEL_NOTICE);
-    return status ? -1 : 0;
+    int               status = openulog(progname, LOG_PID, LOG_LDM, log_dest);
+
+    if (status != -1) {
+        // Allow all levels because the higher layer will control
+        (void)setulogmask(LOG_UPTO(LOG_DEBUG));
+        status = 0;
+    }
+
+    return status;
 }
 
 /**
@@ -97,29 +106,30 @@ int logi_reinit(void)
     return reinit();
 }
 
-/**
- * Sets the logging destination. Should be called between log_init() and
- * log_fini().
- */
-int logi_set_destination(void)
+int logi_set_destination(const char* const dest)
 {
-    return reinit();
+    size_t nchars = strlen(dest);
+
+    if (nchars > sizeof(log_dest) - 1)
+        nchars = sizeof(log_dest) - 1;
+
+    lock();
+        memmove(log_dest, dest, nchars)[nchars] = 0;
+
+        int status = reinit(); // Uses `log_dest`
+    unlock();
+
+    return status;
 }
 
-/**
- * Enables logging down to a given level.
- *
- * @pre              `log_level` is valid
- * @param[in] level  The lowest level through which logging should occur.
- * @retval    0      Success.
- * @retval    -1     Failure.
- */
-void logi_set_level(void)
+const char*
+logi_get_destination(void)
 {
-    static int ulogUpTos[LOG_LEVEL_COUNT] = {LOG_UPTO(LOG_DEBUG),
-            LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_NOTICE), LOG_UPTO(LOG_WARNING),
-            LOG_UPTO(LOG_ERR)};
-    (void)setulogmask(ulogUpTos[log_level]);
+    lock();
+        const char* const dest = log_dest;
+    unlock();
+
+    return dest;
 }
 
 /**

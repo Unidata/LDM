@@ -1094,13 +1094,7 @@ void logl_internal(
     unlock();
 }
 
-/**
- * Emits a single log message.
- *
- * @param[in] level  Logging level.
- * @param[in] msg    The message.
- */
-void logi_log(
+int logi_log(
         const log_level_t    level,
         const Message* const   msg)
 {
@@ -1115,4 +1109,6 @@ void logi_log(
                 msg->string);
     }
     unlock();
+
+    return 0;
 }

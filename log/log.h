@@ -53,8 +53,10 @@ typedef enum {
  * Returns the default destination for log messages if the process is a daemon
  * (i.e., doesn't have a controlling terminal).
  *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
+ * @retval ""          The system logging daemon
+ * @return             The pathname of the standard LDM log file
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 const char* log_get_default_daemon_destination(void);
 
@@ -64,9 +66,11 @@ const char* log_get_default_daemon_destination(void);
  * default destination will be the standard error stream; otherwise, the default
  * destination will be that given by log_get_default_daemon_destination().
  *
- * @retval ""   The system logging daemon
- * @retval "-"  The standard error stream
- * @return      The pathname of the log file
+ * @retval ""          The system logging daemon
+ * @retval "-"         The standard error stream
+ * @return             The pathname of the log file
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 const char* log_get_default_destination(void);
 
@@ -74,10 +78,12 @@ const char* log_get_default_destination(void);
  * Indicates if the standard error file descriptor refers to a file that is not
  * `/dev/null`. This function may be called at any time.
  *
- * @retval true   Standard error file descriptor refers to a file that is not
- *               `/dev/null`
- * @retval false  Standard error file descriptor is closed or refers to
- *                `/dev/null`.
+ * @retval true        Standard error file descriptor refers to a file that is
+ *                     not `/dev/null`
+ * @retval false       Standard error file descriptor is closed or refers to
+ *                     `/dev/null`.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
  */
 bool log_is_stderr_useful(void);
 
@@ -92,6 +98,8 @@ bool log_is_stderr_useful(void);
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int log_init(
         const char* const id);
@@ -99,6 +107,9 @@ int log_init(
 /**
  * Tells this module to avoid using the standard error stream (because the
  * process has become a daemon, for example).
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void log_avoid_stderr(void);
 
@@ -109,7 +120,8 @@ void log_avoid_stderr(void);
  * error stream, then it will continue to be if log_avoid_stderr() hasn't been
  * called; otherwise, logging will be to the provider default.
  *
- * This function is async-signal-safe.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
  */
 void log_refresh(void);
 
@@ -126,12 +138,14 @@ void log_refresh(void);
  * Enables logging down to a given level. Should be called between
  * log_init() and log_fini().
  *
- * @param[in] level  The lowest level through which logging should occur. The
- *                   levels are ordered: LOG_LEVEL_DEBUG < LOG_LEVEL_INFO <
- *                   LOG_LEVEL_NOTICE  < LOG_LEVEL_WARNING <
- *                   LOG_LEVEL_ERROR.
- * @retval    0      Success.
- * @retval    -1     Failure.
+ * @param[in] level    The lowest level through which logging should occur. The
+ *                     levels are ordered: LOG_LEVEL_DEBUG < LOG_LEVEL_INFO <
+ *                     LOG_LEVEL_NOTICE  < LOG_LEVEL_WARNING <
+ *                     LOG_LEVEL_ERROR.
+ * @retval    0        Success.
+ * @retval    -1       Failure.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int log_set_level(
         const log_level_t level);
@@ -140,15 +154,20 @@ int log_set_level(
  * Returns the current logging level. Should be called between log_init()
  * and log_fini().
  *
- * @return The lowest level through which logging will occur. The levels are
- *         ordered: LOG_LEVEL_ERROR > LOG_LEVEL_WARNING > LOG_LEVEL_NOTICE
- *         > LOG_LEVEL_INFO > LOG_LEVEL_DEBUG.
+ * @return             The lowest level through which logging will occur. The
+ *                     levels are ordered: LOG_LEVEL_ERROR > LOG_LEVEL_WARNING >
+ *                     LOG_LEVEL_NOTICE > LOG_LEVEL_INFO > LOG_LEVEL_DEBUG.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 log_level_t log_get_level(void);
 
 /**
  * Lowers the logging threshold by one. Wraps at the bottom. Should be called
  * between log_init() and log_fini().
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void log_roll_level(void);
 
@@ -159,6 +178,8 @@ void log_roll_level(void);
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
  * @retval    -1        Failure.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 int log_set_id(
         const char* const id);
@@ -171,6 +192,8 @@ int log_set_id(
  * @param[in] isFeeder  Whether or not the process is sending data-products or
  *                      just notifications.
  * @retval    0         Success.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 int log_set_upstream_id(
         const char* const hostId,
@@ -180,7 +203,9 @@ int log_set_upstream_id(
  * Returns the logging identifier. Should be called between log_init() and
  * log_fini().
  *
- * @return The logging identifier.
+ * @return             The logging identifier.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 const char* log_get_id(void);
 
@@ -188,7 +213,15 @@ const char* log_get_id(void);
  * Sets the implementation-defined logging options. Should be called between
  * log_init() and log_fini().
  *
- * @param[in] options  The implementation-defined logging options.
+ * @param[in] options  The logging options. Bitwise or of
+ *                         LOG_PID     Log the pid with each message (default)
+ *                         LOG_CONS    Log on the console if errors in sending
+ *                         LOG_ODELAY  Delay open until first syslog()
+ *                         LOG_NDELAY  Don't delay open (default)
+ *                         LOG_NOWAIT  Don't wait for console forks: DEPRECATED
+ *                         LOG_PERROR  Log to stderr as well
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void log_set_options(
         const unsigned options);
@@ -197,7 +230,15 @@ void log_set_options(
  * Returns the implementation-defined logging options. Should be called between
  * log_init() and log_fini().
  *
- * @return The implementation-defined logging options.
+ * @return             The logging options. Bitwise or of
+ *                         LOG_PID     Log the pid with each message (default)
+ *                         LOG_CONS    Log on the console if errors in sending
+ *                         LOG_ODELAY  Delay open until first syslog()
+ *                         LOG_NDELAY  Don't delay open (default)
+ *                         LOG_NOWAIT  Don't wait for console forks: DEPRECATED
+ *                         LOG_PERROR  Log to stderr as well
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 unsigned log_get_options(void);
 
@@ -210,6 +251,8 @@ unsigned log_get_options(void);
  *                      system logging daemon.
  * @retval    0         Success.
  * @retval    -1        Error.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 int log_set_facility(
         const int facility);
@@ -218,6 +261,10 @@ int log_set_facility(
  * Returns the facility that will be used (e.g., `LOG_LOCAL0`) when logging to
  * the system logging daemon. Should be called between log_init() and
  * log_fini().
+ *
+ * @return             The logging facility
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int log_get_facility(void);
 
@@ -232,6 +279,8 @@ int log_get_facility(void);
  *                     </dl>
  * @retval    0        Success.
  * @retval    -1       Failure.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int log_set_destination(
         const char* const dest);
@@ -240,16 +289,21 @@ int log_set_destination(
  * Returns the logging destination. Should be called between log_init() and
  * log_fini().
  *
- * @return       The logging destination. One of <dl>
- *                   <dt>""      <dd>The system logging daemon.
- *                   <dt>"-"     <dd>The standard error stream.
- *                   <dt>else    <dd>The pathname of the log file.
- *               </dl>
+ * @return             The logging destination. One of <dl>
+ *                         <dt>""      <dd>The system logging daemon.
+ *                         <dt>"-"     <dd>The standard error stream.
+ *                         <dt>else    <dd>The pathname of the log file.
+ *                     </dl>
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 const char* log_get_destination(void);
 
 /**
  * Clears the message-queue of the current thread.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void log_clear(void);
 
@@ -270,8 +324,10 @@ void log_clear(void);
 /**
  * Indicates if a message of the given level would be logged.
  *
- * @param[in] level  Logging level
- * @retval    true   iff a message of level `level` would be logged
+ * @param[in] level    Logging level
+ * @retval    true     Iff a message of level `level` would be logged
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 bool log_is_level_enabled(
         const log_level_t level);

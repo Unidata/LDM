@@ -65,19 +65,17 @@ typedef struct message {
 /**
  *  Logging level.
  */
-extern volatile sig_atomic_t log_level;
-
-/**
- * The persistent destination specification.
- */
-extern char        log_dest[];
+extern log_level_t log_level;
 
 /**
  * Finalizes the logging module. Should be called eventually after
  * log_init(), after which no more logging should occur.
  *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
+ * @retval 0           Success.
+ * @retval -1          Failure. Logging module is in an unspecified state.
+ *
+ * @threadsafety       Unsafe
+ * @asyncsignalsafety  Unsafe
  */
 int log_fini_located(
         const log_loc_t* loc);
@@ -85,6 +83,9 @@ int log_fini_located(
 /**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void log_free_located(
         const log_loc_t* loc);
@@ -100,25 +101,35 @@ void log_free_located(
  * @param[in] level    The logging level
  * @retval    LOG_ERR  `level` is invalid
  * @return             The system logging priority associated with `level`
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
  */
 int logl_level_to_priority(
         const log_level_t level);
 
 /**
  * Acquires this module's mutex.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void logl_lock(void);
 
 /**
  * Releases this module's mutex.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 void logl_unlock(void);
 
 /**
  * Vets a logging level.
  *
- * @param[in] level  The logging level to be vetted.
- * @retval    true   iff `level` is a valid level.
+ * @param[in] level    The logging level to be vetted.
+ * @retval    true     Iff `level` is a valid level.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
  */
 static inline bool logl_vet_level(
         log_level_t level)
@@ -131,6 +142,8 @@ static inline bool logl_vet_level(
  *
  * @param[in] pathname  The pathname.
  * @return              Pointer to the last component of the pathname.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
  */
 const char* logl_basename(
         const char* const pathname);
@@ -138,12 +151,16 @@ const char* logl_basename(
 /**
  * Logs a single variadic message, bypassing the message-queue.
  *
- * @param[in] loc     Location where the message was generated.
- * @param[in] level   Logging level.
- * @param[in] format  Format of the message.
- * @param[in] args    Format arguments.
+ * @param[in] loc      Location where the message was generated.
+ * @param[in] level    Logging level.
+ * @param[in] format   Format of the message.
+ * @param[in] args     Format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_vlog_1(
+int logl_vlog_1(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
@@ -152,12 +169,16 @@ void logl_vlog_1(
 /**
  * Logs a single message, bypassing the message-queue.
  *
- * @param[in] loc     Location where the message was generated.
- * @param[in] level   Logging level.
- * @param[in] format  Format of the message or NULL.
- * @param[in] ...     Optional format arguments.
+ * @param[in] loc      Location where the message was generated.
+ * @param[in] level    Logging level.
+ * @param[in] format   Format of the message or NULL.
+ * @param[in] ...      Optional format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_log_1(
+int logl_log_1(
         const log_loc_t* const loc,
         const log_level_t      level,
         const char* const      format,
@@ -167,13 +188,17 @@ void logl_log_1(
  * Logs a single message based on a system error code, bypassing the message
  * queue.
  *
- * @param[in] loc     The location where the error occurred. `loc->file` must
- *                    persist.
- * @param[in] errnum  The system error code (e.g., `errno`).
- * @param[in] fmt     Format of the user's message or NULL.
- * @param[in] ...     Optional format arguments.
+ * @param[in] loc      The location where the error occurred. `loc->file` must
+ *                     persist.
+ * @param[in] errnum   The system error code (e.g., `errno`).
+ * @param[in] fmt      Format of the user's message or NULL.
+ * @param[in] ...      Optional format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_errno_1(
+int logl_errno_1(
         const log_loc_t* const loc,
         const int              errnum,
         const char* const      fmt,
@@ -183,12 +208,16 @@ void logl_errno_1(
  * Adds a variadic message to the current thread's queue of messages. Emits and
  * then clears the queue.
  *
- * @param[in] loc     Location where the message was generated.
- * @param[in] level   Logging level.
- * @param[in] format  Format of the message.
- * @param[in] args    Format arguments.
+ * @param[in] loc      Location where the message was generated.
+ * @param[in] level    Logging level.
+ * @param[in] format   Format of the message.
+ * @param[in] args     Format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_vlog_q(
+int logl_vlog_q(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
@@ -198,12 +227,16 @@ void logl_vlog_q(
  * Adds a message to the current thread's queue of messages. Emits and then
  * clears the queue.
  *
- * @param[in] loc     Location where the message was generated.
- * @param[in] level   Logging level.
- * @param[in] format  Format of the message or NULL.
- * @param[in] ...     Optional Format arguments.
+ * @param[in] loc      Location where the message was generated.
+ * @param[in] level    Logging level.
+ * @param[in] format   Format of the message or NULL.
+ * @param[in] ...      Optional Format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_log_q(
+int logl_log_q(
         const log_loc_t* const loc,
         const log_level_t      level,
         const char* const      format,
@@ -213,13 +246,17 @@ void logl_log_q(
  * Adds a system error message and an optional user's message to the current
  * thread's message-queue, emits the queue, and then clears the queue.
  *
- * @param[in] loc     The location where the error occurred. `loc->file` must
- *                    persist.
- * @param[in] errnum  The system error number (i.e., `errno`).
- * @param[in] fmt     Format of the user's message or NULL.
- * @param[in] ...     Optional format arguments.
+ * @param[in] loc      The location where the error occurred. `loc->file` must
+ *                     persist.
+ * @param[in] errnum   The system error number (i.e., `errno`).
+ * @param[in] fmt      Format of the user's message or NULL.
+ * @param[in] ...      Optional format arguments.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_errno_q(
+int logl_errno_q(
         const log_loc_t* const loc,
         const int              errnum,
         const char* const      fmt,
@@ -229,13 +266,17 @@ void logl_errno_q(
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-queue for the current thread.
  *
- * @param[in] loc    Location.
- * @param[in] level  The level at which to log the messages. One of
- *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
- *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
- *                   behavior is undefined.
+ * @param[in] loc      Location.
+ * @param[in] level    The level at which to log the messages. One of
+ *                     LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
+ *                     LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
+ *                     behavior is undefined.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logl_flush(
+int logl_flush(
         const log_loc_t* const loc,
         const log_level_t      level);
 
@@ -254,6 +295,8 @@ void logl_flush(
  * @retval ENOMEM       Out-of-memory. Error message logged.
  * @retval EOVERFLOW    The length of the message is greater than {INT_MAX}.
  *                      Error message logged.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 int logl_vadd(
         const log_loc_t* const  loc,
@@ -263,11 +306,21 @@ int logl_vadd(
 /**
  * Adds a log-message for the current thread.
  *
- * @param[in] loc  Location where the message was created. `loc->file` must
- *                 persist.
- * @param[in] fmt     Formatting string for the message.
- * @param[in] ...  Arguments for the formatting string.
- * @retval    0    Success.
+ * @param[in] loc        Location where the message was created. `loc->file`
+ *                       must persist.
+ * @param[in] fmt        Formatting string for the message.
+ * @param[in] ...        Arguments for the formatting string.
+ * @retval    0          Success.
+ * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
+ * @retval    EINVAL     There are insufficient arguments. Error message logged.
+ * @retval    EILSEQ     A wide-character code that doesn't correspond to a
+ *                       valid character has been detected. Error message
+ *                       logged.
+ * @retval    ENOMEM     Out-of-memory. Error message logged.
+ * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
+ *                       Error message logged.
+ * @threadsafety         Safe
+ * @asyncsignalsafety    Unsafe
  */
 int logl_add(
         const log_loc_t* const loc,
@@ -277,12 +330,22 @@ int logl_add(
 /**
  * Adds a system error message and an optional user message.
  *
- * @param[in] loc     Location.
- * @param[in] errnum  System error number (i.e., `errno`).
- * @param[in] fmt     Formatting string for the user message or NULL for no user
- *                    message.
- * @param[in] ...     Arguments for the formatting string.
- * @return
+ * @param[in] loc        Location.
+ * @param[in] errnum     System error number (i.e., `errno`).
+ * @param[in] fmt        Formatting string for the user message or NULL for no
+ *                       user message.
+ * @param[in] ...        Arguments for the formatting string.
+ * @retval    0          Success
+ * @retval    EINVAL     `fmt` or `args` is `NULL`. Error message logged.
+ * @retval    EINVAL     There are insufficient arguments. Error message logged.
+ * @retval    EILSEQ     A wide-character code that doesn't correspond to a
+ *                       valid character has been detected. Error message
+ *                       logged.
+ * @retval    ENOMEM     Out-of-memory. Error message logged.
+ * @retval    EOVERFLOW  The length of the message is greater than {INT_MAX}.
+ *                       Error message logged.
+ * @threadsafety         Safe
+ * @asyncsignalsafety    Unsafe
  */
 int logl_add_errno(
         const log_loc_t* const loc,
@@ -302,6 +365,8 @@ int logl_add_errno(
  *                      "Couldn't allocate <n> bytes for ...".
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 void* logl_malloc(
         const char* const file,
@@ -322,6 +387,8 @@ void* logl_malloc(
  *                      "Couldn't allocate <n> bytes for ...".
  * @retval    NULL      Out of memory. Log message added.
  * @return              Pointer to the allocated memory.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 void* logl_realloc(
         const char* const file,
@@ -335,7 +402,9 @@ void* logl_realloc(
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
- * @param[in] ...  Message arguments -- starting with the format.
+ * @param[in] ...      Message arguments -- starting with the format.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 #define logl_internal(level, ...) do { \
     LOG_LOC_DECL(loc); \
@@ -383,19 +452,41 @@ void* logl_realloc(
  * Sets the logging destination.
  *
  * @pre                Module is locked
+ * @param[in] dest     New destination. One of
+ *                       - ""    System logging daemon
+ *                       - "-"   Standard error stream
+ *                       - else  Pathname of log file
  * @retval  0          Success
- * @retval -1          Failure
+ * @retval -1          Failure. Logging destination is unchanged. log_add()
+ *                     called.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-int logi_set_destination(void);
+int logi_set_destination(const char* dest);
+
+/**
+ * Gets the logging destination.
+ *
+ * @return             Logging destination. One of
+ *                       - ""    System logging daemon
+ *                       - "-"   Standard error stream
+ *                       - else  Pathname of log file
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+const char*
+logi_get_destination(void);
 
 /**
  * Initializes the logging module's implementation. Should be called before any
- * other function. `log_dest` must be set.
+ * other function.
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int logi_init(
         const char* const id);
@@ -407,14 +498,10 @@ int logi_init(
  *
  * @retval   -1        Failure
  * @retval    0        Success
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int logi_reinit(void);
-
-/**
- * Enables logging down to the level given by `log::log_level`. Should be called
- * after logi_init().
- */
-void logi_set_level(void);
 
 /**
  * Sets the logging identifier. Should be called between `logi_init()` and
@@ -423,6 +510,8 @@ void logi_set_level(void);
  * @param[in] id        The new identifier. Caller may free.
  * @retval    0         Success.
  * @retval    -1        Failure.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 int logi_set_id(
         const char* const id);
@@ -431,37 +520,49 @@ int logi_set_id(
  * Finalizes the logging module's implementation. Should be called eventually
  * after `log_impl_init()`, after which no more logging should occur.
  *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
+ * @retval 0           Success.
+ * @retval -1          Failure. Logging module is in an unspecified state.
+ * @threadsafety       Unsafe
+ * @asyncsignalsafety  Unsafe
  */
 int logi_fini(void);
 
 /**
  * Emits a single log message.
  *
- * @param[in] level  Logging level.
- * @param[in] loc    The location where the message was generated.
- * @param[in] string The message.
+ * @param[in] level    Logging level.
+ * @param[in] loc      The location where the message was generated.
+ * @param[in] string   The message.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logi_log(
+int logi_log(
         const log_level_t level,
         const log_loc_t*  loc,
         const char*       string);
 
 /**
  * Flushes logging.
+ * @retval    0       Success
+ * @retval    -1      Error
  */
-void logi_flush(void);
+int logi_flush(void);
 
 /**
  * Emits an error message. Used internally when an error occurs in this logging
  * module.
  *
- * @param[in] level  Logging level.
- * @param[in] loc    Location where the message was generated.
- * @param[in] ...    Message arguments -- starting with the format.
+ * @param[in] level    Logging level.
+ * @param[in] loc      Location where the message was generated.
+ * @param[in] ...      Message arguments -- starting with the format.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
-void logi_internal(
+int logi_internal(
         const log_level_t      level,
         const log_loc_t* const loc,
                                ...);

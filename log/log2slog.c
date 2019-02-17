@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -12,9 +12,9 @@
 #include "config.h"
 
 #include "Thread.h"
-#include "ldmfork.h"
 #include "log.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -43,50 +43,146 @@
  ******************************************************************************/
 
 /**
+ * The persistent destination specification.
+ */
+char log_dest[_XOPEN_PATH_MAX];
+
+/**
  * Destination object for log messages.
  */
 typedef struct dest {
-    void (*log)(
+    /**
+     * Writes a single log message. The message might be pending until `flush()`
+     * is called.
+     *
+     * @param[in,out] dest   Destination object
+     * @param[in]     level  Logging level.
+     * @param[in]     loc    Location where the message was created.
+     * @param[in]     msg    Message.
+     * @retval        0      Success
+     * @threadsafety         Safe
+     * @asyncsignalsafety    Unsafe
+     */
+    int (*log)(
         struct dest*              dest,
         const log_level_t         level,
         const log_loc_t* restrict loc,
         const char* restrict      msg);
-    void (*flush)(struct dest*);
+    /**
+     * Flushes all pending log messages.
+     *
+     * @param[in,out] dest  Destination object
+     * @retval        0     Success
+     * @retval        -1    Failure
+     * @threadsafety        Safe
+     * @asyncsignalsafety   Unsafe
+     */
+    int  (*flush)(struct dest*);
+    /**
+     * Returns the file descriptor associated with logging.
+     *
+     * @param[in,out] dest  Destination object
+     * @retval -1           No knowable file descriptor is used (e.g., syslog)
+     * @return              The file descriptor that will be used for logging
+     * @threadsafety        Safe
+     * @asyncsignalsafety   Unsafe
+     */
     int  (*get_fd)(const struct dest*);
-    void (*fini)(struct dest*);
+    /**
+     * Finalizes access to the logging system.
+     *
+     * @param[in,out] dest  Destination object
+     * @retval        0     Success
+     * @retval        -1    Failure
+     * @threadsafety        Unsafe
+     * @asyncsignalsafety   Unsafe
+     */
+    int  (*fini)(struct dest*);
+    /**
+     * Locks access to logging as much as possible (i.e., thread and process).
+     *
+     * @param[in,out] dest     Destination object
+     * @retval        0        Success
+     * @retval        EINTR    Interrupted by signal
+     * @retval        ENOLCK   Creating a locked region would exceed system limit
+     * @retval        EDEADLK  Deadlock detected
+     * @threadsafety           Safe
+     * @asyncsignalsafety      Unsafe
+     */
     int  (*lock)(struct dest*);
+    /**
+     * Unlocks access to logging as much as possible (i.e., thread and process).
+     *
+     * @param[in,out] dest  Destination object
+     * @retval        0     Success
+     * @retval    EINTR     Interrupted by signal
+     * @retval    EBADF     Invalid file descriptor
+     * @threadsafety        Safe
+     * @asyncsignalsafety   Unsafe
+     */
     int  (*unlock)(struct dest*);
-    FILE*  stream; // Unused for system logging
+    /**
+     * Logging stream. Unused for logging via the system logging daemon
+     */
+    FILE*  stream;
 } dest_t;
 /**
  * The identifier for log messages
  */
-static char          ident[_XOPEN_PATH_MAX];
+static char            ident[_XOPEN_PATH_MAX];
 /**
  * System logging daemon options
  */
-static int           syslog_options = LOG_PID | LOG_NDELAY;
+static int             syslog_options = LOG_PID | LOG_NDELAY;
 /**
  * System logging facility
  */
-static int           syslog_facility = LOG_LDM;
+static int             syslog_facility = LOG_LDM;
 /**
  * The destination of log messages:
  */
-static dest_t        dest;
+static dest_t          dest;
+/**
+ * The mutex that makes this module thread-safe.
+ */
+static pthread_mutex_t mutex;
 
-static void blockSigs(sigset_t* const prevSigs)
+/**
+ * Acquires this module's lock.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+static void lock(void)
 {
-    sigset_t sigs;
+    int status = pthread_mutex_lock(&mutex);
 
-    sigfillset(&sigs);
-
-    (void)pthread_sigmask(SIG_BLOCK, &sigs, prevSigs);
+    assert(status == 0);
 }
 
-static void unblockSigs(sigset_t* const prevSigs)
+/**
+ * Releases this module's lock.
+ */
+static void unlock(void)
 {
-    (void)pthread_sigmask(SIG_SETMASK, prevSigs, NULL);
+    int status = pthread_mutex_unlock(&mutex);
+
+    assert(status == 0);
+}
+
+static void register_atfork_funcs(void)
+{
+    int status = pthread_atfork(lock, unlock, unlock);
+
+    assert(status == 0);
+}
+
+/**
+ * Asserts that the current thread has acquired this module's lock.
+ */
+static void assertLocked(void)
+{
+    assert(pthread_mutex_trylock(&mutex));
 }
 
 /**
@@ -97,17 +193,16 @@ static void unblockSigs(sigset_t* const prevSigs)
 static const char* get_ldm_logfile_pathname(void)
 {
     static char pathname[_XOPEN_PATH_MAX];
+
     if (pathname[0] == 0) {
         int   reg_getString(const char* key, char** value);
         char* value;
+
         if (reg_getString("/log/file", &value)) {
             // No entry in registry
             (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
                     LDM_LOG_DIR);
             pathname[sizeof(pathname)-1] = 0;
-            logl_internal(LOG_LEVEL_WARNING,
-                    "Couldn't get pathname of LDM log file from registry. "
-                    "Using default: \"%s\".", pathname);
         }
         else {
             (void)strncpy(pathname, value, sizeof(pathname));
@@ -130,6 +225,7 @@ static const char* level_to_string(
 {
     static const char* strings[] = {"DEBUG", "INFO", "NOTE", "WARN",
             "ERROR", "ALERT", "CRIT", "EMERG"};
+
     return logl_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
@@ -144,8 +240,10 @@ static const char* level_to_string(
  * @param[in]     level Logging level
  * @param[in]     loc   Message location
  * @param[in]     msg   Message
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
-static void syslog_log(
+static int syslog_log(
         dest_t* const             dest,
         const log_level_t         level,
         const log_loc_t* restrict loc,
@@ -153,18 +251,21 @@ static void syslog_log(
 {
     syslog(logl_level_to_priority(level), "%s:%d:%s() %s",
             logl_basename(loc->file), loc->line, loc->func, msg);
+
+    return 0;
 }
 
 /**
  * Flushes logging to the system logging daemon.
  *
  * @param[in,out] dest  Destination object
+ * @retval        0     Always
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
  */
-static void syslog_flush(
+static int syslog_flush(
         dest_t* const dest)
-{
-    // Does nothing
-}
+{}
 
 /**
  * Returns the file descriptor that will be used for logging.
@@ -172,6 +273,8 @@ static void syslog_flush(
  * @param[in,out] dest  Destination object
  * @retval -1           No file descriptor will be used
  * @return              The file descriptor that will be used for logging
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
  */
 static int syslog_get_fd(
         const dest_t* const dest)
@@ -183,26 +286,35 @@ static int syslog_get_fd(
  * Finalizes access to the system logging daemon.
  *
  * @param[in,out] dest  Destination object
+ * @retval    0         Always
+ * @threadsafety        Unsafe
+ * @asyncsignalsafety   Unsafe
  */
-static void syslog_fini(
+static int syslog_fini(
         dest_t* const             dest)
 {
     closelog();
+    return 0;
 }
 
 /**
  * Initializes access to the system logging daemon.
  *
- * @retval 0  Success (always)
+ * @retval 0           Success (always)
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 static int syslog_init(
         dest_t* const dest)
 {
+    assertLocked();
+
     openlog(ident, syslog_options, syslog_facility);
     dest->log = syslog_log;
     dest->flush = syslog_flush;
     dest->get_fd = syslog_get_fd;
     dest->fini = syslog_fini;
+
     return 0;
 }
 
@@ -217,6 +329,8 @@ static int syslog_init(
  * @param[in,out] dest  Destination object
  * @retval -1           No knowable file descriptor will be used (e.g., syslog)
  * @return              The file descriptor that will be used for logging
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 static inline int stream_get_fd(
         const dest_t* const dest)
@@ -227,17 +341,25 @@ static inline int stream_get_fd(
 /**
  * Writes a single log message to a stream.
  *
- * @param[in,out] dest   Destination object
- * @param[in]     level  Logging level.
- * @param[in]     loc    Location where the message was created.
- * @param[in]     msg    Message.
+ * @param[in,out] dest     Destination object
+ * @param[in]     level    Logging level.
+ * @param[in]     loc      Location where the message was created.
+ * @param[in]     msg      Message.
+ * @retval        0        Success
+ * @retval        EINTR    Interrupted by signal
+ * @retval        ENOLCK   Creating a locked region would exceed system limit
+ * @retval        EDEADLK  Deadlock detected
+ * @threadsafety           Safe
+ * @asyncsignalsafety      Unsafe
  */
-static void stream_log(
+static int stream_log(
         dest_t* const             dest,
         const log_level_t         level,
         const log_loc_t* restrict loc,
         const char* restrict      msg)
 {
+    assertLocked();
+
     struct timespec now;
     (void)clock_gettime(CLOCK_REALTIME, &now);
 
@@ -250,73 +372,100 @@ static void stream_log(
     const int         pid = getpid();
     const char* const basename = logl_basename(loc->file);
     const char* const levelId = level_to_string(level);
+    int               status = dest->lock(dest);
 
-    sigset_t prevSigs;
-    blockSigs(&prevSigs);
-        (void)dest->lock(dest);
-            while (*msg) {
-                // Timestamp
-                (void)fprintf(dest->stream,
-                        "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
-                        year, month, tm.tm_mday, tm.tm_hour,
-                        tm.tm_min, tm.tm_sec, microseconds);
+    if (status == 0) {
+        while (*msg) {
+            // Timestamp
+            (void)fprintf(dest->stream,
+                    "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
+                    year, month, tm.tm_mday, tm.tm_hour,
+                    tm.tm_min, tm.tm_sec, microseconds);
 
-                #define MIN0(x) ((x) >= 0 ? (x) : 0)
+            #define MIN0(x) ((x) >= 0 ? (x) : 0)
 
-                // Process
-                int nbytes = snprintf(NULL, 0, "%s[%d]", ident, pid);
-                (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(27-nbytes),
-                        "", ident, pid);
+            // Process
+            int nbytes = snprintf(NULL, 0, "%s[%d]", ident, pid);
+            (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(27-nbytes),
+                    "", ident, pid);
 
-                // Location
-                nbytes = snprintf(NULL, 0, "%s:%s()", basename, loc->func);
-                (void)fprintf(dest->stream, "%*s%s:%s() ", MIN0(32-nbytes),
-                        "", basename, loc->func);
+            // Location
+            nbytes = snprintf(NULL, 0, "%s:%s()", basename, loc->func);
+            (void)fprintf(dest->stream, "%*s%s:%s() ", MIN0(32-nbytes),
+                    "", basename, loc->func);
 
-                // Error level
-                (void)fprintf(dest->stream, "%-5s ", levelId);
+            // Error level
+            (void)fprintf(dest->stream, "%-5s ", levelId);
 
-                // Message
-                const char* const newline = strchr(msg, '\n');
-                if (newline) {
-                    (void)fprintf(dest->stream, "%.*s\n", (int)(newline-msg),
-                            msg);
-                    msg = newline + 1;
-                }
-                else {
-                    (void)fprintf(dest->stream, "%s\n", msg);
-                    break;
-                }
-            } // Output-line loop
+            // Message
+            const char* const newline = strchr(msg, '\n');
+            if (newline) {
+                (void)fprintf(dest->stream, "%.*s\n", (int)(newline-msg), msg);
+                msg = newline + 1;
+            }
+            else {
+                (void)fprintf(dest->stream, "%s\n", msg);
+                break;
+            }
+        } // Output-line loop
 
-            dest->flush(dest);
         (void)dest->unlock(dest);
-    unblockSigs(&prevSigs);
+    } // Log stream is locked
+
+    return status;
 }
 
 /**
  * Flushes the logging stream.
  *
  * @param[in,out] dest  Destination object
+ * @retval        0     Success
+ * @retval        -1    Failure
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
-static inline void stream_flush(
+static inline int stream_flush(
         dest_t* const             dest)
 {
-    (void)fflush(dest->stream);
+    assertLocked();
+
+    return fflush(dest->stream)
+            ? -1
+            : 0;
 }
 
 /******************************************************************************
  * Logging is to the standard error stream:
  ******************************************************************************/
 
+/**
+ * Locks access to the standard error stream for the current thread only.
+ *
+ * @param[in,out] dest  Destination object
+ * @retval        0     Always
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
+ */
 static int stderr_lock(dest_t* const dest)
 {
+    assertLocked();
+
     flockfile(dest->stream);
     return 0;
 }
 
+/**
+ * Unlocks access to the standard error stream.
+ *
+ * @param[in,out] dest  Destination object
+ * @retval        0     Always
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
+ */
 static int stderr_unlock(dest_t* const dest)
 {
+    assertLocked();
+
     funlockfile(dest->stream);
     return 0;
 }
@@ -326,10 +475,14 @@ static int stderr_unlock(dest_t* const dest)
  *
  * @param[in,out] dest  Destination object
  * @retval 0            Success (always)
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
  */
 static int stderr_init(
         dest_t* const dest)
 {
+    assertLocked();
+
     dest->log = stream_log;
     dest->flush = stream_flush;
     dest->get_fd = stream_get_fd;
@@ -337,6 +490,7 @@ static int stderr_init(
     dest->lock = stderr_lock;
     dest->unlock = stderr_unlock;
     dest->stream = stderr;
+
     return 0;
 }
 
@@ -352,10 +506,13 @@ static int stderr_init(
  * @retval    EINTR    Interrupted by signal
  * @retval    ENOLCK   Creating the locked region would exceed system limit
  * @retval    EDEADLK  Deadlock detected
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 static int file_lock(dest_t* const dest)
 {
-    int          status;
+    assertLocked();
+
     struct flock lock;
 
     lock.l_type = F_WRLCK;
@@ -364,15 +521,9 @@ static int file_lock(dest_t* const dest)
     lock.l_start = 0;
     lock.l_len = 0;
 
-    if (fcntl(stream_get_fd(dest), F_SETLKW, &lock) == -1) {
-        log_add_syserr("Couldn't lock log file");
-        status = errno;
-    }
-    else {
-        status = 0;
-    }
-
-    return status;
+    return (fcntl(stream_get_fd(dest), F_SETLKW, &lock) == -1)
+        ? errno
+        : 0;
 }
 
 /**
@@ -381,10 +532,12 @@ static int file_lock(dest_t* const dest)
  * @param[in] dest     Logging destination
  * @retval    0        Success
  * @retval    EINTR    Interrupted by signal
+ * @retval    EBADF    Invalid file descriptor
  */
 static int file_unlock(dest_t* const dest)
 {
-    int          status;
+    assertLocked();
+
     struct flock lock;
 
     lock.l_type = F_UNLCK;
@@ -393,28 +546,59 @@ static int file_unlock(dest_t* const dest)
     lock.l_start = 0;
     lock.l_len = 0;
 
-    if (fcntl(stream_get_fd(dest), F_SETLK, &lock) == -1) {
-        log_add_syserr("Couldn't unlock log file");
-        status = errno;
-    }
-    else {
-        status = 0;
-    }
-
-    return status;
+    return (fcntl(stream_get_fd(dest), F_SETLK, &lock) == -1)
+        ? errno
+        : 0;
 }
 
 /**
  * Finalizes access to the log file.
  *
  * @param[in,out] dest  Destination object
+ * @threadsafety        Unsafe
+ * @asyncsignalsafety   Unsafe
  */
-static void file_fini(dest_t* const dest)
+static int file_fini(dest_t* const dest)
 {
-    if (dest->stream != NULL) {
-        (void)fclose(dest->stream); // Will flush
-        dest->stream = NULL;
+    assertLocked();
+
+    int status;
+
+    if (dest->stream == NULL) {
+        status = 0;
     }
+    else {
+        status = fclose(dest->stream); // Will flush
+        dest->stream = NULL;
+
+        if (status)
+            status = -1;
+    }
+
+    return status;
+}
+
+/**
+ * Ensures that a file descriptor will close if and when a function of the
+ * `exec()` family is called.
+ *
+ * @param[in] fd       File descriptor
+ * @retval  0          Success
+ * @retval -1          Failure
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Safe
+ */
+static int ensure_close_on_exec(
+        const int fd)
+{
+    int status = fcntl(fd, F_GETFD);
+
+    if (status != -1)
+        status = (status & FD_CLOEXEC)
+                ? 0
+                : fcntl(fd, F_SETFD, status | FD_CLOEXEC);
+
+    return status;
 }
 
 /**
@@ -423,28 +607,31 @@ static void file_fini(dest_t* const dest)
  * @param[in,out] dest  Destination object
  * @retval  0           Success
  * @retval -1           Failure
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
 static int file_init(
         dest_t* const dest)
 {
+    assertLocked();
+
     int status;
     int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
             S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+
     if (fd < 0) {
-        log_add_syserr("Couldn't open log file \"%s\"", log_dest);
         status = -1;
     }
     else {
         status = ensure_close_on_exec(fd);
+
         if (status) {
-            log_add("Couldn't ensure log file \"%s\" is close-on-exec",
-                    log_dest);
+            close(fd);
         }
         else {
             dest->stream = fdopen(fd, "a");
+
             if (dest->stream == NULL) {
-                log_add_syserr("Couldn't open stream on log file \"%s\"",
-                        log_dest);
                 status = -1;
             }
             else {
@@ -457,22 +644,25 @@ static int file_init(
                 dest->unlock = file_unlock;
             }
         }
-        if (status)
-            close(fd);
     }
+
     return status;
 }
 
 /**
- * Sets the logging destination object.
+ * Sets the logging destination object. Uses `log_dest`.
  *
  * @pre                 Module is locked
  * @retval  0           Success
  * @retval -1           Failure. Logging destination is unchanged. log_add()
  *                      called.
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
  */
-static int dest_set(void)
+static int dest_set()
 {
+    assertLocked();
+
     dest_t new_dest;
     int    status =
             LOG_IS_SYSLOG_SPEC(log_dest)
@@ -480,13 +670,12 @@ static int dest_set(void)
                 : LOG_IS_STDERR_SPEC(log_dest)
                   ? stderr_init(&new_dest)
                   : file_init(&new_dest);
-    if (status) {
-        log_add("Couldn't set logging destination");
-    }
-    else {
+
+    if (status == 0) {
         dest.fini(&dest);
         dest = new_dest;
     }
+
     return status;
 }
 
@@ -494,46 +683,62 @@ static int dest_set(void)
  * Package-Private Implementation API:
  ******************************************************************************/
 
-/**
- * Sets the logging destination.
- *
- * @pre                Module is locked
- * @retval  0          Success
- * @retval -1          Failure. Logging destination is unchanged. log_add()
- *                     called.
- */
-int logi_set_destination(void)
+int logi_set_destination(const char* const dest)
 {
-    return dest_set();
+    size_t nchars = strlen(dest);
+
+    if (nchars > sizeof(log_dest) - 1)
+        nchars = sizeof(log_dest) - 1;
+
+    lock();
+        ((char*)memmove(log_dest, dest, nchars))[nchars] = 0;
+
+        int status = dest_set(); // Uses `log_dest`
+    unlock();
+
+    return status;
 }
 
-/**
- * Emits an error message. Used internally when an error occurs in this logging
- * module.
- *
- * @param[in] level  Logging level.
- * @param[in] loc    Location where the message was generated.
- * @param[in] ...    Message arguments -- starting with the format.
- */
-void logi_internal(
+const char*
+logi_get_destination(void)
+{
+    lock();
+        const char* const dest = log_dest;
+    unlock();
+
+    return dest;
+}
+
+int logi_internal(
         const log_level_t      level,
         const log_loc_t* const loc,
                                ...)
 {
+    assertLocked();
+
+    int     status;
     va_list args;
+
     va_start(args, loc);
-    const char* fmt = va_arg(args, const char*);
-    char        buf[_POSIX2_LINE_MAX];
-    int nbytes = vsnprintf(buf, sizeof(buf), fmt, args);
-    if (nbytes < 0) {
-        LOG_LOC_DECL(location);
-        dest.log(&dest, LOG_LEVEL_ERROR, &location, "vsnprintf() failure");
-    }
-    else {
-        buf[sizeof(buf)-1] = 0;
-        dest.log(&dest, level, loc, buf);
-    }
+        const char* fmt = va_arg(args, const char*);
+        char        buf[_POSIX2_LINE_MAX];
+        int         nbytes = vsnprintf(buf, sizeof(buf), fmt, args);
+
+        if (nbytes < 0) {
+            LOG_LOC_DECL(location);
+            dest.log(&dest, LOG_LEVEL_ERROR, &location, "vsnprintf() failure");
+            status = -1;
+        }
+        else {
+            buf[sizeof(buf)-1] = 0;
+            status = dest.log(&dest, level, loc, buf);
+
+            if (status)
+                status = -1;
+        }
     va_end(args);
+
+    return status;
 }
 
 /**
@@ -552,121 +757,123 @@ void logi_internal(
  *                     free.
  * @retval    0        Success.
  * @retval    -1       Error. Logging module is in an unspecified state.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
  */
 int logi_init(
         const char* const id)
 {
     int status;
+
     if (id == NULL) {
-        status = -1;
+        status = EINVAL;
     }
     else {
-        (void)stderr_init(&dest);
-        syslog_options = LOG_PID | LOG_NDELAY;
-        syslog_facility = LOG_LDM;
+        /*
+         * The following mutex isn't error-checking or recursive because a
+         * glibc-created child process can't release such mutexes because the
+         * thread in the child isn't the same as the thread in the parent. See
+         * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
+         * As a consequence, failure to lock or unlock the mutex must not result
+         * in a call to a logging function that attempts to lock or unlock the
+         * mutex.
+         */
+        status = pthread_mutex_init(&mutex, NULL);
 
+        if (status == 0) {
+            lock();
+                static pthread_once_t atfork_control = PTHREAD_ONCE_INIT;
+
+                status = pthread_once(&atfork_control, register_atfork_funcs);
+
+                (void)stderr_init(&dest);
+                syslog_options = LOG_PID | LOG_NDELAY;
+                syslog_facility = LOG_LDM;
+
+                // Handle potential overlap because log_get_id() returns `ident`
+                size_t nbytes = strlen(id);
+                if (nbytes > sizeof(ident) - 1)
+                    nbytes = sizeof(ident) - 1;
+                (void)memmove(ident, logl_basename(id), nbytes);
+                ident[nbytes] = 0;
+
+                status = dest_set();
+
+                if (status)
+                    (void)pthread_mutex_destroy(&mutex);
+            unlock();
+        } // `mutex` initialized
+    } // Valid argument
+
+    return status ? -1 : 0;
+}
+
+int logi_reinit(void)
+{
+    lock();
+        int status = dest_set();
+    unlock();
+
+    return status;
+}
+
+int logi_set_id(
+        const char* const id)
+{
+    lock();
         // Handle potential overlap because log_get_id() returns `ident`
         size_t nbytes = strlen(id);
         if (nbytes > sizeof(ident) - 1)
             nbytes = sizeof(ident) - 1;
-        (void)memmove(ident, logl_basename(id), nbytes);
-        ident[nbytes] = 0;
 
-        status = logi_set_destination();
-        if (status)
-            logl_internal(LOG_LEVEL_ERROR, "Couldn't set logging destination");
-    }
+        (void)memmove(ident, id, nbytes);
+        ident[nbytes] = 0;
+        /*
+         * The destination is re-initialized in case it's the system logging
+         * daemon.
+         */
+        int status = dest_set();
+    unlock();
+
     return status;
 }
 
-/**
- * Re-initializes the logging module based on its state just prior to calling
- * logi_fini(). If logi_fini(), wasn't called, then the result is unspecified.
- *
- * @retval    0        Success.
- */
-int logi_reinit(void)
-{
-    return dest_set();
-}
-
-/**
- * Enables logging down to the level given by `log::log_level`. Should be called
- * after logi_init().
- */
-void logi_set_level(void)
-{
-}
-
-/**
- * Sets the logging identifier. Should be called after `logi_init()`.
- *
- * @pre                 `id` isn't NULL
- * @param[in] id        The new identifier. Caller may free.
- * @retval    0         Success.
- * @retval    -1        Failure.
- */
-int logi_set_id(
-        const char* const id)
-{
-    // Handle potential overlap because log_get_id() returns `ident`
-    size_t nbytes = strlen(id);
-    if (nbytes > sizeof(ident) - 1)
-        nbytes = sizeof(ident) - 1;
-    (void)memmove(ident, id, nbytes);
-    ident[nbytes] = 0;
-    /*
-     * The destination is re-initialized in case it's the system logging
-     * daemon.
-     */
-    return dest_set();
-}
-
-/**
- * Finalizes the logging module.
- *
- * @retval 0   Success.
- * @retval -1  Failure. Logging module is in an unspecified state.
- */
 int logi_fini(void)
 {
-    dest.fini(&dest);
-    return 0;
+    lock();
+        dest.fini(&dest);
+    unlock();
+
+    return pthread_mutex_destroy(&mutex) ? -1 : 0;
 }
 
-/**
- * Emits a single log message.
- *
- * @param[in] level  Logging level.
- * @param[in] loc    The location where the message was generated.
- * @param[in] string The message.
- */
-void logi_log(
+int logi_log(
         const log_level_t               level,
         const log_loc_t* const restrict loc,
         const char* const restrict      string)
 {
-    dest.log(&dest, level, loc, string);
+    lock();
+        int status = dest.log(&dest, level, loc, string)
+            ? -1
+            : 0;
+    unlock();
+
+    return status;
 }
 
-/**
- * Flushes logging.
- */
-void logi_flush(void)
+int logi_flush(void)
 {
-    dest.flush(&dest);
+    lock();
+        int status = dest.flush(&dest);
+    unlock();
+
+    return status;
 }
 
 /******************************************************************************
  * Public API:
  ******************************************************************************/
 
-/**
- * Returns the default destination for log messages if the process is a daemon.
- *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
- */
 const char* log_get_default_daemon_destination(void)
 {
     /*
@@ -676,106 +883,64 @@ const char* log_get_default_daemon_destination(void)
     return get_ldm_logfile_pathname();
 }
 
-/**
- * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `log_init()`.
- *
- * @param[in] facility  The facility that will be used when logging to the
- *                      system logging daemon.
- * @retval    0         Success
- * @retval    -1        Failure
- */
 int log_set_facility(
         const int facility)
 {
     int  status;
     int  diff_local0 = facility - LOG_LOCAL0;
     int  diff_local7 = facility - LOG_LOCAL7;
+
     if (diff_local0 * diff_local7 > 0 && facility != LOG_USER) {
-        logl_internal(LOG_LEVEL_ERROR, "Invalid system logging facility: %d",
-                facility);
         status = -1; // `facility` is invalid
     }
     else {
-        logl_lock();
+        lock();
             syslog_facility = facility;
             /*
              * The destination is re-initialized in case it's the system logging
              * daemon.
              */
             status = dest_set();
-        logl_unlock();
+        unlock();
     }
+
     return status;
 }
 
-/**
- * Returns the facility that will be used when logging to the system logging
- * daemon (e.g., `LOG_LOCAL0`). Should be called after log_init().
- *
- * @return The facility that will be used when logging to the system logging
- *         daemon (e.g., `LOG_LOCAL0`).
- */
 int log_get_facility(void)
 {
-    logl_lock();
+    lock();
         int facility = syslog_facility;
-    logl_unlock();
+    unlock();
+
     return facility;
 }
 
-/**
- * Returns the logging identifier. Should be called after log_init().
- *
- * @return The logging identifier.
- */
 const char* log_get_id(void)
 {
-    logl_lock(); // For visibility of changes
+    lock(); // For visibility of changes
         const char* const id = ident;
-    logl_unlock();
+    unlock();
+
     return id;
 }
 
-/**
- * Sets the logging options for the system logging daemon. Should be called
- * after log_init().
- *
- * @param[in] options  The logging options. Bitwise or of
- *                         LOG_PID     Log the pid with each message (default)
- *                         LOG_CONS    Log on the console if errors in sending
- *                         LOG_ODELAY  Delay open until first syslog()
- *                         LOG_NDELAY  Don't delay open (default)
- *                         LOG_NOWAIT  Don't wait for console forks: DEPRECATED
- *                         LOG_PERROR  Log to stderr as well
- */
 void log_set_options(
         const unsigned options)
 {
-    logl_lock();
+    lock();
         syslog_options = options;
         // The destination is re-initialized in case it's the system logging daemon.
         int status = dest_set();
-        logl_assert(status == 0);
-    logl_unlock();
+        assert(status == 0);
+    unlock();
 }
 
-/**
- * Returns the logging options for the system logging daemon. Should be called
- * after log_init().
- *
- * @return The logging options. Bitwise or of
- *             LOG_PID     Log the pid with each message (default)
- *             LOG_CONS    Log on the console if errors in sending
- *             LOG_ODELAY  Delay open until first syslog()
- *             LOG_NDELAY  Don't delay open (default)
- *             LOG_NOWAIT  Don't wait for console forks: DEPRECATED
- *             LOG_PERROR  Log to stderr as well
- */
 unsigned log_get_options(void)
 {
-    logl_lock(); // For visibility of changes
+    lock(); // For visibility of changes
         const int opts = syslog_options;
-    logl_unlock();
+    unlock();
+
     return opts;
 }
