@@ -703,15 +703,14 @@ oess_init(void)
 {
     if (oessPathname == NULL) {
         if (reg_getString(REG_OESS_PATHNAME, &oessPathname))
-            oessPathname = defaultOessPathname;
+            oessPathname = strdup(defaultOessPathname);
     }
 }
 
 static void
 oess_destroy(void)
 {
-    if (oessPathname != defaultOessPathname)
-        free(oessPathname);
+    free(oessPathname);
 
     oessPathname = NULL;
 }
