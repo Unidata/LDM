@@ -12,8 +12,7 @@
  */
 
 #define _XOPEN_SOURCE 600
-#define _GNU_SOURCE     1
-#define __EXTENSIONS__  1
+#define _BSD_SOURCE // For `struct ip_mreq_source`
 
 #include "send_recv_test.h"
 
@@ -274,7 +273,8 @@ configure_socket(
      * accept every packet destined to the port number regardless of destination
      * IP address.
      */
-    success = bind(sock, groupSockAddr, sizeof(*groupSockAddr)) == 0;
+    success = bind(sock, (struct sockaddr*)groupSockAddr,
+            sizeof(*groupSockAddr)) == 0;
 
     if (!success) {
         perror(NULL);
@@ -345,7 +345,7 @@ print_packets(
     if (debug) {
         struct sockaddr_in sockAddrIn;
         socklen_t          len = sizeof(sockAddrIn);
-        if (-1 == getsockname(sock, &sockAddrIn, &len)) {
+        if (-1 == getsockname(sock, (struct sockaddr*)&sockAddrIn, &len)) {
             perror("getsockname()");
             return false;
         }

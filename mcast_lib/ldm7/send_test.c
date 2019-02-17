@@ -7,8 +7,6 @@
  */
 
 #define _XOPEN_SOURCE 600
-#define _GNU_SOURCE     1
-#define __EXTENSIONS__  1
 
 #include "send_recv_test.h"
 
