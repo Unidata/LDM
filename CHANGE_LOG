@@ -1,7 +1,14 @@
-6.13.8.4	2019-02-07T13:20:49-0700
+6.13.8.5	2019-02-17T10:40:47-0700
     Building and Installing:
-        Made C++ library reference for LDM library conditional on WANT_MULTICAST
-        to obviate the need for that library for a regular build
+        * Made C++ library reference for LDM library conditional on
+          WANT_MULTICAST to obviate the need for that library for a regular
+          build
+        * Added missing mutex files to distribution to support configure(1)'s
+          "--with-ulog" option
+
+    Logging:
+        Refactored logging to eliminate occasionally hanging by a terminating
+        ldmd(1) process
 
     NOAAPort Ingestion:
         Converted the directory "gempak/tables" into its own GitHub repository
@@ -20,6 +27,9 @@
         * Added error message if MldmRpc::Impl::~Impl can't remove the secret
           file
         * Added removal of MldmRpc secret files to "ldmadmin clean"
+        * Modified downlet_run() to print result of changing address of FMTP
+          server 
+        * Refactored oess_init() & oess_destroy() to achieve "const" correctness
 
     Developer:
         * Removed directory "mcast_lib/OESS-Client" from AC_CONFIG_SUBDIRS() to
@@ -30,6 +40,14 @@
           subtree.)
         * Added "pull-%" and "push-%" to the top-level makefile for pulling-from
           and pushing-to subtrees
+        * Added scripts "ldm7PreInstall" and "ldm7Install" to distribution
+        * Changed multicast group IP address of send_test(1) and recv_test(1)
+          from 234.127.117.0 to 234.128.117.1 and improved logging.
+        * send_test(1) & recv_test(1):
+            * Made independent of LDM package
+            * Made GNU independent and eliminated compiler warnings
+            * Changed multicast group address of from any-source 234... to
+              source-specific 232...
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
