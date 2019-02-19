@@ -14,7 +14,7 @@ link = []
 (username,passwd)=account.readAccount(sys.argv[2])
 gh_url = 'https://al2s.net.internet2.edu/oess-service-basic/data.cgi'
 values1 = {'method' : 'get_workgroups'}
-values2 = {'method' : 'get_shortest_path', 'node' : [sys.argv[3], sys.argv[6]], 'type' : 'mpls'}
+values2 = {'method' : 'get_shortest_path', 'node' : [sys.argv[4], sys.argv[7]], 'type' : 'mpls'}
 data1 = urllib.urlencode(values1, doseq=True)
 data2 = urllib.urlencode(values2, doseq=True)
 req1 = urllib2.Request(gh_url, data1)
@@ -40,7 +40,7 @@ for er in searchResults2:
 	if er['link'] != None:
 		link.append(er['link'])
 
-values3 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'link' : link, 'node' : [sys.argv[3], sys.argv[6]], 'interface' : [sys.argv[4], sys.argv[7]], 'tag' : [sys.argv[5], sys.argv[8]]}
+values3 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'link' : link, 'node' : [sys.argv[4], sys.argv[7]], 'interface' : [sys.argv[5], sys.argv[8]], 'tag' : [sys.argv[6], sys.argv[9]]}
 data = urllib.urlencode(values3, doseq=True)
 gh_url2 = 'https://al2s.net.internet2.edu/oess-service-basic/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
