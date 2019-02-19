@@ -12,7 +12,6 @@ brief     Read OESS API account
 """
 
 import json
-
 def readAccount(filename):
 	f = open(filename, 'r+')
 	jsonData = json.load(f)

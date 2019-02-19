@@ -12,7 +12,7 @@ values2 = {}
 values3 = {}
 link = []
 (username,passwd)=account.readAccount(sys.argv[2])
-gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
+gh_url = 'https://al2s.net.internet2.edu/oess-service-basic/data.cgi'
 values1 = {'method' : 'get_workgroups'}
 values2 = {'method' : 'get_shortest_path', 'node' : [sys.argv[3], sys.argv[6]], 'type' : 'mpls'}
 data1 = urllib.urlencode(values1, doseq=True)
@@ -42,7 +42,7 @@ for er in searchResults2:
 
 values3 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'link' : link, 'node' : [sys.argv[3], sys.argv[6]], 'interface' : [sys.argv[4], sys.argv[7]], 'tag' : [sys.argv[5], sys.argv[8]]}
 data = urllib.urlencode(values3, doseq=True)
-gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
+gh_url2 = 'https://al2s.net.internet2.edu/oess-service-basic/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
 password_manager.add_password(None, gh_url2, username, passwd)

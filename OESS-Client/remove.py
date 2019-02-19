@@ -6,16 +6,14 @@ import string
 import array
 import numpy
 import json
+import account
 from subprocess import call
 global values1, values2
 values1 = {}
 values2 = {}
 link = []
-f = open("/home/yt4xb/etc/OESS-password", 'r+')
-line = f.read().split()
-username = line[0]
-passwd = line[1]
-gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
+(username,passwd)=account.readAccount(sys.argv[2])
+gh_url = 'https://al2s.net.internet2.edu/oess-service-basic/data.cgi'
 values1 = {'method' : 'get_workgroups'}
 data1 = urllib.urlencode(values1, doseq=True)
 req1 = urllib2.Request(gh_url, data1)
@@ -31,9 +29,9 @@ searchResults1 =  jsonData1['results']
 for er in searchResults1:
 	if er['name'] == sys.argv[1]:
 		wg_id = er['workgroup_id']
-values2 = values = {'action' : 'remove_circuit', 'workgroup_id' : wg_id, 'circuit_id' : sys.argv[2], 'remove_time' : -1}
+values2 = values = {'action' : 'remove_circuit', 'workgroup_id' : wg_id, 'circuit_id' : sys.argv[3], 'remove_time' : -1}
 data = urllib.urlencode(values2, doseq=True)
-gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
+gh_url2 = 'https://al2s.net.internet2.edu/oess-service-basic/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
 password_manager.add_password(None, gh_url2, username, passwd)
