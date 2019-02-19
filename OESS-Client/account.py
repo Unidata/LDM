@@ -11,10 +11,10 @@ date      Feb. 14, 2019
 brief     Read OESS API account
 """
 
-import json
+import yaml
 def readAccount(filename):
 	f = open(filename, 'r+')
-	jsonData = json.load(f)
-	username = jsonData['username']
-	passwd = jsonData['password']
+	yamlData = yaml.load(f)
+	username = yamlData['username']
+	passwd = yamlData['passwd']
 	return (username,passwd)
