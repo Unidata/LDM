@@ -27,7 +27,7 @@ typedef struct inetId InetId;
  * Returns a new Internet identifier.
  *
  * @param[in] id    Formatted identifier. May be a host name, a formatted IPv4
- *                  address, or a formatted IPv6 address.
+ *                  address, or a formatted IPv6 address. Caller may free.
  * @retval    NULL  Failure. `log_add()` called.
  * @return          Internet identifier. Caller should call `inetId_free()` when
  *                  it's no longer needed.

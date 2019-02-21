@@ -71,8 +71,7 @@ isa_newFromId(
                     }
                 } // Decoding successful
 
-                if (status)
-                    free(addrId);
+                free(addrId);
             } // `addrId` allocated
 
             if (status) {

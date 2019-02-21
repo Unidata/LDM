@@ -265,7 +265,9 @@ static int syslog_log(
  */
 static int syslog_flush(
         dest_t* const dest)
-{}
+{
+    return 0;
+}
 
 /**
  * Returns the file descriptor that will be used for logging.

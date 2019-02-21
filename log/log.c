@@ -351,6 +351,7 @@ static int queue_getNextEntry(
                 queue->last->next = msg;
 
             *entry = msg;
+            status = 0;
         } // `msg` allocated
     } // need new message structure
 
