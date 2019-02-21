@@ -1,0 +1,16 @@
+PATH=/usr/local/bin:/bin:/usr/bin
+
+set -e
+
+version=${1?Version not specified}
+
+gunzip -c ldm-$version.tar.gz | pax -r '-s:/:/src/:'
+cd ldm-$version/src/
+./configure --disable-root-actions --enable-debug >&configure.log &&
+        echo Configured && make install >&install.log && echo Installed
+su << EOF
+    make root-actions >&root-actions.log && echo Root-actioned
+    exit
+EOF
+cd
+ldmadmin stop && rm runtime && ln -s ldm-6.13.8.5 runtime && ldmadmin start
