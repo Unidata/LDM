@@ -1,16 +1,22 @@
-PATH=/usr/local/bin:/bin:/usr/bin
+PATH=/bin:/usr/bin:/usr/local/bin
 
 set -e
 
 version=${1?Version not specified}
+remote=${2?Remote not specified}
 
-gunzip -c ldm-$version.tar.gz | pax -r '-s:/:/src/:'
-cd ldm-$version/src/
-./configure --disable-root-actions --enable-debug >&configure.log &&
-        echo Configured && make install >&install.log && echo Installed
-su << EOF
-    make root-actions >&root-actions.log && echo Root-actioned
-    exit
+ldmName=ldm-$version
+tarball=$ldmName.tar.gz
+
+scp $tarball $remote:
+
+ssh $remote bash --login <<EOF
+    set -x -e
+    gunzip -c $tarball | pax -r '-s:/:/src/:'
+    cd $ldmName/src/
+    ./configure --disable-root-actions --enable-debug >&configure.log &&
+            echo Configured && make install >&install.log && echo Installed
+    su -c 'make root-actions >&root-actions.log' && echo Root actions made
+    cd
+    ldmadmin stop && rm runtime && ln -s ldm-$version runtime && ldmadmin start
 EOF
-cd
-ldmadmin stop && rm runtime && ln -s ldm-6.13.8.5 runtime && ldmadmin start
