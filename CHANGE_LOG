@@ -1,4 +1,4 @@
-6.13.8.5	2019-02-17T10:40:47-0700
+6.13.8.6	2019-02-21T11:37:22-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -6,8 +6,14 @@
         * Added missing mutex files to distribution to support configure(1)'s
           "--with-ulog" option
 
+    ldmadmin(1):
+        * Changed "ldmadmin start" to wait indefinitely for the LDM server to
+          start
+        * Changed "ldmadmin stop" to only print one message and to wait
+          indefinitely for the LDM server to stop
+
     Logging:
-        Refactored logging to eliminate occasionally hanging by a terminating
+        Refactored logging to eliminate occasional hanging by a terminating
         ldmd(1) process
 
     NOAAPort Ingestion:
@@ -45,9 +51,10 @@
           from 234.127.117.0 to 234.128.117.1 and improved logging.
         * send_test(1) & recv_test(1):
             * Made independent of LDM package
-            * Made GNU independent and eliminated compiler warnings
-            * Changed multicast group address of from any-source 234... to
+            * Made independent of gcc(1) and eliminated compiler warnings
+            * Changed multicast group address from any-source 234... to
               source-specific 232...
+        * Created script for installing on IDD backends
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
