@@ -36,4 +36,3 @@ script: make distcheck
 
 after_failure:
   - pwd
-  - cat /home/travis/build/Unidata/LDM/ldm-6.13.8.8/_build/log/log_test.log
