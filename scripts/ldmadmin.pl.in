@@ -705,16 +705,9 @@ sub start
         }
         else {
             # Check to make sure the LDM is running
-            my($loopcount) = 1;
+            print "Waiting for the LDM server to start...\n" ;
             while(!isRunning($pid_file, $ip_addr)) {
-                if($loopcount > 15) {
-                    errmsg("start(): ".
-                        "Server not started.");
-                    $status = 1;        # failure
-                    last;
-                }
-                sleep($loopcount);
-                $loopcount++;
+                sleep(1);
             }
         }
     }
@@ -811,16 +804,9 @@ sub stop_ldm
         system( "kill $rpc_pid" );
 
         # we may need to sleep to make sure that the port is deregistered
-        my($loopcount) = 1;
+        print "Waiting for the LDM server to terminate...\n" ;
         while(isRunning($pid_file, $ip_addr)) {
-            if($loopcount > 65) {
-                errmsg("stop_ldm: LDM server not dead.");
-                $status = 1;
-                last;
-            }
-            print "Waiting for the LDM server to terminate...\n" ;
-            sleep($loopcount);
-            $loopcount++;
+            sleep(1);
         }
     }
 
