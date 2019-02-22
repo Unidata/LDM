@@ -2,35 +2,68 @@ PATH=/bin:/usr/bin:/usr/local/bin
 
 set -e
 
+printUsage()
+{
+    cat 1>&2 <<EOF
+Usage: `basename $0` [-s] [-u <user>] <version> <host>
+Where:
+    -s          Use sudo(1) instead of logging in as "root"
+    -u <user>   Use <user> instead of "ldm"
+    <version>   LDM version (e.g., "6.13.8.8")
+    <host>      Remote host (e.g., "node4.unidata.ucar.edu")
+EOF
+}
+
+useSudo=false
+user=ldm
+
+while getopts su: id; do
+    case $id in
+        s) useSudo=true;;
+        u) user=$OPTARG;;
+        *) printUsage
+           exit 1;;
+    esac
+done
+shift `expr $OPTIND - 1`
 version=${1?Version not specified}
 host=${2?Host not specified}
 
-ldmName=ldm-$version
-tarball=$ldmName.tar.gz
+pkgId=ldm-$version
+tarball=$pkgId.tar.gz
 
 scp $tarball $host:
 
-# ssh(1) is used thrice because the security policy doesn't allow ssh(1)ing to
-# the remote host and then executing su(1) in a here-document.
+# ssh(1) is used thrice because some security policies doesn't allow
+# ssh(1)ing to the remote host and then executing su(1) in a here-document.
 
 ssh -T $host bash --login <<EOF
     set -x -e
     gunzip -c $tarball | pax -r '-s:/:/src/:'
-    cd $ldmName/src/
+    cd $pkgId/src/
     ./configure --disable-root-actions --enable-debug >&configure.log
     make install >&install.log
 EOF
 
-ssh -T root@$host bash --login <<EOF
-    set -x -e
-    cd ~ldm/$ldmName/src
-    make root-actions >&root-actions.log && echo Root actions made
+if test "$useSudo" = true; then
+    ssh -T root@$host bash --login <<EOF
+        set -x -e
+        cd ~$user/$pkgId/src
+        make root-actions >&root-actions.log
+        echo Root actions made
+EOF
+else
+    ssh -T $host bash --login <<EOF
+        set -x -e
+        cd $pkgId/src
+        sudo make root-actions >&root-actions.log
+        echo Root actions made
 EOF
 
 ssh -T $host bash --login <<EOF
     set -x -e
     ldmadmin stop || echo "LDM isn't running"
     rm -f runtime || echo "Runtime link doesn't exist"
-    ln -s $ldmName runtime
+    ln -s $pkgId runtime
     ldmadmin start
 EOF
