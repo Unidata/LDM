@@ -16,7 +16,6 @@ import urllib2
 import urllib
 import string
 import json
-from subprocess import call
 values1 = {}
 global gh_url
 gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'

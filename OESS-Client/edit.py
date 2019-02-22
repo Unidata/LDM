@@ -6,11 +6,8 @@ import string
 import json
 import account
 from subprocess import call
-global values1, values2, values3
 values1 = {}
 values2 = {}
-values3 = {}
-values4 = {}
 node = []
 interface = []
 tag = []
@@ -74,8 +71,8 @@ if sys.argv[4] == 'del':
 			if er not in link:
 				link.append(er['link'])
 		index += 1
-values4 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'link' : link, 'node' : node, 'interface' : interface, 'tag' : tag}
-data = urllib.urlencode(values4, doseq=True)
+values2 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'link' : link, 'node' : node, 'interface' : interface, 'tag' : tag}
+data = urllib.urlencode(values2, doseq=True)
 gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 req = urllib2.Request(gh_url2, data)
 password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -99,6 +96,3 @@ else:
 	f.write(circuit_id)
 	f.close()
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Edit.py: circuit_id is "+circuit_id])
-
-
-
