@@ -1,4 +1,4 @@
-6.13.8.8	2019-02-21T12:31:39-0700
+6.13.8.9	2019-02-22T13:11:30-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -13,8 +13,9 @@
           indefinitely for the LDM server to stop
 
     Logging:
-        Refactored logging to eliminate occasional hanging by a terminating
-        ldmd(1) process
+        * Refactored logging to eliminate occasional hanging by a terminating
+          ldmd(1) process
+        * Added missing return value that Coverity Scan found to two functions
 
     NOAAPort Ingestion:
         Converted the directory "gempak/tables" into its own GitHub repository
@@ -37,6 +38,9 @@
           server 
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
 
+    Misc:
+        Eliminated small and infrequent memory leak found by Coverity Scan
+
     Developer:
         * Removed directory "mcast_lib/OESS-Client" from AC_CONFIG_SUBDIRS() to
           eliminate warning about that directory not having a configure(1)
@@ -54,7 +58,7 @@
             * Made independent of gcc(1) and eliminated compiler warnings
             * Changed multicast group address from any-source 234... to
               source-specific 232...
-        * Created script for installing on IDD backends
+        * Created script for installing on IDD backends using ssh(1) thrice
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
