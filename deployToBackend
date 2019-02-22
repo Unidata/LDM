@@ -62,8 +62,12 @@ EOF
 
 ssh -T $host bash --login <<EOF
     set -x -e
-    ldmadmin stop || echo "LDM isn't running"
-    rm -f runtime || echo "Runtime link doesn't exist"
-    ln -s $pkgId runtime
-    ldmadmin start
+    if ldmadmin stop; then
+        rm -f runtime || echo "Runtime link doesn't exist"
+        ln -s $pkgId runtime
+        ldmadmin start
+    else
+        echo "LDM isn't running"
+        ln -s $pkgId runtime
+    fi
 EOF
