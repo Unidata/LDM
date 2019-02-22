@@ -1,0 +1,36 @@
+PATH=/bin:/usr/bin:/usr/local/bin
+
+set -e
+
+version=${1?Version not specified}
+host=${2?Host not specified}
+
+ldmName=ldm-$version
+tarball=$ldmName.tar.gz
+
+scp $tarball $host:
+
+# ssh(1) is used thrice because the security policy doesn't allow ssh(1)ing to
+# the remote host and then executing su(1) in a here-document.
+
+ssh -T $host bash --login <<EOF
+    set -x -e
+    gunzip -c $tarball | pax -r '-s:/:/src/:'
+    cd $ldmName/src/
+    ./configure --disable-root-actions --enable-debug >&configure.log
+    make install >&install.log
+EOF
+
+ssh -T root@$host bash --login <<EOF
+    set -x -e
+    cd ~ldm/$ldmName/src
+    make root-actions >&root-actions.log && echo Root actions made
+EOF
+
+ssh -T $host bash --login <<EOF
+    set -x -e
+    ldmadmin stop || echo "LDM isn't running"
+    rm -f runtime || echo "Runtime link doesn't exist"
+    ln -s $ldmName runtime
+    ldmadmin start
+EOF
