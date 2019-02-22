@@ -6,4 +6,4 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-SUBDIRS			= OESS-Client-V2
+dist_bin_SCRIPTS	= provision.py remove.py
