@@ -1,10 +1,12 @@
-provision.py wrkgrpName desc node1 interface1 vlanId1 node2 interface2 vlanId2 
+provision.py wrkgrpName credential desc node1 interface1 vlanId1 node2 interface2 vlanId2 
 
 Adds a circuit on the network using the OESS API function `provision_circuit`. The circuit is created immediately and can be removed by `remove_circuit.py`.
 
 Parameters:
 wrkgrpName
 ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
+credential
+credential for AL2S OESS API account
 desc
 Description of the circuit (e.g., “NEXRAD2 feed”) 
 node1
@@ -24,12 +26,12 @@ Output:
 On success, the script writes the circuit ID to its standard output stream as a string.
 
 Example:
-$ python provision.py Virginia NEXRAD2 \ sdn-sw.ashb.net.internet2.edu et-3/0/0 332 \ sdn-sw.pitt.net.internet2.edu et-8/0/0 332
+$ python provision.py Virginia oess-acount.yaml NEXRAD2 \ sdn-sw.ashb.net.internet2.edu et-3/0/0 332 \ sdn-sw.pitt.net.internet2.edu et-8/0/0 332
 
 
 __________________________________________________________________________
 
-remove.py wrkgrpName circuitId
+remove.py wrkgrpName credential desc
 remove_circuit
 Removes a circuit on the network using the OESS API function ‘remove_circuit’. 
 If the circuit has been removed successfully or is scheduled for removal from the network.
@@ -37,24 +39,28 @@ If the circuit has been removed successfully or is scheduled for removal from th
 Parameters:
 wrkgrpName
 ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
-circuitId
-ID of the circuit (e.g., “123456”)
+credential
+credential for AL2S OESS API account
+desc
+Description of the circuit (e.g., “NEXRAD2 feed”)
 
 Example:
-$ python remove.py remove_circuit Virginia 123456
+$ python remove.py remove_circuit Virginia oess-acount.yaml NEXRAD2
 __________________________________________________________________________
 
 
 
-edit.py wrkgrpName circuitId add|del node1 interface1 vlanId1 
+edit.py wrkgrpName credential desc add|del node1 interface1 vlanId1 
 
 Modify a circuit with specific circuitId on the network using the OESS API function `provision_circuit`.
 
 Parameters:
 wrkgrpName
 ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
-circuitId
-ID of the circuit(e.g., “123456”)
+credential
+credential for AL2S OESS API account
+desc
+Description of the circuit (e.g., “NEXRAD2 feed”)
 add|delete
 The phase ‘add’ means add the endpoint into the circuit; the phase ‘delete’ means delete the existing endpoint in the circuit.
 node1
@@ -65,4 +71,4 @@ vlanId1
 VLAN number for `node`/`interface1` (e.g., “4000”)
 
 Example:
-$ python edit.py Virginia 123456 add sdn-sw.ashb.net.internet2.edu \ et-3/0/0 332
+$ python edit.py Virginia oess-acount.yaml NEXRAD2 add sdn-sw.ashb.net.internet2.edu \ et-3/0/0 332
