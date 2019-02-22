@@ -1,4 +1,4 @@
-6.13.8.9	2019-02-22T13:11:30-0700
+6.13.8.9	2019-02-22T14:17:49-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -58,7 +58,7 @@
             * Made independent of gcc(1) and eliminated compiler warnings
             * Changed multicast group address from any-source 234... to
               source-specific 232...
-        * Created script for installing on IDD backends using ssh(1) thrice
+        * Created script for deploying to remote hosts
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
