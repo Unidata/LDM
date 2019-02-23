@@ -24,8 +24,8 @@
  * <hr>
  *
  * @section preinstallation Preinstallation
- * Operating systems based on Redhat Linux (including Fedora) must have two
- * kernel parameters modified from their default values. The parameter
+ * Operating systems based on Redhat Linux (e.g., RHEL, Fedora, CentOS) must
+ * have two kernel parameters modified from their default values. The parameter
  * \c net.ipv4.ipfrag_max_dist must be modified from its default value of
  * of \c 64 in order for all broadcast UDP packets to be correctly received
  * without any gaps.
