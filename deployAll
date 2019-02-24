@@ -1,0 +1,17 @@
+# Deploys LDM7 to all permitted hosts
+
+set -e
+
+deploy()
+{
+    host=`echo "$@" | awk '{print $NF}'`
+    echo "Deploying to $host"
+    ./deploy "$@" || echo 1>&2 "Couldn't deploy to $host"
+}
+
+cd `dirname $0`
+
+version=`awk '{print $1; exit}' CHANGE_LOG`
+ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && hostSuffix=-r
+
+deploy -n $version node0${hostSuffix}
