@@ -5,8 +5,10 @@ set -e
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: `basename $0` [-s] [-u <user>] <version> <host>
+Usage: `basename $0` [-m] [-n] [-s] [-u <user>] <version> <host>
 Where:
+    -m          Enable multicast support
+    -n          Enable NOAAPort support
     -s          Use sudo(1) instead of logging in as "root"
     -u <user>   Use <user> instead of "ldm"
     <version>   LDM version (e.g., "6.13.8.8")
@@ -14,11 +16,12 @@ Where:
 EOF
 }
 
-useSudo=false
 user=ldm
 
-while getopts su: id; do
-    case $id in
+while getopts mnsu: opt; do
+    case $opt in
+        m) withMulticast=true;;
+        n) withNoaaport=true;;
         s) useSudo=true;;
         u) user=$OPTARG;;
         *) printUsage
@@ -32,6 +35,8 @@ host=${2?Host not specified}
 pkgId=ldm-$version
 tarball=$pkgId.tar.gz
 
+echo "Deploying $tarball to $host"
+
 scp $tarball $host:
 
 # ssh(1) is used thrice because some security policies doesn't allow
@@ -41,24 +46,27 @@ ssh -T $host bash --login <<EOF
     set -x -e
     gunzip -c $tarball | pax -r '-s:/:/src/:'
     cd $pkgId/src/
-    ./configure --disable-root-actions --enable-debug >&configure.log
+    ./configure --disable-root-actions --enable-debug \
+            ${withMulticast+--with-multicast} ${withNoaaport+--with-noaaport} \
+            >&configure.log
     make install >&install.log
 EOF
 
-if test "$useSudo" = true; then
+if test "${useSudo+true}"; then
+    ssh $host bash --login <<EOF
+        set -x -e
+        cd $pkgId/src
+        sudo make root-actions >&root-actions.log
+        echo Root actions made
+EOF
+else
     ssh -T root@$host bash --login <<EOF
         set -x -e
         cd ~$user/$pkgId/src
         make root-actions >&root-actions.log
         echo Root actions made
 EOF
-else
-    ssh -T $host bash --login <<EOF
-        set -x -e
-        cd $pkgId/src
-        sudo make root-actions >&root-actions.log
-        echo Root actions made
-EOF
+fi
 
 ssh -T $host bash --login <<EOF
     set -x -e
@@ -67,7 +75,7 @@ ssh -T $host bash --login <<EOF
         ln -s $pkgId runtime
         ldmadmin start
     else
-        echo "LDM isn't running"
+        echo "LDM isn't running. New installation not started."
         ln -s $pkgId runtime
     fi
 EOF
