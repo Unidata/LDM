@@ -5,7 +5,7 @@ Usage: provision.py wrkgrpName credential desc node1 interface1 vlanId1 node2 in
 
 Where:
 wrkgrpName | ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
-credential | Pathname of file containing AL2S OESS API account credentials
+credential | Pathname of YAML file containing AL2S OESS account credentials
 desc       | Description of the circuit (e.g., “NEXRAD2 feed”) 
 node1      | Name of AL2S switch at one endpoint (e.g., “sdn-sw.ashb.net.internet2.edu”)
 interface1 | Specification of port on `node1` (e.g., “1/7”)
