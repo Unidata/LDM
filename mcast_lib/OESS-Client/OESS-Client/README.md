@@ -1,26 +1,18 @@
-provision.py wrkgrpName credential desc node1 interface1 vlanId1 node2 interface2 vlanId2 
+Adds a circuit on the network using the OESS API function `provision_circuit`.
+The circuit is created immediately and can be removed by `remove_circuit.py`.
 
-Adds a circuit on the network using the OESS API function `provision_circuit`. The circuit is created immediately and can be removed by `remove_circuit.py`.
+Usage: provision.py wrkgrpName credential desc node1 interface1 vlanId1 node2 interface2 vlanId2 
 
-Parameters:
-wrkgrpName
-ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
-credential
-credential for AL2S OESS API account
-desc
-Description of the circuit (e.g., “NEXRAD2 feed”) 
-node1
-Name of AL2S switch at one endpoint (e.g., “sdn-sw.ashb.net.internet2.edu”)
-interface1
-Specification of port on `node1` (e.g., “1/7”)
-vlanId1
-VLAN number for `node`/`interface1` (e.g., “4000”)
-node2
-Name of AL2S switch at other endpoint (e.g., “sdn-sw.pitt.net.internet2.edu”)
-Interface2
-Specification of port on `node2` (e.g., “et-3/0/0”)
-vlanId2
-VLAN number for `node2`/`interface2` (e.g., “4001”)
+Where:
+wrkgrpName | ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
+credential | Pathname of file containing AL2S OESS API account credentials
+desc       | Description of the circuit (e.g., “NEXRAD2 feed”) 
+node1      | Name of AL2S switch at one endpoint (e.g., “sdn-sw.ashb.net.internet2.edu”)
+interface1 | Specification of port on `node1` (e.g., “1/7”)
+vlanId1    | VLAN number for `node`/`interface1` (e.g., “4000”)
+node2      | Name of AL2S switch at other endpoint (e.g., “sdn-sw.pitt.net.internet2.edu”)
+Interface2 | Specification of port on `node2` (e.g., “et-3/0/0”)
+vlanId2    | VLAN number for `node2`/`interface2` (e.g., “4001”)
 
 Output:
 On success, the script writes the circuit ID to its standard output stream as a string.
