@@ -752,20 +752,21 @@ oess_provision(
         status = LDM7_INVAL;
     }
     else {
-        char vlanId1[12]; // More than sufficient for 12-bit VLAN ID
-        char vlanId2[12];
+        char  vlanId1[12]; // More than sufficient for 12-bit VLAN ID
+        char  vlanId2[12];
 
         (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
         (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
 
-        const char* const cmdVec[] = {python, "provision.py", wrkGrpName,
-                oessPathname,
+        const char* const cmdVec[] = {python, "provision.py",
+                wrkGrpName, oessPathname, desc,
                 end1->switchId, end1->portId, vlanId1,
                 end2->switchId, end2->portId, vlanId2, NULL};
 
         rootpriv();
             ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
         unpriv();
+        free(desc);
 
         if (cmd == NULL) {
             status = LDM7_SYSTEM;
