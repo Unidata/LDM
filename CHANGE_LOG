@@ -1,4 +1,4 @@
-6.13.8.10	2019-02-27T14:01:07-0700
+6.13.8.11	2019-02-27T14:55:12-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -41,6 +41,7 @@
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
         * Adapted to new "provision.py" and "remove.py" command-arguments
         * Improve OESS-client markup in README.md
+        * Removed double free()ing in UpMcastMgr found by Coverity Scan
 
     Misc:
         Eliminated small and infrequent memory leak found by Coverity Scan
