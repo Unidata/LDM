@@ -718,7 +718,7 @@ oess_destroy(void)
 /**
  * Creates an AL2S virtual circuit between two end-points.
  *
- * @param[in]  wrkGrpName   Name of the AL2S workgroup
+ * @param[in]  wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in]  desc         Description of virtual circuit
  * @param[in]  end1         One end of the virtual circuit. If the endpoint
  *                          isn't valid, then the circuit will not be created.
@@ -824,17 +824,19 @@ oess_provision(
 /**
  * Destroys an Al2S virtual circuit.
  *
- * @param[in] wrkGrpName   Name of the AL2S workgroup
+ * @param[in] wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in] circuitId    Virtual-circuit identifier
+ * @param[in] desc         Description of circuit (e.g., "NEXRAD2 feed")
  */
 static void
 oess_remove(
         const char* const restrict wrkGrpName,
-        const char* const restrict circuitId)
+        const char* const restrict circuitId,
+        const char* const restrict desc)
 {
     int               status;
-    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, oessPathname,
-            circuitId, NULL};
+    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
+            oessPathname, NULL};
     ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
     if (cmd == NULL) {
@@ -1176,6 +1178,31 @@ me_startIfNot(
 }
 
 /**
+ * Returns the description of an AL2S virtual-circuit for an entry.
+ *
+ * @param[in] entry  Multicast entry
+ * @retval    NULL   Failure. `log_add()` called.
+ * @return           Description of AL2S virtual-circuit. Caller should free
+ *                   when it's no longer needed.
+ */
+static char*
+me_newDesc(const McastEntry* const restrict entry)
+{
+    char feedStr[128];
+
+    (void)ft_format(smi_getFeed(entry->info), feedStr, sizeof(feedStr));
+    feedStr[sizeof(feedStr)-1] = 0;
+
+    char* const desc = ldm_format(128, "%s feed", feedStr);
+
+    if (desc == NULL)
+        log_add("Couldn't format description for AL2S virtual-circuit for "
+                "feed %s", feedStr);
+
+    return desc;
+}
+
+/**
  * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
  *
  * @param[in,out] entry       Multicast entry
@@ -1191,17 +1218,11 @@ me_createVirtCirc(
         const char* const restrict       wrkGrpName,
         const VcEndPoint* const restrict rmtVcEnd)
 {
-    int  status;
-    char feedStr[128];
-
-    (void)ft_format(smi_getFeed(entry->info), feedStr, sizeof(feedStr));
-    feedStr[sizeof(feedStr)-1] = 0;
-
-    char* const desc = ldm_format(128, "%s feed", feedStr);
+    int         status;
+    char* const desc = me_newDesc(entry);
 
     if (desc == NULL) {
-        log_add("Couldn't format description for AL2S virtual-circuit for "
-                "feed %s", feedStr);
+        log_add("Couldn't get description of AL2S virtual-circuit");
         status = LDM7_SYSTEM;
     }
     else {
@@ -1209,8 +1230,7 @@ me_createVirtCirc(
                 &entry->circuitId);
 
         if (status)
-            log_add("Couldn't add host to AL2S virtual circuit for feed %s",
-                    feedStr);
+            log_add("Couldn't add host to AL2S virtual circuit");
 
         free(desc);
     } // `desc` allocated
@@ -1222,7 +1242,7 @@ me_createVirtCirc(
  * Destroys the virtual circuit of a multicast entry.
  *
  * @param[in,out] entry       Multicast entry
- * @param[in]     wrkGrpName  Name of AL2S workgroup
+ * @param[in]     wrkGrpName  Name of AL2S workgroup (e.g., "UCAR-LDM")
  */
 static void
 me_destroyVirtCirc(
@@ -1230,9 +1250,17 @@ me_destroyVirtCirc(
         const char* const restrict wrkGrpName)
 {
     if (entry->circuitId) {
-        oess_remove(wrkGrpName, entry->circuitId);
-        free(entry->circuitId);
-        entry->circuitId = NULL;
+        char* const desc = me_newDesc(entry);
+
+        if (desc == NULL) {
+            log_add("Couldn't get description of AL2S virtual-circuit");
+        }
+        else {
+            oess_remove(wrkGrpName, entry->circuitId, desc);
+            free(desc);
+            free(entry->circuitId);
+            entry->circuitId = NULL;
+        }
     }
 }
 
