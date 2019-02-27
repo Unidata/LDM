@@ -1,4 +1,4 @@
-6.13.8.9	2019-02-22T14:17:49-0700
+6.13.8.10
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -18,9 +18,11 @@
         * Added missing return value that Coverity Scan found to two functions
 
     NOAAPort Ingestion:
-        Converted the directory "gempak/tables" into its own GitHub repository
-        so that it can be updated and downloaded independent of the LDM
-        package
+        * Converted the directory "gempak/tables" into its own GitHub repository
+          so that it can be updated and downloaded independent of the LDM
+          package
+        * Added RHEL and CentOS to documentation as examples of Red Hat
+          derivatives
 
     Multicast:
         * fmtpRecvv3::joinGroup()
@@ -37,6 +39,8 @@
         * Modified downlet_run() to print result of changing address of FMTP
           server 
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
+        * Adapted to new "provision.py" and "remove.py" command-arguments
+        * Improve OESS-client markup in README.md
 
     Misc:
         Eliminated small and infrequent memory leak found by Coverity Scan
@@ -58,7 +62,9 @@
             * Made independent of gcc(1) and eliminated compiler warnings
             * Changed multicast group address from any-source 234... to
               source-specific 232...
-        * Created script for deploying to remote hosts
+        * Created script for deploying to a remote host
+        * Created initial script for deploying to all permitted remote hosts
+        * Created context/container/component diagrams for LDM
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
