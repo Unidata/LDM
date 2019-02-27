@@ -766,7 +766,6 @@ oess_provision(
         rootpriv();
             ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
         unpriv();
-        free(desc);
 
         if (cmd == NULL) {
             status = LDM7_SYSTEM;
