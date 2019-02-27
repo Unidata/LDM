@@ -18,33 +18,31 @@ Output:
 On success, the script writes the circuit ID to its standard output stream as a string.
 
 Example:
-$ python provision.py Virginia oess-acount.yaml NEXRAD2 \ sdn-sw.ashb.net.internet2.edu et-3/0/0 332 \ sdn-sw.pitt.net.internet2.edu et-8/0/0 332
-
-
+$ python provision.py Virginia oess-acount.yaml NEXRAD2 \
+sdn-sw.ashb.net.internet2.edu et-3/0/0 332 \
+sdn-sw.pitt.net.internet2.edu et-8/0/0 332
 __________________________________________________________________________
 
-remove.py wrkgrpName credential desc
-remove_circuit
 Removes a circuit on the network using the OESS API function ‘remove_circuit’. 
-If the circuit has been removed successfully or is scheduled for removal from the network.
+If the circuit has been removed successfully or is scheduled for removal from
+the network.
 
-Parameters:
-wrkgrpName
-ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
-credential
-credential for AL2S OESS API account
-desc
-Description of the circuit (e.g., “NEXRAD2 feed”)
+Usage: remove.py wrkgrpName circuit-ID credential desc
+
+Where:
+wrkgrpName | ID of the workgroup (e.g., “UCAR-LDM”, “Virginia”)
+circuit-ID | Circuit identifier returned by "provision.py"
+credential | Pathname of YAML file containing AL2S OESS credentials
+desc       | Description of the circuit (e.g., “NEXRAD2 feed”)
 
 Example:
-$ python remove.py remove_circuit Virginia oess-acount.yaml NEXRAD2
+$ python remove.py <circuit-ID> Virginia oess-acount.yaml "NEXRAD2 feed"
 __________________________________________________________________________
 
-
+Modify a circuit with specific circuitId on the network using the OESS API
+function `provision_circuit`.
 
 edit.py wrkgrpName credential desc add|del node1 interface1 vlanId1 
-
-Modify a circuit with specific circuitId on the network using the OESS API function `provision_circuit`.
 
 Parameters:
 wrkgrpName
