@@ -1,4 +1,4 @@
-6.13.8.10
+6.13.8.10	2019-02-27T14:01:07-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
