@@ -315,7 +315,7 @@ elsif ($command eq "clean") {	# clean up after an abnormal termination
         $status = 3;
     }
     else {
-        system("rm $ldmhome/MldmRpc_*");
+        system("rm -f $ldmhome/MldmRpc_*");
 	$status = 0;
     }
 }
