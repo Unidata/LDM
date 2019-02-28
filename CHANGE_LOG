@@ -1,4 +1,4 @@
-6.13.8.11	2019-02-27T14:55:12-0700
+6.13.8.12	2019-02-28T10:02:07-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -40,8 +40,13 @@
           server 
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
         * Adapted to new "provision.py" and "remove.py" command-arguments
-        * Improve OESS-client markup in README.md
+        * Improved OESS-client markup in README.md
         * Removed double free()ing in UpMcastMgr found by Coverity Scan
+        * Made removal of MldmRpc_* files by ldmadmin(1) silent
+
+    Documentation:
+        Add thread-safety and async-signal safety sections to
+        doxygen-generated function-documentation
 
     Misc:
         Eliminated small and infrequent memory leak found by Coverity Scan
@@ -66,6 +71,7 @@
         * Created script for deploying to a remote host
         * Created initial script for deploying to all permitted remote hosts
         * Created context/container/component diagrams for LDM
+        * Added NWSC nodes 1-7 to deployAll
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
