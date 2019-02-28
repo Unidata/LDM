@@ -20,7 +20,7 @@ EOF
 makePath=make
 user=ldm
 
-while getopts mnsu: opt; do
+while getopts M:mnsu: opt; do
     case $opt in
         M) makePath=$OPTARG;;
         m) withMulticast=true;;
