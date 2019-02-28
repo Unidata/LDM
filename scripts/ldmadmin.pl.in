@@ -804,7 +804,6 @@ sub stop_ldm
         system( "kill $rpc_pid" );
 
         # we may need to sleep to make sure that the port is deregistered
-        print "Waiting for the LDM server to terminate...\n" ;
         while(isRunning($pid_file, $ip_addr)) {
             sleep(1);
         }
@@ -1192,7 +1191,6 @@ sub vetQueueSize
                             $restartNeeded = 0;
                         }
                         else {
-                            print "Stopping the LDM...\n";
                             if (stop_ldm()) {
                                 $status = 2;        # major failure
                             }
