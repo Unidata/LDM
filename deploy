@@ -5,8 +5,9 @@ set -e
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: `basename $0` [-m] [-n] [-s] [-u <user>] <version> <host>
+Usage: `basename $0` [-M <make>] [-m] [-n] [-s] [-u <user>] <version> <host>
 Where:
+    -M <make>   Pathname of make(1) utility when root
     -m          Enable multicast support
     -n          Enable NOAAPort support
     -s          Use sudo(1) instead of logging in as "root"
@@ -16,10 +17,12 @@ Where:
 EOF
 }
 
+makePath=make
 user=ldm
 
 while getopts mnsu: opt; do
     case $opt in
+        M) makePath=$OPTARG;;
         m) withMulticast=true;;
         n) withNoaaport=true;;
         s) useSudo=true;;
@@ -61,7 +64,7 @@ else
     ssh -T root@$host bash --login <<EOF
         set -x -e
         cd ~$user/$pkgId/src
-        make root-actions >&root-actions.log
+        $makePath root-actions >&root-actions.log
         echo Root actions made
 EOF
 fi
