@@ -1,4 +1,4 @@
-6.13.8.13	2019-02-28T10:21:54-0700
+6.13.8.14	2019-02-28T10:35:09-0700
     Building and Installing:
         * Made C++ library reference for LDM library conditional on
           WANT_MULTICAST to obviate the need for that library for a regular
@@ -72,6 +72,8 @@
         * Created initial script for deploying to all permitted remote hosts
         * Created context/container/component diagrams for LDM
         * Added NWSC nodes 1-7 to deployAll
+        * Added "-M <make>" option to deploy(1)
+        * Used "-M /usr/ccs/bin/make" when deploying to burns
 
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
