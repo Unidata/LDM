@@ -14,4 +14,6 @@ cd `dirname $0`
 version=`awk '{print $1; exit}' CHANGE_LOG`
 ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && hostSuffix=-r
 
-deploy -n $version node0${hostSuffix}
+for i in 0 1 2 3 4 5 6 7; do
+    deploy -n $version node0${hostSuffix}
+done
