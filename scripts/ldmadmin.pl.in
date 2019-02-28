@@ -705,7 +705,6 @@ sub start
         }
         else {
             # Check to make sure the LDM is running
-            print "Waiting for the LDM server to start...\n" ;
             while(!isRunning($pid_file, $ip_addr)) {
                 sleep(1);
             }
