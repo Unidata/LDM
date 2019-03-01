@@ -17,7 +17,8 @@ EXTRA_DIST		= \
     plotMetrics.in \
     syscheck.in
 dist_bin_SCRIPTS	= \
-    wasReceived
+    wasReceived \
+    updateGempakTables
 nodist_bin_SCRIPTS	= \
     ldmadmin \
     ldmfail \
