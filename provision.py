@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2019 University of Virginia. All rights reserved.
+
+file      provision.py
+author    Yuanlong Tan <yt4xb@virginia.edu>
+version   1.0
+date      Mar. 1, 2019
+brief     create circuit and add entry onto circuit
+"""
+
 import sys
 import urllib2
 import urllib
@@ -28,7 +41,7 @@ if ct_id == 0:
 	searchResults = jsonData['results']
 else:
 	searchResults = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"add",username,passwd)
-"""
+
 if (searchResults == None):
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Provision.py:"+jsonData['error_text']])
 else:
@@ -38,8 +51,3 @@ else:
 	f.write(circuit_id)
 	f.close()
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Provision.py: circuit_id is "+circuit_id])
-"""
-if (searchResults == None):
-	print jsonData['error_text']
-else:
-	print searchResults

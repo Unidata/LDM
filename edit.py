@@ -8,7 +8,7 @@ file      edit.py
 author    Yuanlong Tan <yt4xb@virginia.edu>
 version   1.0
 date      Feb. 14, 2019
-brief     add/delete endpoint
+brief     add/delete entry
 """
 import urllib2
 import urllib
@@ -86,7 +86,7 @@ def edit_endpoint(wg_id,node_id,interface_id,vlan_id,ct_id,function,username,pas
 						link.append(er['link'])
 				index += 1
 	values2 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'link' : link, 'node' : node, 'interface' : interface, 'tag' : tag}
-	data = urllib.urlencode(values2, doseq=True)	
+	data = urllib.urlencode(values2, doseq=True)
 	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data)
 	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()

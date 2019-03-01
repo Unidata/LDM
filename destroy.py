@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2019 University of Virginia. All rights reserved.
+
+file      desroy.py
+author    Yuanlong Tan <yt4xb@virginia.edu>
+version   1.0
+date      Mar. 1, 2019
+brief     destroy the circuits
+"""
 import urllib2
 import urllib
 import sys
@@ -28,4 +40,3 @@ if (searchResults == None):
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log",jsonData['error_text']])
 else:
 	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Remove.py: Success"])
-
