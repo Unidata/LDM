@@ -138,8 +138,8 @@ umm_addSndr(
  *
  * @param[in]  feed         Multicast group feed-type.
  * @param[in]  clntAddr     Address of client
- * @param[in]  rmtVcEnd     Remote virtual-circuit endpoint or `NULL`. Caller
- *                          may free.
+ * @param[in]  rmtVcEnd     Remote (receiving) virtual-circuit endpoint or
+ *                          `NULL`. Caller may free.
  * @param[out] smi          Separated-out multicast information. Set only on
  *                          success.
  * @param[out] fmtpClntCidr CIDR address for the FMTP client. Set only on
