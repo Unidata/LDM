@@ -504,10 +504,10 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
  *
  * @param[in]  xprt         Server-side RPC transport
  * @param[in]  desiredFeed  Multicast feed desired by downstream client
- * @param[in]  fmtVcEnd     Remote endpoint of the AL2S virtual circuit or
- *                          `NULL`. Necessary only if the multicast LDM sender
- *                          associated with `feed` multicasts on an AL2S
- *                          multipoint VLAN.
+ * @param[in]  rmtVcEnd     Remote (receiving) endpoint of the AL2S virtual
+ *                          circuit or `NULL`. Necessary only if the multicast
+ *                          LDM sender associated with `feed` multicasts on an
+ *                          AL2S multipoint VLAN. Caller may free.
  * @param[out] reply        RPC reply. Only modified on success.
  * @retval     0            Success. `*reply` is set.
  * @retval     LDM7_LOGIC   Logic error. `log_add()` called.
