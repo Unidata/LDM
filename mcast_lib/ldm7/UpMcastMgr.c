@@ -720,10 +720,12 @@ oess_destroy(void)
  *
  * @param[in]  wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in]  desc         Description of virtual circuit
- * @param[in]  end1         One end of the virtual circuit. If the endpoint
- *                          isn't valid, then the circuit will not be created.
- * @param[in]  end2         Other end of the virtual circuit. If the endpoint
- *                          isn't valid, then the circuit will not be created.
+ * @param[in]  sendEnd      Sending (local) end of the virtual circuit. If the
+ *                          endpoint isn't valid, then the circuit will not be
+ *                          created.
+ * @param[in]  recvEnd      Receiving (remote) end of the virtual circuit. If
+ *                          the endpoint isn't valid, then the circuit will not
+ *                          be created.
  * @param[out] circuitId    Identifier of created virtual-circuit. Caller should
  *                          call `free(*circuitId)` when the identifier is no
  *                          longer needed.
@@ -735,33 +737,35 @@ static int
 oess_provision(
         const char* const restrict       wrkGrpName,
         const char* const restrict       desc,
-        const VcEndPoint* const restrict end1,
-        const VcEndPoint* const restrict end2,
+        const VcEndPoint* const restrict sendEnd,
+        const VcEndPoint* const restrict recvEnd,
         char** const restrict            circuitId)
 {
     int  status;
 
-    if (wrkGrpName == NULL || desc == NULL || end1 == NULL ||
-            end2 == NULL || circuitId == NULL) {
-        char* end1Id = end1 ? vcEndPoint_format(end1) : NULL;
-        char* end2Id = end2 ? vcEndPoint_format(end2) : NULL;
-        log_add("NULL argument: wrkGrpName=%s, desc=%s, end1=%s, end2=%s, "
-                "circuitId=%p", wrkGrpName, desc, end1Id, end2Id, circuitId);
-        free(end1Id);
-        free(end2Id);
+    if (wrkGrpName == NULL || desc == NULL || sendEnd == NULL ||
+            recvEnd == NULL || circuitId == NULL) {
+        char* sendEndId = sendEnd ? vcEndPoint_format(sendEnd) : NULL;
+        char* recvEndId = recvEnd ? vcEndPoint_format(recvEnd) : NULL;
+        log_add("NULL argument: wrkGrpName=%s, desc=%s, sendEnd=%s,"
+                "recvEnd=%s, circuitId=%p", wrkGrpName, desc, sendEndId,
+                recvEndId, circuitId);
+        free(sendEndId);
+        free(recvEndId);
         status = LDM7_INVAL;
     }
     else {
-        char  vlanId1[12]; // More than sufficient for 12-bit VLAN ID
-        char  vlanId2[12];
+        char  sendVlanTag[12]; // More than sufficient for 12-bit VLAN tag
+        char  recvVlanTag[12];
 
-        (void)snprintf(vlanId1, sizeof(vlanId1), "%hu", end1->vlanId);
-        (void)snprintf(vlanId2, sizeof(vlanId2), "%hu", end2->vlanId);
+        (void)snprintf(sendVlanTag, sizeof(sendVlanTag), "%hu", sendEnd->vlanId);
+        (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
 
         const char* const cmdVec[] = {python, "provision.py",
                 wrkGrpName, oessPathname, desc,
-                end1->switchId, end1->portId, vlanId1,
-                end2->switchId, end2->portId, vlanId2, NULL};
+                recvEnd->switchId, recvEnd->portId, recvVlanTag,
+                sendEnd->switchId, sendEnd->portId, sendVlanTag,
+                NULL};
 
         rootpriv();
             ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
@@ -812,9 +816,6 @@ oess_provision(
                 } // Child process terminated unsuccessfully
             } // Child-command was reaped
         } // Couldn't execute child-command
-
-        if (oessPathname != defaultOessPathname)
-            free(oessPathname);
     } // Valid arguments and actual provisioning
 
     return status;
@@ -824,36 +825,49 @@ oess_provision(
  * Destroys an Al2S virtual circuit.
  *
  * @param[in] wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
- * @param[in] circuitId    Virtual-circuit identifier
  * @param[in] desc         Description of circuit (e.g., "NEXRAD2 feed")
+ * @param[in] recvEnd      Receiving (remote) end of the virtual circuit
  */
 static void
 oess_remove(
-        const char* const restrict wrkGrpName,
-        const char* const restrict circuitId,
-        const char* const restrict desc)
+        const char* const restrict       wrkGrpName,
+        const char* const restrict       desc,
+        const VcEndPoint* const restrict recvEnd)
 {
-    int               status;
-    const char* const cmdVec[] = {python, "remove.py", wrkGrpName, circuitId,
-            oessPathname, NULL};
-    ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
-
-    if (cmd == NULL) {
-        status = errno;
+    if (wrkGrpName == NULL || desc == NULL || recvEnd == NULL) {
+        char* recvEndId = recvEnd ? vcEndPoint_format(recvEnd) : NULL;
+        log_add("NULL argument: wrkGrpName=%s, desc=%s, recvEnd=%s",
+                wrkGrpName, desc, recvEndId);
+        free(recvEndId);
     }
     else {
-        int exitStatus;
+        char recvVlanTag[12];
 
-        status = childCmd_reap(cmd, &exitStatus);
+        (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
 
-        if (status == 0 && exitStatus)
-            log_add("Child-process terminated with status %d", exitStatus);
-    } // Child-command executing
+        const char* const cmdVec[] = {python, "remove.py",
+                wrkGrpName, oessPathname, desc,
+                recvEnd->switchId, recvEnd->portId, recvVlanTag,
+                NULL};
+        ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
-    if (status) {
-        log_add_errno(status, "Couldn't destroy AL2S virtual-circuit");
-        log_flush_error();
+        if (cmd == NULL) {
+            log_add("Couldn't execute %s", cmdVec[1]);
+        }
+        else {
+            int exitStatus;
+            int status = childCmd_reap(cmd, &exitStatus);
+
+            if (status) {
+                log_add("Couldn't reap %s", cmdVec[1]);
+            }
+            else if (exitStatus) {
+                log_add("%s terminated with status %d", cmdVec[1], exitStatus);
+            }
+        } // Child-command executing
     }
+
+    log_flush_error();
 }
 
 /******************************************************************************
@@ -865,7 +879,7 @@ typedef struct {
     SepMcastInfo*  info;
     char*          circuitId;
     char*          pqPathname;
-    VcEndPoint*    vcEnd;
+    VcEndPoint*    vcEnd; ///< Local (sending) virtual-circuit endpoint
     CidrAddr       fmtpSubnet;
     unsigned short ttl;
 } McastEntry;
@@ -879,8 +893,8 @@ typedef struct {
  *                         interface.
  * @param[in]  mcastInfo   Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
- * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
- *                         free.
+ * @param[in]  vcEnd       Sending (local) virtual-circuit endpoint or `NULL`.
+ *                         Caller may free.
  * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections. Caller may
  *                         free.
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
@@ -1242,11 +1256,13 @@ me_createVirtCirc(
  *
  * @param[in,out] entry       Multicast entry
  * @param[in]     wrkGrpName  Name of AL2S workgroup (e.g., "UCAR-LDM")
+ * @param[in]     recvEnd     Receiving (remote) virtual-circuit endpoint
  */
 static void
 me_destroyVirtCirc(
-        McastEntry* const restrict entry,
-        const char* const restrict wrkGrpName)
+        McastEntry* const restrict       entry,
+        const char* const restrict       wrkGrpName,
+        const VcEndPoint* const restrict recvEnd)
 {
     if (entry->circuitId) {
         char* const desc = me_newDesc(entry);
@@ -1255,7 +1271,7 @@ me_destroyVirtCirc(
             log_add("Couldn't get description of AL2S virtual-circuit");
         }
         else {
-            oess_remove(wrkGrpName, entry->circuitId, desc);
+            oess_remove(wrkGrpName, desc, recvEnd);
             free(desc);
             free(entry->circuitId);
             entry->circuitId = NULL;
@@ -1353,7 +1369,7 @@ me_subscribe(
         } // Multicast LDM sender is running
 
         if (status && me_usesVlan(entry))
-            me_destroyVirtCirc(entry, wrkGrpName);
+            me_destroyVirtCirc(entry, wrkGrpName, rmtVcEnd);
     } // Virtual circuit to FMTP client created if appropriate
 
     return status;
@@ -1369,6 +1385,7 @@ me_subscribe(
  *                              multicast LDM sender associated with `entry`
  *                              communicates with the FMTP client using an AL2S
  *                              multipoint VLAN.
+ * @param[in]     recvEnd       Receiving (remote) virtual-circuit endpoint
  * @retval        LDM7_OK       Success. `fmtpClntAddr` is available for subsequent
  *                              reservation.
  * @retval        LDM7_NOENT    `fmtpAddr` wasn't previously reserved.
@@ -1377,9 +1394,10 @@ me_subscribe(
  */
 static Ldm7Status
 me_unsubscribe(
-        McastEntry* const restrict entry,
-        const in_addr_t            fmtpClntAddr,
-        const char* const restrict wrkGrpName)
+        McastEntry* const restrict       entry,
+        const in_addr_t                  fmtpClntAddr,
+        const char* const restrict       wrkGrpName,
+        const VcEndPoint* const restrict recvEnd)
 {
     int status = 0;
 
@@ -1392,7 +1410,7 @@ me_unsubscribe(
                     inet_ntoa(addr));
         }
 
-        me_destroyVirtCirc(entry, wrkGrpName);
+        me_destroyVirtCirc(entry, wrkGrpName, recvEnd);
     } // Associated multicast LDM sender uses a multipoint VLAN
 
     return status;
@@ -1404,15 +1422,22 @@ me_unsubscribe(
  ******************************************************************************/
 
 /// Module is initialized?
-static bool initialized = false;
+static bool        initialized = false;
+
 /// Multicast entries
-static void* mcastEntries;
+static void*       mcastEntries;
+
 /// Key for multicast entries
-static McastEntry key;
+static McastEntry  key;
+
 /// FMTP retransmission timeout in minutes
-static float retxTimeout = -1.0; // Negative => use FMTP default
+static float       retxTimeout = -1.0; // Negative => use FMTP default
+
 /// Name of AL2S Workgroup
 static const char* wrkGrpName = "UCAR-LDM"; // Default value
+
+/// Receiving (remote) virtual-circuit endpoint
+static VcEndPoint* recvEnd = NULL;
 
 /**
  * Returns the multicast entry corresponding to a particular feed.
@@ -1524,17 +1549,28 @@ umm_subscribe(
             //log_notice("umm_subscribe(): entry->info=%s", str);
             //free(str);
 
-            /*
-             * Sets the port numbers of the FMTP server & RPC-command server of
-             * the multicast LDM sender process if appropriate
-             */
-            status = me_subscribe(entry, wrkGrpName, clntAddr, rmtVcEnd,
-                    retxTimeout, smi, fmtpClntCidr);
+            recvEnd = vcEndPoint_clone(rmtVcEnd);
 
-            if (status)
-                log_add("me_subscribe() failure");
+            if (recvEnd == NULL) {
+                log_add("Couldn't clone remote virtual-circuit endpoint");
+                status = LDM7_SYSTEM;
+            }
+            else {
+                /*
+                 * Sets the port numbers of the FMTP server & RPC-command server
+                 * of the multicast LDM sender process if appropriate
+                 */
+                status = me_subscribe(entry, wrkGrpName, clntAddr, recvEnd,
+                        retxTimeout, smi, fmtpClntCidr);
+
+                if (status) {
+                    log_add("me_subscribe() failure");
+                    vcEndPoint_free(recvEnd);
+                    recvEnd = NULL;
+                }
+           } // Remote endpoint cloned
         } // Desired feed maps to a possible multicast LDM sender
-    }
+    } // Module is initialized
 
     return status;
 }
@@ -1594,7 +1630,7 @@ umm_unsubscribe(
             status = LDM7_INVAL;
         }
         else  {
-            status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName);
+            status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName, recvEnd);
 
             if (status)
                 log_add("me_unsubscribe() failure");
@@ -1654,6 +1690,8 @@ umm_destroy(const bool final)
     else {
         oess_destroy();
         umm_clear();
+        vcEndPoint_free(recvEnd);
+        recvEnd = NULL;
         msm_destroy(final);
         initialized = false;
     }
