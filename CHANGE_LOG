@@ -1,27 +1,30 @@
-6.13.8.15	2019-02-28T10:38:15-0700
+6.13.8.16	2019-03-02T15:04:07-0700
     Building and Installing:
-        * Made C++ library reference for LDM library conditional on
-          WANT_MULTICAST to obviate the need for that library for a regular
-          build
-        * Added missing mutex files to distribution to support configure(1)'s
-          "--with-ulog" option
+        * Made the C++ library reference for building the LDM library
+          conditional on WANT_MULTICAST to obviate the need for a C++ library
+          for a regular build
+        * Added missing mutex source-files to distribution to support
+          configure(1)'s "--with-ulog" option
 
     ldmadmin(1):
-        * Changed "ldmadmin start" to wait indefinitely for the LDM server to
-          start
+        * Changed "ldmadmin start" to only print one message and to wait
+          indefinitely for the LDM server to start
         * Changed "ldmadmin stop" to only print one message and to wait
           indefinitely for the LDM server to stop
+        * Added the command "updategempaktables" to update the installed GEMPAK
+          parameter tables from the GitHub repository. Requires a standard
+          installation directory structure.
 
     Logging:
         * Refactored logging to eliminate occasional hanging by a terminating
           ldmd(1) process
-        * Added missing return value that Coverity Scan found to two functions
+        * Added to two functions a missing return value found by Coverity Scan
 
     NOAAPort Ingestion:
         * Converted the directory "gempak/tables" into its own GitHub repository
           so that it can be updated and downloaded independent of the LDM
           package
-        * Added RHEL and CentOS to documentation as examples of Red Hat
+        * Added RHEL and CentOS to the documentation as examples of Red Hat
           derivatives
 
     Multicast:
@@ -35,14 +38,17 @@
             * Added debug log message for successful bind()
         * Added error message if MldmRpc::Impl::~Impl can't remove the secret
           file
-        * Added removal of MldmRpc secret files to "ldmadmin clean"
+        * Added removal of MldmRpc secret files to ldmadmin(1)
         * Modified downlet_run() to print result of changing address of FMTP
           server 
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
         * Adapted to new "provision.py" and "remove.py" command-arguments
         * Improved OESS-client markup in README.md
         * Removed double free()ing in UpMcastMgr found by Coverity Scan
-        * Made removal of MldmRpc_* files by ldmadmin(1) silent
+        * Improved documentation of childCmd_reap()
+        * Corrected documentation of up7::init()
+        * Improved documentationi of umm_subscribe()
+        * Saved remote virtual-circuit endpoint for removal in UpMcastMgr
 
     Documentation:
         Add thread-safety and async-signal safety sections to
