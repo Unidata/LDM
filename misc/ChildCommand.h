@@ -63,6 +63,7 @@ ChildCmd* childCmd_execvp(
  * @param[in]  cmd         Child command
  * @param[out] exitStatus  Exit status of the child command
  * @return     0           Success. `*exitStatus` is set.
+ * @retval     EINVAL      `cmd` is invalid. `log_add()` called.
  * @retval     EINTR       The function was interrupted by a signal. The value
  *                         of the location pointed to by `exitStatus` is
  *                         undefined.
