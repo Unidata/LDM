@@ -1,4 +1,4 @@
-6.13.8.16	2019-03-02T15:04:07-0700
+6.13.8	2019-03-04T08:49:35-0700
     Building and Installing:
         * Made the C++ library reference for building the LDM library
           conditional on WANT_MULTICAST to obviate the need for a C++ library
@@ -51,8 +51,8 @@
         * Saved remote virtual-circuit endpoint for removal in UpMcastMgr
 
     Documentation:
-        Add thread-safety and async-signal safety sections to
-        doxygen-generated function-documentation
+        Added thread-safety and async-signal safety sections to
+        doxygen-generated documentation
 
     Misc:
         Eliminated small and infrequent memory leak found by Coverity Scan
@@ -75,7 +75,7 @@
             * Changed multicast group address from any-source 234... to
               source-specific 232...
         * Created script for deploying to a remote host
-        * Created initial script for deploying to all permitted remote hosts
+        * Created script for deploying to all permitted remote hosts
         * Created context/container/component diagrams for LDM
 
 6.13.7	2019-02-01T15:19:00-0700
