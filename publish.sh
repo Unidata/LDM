@@ -16,11 +16,16 @@
 #       $0 [<host>]
 # where:
 #       <host>     Name of the host on which the LDM package is made public.
-#                  Default is "www.unidata.ucar.edu".
+#                  Default is "www" or "www-r".
 
 set -e  # exit on failure
 
-host=${1:-www.unidata.ucar.edu}
+if test "$1"; then
+    host=$1
+else
+    host=www
+    ps -fu $USER | grep 'ssh upc' | grep -v grep >/dev/null && host=${host}-r
+fi
 
 # Ensure that the package is installed so that the documentation can be copied
 # to the website.
