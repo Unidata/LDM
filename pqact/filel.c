@@ -1356,7 +1356,7 @@ int unio_prodput(
                 }
                 else {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
+                        log_info("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
                                         log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
@@ -1596,7 +1596,7 @@ int stdio_prodput(
                 status = flushIfAppropriate(entry);
 
                 if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
-                    log_notice_q("StdioFiled in \"%s\": %s", argv[argc - 1],
+                    log_info("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info,
                                     log_is_enabled_debug));
             } /* data written */
