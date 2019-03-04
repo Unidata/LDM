@@ -5,6 +5,7 @@ set -e
 deploy()
 {
     host=`echo "$@" | awk '{print $NF}'`
+    echo
     echo "Deploying to $host"
     ./deploy "$@" || echo 1>&2 "Couldn't deploy to $host"
 }
@@ -16,6 +17,6 @@ ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && hostSuffix=-r
 
 deploy -M /usr/ccs/bin/make -n $version burns${hostSuffix}
 
-#for i in 1 2 3 4 5 6 7; do
-    #deploy $version node$i${hostSuffix}
-#done
+for i in 1 2 3 4 5 6 7; do
+    deploy $version node$i${hostSuffix}
+done
