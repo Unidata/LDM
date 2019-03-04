@@ -1,3 +1,10 @@
+6.13.9.1	2019-03-04T10:42:13-0700
+    pqact(1):
+        Demoted two per-product log messages from NOTICE to INFO
+
+    Developer:
+        Modified "publish.sh" to use "www" or "www-r" by default
+
 6.13.8	2019-03-04T08:49:35-0700
     Building and Installing:
         * Made the C++ library reference for building the LDM library
