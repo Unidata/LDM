@@ -33,7 +33,9 @@ __________________________________________________________________________
 
 remove.py wrkgrpName credential desc recv_node recv_interface recv_vlanId
 remove_circuit
-Removes an recv entry when the subscriber leaves calling the edit.py.
+Removes an recv entry when the subscriber leaves.
+Note: when the subscriber is the last one, it will remove the circuit from the AL2S network.
+
 
 Parameters:
 wrkgrpName
