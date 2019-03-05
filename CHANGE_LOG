@@ -1,4 +1,4 @@
-6.13.9.4	2019-03-05T15:56:17-0700
+6.13.9.5	2019-03-05T16:39:39-0700
     pqact(1):
         Demoted two log messages about writing a product to a file from NOTICE
         to INFO because per-product messages should be logged only in verbose
@@ -18,6 +18,9 @@
         * Adapted configure(1) to new directory structure of
           "mcast_lib/OESS-Client"
         * Added rationale for using longer subtree merging command in makefile
+        * Made version an option in deploy(1) and added user to @host
+        * Eliminated $version and $hostSuffix from deployAll(1) and added host
+         "frgp"
 
 6.13.8	2019-03-04T08:49:35-0700
     Building and Installing:
