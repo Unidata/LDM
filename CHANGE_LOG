@@ -1,4 +1,4 @@
-6.13.9.2	2019-03-05T09:28:06-0700
+6.13.9.3	2019-03-05T10:14:48-0700
     pqact(1):
         Demoted two log messages about writing a product to a file from NOTICE
         to INFO because per-product messages should be logged only in verbose
@@ -9,7 +9,8 @@
         for use by third-party software (e.g., McIDAS)
 
     Developer:
-        Modified "publish.sh" to use "www" or "www-r" by default
+        * Modified "publish.sh" to use "www" or "www-r" by default
+        * Improved messaging by deploy(1) and added an alert
 
 6.13.8	2019-03-04T08:49:35-0700
     Building and Installing:
