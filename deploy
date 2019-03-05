@@ -44,25 +44,33 @@ scp $tarball $host:
 # ssh(1)ing to the remote host and then executing su(1) in a here-document.
 
 ssh -T $host bash --login <<EOF
-    set -x -e
+    set -e
+
+    echo Unpacking
     gunzip -c $tarball | pax -r '-s:/:/src/:'
+
+    echo Configuring
     cd $pkgId/src/
     ./configure --disable-root-actions --enable-debug \
             ${withMulticast+--with-multicast} ${withNoaaport+--with-noaaport} \
             >&configure.log
+
+    echo Installing
     make install >&install.log
 EOF
 
+echo -en '\a'
+echo Making root actions
+
 if test "${useSudo+true}"; then
     ssh $host bash --login <<EOF
-        set -x -e
+        set -e
         cd $pkgId/src
         sudo make root-actions >&root-actions.log
-        echo Root actions made
 EOF
 else
     ssh -T root@$host bash --login <<EOF
-        set -x -e
+        set -e
         cd ~$user/$pkgId/src
         $makePath root-actions >&root-actions.log
         echo Root actions made
@@ -70,7 +78,7 @@ EOF
 fi
 
 ssh -T $host bash --login <<EOF
-    set -x -e
+    set -e
     if ldmadmin stop; then
         rm -f runtime || echo "Runtime link doesn't exist"
         ln -s $pkgId runtime
