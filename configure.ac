@@ -730,7 +730,6 @@ AC_CONFIG_FILES([
     mcast_lib/Makefile
     mcast_lib/ldm7/Makefile
     mcast_lib/OESS-Client/Makefile
-    mcast_lib/OESS-Client/OESS-Client-V2/Makefile
     misc/Makefile
     mldm_sender/Makefile
     log/Makefile
