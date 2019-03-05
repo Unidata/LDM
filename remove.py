@@ -20,7 +20,8 @@ import edit
 from subprocess import call
 global values1, values2
 node = []
-values1, values2 = {}
+values1 = {}
+values2 = {}
 (username,passwd)=account.readAccount(sys.argv[2])
 wg_id=account.getWkGpID(sys.argv[1],username,passwd)
 ct_id=account.getCtID(wg_id, sys.argv[3],username,passwd)
@@ -44,7 +45,7 @@ if len(node) > 2:
 	searchResults = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"del",username,passwd)
 else:
 	values2 = {'method' : 'remove_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'remove_time' : -1}
-	data2 = urllib.urlencode(values1, doseq=True)
+	data2 = urllib.urlencode(values2, doseq=True)
 	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data2)
 	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
