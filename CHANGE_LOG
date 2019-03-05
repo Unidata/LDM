@@ -1,6 +1,12 @@
-6.13.9.1	2019-03-04T10:42:13-0700
+6.13.9.2	2019-03-05T09:28:06-0700
     pqact(1):
-        Demoted two per-product log messages from NOTICE to INFO
+        Demoted two log messages about writing a product to a file from NOTICE
+        to INFO because per-product messages should be logged only in verbose
+        logging mode ("-v").
+
+    Logging:
+        Unconditionally included the ulog(3) logging module in the LDM library
+        for use by third-party software (e.g., McIDAS)
 
     Developer:
         Modified "publish.sh" to use "www" or "www-r" by default
@@ -19,8 +25,8 @@
         * Changed "ldmadmin stop" to only print one message and to wait
           indefinitely for the LDM server to stop
         * Added the command "updategempaktables" to update the installed GEMPAK
-          parameter tables from the GitHub repository. Requires a standard
-          installation directory structure.
+          tables from the GitHub repository. Requires a standard installation
+          directory structure.
 
     Logging:
         * Refactored logging to eliminate occasional hanging by a terminating
@@ -45,17 +51,17 @@
             * Added debug log message for successful bind()
         * Added error message if MldmRpc::Impl::~Impl can't remove the secret
           file
-        * Added removal of MldmRpc secret files to ldmadmin(1)
+        * Added removal of MldmRpc(3) secret files to ldmadmin(1)
         * Modified downlet_run() to print result of changing address of FMTP
           server 
         * Refactored oess_init() & oess_destroy() to achieve "const" correctness
         * Adapted to new "provision.py" and "remove.py" command-arguments
         * Improved OESS-client markup in README.md
-        * Removed double free()ing in UpMcastMgr found by Coverity Scan
+        * Removed double free()ing in UpMcastMgr(3) found by Coverity Scan
         * Improved documentation of childCmd_reap()
         * Corrected documentation of up7::init()
         * Improved documentationi of umm_subscribe()
-        * Saved remote virtual-circuit endpoint for removal in UpMcastMgr
+        * Saved remote virtual-circuit endpoint for removal in UpMcastMgr(3)
 
     Documentation:
         Added thread-safety and async-signal safety sections to
@@ -199,8 +205,8 @@
     Logging:
         * Changed printing of multi-line log messages: each line will have the
           same timestamp, process ID, location, and logging level.
-        * Reduced occurence of overlapping log messages:
-            * Added output file locking to prevent overlaping log messages to a
+        * Reduced occurrence of overlapping log messages:
+            * Added output file locking to prevent overlapping log messages to a
               regular file.
             * Added signal blocking and mutex locking for concurrent threads
         * Removed SIGUSR1 handling from logging module
