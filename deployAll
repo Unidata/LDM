@@ -12,11 +12,11 @@ deploy()
 
 cd `dirname $0`
 
-version=`awk '{print $1; exit}' CHANGE_LOG`
 ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && hostSuffix=-r
 
-deploy -M /usr/ccs/bin/make -n $version burns${hostSuffix}
+deploy -m -u ldm7 frgp$hostSuffix
+deploy -M /usr/ccs/bin/make -n burns$hostSuffix
 
 for i in 0 1 2 3 4 5 6 7; do
-    deploy $version node$i${hostSuffix}
+    deploy node$i$hostSuffix
 done
