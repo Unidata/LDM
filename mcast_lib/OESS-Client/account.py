@@ -7,7 +7,7 @@ Copyright (C) 2019 University of Virginia. All rights reserved.
 file      account.py
 author    Yuanlong Tan <yt4xb@virginia.edu>
 version   1.0
-date      Feb. 14, 2019
+date      Mar. 1, 2019
 brief     Read OESS API account
 """
 
@@ -16,7 +16,7 @@ import urllib2
 import urllib
 import string
 import json
-values1 = {}
+global values1
 global gh_url
 gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
 def readAccount(filename):
@@ -45,6 +45,7 @@ def getWkGpID(workgroup_name,username,passwd):
 	return wg_id
 
 def getCtID(wg_id,feedtype,username,passwd):
+	circuit_id = 0
 	values1 = {'method' : 'get_existing_circuits', 'workgroup_id' : wg_id}
 	data1 = urllib.urlencode(values1, doseq=True)
 	req1 = urllib2.Request(gh_url, data1)
