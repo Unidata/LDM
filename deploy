@@ -5,45 +5,46 @@ set -e
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: `basename $0` [-M <make>] [-m] [-n] [-s] [-u <user>] <version> <host>
+Usage: `basename $0` [-M <make>] [-m] [-n] [-s] [-u <user>] [-v <version>] <host>
 Where:
-    -M <make>   Pathname of make(1) utility when root
-    -m          Enable multicast support
-    -n          Enable NOAAPort support
-    -s          Use sudo(1) instead of logging in as "root"
-    -u <user>   Use <user> instead of "ldm"
-    <version>   LDM version (e.g., "6.13.8.8")
-    <host>      Remote host (e.g., "node4.unidata.ucar.edu")
+    -M <make>    Pathname of make(1) utility when root
+    -m           Enable multicast support
+    -n           Enable NOAAPort support
+    -s           Use sudo(1) instead of logging in as "root"
+    -u <user>    Use <user> instead of "ldm"
+    -v <version> Use LDM version <version> instead of first word in CHANGE_LOG
+    <host>       ssh(1)able remote host (e.g., "node0" or "node0-r")
 EOF
 }
 
 makePath=make
 user=ldm
+version=`awk '{print $1; exit}' CHANGE_LOG`
 
-while getopts M:mnsu: opt; do
+while getopts M:mnsu:v: opt; do
     case $opt in
         M) makePath=$OPTARG;;
         m) withMulticast=true;;
         n) withNoaaport=true;;
         s) useSudo=true;;
         u) user=$OPTARG;;
+        v) version=$OPTARG;;
         *) printUsage
            exit 1;;
     esac
 done
 shift `expr $OPTIND - 1`
-version=${1?Version not specified}
-host=${2?Host not specified}
+host=${1?Host not specified}
 
 pkgId=ldm-$version
 tarball=$pkgId.tar.gz
 
-scp $tarball $host:
+scp $tarball $user@$host:
 
 # ssh(1) is used thrice because some security policies doesn't allow
 # ssh(1)ing to the remote host and then executing su(1) in a here-document.
 
-ssh -T $host bash --login <<EOF
+ssh -T $user@$host bash --login <<EOF
     set -e
 
     echo Unpacking
@@ -63,13 +64,13 @@ echo -en '\a'
 
 if test "${useSudo+true}"; then
     echo "Making root actions via sudo(8)"
-    ssh $host bash --login <<EOF
+    ssh $user@$host bash --login <<EOF
         set -e
         cd $pkgId/src
         sudo make root-actions >&root-actions.log
 EOF
 else
-    echo "Making root actions via su(1)"
+    echo "Making root actions as root"
     ssh -T root@$host bash --login <<EOF
         set -e
         cd ~$user/$pkgId/src
@@ -77,7 +78,7 @@ else
 EOF
 fi
 
-ssh -T $host bash --login <<EOF
+ssh -T $user@$host bash --login <<EOF
     set -e
     if ldmadmin stop; then
         rm -f runtime || echo "Runtime link doesn't exist"
