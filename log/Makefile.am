@@ -48,8 +48,8 @@ lib_la_CPPFLAGS		+= -I$(srcdir)/ulog
 endif
 endif
 
-# The ulog(3) module is included in the LDM library to enable unconditional use
-# of that API by third-party software (e.g., McIDAS).
+# The ulog(3) module is unconditionally included in the LDM library for use by
+# third-party software (e.g., McIDAS)
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
 
 if HAVE_CUNIT
