@@ -45,9 +45,12 @@ else
 if WANT_ULOG
 lib_la_SOURCES		+= log2ulog.c
 lib_la_CPPFLAGS		+= -I$(srcdir)/ulog
+endif
+endif
+
+# The ulog(3) module is included in the LDM library to enable unconditional use
+# of that API by third-party software (e.g., McIDAS).
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
-endif
-endif
 
 if HAVE_CUNIT
 check_PROGRAMS		= log_test
