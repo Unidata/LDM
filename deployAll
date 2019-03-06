@@ -6,7 +6,6 @@ deploy()
 {
     host=`echo "$@" | awk '{print $NF}'`
     echo
-    echo "Deploying to $host"
     ./deploy "$@" || echo 1>&2 "Couldn't deploy to $host"
 }
 
