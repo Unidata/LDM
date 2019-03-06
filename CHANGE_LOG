@@ -1,3 +1,11 @@
+6.13.10	2019-03-06T14:17:16-0700
+    Logging:
+        Applied changes to log2slog(3) module to log2ulog(3) module
+
+    Developer:
+        Redirected publish.sh(1)'s scp(1) output to /dev/null while copying
+        documentation
+
 6.13.9	2019-03-06T13:30:34-0700
     ldmping(1):
         Made the main loop interruptable. Reconciling signal-handling amongst
