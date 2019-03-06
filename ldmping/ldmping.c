@@ -301,7 +301,7 @@ char *av[] ;
         if(verbose)
                 print_label() ;
 
-        while(1)
+        while(!done)
         {
                 for(sp = stats ; sp->state != H_NONE ; sp++)
                 {
