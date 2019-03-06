@@ -39,6 +39,8 @@ host=${1?Host not specified}
 pkgId=ldm-$version
 tarball=$pkgId.tar.gz
 
+echo "Deploying $pkgId to $user@$host"
+
 scp $tarball $user@$host:
 
 # ssh(1) is used thrice because some security policies doesn't allow
