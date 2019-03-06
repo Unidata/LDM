@@ -15,6 +15,7 @@
 #include "log.h"
 #include "ulog.h"
 
+#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
@@ -22,6 +23,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+/**
+ * The mutex that makes this module thread-safe.
+ */
+static pthread_mutex_t mutex;
+
+/**
+ * Acquires this module's lock.
+ *
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+static void lock(void)
+{
+    int status = pthread_mutex_lock(&mutex);
+
+    assert(status == 0);
+}
+
+/**
+ * Releases this module's lock.
+ */
+static void unlock(void)
+{
+    int status = pthread_mutex_unlock(&mutex);
+
+    assert(status == 0);
+}
 
 #ifndef _XOPEN_PATH_MAX
     #define _XOPEN_PATH_MAX 1024
@@ -114,7 +143,7 @@ int logi_set_destination(const char* const dest)
         nchars = sizeof(log_dest) - 1;
 
     lock();
-        memmove(log_dest, dest, nchars)[nchars] = 0;
+        ((char*)memmove(log_dest, dest, nchars))[nchars] = 0;
 
         int status = reinit(); // Uses `log_dest`
     unlock();
@@ -154,21 +183,24 @@ int logi_set_id(
  * @param[in] loc    The location where the message was generated.
  * @param[in] string The message.
  */
-void logi_log(
+int logi_log(
         const log_level_t level,
         const log_loc_t*  loc,
         const char*       string)
 {
     (void)ulog(logl_level_to_priority(level), "%s:%d:%s() %s",
             logl_basename(loc->file), loc->line, loc->func, string);
+
+    return 0;
 }
 
 /**
  * Flushes logging.
  */
-void logi_flush(void)
+int logi_flush(void)
 {
     // Does nothing because the `ulog` module flushes every message
+    return 0;
 }
 
 /**
@@ -179,7 +211,7 @@ void logi_flush(void)
  * @param[in] loc    The location where the message was generated. Unused.
  * @param[in] ...    Format and format arguments.
  */
-void logi_internal(
+int logi_internal(
         const log_level_t level,
         const log_loc_t*  loc,
                           ...)
@@ -189,6 +221,8 @@ void logi_internal(
     const char* const fmt = va_arg(args, const char*);
     (void)vulog(logl_level_to_priority(level), fmt, args);
     va_end(args);
+
+    return 0;
 }
 
 /******************************************************************************
