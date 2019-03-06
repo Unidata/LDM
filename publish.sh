@@ -98,7 +98,7 @@ versionWebDir=$webdir/ldm-$version
 echo Copying documentation to $versionWebDir
 ssh -T $host rm -rf $versionWebDir
 trap "ssh -T $host rm -rf $versionWebDir; `trap -p ERR`" ERR
-scp -Br ../share/doc/ldm $host:$versionWebDir
+scp -Br ../share/doc/ldm $host:$versionWebDir >/dev/null
 
 # Ensure that the package's home-page references the just-copied documentation.
 ssh -T $host bash --login <<EOF
