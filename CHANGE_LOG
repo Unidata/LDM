@@ -1,4 +1,4 @@
-6.13.9.7	2019-03-06T13:17:02-0700
+6.13.9	2019-03-06T13:30:34-0700
     ldmping(1):
         Made the main loop interruptable. Reconciling signal-handling amongst
         the various programs apparently caused this one to loop forever.
