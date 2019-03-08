@@ -2338,7 +2338,7 @@ down7_init(
     log_assert(pq);
     log_assert(mrm);
 
-    if (vcEndPoint_isValid(vcEnd) == strcmp(fmtpIface, "dummy")) {
+    if (vcEndPoint_isValid(vcEnd) == (strcmp(fmtpIface, "dummy") != 0)) {
         char* vcEndStr = vcEndPoint_format(vcEnd);
         log_add("FMTP interface specification, %s, is inconsistent with "
                 "local virtual-circuit endpoint, %s", fmtpIface, vcEndStr);
