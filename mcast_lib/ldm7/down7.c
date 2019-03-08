@@ -2310,9 +2310,9 @@ down7_wait(void)
  *                        component to use or "dummy", indicating that no
  *                        virtual interface should be created, in which case
  *                        `vcEnd` must be invalid. Caller may free.
- * @param[in] vcEnd       Local virtual-circuit endpoint for an AL2S VLAN.
- *                        It must be valid only if communication with the FMTP
- *                        server will be over an AL2S VLAN. Caller may free.
+ * @param[in] vcEnd       Local virtual-circuit endpoint of AL2S VLAN. It must
+ *                        be valid only if communication with the FMTP server
+ *                        will be over an AL2S VLAN. Caller may free.
  * @param[in] pq          Product-queue for received data-products
  * @param[in] mrm         Persistent multicast receiver memory
  * @retval    0           Success
@@ -2338,7 +2338,7 @@ down7_init(
     log_assert(pq);
     log_assert(mrm);
 
-    if (vcEndPoint_isValid(vcEnd) != strcmp(fmtpIface, "dummy")) {
+    if (vcEndPoint_isValid(vcEnd) == strcmp(fmtpIface, "dummy")) {
         char* vcEndStr = vcEndPoint_format(vcEnd);
         log_add("FMTP interface specification, %s, is inconsistent with "
                 "local virtual-circuit endpoint, %s", fmtpIface, vcEndStr);
