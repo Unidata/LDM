@@ -695,7 +695,7 @@ mldm_release(const in_addr_t fmtpClntAddr)
  ******************************************************************************/
 
 static const char python[] = "python"; ///< Name of python executable
-static const char defaultOessPathname[] = LDMHOME "/etc/OESS-account.json";
+static const char defaultOessPathname[] = LDMHOME "/etc/OESS-account.yaml";
 static char*      oessPathname;
 
 static void
