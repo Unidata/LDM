@@ -11,11 +11,10 @@ deploy()
 
 cd `dirname $0`
 
-ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && hostSuffix=-r
-
-deploy -m -u ldm7 frgp$hostSuffix
-deploy -M /usr/ccs/bin/make -n burns$hostSuffix
+deploy -m    -u ldm7           frgp
+deploy -m -s -u ldm7           fdt-uva
+deploy -M /usr/ccs/bin/make -n burns
 
 for i in 0 1 2 3 4 5 6 7; do
-    deploy node$i$hostSuffix
+    deploy node$i
 done
