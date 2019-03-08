@@ -13,7 +13,7 @@ Where:
     -s           Use sudo(1) instead of logging in as "root"
     -u <user>    Use <user> instead of "ldm"
     -v <version> Use LDM version <version> instead of first word in CHANGE_LOG
-    <host>       ssh(1)able remote host (e.g., "node0" or "node0-r")
+    <host>       ssh(1)able remote host (e.g., "node0")
 EOF
 }
 
@@ -35,6 +35,8 @@ while getopts M:mnsu:v: opt; do
 done
 shift `expr $OPTIND - 1`
 host=${1?Host not specified}
+
+ps -fu $USER | grep 'ssh upc'  | grep -v grep >/dev/null && host=$host-r
 
 pkgId=ldm-$version
 tarball=$pkgId.tar.gz
@@ -83,11 +85,12 @@ fi
 ssh -T $user@$host bash --login <<EOF
     set -e
     if ldmadmin stop; then
-        rm -f runtime || echo "Runtime link doesn't exist"
+        rm runtime || echo "Runtime link doesn't exist"
         ln -s $pkgId runtime
         ldmadmin start
     else
         echo "LDM isn't running. New installation not started."
+        rm runtime || echo "Runtime link doesn't exist"
         ln -s $pkgId runtime
     fi
 EOF
