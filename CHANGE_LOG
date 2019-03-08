@@ -1,10 +1,11 @@
-6.13.11.1	2019-03-08T11:27:49-0700
+6.13.11.2	2019-03-08T12:26:30-0700
     Multicast:
         * Receive entry in LDM configuration-file:
             * Corrected description of <host>
             * Improved description of <al2sVlanId>
         * Corrected AL2S VLAN endpoint <-> FMTP interface consistency-test in
           down7(3)
+        * Changed extension of OESS account file from "json" to "yaml"
 
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
