@@ -1,3 +1,15 @@
+6.13.11.1	2019-03-08T11:27:49-0700
+    Multicast:
+        * Receive entry in LDM configuration-file:
+            * Corrected description of <host>
+            * Improved description of <al2sVlanId>
+        * Corrected AL2S VLAN endpoint <-> FMTP interface consistency-test in
+          down7(3)
+
+    Developer:
+        * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
+        * Added removal of runtime link if LDM wasn't running to deploy(1)
+
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
         Applied changes to log2slog(3) module to log2ulog(3) module
