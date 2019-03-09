@@ -1,4 +1,4 @@
-6.13.11.2	2019-03-08T12:26:30-0700
+6.13.11.3	2019-03-09T11:14:03-0700
     Multicast:
         * Receive entry in LDM configuration-file:
             * Corrected description of <host>
@@ -10,6 +10,8 @@
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
         * Added removal of runtime link if LDM wasn't running to deploy(1)
+        * Insured CU_ASSERT_* functions not called in Up7Down7_test(1) during
+          teardown
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
