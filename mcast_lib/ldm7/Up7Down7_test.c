@@ -114,21 +114,23 @@ typedef struct {
  * the University of Virginia.
  */
 // Capacity of the product-queue in bytes
-static const unsigned    PQ_DATA_CAPACITY = MEAN_NUM_PRODS*MEAN_PROD_SIZE;
+static const unsigned        PQ_DATA_CAPACITY = MEAN_NUM_PRODS*MEAN_PROD_SIZE;
 // Capacity of the product-queue in number of products
-static const unsigned    PQ_PROD_CAPACITY = MEAN_NUM_PRODS;
+static const unsigned        PQ_PROD_CAPACITY = MEAN_NUM_PRODS;
 // Number of data-products to insert
-static const unsigned    NUM_PRODS = NUM_TIMES*MEAN_NUM_PRODS;
-static const char        LOCAL_HOST[] = "127.0.0.1";
-static const int         UP7_PORT = 38800;
-static const char        UP7_PQ_PATHNAME[] = "up7_test.pq";
-static const char        DOWN7_PQ_PATHNAME[] = "down7_test.pq";
-static pqueue*           receiverPq;
-static uint64_t          numDeletedProds;
-static ServiceAddr*      up7Addr;
-static VcEndPoint*       localVcEnd;
-static Executor*         executor;
-static sigset_t          mostSigMask;
+static const unsigned        NUM_PRODS = NUM_TIMES*MEAN_NUM_PRODS;
+static const char            LOCAL_HOST[] = "127.0.0.1";
+static const int             UP7_PORT = 38800;
+static const char            UP7_PQ_PATHNAME[] = "up7_test.pq";
+static const char            DOWN7_PQ_PATHNAME[] = "down7_test.pq";
+static pqueue*               receiverPq;
+static uint64_t              numDeletedProds;
+static ServiceAddr*          up7Addr;
+static VcEndPoint*           localVcEnd;
+static Executor*             executor;
+static sigset_t              mostSigMask;
+/// Prevents calling CU_ASSERT_EQUAL*() functions when not in test function
+static volatile sig_atomic_t inTeardown;
 
 static void sigHandler(
         int sig)
@@ -273,6 +275,8 @@ setup(void)
 static int
 teardown(void)
 {
+    inTeardown = true;
+
     executor_free(executor);
     vcEndPoint_free(localVcEnd);
     sa_free(up7Addr);
@@ -368,13 +372,19 @@ sndr_init(Sender* const sender)
 static void
 sndr_lock(Sender* const sender)
 {
-    CU_ASSERT_EQUAL_FATAL(pthread_mutex_lock(&sender->mutex), 0);
+    int status = pthread_mutex_lock(&sender->mutex);
+
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
 }
 
 static void
 sndr_unlock(Sender* const sender)
 {
-    CU_ASSERT_EQUAL_FATAL(pthread_mutex_unlock(&sender->mutex), 0);
+    int status = pthread_mutex_unlock(&sender->mutex);
+
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
 }
 
 static void
@@ -386,20 +396,25 @@ killMcastSndr(void)
 
     if (pid) {
         log_debug("Sending SIGTERM to multicast LDM sender process");
-        CU_ASSERT_EQUAL(kill(pid, SIGTERM), 0);
+        int status = kill(pid, SIGTERM);
+        if (!inTeardown)
+            CU_ASSERT_EQUAL(status, 0);
 
         /* Reap the terminated multicast sender. */
         {
-            int status;
-
             log_debug("Reaping multicast sender child process");
             const pid_t wpid = waitpid(pid, &status, 0);
 
-            CU_ASSERT_EQUAL(wpid, pid);
-            CU_ASSERT_TRUE(wpid > 0);
-            CU_ASSERT_TRUE(WIFEXITED(status));
-            CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
-            CU_ASSERT_EQUAL(umm_terminated(wpid), 0);
+            if (!inTeardown) {
+                CU_ASSERT_EQUAL(wpid, pid);
+                CU_ASSERT_TRUE(wpid > 0);
+                CU_ASSERT_TRUE(WIFEXITED(status));
+                CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
+            }
+
+            status = umm_terminated(wpid);
+            if (!inTeardown)
+                CU_ASSERT_EQUAL(status, 0);
         }
     }
 
@@ -509,12 +524,16 @@ sndr_halt(
     log_debug("Terminating multicast LDM sender");
     killMcastSndr();
 
-    sndr_lock(sender);
-        sender->done = true;
+    if (pthread_self() != thread) {
+        sndr_lock(sender);
+            sender->done = true;
 
-        int status = pthread_kill(thread, SIGTERM);
-        CU_ASSERT_TRUE_FATAL(status == 0 || status == ESRCH);
-    sndr_unlock(sender);
+            int status = pthread_kill(thread, SIGTERM);
+
+            if (!inTeardown)
+                CU_ASSERT_TRUE_FATAL(status == 0 || status == ESRCH);
+        sndr_unlock(sender);
+    }
 
     log_debug("Returning");
 
@@ -903,7 +922,9 @@ rqstr_halt(
     mutex_lock(&requester->mutex);
         requester->done = true;
         int status = pthread_kill(thread, SIGTERM);
-        CU_ASSERT_TRUE(status == 0 || status == ESRCH);
+
+        if (!inTeardown)
+            CU_ASSERT_TRUE(status == 0 || status == ESRCH);
     mutex_unlock(&requester->mutex);
 }
 
@@ -925,7 +946,9 @@ static void
 rqstr_destroy(Requester* const requester)
 {
     int status = mutex_destroy(&requester->mutex);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+
+    if (!inTeardown)
+        CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 /**
@@ -969,6 +992,7 @@ rcvr_init(
 
     int status = down7_init(ldmSrvr, feed, "dummy", localVcEnd, receiverPq,
             receiver->mrm);
+    log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
     isa_free(ldmSrvr);
@@ -982,11 +1006,17 @@ rcvr_destroy(Receiver* const recvr)
 {
     down7_destroy();
 
-    CU_ASSERT_TRUE(mrm_close(recvr->mrm));
+    int status = mrm_close(recvr->mrm);
+    if (!inTeardown)
+        CU_ASSERT_TRUE(status);
 
-    CU_ASSERT_EQUAL(pq_close(receiverPq), 0);
+    status = pq_close(receiverPq);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
 
-    CU_ASSERT_EQUAL(unlink(DOWN7_PQ_PATHNAME), 0);
+    status = unlink(DOWN7_PQ_PATHNAME);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
 }
 
 static int
@@ -1074,11 +1104,21 @@ rcvr_start(
 static void
 rcvr_stop(Receiver* const recvr)
 {
-    CU_ASSERT_EQUAL(future_cancel(recvr->down7Future), 0);
-    CU_ASSERT_EQUAL(future_getAndFree(recvr->down7Future, NULL), ECANCELED);
+    int status = future_cancel(recvr->down7Future);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
 
-    CU_ASSERT_EQUAL(future_cancel(recvr->requesterFuture), 0);
-    CU_ASSERT_EQUAL(future_getAndFree(recvr->requesterFuture, NULL), ECANCELED);
+    status = future_getAndFree(recvr->down7Future, NULL);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, ECANCELED);
+
+    status = future_cancel(recvr->requesterFuture);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, 0);
+
+    status = future_getAndFree(recvr->requesterFuture, NULL);
+    if (!inTeardown)
+        CU_ASSERT_EQUAL(status, ECANCELED);
 
     rqstr_destroy(&recvr->requester);
 }
