@@ -694,7 +694,6 @@ mldm_release(const in_addr_t fmtpClntAddr)
  * OESS-based submodule for creating an AL2S virtual circuit
  ******************************************************************************/
 
-static const char python[] = "python"; ///< Name of python executable
 static const char defaultOessPathname[] = LDMHOME "/etc/OESS-account.yaml";
 static char*      oessPathname;
 
@@ -761,7 +760,7 @@ oess_provision(
         (void)snprintf(sendVlanTag, sizeof(sendVlanTag), "%hu", sendEnd->vlanId);
         (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
 
-        const char* const cmdVec[] = {python, "provision.py",
+        const char* const cmdVec[] = {"provision.py",
                 wrkGrpName, oessPathname, desc,
                 recvEnd->switchId, recvEnd->portId, recvVlanTag,
                 sendEnd->switchId, sendEnd->portId, sendVlanTag,
@@ -845,7 +844,7 @@ oess_remove(
 
         (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
 
-        const char* const cmdVec[] = {python, "remove.py",
+        const char* const cmdVec[] = {"remove.py",
                 wrkGrpName, oessPathname, desc,
                 recvEnd->switchId, recvEnd->portId, recvVlanTag,
                 NULL};
