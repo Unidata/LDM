@@ -16,13 +16,12 @@
 
 #include "config.h"
 
-#include "log.h"
-#include "inetutil.h"
-#include "ChildCommand.h"
+#include "ChildCmd.h"
 #include "CidrAddr.h"
 #include "fmtp.h"
-#include "InetSockAddr.h"
 #include "globals.h"
+#include "InetSockAddr.h"
+#include "inetutil.h"
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"

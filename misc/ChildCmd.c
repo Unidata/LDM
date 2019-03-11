@@ -16,7 +16,7 @@
  */
 #include "config.h"
 
-#include "ChildCommand.h"
+#include "ChildCmd.h"
 #include "log.h"
 #include "priv.h"
 

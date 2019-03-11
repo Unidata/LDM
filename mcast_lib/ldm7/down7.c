@@ -20,7 +20,7 @@
 #include "config.h"
 
 #include "AtomicInt.h"
-#include "ChildCommand.h"
+#include "ChildCmd.h"
 #include "CidrAddr.h"
 #include "Completer.h"
 #include "down7.h"
@@ -31,6 +31,8 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "mcast_info.h"
+#include "MldmRcvr.h"
+#include "MldmRcvrMemory.h"
 #include "pq.h"
 #include "prod_index_queue.h"
 #include "rpc/rpc.h"
@@ -57,8 +59,6 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
-#include "MldmRcvr.h"
-#include "MldmRcvrMemory.h"
 
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))

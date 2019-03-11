@@ -23,7 +23,7 @@
 
 #include "config.h"
 
-#include "ChildCommand.h"
+#include "ChildCmd.h"
 #include "CidrAddr.h"
 #include "globals.h"
 #include "inetutil.h"

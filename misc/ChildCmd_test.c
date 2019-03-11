@@ -11,7 +11,7 @@
 #include "config.h"
 
 #include "log.h"
-#include "ChildCommand.h"
+#include "ChildCmd.h"
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
