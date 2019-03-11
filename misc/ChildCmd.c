@@ -97,7 +97,7 @@ getline(char** const restrict  lineptr,
  * @retval    NULL  Always
  */
 static void*
-childCmd_logStdErr(void* const arg)
+childCmd_log(void* const arg)
 {
     ChildCmd* const cmd = (ChildCmd*)arg;
     char*           line = NULL;
@@ -349,7 +349,7 @@ childCmd_execute(
                 }
                 else {
                     status = pthread_create(&cmd->stdErrThread, NULL,
-                            childCmd_logStdErr, cmd);
+                            childCmd_log, cmd);
 
                     if (status) {
                         log_add_errno(status, "Couldn't create thread to "
