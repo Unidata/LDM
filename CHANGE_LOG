@@ -1,4 +1,9 @@
-6.13.11.5	2019-03-11T10:08:33-0600
+6.13.11.6	2019-03-11T15:41:39-0600
+    Misc:
+        * Shortened log messages from ChildCommand(3) by
+            * Renaming ChildCommand(3) to ChildCmd(3)
+            * Renaming childCmd_logStdErr() to childCmd_log()
+
     Multicast:
         * Receive entry in LDM configuration-file:
             * Corrected description of <host>
