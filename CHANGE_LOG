@@ -1,4 +1,4 @@
-6.13.11.3	2019-03-09T11:14:03-0700
+6.13.11.4
     Multicast:
         * Receive entry in LDM configuration-file:
             * Corrected description of <host>
@@ -6,12 +6,14 @@
         * Corrected AL2S VLAN endpoint <-> FMTP interface consistency-test in
           down7(3)
         * Changed extension of OESS account file from "json" to "yaml"
+        * Added account.py and edit.py to "make install"
 
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
         * Added removal of runtime link if LDM wasn't running to deploy(1)
         * Insured CU_ASSERT_* functions not called in Up7Down7_test(1) during
           teardown
+        * Added deletion of temporary branch in "push-%" rule
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
