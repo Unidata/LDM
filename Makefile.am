@@ -378,6 +378,7 @@ push-%:
 	git merge --strategy=subtree master
 	git push $* HEAD:master
 	git checkout master
+	git branch -d backport-$*
 	
 .PHONY:		\
     alpha \
