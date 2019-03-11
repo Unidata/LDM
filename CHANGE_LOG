@@ -1,4 +1,4 @@
-6.13.11.4	2019-03-11T09:54:09-0600
+6.13.11.5	2019-03-11T10:08:33-0600
     Multicast:
         * Receive entry in LDM configuration-file:
             * Corrected description of <host>
@@ -7,6 +7,7 @@
           down7(3)
         * Changed extension of OESS account file from "json" to "yaml"
         * Added installation of account.py and edit.py
+        * Deleted invocation of Python interpreter from UpMcastMgr(3)
 
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
