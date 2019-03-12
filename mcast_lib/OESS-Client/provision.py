@@ -44,12 +44,10 @@ else:
 
 if (searchResults == None):
         sys.stderr.write("provision.py: " + jsonData['error_text'] + '\n')
-        sys.stderr.flush()
 else:
 	circuit_id = searchResults['circuit_id']
 	file_name = str('circuit_id.log')
 	f = open (file_name, 'w')
-	f.write(circuit_id)
+	f.write(circuit_id + '\n')
 	f.close()
-        sys.stderr.write("provision.py: circuit_id is " + circuit_id + '\n')
-        sys.stderr.flush()
+        sys.stdout.write(circuit_id + '\n')
