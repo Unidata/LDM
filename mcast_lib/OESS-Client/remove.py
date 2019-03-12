@@ -59,6 +59,8 @@ else:
 	searchResults = jsonData['results']
 
 if (searchResults == None):
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log",jsonData['error_text']])
+        sys.stderr.write("remove.py: " + jsonData['error_text'] + '\n')
+        sys.stderr.flush()
 else:
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Remove.py: Success"])
+        sys.stderr.write("remove.py: Success\n")
+        sys.stderr.flush()
