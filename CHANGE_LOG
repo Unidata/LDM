@@ -1,4 +1,4 @@
-6.13.11.7	2019-03-12T09:51:48-0600
+6.13.11.8	2019-03-12T10:35:25-0600
     Misc:
         * Shortened log messages from ChildCommand(3) by
             * Renaming ChildCommand(3) to ChildCmd(3)
@@ -15,6 +15,7 @@
         * Deleted invocation of Python interpreter from UpMcastMgr(3)
         * Replaced calls to ulogger(1) with sys.stderr.write() in OESS Python
           scripts
+        * Added logging to childCmd_getline()
 
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
