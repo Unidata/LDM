@@ -1,4 +1,4 @@
-6.13.11.10	2019-03-12T14:13:43-0600
+6.13.11.11	2019-03-12T17:13:16-0600
     Misc:
         * Shortened log messages from ChildCommand(3) by
             * Renaming ChildCommand(3) to ChildCmd(3)
@@ -10,15 +10,21 @@
             * Improved description of <al2sVlanId>
         * Corrected AL2S VLAN endpoint <-> FMTP interface consistency-test in
           down7(3)
-        * Changed extension of OESS account file from "json" to "yaml"
-        * Added installation of account.py and edit.py
-        * Deleted invocation of Python interpreter from UpMcastMgr(3)
-        * Replaced calls to ulogger(1) with sys.stderr.write() in OESS Python
-          scripts
-        * Replaced writing of circuit-ID to stderr with writing to stdout in
-          provision.py
-        * Added logging to childCmd_getline()
-        * Differentiated childCmd_getline() failure from EOF in UpMcastMgr(3)
+        * OESS Scripts:
+            * Changed default extension of OESS account file from "json" to
+              "yaml"
+            * Added installation of account.py and edit.py
+            * Replaced calls to ulogger(1) with sys.stderr.write()
+            * Replaced writing of circuit-ID to stderr with writing to stdout in
+              provision.py
+        * Added more logging to childCmd_getline()
+        * UpMcastMgr(3):
+            * Deleted invocation of Python interpreter because scripts are
+              executable
+            * Differentiated childCmd_getline() failure from EOF in logging of
+              failure
+            * Removed acquisition of root privileges when calling "provision.py"
+            * Added printing of script name on failure to oess_provision()
 
     Developer:
         * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
