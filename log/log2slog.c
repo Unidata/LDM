@@ -656,7 +656,7 @@ static int file_init(
  *
  * @pre                 Module is locked
  * @retval  0           Success
- * @retval -1           Failure. Logging destination is unchanged. log_add()
+ * @retval -1           Failure. Logging destination is unchanged. `log_add()`
  *                      called.
  * @threadsafety        Safe
  * @asyncsignalsafety   Unsafe
