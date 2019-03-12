@@ -61,7 +61,8 @@ static const int MAGIC;
  *                         otherwise ignored. Will contain number of bytes
  *                         `*lineptr` points to on successful return.
  * @param[in]     stream   Stream from which to read a line of input
- * @retval        -1       Error or EOF
+ * @retval        -1       Error. `log_add()` called
+ * @retval         0       EOF
  * @return                 Number of bytes read -- excluding the terminating
  *                         NUL. `*lineptr` and `*size` are set.
  */
@@ -74,18 +75,28 @@ getline(char** const restrict  lineptr,
     ssize_t nbytes = -1;
 
     if (lineptr == NULL || size == NULL) {
-        errno = EINVAL;
+        log_add("Invalid argument: lineptr=%p, size=%p", lineptr, size);
     }
     else {
         static const int SIZE = _POSIX_MAX_CANON + 1;
-        char*            line = realloc(*lineptr, SIZE);
+        char*            line = log_realloc(*lineptr, SIZE, "getline() buffer");
 
-        if (line && fgets(line, SIZE, stream)) {
-            *lineptr = line;
-            *size = SIZE;
-            nbytes = strlen(line);
-        }
-    }
+        if (line) {
+            if (fgets(line, SIZE, stream) == NULL) {
+                if (ferror(stream)) {
+                    log_add_syserr("fgets() failure");
+                }
+                else {
+                    nbytes = 0; // EOF
+                }
+            }
+            else {
+                *lineptr = line;
+                *size = SIZE;
+                nbytes = strlen(line);
+            } // Line read
+        } // Line buffer allocated
+    } // Valid arguments
 
     return nbytes;
 }
@@ -482,8 +493,8 @@ childCmd_getline(
     else {
         status = getline(line, size, cmd->stdOut);
 
-        if (status == -1 && ferror(cmd->stdOut))
-            log_add_syserr("Couldn't read from standard output of command \"%s\"",
+        if (status == -1)
+            log_add("Couldn't read from standard output of command \"%s\"",
                     cmd->cmdStr);
     }
 
