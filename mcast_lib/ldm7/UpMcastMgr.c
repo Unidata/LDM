@@ -779,13 +779,10 @@ oess_provision(
             int     circuitIdStatus;
 
             if (nbytes <= 0) {
-                if (nbytes) {
-                    log_add("childCmd_getline() failure");
-                }
-                else {
-                    log_add("childCmd_getline() EOF");
-                }
-                log_add("Couldn't get AL2S virtual-circuit ID");
+                log_add("Couldn't get AL2S virtual-circuit ID: %s",
+                        nbytes
+                            ? "childCmd_getline() failure"
+                            : "childCmd_getline() EOF");
 
                 circuitIdStatus = LDM7_SYSTEM;
             }
