@@ -60,7 +60,5 @@ else:
 
 if (searchResults == None):
         sys.stderr.write("remove.py: " + jsonData['error_text'] + '\n')
-        sys.stderr.flush()
 else:
         sys.stderr.write("remove.py: Success\n")
-        sys.stderr.flush()
