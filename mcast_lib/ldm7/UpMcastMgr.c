@@ -765,9 +765,7 @@ oess_provision(
                 sendEnd->switchId, sendEnd->portId, sendVlanTag,
                 NULL};
 
-        rootpriv();
-            ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-        unpriv();
+        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
             log_add("Couldn't execute %s", cmdVec[0]);
@@ -780,7 +778,8 @@ oess_provision(
             int     circuitIdStatus;
 
             if (nbytes <= 0) {
-                log_add("Couldn't get AL2S virtual-circuit ID: %s",
+                log_add("Couldn't get AL2S virtual-circuit ID from %s process: "
+                        "%s", cmdVec[0],
                         nbytes
                             ? "childCmd_getline() failure"
                             : "childCmd_getline() EOF");
