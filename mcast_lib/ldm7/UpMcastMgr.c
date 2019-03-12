@@ -770,6 +770,7 @@ oess_provision(
         unpriv();
 
         if (cmd == NULL) {
+            log_add("Couldn't execute %s", cmdVec[0]);
             status = LDM7_SYSTEM;
         }
         else {
@@ -798,11 +799,12 @@ oess_provision(
             status = childCmd_reap(cmd, &childExitStatus);
 
             if (status) {
+                log_add("Couldn't reap %s process", cmdVec[0]);
                 status = LDM7_SYSTEM;
             }
             else {
                 if (childExitStatus) {
-                    log_add("OESS provisioning process terminated with status "
+                    log_add("%s process terminated with status ", cmdVec[0],
                             "%d", childExitStatus);
 
                     status = LDM7_SYSTEM;
@@ -844,7 +846,8 @@ oess_remove(
     else {
         char recvVlanTag[12];
 
-        (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
+        (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu",
+                recvEnd->vlanId);
 
         const char* const cmdVec[] = {"remove.py",
                 wrkGrpName, oessPathname, desc,
@@ -853,17 +856,18 @@ oess_remove(
         ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
-            log_add("Couldn't execute %s", cmdVec[1]);
+            log_add("Couldn't execute %s", cmdVec[0]);
         }
         else {
             int exitStatus;
             int status = childCmd_reap(cmd, &exitStatus);
 
             if (status) {
-                log_add("Couldn't reap %s", cmdVec[1]);
+                log_add("Couldn't reap %s process", cmdVec[0]);
             }
             else if (exitStatus) {
-                log_add("%s terminated with status %d", cmdVec[1], exitStatus);
+                log_add("%s process terminated with status %d", cmdVec[0],
+                        exitStatus);
             }
         } // Child-command executing
     }
