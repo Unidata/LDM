@@ -803,8 +803,8 @@ oess_provision(
             }
             else {
                 if (childExitStatus) {
-                    log_add("%s process terminated with status ", cmdVec[0],
-                            "%d", childExitStatus);
+                    log_add("%s process terminated with status %d", cmdVec[0],
+                            childExitStatus);
 
                     status = LDM7_SYSTEM;
                 }
