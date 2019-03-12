@@ -494,7 +494,7 @@ childCmd_getline(
         status = getline(line, size, cmd->stdOut);
 
         if (status == -1)
-            log_add("Couldn't read from standard output of command \"%s\"",
+            log_add("getline() failure on stdout of command \"%s\"",
                     cmd->cmdStr);
     }
 

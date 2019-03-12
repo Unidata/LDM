@@ -93,9 +93,9 @@ ssize_t childCmd_putline(
  * @param[in,out] line    The next line or `NULL`. Must be appropriate to pass
  *                        to `realloc()`.
  * @param[in,out] nbytes  Size of `line`
+ * @retval        -1      Failure. `log_add()` called.
+ * @retval        0       EOF
  * @return                Number of bytes read, excluding the terminating NUL
- * @retval     -1         Failure. `log_add()` called. `errno` is set:
- *                          - EINVAL  Invalid child command
  */
 ssize_t childCmd_getline(
         ChildCmd*     cmd,
