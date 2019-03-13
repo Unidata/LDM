@@ -1,8 +1,10 @@
-6.13.11.11	2019-03-12T17:13:16-0600
+6.13.11.12
     Misc:
-        * Shortened log messages from ChildCommand(3) by
-            * Renaming ChildCommand(3) to ChildCmd(3)
-            * Renaming childCmd_logStdErr() to childCmd_log()
+        ChildCmd(3) (was ChildCommand(3)):
+            * Shortened log messages by
+                * Renaming ChildCommand(3) to ChildCmd(3)
+                * Renaming childCmd_logStdErr() to childCmd_log()
+            * Added more logging to childCmd_getline()
 
     Multicast:
         * Receive entry in LDM configuration-file:
@@ -17,7 +19,6 @@
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * Replaced writing of circuit-ID to stderr with writing to stdout in
               provision.py
-        * Added more logging to childCmd_getline()
         * UpMcastMgr(3):
             * Deleted invocation of Python interpreter because scripts are
               executable
