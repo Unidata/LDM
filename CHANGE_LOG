@@ -7,11 +7,11 @@
             * Added more logging to childCmd_getline()
 
     Multicast:
-        * Receive entry in LDM configuration-file:
+        * LDM configuration-file RECEIVE entry:
             * Corrected description of <host>
             * Improved description of <al2sVlanId>
-        * Corrected AL2S VLAN endpoint <-> FMTP interface consistency-test in
-          down7(3)
+        * down7(3): Corrected AL2S VLAN endpoint <-> FMTP interface
+          consistency-test
         * OESS Scripts:
             * Changed default extension of OESS account file from "json" to
               "yaml"
@@ -28,11 +28,13 @@
             * Added printing of script name on failure to oess_provision()
 
     Developer:
-        * Moved determination of "-r" host-suffix from deployAll(1) to deploy(1)
-        * Added removal of runtime link if LDM wasn't running to deploy(1)
-        * Insured CU_ASSERT_* functions not called in Up7Down7_test(1) during
+        * Deployment:
+            * Moved determination of "-r" host-suffix from deployAll(1)
+              to deploy(1)
+            * Added removal of runtime link if LDM wasn't running to deploy(1)
+        * Up7Down7_test(1): Insured CU_ASSERT_* functions not called during
           teardown
-        * Added deletion of temporary branch in makefile rule "push-%"
+        * GitHub: Added deletion of temporary branch in makefile rule "push-%"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
