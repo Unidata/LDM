@@ -43,11 +43,11 @@ else:
 	searchResults = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"add",username,passwd)
 
 if (searchResults == None):
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Provision.py:"+jsonData['error_text']])
+        sys.stderr.write("provision.py: " + jsonData['error_text'] + '\n')
 else:
 	circuit_id = searchResults['circuit_id']
 	file_name = str('circuit_id.log')
 	f = open (file_name, 'w')
-	f.write(circuit_id)
+	f.write(circuit_id + '\n')
 	f.close()
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Provision.py: circuit_id is "+circuit_id])
+        sys.stdout.write(circuit_id + '\n')

@@ -37,6 +37,8 @@ jsonData = json.loads(result)
 searchResults = jsonData['results']
 
 if (searchResults == None):
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log",jsonData['error_text']])
+        sys.stderr.write("destroy.py: " + jsonData['error_text'] + '\n')
+        sys.stderr.flush()
 else:
-	call(["ulogger", "-i","-l","$LDM/var/logs/ldmd.log","Remove.py: Success"])
+        sys.stderr.write()
+        sys.stderr.flush("destroy.py: Success\n")
