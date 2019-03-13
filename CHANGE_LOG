@@ -1,4 +1,4 @@
-6.13.11.12
+6.13.11.12	2019-03-13T10:14:50-0600
     Misc:
         ChildCmd(3) (was ChildCommand(3)):
             * Shortened log messages by
@@ -17,8 +17,10 @@
               "yaml"
             * Added installation of account.py and edit.py
             * Replaced calls to ulogger(1) with sys.stderr.write()
-            * Replaced writing of circuit-ID to stderr with writing to stdout in
-              provision.py
+            * provision.py:
+                * Replaced writing of circuit-ID to stderr with writing to
+                  stdout
+                * Added case where multipoint VLAN already exists
         * UpMcastMgr(3):
             * Deleted invocation of Python interpreter because scripts are
               executable
