@@ -42,7 +42,8 @@ for er in searchResults1:
 	    if er['node'] != None:
 		node.append(er['node'])
 if len(node) > 2:
-	searchResults = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"del",username,passwd)
+	jsonData = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"del",username,passwd)
+	searchResults = jsonData['results']
 else:
 	values2 = {'method' : 'remove_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'remove_time' : -1}
 	data2 = urllib.urlencode(values2, doseq=True)

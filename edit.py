@@ -97,5 +97,4 @@ def edit_endpoint(wg_id,node_id,interface_id,vlan_id,ct_id,function,username,pas
 	handler = urllib2.urlopen(req)
 	result = handler.read()
 	jsonData = json.loads(result)
-	searchResults = jsonData['results']
-	return searchResults
+	return jsonData

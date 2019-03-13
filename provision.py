@@ -40,8 +40,9 @@ if ct_id == 0:
 	jsonData = json.loads(result)
 	searchResults = jsonData['results']
 else:
-	searchResults = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"add",username,passwd)
-
+	jsonData = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"add",username,passwd)
+	searchResults = jsonData['results']
+	
 if (searchResults == None):
         sys.stderr.write("provision.py: " + jsonData['error_text'] + '\n')
 else:
