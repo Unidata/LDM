@@ -768,7 +768,7 @@ oess_provision(
         ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
-            log_add("Couldn't execute %s", cmdVec[0]);
+            log_add("Couldn't execute %s", childCmd_getCmd(cmd));
             status = LDM7_SYSTEM;
         }
         else {
@@ -778,11 +778,11 @@ oess_provision(
             int     circuitIdStatus;
 
             if (nbytes <= 0) {
-                log_add("Couldn't get AL2S virtual-circuit ID from %s process: "
-                        "%s", cmdVec[0],
-                        nbytes
+                log_add(nbytes
                             ? "childCmd_getline() failure"
                             : "childCmd_getline() EOF");
+                log_add("Couldn't get AL2S virtual-circuit ID from command "
+                        "\"%s\"", childCmd_getCmd(cmd));
 
                 circuitIdStatus = LDM7_SYSTEM;
             }
