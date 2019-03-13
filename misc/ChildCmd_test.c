@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -90,6 +90,21 @@ static void test_writeToStdErr(void)
     CU_ASSERT_TRUE(exitStatus > 0);
 }
 
+static void test_getCmd(void)
+{
+    const char* const cmdVec[] = {"true", "arg", "split arg", NULL};
+    ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
+    CU_ASSERT_PTR_NOT_NULL(cmd);
+
+    const char* const cmdStr = childCmd_getCmd(cmd);
+    CU_ASSERT_STRING_EQUAL(cmdStr, "true arg 'split arg'");
+
+    int exitStatus;
+    int status = childCmd_reap(cmd, &exitStatus);
+    CU_ASSERT_EQUAL(status, 0);
+    CU_ASSERT_EQUAL(exitStatus, 0);
+}
+
 int main(
         const int argc,
         const char* const * argv)
@@ -109,6 +124,7 @@ int main(
                         && CU_ADD_TEST(testSuite, test_false)
                         && CU_ADD_TEST(testSuite, test_echoToStdOut)
                         && CU_ADD_TEST(testSuite, test_writeToStdErr)
+                        && CU_ADD_TEST(testSuite, test_getCmd)
                         ) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();

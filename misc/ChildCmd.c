@@ -272,7 +272,7 @@ childCmd_free(ChildCmd* const cmd)
  * @retval    `false`  Child command is not valid. `log_add()` called.
  */
 inline static bool
-isValid(ChildCmd* const cmd)
+isValid(const ChildCmd* const cmd)
 {
     const bool valid = cmd != NULL && cmd->magic == &MAGIC;
 
@@ -499,6 +499,14 @@ childCmd_getline(
     }
 
     return status;
+}
+
+const char*
+childCmd_getCmd(ChildCmd* const cmd)
+{
+    return isValid(cmd)
+            ? cmd->cmdStr
+            : NULL;
 }
 
 int sudo(

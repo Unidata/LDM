@@ -103,6 +103,16 @@ ssize_t childCmd_getline(
         size_t* const nbytes);
 
 /**
+ * Returns the command string.
+ *
+ * @param[in] cmd     Child command
+ * @retval    `NULL`  `cmd` is invalid
+ * @return            Comand string
+ */
+const char*
+childCmd_getCmd(ChildCmd* const cmd);
+
+/**
  * Executes a command in a child process with superuser privileges. Logs the
  * child's standard error stream. Waits for the child to terminate.
  *
