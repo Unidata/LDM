@@ -5,12 +5,13 @@ set -e
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: `basename $0` [-M <make>] [-m] [-n] [-s] [-u <user>] [-v <version>] <host>
+Usage: `basename $0` [-M <make>] [-m] [-n] [-r <root>|-s] [-u <user>] [-v <version>] <host>
 Where:
     -M <make>    Pathname of make(1) utility when root
     -m           Enable multicast support
     -n           Enable NOAAPort support
-    -s           Use sudo(1) instead of logging in as "root"
+    -r <root>    Use account <root> for root privileges instead of "root"
+    -s           Use sudo(1) instead of logging into a privileged account
     -u <user>    Use <user> instead of "ldm"
     -v <version> Use LDM version <version> instead of first word in CHANGE_LOG
     <host>       ssh(1)able remote host (e.g., "node0")
@@ -20,12 +21,14 @@ EOF
 makePath=make
 user=ldm
 version=`awk '{print $1; exit}' CHANGE_LOG`
+root=root
 
-while getopts M:mnsu:v: opt; do
+while getopts M:mnr:su:v: opt; do
     case $opt in
         M) makePath=$OPTARG;;
         m) withMulticast=true;;
         n) withNoaaport=true;;
+        r) root=$OPTARG;;
         s) useSudo=true;;
         u) user=$OPTARG;;
         v) version=$OPTARG;;
@@ -74,8 +77,8 @@ if test "${useSudo+true}"; then
         sudo make root-actions >&root-actions.log
 EOF
 else
-    echo "Making root actions as root"
-    ssh -T root@$host bash --login <<EOF
+    echo "Making root actions using account '$root'"
+    ssh -T $root@$host bash --login <<EOF
         set -e
         cd ~$user/$pkgId/src
         $makePath root-actions >&root-actions.log
