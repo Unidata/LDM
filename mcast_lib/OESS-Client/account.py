@@ -20,7 +20,7 @@ global values1
 global gh_url
 gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
 def readAccount(filename):
-	f = open(filename, 'r+')
+	f = open(filename, 'r')
 	yamlData = yaml.load(f)
 	username = yamlData['username']
 	passwd = yamlData['passwd']
