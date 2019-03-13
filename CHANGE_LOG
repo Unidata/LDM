@@ -1,10 +1,11 @@
-6.13.11.12	2019-03-13T10:14:50-0600
+6.13.11.13	2019-03-13T12:54:28-0600
     Misc:
         ChildCmd(3) (was ChildCommand(3)):
             * Shortened log messages by
                 * Renaming ChildCommand(3) to ChildCmd(3)
                 * Renaming childCmd_logStdErr() to childCmd_log()
             * Added more logging to childCmd_getline()
+            * Created childCmd_getCmd()
 
     Multicast:
         * LDM configuration-file RECEIVE entry:
@@ -28,6 +29,7 @@
               failure
             * Removed acquisition of root privileges when calling "provision.py"
             * Added printing of script name on failure to oess_provision()
+            * Added printing of "provision.py" command on failure
 
     Developer:
         * Deployment:
