@@ -1064,10 +1064,8 @@ vlanIface_create(
         int childStatus;
         status = sudo(cmdVec, &childStatus);
 
-        if (status || childStatus) {
-            log_add("Couldn't create local VLAN interface");
+        if (status || childStatus)
             status = LDM7_SYSTEM;
-        }
     }
 
     return status;
@@ -1380,7 +1378,7 @@ mcastRcvr_init(
                     ifaceAddr);
 
             if (status) {
-                log_add("Couldn't create VLAN virtual interface");
+                log_add("Couldn't create VLAN virtual-interface");
             }
             else {
                 char ifaceAddrStr[INET_ADDRSTRLEN];
