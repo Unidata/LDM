@@ -518,18 +518,20 @@ int sudo(
         ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
-            log_add("Couldn't execute command in child process");
+            log_add("Couldn't execute command \"%s\" in child process",
+                    cmdVec[0]);
             status = errno;
         }
         else {
             status = childCmd_reap(cmd, childStatus);
 
             if (status) {
-                log_add("Couldn't reap command's child process");
+                log_add("Couldn't reap command \"%s\"", cmd->cmdStr);
                 status = errno;
             }
             else if (*childStatus) {
-                log_add("Command exited with status %d", *childStatus);
+                log_add("Command \"%s\" exited with status %d", cmd->cmdStr,
+                        *childStatus);
             }
         }
     unpriv();
