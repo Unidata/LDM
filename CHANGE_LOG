@@ -1,13 +1,11 @@
-6.13.11.14	2019-03-14T09:08:12-0600
+6.13.11.15	2019-03-14T09:29:26-0600
     Misc:
         ChildCmd(3) (was ChildCommand(3)):
             * Shortened log messages by
                 * Renaming ChildCommand(3) to ChildCmd(3)
                 * Renaming childCmd_logStdErr() to childCmd_log()
-            * Added more logging to childCmd_getline()
+            * Improved error-logging
             * Created childCmd_getCmd()
-            * Created different log messages for EOF versus failure
-            * Improved sudo() logging
 
     Multicast:
         * LDM configuration-file RECEIVE entry:
@@ -29,6 +27,7 @@
               executable
             * Removed acquisition of root privileges when calling "provision.py"
             * Added printing of "provision.py" command-string on failure
+            * Deleted logging of child command that error-exits
 
     Developer:
         * Deployment:
