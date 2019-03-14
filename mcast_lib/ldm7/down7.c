@@ -1058,8 +1058,8 @@ vlanIface_create(
         // Can't fail
         (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-        const char* const cmdVec[] = {vlanUtil, "create", ifaceName, ifaceAddrStr,
-                srvrAddrStr, NULL};
+        const char* const cmdVec[] = {vlanUtil, "create", ifaceName,
+                ifaceAddrStr, srvrAddrStr, NULL};
 
         int childStatus;
         status = sudo(cmdVec, &childStatus);
