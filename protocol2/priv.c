@@ -28,7 +28,7 @@ ensureDumpable()
 #if __linux || __linux__ || linux
     /*
      * Workaround non-standard behavior of Linux regarding the creation
-     * of a core file for a setuid program.
+     * of a core file for a setuid program owned by root.
      */
     if (-1 == prctl(PR_SET_DUMPABLE, 1, 0, 0, 0))
         log_syserr("Couldn't give process the ability to create a core file");
