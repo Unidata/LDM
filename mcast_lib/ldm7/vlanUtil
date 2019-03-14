@@ -5,7 +5,8 @@
 # Exit on error
 set -e
 
-export PATH=/usr/bin:/bin:/usr/sbin
+# ip(1) is in "/sbin"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 printUsage()
 {
@@ -39,17 +40,7 @@ destroy()
         fi
     fi
 
-    # Remove address of virtual interface if it exists
-    ifaceAddr=$(ip addr show dev "$virtIface" 2>/dev/null | 
-            awk '/ *inet / {print $2;}' | sed 's;/.*;;')
-    if test "$ifaceAddr"; then
-        if ! ip addr del "$ifaceAddr/32" dev "$virtIface"; then
-            echo 1>&2 "Couldn't remove address $ifaceAddr from interface $virtIface"
-            status=1
-        fi
-    fi
-
-    # Delete virtual interface if it exists
+    # Delete virtual interface if it exists. This also deletes its address.
     if ip link show dev "$virtIface" >/dev/null 2>&1; then
         if ! ip link set dev "$virtIface" down; then
             echo 1>&2 "Couldn't disable interface $virtIface"
