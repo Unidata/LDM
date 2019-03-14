@@ -803,9 +803,6 @@ oess_provision(
             }
             else {
                 if (childExitStatus) {
-                    log_add("%s process terminated with status %d", cmdVec[0],
-                            childExitStatus);
-
                     status = LDM7_SYSTEM;
                 }
                 else {
@@ -861,13 +858,8 @@ oess_remove(
             int exitStatus;
             int status = childCmd_reap(cmd, &exitStatus);
 
-            if (status) {
+            if (status)
                 log_add("Couldn't reap %s process", cmdVec[0]);
-            }
-            else if (exitStatus) {
-                log_add("%s process terminated with status %d", cmdVec[0],
-                        exitStatus);
-            }
         } // Child-command executing
     }
 

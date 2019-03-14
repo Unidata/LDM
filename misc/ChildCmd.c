@@ -446,9 +446,14 @@ childCmd_reap(
         }
         else {
             (void)pthread_join(cmd->stdErrThread, NULL);
-            childCmd_free(cmd);
 
             *exitStatus = WEXITSTATUS(*exitStatus);
+
+            if (*exitStatus)
+                log_add("Command \"%s\" exited with status %d", cmd->cmdStr,
+                        *exitStatus);
+
+            childCmd_free(cmd);
             status = 0;
         }
     }
@@ -526,10 +531,6 @@ int sudo(
             if (status) {
                 log_add("Couldn't reap command \"%s\"", cmd->cmdStr);
                 status = errno;
-            }
-            else if (*childStatus) {
-                log_add("Command \"%s\" exited with status %d", cmd->cmdStr,
-                        *childStatus);
             }
         }
     unpriv();
