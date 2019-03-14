@@ -405,7 +405,7 @@ childCmd_execvp(
         cmd->cmdStr = catCmdVec(cmdVec);
 
         if (cmd->cmdStr == NULL) {
-            log_add("Couldn't concatenate command arguments");
+            log_add("Couldn't concatenate command \"%s\" arguments", pathname);
 
             status = -1;
         }
@@ -442,7 +442,7 @@ childCmd_reap(
 
         if (status != cmd->pid) {
             status = errno;
-            log_add_syserr("Couldn't reap command \"%s\"", cmd->cmdStr);
+            log_add_syserr("waitpid() failure");
         }
         else {
             (void)pthread_join(cmd->stdErrThread, NULL);
@@ -518,8 +518,6 @@ int sudo(
         ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
-            log_add("Couldn't execute command \"%s\" in child process",
-                    cmdVec[0]);
             status = errno;
         }
         else {
