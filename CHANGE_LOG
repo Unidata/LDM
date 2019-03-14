@@ -1,4 +1,4 @@
-6.13.11.13	2019-03-13T12:54:28-0600
+6.13.11.14	2019-03-14T09:08:12-0600
     Misc:
         ChildCmd(3) (was ChildCommand(3)):
             * Shortened log messages by
@@ -6,6 +6,8 @@
                 * Renaming childCmd_logStdErr() to childCmd_log()
             * Added more logging to childCmd_getline()
             * Created childCmd_getCmd()
+            * Created different log messages for EOF versus failure
+            * Improved sudo() logging
 
     Multicast:
         * LDM configuration-file RECEIVE entry:
@@ -14,30 +16,33 @@
         * down7(3): Corrected AL2S VLAN endpoint <-> FMTP interface
           consistency-test
         * OESS Scripts:
-            * Changed default extension of OESS account file from "json" to
-              "yaml"
-            * Added installation of account.py and edit.py
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
                 * Replaced writing of circuit-ID to stderr with writing to
                   stdout
                 * Added case where multipoint VLAN already exists
         * UpMcastMgr(3):
+            * Changed default extension of OESS account-file from "json" to
+              "yaml"
+            * Added installation of account.py(1) and edit.py(1)
             * Deleted invocation of Python interpreter because scripts are
               executable
-            * Differentiated childCmd_getline() failure from EOF in logging of
-              failure
             * Removed acquisition of root privileges when calling "provision.py"
-            * Added printing of script name on failure to oess_provision()
-            * Added printing of "provision.py" command on failure
+            * Added printing of "provision.py" command-string on failure
 
     Developer:
         * Deployment:
-            * Moved determination of "-r" host-suffix from deployAll(1)
-              to deploy(1)
-            * Added removal of runtime link if LDM wasn't running to deploy(1)
-        * Up7Down7_test(1): Insured CU_ASSERT_* functions not called during
-          teardown
+            * deploy(1):
+                * Added determination of "-r" host-suffix
+                * Added removal of runtime link if LDM wasn't running
+                * Added "-r <root>" option
+                * Handle $sudoUser not being able to create root-actions log
+                  file
+            * deployAll(1):
+                * Removed determination of "-r" host-suffix
+                * Added the MAX
+        * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
+          during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
 
 6.13.10	2019-03-06T14:17:16-0700
