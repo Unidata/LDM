@@ -69,7 +69,6 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
-static int      portIsMapped = 0;
 static unsigned maxClients = 256;
 static int      exit_status = 0;
 
@@ -229,23 +228,6 @@ static void cleanup(
          * This process is the process group leader (i.e., the top-level
          * LDM server).
          */
-        if (portIsMapped) {
-            int vers;
-
-            /*
-             * Superuser privileges might be required to unmap the
-             * port on which the LDM is listening.
-             */
-            rootpriv();
-                for (vers = MIN_LDM_VERSION; vers <= MAX_LDM_VERSION; vers++) {
-                    if (!pmap_unset(LDMPROG, vers))
-                        log_error_q("pmap_unset(LDMPROG %lu, LDMVERS %lu) "
-                                "failed", LDMPROG, vers);
-                    else
-                        portIsMapped = 0;
-                }
-            unpriv();
-        }
 
         /*
          * Terminate all child processes.
@@ -491,23 +473,10 @@ static int create_ldm_tcp_svc(
             if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;
 
-                log_syserr_q("Couldn't obtain local address %s:%u for server",
-                        inet_ntoa(addr.sin_addr), (unsigned) port);
-
-                if (error == EACCES) {
-                    error = 0;
-                    addr.sin_port = 0; /* let system assign port */
-
-                    if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
-                        error = errno;
-
-                        log_syserr_q("Couldn't obtain local address %s for "
-                                "server", inet_ntoa(addr.sin_addr));
-                    }
-                } /* requested port is reserved */
+                log_syserr("Couldn't obtain local address %s:%u for server",
+                        inet_ntoa(addr.sin_addr), (unsigned)port);
             } /* couldn't bind to requested port */
-
-            if (!error) {
+            else {
                 /*
                  * Get the local address associated with the bound socket.
                  */
@@ -530,33 +499,6 @@ static int create_ldm_tcp_svc(
                         log_syserr_q("Couldn't listen() on server's socket");
                     }
                     else {
-#if 0
-                        /*
-                         * Register with the portmapper if it's running.  The
-                         * check to see if it's running is made because on a
-                         * FreeBSD 4.7-STABLE system, a pmap_set() call takes
-                         * one minute even if the portmapper isn't running.
-                         */
-                        log_debug("Checking portmapper");
-                        if (local_portmapper_running()) {
-                            log_debug("Registering");
-
-                            if (pmap_set(LDMPROG, 6, IPPROTO_TCP, port) == 0) {
-                                log_add("Can't register TCP service %lu on "
-                                        "port %u", LDMPROG, (unsigned) port);
-                                log_add("Downstream LDMs won't be able to "
-                                        "connect via the RPC portmapper daemon "
-                                        "(rpcbind(8), portmap(8), etc.)");
-                                log_flush_warning();
-                            }
-                            else {
-                                portIsMapped = 1;
-
-                                (void) pmap_set(LDMPROG, 5, IPPROTO_TCP, port);
-                            }
-                        } /* a local portmapper is running */
-#endif
-
                         *sockp = sock;
                     } /* listen() success */
                 } /* getsockname() success */
@@ -682,8 +624,6 @@ runChildLdm(
         } // Client's IP address is not allowed
 
         if (status == 0) {
-            portIsMapped = 0; /* don't call pmap_unset() from child */
-
             /* Set the logging identifier, optional. */
             log_set_id(remote_name());
             log_info("Connection from %s", remote_name());
