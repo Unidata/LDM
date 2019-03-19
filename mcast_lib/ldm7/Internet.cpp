@@ -9,6 +9,7 @@
 #include "config.h"
 
 #include "Internet.h"
+#include "log.h"
 
 #include <cerrno>
 #include <system_error>
@@ -24,6 +25,16 @@ std::string to_string(const struct sockaddr_in& sockAddr)
 {
     return to_string(sockAddr.sin_addr.s_addr) + ":" +
             std::to_string(ntohs(sockAddr.sin_port));
+}
+
+std::string to_string(const struct sockaddr& sockAddr)
+{
+    if (sockAddr.sa_family == AF_INET)
+        return ::to_string(
+                *reinterpret_cast<const struct sockaddr_in*>(&sockAddr));
+
+    return "{Unsupported address family, " +
+            std::to_string(sockAddr.sa_family) + "}";
 }
 
 InetAddr::InetAddr(const char* addrSpec)
@@ -59,7 +70,12 @@ void InetAddr::setSockAddr(
 void InetSockAddr::bind(const int sd) const
 {
     struct sockaddr sockAddr{};
+
     inAddr.setSockAddr(sockAddr, port);
+
+    log_debug("Binding socket %d to address %s", sd,
+            ::to_string(sockAddr).c_str());
+
     if (::bind(sd, &sockAddr, sizeof(sockAddr)))
         throw std::system_error{errno, std::system_category(),
                 std::string{"Couldn't bind socket "} + std::to_string(sd) +
@@ -69,7 +85,11 @@ void InetSockAddr::bind(const int sd) const
 void InetSockAddr::connect(const int sd) const
 {
     struct sockaddr sockAddr{};
+
     inAddr.setSockAddr(sockAddr, port);
+
+    log_debug("Connecting socket %d to %s", sd, to_string().c_str());
+
     if (::connect(sd, &sockAddr, sizeof(sockAddr)))
         throw std::system_error{errno, std::system_category(),
                 std::string{"Couldn't connect socket to remote address "} +
