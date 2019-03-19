@@ -48,16 +48,27 @@ static int          shmId;
 /// Whether or not this module is initialized:
 static bool         initialized = false;
 
+/**
+ * Formats multicast LDM sender information.
+ *
+ * @param[in] feed         Data-product feed of the multicast LDM sender
+ * @param[in] pid          Process ID of the multicast LDM sender
+ * @param[in] fmtpPort     Port number of the multicast LDM sender's FMTP server
+ *                         in host byte-order
+ * @param[in] mldmCmdPort  Port number of the multicast LDM sender RPC command
+ *                         server in host byte-order
+ * @return                 String representation of the above information
+ */
 static char*
 smo_mldmStr(
         const feedtypet feed,
         const pid_t     pid,
         const in_port_t fmtpPort,
-        const in_port_t mldmSrvrPort)
+        const in_port_t mldmCmdPort)
 {
     return ldm_format(128, "{feed=%s, pid=%ld, fmtpPort=%hu, "
-            "mldmSrvrPort=%hu}", s_feedtypet(feed), (long)pid, fmtpPort,
-            mldmSrvrPort);
+            "mldmCmdPort=%hu}", s_feedtypet(feed), (long)pid, fmtpPort,
+            mldmCmdPort);
 }
 
 /**
@@ -468,7 +479,7 @@ Ldm7Status
 msm_put(const feedtypet feed,
         const pid_t     pid,
         const in_port_t fmtpPort,
-        const in_port_t mldmSrvrPort)
+        const in_port_t mldmCmdPort)
 {
     int status;
 
@@ -477,14 +488,14 @@ msm_put(const feedtypet feed,
         status = LDM7_LOGIC;
     }
     else {
-        status = smo_put(feed, pid, fmtpPort, mldmSrvrPort);
+        status = smo_put(feed, pid, fmtpPort, mldmCmdPort);
 
         if (status) {
             log_add("Couldn't save multicast process information");
         }
         else {
             char* const mldmStr = smo_mldmStr(feed, pid, fmtpPort,
-                    mldmSrvrPort);
+                    mldmCmdPort);
             log_debug("Saved information on multicast process %s", mldmStr);
             free(mldmStr);
         }
