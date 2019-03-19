@@ -30,6 +30,13 @@ std::string to_string(const in_addr_t addr);
  */
 std::string to_string(const struct sockaddr_in& sockAddr);
 
+/**
+ * Returns the string representation of a socket address.
+ * @param[in] sockAddr  Socket address
+ * @return              String representation of address
+ */
+std::string to_string(const struct sockaddr& sockAddr);
+
 class InetAddr
 {
     struct in_addr structInAddr;
