@@ -32,6 +32,10 @@
 
 #include "TcpSend.h"
 
+#ifdef LDM_LOGGING
+#include "log.h"
+#endif
+
 #include <errno.h>
 #include <exception>
 #include <netinet/in.h>
@@ -290,6 +294,10 @@ void TcpSend::Init()
         servAddr.sin_addr.s_addr = inAddr;
         /* If tcpPort = 0, OS will automatically choose an available port number. */
         servAddr.sin_port = htons(tcpPort);
+#ifdef LDM_LOGGING
+        log_debug("Binding TCP socket %d to %s:%u", sockfd, tcpAddr.c_str(),
+                tcpPort);
+#endif
 #if 0
         cerr << std::string("TcpSend::TcpSend() Binding TCP socket to ").
                 append(tcpAddr).append(":").append(std::to_string(tcpPort)).

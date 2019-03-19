@@ -213,10 +213,13 @@ public:
             const size_t nbytes)
     {
         const auto status = ::recv(sd, buf, nbytes, MSG_WAITALL);
+
         if (status == -1)
             throw std::system_error(errno, std::system_category(),
                     "Couldn't receive " + std::to_string(nbytes) +
-                    " bytes from remote address " + remoteAddrStr());
+                    " bytes from remote address " + remoteAddrStr() +
+                    " on socket " + std::to_string(sd));
+
         return status < nbytes ? 0 : status;
     }
 
