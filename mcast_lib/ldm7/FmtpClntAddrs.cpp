@@ -18,6 +18,7 @@
 #include <deque>
 #include <mutex>
 #include <unordered_set>
+#include <stdexcept>
 
 /******************************************************************************
  * Misc functions:
@@ -41,8 +42,8 @@ static std::string to_string(const CidrAddr& addr)
 
 class FmtpClntAddrs::Impl final
 {
-    /// AL2S virtual circuit subnet
-    CidrAddr                        al2sSubnet;
+    /// FMTP server address and subnet
+    CidrAddr                        fmtpSrvr;
     /// Available IP addresses
     std::deque<in_addr_t>           available;
     /// Allocated IP addresses. Includes explicitly-allowed and pool addresses
@@ -54,22 +55,45 @@ class FmtpClntAddrs::Impl final
 
 public:
     /**
-     * Constructs from a specification of the subnet to be used by FMTP clients.
+     * Constructs from a specification of the FMTP server address and subnet.
      *
-     * @param[in] cidr               Al2S subnet specification
+     * @param[in] fmtpSrvr FMTP server address and subnet
      */
-    Impl(const CidrAddr& cidr)
-        : al2sSubnet(cidr)
-        // Parentheses are needed to obtain correct construction
-        , available(cidrAddr_getNumHostAddrs(&cidr), cidrAddr_getSubnet(&cidr))
+    Impl(const CidrAddr& fmtpSrvr)
+        : fmtpSrvr(fmtpSrvr)
+          // Parentheses are needed to obtain correct construction
+        , available(cidrAddr_getNumHostAddrs(&fmtpSrvr) - 1,
+                cidrAddr_getSubnet(&fmtpSrvr))
         , allocated{}
         , mutex{}
     {
-        log_debug("cidr=%s", to_string(cidr).c_str());
-        auto size = available.size();
-        // Doesn't include network or broadcast address
-        for (in_addr_t i = 1; i <= size; ++i)
-            available[i-1] |= htonl(i);
+        log_debug("fmtpSrvr=%s", to_string(fmtpSrvr).c_str());
+
+        in_addr_t subnet = cidrAddr_getSubnet(&fmtpSrvr);
+
+        if (subnet == cidrAddr_getAddr(&fmtpSrvr))
+            throw std::invalid_argument("FMTP server address mustn't be same "
+                    "as subnet address, " + to_string(subnet));
+
+        SubnetLen suffixLen = 32 - cidrAddr_getPrefixLen(&fmtpSrvr);
+        in_addr_t bcastAddr = subnet | ((1 << suffixLen) - 1);
+
+        if (cidrAddr_getSubnet(&fmtpSrvr) == cidrAddr_getAddr(&fmtpSrvr))
+            throw std::invalid_argument("FMTP server address mustn't be same "
+                    "as broadcast address, " + to_string(bcastAddr));
+
+        auto      size = available.size();
+        in_addr_t fmtpSrvrAddr = cidrAddr_getAddr(&fmtpSrvr);
+
+        // Doesn't include network, broadcast, and FMTP server addresses
+        for (in_addr_t i = 1, j = 0; i <= size; ++i) {
+            const in_addr_t addr = available[j] | htonl(i);
+
+            if (addr != fmtpSrvrAddr) {
+                available[j] = addr;
+                ++j;
+            }
+        }
     }
 
     /**
@@ -146,11 +170,10 @@ public:
 
         allocated.erase(iter);
 
-        if (cidrAddr_isMember(&al2sSubnet, addr))
+        if (cidrAddr_isMember(&fmtpSrvr, addr))
             available.push_back(addr);
 
-        log_debug((std::string("Address ") + std::to_string(addr) + " released")
-                .c_str());
+        log_debug("Address %s released", to_string(addr).c_str());
     }
 }; // class InAddrPool::Impl
 
@@ -158,8 +181,8 @@ public:
  * Collection of FMTP client addresses:
  ******************************************************************************/
 
-FmtpClntAddrs::FmtpClntAddrs(const CidrAddr& subnet)
-    : pImpl{new Impl(subnet)}
+FmtpClntAddrs::FmtpClntAddrs(const CidrAddr& fmtpSrvr)
+    : pImpl{new Impl(fmtpSrvr)}
 {}
 
 in_addr_t FmtpClntAddrs::getAvailable() const
@@ -186,9 +209,9 @@ void FmtpClntAddrs::release(const in_addr_t addr) const
  * C interface:
  ******************************************************************************/
 
-void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet)
+void* fmtpClntAddrs_new(const CidrAddr* const fmtpSrvr)
 {
-    return new FmtpClntAddrs{*fmtpSubnet};
+    return new FmtpClntAddrs(*fmtpSrvr);
 }
 
 in_addr_t fmtpClntAddrs_getAvailable(const void* const fmtpClntAddrs)

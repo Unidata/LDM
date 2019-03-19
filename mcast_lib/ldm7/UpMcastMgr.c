@@ -82,9 +82,14 @@ allowSigs(void)
 
 /// Pid of multicast LDM sender process
 static pid_t     childPid;
-/// Port number of FMTP server of multicast LDM sender process
+/**
+ * Port number of FMTP server of multicast LDM sender process in host byte-order
+ */
 static in_port_t fmtpSrvrPort;
-/// Port number of RPC command server of multicast LDM sender process
+/**
+ * Port number of RPC command server of multicast LDM sender process in host
+ * byte-order
+ */
 static in_port_t mldmCmdPort;
 
 static void
@@ -109,11 +114,11 @@ mldm_reset(void)
 static Ldm7Status
 mldm_getSrvrPorts(const int pipe)
 {
-    int     status;
 #if 1
     char    buf[100];
     ssize_t nbytes = read(pipe, buf, sizeof(buf));
 
+    int     status;
     if (nbytes == -1) {
         log_add_syserr("Couldn't read from pipe to multicast FMTP process");
         status = LDM7_SYSTEM;
@@ -167,9 +172,6 @@ mldm_getSrvrPorts(const int pipe)
  *     - The logging level; and
  *     - The LDM product-queue;
  *
- * @param[in] mcastIface     IPv4 address of interface to use for multicasting.
- *                           "0.0.0.0" obtains the system's default multicast
- *                           interface.
  * @param[in] info           Information on the multicast group.
  * @param[in] ttl            Time-to-live for the multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -181,7 +183,8 @@ mldm_getSrvrPorts(const int pipe)
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] fmtpSubnet     Subnet for client FMTP TCP connections
+ * @param[in] subnetLen      Number of bits in the network prefix of the private
+ *                           AL2S network.
  * @param[in] retxTimeout    FMTP retransmission timeout in minutes. Duration
  *                           that a product will be held by the FMTP layer
  *                           before being released. If negative, then the
@@ -193,10 +196,9 @@ mldm_getSrvrPorts(const int pipe)
  */
 static Ldm7Status
 mldm_exec(
-    const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict info,
     const unsigned short               ttl,
-    const CidrAddr* const restrict     fmtpSubnet,
+    const unsigned short               subnetLen,
     const float                        retxTimeout,
     const char* const restrict         pqPathname,
     const int                          pipe)
@@ -226,25 +228,18 @@ mldm_exec(
         args[i++] = feedtypeBuf; // multicast group identifier
     } // Non-default LDM7 feed
 
-    char mcastIfaceArg[INET_ADDRSTRLEN];
-    if (mcastIface.s_addr) {
-        inet_ntop(AF_INET, &mcastIface, mcastIfaceArg, sizeof(mcastIfaceArg));
-        args[i++] = "-i";
-        args[i++] = mcastIfaceArg;
-    } // Non-default multicast interface
-
-    char* fmtpSubnetArg = NULL;
-    if (status == 0 && cidrAddr_getNumHostAddrs(fmtpSubnet)) {
-        fmtpSubnetArg = cidrAddr_format(fmtpSubnet);
-        if (fmtpSubnetArg == NULL) {
-            log_add("Couldn't create FMTP subnet option-argument");
-            status = LDM7_SYSTEM;
+    char subnetLenArg[3];
+    if (status == 0 && subnetLen) {
+        if (snprintf(subnetLenArg, sizeof(subnetLenArg), "%u",
+                subnetLen) >= sizeof(subnetLenArg)) {
+            log_add("Invalid subnet-length parameter %u", subnetLen);
+            status = LDM7_INVAL;
         }
         else {
             args[i++] = "-n";
-            args[i++] = fmtpSubnetArg;
+            args[i++] = subnetLenArg;
         }
-    } // Non-default FMTP VLAN subnet
+    } // Non-default FMTP subnet length
 
     char* retxTimeoutArg = NULL;
     if (status == 0 && retxTimeout >= 0) {
@@ -321,7 +316,6 @@ mldm_exec(
     } // `status == 0`
 
     free(retxTimeoutArg);
-    free(fmtpSubnetArg);
 
     return status;
 }
@@ -386,12 +380,10 @@ mldm_stopSndr()
  * Executes a multicast LDM sender as a child process. Doesn't block. Sets
  * `childPid`, `fmtpSrvrPort` and `mldmCmdPort`.
  *
- * @param[in]     mcastIface     IPv4 address of interface to use for
- *                               multicasting. "0.0.0.0" obtains the system's
- *                               default multicast interface.
  * @param[in,out] info           Information on the multicast group.
  * @param[in]     ttl            Time-to-live of multicast packets.
- * @param[in]     fmtpSubnet     Subnet for client FMTP TCP connections
+ * @param[in]     subnetLen      Number of bits in the network prefix of the
+ *                               private AL2S network.
  * @param[in]     retxTimeout    FMTP retransmission timeout in minutes.
  *                               Duration that a product will be held by the
  *                               FMTP layer before being released. If negative,
@@ -404,10 +396,9 @@ mldm_stopSndr()
  */
 static Ldm7Status
 mldm_spawn(
-    const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict info,
     const unsigned short               ttl,
-    const CidrAddr* const restrict     fmtpSubnet,
+    const unsigned short               subnetLen,
     const float                        retxTimeout,
     const char* const restrict         pqPathname)
 {
@@ -433,8 +424,7 @@ mldm_spawn(
             (void)close(fds[0]); // read end of pipe unneeded
             allowSigs(); // so process can be terminated
             // The following statement shouldn't return
-            mldm_exec(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
-                    pqPathname, fds[1]);
+            mldm_exec(info, ttl, subnetLen, retxTimeout, pqPathname, fds[1]);
             log_flush_error();
             exit(1);
         }
@@ -466,12 +456,10 @@ mldm_spawn(
 /**
  * Ensures that a multicast LDM sender process is running.
  *
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicast
- *                         interface.
  * @param[in] info         LDM7 multicast information
  * @param[in] ttl          Time-to-live of multicast packets
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections
+ * @param[in] subnetLen    Number of bits in the network prefix of the private
+ *                         AL2S network.
  * @param[in] retxTimeout  FMTP retransmission timeout in minutes. A negative
  *                         value obtains the FMTP default.
  * @param[in] pqPathname   Pathname of product-queue
@@ -485,10 +473,9 @@ mldm_spawn(
  */
 static Ldm7Status
 mldm_ensureExec(
-        const struct in_addr               mcastIface,
         const SepMcastInfo* const restrict info,
         const unsigned short               ttl,
-        const CidrAddr* const restrict     fmtpSubnet,
+        const unsigned short               subnetLen,
         const float                        retxTimeout,
         const char* const restrict         pqPathname)
 {
@@ -528,7 +515,8 @@ mldm_ensureExec(
             /*
              * Sets `childPid`, `fmtpSrvrPort`, and `mldmCmdPort`
              */
-            status = mldm_spawn(mcastIface, info, ttl, fmtpSubnet, retxTimeout,
+            struct in_addr addr;
+            status = mldm_spawn(info, ttl, subnetLen, retxTimeout,
                     pqPathname);
 
             if (status) {
@@ -602,11 +590,11 @@ mldm_getFmtpClntAddr(in_addr_t* const restrict downFmtpAddr)
         status = mldmClnt_reserve(mldmClnt, downFmtpAddr);
 
         if (status) {
-            log_add("Couldn't obtain IP address for remote FMTP layer");
+            log_add("Couldn't obtain IP address for remote FMTP client");
         }
         else {
             char buf[80];
-            log_info("Allocated IP address %s for remote FMTP",
+            log_info("Allocated IP address %s for remote FMTP client",
                     inet_ntop(AF_INET, downFmtpAddr, buf, sizeof(buf)));
         }
 
@@ -642,7 +630,7 @@ mldm_allow(const in_addr_t fmtpClntAddr)
         }
         else {
             char ipStr[INET_ADDRSTRLEN];
-            log_debug("Address %s allowed", inet_ntop(AF_INET, &fmtpClntAddr,
+            log_debug("Address %s is allowed", inet_ntop(AF_INET, &fmtpClntAddr,
                     ipStr, sizeof(ipStr)));
         }
 
@@ -871,11 +859,11 @@ oess_remove(
  ******************************************************************************/
 
 typedef struct {
-    struct in_addr mcastIface;
     SepMcastInfo*  info;
     char*          circuitId;
     char*          pqPathname;
     VcEndPoint*    vcEnd; ///< Local (sending) virtual-circuit endpoint
+    unsigned short subnetLen;
     CidrAddr       fmtpSubnet;
     unsigned short ttl;
 } McastEntry;
@@ -884,15 +872,12 @@ typedef struct {
  * Initializes a multicast entry.
  *
  * @param[out] entry       Entry to be initialized.
- * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicast
- *                         interface.
  * @param[in]  mcastInfo   Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
+ * @param[in]  subnetLen   Number of bits in the network prefix of the private
+ *                         AL2S network.
  * @param[in]  vcEnd       Sending (local) virtual-circuit endpoint or `NULL`.
  *                         Caller may free.
- * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections. Caller may
- *                         free.
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is initialized. Caller should call
  *                         `me_destroy(entry)` when it's no longer needed.
@@ -902,19 +887,17 @@ typedef struct {
  * @see `me_destroy()`
  */
 static Ldm7Status
-me_init(
-        McastEntry* const restrict       entry,
-        const struct in_addr             mcastIface,
+me_init(McastEntry* const restrict       entry,
         const SepMcastInfo* const        mcastInfo,
-        unsigned short                   ttl,
+        const unsigned short             ttl,
+        const unsigned short             subnetLen,
         const VcEndPoint* const restrict vcEnd,
-        const CidrAddr* const restrict   fmtpSubnet,
         const char* const restrict       pqPathname)
 {
     int status;
 
     if (ttl >= 255) {
-        log_add("Time-to-live is too large: %hu >= 255", ttl);
+        log_add("Time-to-live is too large: %u >= 255", ttl);
         status = LDM7_INVAL;
     }
     else {
@@ -943,9 +926,7 @@ me_init(
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    cidrAddr_copy(&entry->fmtpSubnet, fmtpSubnet);
-
-                    entry->mcastIface = mcastIface;
+                    entry->subnetLen = subnetLen;
                     entry->ttl = ttl;
                     entry->circuitId = NULL;
                     status = 0;
@@ -972,7 +953,6 @@ static void
 me_destroy(McastEntry* const entry)
 {
     free(entry->circuitId);
-    cidrAddr_destroy(&entry->fmtpSubnet);
     free(entry->pqPathname);
     smi_free(entry->info);
     vcEndPoint_free(entry->vcEnd);
@@ -982,14 +962,11 @@ me_destroy(McastEntry* const entry)
  * Returns a new multicast entry.
  *
  * @param[out] entry       New, initialized entry.
- * @param[in]  mcastIface  IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicast
- *                         interface.
  * @param[in]  mcastInfo   Multicast information. Caller may free.
  * @param[in]  ttl         Time-to-live for multicast packets.
+ * @param[in]  subnetLen   Number of bits in the network prefix of the private
+ *                         AL2S network.
  * @param[in]  vcEnd       Local virtual-circuit endpoint or `NULL`. Caller may
- *                         free.
- * @param[in]  fmtpSubnet  Subnet for client FMTP TCP connections. Caller may
  *                         free.
  * @param[in]  pqPathname  Pathname of product-queue. Caller may free.
  * @retval     0           Success. `*entry` is set. Caller should call
@@ -1000,13 +977,11 @@ me_destroy(McastEntry* const entry)
  * @see `me_free()`
  */
 static Ldm7Status
-me_new(
-        McastEntry** const restrict      entry,
-        const struct in_addr             mcastIface,
+me_new( McastEntry** const restrict      entry,
         const SepMcastInfo* const        mcastInfo,
         unsigned short                   ttl,
+        const unsigned short             subnetLen,
         const VcEndPoint* const restrict vcEnd,
-        const CidrAddr* const restrict   fmtpSubnet,
         const char* const restrict       pqPathname)
 {
     int         status;
@@ -1020,8 +995,7 @@ me_new(
         //log_notice("me_new(): info=%s", str);
         //free(str);
 
-        status = me_init(ent, mcastIface, mcastInfo, ttl, vcEnd, fmtpSubnet,
-                    pqPathname);
+        status = me_init(ent, mcastInfo, ttl, subnetLen, vcEnd, pqPathname);
 
         if (status) {
             free(ent);
@@ -1174,8 +1148,8 @@ me_startIfNot(
         const float       retxTimeout)
 {
     // Sets `mldmCmdPort`
-    int status = mldm_ensureExec(entry->mcastIface, entry->info,
-            entry->ttl, &entry->fmtpSubnet, retxTimeout, entry->pqPathname);
+    int status = mldm_ensureExec(entry->info,
+            entry->ttl, entry->subnetLen, retxTimeout, entry->pqPathname);
 
     if (status == 0) {
         status = isa_setPort(smi_getFmtpSrvr(entry->info),
@@ -1346,8 +1320,7 @@ me_subscribe(
                 status = mldm_getFmtpClntAddr(&fmtpClntAddr);
 
                 if (status == 0)
-                    cidrAddr_init(fmtpClntCidr, fmtpClntAddr,
-                            cidrAddr_getPrefixLen(&entry->fmtpSubnet));
+                    cidrAddr_init(fmtpClntCidr, fmtpClntAddr, entry->subnetLen);
             } // Sending FMTP multicasts on multipoint VLAN
             else {
                 status = mldm_allow(clntAddr);
@@ -1479,11 +1452,10 @@ umm_setWrkGrpName(const char* const name)
 
 Ldm7Status
 umm_addSndr(
-    const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict mcastInfo,
     const unsigned short               ttl,
+    const unsigned short               subnetLen,
     const VcEndPoint* const restrict   vcEnd,
-    const CidrAddr* const restrict     fmtpSubnet,
     const char* const restrict         pqPathname)
 {
     int status;
@@ -1499,8 +1471,7 @@ umm_addSndr(
 
         McastEntry* entry;
 
-        status = me_new(&entry, mcastIface, mcastInfo, ttl, vcEnd,
-                fmtpSubnet, pqPathname);
+        status = me_new(&entry, mcastInfo, ttl, subnetLen, vcEnd, pqPathname);
 
         if (0 == status) {
             const void* const node = tsearch(entry, &mcastEntries,

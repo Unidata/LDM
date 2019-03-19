@@ -27,7 +27,7 @@ class AuthorizerTest : public ::testing::Test
 TEST_F(AuthorizerTest, Construction)
 {
     in_addr_t addr;
-    inet_pton(AF_INET, "192.168.8.0", &addr);
+    inet_pton(AF_INET, "192.168.8.1", &addr);
     CidrAddr* subnet = cidrAddr_new(addr, 21);
     FmtpClntAddrs addrs{*subnet};
     Authorizer auth(addrs, ANY);
@@ -38,7 +38,7 @@ TEST_F(AuthorizerTest, Construction)
 TEST_F(AuthorizerTest, Authorization)
 {
     struct in_addr addr;
-    inet_pton(AF_INET, "192.168.8.0", &addr.s_addr);
+    inet_pton(AF_INET, "192.168.8.1", &addr.s_addr);
 
     CidrAddr*     subnet = cidrAddr_new(addr.s_addr, 21);
     FmtpClntAddrs addrs{*subnet};

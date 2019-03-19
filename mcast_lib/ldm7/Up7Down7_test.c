@@ -668,18 +668,12 @@ sndr_start(
         }
     }
 
-    in_addr_t subnet;
-    CU_ASSERT_EQUAL(inet_pton(AF_INET, LOCAL_HOST, &subnet), 1);
-
-    CidrAddr*   fmtpSubnet = cidrAddr_new(subnet, 24);
-    CU_ASSERT_PTR_NOT_NULL(fmtpSubnet);
-
     const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
 
     // The upstream multicast manager takes responsibility for freeing
     // `mcastInfo`
-    status = umm_addSndr(mcastIface, mcastInfo, 2, localVcEnd,
-            fmtpSubnet, UP7_PQ_PATHNAME);
+    const unsigned short subnetLen = 24;
+    status = umm_addSndr(mcastInfo, 2, subnetLen, localVcEnd, UP7_PQ_PATHNAME);
     if (status) {
         log_flush_error();
         CU_FAIL_FATAL("");
@@ -688,11 +682,9 @@ sndr_start(
     char* upAddr = ipv4Sock_getLocalString(sender->sock);
     char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(localVcEnd);
-    char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
     log_notice("LDM7 sender starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
-            "localVcEnd=%s, subnet=%s", getQueuePath(), upAddr, mcastInfoStr,
-            vcEndPointStr, fmtpSubnetStr);
-    free(fmtpSubnetStr);
+            "localVcEnd=%s, subnetLen=%u", getQueuePath(), upAddr, mcastInfoStr,
+            vcEndPointStr, subnetLen);
     free(vcEndPointStr);
     free(mcastInfoStr);
     free(upAddr);
@@ -707,7 +699,6 @@ sndr_start(
                     &sender->mutex), 0);
     sndr_unlock(sender);
 
-    cidrAddr_free(fmtpSubnet);
     smi_free(mcastInfo);
 }
 

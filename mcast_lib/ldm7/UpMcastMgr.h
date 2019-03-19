@@ -93,9 +93,6 @@ umm_setWrkGrpName(const char* name);
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         "0.0.0.0" obtains the system's default multicast
- *                         interface.
  * @param[in] mcastInfo    Information on the multicast group. The port number
  *                         of the FMTP TCP server is ignored (it will be chosen
  *                         by the operating system). Caller may free.
@@ -109,9 +106,9 @@ umm_setWrkGrpName(const char* name);
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
+ * @param[in] subnetLen    Number of bits in the network prefix of the private
+ *                         AL2S network.
  * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
- *                         free.
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections. Caller may
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
@@ -123,11 +120,10 @@ umm_setWrkGrpName(const char* name);
  */
 Ldm7Status
 umm_addSndr(
-    const struct in_addr               mcastIface,
     const SepMcastInfo* const restrict mcastInfo,
     const unsigned short               ttl,
+    const unsigned short               subnetLen,
     const VcEndPoint* const restrict   vcEnd,
-    const CidrAddr* const restrict     fmtpSubnet,
     const char* const restrict         pqPathname);
 
 /**

@@ -204,25 +204,29 @@ fmtpReceiver_execute(
         status = EINVAL;
     }
     else {
-        status = -1;
-        try {
-            // Joining a multicast group with a well-known port number requires
-            // root privileges
-            if (receiver->mcastGrpPort < 1024)
-                rootpriv();
+        /*
+         * Joining a multicast group with a well-known port number requires
+         * root privileges
+         */
+        const bool privNeeded = receiver->mcastGrpPort < 1024;
 
-            // FMTP call
-            receiver->fmtpReceiver->Start();
+        if (privNeeded)
+            rootpriv();
 
-            if (receiver->mcastGrpPort < 1024)
-                unpriv();
+            try {
+                // FMTP call
+                receiver->fmtpReceiver->Start();
+                status = 0;
+            }
+            catch (const std::exception& e) {
+                log_what(e);
+                status = -1;
+            }
 
-            status = 0;
-        }
-        catch (const std::exception& e) {
-            log_what(e);
-        }
+        if (privNeeded)
+            unpriv();
     }
+
     return status;
 }
 
@@ -260,9 +264,6 @@ struct fmtp_sender {
  * @param[in]     groupAddr     Internet socket address of the multicast group.
  * @param[in]     groupPort     Port number of the multicast group in host byte
  *                              order
- * @param[in]     mcastIface    IP address of the interface to use to send
- *                              multicast packets. "0.0.0.0" obtains the default
- *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -295,7 +296,6 @@ fmtpSender_init(
     const unsigned short   serverPort,
     const char* const      groupAddr,
     const unsigned short   groupPort,
-    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -310,11 +310,15 @@ fmtpSender_init(
                         *static_cast<Authorizer*>(authorizer));
 
         try {
+            /*
+             * NB: The address of the multicast interface is the address of the
+             * FMTP server
+             */
             fmtpSendv3* fmtpSender = retxTimeout < 0
                     ? new fmtpSendv3(serverAddr, serverPort, groupAddr,
-                            groupPort, notifier, ttl, mcastIface, iProd)
+                            groupPort, notifier, ttl, serverAddr, iProd)
                     : new fmtpSendv3(serverAddr, serverPort, groupAddr,
-                            groupPort, notifier, ttl, mcastIface, iProd,
+                            groupPort, notifier, ttl, serverAddr, iProd,
                             retxTimeout);
             sender->fmtpSender = fmtpSender;
             sender->notifier = notifier;
@@ -328,8 +332,9 @@ fmtpSender_init(
             log_what(e);
             status = 3;
         }
+
         if (status) {
-            log_add("Couldn't create new FMTP sender");
+            log_add("Couldn't construct new FMTP sender instance");
             delete notifier;
         }
     }
@@ -353,9 +358,6 @@ fmtpSender_init(
  * @param[in]     serverPort    Port number of the sending FMTP server
  * @param[in]     groupAddr     Internet address of the multicast group.
  * @param[in]     groupPort     Port number of the multicast group
- * @param[in]     mcastIface    IP address of the interface to use to send
- *                              multicast packets. "0.0.0.0" obtains the default
- *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -388,7 +390,6 @@ fmtpSender_new(
     const in_port_t        serverPort,
     const char* const      groupAddr,
     const in_port_t        groupPort,
-    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -404,7 +405,7 @@ fmtpSender_new(
     }
     else {
         status = fmtpSender_init(send, serverAddr, serverPort, groupAddr,
-                groupPort, mcastIface, ttl, iProd, retxTimeout, doneWithProd,
+                groupPort, ttl, iProd, retxTimeout, doneWithProd,
                 authorizer);
 
         if (status) {
@@ -424,8 +425,7 @@ fmtpSender_new(
  * @param[in]  sender      The sender to be started.
  * @param[out] serverPort  Port number of the FMTP TCP server in host
  *                         byte-order.
- * @retval     0           Success. `fmtpSender_stop()` was called.
- *                         `*serverPort` is set.
+ * @retval     0           Success. `*serverPort` is set.
  * @retval     2           Non-system runtime error. `log_add()` called.
  * @retval     3           System error. `log_add()` called.
  */
@@ -514,7 +514,6 @@ fmtpSender_create(
     in_port_t* const       serverPort,
     const char* const      groupAddr,
     const in_port_t        groupPort,
-    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,
@@ -523,11 +522,11 @@ fmtpSender_create(
 {
     FmtpSender*  send;
     int          status = fmtpSender_new(&send, serverAddr, *serverPort,
-            groupAddr, groupPort, mcastIface, ttl, iProd, retxTimeout,
+            groupAddr, groupPort, ttl, iProd, retxTimeout,
             doneWithProd, authorizer);
 
     if (status) {
-        log_add("Couldn't create new FMTP sender");
+        log_add("Couldn't construct new FMTP sender");
     }
     else {
         status = fmtpSender_start(send, serverPort); // Doesn't block

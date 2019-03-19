@@ -25,11 +25,12 @@
 /**
  * Creates a collection of IP addresses for FMTP clients.
  *
- * @param[in] fmtpSubnet Subnet specification for FMTP clients
- * @retval    NULL       Failure. `log_add()` called.
+ * @param[in] fmtpSrvr      FMTP server address and subnet. Caller may free.
+ * @param[in] subnetLen     Bit-length of FMTP subnet prefix
+ * @retval    NULL          Failure. `log_add()` called.
  * @see `fmtpClntAddrs_getAvailable()`
  */
-void* fmtpClntAddrs_new(const CidrAddr* fmtpSubnet);
+void* fmtpClntAddrs_new(const CidrAddr* fmtpSrvr);
 
 /**
  * Returns an available (i.e., unused) address for an FMTP client on an AL2S
@@ -90,12 +91,11 @@ class FmtpClntAddrs final
 
 public:
     /**
-     * Constructs from a specification of the subnet to be used by FMTP clients.
+     * Constructs from a specification of the FMTP server address and subnet.
      *
-     * @param[in] subnet  Subnet specification for potential FMTP client
-     *                    addresses on an AL2S virtual circuit
+     * @param[in] fmtpSrvrCidr  FMTP server address and subnet
      */
-    FmtpClntAddrs(const CidrAddr& subnet);
+    FmtpClntAddrs(const CidrAddr& fmtpSrvrCidr);
 
     /**
      * Returns an available (i.e., unused) address for an FMTP client on an AL2S

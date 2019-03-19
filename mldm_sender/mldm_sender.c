@@ -73,16 +73,7 @@ static unsigned              ttl = 1; // Won't be forwarded by any router.
  * Ratio of product-hold duration to multicast duration. If negative, then the
  * default timeout is used.
  */
-static float                 retxTimeout = -1;  // Use default
-/**
- * FMTP client subnet:
- */
-static CidrAddr*             fmtpSubnet;
-/**
- * Address of multicast interface. "0.0.0.0" obtains the default multicast
- * interface.
- */
-static const char*           mcastIface;
+static float                 retxTimeout = -1;  // Use FMTP module's default
 /**
  * Termination signals.
  */
@@ -108,9 +99,9 @@ static void*                 authorizer;
  */
 static SepMcastInfo*         mcastInfo;
 /**
- * Subnet for client FMTP TCP connections:
+ * Bit-length of the FMTP subnet prefix:
  */
-static CidrAddr*             fmtpSubnet;
+static unsigned short        subnetLen;
 /**
  * Multicast LDM RPC command-server:
  */
@@ -149,14 +140,10 @@ Usage: %s [options] groupId:groupPort\n\
 Options:\n\
     -f feedExpr       Feedtype expression specifying data to send. Default\n\
                       is EXP.\n\
-    -i mcastIface     IP address of interface to use to send multicast\n\
-                      packets. Default is the system's default multicast\n\
-                      interface.\n\
     -l dest           Log to `dest`. One of: \"\" (system logging daemon),\n\
                       \"-\" (standard error), or file `dest`. Default is\n\
                       \"%s\".\n\
-    -n subnet         Subnet for VLAN FMTP clients in CIDR format (e.g.,\n\
-                      \"192.168.8.0/21\"). Default is the empty set.\n\
+    -n subnetLen      Bit-length of FMTP subnet prefix. Default is 0.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
     -r retxTimeout    FMTP retransmission timeout in minutes. Duration that a\n\
                       product will be held by the FMTP layer before being\n\
@@ -188,24 +175,19 @@ Operands:\n\
 /**
  * Decodes the options of the command-line.
  *
- * @pre                      {`openulog()` has already been called.}
- * @param[in]  argc          Number of arguments.
- * @param[in]  argv          Arguments.
- * @param[out] feed          Feedtypes of data to be sent.
- * @param[out] serverId      FMTP server address. Caller must not free.
- * @param[out] ifaceAddr     IP address of the interface to use to send
- *                           multicast packets.
- * @retval     0             Success. `*serverIface` or `*ttl` might not have
- *                           been set.
- * @retval     1             Invalid options. `log_add()` called.
+ * @param[in]  argc      Number of arguments.
+ * @param[in]  argv      Arguments.
+ * @param[out] feed      Feedtypes of data to be sent.
+ * @param[out] serverId  FMTP server address. Caller must not free.
+ * @retval     0         Success. `subnetLen` or `*ttl` might not have been set.
+ * @retval     1         Invalid options. `log_add()` called.
  */
 static int
 mls_decodeOptions(
         int                            argc,
         char* const* const restrict    argv,
         feedtypet* const restrict      feed,
-        const char** const restrict    serverId,
-        const char** const restrict    ifaceAddr)
+        const char** const restrict    serverId)
 {
     int          ch;
     extern int   opterr;
@@ -214,7 +196,7 @@ mls_decodeOptions(
 
     opterr = 1; // prevent getopt(3) from trying to print error messages
 
-    while ((ch = getopt(argc, argv, ":F:f:i:l:n:q:r:s:t:vx")) != EOF)
+    while ((ch = getopt(argc, argv, ":F:f:l:n:q:r:s:t:vx")) != EOF)
         switch (ch) {
             case 'f': {
                 if (strfeedtypet(optarg, feed)) {
@@ -223,22 +205,18 @@ mls_decodeOptions(
                 }
                 break;
             }
-            case 'i': {
-                *ifaceAddr = optarg;
-                break;
-            }
             case 'l': {
                 (void)log_set_destination(optarg);
                 break;
             }
             case 'n': {
-                CidrAddr* subnet = cidrAddr_parse(optarg);
-                if (subnet == NULL) {
-                    log_add("Couldn't parse FMTP subnet \"%s\"", optarg);
+                int nbytes;
+                if (sscanf(optarg, "%hu %n", &subnetLen, &nbytes) != 1 ||
+                        optarg[nbytes] != 0) {
+                    log_add("Invalid FMTP subnet-length argument, \"%s\"",
+                            optarg);
                     return 1;
                 }
-                cidrAddr_free(fmtpSubnet);
-                fmtpSubnet = subnet;
                 break;
             }
             case 'q': {
@@ -340,8 +318,8 @@ mls_decodeOperands(
  *
  * @param[in]  argc          Number of arguments.
  * @param[in]  argv          Arguments.
- * @retval     0             Success. `*mcastGrpInfo` and `mcastIface` are set.
- *                           `*ttl` might be set.
+ * @retval     0             Success. `*mcastGrpInfo` is set. `*ttl` might be
+ *                           set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
  */
@@ -352,47 +330,33 @@ mls_decodeCommandLine(
 {
     int status;
 
-    cidrAddr_free(fmtpSubnet);
-    fmtpSubnet = cidrAddr_new(0, 32); // default: empty set
+    feedtypet   feed = EXP;
+    const char* serverId = "0.0.0.0:0"; // default: all interfaces
 
-    if (fmtpSubnet == NULL) {
-        log_add("Couldn't create default subnet for FMTP clients");
-        status = 2;
-    }
-    else {
-        feedtypet   feed = EXP;
-        const char* serverId = "0.0.0.0:0"; // default: all interfaces
-        const char* mcastIf = "0.0.0.0";    // default multicast interface
+    subnetLen = 0;
 
-        status = mls_decodeOptions(argc, argv, &feed, &serverId, &mcastIf);
+    status = mls_decodeOptions(argc, argv, &feed, &serverId);
+
+    if (0 == status) {
+        extern int  optind;
+        const char* groupId;
+
+        argc -= optind;
+        argv += optind;
+        status = mls_decodeOperands(argc, argv, &groupId);
 
         if (0 == status) {
-            extern int  optind;
-            const char* groupId;
+            SepMcastInfo* const info = smi_newFromStr(feed, groupId,
+                    serverId);
 
-            argc -= optind;
-            argv += optind;
-            status = mls_decodeOperands(argc, argv, &groupId);
-
-            if (0 == status) {
-                SepMcastInfo* const info = smi_newFromStr(feed, groupId,
-                        serverId);
-
-                if (info == NULL) {
-                    status = 2;
-                }
-                else {
-                    mcastInfo = info;
-                    mcastIface = mcastIf;
-                }
+            if (info == NULL) {
+                status = 2;
             }
-        } // options decoded
-
-        if (status) {
-            cidrAddr_free(fmtpSubnet);
-            fmtpSubnet = NULL;
+            else {
+                mcastInfo = info;
+            }
         }
-    } // Default subnet for FMTP clients created
+    } // options decoded
 
     return status;
 }
@@ -557,7 +521,7 @@ mls_init()
     const in_port_t     mcastGrpPort = isa_getPort(mcastGrpAddr);
 
     if ((status = fmtpSender_create(&fmtpSender, fmtpSrvrInetAddr,
-            &fmtpSrvrPort, mcastGrpInetAddr, mcastGrpPort, mcastIface, ttl,
+            &fmtpSrvrPort, mcastGrpInetAddr, mcastGrpPort, ttl,
             iProd, retxTimeout, mls_doneWithProduct, authorizer))) {
         log_add("Couldn't create FMTP sender");
         status = (status == 1)
@@ -817,58 +781,68 @@ runMldmSrvr(void* mldmSrvr)
 /**
  * Starts the FMTP client authorization process.
  *
- * @param[in] fmtpSubnet   Subnet for FMTP clients
- * @retval    0            Success
- * @retval    LDM7_SYSTEM  Failure. `log_add()` called.
+ * @param[in] fmtpSrvrAddr  Address of FMTP server
+ * @param[in] subnetLen     Bit-length of FMTP subnet prefix
+ * @retval    0             Success
+ * @retval    LDM7_SYSTEM   Failure. `log_add()` called.
  */
 static Ldm7Status
-startAuthorization(const CidrAddr* const fmtpSubnet)
+startAuthorization(
+        const struct in_addr* const fmtpSrvrAddr,
+        const unsigned short        subnetLen)
 {
     Ldm7Status status;
+    CidrAddr   fmtpSrvrCidr;
 
-    fmtpClntAddrs = fmtpClntAddrs_new(fmtpSubnet);
-
-    if (fmtpClntAddrs == NULL) {
-        log_add_syserr("Couldn't create pool of available IP addresses");
+    if (!cidrAddr_init(&fmtpSrvrCidr, fmtpSrvrAddr->s_addr, subnetLen)) {
+        log_add("Couldn't create FMTP server CIDR address");
         status = LDM7_SYSTEM;
     }
     else {
-        authorizer = auth_new(fmtpClntAddrs, smi_getFeed(mcastInfo));
+        fmtpClntAddrs = fmtpClntAddrs_new(&fmtpSrvrCidr);
 
-        if (authorizer == NULL) {
-            log_add_syserr("Couldn't create authorizer of remote clients");
+        if (fmtpClntAddrs == NULL) {
+            log_add_syserr("Couldn't create pool of available IP addresses");
+            status = LDM7_SYSTEM;
         }
         else {
-            mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrs);
+            authorizer = auth_new(fmtpClntAddrs, smi_getFeed(mcastInfo));
 
-            if (mldmCmdSrvr == NULL) {
-                log_add_syserr("Couldn't create multicast LDM RPC "
-                        "command-server");
-                status = LDM7_SYSTEM;
+            if (authorizer == NULL) {
+                log_add_syserr("Couldn't create authorizer of remote clients");
             }
             else {
-                status = pthread_create(&mldmCmdSrvrThrd, NULL, runMldmSrvr,
-                        mldmCmdSrvr);
+                mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrs);
 
-                if (status) {
+                if (mldmCmdSrvr == NULL) {
                     log_add_syserr("Couldn't create multicast LDM RPC "
-                            "command-server thread");
-                    mldmSrvr_free(mldmCmdSrvr);
-                    mldmCmdSrvr = NULL;
+                            "command-server");
                     status = LDM7_SYSTEM;
                 }
                 else {
-                    status = LDM7_OK;
-                }
-            } // `mldmSrvr` set
+                    status = pthread_create(&mldmCmdSrvrThrd, NULL, runMldmSrvr,
+                            mldmCmdSrvr);
+
+                    if (status) {
+                        log_add_syserr("Couldn't create multicast LDM RPC "
+                                "command-server thread");
+                        mldmSrvr_free(mldmCmdSrvr);
+                        mldmCmdSrvr = NULL;
+                        status = LDM7_SYSTEM;
+                    }
+                    else {
+                        status = LDM7_OK;
+                    }
+                } // `mldmSrvr` set
+
+                if (status)
+                    auth_delete(authorizer);
+            } // `authorizer` set
 
             if (status)
-                auth_delete(authorizer);
-        } // `authorizer` set
-
-        if (status)
-            fmtpClntAddrs_free(fmtpClntAddrs);
-    } // `inAddrPool` set
+                fmtpClntAddrs_free(fmtpClntAddrs);
+        } // `inAddrPool` set
+    }
 
     return status;
 }
@@ -925,60 +899,71 @@ mls_execute(void)
      * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
      * `mldmSrvrPort`.
      */
-    status = startAuthorization(fmtpSubnet);
-    if (status) {
-        log_add("Couldn't initialize authorization of remote clients");
+    sa_family_t    family;
+    struct in_addr fmtpSrvrAddr;
+    socklen_t      size = sizeof(fmtpSrvrAddr);
+    const InetId*  fmtpSrvrId = isa_getInetId(smi_getFmtpSrvr(mcastInfo));
+
+    if (inetId_idIsName(fmtpSrvrId) ||
+            inetId_getAddr((InetId*)isa_getInetId(smi_getFmtpSrvr(mcastInfo)),
+                    &family, &fmtpSrvrAddr, &size) || family != AF_INET) {
+        log_add("FMTP server specification, \"%s\", isn't IPv4 address",
+                inetId_getId(fmtpSrvrId));
     }
     else {
-        status = mls_init();
-        unblockTermSigs(); // Done creating child threads
+        status = startAuthorization(&fmtpSrvrAddr, subnetLen);
+
         if (status) {
-            log_add("Couldn't initialize multicast LDM sender");
+            log_add("Couldn't initialize authorization of remote clients");
         }
         else {
-            /*
-             * Print, to the standard output stream,
-             * - The port number of the FMTP TCP server in case it wasn't
-             *   specified by the user and was, instead, chosen by the
-             *   operating system; and
-             * - The port number of the multicast LDM RPC command-server so that
-             *   upstream LDM processes running on the local host can
-             *   communicate with it to, for example, reserve IP addresses for
-             *   remote FMTP clients.
-             */
-            if (printf("%" PRIu16 " %" PRIu16 "\n",
-                    isa_getPort(smi_getFmtpSrvr(mcastInfo)),
-                    mldmSrvr_getPort(mldmCmdSrvr)) < 0) {
-                log_add_syserr(
-                        "Couldn't write port numbers to standard output");
-                status = LDM7_SYSTEM;
+            status = mls_init();
+            unblockTermSigs(); // Done creating child threads
+            if (status) {
+                log_add("Couldn't initialize multicast LDM sender");
             }
             else {
-                status = fflush(stdout);
-                log_assert(status != EOF);
                 /*
-                 * Data-products are multicast on the current (main) thread so
-                 * that the process will automatically terminate if something
-                 * goes wrong.
+                 * Print, to the standard output stream,
+                 * - The port number of the FMTP TCP server in case it wasn't
+                 *   specified by the user and was, instead, chosen by the
+                 *   operating system; and
+                 * - The port number of the multicast LDM RPC command-server so that
+                 *   upstream LDM processes running on the local host can
+                 *   communicate with it to, for example, reserve IP addresses for
+                 *   remote FMTP clients.
                  */
-                char* miStr = smi_toString(mcastInfo);
-                char* fmtpSubnetStr = cidrAddr_format(fmtpSubnet);
-                log_notice_q("Multicast LDM sender starting up: mcastIface=%s, "
-                        "mcastGrpInfo=%s, ttl=%u, fmtpSubnet=%s, "
-                        "pq=\"%s\", mldmCmdPort=%hu", mcastIface, miStr, ttl,
-                        fmtpSubnetStr, getQueuePath(),
-                        mldmSrvr_getPort(mldmCmdSrvr));
-                free(fmtpSubnetStr);
-                free(miStr);
-                status = mls_startMulticasting();
+                if (printf("%" PRIu16 " %" PRIu16 "\n",
+                        isa_getPort(smi_getFmtpSrvr(mcastInfo)),
+                        mldmSrvr_getPort(mldmCmdSrvr)) < 0) {
+                    log_add_syserr(
+                            "Couldn't write port numbers to standard output");
+                    status = LDM7_SYSTEM;
+                }
+                else {
+                    status = fflush(stdout);
+                    log_assert(status != EOF);
+                    /*
+                     * Data-products are multicast on the current (main) thread
+                     * so that the process will automatically terminate if
+                     * something goes wrong.
+                     */
+                    char* miStr = smi_toString(mcastInfo);
+                    log_notice("Starting up: mcastGrpInfo=%s, ttl=%u, "
+                            "fmtpSubnetLen=%u, pq=\"%s\", mldmCmdPort=%u",
+                            miStr, ttl, subnetLen, getQueuePath(),
+                            mldmSrvr_getPort(mldmCmdSrvr));
+                    free(miStr);
+                    status = mls_startMulticasting();
 
-                int msStatus = mls_destroy();
-                if (status == 0)
-                    status = msStatus;
-            } // Port numbers successfully written to standard output stream
-        } // Multicast LDM sender initialized
-        stopAuthorization();
-    } // Multicast LDM RPC server started
+                    int msStatus = mls_destroy();
+                    if (status == 0)
+                        status = msStatus;
+                } // Port numbers successfully written to standard output stream
+            } // Multicast LDM sender initialized
+            stopAuthorization();
+        } // Multicast LDM RPC server started
+    }
     return status;
 }
 
@@ -1028,10 +1013,7 @@ main(   const int    argc,
             }
         }
 
-        cidrAddr_free(fmtpSubnet);
-        fmtpSubnet = NULL;
-
-        log_notice_q("Terminating");
+        log_notice("Terminating");
 
         if (status)
             smi_free(mcastInfo);

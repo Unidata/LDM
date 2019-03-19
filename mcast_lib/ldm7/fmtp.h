@@ -65,9 +65,6 @@ void fmtpReceiver_stop(
  * @param[in]     serverPort    Port number of the sending FMTP server
  * @param[in]     groupAddr     Internet address of the multicast group.
  * @param[in]     groupPort     Port number of the multicast group
- * @param[in]     mcastIface    IP address of the interface to use to send
- *                              multicast packets. "0.0.0.0" obtains the default
- *                              multicast interface. Caller may free.
  * @param[in]     ttl           Time-to-live of outgoing packets.
  *                                    0  Restricted to same host. Won't be
  *                                       output by any interface.
@@ -101,7 +98,6 @@ fmtpSender_create(
     in_port_t* const       serverPort,
     const char* const      groupAddr,
     const in_port_t        groupPort,
-    const char* const      mcastIface,
     const unsigned         ttl,
     const FmtpProdIndex    iProd,
     const float            retxTimeout,

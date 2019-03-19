@@ -573,43 +573,29 @@ request_entry:  REQUEST_K STRING STRING STRING
                 }
                 ;
 
-multicast_entry: MULTICAST_K STRING STRING STRING
+multicast_entry: MULTICAST_K STRING STRING
                 {
                 #if WANT_MULTICAST
-                    int errCode = decodeMulticastEntry($2, $3, $4, "0.0.0.0",
-                            NULL, NULL, NULL, NULL, NULL);
+                    int errCode = decodeMulticastEntry($2, $3, "0.0.0.0",
+                            "0", "dummy", "dummy", "dummy");
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
-                                "\"MULTICAST %s %s %s\"", $2, $3, $4);
+                                "\"MULTICAST %s %s\"", $2, $3);
                         return errCode;
                     }
                 #endif
                 }
-                | MULTICAST_K STRING STRING STRING STRING STRING STRING STRING STRING
+                | MULTICAST_K STRING STRING STRING STRING STRING STRING STRING
                 {
                 #if WANT_MULTICAST
                     int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
-                            $8, $9, $5);
+                            $8);
 
                     if (errCode) {
                         log_add("Couldn't decode MULTICAST entry "
-                                "\"MULTICAST %s %s %s %s %s %s %s %s\"",
-                                 $2, $3, $4, $5, $6, $7, $8, $9);
-                        return errCode;
-                    }
-                #endif
-                }
-                | MULTICAST_K STRING STRING STRING STRING STRING STRING STRING STRING STRING
-                {
-                #if WANT_MULTICAST
-                    int errCode = decodeMulticastEntry($2, $3, $4, $5, $6, $7,
-                            $8, $9, $10);
-
-                    if (errCode) {
-                        log_add("Couldn't decode MULTICAST entry "
-                                "\"MULTICAST %s %s %s %s %s %s %s %s %s\"",
-                                 $2, $3, $4, $5, $6, $7, $8, $9, $10);
+                                "\"MULTICAST %s %s %s %s %s %s %s\"",
+                                 $2, $3, $4, $5, $6, $7, $8);
                         return errCode;
                     }
                 #endif

@@ -2860,34 +2860,23 @@ lcf_addAccept(
 
 int
 lcf_addMulticast(
-        const struct sockaddr* const restrict mcastIface,
         const SepMcastInfo* const restrict    mcastInfo,
         const unsigned short                  ttl,
+        const unsigned short                  subnetLen,
         const VcEndPoint* const restrict      vcEnd,
-        const CidrAddr* const restrict        fmtpSubnet,
         const char* const restrict            pqPathname)
 {
-    int status;
-
-    if (mcastIface->sa_family != AF_INET) {
-        log_add("Address family not AF_INET");
-        status = LDM7_INVAL;
+    int status = umm_addSndr(mcastInfo, ttl, subnetLen, vcEnd, pqPathname);
+    if (0 == status) {
+        serverNeeded = true;
+        somethingToDo = true;
     }
     else {
-        status = umm_addSndr(
-                ((struct sockaddr_in*)mcastIface)->sin_addr, mcastInfo, ttl,
-                vcEnd, fmtpSubnet, pqPathname);
-        if (0 == status) {
-            serverNeeded = true;
-            somethingToDo = true;
-        }
-        else {
-            status = (LDM7_DUP == status)
+        status = (LDM7_DUP == status)
+                    ? EINVAL
+                    : (LDM7_INVAL == status)
                         ? EINVAL
-                        : (LDM7_INVAL == status)
-                            ? EINVAL
-                            : ENOMEM;
-        }
+                        : ENOMEM;
     }
 
     return status;
@@ -3252,132 +3241,79 @@ int
 decodeMulticastEntry(
     const char* const   feedStr,
     const char* const   mcastGrpStr,
-    const char* const   ttlSpec,
     const char* const   fmtpAddrStr,
+    const char* const   subnetLenStr,
     const char*         vlanIdStr,
     const char* const   switchStr,
-    const char* const   switchPortStr,
-    const char*         vlanSubnetStr,
-    const char* const   mcastIfaceStr)
+    const char* const   switchPortStr)
 {
-    int         status = EINVAL;
     feedtypet   feed;
+    int         status = decodeFeedtype(&feed, feedStr);
 
-    status = decodeFeedtype(&feed, feedStr);
-
-    if (0 == status) {
+    if (status) {
+        status = EINVAL;
+    }
+    else {
         InetSockAddr* const mcastGrp = isa_newFromId(mcastGrpStr, LDM_PORT);
 
         if (mcastGrp == NULL) {
             log_add("Couldn't create socket address for multicast group from "
                     "\"%s\"", mcastGrpStr);
+            status = ENOMEM;
         }
         else {
-            unsigned short ttl;
-            int            nbytes;
+            // NB: port 0 => system chooses port number
+            InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpAddrStr, 0);
 
-            if (sscanf(ttlSpec, "%hu %n", &ttl, &nbytes) != 1 ||
-                    ttlSpec[nbytes] != 0) {
-                log_add("Couldn't parse time-to-live specification from "
-                        "\"%s\"",  ttlSpec);
+            if (fmtpSrvr == NULL) {
+                log_add("Couldn't create socket address for FMTP server "
+                        "from \"%s\"", fmtpAddrStr);
+                status = ENOMEM;
             }
             else {
-                // NB: port 0
-                InetSockAddr* const fmtpSrvr = isa_newFromId(fmtpAddrStr, 0);
+                unsigned short subnetLen;
+                unsigned short vlanId;
+                int            nbytes;
 
-                if (fmtpSrvr == NULL) {
-                    log_add("Couldn't create socket address for FMTP server "
-                            "from \"%s\"", fmtpAddrStr);
+                if (sscanf(subnetLenStr, "%hu %n", &subnetLen, &nbytes) != 1
+                        || subnetLenStr[nbytes] != 0) {
+                    log_add("Invalid subnet-length string \"%s\"",
+                            subnetLenStr);
+                    status = EINVAL;
+                }
+                else if ((sscanf(vlanIdStr, "%hu %n", &vlanId,
+                        &nbytes) != 1) || vlanIdStr[nbytes] != 0) {
+                    log_add("Invalid VLAN ID \"%s\"", vlanIdStr);
+                    status = EINVAL;
                 }
                 else {
-                    unsigned short vlanId;
+                    SepMcastInfo* const mcastInfo = smi_new(feed, mcastGrp,
+                            fmtpSrvr);
 
-                    if (vlanIdStr == NULL)
-                        vlanIdStr = "0";
-
-                    if ((sscanf(vlanIdStr, "%hu %n", &vlanId,
-                            &nbytes) != 1) || vlanIdStr[nbytes] != 0) {
-                        log_add("Couldn't create VLAN tag from \"%s\"",
-                                vlanIdStr);
+                    if (mcastInfo == NULL) {
+                        status = ENOMEM;
                     }
                     else {
-                        if (vlanSubnetStr == NULL)
-                            vlanSubnetStr = "0.0.0.0/32";
+                        VcEndPoint* const vcEnd = vcEndPoint_new(vlanId,
+                                switchStr, switchPortStr);
 
-                        CidrAddr* fmtpSubnet = cidrAddr_parse(vlanSubnetStr);
-
-                        if (fmtpSubnet == NULL) {
-                            log_add("Couldn't create VLAN subnet from \"%s\"",
-                                    vlanSubnetStr);
-                            status = LDM7_INVAL;
+                        if (vcEnd == NULL) {
+                            log_add("Couldn't construct local VLAN endpoint");
+                            status = ENOMEM;
                         }
                         else {
-                            SepMcastInfo* const mcastInfo = smi_new(feed,
-                                    mcastGrp, fmtpSrvr);
+                            status = lcf_addMulticast(mcastInfo, 254, subnetLen,
+                                    vcEnd, getQueuePath());
 
-                            if (mcastInfo) {
-                                VcEndPoint* const vcEnd = vcEndPoint_new(vlanId,
-                                        switchStr, switchPortStr);
+                            vcEndPoint_free(vcEnd);
+                        } // `vcEnd` allocated
 
-                                if (vcEnd == NULL) {
-                                    log_add("Couldn't construct virtual-"
-                                            "circuit endpoint");
-                                    status = LDM7_SYSTEM;
-                                }
-                                else {
-                                    InetSockAddr* mcastIfaceSockAddr;
+                        smi_free(mcastInfo);
+                    } // `mcastInfo` allocated
+                } // `vlanId` and `subnetLen` set
 
-                                    if (mcastIfaceStr == NULL) {
-                                        mcastIfaceSockAddr = fmtpSrvr;
-                                    }
-                                    else {
-                                        mcastIfaceSockAddr =
-                                                isa_newFromId(mcastIfaceStr, 0);
-
-                                        if (mcastIfaceSockAddr == NULL) {
-                                            log_add("isa_newFromId() failure");
-                                            status = LDM7_INVAL;
-                                        }
-                                    }
-
-                                    if (status == 0) {
-                                        struct sockaddr mcastIface = {};
-                                        socklen_t       socklen =
-                                                sizeof(mcastIface);
-
-                                        status = isa_getSockAddr(
-                                                mcastIfaceSockAddr,
-                                                &mcastIface, &socklen);
-
-                                        if (status) {
-                                            log_add("isa_getSockAddr() "
-                                                    "failure");
-                                            status = LDM7_INVAL;
-                                        }
-                                        else {
-                                            status = lcf_addMulticast(
-                                                    &mcastIface, mcastInfo, ttl,
-                                                    vcEnd, fmtpSubnet,
-                                                    getQueuePath());
-                                        }
-
-                                        if (mcastIfaceStr != NULL)
-                                            isa_free(mcastIfaceSockAddr);
-                                    } // `mcastIfaceSockAddr` constructed
-
-                                    vcEndPoint_free(vcEnd);
-                                } // `vcEnd` allocated
-
-                                smi_free(mcastInfo);
-                            } // `mcastInfo` allocated
-
-                            cidrAddr_free(fmtpSubnet);
-                        } // `fmtpSubnet` set
-                    } // `vlanId` set
-
-                    isa_free(fmtpSrvr);
-                } // `fmtpServerSa` allocated
-            } // `ttl` set
+                isa_free(fmtpSrvr);
+            } // `fmtpSrvr` allocated
 
             isa_free(mcastGrp);
         } // `mcastGroupSa` allocated

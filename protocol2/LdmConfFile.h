@@ -303,9 +303,6 @@ lcf_addAccept(
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.
  *
- * @param[in] mcastIface   IPv4 address of interface to use for multicasting.
- *                         Only the address portion is used. `INADDR_ANY`
- *                         obtains the system's default multicasting interface.
  * @param[in] mcastInfo    Information on the multicast group. Caller may free.
  * @param[in] ttl          Time-to-live for multicast packets:
  *                                0  Restricted to same host. Won't be output by
@@ -317,9 +314,8 @@ lcf_addAccept(
  *                              <64  Restricted to same region.
  *                             <128  Restricted to same continent.
  *                             <255  Unrestricted in scope. Global.
- * @param[in] vcEnd        Local virtual-circuit endpoint or `NULL`. Caller may
- *                         free.
- * @param[in] fmtpSubnet   Subnet for client FMTP TCP connections. Caller may
+ * @param[in] subnetLen    Number of bits in network subnet
+ * @param[in] vcEnd        Local virtual-circuit endpoint. Caller may
  *                         free.
  * @param[in] pqPathname   Pathname of product-queue. Caller may free.
  * @retval    0            Success.
@@ -329,11 +325,10 @@ lcf_addAccept(
  */
 int
 lcf_addMulticast(
-        const struct sockaddr* const restrict mcastIface,
         const SepMcastInfo* const restrict    mcastInfo,
         const unsigned short                  ttl,
+        const unsigned short                  subnetLen,
         const VcEndPoint* const restrict      vcEnd,
-        const CidrAddr* const restrict        fmtpSubnet,
         const char* const restrict            pqPathname);
 
 /**
@@ -490,26 +485,19 @@ decodeFeedtype(
  * @param[in] mcastGrpStr     Multicast group Internet address in the form
  *                            "<nnn.nnn.nnn.nnn>[:<port>]". The default for
  *                            <port> is `regutil /server/port`.
- * @param[in] ttlStr          Time-to-live for multicast packets
  * @param[in] fmtpAddrStr     Address of local FMTP server in the form
  *                            "<nnn.nnn.nnn.nnn>[:<port]". If <port> isn't
  *                            specified, then it is chosen by the operating
  *                            system.
- * @param[in] vlanIdStr       VLAN identifier/tag or `NULL` indicating a
- *                            multipoint VLAN won't be used
- * @param[in] switchStr       Identifier of nearest level-2 switch or `NULL`
+ * @param[in] subnetLenStr    Number of bits in the network prefix for the
+ *                            multipoint VLAN or "0" indicating a multipoint
+ *                            VLAN won't be used
+ * @param[in] vlanIdStr       Outgoing VLAN tag  or "0" indicating a multipoint
+ *                            VLAN won't be used
+ * @param[in] switchStr       Identifier of nearest level-2 switch or "dummy"
  *                            indicating a multipoint VLAN won't be used
- * @param[in] switchPortStr   Identifier of port on `switchStr` or `NULL`
+ * @param[in] switchPortStr   Identifier of port on `switchStr` or "dummy"
  *                            indicating a multipoint VLAN won't be used
- * @param[in] fmtpSubnetStr   IPv4 address-space for FMTP clients or `NULL`,
- *                            indicating that multipoint VLAN won't be used.
- * @param[in] mcastIfaceStr   Interface to use for outgoing multicast packets.
- *                            If `NULL`, then the same  interface as
- *                            `fmtpAddrStr` will be used if a multipoint VLAN
- *                            will be used; otherwise the default multicast
- *                            interface will be used. If non-NULL, then it must
- *                            be in the form "<nnn.nnn.nnn.nnn>[:<port]". The
- *                            <port> specification will be ignored.
  * @retval    0               Success
  * @retval    EINVAL          Invalid specification. `log_add()` called.
  * @retval    ENOMEM          Out-of-memory. `log_add()` called.
@@ -518,13 +506,11 @@ int
 decodeMulticastEntry(
     const char* const   feedStr,
     const char* const   mcastGrpStr,
-    const char* const   ttlSpec,
     const char* const   fmtpAddrStr,
-    const char* const   vlanIdStr,
+    const char* const   subnetLenStr,
+    const char*         vlanIdStr,
     const char* const   switchStr,
-    const char* const   switchPortStr,
-    const char* const   vlanSubnetStr,
-    const char* const   mcastIfaceStr);
+    const char* const   switchPortStr);
 
 /**
  * Decodes a RECEIVE entry.
