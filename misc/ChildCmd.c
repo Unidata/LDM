@@ -514,26 +514,27 @@ childCmd_getCmd(ChildCmd* const cmd)
             : NULL;
 }
 
-int sudo(
-        const char* const restrict cmdVec[],
+int
+sudo(   const char* const restrict cmdVec[],
         int* const restrict        childStatus)
 {
-    rootpriv();
-        int       status;
-        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+    int status;
 
-        if (cmd == NULL) {
+    rootpriv();
+        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
+    unpriv();
+
+    if (cmd == NULL) {
+        status = errno;
+    }
+    else {
+        status = childCmd_reap(cmd, childStatus);
+
+        if (status) {
+            log_add("Couldn't reap command \"%s\"", cmd->cmdStr);
             status = errno;
         }
-        else {
-            status = childCmd_reap(cmd, childStatus);
-
-            if (status) {
-                log_add("Couldn't reap command \"%s\"", cmd->cmdStr);
-                status = errno;
-            }
-        }
-    unpriv();
+    }
 
     return status;
 }
