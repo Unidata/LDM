@@ -44,7 +44,7 @@ static int srvr_init()
         if (status == 0) {
             socklen_t socklen = sizeof(srvrAddr);
 
-            status = getsockname(srvrSd, &srvrAddr, &socklen);
+            status = getsockname(srvrSd, (struct sockaddr*)&srvrAddr, &socklen);
 
             if (status == 0)
                 status = listen(srvrSd, 1);
