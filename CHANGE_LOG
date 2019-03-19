@@ -1,16 +1,30 @@
-6.13.11.15	2019-03-14T09:29:26-0600
-    Misc:
-        ChildCmd(3) (was ChildCommand(3)):
+6.13.11.16	2019-03-19T16:46:59-0600
+    ldmd(8):
+        Eliminated having the operating-system assign a transitory port
+        number for the LDM server if the server couldn't get its official port
+        number because 
+          * No downstream, receiving LDM could connect to the server without
+            knowing the transitory port number; 
+          * The LDM server can't communicate a transitory port number to the
+            outside world; and
+          * Using a transitory port number prevented the LDM from terminating
+            with an error to indicate a problem
+
+    Multicast:
+        * ChildCmd(3) (was ChildCommand(3)):
             * Shortened log messages by
                 * Renaming ChildCommand(3) to ChildCmd(3)
                 * Renaming childCmd_logStdErr() to childCmd_log()
             * Improved error-logging
             * Created childCmd_getCmd()
-
-    Multicast:
-        * LDM configuration-file RECEIVE entry:
-            * Corrected description of <host>
-            * Improved description of <al2sVlanId>
+        * ldmd.conf(5)
+            * RECEIVE entry:
+                * Corrected description of <host>
+                * Improved description of <al2sVlanId>
+            * MULTICAST entry:
+                * Eliminated parameters
+                    * Multicast interface
+                    * time-to-live
         * down7(3): Corrected AL2S VLAN endpoint <-> FMTP interface
           consistency-test
         * OESS Scripts:
@@ -28,6 +42,17 @@
             * Removed acquisition of root privileges when calling "provision.py"
             * Added printing of "provision.py" command-string on failure
             * Deleted logging of child command that error-exits
+        * vlanUtil(1):
+            * Addd "/sbin" to PATH to get ip(1)
+            * Removed address deassignment from "destroy" because deleting the
+              virtual-interface deletes the address
+        * Sender code:
+            * Disallowed multicast interface parameter as the interface must be
+              the same as the FMTP server address
+            * Ensured that the FMTP server address is in the subnet of its FMTP
+              clients
+        * Internet(3): Created ::to_string(struct sockaddr&)
+        * mldm_sender(1): Correct removal of secret file
 
     Developer:
         * Deployment:
