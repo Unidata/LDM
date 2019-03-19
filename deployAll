@@ -12,7 +12,7 @@ deploy()
 cd `dirname $0`
 
 deploy -m              -u ldm7 frgp
-deploy -m           -s -u ldm7 fdt-uva
+deploy -m -r ldm7   -s -u ldm7 fdt-uva
 deploy -m -r centos -s -u ldm7 max
 deploy -M /usr/ccs/bin/make -n burns
 
