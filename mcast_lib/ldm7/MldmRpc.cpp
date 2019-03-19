@@ -86,9 +86,11 @@ public:
     Impl(const in_port_t port)
         : tcpSock{InetSockAddr{InetAddr{"127.0.0.1"}}}
     {
-       tcpSock.connect(InetSockAddr{InetAddr{"127.0.0.1"}, port});
-       auto secret = getSecret(port);
-       tcpSock.write(&secret, sizeof(secret));
+        log_debug("Connecting to multicast LDM command-server on port %u "
+                "of local host", port);
+        tcpSock.connect(InetSockAddr{InetAddr{"127.0.0.1"}, port});
+        auto secret = getSecret(port);
+        tcpSock.write(&secret, sizeof(secret));
     }
 
     /**
@@ -112,19 +114,27 @@ public:
 
     void allow(in_addr_t fmtpAddr)
     {
-        static auto action = MldmRpcAct::ALLOW_ADDR;
+        struct in_addr inAddr = {fmtpAddr};
+
+        log_debug("Checking if FMTP client %s is allowed", ::inet_ntoa(inAddr));
+
+        static auto  action = MldmRpcAct::ALLOW_ADDR;
         struct iovec iov[2] = {
                 {&action,   sizeof(action)},
                 {&fmtpAddr, sizeof(fmtpAddr)}
         };
+
         tcpSock.writev(iov, 2);
+
         Ldm7Status ldm7Status;
+
         if (tcpSock.read(&ldm7Status, sizeof(ldm7Status)) == 0)
             throw std::system_error(errno, std::system_category(),
                     "Socket was closed");
+
         if (ldm7Status != LDM7_OK)
-            throw std::runtime_error("Couldn't allow IP address " +
-                    to_string(fmtpAddr));
+            throw std::runtime_error("IP address " + to_string(fmtpAddr) +
+                    " isn't allowed");
     }
 
     /**
@@ -245,6 +255,8 @@ class MldmSrvr::Impl final
     FmtpClntAddrs                  fmtpClntAddrs;
     /// Server's listening socket
     SrvrTcpSock                    srvrSock;
+    /// Pathname of file containing authentication secret
+    std::string                    secretPathname;
     /// Authentication secret
     uint64_t                       secret;
     typedef std::mutex             Mutex;
@@ -253,36 +265,15 @@ class MldmSrvr::Impl final
     bool                           stopRequested;
 
     /**
-     * Creates the secret that's shared between the multicast LDM RPC server and
+     * Returns the secret that's shared between the multicast LDM RPC server and
      * its client processes on the same system and belonging to the same user.
-     * @param port               Port number of server in host byte-order
      * @return                   Secret value
-     * @throw std::system_error  Couldn't open secret-file
-     * @throw std::system_error  Couldn't write secret to secret-file
      */
-    static uint64_t initSecret(const in_port_t port)
+    static uint64_t initSecret()
     {
-        const std::string pathname = getSecretFilePathname(port);
-        auto fd = ::open(pathname.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
-        if (fd < 0)
-            throw std::system_error(errno, std::system_category(),
-                    "Couldn't open multicast LDM RPC secret-file " +
-                    pathname + " for writing");
-        uint64_t secret;
-        try {
-            auto seed = std::chrono::high_resolution_clock::now()
-                .time_since_epoch().count();
-            secret = std::mt19937_64{seed}();
-            if (::write(fd, &secret, sizeof(secret)) != sizeof(secret))
-                throw std::system_error(errno, std::system_category(),
-                        "Couldn't write secret to secret-file " + pathname);
-            ::close(fd);
-        } // `fd` is open
-        catch (const std::exception& ex) {
-            ::close(fd);
-            throw;
-        }
-        return secret;
+        auto seed = std::chrono::high_resolution_clock::now()
+            .time_since_epoch().count();
+        return std::mt19937_64{seed}();
     }
 
     /**
@@ -429,21 +420,41 @@ public:
     Impl(FmtpClntAddrs& addrs)
         : fmtpClntAddrs{addrs}
         , srvrSock{InetSockAddr{InetAddr{"127.0.0.1"}}, 32}
-        , secret{initSecret(srvrSock.getPort())}
+        , secretPathname{getSecretFilePathname(srvrSock.getPort())}
+        , secret{initSecret()}
         , mutex{}
         , stopRequested{false}
-    {}
+    {
+        auto fd = ::open(secretPathname.c_str(),
+                O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
+
+        if (fd < 0)
+            throw std::system_error(errno, std::system_category(),
+                    "Couldn't open multicast LDM RPC secret-file " +
+                    secretPathname + " for writing");
+
+        try {
+            if (::write(fd, &secret, sizeof(secret)) != sizeof(secret))
+                throw std::system_error(errno, std::system_category(),
+                        "Couldn't write secret to secret-file " +
+                        secretPathname);
+
+            ::close(fd);
+        } // `fd` is open
+        catch (const std::exception& ex) {
+            ::close(fd);
+            throw;
+        }
+    }
 
     /**
      * Destroys. Removes the secret-file.
      */
     ~Impl() noexcept
     {
-        std::string pathname{getSecretFilePathname(srvrSock.getPort())};
-
-        if (::unlink(pathname.c_str()))
+        if (::unlink(secretPathname.c_str()))
             log_syserr("MldmRpc::Impl::~Impl() Couldn't unlink secret file %s",
-                    pathname.c_str());
+                    secretPathname.c_str());
     }
 
     /**
