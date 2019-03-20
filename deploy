@@ -93,13 +93,14 @@ fi
 
 ssh -T $ldmUser@$host bash --login <<EOF
     set -e
-    if ldmadmin stop; then
-        rm runtime || echo "Runtime link doesn't exist"
+    if test -e runtime && ldmadmin stop; then
+        echo "Throwing the runtime switch"
+        rm runtime
         ln -s $pkgId runtime
         ldmadmin start
     else
-        echo "LDM isn't running. New installation not started."
-        rm runtime || echo "Runtime link doesn't exist"
+        echo "LDM wasn't previously installed or isn't running. New installation not started."
+        rm -f runtime
         ln -s $pkgId runtime
     fi
 EOF
