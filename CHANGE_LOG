@@ -1,3 +1,10 @@
+6.13.11.17	2019-03-20T13:17:40-0600
+    Multicast:
+        * mldm_sender(1): Removed lint found by Coverity Scan
+
+    Developer:
+        * deployAll(1): Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
+
 6.13.11.16	2019-03-19T16:46:59-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
