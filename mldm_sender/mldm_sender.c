@@ -884,17 +884,20 @@ static Ldm7Status
 mls_execute(void)
 {
     int status;
+
     /*
      * Block signals used by `pq_sequence()` so that they will only be
      * received by a thread that's accessing the product queue. (The product-
      * queue ensures signal reception when necessary.)
      */
     mls_blockPqSignals();
+
     /*
      * Prevent child threads from receiving a term signal because this thread
      * manages the child threads.
      */
     blockTermSigs();
+
     /*
      * Sets `inAddrPool, `authorizer`, `mldmSrvr`, `mldmSrvrThread`, and
      * `mldmSrvrPort`.
@@ -909,6 +912,7 @@ mls_execute(void)
                     &family, &fmtpSrvrAddr, &size) || family != AF_INET) {
         log_add("FMTP server specification, \"%s\", isn't IPv4 address",
                 inetId_getId(fmtpSrvrId));
+        status = LDM7_INVAL;
     }
     else {
         status = startAuthorization(&fmtpSrvrAddr, subnetLen);
@@ -919,6 +923,7 @@ mls_execute(void)
         else {
             status = mls_init();
             unblockTermSigs(); // Done creating child threads
+
             if (status) {
                 log_add("Couldn't initialize multicast LDM sender");
             }
@@ -961,9 +966,11 @@ mls_execute(void)
                         status = msStatus;
                 } // Port numbers successfully written to standard output stream
             } // Multicast LDM sender initialized
+
             stopAuthorization();
         } // Multicast LDM RPC server started
     }
+
     return status;
 }
 
