@@ -549,7 +549,10 @@ sudo(   const char* const restrict cmdVec[],
     int       status;
     ChildCmd* cmd = spawn(cmdVec[0], cmdVec, true);
 
-    if (cmd) {
+    if (cmd == NULL) {
+        status = errno;
+    }
+    else {
         status = childCmd_reap(cmd, childStatus);
 
         if (status)
