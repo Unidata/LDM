@@ -1058,7 +1058,7 @@ vlanIface_create(
         // Can't fail
         (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
 
-        const char* const cmdVec[] = {vlanUtil, "create", ifaceName,
+        const char* const cmdVec[] = {"sh", vlanUtil, "create", ifaceName,
                 ifaceAddrStr, srvrAddrStr, NULL};
 
         int childStatus;
@@ -1094,7 +1094,7 @@ vlanIface_destroy(
     }
     else {
         int               childStatus;
-        const char* const cmdVec[] = {vlanUtil, "destroy", ifaceName,
+        const char* const cmdVec[] = {"sh", vlanUtil, "destroy", ifaceName,
                 srvrAddrStr, NULL};
 
         status = sudo(cmdVec, &childStatus);
