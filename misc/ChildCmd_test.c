@@ -50,10 +50,12 @@ static void test_false(void)
 {
     const char* const cmdVec[] = {"false", NULL};
     ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
+    log_flush_error();
     CU_ASSERT_PTR_NOT_NULL(cmd);
 
     int exitStatus;
     int status = childCmd_reap(cmd, &exitStatus);
+    log_flush_error();
     CU_ASSERT_EQUAL(status, 0);
     CU_ASSERT_EQUAL(exitStatus, 1);
 }

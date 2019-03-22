@@ -139,6 +139,8 @@ childCmd_getCmd(ChildCmd* const cmd);
  *                          calling process. `log_add()` called.
  * @retval     ENOMEM       Insufficient space to allocate a buffer. `log_add()`
  *                          called.
+ * @retval     EPERM        The current process does not have appropriate
+ *                          privileges
  * @retval     0            Success. `*childStatus` is set to the exit status
  *                          of the child process.
  */

@@ -288,6 +288,7 @@ isValid(const ChildCmd* const cmd)
  * @param[in] cmd       Child command structure
  * @param[in] pathname  Pathname of file to execute
  * @param[in] cmdVec    Command vector
+ * @param[in] asRoot    Execute command as root?
  * @retval    0         Success
  * @retval    EAGAIN    The system lacked the necessary resources to create
  *                      another process, or the system-imposed limit on the
@@ -300,16 +301,17 @@ isValid(const ChildCmd* const cmd)
  * @retval    ENOMEM    Insufficient space to allocate a buffer.
  */
 static int
-childCmd_execute(
+execute(
         ChildCmd* const restrict   cmd,
         const char* const restrict pathname,
-        const char* const restrict cmdVec[])
+        const char* const restrict cmdVec[],
+        const bool                 asRoot)
 {
     int         status;
     const pid_t pid = fork();
 
     if (pid == -1) {
-        log_add_syserr("fork() failure");
+        log_add_syserr("fork() failed");
         status = errno;
     }
     else if (pid == 0) {
@@ -321,12 +323,30 @@ childCmd_execute(
         (void)close(cmd->stdOutPipe[0]); // Read end of stdout pipe unneeded
         (void)close(cmd->stdErrPipe[0]); // Read end of stderr pipe unneeded
 
-        (void)execvp(pathname, (char* const*)cmdVec);
+        uid_t euid;
 
-        log_add_syserr("execvp() failure");
-        log_flush_error();
-        log_fini();
-        exit(1);
+        if (!asRoot) {
+            status = 0;
+        }
+        else {
+            euid = geteuid();
+            status = setuid(0);
+
+            if (status)
+                log_add_syserr("seteuid() failed");
+        }
+
+        if (status == 0) {
+            (void)execvp(pathname, (char* const*)cmdVec);
+
+            if (asRoot)
+                (void)seteuid(euid);
+
+            log_add_syserr("execvp() failed");
+            log_flush_error();
+            log_fini();
+            exit(1);
+        } // Executing as root
     }
     else {
         /* Parent process */
@@ -393,9 +413,9 @@ childCmd_execute(
 }
 
 ChildCmd*
-childCmd_execvp(
-        const char* const restrict pathname,
-        const char* const restrict cmdVec[])
+spawn(  const char* const restrict pathname,
+        const char* const restrict cmdVec[],
+        const bool                 asRoot)
 {
     ChildCmd* cmd = childCmd_new();
 
@@ -410,7 +430,7 @@ childCmd_execvp(
             status = -1;
         }
         else {
-            status = childCmd_execute(cmd, pathname, cmdVec);
+            status = execute(cmd, pathname, cmdVec, asRoot);
 
             if (status) {
                 errno = status;
@@ -425,6 +445,14 @@ childCmd_execvp(
     } // `cmd` allocated
 
     return cmd;
+}
+
+ChildCmd*
+childCmd_execvp(
+        const char* const restrict pathname,
+        const char* const restrict cmdVec[])
+{
+    return spawn(pathname, cmdVec, false);
 }
 
 int
@@ -442,7 +470,7 @@ childCmd_reap(
 
         if (status != cmd->pid) {
             status = errno;
-            log_add_syserr("waitpid() failure");
+            log_add_syserr("waitpid() failed");
         }
         else {
             (void)pthread_join(cmd->stdErrThread, NULL);
@@ -518,23 +546,15 @@ int
 sudo(   const char* const restrict cmdVec[],
         int* const restrict        childStatus)
 {
-    int status;
+    int       status;
+    ChildCmd* cmd = spawn(cmdVec[0], cmdVec, true);
 
-    rootpriv();
-        ChildCmd* cmd = childCmd_execvp(cmdVec[0], cmdVec);
-    unpriv();
-
-    if (cmd == NULL) {
-        status = errno;
-    }
-    else {
+    if (cmd) {
         status = childCmd_reap(cmd, childStatus);
 
-        if (status) {
+        if (status)
             log_add("Couldn't reap command \"%s\"", cmd->cmdStr);
-            status = errno;
-        }
-    }
+    } // `cmd` allocated
 
     return status;
 }
