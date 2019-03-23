@@ -1,21 +1,4 @@
-6.13.11.18	2019-03-22T15:14:12-0600
-    down7(3):
-        * Added "sh" to vlanUtil(1) command 
-
-    ChildCmd(3):
-        * Corrected sudo()
-
-    Developer:
-        * deploy(1): Added test for "runtime" and improved messages
-
-6.13.11.17	2019-03-20T13:17:40-0600
-    Multicast:
-        * mldm_sender(1): Removed lint found by Coverity Scan
-
-    Developer:
-        * deployAll(1): Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
-
-6.13.11.16	2019-03-19T16:46:59-0600
+6.13.11.19	2019-03-23T15:16:37-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -34,6 +17,7 @@
                 * Renaming childCmd_logStdErr() to childCmd_log()
             * Improved error-logging
             * Created childCmd_getCmd()
+            * Corrected sudo()
         * ldmd.conf(5)
             * RECEIVE entry:
                 * Corrected description of <host>
@@ -42,8 +26,10 @@
                 * Eliminated parameters
                     * Multicast interface
                     * time-to-live
-        * down7(3): Corrected AL2S VLAN endpoint <-> FMTP interface
-          consistency-test
+        * down7(3):
+            * Corrected AL2S VLAN endpoint <-> FMTP interface
+              consistency-test
+            * Added "sh" to vlanUtil(1) command 
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
@@ -68,6 +54,7 @@
               the same as the FMTP server address
             * Ensured that the FMTP server address is in the subnet of its FMTP
               clients
+            * Removed lint found by Coverity Scan
         * Internet(3): Created ::to_string(struct sockaddr&)
         * mldm_sender(1): Correct removal of secret file
 
@@ -79,9 +66,11 @@
                 * Added "-r <root>" option
                 * Handle $sudoUser not being able to create root-actions log
                   file
+                * Added test for "runtime" and improved messages
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
                 * Added the MAX
+                * Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
         * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
           during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
