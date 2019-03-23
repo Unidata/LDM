@@ -330,10 +330,17 @@ execute(
         }
         else {
             euid = geteuid();
-            status = setuid(0);
+            status = seteuid(0); // Get privilege to set real UID to root
 
-            if (status)
-                log_add_syserr("seteuid() failed");
+            if (status) {
+                log_add_syserr("Couldn't get root privilege");
+            }
+            else {
+                status = setuid(0);
+
+                if (status)
+                    log_add_syserr("Couldn't set UID to root");
+            }
         }
 
         if (status == 0) {
@@ -412,7 +419,17 @@ execute(
     return status;
 }
 
-ChildCmd*
+/**
+ * Spawns a child process and executes a command
+ *
+ * @param[in] cmd       Child command structure
+ * @param[in] pathname  Pathname of file to execute
+ * @param[in] cmdVec    Command vector
+ * @param[in] asRoot    Execute command as root?
+ * @retval    NULL      Failure. `log_add()` called.
+ * @return              Child command
+ */
+static ChildCmd*
 spawn(  const char* const restrict pathname,
         const char* const restrict cmdVec[],
         const bool                 asRoot)
