@@ -1769,7 +1769,7 @@ static int pipe_open(
                     /*
                      * This process is made its own process-group leader to
                      * isolate it from signals sent to the LDM process-group
-                     * (e.g., SIGCONTs, SIGINTs, and SIGTERMs).
+                     * (e.g., SIGCONT, SIGINT, SIGTERM, SIGUSR2, SIGUSR2).
                      */
                     if (setpgid(0, 0) == -1) {
                         log_warning_q(
@@ -3013,7 +3013,8 @@ pid_t reap(
                     wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            log_warning_q("Child %d terminated by signal %d", wpid, WTERMSIG(status));
+            log_warning_q("Child %d terminated by signal %d", wpid,
+                    WTERMSIG(status));
 
             if (!isExec) {
                 fl_removeAndFree(entry, DR_TERMINATED); // NULL `entry` safe
@@ -3029,7 +3030,8 @@ pid_t reap(
                     exitStatus ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
             const DeleteReason dr = exitStatus ? DR_ERROR : DR_TERMINATED;
 
-            log_log_q(logLevel, "Child %d exited with status %d", wpid, exitStatus);
+            log_log_q(logLevel, "Child %d exited with status %d", wpid,
+                    exitStatus);
 
             if (!isExec) {
                 fl_removeAndFree(entry, dr);    // NULL `entry` safe
