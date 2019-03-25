@@ -1479,10 +1479,10 @@ mcastRcvr_run(void* const arg)
  * Starts the multicast receiver concurrent task.
  *
  * @param[in] mcastInfo   Information on multicast feed
- * @param[in] fmtpIface    Name of virtual interface to be created and used by
- *                         FMTP layer or "dummy", indicating that no virtual
- *                         interfaces is to be created. Must exist until
- *                         `mcastRcvr_stop()` returns.
+ * @param[in] fmtpIface   Name of virtual interface to be created and used by
+ *                        FMTP layer or "dummy", indicating that no virtual
+ *                        interfaces is to be created. Must exist until
+ *                        `mcastRcvr_stop()` returns.
  * @param[in] ifaceAddr   IP address to be assigned to the virtual interface if
  *                        it's created
  * @param[in] pq          Output product queue
@@ -1929,6 +1929,7 @@ downlet_destroyClient()
     downlet.sock = -1;
 
     smi_free(downlet.mcastInfo);
+    downlet.mcastInfo = NULL;
 }
 
 /**
