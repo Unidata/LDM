@@ -263,6 +263,9 @@
 /* Package will have multicast capability */
 #undef WANT_MULTICAST
 
+/* Make pqact(1) EXEC programs process-group leaders */
+#undef WANT_SETPGID_EXEC
+
 /* Package will use slog(3) for logging */
 #undef WANT_SLOG
 

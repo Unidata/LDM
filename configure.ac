@@ -369,6 +369,15 @@ AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
 AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
 AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
+AC_ARG_ENABLE([setpgid-exec],
+    AS_HELP_STRING([--disable-exec-setpgid], 
+	[disable making pqact(1) EXEC programs process-group leaders so that
+	they don't receive signals sent to the LDM process group
+	[[default=enable]]]),
+    [test "$enableval" = yes && AC_DEFINE([WANT_SETPGID_EXEC])],
+    AC_DEFINE([WANT_SETPGID_EXEC], [1],
+        [Make pqact(1) EXEC programs process-group leaders]))
+
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])
 CPPFLAGS_CUNIT=

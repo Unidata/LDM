@@ -89,12 +89,20 @@ exec_prodput(
             log_syserr_q("Couldn't fork EXEC process");
         }
         else if (0 == pid) {
+            // Child process.
+
+#if WANT_SETPGID_EXEC
             /*
-             * Child process.
-             *
-             * Detach the child process from the parents process group??
-             * (void) setpgid(0,0);
+             * Make this process a process-group leader so that it doesn't
+             * receive signals sent to the LDM's process group (e.g., SIGCONT,
+             * SIGTERM, SIGINT, SIGUSR1, SIGUSR2)
              */
+            if (setpgid(0, 0) == -1) {
+                log_warning("Couldn't make EXEC program \"%s\" a "
+                        "process-group leader", argv[0]);
+            }
+#endif
+
             (void)signal(SIGTERM, SIG_DFL);
             (void)pq_close(pq);
 

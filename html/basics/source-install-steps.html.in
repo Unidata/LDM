@@ -238,6 +238,17 @@ options and arguments, when and if appropriate:
         <tt><b>CC</b></tt>, <tt><b>CPPFLAGS</b></tt>, <tt><b>CFLAGS</b></tt>,
         and <tt><b>LDFLAGS</b></tt> variables are used verbatim. 
 
+    <dt><code>--disable-setpgid-exec</code>
+    <dd>By default, every process created by a
+        <a href="glindex.html#pqact EXEC action">pqact(1) <tt>EXEC</tt> action</a>
+        will be made a
+        <a href="glindex.html#process group leader">process group leader</a>
+        so that it will not receive signals sent to
+        the LDM's <a href="glindex.html#process group">process group</a>. This
+        is done because the process is likely not prepared to handle such
+        signals. Disabling this feature will cause those processes to receive
+        those signals.
+
     <dt><code>--with-noaaport</code>
     <dd>Include support for ingesting data-products from a
         <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
