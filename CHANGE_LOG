@@ -1,4 +1,4 @@
-6.13.11.19	2019-03-23T15:16:37-0600
+6.13.11.20	2019-03-26T09:27:24-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -9,6 +9,14 @@
             outside world; and
           * Using a transitory port number prevented the LDM from terminating
             with an error to indicate a problem
+
+    pqact(1):
+        Made processes created via EXEC entries in a pqact(1)
+        configuration-files process group leaders so that they don't receive
+        signals sent to the LDM system's process group. This was done because
+        such processes are unlikely to handle such signals. This feature can
+        be disabled via the configure(1) script's option
+        "--disable-setpgid_exec".
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -30,6 +38,9 @@
             * Corrected AL2S VLAN endpoint <-> FMTP interface
               consistency-test
             * Added "sh" to vlanUtil(1) command 
+            * Increased RPC timeout for subscribe_7() because adding a node to
+              an AL2S multipoint VLAN can take longer than the default RPC
+              client timeout.
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
