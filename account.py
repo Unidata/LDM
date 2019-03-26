@@ -63,21 +63,3 @@ def getCtID(wg_id,feedtype,username,passwd):
 			circuit_id = er['circuit_id']
 	return circuit_id
 
-def getSPath(node_1,node_2,username,passwd):
-	link=[]
-	values1 = {'method' : 'get_shortest_path', 'node' : [node_1, node_2], 'type' : 'mpls'}
-	data1 = urllib.urlencode(values1, doseq=True)
-	req1 = urllib2.Request(gh_url, data1)
-	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-	password_manager.add_password(None, gh_url, username, passwd)
-	auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
-	opener = urllib2.build_opener(auth_manager)
-	urllib2.install_opener(opener)
-	handler1 = urllib2.urlopen(req1)
-	result1 = handler1.read()
-	jsonData1 = json.loads(result1)
-	searchResults1 =  jsonData1['results']
-	for er in searchResults1:
-		if er['link'] != None:
-			link.append(er['link'])
-	return link
