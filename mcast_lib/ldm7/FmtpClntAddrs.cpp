@@ -70,29 +70,27 @@ public:
         log_debug("fmtpSrvr=%s", to_string(fmtpSrvr).c_str());
 
         in_addr_t subnet = cidrAddr_getSubnet(&fmtpSrvr);
+        in_addr_t srvrAddr = cidrAddr_getAddr(&fmtpSrvr);
 
-        if (subnet == cidrAddr_getAddr(&fmtpSrvr))
+        if (subnet == srvrAddr)
             throw std::invalid_argument("FMTP server address mustn't be same "
                     "as subnet address, " + to_string(subnet));
 
         SubnetLen suffixLen = 32 - cidrAddr_getPrefixLen(&fmtpSrvr);
-        in_addr_t bcastAddr = subnet | ((1 << suffixLen) - 1);
+        in_addr_t bcastAddr = subnet | htonl((1 << suffixLen) - 1);
 
-        if (cidrAddr_getSubnet(&fmtpSrvr) == cidrAddr_getAddr(&fmtpSrvr))
+        if (bcastAddr == srvrAddr)
             throw std::invalid_argument("FMTP server address mustn't be same "
                     "as broadcast address, " + to_string(bcastAddr));
 
         auto      size = available.size();
-        in_addr_t fmtpSrvrAddr = cidrAddr_getAddr(&fmtpSrvr);
 
         // Doesn't include network, broadcast, and FMTP server addresses
         for (in_addr_t i = 1, j = 0; i <= size; ++i) {
             const in_addr_t addr = available[j] | htonl(i);
 
-            if (addr != fmtpSrvrAddr) {
-                available[j] = addr;
-                ++j;
-            }
+            if (addr != srvrAddr)
+                available[j++] = addr;
         }
     }
 
