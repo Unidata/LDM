@@ -344,6 +344,7 @@ execute(
         }
 
         if (status == 0) {
+            log_debug("Executing command \"%s\"", cmd->cmdStr);
             (void)execvp(pathname, (char* const*)cmdVec);
 
             if (asRoot)
