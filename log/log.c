@@ -577,12 +577,8 @@ static int flush(
     if (NULL != queue && NULL != queue->last) {
         logl_lock();
 
-        if (!is_level_enabled(level)) {
-            logl_unlock();
-        }
-        else {
+        if (is_level_enabled(level)) {
             (void)refresh_if_necessary();
-            logl_unlock();
 
             for (const Message* msg = queue->first; NULL != msg;
                     msg = msg->next) {
@@ -598,6 +594,7 @@ static int flush(
             status = logi_flush();
         } // Messages should be printed
 
+        logl_unlock();
         queue_clear();
     } // Have messages
 
@@ -726,13 +723,13 @@ int logl_vlog_1(
         }
         else {
             (void)refresh_if_necessary();
-            logl_unlock();
 
             status = logi_log(level, loc, msg);
 
             if (status == 0)
                 status = logi_flush();
 
+            logl_unlock();
             free(msg);
         } // Have message
     } // Message should be logged
