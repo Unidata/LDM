@@ -13,27 +13,28 @@ printUsage()
     name=`basename $0`
     cat 1>&2 <<EOF
 Usage:
-    $name create <virtIface> <ifaceAddr> [<srvrAddr>]
+    $name create <virtIface> <ifaceCidr> [<srvrAddr>]
     $name destroy <virtIface> [<srvrAddr>]
 Operands:
     <virtIface>   Specification of virtual interface (e.g., "eth0.4000")
-    <ifaceAddr>   IP address of virtual interface (e.g., "192.168.0.2")
+    <ifaceCidr>   IP address and prefix length for virtual interface (e.g.,
+                  "10.40.1.1/24")
     <srvrAddr>    IP address of sending FMTP server (e.g., "192.168.0.1").
                   Only receiver should specify.
 EOF
 }
 
-# Destroys an existing VLAN if it exists
+# Destroys a VLAN if it exists
 destroy()
 {
     virtIface="${1:?Virtual interface not specified}"
     srvrAddr="${2}"
     status=0
 
-    # Remove route if receiver and route exists
+    # Remove route to sender if it exists
     if test "$srvrAddr"; then
         if ip route get "$srvrAddr" | fgrep "$virtIface" >/dev/null 2>&1; then
-            if ! ip route del "$srvrAddr/32" dev "$virtIface"; then
+            if ! ip route del "$srvrAddr" dev "$virtIface"; then
                 echo 1>&2 "Couldn't remove interface $virtIface as route to $srvrAddr"
                 status=1;
             fi
@@ -56,15 +57,15 @@ destroy()
     return $status
 }
 
-# Creates a VLAN. Destroys any previously-existing one.
+# Creates a VLAN after first destroying any previously-existing one.
 create()
 {
     virtIface="${1:?Virtual interface not specified}"
-    ifaceAddr="${2:?Virtual interface\'s address not specified}"
+    ifaceCidr="${2:?Virtual interface\'s CIDR address not specified}"
     srvrAddr="${3}"
     status=0
 
-    # If this is receiver, then ensure that VLAN doesn't exist
+    # If this is a receiving node, then ensure that VLAN doesn't exist
     if test "$srvrAddr"; then
         # In subshell so parameters not overwritten
         if ! (destroy "$virtIface" "$srvrAddr"); then
@@ -89,17 +90,17 @@ create()
                 echo 1>&2 "Couldn't enable interface $virtIface"
                 status=1
             else
-                if ! ip addr add "$ifaceAddr/32" dev "$virtIface"; then
-                    echo 1>&2 "Couldn't add address $ifaceAddr to interface $virtIface"
+                if ! ip addr add "$ifaceCidr" dev "$virtIface"; then
+                    echo 1>&2 "Couldn't add address $ifaceCidr to interface $virtIface"
                     status=1
                 fi
             fi
         fi
 
-        # If this is receiver, then add route to sending FMTP server
+        # If this is a receiving node, then add route to sending FMTP server
         if test $status -eq 0 -a "$srvrAddr"; then
             # Must be after interface is up
-            if ! ip route add "$srvrAddr/32" dev "$virtIface"; then
+            if ! ip route add "$srvrAddr" dev "$virtIface"; then
                 echo 1>&2 "Couldn't add interface $virtIface as route to $srvrAddr"
                 status=1
             fi
