@@ -97,6 +97,11 @@ cidrAddr_copy(
         CidrAddr*       lhs,
         const CidrAddr* rhs)
 {
+    if (rhs->prefixLen > 32) {
+        log_add("Invalid subnet prefix length: %u", rhs->prefixLen);
+        return NULL;
+    }
+
     *lhs = *rhs;
     return lhs;
 }
@@ -128,6 +133,17 @@ cidrAddr_parse(const char* const spec)
         }
     }
     return cidrAddr;
+}
+
+int
+cidrAddr_snprintf(
+        const CidrAddr* const addr,
+        char* const           buf,
+        const size_t          size)
+{
+    char dottedQuad[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr->addr, dottedQuad, sizeof(dottedQuad));
+    return snprintf(buf, size, "%s/%u", dottedQuad, addr->prefixLen);
 }
 
 char*

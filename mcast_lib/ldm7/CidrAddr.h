@@ -15,7 +15,10 @@
 
 #include "ldm.h"
 
+#include <netinet/in.h>
 #include <stdbool.h>
+
+#define CIDRSTRLEN (INET_ADDRSTRLEN + 1 + 2) // "xxx.xxx.xxx.xxx/nn\0"
 
 #ifdef __cplusplus
     extern "C" {
@@ -108,6 +111,14 @@ cidrAddr_getAddr(const CidrAddr* cidrAddr);
 SubnetLen
 cidrAddr_getPrefixLen(const CidrAddr* cidrAddr);
 
+/**
+ * Copies a CIDR address.
+ *
+ * @param[out] lhs   CIDR address to be set
+ * @param[in]  rhs   CIDR address to be copied
+ * @retval     NULL  `rhs` is invalid
+ * @return           `lhs`
+ */
 CidrAddr*
 cidrAddr_copy(
         CidrAddr* lhs,
@@ -134,7 +145,23 @@ CidrAddr*
 cidrAddr_parse(const char* const spec);
 
 /**
- * Formats a CIDR address.
+ * Formats a CIDR address into a user-supplied buffer.
+ *
+ * @param[in]  addr  CIDR address
+ * @param[out] buf   Buffer to contain the string representation
+ * @param[in]  size  Size of the buffer in bytes. Should be at least
+ *                   `CIDRSTRLEN`.
+ * @return           Number of bytes in string representation excluding the
+ *                   terminating NUL byte
+ */
+int
+cidrAddr_snprintf(
+        const CidrAddr* const addr,
+        char* const           buf,
+        const size_t          size);
+
+/**
+ * Returns a string representation of a CIDR address.
  * @param[in] addr  CIDR address to be formatted
  * @retval NULL     Couldn't format address. `log_add()` called.
  * @return          Formatted address in the form `nnn.nnn.nnn.nnn/nn`. Caller
