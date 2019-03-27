@@ -296,7 +296,7 @@ up7Proxy_incTimeout(
  * @param[in]  vcEnd          Local virtual-circuit endpoint
  * @param[out] mcastInfo      Information on the multicast group corresponding
  *                            to `feed`.
- * @param[out] ifaceAddr      IP address of VLAN virtual interface
+ * @param[out] ifaceCidr      CIDR address of VLAN virtual interface
  * @retval     0              If and only if success. `*mcastInfo` is set. The
  *                            caller should call `mi_free(*mcastInfo)` when
  *                            it's no longer needed.
@@ -317,7 +317,7 @@ up7Proxy_subscribe(
         feedtypet                        feed,
         const VcEndPoint* const restrict vcEnd,
         SepMcastInfo** const restrict    mcastInfo,
-        in_addr_t* const restrict        ifaceAddr)
+        CidrAddr* const restrict         ifaceCidr)
 {
     int status;
 
@@ -372,9 +372,15 @@ up7Proxy_subscribe(
                         reply->SubscriptionReply_u.info.mcastInfo.feed,
                         reply->SubscriptionReply_u.info.mcastInfo.group,
                         reply->SubscriptionReply_u.info.mcastInfo.server);
-                *ifaceAddr = cidrAddr_getAddr(
-                        &reply->SubscriptionReply_u.info.fmtpAddr);
+
+                if (cidrAddr_copy(ifaceCidr,
+                        &reply->SubscriptionReply_u.info.fmtpAddr) == NULL) {
+                    log_add("Subscription reply contains invalid CIDR address "
+                            "for virtual interface");
+                    status = LDM7_INVAL;
+                }
             }
+
             xdr_free(xdr_SubscriptionReply, (char*)reply);
         }
     up7Proxy_unlock();
@@ -1086,16 +1092,16 @@ static const char vlanUtil[] = "vlanUtil";
  * @param[in] ifaceName    Name of virtual interface to be created (e.g.,
  *                         "eth0.0") or "dummy", in which case no virtual
  *                         interface will be created.
- * @param[in] ifaceAddr    IP address to be assigned to virtual interface
+ * @param[in] ifaceCidr    CIDR address to be assigned to virtual interface
  * @retval    0            Success
  * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
  * @retval    LDM7_INVAL   Invalid argument. `log_add()` called.
  */
 static int
 vlanIface_create(
-        const char* const restrict srvrAddrStr,
-        const char* const restrict ifaceName,
-        const in_addr_t            ifaceAddr)
+        const char* const restrict     srvrAddrStr,
+        const char* const restrict     ifaceName,
+        const CidrAddr* const restrict ifaceCidr)
 {
     log_assert(srvrAddrStr);
     log_assert(ifaceName);
@@ -1106,20 +1112,20 @@ vlanIface_create(
         status = 0;
     }
     else {
-        char ifaceAddrStr[INET_ADDRSTRLEN];
+        char ifaceCidrStr[CIDRSTRLEN];
 
         // Can't fail
-        (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr, sizeof(ifaceAddrStr));
+        (void)cidrAddr_snprintf(ifaceCidr, ifaceCidrStr, sizeof(ifaceCidrStr));
 
         const char* const cmdVec[] = {"sh", vlanUtil, "create", ifaceName,
-                ifaceAddrStr, srvrAddrStr, NULL};
+                ifaceCidrStr, srvrAddrStr, NULL};
 
         int childStatus;
         status = sudo(cmdVec, &childStatus);
 
         if (status || childStatus)
             status = LDM7_SYSTEM;
-    }
+    } // A virtual interface is actually requested
 
     return status;
 }
@@ -1389,7 +1395,7 @@ static McastRcvr mcastRcvr;
  *                         FMTP layer or "dummy", indicating that no virtual
  *                         interfaces is to be created. Must exist until
  *                         `mcastRcvr_destroy()` returns.
- * @param[in] ifaceAddr    IP address to be assigned to `fmtpIface`
+ * @param[in] ifaceCidr    CIDR address to be assigned to `fmtpIface`
  * @param[in] pq           Product queue
  * @retval    0            Success or `ifaceName` starts with "dummy"
  * @retval    LDM7_INVAL   Invalid address of sending FMTP server. `log_add()`
@@ -1399,10 +1405,10 @@ static McastRcvr mcastRcvr;
  */
 static int
 mcastRcvr_init(
-        SepMcastInfo* const restrict mcastInfo,
-        const char* const restrict   fmtpIface,
-        const in_addr_t              ifaceAddr,
-        pqueue* const restrict       pq)
+        SepMcastInfo* const restrict   mcastInfo,
+        const char* const restrict     fmtpIface,
+        const CidrAddr* const restrict ifaceCidr,
+        pqueue* const restrict         pq)
 {
     log_assert(mcastInfo);
     log_assert(fmtpIface);
@@ -1428,13 +1434,14 @@ mcastRcvr_init(
         }
         else {
             status = vlanIface_create(mcastRcvr.fmtpSrvrAddr, fmtpIface,
-                    ifaceAddr);
+                    ifaceCidr);
 
             if (status) {
                 log_add("Couldn't create VLAN virtual-interface");
             }
             else {
-                char ifaceAddrStr[INET_ADDRSTRLEN];
+                const in_addr_t ifaceAddr = cidrAddr_getAddr(ifaceCidr);
+                char            ifaceAddrStr[INET_ADDRSTRLEN];
 
                 // Can't fail
                 (void)inet_ntop(AF_INET, &ifaceAddr, ifaceAddrStr,
@@ -1547,17 +1554,17 @@ mcastRcvr_run(void* const arg)
  */
 static Ldm7Status
 mcastRcvr_start(
-        SepMcastInfo* const restrict mcastInfo,
-        const char* const restrict   fmtpIface,
-        const in_addr_t              ifaceAddr,
-        pqueue* const restrict       pq)
+        SepMcastInfo* const restrict   mcastInfo,
+        const char* const restrict     fmtpIface,
+        const CidrAddr* const restrict ifaceCidr,
+        pqueue* const restrict         pq)
 {
     log_assert(mcastInfo);
     log_assert(fmtpIface);
     log_assert(pq);
     log_assert(mcastRcvr.state == TASK_UNINITIALIZED);
 
-    int status = mcastRcvr_init(mcastInfo, fmtpIface, ifaceAddr, pq);
+    int status = mcastRcvr_init(mcastInfo, fmtpIface, ifaceCidr, pq);
 
     if (status) {
         log_add("Couldn't initialize multicast receiver");
@@ -1709,7 +1716,7 @@ typedef struct downlet {
     char*           feedId;           ///< Desired feed specification
     /// Server-side transport for receiving products
     SVCXPRT*        xprt;
-    in_addr_t       ifaceAddr;        ///< VLAN virtual interface IP address
+    CidrAddr        ifaceCidr;        ///< VLAN virtual interface CIDR address
     int             sock;             ///< Socket with remote LDM7
     int             taskStatus;       ///< Concurrent task status
 } Downlet;
@@ -1741,7 +1748,7 @@ downlet_startTasks(void)
 
         if (status == 0) {
             status = mcastRcvr_start(downlet.mcastInfo, down7.fmtpIface,
-                    downlet.ifaceAddr, down7.pq);
+                    &downlet.ifaceCidr, down7.pq);
 
             if (status)
                 backstop_stop();
@@ -2100,7 +2107,7 @@ downlet_run()
          * and `downlet.fmtpAddr`. Potentially lengthy.
          */
         status = up7Proxy_subscribe(down7.feedtype, &down7.vcEnd,
-                &downlet.mcastInfo, &downlet.ifaceAddr);
+                &downlet.mcastInfo, &downlet.ifaceCidr);
 
         if (status) {
             log_add("Couldn't subscribe to feed %s from %s",
@@ -2108,13 +2115,13 @@ downlet_run()
         }
         else {
             char* const miStr = smi_toString(downlet.mcastInfo);
-            char        ifaceAddrStr[INET_ADDRSTRLEN];
+            char        ifaceCidrStr[CIDRSTRLEN];
 
-            (void)inet_ntop(AF_INET, &downlet.ifaceAddr, ifaceAddrStr,
-                    sizeof(ifaceAddrStr));
+            (void)cidrAddr_snprintf(&downlet.ifaceCidr, ifaceCidrStr,
+                    sizeof(ifaceCidrStr));
             log_info("Subscription reply from %s: mcastGroup=%s, "
-                    "ifaceAddr=%s", isa_toString(down7.ldmSrvr), miStr,
-                    ifaceAddrStr);
+                    "ifaceCidrAddr=%s", isa_toString(down7.ldmSrvr), miStr,
+                    ifaceCidrStr);
             free(miStr);
 
             {
