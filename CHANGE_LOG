@@ -1,4 +1,4 @@
-6.13.11.20	2019-03-26T09:27:24-0600
+6.13.11.21	2019-03-27T12:35:21-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -41,6 +41,7 @@
             * Increased RPC timeout for subscribe_7() because adding a node to
               an AL2S multipoint VLAN can take longer than the default RPC
               client timeout.
+            * Modified to pass CIDR address for virtual interface to vlanUtil(1)
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
@@ -58,8 +59,12 @@
             * Deleted logging of child command that error-exits
         * vlanUtil(1):
             * Addd "/sbin" to PATH to get ip(1)
-            * Removed address deassignment from "destroy" because deleting the
+            * Removed address de-assignment from "destroy" because deleting the
               virtual-interface deletes the address
+            * Added subnet specification to assignment of address to virtual
+              interface
+            * Eliminated use of subnet specifiction when managing route to
+              sender
         * Sender code:
             * Disallowed multicast interface parameter as the interface must be
               the same as the FMTP server address
@@ -68,6 +73,9 @@
             * Removed lint found by Coverity Scan
         * Internet(3): Created ::to_string(struct sockaddr&)
         * mldm_sender(1): Correct removal of secret file
+        * CidrAddr(3):
+            * Made cidrAddr_copy() more robust to verity subscription reply
+            * Created cidrAddr_snprintf(), which doesn't allocate memory
 
     Developer:
         * Deployment:
