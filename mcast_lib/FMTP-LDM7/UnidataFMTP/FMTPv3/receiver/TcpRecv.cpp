@@ -159,7 +159,7 @@ void TcpRecv::initSocket()
 
     if (sockfd < 0)
         throw std::system_error(errno, std::system_category(),
-                "TcpRecv::TcpRecv() error creating socket");
+                "TcpRecv::initSocket() error creating socket");
 
     /*
      * Binding the socket to the VLAN interface isn't necessary to ensure that
@@ -177,7 +177,7 @@ void TcpRecv::initSocket()
                 sizeof(addr))) {
             close(sockfd);
             throw std::system_error(errno, std::system_category(),
-                    "TcpRecv:InitSocket() Couldn't bind socket to interface " +
+                    "TcpRecv:initSocket() Couldn't bind socket to interface " +
                     addr);
         }
     }
@@ -185,7 +185,7 @@ void TcpRecv::initSocket()
     if (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         close(sockfd);
         throw std::system_error(errno, std::system_category(),
-                "TcpRecv::TcpRecv() Error connecting to " + servAddr);
+                "TcpRecv::initSocket() Error connecting to " + servAddr);
     }
 #if 0
     std::cerr << "TcpRecv::initSocket(): Socket " + std::to_string(sockfd) +
