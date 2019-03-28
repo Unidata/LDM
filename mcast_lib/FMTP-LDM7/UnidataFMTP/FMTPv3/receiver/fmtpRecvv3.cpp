@@ -188,7 +188,23 @@ void fmtpRecvv3::SetLinkSpeed(uint64_t speed)
 void fmtpRecvv3::Start()
 {
     /** connect to the sender */
-    tcprecv->Init();
+    /*
+     * Apparently, just because an AL2S VLAN has just been provisioned for this
+     * host, that doesn't mean the VLAN works just yet.
+     */
+    const int timeout = 120;
+    const int interval = 5;
+    for (int t = 0; t <= timeout; t += interval) {
+        try {
+            tcprecv->Init();
+            log_debug("Connected to FMTP server after %d seconds", t);
+            break;
+        }
+        catch (const std::system_error& ex) {
+            if (t == timeout || ::sleep(interval))
+                throw; // Time is up or a signal interrupted `sleep()`
+        }
+    }
 
     joinGroup(tcpAddr, mcastAddr, mcastPort);
 
