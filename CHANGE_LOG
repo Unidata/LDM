@@ -1,4 +1,4 @@
-6.13.11.23	2019-03-28T17:34:56-0600
+6.13.11.24	2019-03-29T14:49:09-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -46,6 +46,8 @@
               an AL2S multipoint VLAN can take longer than the default RPC
               client timeout.
             * Modified to pass CIDR address for virtual interface to vlanUtil(1)
+            * Made down7_halt() async-signal-safe to obviate deadlock if
+              interrupted while logging
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
@@ -98,6 +100,7 @@
                 * Handle $sudoUser not being able to create root-actions log
                   file
                 * Added test for "runtime" and improved messages
+                * Modified to delete previous installed versions
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
                 * Added the MAX
@@ -106,6 +109,9 @@
         * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
           during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
+        * ldm7PreInstall:
+            * Don't use devtools-2 g++ if on a CentOS7 system
+            * Changed an "install" to "update"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
