@@ -2654,16 +2654,16 @@ down7_run()
 }
 
 /**
- * Signals the downstream LDM7 that it should terminate.
+ * Signals the downstream LDM7 that it should terminate. May be called by a
+ * signal handler.
  *
  * @retval 0            Success
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
+ * @asyncsignalsafety   Safe
  */
 static int
 down7_signal()
 {
-    log_debug("Entered");
-
     sigset_t prevMask;
     sigprocmask(SIG_BLOCK, &termMask, &prevMask);
         char       byte = 0;
@@ -2672,8 +2672,6 @@ down7_signal()
             ? 0
             : LDM7_SYSTEM;
     sigprocmask(SIG_SETMASK, &prevMask, NULL);
-
-    log_debug("Returning");
 
     return status;
 }
@@ -2688,8 +2686,6 @@ down7_signal()
 void
 down7_halt()
 {
-    log_debug("Entered");
-
     /*
      * A condition variable can't be used because the relevant pthread functions
      * aren't async-signal safe
@@ -2699,18 +2695,13 @@ down7_halt()
 
     (void)down7_signal();
 
-    // Same thread => called by signal handler => rely on EINTR instead
-    if (down7.thread && down7.thread != pthread_self()) {
-        int status = pthread_kill(down7.thread, SIGTERM);
-
-        // Apparently, a terminated thread cannot be sent a signal.
-        if (status && status != ESRCH) {
-            log_add_errno(status, "Couldn't kill downstream LDM7");
-            log_flush_error();
-        }
-    } // `down7_run()` is executing on a different thread
-
-    log_debug("Returning");
+    /*
+     * If the current thread is the one that's executing `down7_run()`, then
+     * the thread has been interrupted; consequently, it isn't signaled but,
+     * rather, relies on having been interrupted for termination.
+     */
+    if (down7.thread && down7.thread != pthread_self())
+        (void)pthread_kill(down7.thread, SIGTERM);
 }
 
 /**
