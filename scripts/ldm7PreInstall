@@ -6,7 +6,7 @@ set -x
 # Ensures installation of packages on which the LDM7 depends
 ensureDependencies() {
     if type yum; then
-        yum -y update zlib-devel libxml2-devel libyaml-devel gnuplot python
+        yum -y install zlib-devel libxml2-devel libyaml-devel gnuplot python
 #                python2-pip
     elif type apt-get; then
         apt-get -y install libz-dev libxml2-dev libyaml-dev gnuplot python
@@ -22,15 +22,22 @@ ensureDependencies() {
 ensureCxx11() {
     if ! g++ -dumpversion | grep -E -q '^(4\.[89]|5|6)'; then
         if type yum; then
-            wget http://people.centos.org/tru/devtools-2/devtools-2.repo -O \
-                    /etc/yum.repos.d/devtools-2.repo
-            yum -y install devtoolset-2-gcc devtoolset-2-binutils \
-                    devtoolset-2-gcc-c++
-            scl enable devtoolset-2 bash
-            if ! fgrep -q 'source /opt/rh/devtoolset-2/enable' $HOME/.bashrc; then
-                echo >>$HOME/.bashrc
-                echo '# Obtain a C++11-compliant g++(1) by default' >>$HOME/.bashrc
-                echo 'source /opt/rh/devtoolset-2/enable' >>$HOME/.bashrc
+            yum -y install gcc
+            if fgrep 'release 7' /etc/redhat-release; then
+                yum -y install g++
+            else
+                wget http://people.centos.org/tru/devtools-2/devtools-2.repo \
+                        -O /etc/yum.repos.d/devtools-2.repo
+                yum -y install devtoolset-2-gcc devtoolset-2-binutils \
+                        devtoolset-2-gcc-c++
+                scl enable devtoolset-2 bash
+                if ! fgrep -q 'source /opt/rh/devtoolset-2/enable' \
+                        $HOME/.bashrc; then
+                    echo >>$HOME/.bashrc
+                    echo '# Obtain a C++11-compliant g++(1) by default' \
+                            >>$HOME/.bashrc
+                    echo 'source /opt/rh/devtoolset-2/enable' >>$HOME/.bashrc
+                fi
             fi
         else
             echo "No C++11 compiler available" 1>&2
