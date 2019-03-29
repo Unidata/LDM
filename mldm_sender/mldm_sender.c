@@ -607,6 +607,7 @@ mls_mcastProd(
          * requests it.
          */
         status = pim_put(iProd, (const signaturet*)&info->signature);
+
         if (status) {
             char buf[LDM_INFO_MAX];
             log_add("Couldn't add to product-index map: prodIndex=%lu, "
@@ -624,7 +625,7 @@ mls_mcastProd(
             }
             else {
                 char buf[LDM_INFO_MAX];
-                log_info_q("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                         (unsigned long)iProd,
                         s_prod_info(buf, sizeof(buf), info,
                                 log_is_enabled_debug));
