@@ -1,3 +1,6 @@
+# Deploys an LDM package to a remote system. Deletes previous versions on the
+# remote system.
+
 PATH=/bin:/usr/bin:/usr/local/bin
 
 set -e
@@ -103,4 +106,9 @@ ssh -T $ldmUser@$host bash --login <<EOF
         rm -f runtime
         ln -s $pkgId runtime
     fi
+    
+    # Delete previous versions. NB: THIS SHOULD ONLY BE DONE ON NON-PRODUCTION
+    # SYSEMS!
+    find . \( -name 'ldm-*.gz' -o \( -name 'ldm-*' -type d \) \) \
+            ! -name $pkgId ! -name $pkgId.tar.gz -print -prune | xargs rm -rf
 EOF
