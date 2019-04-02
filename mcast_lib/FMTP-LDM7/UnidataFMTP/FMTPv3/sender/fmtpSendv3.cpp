@@ -61,24 +61,55 @@ static void freeLogging(void* arg)
 }
 #endif
 
-// This function is for debugging purposes only
+/**
+ * Logs a message.
+ *
+ * @param[in] msg  Message to be logged
+ */
 inline static void logMsg(const std::string& msg)
 {
+#ifdef LDM_LOGGING
+    log_add(msg.c_str());
+#else
     //std::cerr << msg << std::endl;
+#endif
 }
 
-// This function is for debugging purposes only
-inline static void logMsg(const std::exception& ex)
+/**
+ * Logs a (possibly) nested exception. Messages are logged starting with the
+ * innermost exception and ending with the outermost.
+ *
+ * @param[in] ex       Possible nested exception to be logged
+ * @param isOutermost  Is `ex` the outermost exception?
+ */
+static void logMsg(
+        const std::exception& ex,
+        const bool            isOutermost)
 {
-#if 0
     try {
         std::rethrow_if_nested(ex);
     }
     catch (const std::exception& nested) {
-        logMsg(nested);
+        logMsg(nested, false);
     }
+
     logMsg(ex.what());
+
+#ifdef LDM_LOGGING
+    if (isOutermost)
+        log_flush_error();
 #endif
+}
+
+/**
+ * Logs a potentially nested exception. Messages are logged starting with the
+ * innermost exception and ending with the outermost.
+ *
+ * @param[in] ex       Possible nested exception to be logged
+ */
+inline static void logMsg(const std::exception& ex)
+{
+    logMsg(ex, true);
 }
 
 inline void fmtpSendv3::UdpSerializer::reset()
@@ -791,23 +822,8 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
              * TcpSend::parseHeader() TcpBase::recvall() recv() returns -1,
              * connection is broken.
              */
-            close(retxsockfd);
-            tcpsend->rmSockInList(retxsockfd);
-            std::list<int> socklist = tcpsend->getConnSockList();
-            if (socklist.empty()) {
-                /* this is the last receiver, should rethrow exception to report */
-                taskExit(e);
-                std::rethrow_exception(except);
-            }
-            // TODO: notify timer not to wait for the offline receiver
-#if 1
             std::throw_with_nested(std::runtime_error(
                     "fmtpSendv3::RunRetxThread(): Couldn't parse header"));
-#else
-            /* if not last receiver, silently exit */
-            pthread_exit(NULL);
-#endif
-            // TODO: notify application a receiver went offline?
         }
         if (parsestate == 0) {
             /* encountered EOF, header incomplete */
@@ -862,23 +878,8 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
         }
         catch (const std::runtime_error& e) {
             /* same as parseHeader(), if connection broken, take action */
-            close(retxsockfd);
-            tcpsend->rmSockInList(retxsockfd);
-            std::list<int> socklist = tcpsend->getConnSockList();
-            if (socklist.empty()) {
-                /* this is the last receiver, should rethrow exception to report */
-                taskExit(e);
-                std::rethrow_exception(except);
-            }
-            // TODO: notify timer not to wait for the offline receiver
-#if 1
             std::throw_with_nested(std::runtime_error(
                     "fmtpSendv3::RunRetxThread(): Couldn't reply to request"));
-#else
-            /* if not last receiver, silently exit */
-            pthread_exit(NULL);
-            // TODO: notify application a receiver went offline?
-#endif
         }
 
         /* Releases the product metadata in exclusive use */
@@ -1436,6 +1437,9 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
         close(newptr->retxsockfd);
         pthread_t thisThread = ::pthread_self();
         newptr->retxmitterptr->retxThreadList.remove(thisThread);
+
+        // TODO: notify timer not to wait for the offline receiver
+        // TODO: notify application a receiver went offline?
     }
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);
