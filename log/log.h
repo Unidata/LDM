@@ -167,7 +167,7 @@ log_level_t log_get_level(void);
  * between log_init() and log_fini().
  *
  * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
+ * @asyncsignalsafety  Safe
  */
 void log_roll_level(void);
 

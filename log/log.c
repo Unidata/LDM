@@ -608,7 +608,7 @@ static int flush(
 /**
  *  Logging level.
  */
-log_level_t log_level = LOG_LEVEL_NOTICE;
+volatile sig_atomic_t log_level = LOG_LEVEL_NOTICE;
 
 /**
  * The mapping from logging levels to system logging daemon priorities:
@@ -1139,11 +1139,12 @@ int log_set_level(
 
 void log_roll_level(void)
 {
-    logl_lock();
-        log_level = (log_level == LOG_LEVEL_DEBUG)
-                ? LOG_LEVEL_ERROR
-                : log_level - 1;
-    logl_unlock();
+    int level = log_level - 1;
+
+    if (level < 0)
+        level = LOG_LEVEL_NOTICE;
+
+    log_level = level;
 }
 
 log_level_t log_get_level(void)

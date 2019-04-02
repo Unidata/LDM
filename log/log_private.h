@@ -65,7 +65,7 @@ typedef struct message {
 /**
  *  Logging level.
  */
-extern log_level_t log_level;
+extern volatile sig_atomic_t log_level;
 
 /**
  * Finalizes the logging module. Should be called eventually after
