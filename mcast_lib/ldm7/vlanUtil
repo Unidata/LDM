@@ -81,7 +81,8 @@ create()
         vlanId="${2:?VLAN ID not specified}"
 
         # Create VLAN
-        if ! ip link add link "$phyIface" name "$virtIface" type vlan id "$vlanId"; then
+        if ! ip link add link "$phyIface" name "$virtIface" type vlan \
+                id "$vlanId"; then
             echo 1>&2 "Couldn't create VLAN interface $virtIface"
             status=1
         else
@@ -90,8 +91,19 @@ create()
                 echo 1>&2 "Couldn't enable interface $virtIface"
                 status=1
             else
-                if ! ip addr add "$ifaceCidr" dev "$virtIface"; then
-                    echo 1>&2 "Couldn't add address $ifaceCidr to interface $virtIface"
+                bcastAddr=`echo $ifaceCidr | tr . ' ' | tr / ' ' | awk '{
+                    subnetAddr=lshift(lshift(lshift($1,8)+$2,8)+$3,8)+$4;
+                    hostMask=lshift(1,32-$5)-1;
+                    bcastAddr=or(subnetAddr,hostMask);
+                    print rshift(bcastAddr,24) "." \
+                            and(rshift(bcastAddr,16),0xFF) "." \
+                            and(rshift(bcastAddr,8),0xFF) "." \
+                            and(bcastAddr,0xFF);
+                }'`
+                if ! ip addr add "$ifaceCidr" broadcast $bcastAddr \
+                        dev "$virtIface"; then
+                    echo 1>&2 "Couldn't add address $ifaceCidr to interface " \
+                        "$virtIface"
                     status=1
                 fi
             fi
@@ -101,7 +113,8 @@ create()
         if test $status -eq 0 -a "$srvrAddr"; then
             # Must be after interface is up
             if ! ip route add "$srvrAddr" dev "$virtIface"; then
-                echo 1>&2 "Couldn't add interface $virtIface as route to $srvrAddr"
+                echo 1>&2 "Couldn't add interface $virtIface as route to " \
+                        "$srvrAddr"
                 status=1
             fi
         fi
