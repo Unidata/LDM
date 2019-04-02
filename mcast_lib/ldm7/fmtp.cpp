@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -27,18 +27,46 @@
 #include <xdr.h>
 
 /**
- * Recursively log exception "whats".
+ * Adds a message to the logging queue.
+ *
+ * @param[in] msg  Message to be added
  */
-void log_what(const std::exception& e)
+inline static void logAdd(const std::string& msg)
 {
-    try {
-        std::rethrow_if_nested(e);
-    } catch (const std::exception& nested) {
-        log_what(nested);
-    }
-    log_add("%s", e.what());
+    log_add(msg.c_str());
 }
 
+/**
+ * Adds a (possibly) nested exception to the logging queue. Messages are queued
+ * starting with the innermost exception and ending with the outermost.
+ *
+ * @param[in] ex           Possible nested exception to be queued
+ * @param[in] isOutermost  Is `ex` the outermost exception?
+ */
+static void logAdd(
+        const std::exception& ex,
+        const bool            isOutermost)
+{
+    try {
+        std::rethrow_if_nested(ex);
+    }
+    catch (const std::exception& nested) {
+        logAdd(nested, false);
+    }
+
+    logAdd(ex.what());
+}
+
+/**
+ * Adds a potentially nested exception to the logging queue. Messages are queued
+ * starting with the innermost exception and ending with the outermost.
+ *
+ * @param[in] ex       Possible nested exception to be queued
+ */
+inline static void logAdd(const std::exception& ex)
+{
+    logAdd(ex, true);
+}
 
 /**
  * The FMTP receiver:
@@ -158,12 +186,12 @@ fmtpReceiver_new(
         return 0;
     }
     catch (const std::invalid_argument& e) {
-        log_add("%s", e.what());
+        logAdd(e);
         free(rcvr);
         return EINVAL;
     }
     catch (const std::exception& e) {
-        log_add("%s", e.what());
+        logAdd(e);
         free(rcvr);
         return -1;
     }
@@ -219,7 +247,7 @@ fmtpReceiver_execute(
                 status = 0;
             }
             catch (const std::exception& e) {
-                log_what(e);
+                logAdd(e);
                 status = -1;
             }
 
@@ -325,11 +353,11 @@ fmtpSender_init(
             status = 0;
         }
         catch (const std::invalid_argument& e) {
-            log_what(e);
+            logAdd(e);
             status = 1;
         }
         catch (const std::exception& e) {
-            log_what(e);
+            logAdd(e);
             status = 3;
         }
 
@@ -339,7 +367,7 @@ fmtpSender_init(
         }
     }
     catch (const std::exception& e) {
-        log_what(e);
+        logAdd(e);
         log_add("Couldn't create new per-product sending-notifier");
         status = 3;
     }
@@ -445,18 +473,18 @@ fmtpSender_start(
             status = 0;
         }
         catch(std::system_error& e) {
-            log_what(e);
+            logAdd(e);
             log_add("Couldn't get TCP port number of FMTP sender");
             sender->fmtpSender->Stop();
             status = 3;
         }
     }
     catch (std::runtime_error& e) {
-        log_what(e);
+        logAdd(e);
         status = 2;
     }
     catch (std::exception& e) {
-        log_what(e);
+        logAdd(e);
         status = 3;
     }
 
@@ -482,11 +510,11 @@ fmtpSender_stop(
         status = 0;
     }
     catch (std::runtime_error& e) {
-        log_what(e);
+        logAdd(e);
         status = 2;
     }
     catch (std::exception& e) {
-        log_what(e);
+        logAdd(e);
         status = 3;
     }
 
@@ -584,7 +612,7 @@ fmtpSender_send(
         return 0;
     }
     catch (const std::exception& e) {
-        log_what(e);
+        logAdd(e);
         return EIO;
     }
 }

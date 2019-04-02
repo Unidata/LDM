@@ -130,6 +130,7 @@ public:
     virtual ~Impl() noexcept
     {
         ::close(sd);
+        sd = -1;
     }
 
     /**
@@ -255,8 +256,8 @@ public:
      */
     std::string toString()
     {
-        return std::string{"{localAddr="} + localAddrStr() +
-                ", remoteAddr=" + remoteAddrStr() + "}";
+        return std::string{"{sd="} + std::to_string(sd) + ", localAddr=" +
+                localAddrStr() + ", remoteAddr=" + remoteAddrStr() + "}";
     }
 
     /**

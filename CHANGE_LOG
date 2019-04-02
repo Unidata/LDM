@@ -1,4 +1,4 @@
-6.13.11.24	2019-03-29T14:49:09-0600
+6.13.11.25	2019-04-02T17:53:41-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -19,7 +19,12 @@
         "--disable-setpgid_exec".
 
     log(3):
-        Improved concurrency locking for access by multiple threads
+        * Improved concurrency locking for access by multiple threads
+        * Maked log_roll_level() async-signal-safe so that it can be safely
+          called from a signal handler
+        * Added description of SIGUSR1 action to simple logging documentation
+        * Changed alignment of locatio field from right to left so that file
+          names line up
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -48,6 +53,8 @@
             * Modified to pass CIDR address for virtual interface to vlanUtil(1)
             * Made down7_halt() async-signal-safe to obviate deadlock if
               interrupted while logging
+            * Differentiated "backlog" from "backstop" product-insertion
+              messages
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
@@ -63,6 +70,8 @@
             * Removed acquisition of root privileges when calling "provision.py"
             * Added printing of "provision.py" command-string on failure
             * Deleted logging of child command that error-exits
+            * Added to mldm_ensureExec() removal of terminated sender from
+              mldm_sender_map(3)
         * vlanUtil(1):
             * Addd "/sbin" to PATH to get ip(1)
             * Removed address de-assignment from "destroy" because deleting the
@@ -71,12 +80,14 @@
               interface
             * Eliminated use of subnet specifiction when managing route to
               sender
+            * Added broadcast address to `ip addr add`
         * Sender code:
             * Disallowed multicast interface parameter as the interface must be
               the same as the FMTP server address
             * Ensured that the FMTP server address is in the subnet of its FMTP
               clients
             * Removed lint found by Coverity Scan
+            * Improved MldmRpcCmd server starting-up message
         * Internet(3): Created ::to_string(struct sockaddr&)
         * mldm_sender(1): Correct removal of secret file
         * CidrAddr(3):
@@ -90,6 +101,10 @@
               to the sending FMTP server because it can take time for the AL2S
               VLAN to be provisioned. It will attempt every 5 seconds for 2
               minutes.
+            * fmtpSendv3(3):
+                * ::RunRetxThread(): Don't terminate process on
+                  TcpSend::parserHeader() error
+                * Adapted logMsg() to use LDM logging
 
     Developer:
         * Deployment:
@@ -106,6 +121,7 @@
                 * Added the MAX
                 * Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
                 * Added University of Missouri's host
+                * Changed LDM7 host names to state abbreviations
         * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
           during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
@@ -555,7 +571,7 @@
                   modified to ignore VLAN-creation errors if the switch or port
                   identifiers of the AL2S end-points start with "dummy".
                 * Added ability to ignore vlanUtil(1) exit status and got
-                * up7_down7_test
+                  up7_down7_test to work
                 * Execute OESS provisioning script with root privileges.
                 * Modified LDM7 to log duration of multicast product
                   transmission for throughput calculation

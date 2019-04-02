@@ -61,13 +61,12 @@ TcpBase::~TcpBase()
  * Attempts to read a given number of bytes from a streaming socket. Returns
  * when that number is read, the end-of-file is encountered, or an error occurs.
  *
- * @param[in] sock     The streaming socket.
- * @param[in] buf      Pointer to a buffer.
- * @param[in] nbytes   Number of bytes to attempt to read.
- * @return             Number of bytes read. If less than `nbytes` and
- *                     `nbytes > 0`, then EOF was encountered.
- * @throws std::system_error  if an error is encountered reading from the
- *                            socket.
+ * @param[in] sock               The streaming socket.
+ * @param[in] buf                Pointer to a buffer.
+ * @param[in] nbytes             Number of bytes to attempt to read.
+ * @return                       Number of bytes read. If less than `nbytes` and
+ *                               `nbytes > 0`, then EOF was encountered.
+ * @throws    std::system_error  error reading from the socket.
  */
 size_t TcpBase::recvall(const int sock, void* const buf, const size_t nbytes)
 {

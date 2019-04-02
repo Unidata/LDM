@@ -330,10 +330,11 @@ void TcpSend::Init()
  * read() system call fails, return immediately. Otherwise, return when this
  * function finishes.
  *
- * @param[in] retxsockfd    retransmission socket file descriptor.
- * @param[in] *recvheader   pointer of a FmtpHeader structure, whose fields
- *                          are to hold the parsed out information.
- * @return    retval        return the status value returned by read()
+ * @param[in] retxsockfd         retransmission socket file descriptor.
+ * @param[in] *recvheader        pointer of a FmtpHeader structure, whose fields
+ *                               are to hold the parsed out information.
+ * @return    retval             return the status value returned by read()
+ * @throws    std::system_error  error reading from the socket.
  */
 int TcpSend::parseHeader(int retxsockfd, FmtpHeader* recvheader)
 {
