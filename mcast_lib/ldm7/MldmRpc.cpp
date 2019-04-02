@@ -463,8 +463,8 @@ public:
      */
     void operator()()
     {
-        log_info(("Multicast LDM sender command-server starting up: "
-                "srvrSock=" + srvrSock.getLocalSockAddr().to_string()).data());
+        log_info("Multicast LDM sender command-server starting up on socket "
+                "%s", srvrSock.to_string().data());
 
         while (!done()) {
             try {
@@ -495,15 +495,16 @@ public:
                 }
                 catch (const std::exception& ex) {
                     log_add(ex.what());
-                    log_notice_q("Couldn't serve client %s",
+                    log_add("Couldn't serve client %s",
                             connSock.to_string().c_str());
+                    log_flush_notice();
                 }
             }
             catch (const std::system_error& ex) {
                 throw; // Fatal error
             }
             catch (const std::exception& ex) {
-                log_notice_q(ex.what()); // Non-fatal error
+                log_notice(ex.what()); // Non-fatal error
             }
         } // Individual client session
     }
