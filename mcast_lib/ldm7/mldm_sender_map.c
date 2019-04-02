@@ -539,7 +539,7 @@ msm_remove(const pid_t pid)
             log_add("No multicast sender corresponds to process %ld",
                     (long)pid);
         }
-        else if (log_is_enabled_debug) {
+        else {
             log_debug("Removed information on multicast process %ld",
                     (long)pid);
         }
