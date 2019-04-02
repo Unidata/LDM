@@ -362,7 +362,7 @@ static void test_log_roll_level(void)
 
     log_roll_level();
     level = log_get_level();
-    CU_ASSERT_EQUAL(level, LOG_LEVEL_ERROR);
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_NOTICE);
 
     log_fini();
 }
