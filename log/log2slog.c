@@ -384,17 +384,18 @@ static int stream_log(
                     year, month, tm.tm_mday, tm.tm_hour,
                     tm.tm_min, tm.tm_sec, microseconds);
 
-            #define MIN0(x) ((x) >= 0 ? (x) : 0)
+            #define MIN(a, b) ((a) <= (b) ? (a) : (b))
+
+            static char      buf[265]; // NB: Requires locking
+            static const int buflen = sizeof(buf) - 1;
 
             // Process
-            int nbytes = snprintf(NULL, 0, "%s[%d]", ident, pid);
-            (void)fprintf(dest->stream, "%*s%s[%d] ", MIN0(27-nbytes),
-                    "", ident, pid);
+            (void)snprintf(buf, buflen, "%s[%d]", ident, pid);
+            (void)fprintf(dest->stream, "%27s ", buf);
 
             // Location
-            nbytes = snprintf(NULL, 0, "%s:%s()", basename, loc->func);
-            (void)fprintf(dest->stream, "%*s%s:%s() ", MIN0(32-nbytes),
-                    "", basename, loc->func);
+            (void)snprintf(buf, buflen, "%s:%s()", basename, loc->func);
+            (void)fprintf(dest->stream, "%32s ", buf);
 
             // Error level
             (void)fprintf(dest->stream, "%-5s ", levelId);
