@@ -2224,11 +2224,15 @@ downlet_incNumProds()
  * previously requested from the remote LDM7.
  *
  * @param[in] prod         data-product.
+ * @param[in] backlog      Product is part of the backlog? If `false`, then
+ *                         product was received on the backstop thread.
  * @retval    0            Success.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static int
-downlet_recvProd(product* const restrict prod)
+downlet_recvProd(
+        product* const prod,
+        const bool     backlog)
 {
     // Products are also inserted on the multicast-receiver thread
     pqueue* const restrict  pq = down7.pq;
@@ -2240,7 +2244,7 @@ downlet_recvProd(product* const restrict prod)
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info("Inserted: %s", buf);
+            log_info("%s: %s", backlog ? "Backlog: " : "Inserted: ", buf);
         }
         down7_incNumProds();
     }
@@ -2801,7 +2805,7 @@ deliver_missed_product_7_svc(
         // The queue can't be empty
         (void)mrm_removeRequestedFileNoWait(down7.mrm, &iProd);
 
-        if (downlet_recvProd(&missedProd->prod) != 0) {
+        if (downlet_recvProd(&missedProd->prod, false) != 0) {
             char  buf[LDM_INFO_MAX];
             char* rmtStr = sockAddrIn_format(svc_getcaller(rqstp->rq_xprt));
 
@@ -2868,7 +2872,7 @@ deliver_backlog_product_7_svc(
 {
     log_debug("Entered");
 
-    int status = downlet_recvProd(prod);
+    int status = downlet_recvProd(prod, true);
 
     log_assert(status == 0);
 
