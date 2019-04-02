@@ -1,7 +1,7 @@
 LDM Logging             {#mainpage}
 ===========
 
-Copyright 2016 University Corporation for Atmospheric Research. All rights
+Copyright 2019 University Corporation for Atmospheric Research. All rights
 reserved. See the the file COPYRIGHT in the top-level source-directory for
 licensing conditions.
 
@@ -43,6 +43,19 @@ By default, log messages are written to
 (Note that the LDM server, `ldmd`, daemonizes itself by default. It is the
 only program that does.)
 
+If the output destination is a file, then a `USR1` signal sent to any LDM
+utility will cause this logging module to close  and re-open the output file. 
+This allows the log files to be rotated and purged by an external process so
+that the disk partition doesn't become full.
+
+A `USR2` signal sent to any LDM utility will cause the logging level to be
+"rotated" in the following sequence:
+
+    NOTICE -> INFO -> DEBUG -> NOTICE -> ...
+    
+Be advised that logging at the `DEBUG` level will likely cause the log file to
+become very large, very quickly.
+
 The default destination for log messages can usually be overridden by the
 command-line option `-l` _dest_:
 @par
@@ -51,13 +64,6 @@ command-line option `-l` _dest_:
 <tt>""</tt>     | System logging daemon
 <tt>"-"</tt>    | Standard error stream
 <em>path</em>   | File whose pathname is _path_
-
-Besides managing thread-specific queues of log messages, the LDM logging
-component also registers a handler for the `USR1` signal. If log messages are
-being written to a regular file (e.g., the LDM log file), then upon receipt of
-the signal, the LDM logging component will refresh (i.e., close and re-open) its
-connection to the file. This allows the log files to be rotated and purged by an
-external process so that the disk partition doesn't become full.
 
 ---------------
 
