@@ -116,21 +116,21 @@ public:
 private:
 	TcpClient*	        retrans_tcp_client;
 	// used in the select() system call
-	int		            max_sock_fd;        // the maximum file descriptors allowed
+	int		        max_sock_fd;        // the maximum file descriptors allowed
 	int 		        multicast_sock;
-	int		            retrans_tcp_sock;
+	int		        retrans_tcp_sock;
 	fd_set		        read_sock_set;
 	ofstream 	        retrans_info;
 
 	int 		        packet_loss_rate;
-	uint			    session_id;
+	uint			session_id;
 	FmtpReceiverStats 	recv_stats;
 	CpuCycleCounter		cpu_counter, global_timer;
 	StatusProxy*		status_proxy;
 
 	PerformanceCounter 	cpu_info;
-	bool			    time_diff_measured;
-	double 			    time_diff;
+	bool			time_diff_measured;
+	double 			time_diff;
 
 	/**
 	 * Initializes this instance.
