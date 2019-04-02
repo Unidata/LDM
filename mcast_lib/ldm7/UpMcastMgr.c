@@ -507,6 +507,8 @@ mldm_ensureExec(
             if (kill(childPid, 0)) {
                 log_warning("Multicast LDM sender process %d should "
                         "exist but doesn't. Re-executing...", childPid);
+                status = msm_remove(childPid);
+                log_assert(status == 0);
                 childPid = 0;
             }
         }
