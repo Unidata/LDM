@@ -103,17 +103,17 @@ public:
 
 private:
     /**
-     * Initializes the TCP connection. Blocks until the connection is established
-     * or a severe error occurs.
+     * Initializes the TCP connection.
      *
      * @throws std::system_error  if a system error occurs.
      */
     void initSocket();
 
     struct sockaddr_in      servAddr;
-    std::string             tcpAddr;  /* a copy of the passed-in tcpAddr */
-    unsigned short          tcpPort;  /* a copy of the passed-in tcpPort */
-    in_addr_t               iface;    /// Local interface to use in network byte-order
+    std::string             tcpAddr;  ///< a copy of the passed-in tcpAddr
+    unsigned short          tcpPort;  ///< a copy of the passed-in tcpPort
+    /// Local interface to use in network byte-order
+    in_addr_t               iface;
 };
 
 
