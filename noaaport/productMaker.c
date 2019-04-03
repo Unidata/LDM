@@ -177,7 +177,7 @@ void* pmStart(
     psh_struct*         psh = &productMaker->psh;
     pdb_struct*         pdb = &productMaker->pdb;
     ccb_struct*         ccb = &productMaker->ccb;
-    unsigned long       last_sbn_seqno;
+    unsigned long       last_sbn_seqno = 0;
     unsigned long       last_sbn_runno = ULONG_MAX;
     int                 PNGINIT = 0;
     char*               memheap = NULL;
@@ -410,12 +410,15 @@ int    nnnxxx_offset;
                 /* Update acq table stats - End */
 #endif
 
+#define          MAX_SEQNO 0xFFFFFFFFu
+
         log_debug("***********************************************");
         if (last_sbn_runno != sbn->runno) {
             last_sbn_runno = sbn->runno;
+            last_sbn_seqno = (sbn->seqno - 1) & MAX_SEQNO;
         }
         else {
-#           define          MAX_SEQNO 0xFFFFFFFFu
+
             /*
              * The sequence number is 4 bytes and `& MAX_SEQNO` is necessary if
              * `sizeof(unsigned long) > 4`
