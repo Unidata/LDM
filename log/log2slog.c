@@ -186,6 +186,15 @@ static void assertLocked(void)
 }
 
 /**
+ * Asserts that the current thread has not acquired this module's lock.
+ */
+static void assertUnlocked(void)
+{
+    assert(pthread_mutex_trylock(&mutex) == 0);
+    (void)pthread_mutex_unlock(&mutex);
+}
+
+/**
  * Returns the pathname of the LDM log file.
  *
  * @return The pathname of the LDM log file
@@ -717,7 +726,7 @@ int logi_internal(
         const log_loc_t* const loc,
                                ...)
 {
-    assertLocked();
+    assertUnlocked();
 
     int     status;
     va_list args;
