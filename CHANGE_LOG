@@ -1,4 +1,4 @@
-6.13.11.25	2019-04-02T17:53:41-0600
+6.13.11.26	2019-04-03T11:15:05-0600
     ldmd(8):
         Eliminated having the operating-system assign a transitory port
         number for the LDM server if the server couldn't get its official port
@@ -25,6 +25,12 @@
         * Added description of SIGUSR1 action to simple logging documentation
         * Changed alignment of locatio field from right to left so that file
           names line up
+        * Corrected assertion in log2slog::logi_internal() to the lock is
+          *not* acquired
+
+    NOAAPort:
+        Ensured initialization of last received frame index if and when the
+        run number changes. This lint was found by Coverity Scan.
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
