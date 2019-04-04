@@ -37,7 +37,7 @@ inline static void logAdd(const std::string& msg)
 }
 
 /**
- * Adds a (possibly) nested exception to the logging queue. Messages are queued
+ * Adds a potentially nested exception to the logging queue. Messages are queued
  * starting with the innermost exception and ending with the outermost.
  *
  * @param[in] ex           Possible nested exception to be queued
