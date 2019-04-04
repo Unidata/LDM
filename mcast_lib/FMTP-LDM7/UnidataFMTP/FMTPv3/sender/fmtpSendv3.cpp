@@ -231,7 +231,6 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     linkspeed(0),
     exitMutex(),
     except(),
-    exceptIsSet(false),
     coor_t(),
     timer_t(),
     tsnd(tsnd),
@@ -400,7 +399,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
     catch (std::runtime_error& e) {
-        taskBroke(e);
+        taskBroke(std::current_exception());
         throw;
     }
 
@@ -599,7 +598,7 @@ void* fmtpSendv3::coordinator(void* ptr)
         }
     }
     catch (std::runtime_error& e) {
-        sendptr->taskBroke(e);
+        sendptr->taskBroke(std::current_exception());
     }
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);
@@ -1441,21 +1440,19 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
 }
 
 
-void fmtpSendv3::taskBroke(const std::runtime_error& ex)
+void fmtpSendv3::taskBroke(const std::exception_ptr& ex)
 {
     std::unique_lock<std::mutex> lock(exitMutex);
 
-    if (!exceptIsSet) {
-        except = std::make_exception_ptr(ex);
-        exceptIsSet = true;
-    }
+    if (!except)
+        except = ex;
 }
 
 void fmtpSendv3::throwIfBroken()
 {
     std::unique_lock<std::mutex> lock(exitMutex);
 
-    if (exceptIsSet)
+    if (except)
         std::rethrow_exception(except);
 }
 
@@ -1551,7 +1548,7 @@ void* fmtpSendv3::timerWrapper(void* ptr)
         sender->timerThread();
     }
     catch (std::runtime_error& e) {
-        sender->taskBroke(e);
+        sender->taskBroke(std::current_exception());
     }
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);

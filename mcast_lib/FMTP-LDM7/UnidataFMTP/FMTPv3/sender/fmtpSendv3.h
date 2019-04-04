@@ -268,9 +268,9 @@ private:
      * Records the exception that broke this instance. Only the first such
      * exception is recorded.
      *
-     * @param[in] ex  Exception that broke this instance
+     * @param[in] ex  Pointer to exception that broke this instance
      */
-    void taskBroke(const std::runtime_error& ex);
+    void taskBroke(const std::exception_ptr& ex);
 
     /**
      * Throws the exception that broke this instance if such an exception
@@ -305,7 +305,6 @@ private:
     uint64_t            linkspeed;
     std::mutex          exitMutex;
     std::exception_ptr  except;
-    bool                exceptIsSet;
     RateShaper          rateshaper;
     std::mutex          notifyprodmtx;
     std::mutex          notifycvmtx;
