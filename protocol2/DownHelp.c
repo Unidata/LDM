@@ -217,7 +217,7 @@ dh_saveProd(
         }                           /* "savedInfo"' updated */
     }                               /* duplicate data-product */
     else if (EACCES == error) {
-        log_error_q("All products in %z-byte queue are locked: %s",
+        log_error_q("All products in %zu-byte queue are locked: %s",
                 pq_getDataSize(pq),
                 s_prod_info(NULL, 0, info, log_is_enabled_debug));
         retCode = DOWN6_PQ_NO_ROOM;
