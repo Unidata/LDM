@@ -1,4 +1,4 @@
-6.13.11.27	2019-04-04T15:57:34-0600
+6.13.11.28	2019-04-04T17:01:15-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -117,6 +117,8 @@
                 * Adapted logMsg() to use LDM logging
                 * Eliminated this module terminating the process if an exception
                   occurs
+                * Eliminated slicing of the exception that causeed an instance
+                  to stop working
 
     Developer:
         * Deployment:
