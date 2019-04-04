@@ -1,22 +1,26 @@
-6.13.11.26	2019-04-03T11:15:05-0600
+6.13.11.27	2019-04-04T15:57:34-0600
     ldmd(8):
-        Eliminated having the operating-system assign a transitory port
-        number for the LDM server if the server couldn't get its official port
-        number because 
-          * No downstream, receiving LDM could connect to the server without
-            knowing the transitory port number; 
-          * The LDM server can't communicate a transitory port number to the
-            outside world; and
-          * Using a transitory port number prevented the LDM from terminating
-            with an error to indicate a problem
+        * Eliminated having the operating-system assign a transitory port
+          number for the LDM server if the server couldn't get its official port
+          number because 
+            * No downstream, receiving LDM could connect to the server without
+              knowing the transitory port number; 
+            * The LDM server can't communicate a transitory port number to the
+              outside world; and
+            * Using a transitory port number prevented the LDM from terminating
+              with an error to indicate a problem
+        * DownHelp(3): Eliminated SIGSEGV due to incorrect format for `size_t`
+          variable in error message
 
     pqact(1):
-        Made processes created via EXEC entries in a pqact(1)
-        configuration-files process group leaders so that they don't receive
-        signals sent to the LDM system's process group. This was done because
-        such processes are unlikely to handle such signals. This feature can
-        be disabled via the configure(1) script's option
-        "--disable-setpgid_exec".
+        * Made processes created via EXEC entries in a pqact(1)
+          configuration-files process group leaders so that they don't receive
+          signals sent to the LDM system's process group. This was done because
+          such processes are unlikely to handle such signals. This feature can
+          be disabled via the configure(1) script's option
+          "--disable-setpgid_exec".
+        * pbuf.c: Corrected format for printing ssize_t variable in error
+          message
 
     log(3):
         * Improved concurrency locking for access by multiple threads
@@ -111,6 +115,8 @@
                 * ::RunRetxThread(): Don't terminate process on
                   TcpSend::parserHeader() error
                 * Adapted logMsg() to use LDM logging
+                * Eliminated this module terminating the process if an exception
+                  occurs
 
     Developer:
         * Deployment:
