@@ -109,7 +109,7 @@ pbuf_flush(
             nwrote = 0;
         }
         else {
-            log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zd",
+            log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zu",
                     buf->pfd, len);
         }
         status = tmpErrno;
