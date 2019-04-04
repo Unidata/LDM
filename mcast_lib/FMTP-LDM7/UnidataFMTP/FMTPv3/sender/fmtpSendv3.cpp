@@ -359,6 +359,8 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize)
 uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
                                   uint16_t metaSize)
 {
+    throwIfBroken();
+
     try {
         if (data == NULL)
             throw std::runtime_error(
@@ -398,8 +400,8 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
     catch (std::runtime_error& e) {
-        taskExit(e);
-        std::rethrow_exception(except);
+        taskBroke(e);
+        throw;
     }
 
 #ifdef MODBASE
@@ -476,8 +478,6 @@ void fmtpSendv3::Start()
 /**
  * Stops this instance. Must be called if `Start()` succeeds. Doesn't return
  * until all threads have stopped.
- *
- * @throws std::exception  If an exception was thrown on a thread.
  */
 void fmtpSendv3::Stop()
 {
@@ -488,13 +488,6 @@ void fmtpSendv3::Stop()
 
     (void)pthread_join(timer_t, NULL);
     (void)pthread_join(coor_t, NULL);
-
-    {
-        std::unique_lock<std::mutex> lock(exitMutex);
-        if (exceptIsSet) {
-            std::rethrow_exception(except);
-        }
-    }
 }
 
 
@@ -606,7 +599,7 @@ void* fmtpSendv3::coordinator(void* ptr)
         }
     }
     catch (std::runtime_error& e) {
-        sendptr->taskExit(e);
+        sendptr->taskBroke(e);
     }
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);
@@ -1448,25 +1441,23 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
 }
 
 
-/**
- * Task terminator. If an exception is caught, this function will be called.
- * It consequently terminates all the other threads by calling the Stop(). This
- * task exit call will not be blocking.
- *
- * @param[in] e                     Exception status
- */
-void fmtpSendv3::taskExit(const std::runtime_error& e)
+void fmtpSendv3::taskBroke(const std::runtime_error& ex)
 {
-    {
-        std::unique_lock<std::mutex> lock(exitMutex);
-        if (!exceptIsSet) {
-            except = std::make_exception_ptr(e);
-            exceptIsSet = true;
-        }
+    std::unique_lock<std::mutex> lock(exitMutex);
+
+    if (!exceptIsSet) {
+        except = std::make_exception_ptr(ex);
+        exceptIsSet = true;
     }
-    Stop();
 }
 
+void fmtpSendv3::throwIfBroken()
+{
+    std::unique_lock<std::mutex> lock(exitMutex);
+
+    if (exceptIsSet)
+        std::rethrow_exception(except);
+}
 
 /**
  * The per-product timer. A product-specified timer element will be created
@@ -1560,7 +1551,7 @@ void* fmtpSendv3::timerWrapper(void* ptr)
         sender->timerThread();
     }
     catch (std::runtime_error& e) {
-        sender->taskExit(e);
+        sender->taskBroke(e);
     }
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);

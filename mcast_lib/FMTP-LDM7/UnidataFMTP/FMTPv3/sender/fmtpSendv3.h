@@ -263,7 +263,21 @@ private:
     void StartNewRetxThread(int newtcpsockfd);
     /** new retranmission thread */
     static void* StartRetxThread(void* ptr);
-    void taskExit(const std::runtime_error&);
+
+    /**
+     * Records the exception that broke this instance. Only the first such
+     * exception is recorded.
+     *
+     * @param[in] ex  Exception that broke this instance
+     */
+    void taskBroke(const std::runtime_error& ex);
+
+    /**
+     * Throws the exception that broke this instance if such an exception
+     * occurred; otherwise, does nothing.
+     */
+    void throwIfBroken();
+
     void timerThread();
     /** a wrapper to call the actual fmtpSendv3::timerThread() */
     static void* timerWrapper(void* ptr);
