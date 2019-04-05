@@ -172,8 +172,6 @@ signal_handler(int sig)
     case SIGUSR2 :
             log_roll_level();
             return;
-    case SIGALRM :
-            return;
     }
 }
 
@@ -208,11 +206,10 @@ set_sigactions(void)
      * be handled explicitly.  See the discussion of the SA_RESTART option
      * at http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
      */
-    (void) sigaction(SIGHUP,  &sigact, NULL);
-    (void) sigaction(SIGTERM, &sigact, NULL);
-    (void) sigaction(SIGUSR1, &sigact, NULL);
-    (void) sigaction(SIGUSR2, &sigact, NULL);
-    (void) sigaction(SIGALRM, &sigact, NULL);
+    (void) sigaction(SIGHUP,  &sigact, NULL); // Sets `hupped`
+    (void) sigaction(SIGTERM, &sigact, NULL); // Sets `done`
+    (void) sigaction(SIGUSR1, &sigact, NULL); // Calls log_refresh()
+    (void) sigaction(SIGUSR2, &sigact, NULL); // Calls log_roll_level()
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);
@@ -222,7 +219,6 @@ set_sigactions(void)
     (void)sigaddset(&sigset, SIGTERM);
     (void)sigaddset(&sigset, SIGUSR1);
     (void)sigaddset(&sigset, SIGUSR2);
-    (void)sigaddset(&sigset, SIGALRM);
     (void)sigaddset(&sigset, SIGINT);
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
