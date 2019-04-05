@@ -2262,58 +2262,53 @@ proc_free(Process *proc)
 static int
 proc_exec(Process *proc)
 {
-        log_assert(proc->pid == -1);
-        log_assert(proc->wrdexp.we_wordv[proc->wrdexp.we_wordc] == NULL);
+    log_assert(proc->pid == -1);
+    log_assert(proc->wrdexp.we_wordv[proc->wrdexp.we_wordc] == NULL);
 
-        proc->pid = ldmfork() ;
-        if(proc->pid == -1)
-        {       /* failure */
-                log_flush_error();
-                return -1;
-        }
-        /* else */
+    proc->pid = ldmfork() ;
 
-        if(proc->pid == 0)
-        {       /* child */
-                /* restore signals */
-                {
-                        struct sigaction sigact;
+    if (proc->pid == -1) {
+        // Failure
+        log_flush_error();
+        return -1;
+    }
+    // Else
 
-                        (void)sigemptyset(&sigact.sa_mask);
-                        sigact.sa_flags = 0;
-                        sigact.sa_handler = SIG_DFL;
+    if (proc->pid == 0) {
+        // Child
+        struct sigaction sigact;
 
-                        (void) sigaction(SIGPIPE, &sigact, NULL);
-                        (void) sigaction(SIGUSR1, &sigact, NULL);
-                        (void) sigaction(SIGUSR2, &sigact, NULL);
-                        (void) sigaction(SIGCHLD, &sigact, NULL);
-                        (void) sigaction(SIGALRM, &sigact, NULL);
-                        (void) sigaction(SIGINT,  &sigact, NULL);
-                        (void) sigaction(SIGTERM, &sigact, NULL);
-                }
-                /*
-                 * Block SIGUSR1 because it's sent to the LDM process-group in
-                 * order to refresh logging (i.e., enable log file rotation) and
-                 * would, otherwise, terminate processes that don't handle it
-                 * (e.g., the McIDAS product-decoding system).
-                 */
-                {
-                    sigset_t sigset;
-                    (void)sigemptyset(&sigset);
-                    (void)sigaddset(&sigset, SIGUSR1);
-                    (void)sigprocmask(SIG_BLOCK, &sigset, NULL);
-                }
+        // Restore these signals to their default action
+        sigact.sa_flags = 0;
+        sigact.sa_handler = SIG_DFL;
+        (void)sigemptyset(&sigact.sa_mask);
 
-                endpriv();
-                (void)execvp(proc->wrdexp.we_wordv[0],
-                        proc->wrdexp.we_wordv);
-                log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s",
-                        proc->wrdexp.we_wordv[0], getenv("PATH"));
-                _exit(127) ;
-        }
-        /* else, parent */
+        (void) sigaction(SIGPIPE, &sigact, NULL);
+        (void) sigaction(SIGCHLD, &sigact, NULL);
+        (void) sigaction(SIGALRM, &sigact, NULL);
+        (void) sigaction(SIGINT,  &sigact, NULL);
+        (void) sigaction(SIGTERM, &sigact, NULL);
 
-        return (int)proc->pid;
+        /*
+         * Ignore these signals because they would, otherwise, terminate
+         * processes that don't handle them (e.g., the McIDAS product-decoding
+         * system). LDM programs such as pqact(1) handle these signals
+         * explicitly.
+         */
+        sigact.sa_handler = SIG_IGN;
+
+        (void)sigaction(SIGUSR1, &sigact, NULL); // Rotates LDM log file
+        (void)sigaction(SIGUSR2, &sigact, NULL); // Rotates logging-level
+
+        endpriv();
+        (void)execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
+        log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s",
+                proc->wrdexp.we_wordv[0], getenv("PATH"));
+        _exit(127) ;
+    }
+    // Else, parent
+
+    return (int)proc->pid;
 }
 
 

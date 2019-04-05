@@ -1,4 +1,4 @@
-6.13.11.28	2019-04-04T17:01:15-0600
+6.13.11.29	2019-04-05T12:28:54-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -11,6 +11,9 @@
               with an error to indicate a problem
         * DownHelp(3): Eliminated SIGSEGV due to incorrect format for `size_t`
           variable in error message
+        * LdmConfFile(3) EXEC action:
+            * Replaced blocking of SIGUSR1 before execvp() with ignoring it
+            * Added ignoring of SIGUSR2 before execvp()
 
     pqact(1):
         * Made processes created via EXEC entries in a pqact(1)
@@ -21,6 +24,7 @@
           "--disable-setpgid_exec".
         * pbuf.c: Corrected format for printing ssize_t variable in error
           message
+        * Removed SIGALRM from handled signals because pq(1) handles it
 
     log(3):
         * Improved concurrency locking for access by multiple threads
@@ -65,6 +69,7 @@
               interrupted while logging
             * Differentiated "backlog" from "backstop" product-insertion
               messages
+            * Removed lint found by Coverity Scan
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write()
             * provision.py:
@@ -96,10 +101,10 @@
               the same as the FMTP server address
             * Ensured that the FMTP server address is in the subnet of its FMTP
               clients
-            * Removed lint found by Coverity Scan
-            * Improved MldmRpcCmd server starting-up message
         * Internet(3): Created ::to_string(struct sockaddr&)
-        * mldm_sender(1): Correct removal of secret file
+        * mldm_sender(1):
+            * Improved MldmRpcCmd server starting-up message
+            * Corrected removal of secret file
         * CidrAddr(3):
             * Made cidrAddr_copy() more robust to verity subscription reply
             * Created cidrAddr_snprintf(), which doesn't allocate memory
