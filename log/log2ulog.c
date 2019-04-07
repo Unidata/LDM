@@ -225,52 +225,24 @@ int logi_internal(
     return 0;
 }
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
-
-/**
- * Returns the default destination for log messages if the process is a daemon.
- *
- * @retval ""   The system logging daemon
- * @return      The pathname of the standard LDM log file
- */
-const char* log_get_default_daemon_destination(void)
+const char* logi_get_default_daemon_destination(void)
 {
     return "";
 }
 
-/**
- * Sets the facility that will be used (e.g., `LOG_LOCAL0`) when logging to the
- * system logging daemon. Should be called after `logi_init()`.
- *
- * @param[in] facility  The facility that will be used when logging to the
- *                      system logging daemon.
- */
-int log_set_facility(
+int logi_set_facility(
         const int facility)
 {
-    logl_lock();
-        const char* const id = getulogident();
-        const unsigned    options = ulog_get_options();
-        int               status = openulog(id, options, facility, log_dest);
-    logl_unlock();
+    const char* const id = getulogident();
+    const unsigned    options = ulog_get_options();
+    int               status = openulog(id, options, facility, log_dest);
+
     return status == -1 ? -1 : 0;
 }
 
-/**
- * Returns the facility that will be used when logging to the system logging
- * daemon (e.g., `LOG_LOCAL0`).
- *
- * @return The facility that will be used when logging to the system logging
- *         daemon (e.g., `LOG_LOCAL0`).
- */
-int log_get_facility(void)
+int logi_get_facility(void)
 {
-    logl_lock();
-        int facility = getulogfacility();
-    logl_unlock();
-    return facility;
+    return getulogfacility();
 }
 
 /**
@@ -278,60 +250,23 @@ int log_get_facility(void)
  *
  * @return The logging identifier. The initial value is "ulog".
  */
-const char* log_get_id(void)
+const char* logi_get_id(void)
 {
-    logl_lock();
-        const char* const id = getulogident();
-    logl_unlock();
-    return id;
+    return getulogident();
 }
 
-/**
- * Sets the logging options.
- *
- * @param[in] options  The logging options. Bitwise or of
- *                         LOG_NOTIME      Don't add timestamp
- *                         LOG_PID         Add process-identifier.
- *                         LOG_IDENT       Add logging identifier.
- *                         LOG_MICROSEC    Use microsecond resolution.
- *                         LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
- */
-void log_set_options(
+void logi_set_options(
         const unsigned options)
 {
-    logl_lock();
-        ulog_set_options(~0u, options);
-    logl_unlock();
+    ulog_set_options(~0u, options);
 }
 
-/**
- * Returns the logging options.
- *
- * @return The logging options. Bitwise or of
- *             LOG_NOTIME      Don't add timestamp
- *             LOG_PID         Add process-identifier.
- *             LOG_IDENT       Add logging identifier.
- *             LOG_MICROSEC    Use microsecond resolution.
- *             LOG_ISO_8601    Use timestamp format
- *                             <YYYY><MM><DD>T<hh><mm><ss>[.<uuuuuu>]<zone>
- *         The initial value is `0`.
- */
-unsigned log_get_options(void)
+unsigned logi_get_options(void)
 {
-    logl_lock();
-        const unsigned opts = ulog_get_options();
-    logl_unlock();
-    return opts;
+    return ulog_get_options();
 }
 
-/**
- * Returns the file descriptor that is used for logging.
- *
- * @retval -1  No file descriptor is used
- * @return     The file descriptor that is used for logging
- */
-int log_get_fd(void)
+int logi_get_fd(void)
 {
     return getulogfd();
 }

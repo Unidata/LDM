@@ -142,57 +142,6 @@ static int             syslog_facility = LOG_LDM;
  * The destination of log messages:
  */
 static dest_t          dest;
-/**
- * The mutex that makes this module thread-safe.
- */
-static pthread_mutex_t mutex;
-
-/**
- * Acquires this module's lock.
- *
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static void lock(void)
-{
-    int status = pthread_mutex_lock(&mutex);
-
-    assert(status == 0);
-}
-
-/**
- * Releases this module's lock.
- */
-static void unlock(void)
-{
-    int status = pthread_mutex_unlock(&mutex);
-
-    assert(status == 0);
-}
-
-static void register_atfork_funcs(void)
-{
-    int status = pthread_atfork(lock, unlock, unlock);
-
-    assert(status == 0);
-}
-
-/**
- * Asserts that the current thread has acquired this module's lock.
- */
-static void assertLocked(void)
-{
-    assert(pthread_mutex_trylock(&mutex));
-}
-
-/**
- * Asserts that the current thread has not acquired this module's lock.
- */
-static void assertUnlocked(void)
-{
-    assert(pthread_mutex_trylock(&mutex) == 0);
-    (void)pthread_mutex_unlock(&mutex);
-}
 
 /**
  * Returns the pathname of the LDM log file.
@@ -318,8 +267,6 @@ static int syslog_fini(
 static int syslog_init(
         dest_t* const dest)
 {
-    assertLocked();
-
     openlog(ident, syslog_options, syslog_facility);
     dest->log = syslog_log;
     dest->flush = syslog_flush;
@@ -369,8 +316,6 @@ static int stream_log(
         const log_loc_t* restrict loc,
         const char* restrict      msg)
 {
-    assertLocked();
-
     struct timespec now;
     (void)clock_gettime(CLOCK_REALTIME, &now);
 
@@ -439,8 +384,6 @@ static int stream_log(
 static inline int stream_flush(
         dest_t* const             dest)
 {
-    assertLocked();
-
     return fflush(dest->stream)
             ? -1
             : 0;
@@ -460,8 +403,6 @@ static inline int stream_flush(
  */
 static int stderr_lock(dest_t* const dest)
 {
-    assertLocked();
-
     flockfile(dest->stream);
     return 0;
 }
@@ -476,8 +417,6 @@ static int stderr_lock(dest_t* const dest)
  */
 static int stderr_unlock(dest_t* const dest)
 {
-    assertLocked();
-
     funlockfile(dest->stream);
     return 0;
 }
@@ -493,8 +432,6 @@ static int stderr_unlock(dest_t* const dest)
 static int stderr_init(
         dest_t* const dest)
 {
-    assertLocked();
-
     dest->log = stream_log;
     dest->flush = stream_flush;
     dest->get_fd = stream_get_fd;
@@ -523,8 +460,6 @@ static int stderr_init(
  */
 static int file_lock(dest_t* const dest)
 {
-    assertLocked();
-
     struct flock lock;
 
     lock.l_type = F_WRLCK;
@@ -548,8 +483,6 @@ static int file_lock(dest_t* const dest)
  */
 static int file_unlock(dest_t* const dest)
 {
-    assertLocked();
-
     struct flock lock;
 
     lock.l_type = F_UNLCK;
@@ -572,8 +505,6 @@ static int file_unlock(dest_t* const dest)
  */
 static int file_fini(dest_t* const dest)
 {
-    assertLocked();
-
     int status;
 
     if (dest->stream == NULL) {
@@ -625,8 +556,6 @@ static int ensure_close_on_exec(
 static int file_init(
         dest_t* const dest)
 {
-    assertLocked();
-
     int status;
     int fd = open(log_dest, O_WRONLY|O_APPEND|O_CREAT,
             S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -673,8 +602,6 @@ static int file_init(
  */
 static int dest_set()
 {
-    assertLocked();
-
     dest_t new_dest;
     int    status =
             LOG_IS_SYSLOG_SPEC(log_dest)
@@ -702,23 +629,15 @@ int logi_set_destination(const char* const dest)
     if (nchars > sizeof(log_dest) - 1)
         nchars = sizeof(log_dest) - 1;
 
-    lock();
-        ((char*)memmove(log_dest, dest, nchars))[nchars] = 0;
+    ((char*)memmove(log_dest, dest, nchars))[nchars] = 0;
 
-        int status = dest_set(); // Uses `log_dest`
-    unlock();
-
-    return status;
+    return dest_set(); // Uses `log_dest`
 }
 
 const char*
 logi_get_destination(void)
 {
-    lock();
-        const char* const dest = log_dest;
-    unlock();
-
-    return dest;
+    return log_dest;
 }
 
 int logi_internal(
@@ -726,8 +645,6 @@ int logi_internal(
         const log_loc_t* const loc,
                                ...)
 {
-    assertUnlocked();
-
     int     status;
     va_list args;
 
@@ -781,40 +698,18 @@ int logi_init(
         status = EINVAL;
     }
     else {
-        /*
-         * The following mutex isn't error-checking or recursive because a
-         * glibc-created child process can't release such mutexes because the
-         * thread in the child isn't the same as the thread in the parent. See
-         * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
-         * As a consequence, failure to lock or unlock the mutex must not result
-         * in a call to a logging function that attempts to lock or unlock the
-         * mutex.
-         */
-        status = pthread_mutex_init(&mutex, NULL);
+        (void)stderr_init(&dest);
+        syslog_options = LOG_PID | LOG_NDELAY;
+        syslog_facility = LOG_LDM;
 
-        if (status == 0) {
-            lock();
-                static pthread_once_t atfork_control = PTHREAD_ONCE_INIT;
+        // Handle potential overlap because log_get_id() returns `ident`
+        size_t nbytes = strlen(id);
+        if (nbytes > sizeof(ident) - 1)
+            nbytes = sizeof(ident) - 1;
+        (void)memmove(ident, logl_basename(id), nbytes);
+        ident[nbytes] = 0;
 
-                status = pthread_once(&atfork_control, register_atfork_funcs);
-
-                (void)stderr_init(&dest);
-                syslog_options = LOG_PID | LOG_NDELAY;
-                syslog_facility = LOG_LDM;
-
-                // Handle potential overlap because log_get_id() returns `ident`
-                size_t nbytes = strlen(id);
-                if (nbytes > sizeof(ident) - 1)
-                    nbytes = sizeof(ident) - 1;
-                (void)memmove(ident, logl_basename(id), nbytes);
-                ident[nbytes] = 0;
-
-                status = dest_set();
-
-                if (status)
-                    (void)pthread_mutex_destroy(&mutex);
-            unlock();
-        } // `mutex` initialized
+        status = dest_set();
     } // Valid argument
 
     return status ? -1 : 0;
@@ -822,41 +717,31 @@ int logi_init(
 
 int logi_reinit(void)
 {
-    lock();
-        int status = dest_set();
-    unlock();
-
-    return status;
+    return dest_set();
 }
 
 int logi_set_id(
         const char* const id)
 {
-    lock();
-        // Handle potential overlap because log_get_id() returns `ident`
-        size_t nbytes = strlen(id);
-        if (nbytes > sizeof(ident) - 1)
-            nbytes = sizeof(ident) - 1;
+    // Handle potential overlap because log_get_id() returns `ident`
+    size_t nbytes = strlen(id);
+    if (nbytes > sizeof(ident) - 1)
+        nbytes = sizeof(ident) - 1;
 
-        (void)memmove(ident, id, nbytes);
-        ident[nbytes] = 0;
-        /*
-         * The destination is re-initialized in case it's the system logging
-         * daemon.
-         */
-        int status = dest_set();
-    unlock();
-
-    return status;
+    (void)memmove(ident, id, nbytes);
+    ident[nbytes] = 0;
+    /*
+     * The destination is re-initialized in case it's the system logging
+     * daemon.
+     */
+    return dest_set();
 }
 
 int logi_fini(void)
 {
-    lock();
-        dest.fini(&dest);
-    unlock();
+    dest.fini(&dest);
 
-    return pthread_mutex_destroy(&mutex) ? -1 : 0;
+    return 0;
 }
 
 int logi_log(
@@ -864,29 +749,17 @@ int logi_log(
         const log_loc_t* const restrict loc,
         const char* const restrict      string)
 {
-    lock();
-        int status = dest.log(&dest, level, loc, string)
-            ? -1
-            : 0;
-    unlock();
-
-    return status;
+    return dest.log(&dest, level, loc, string)
+        ? -1
+        : 0;
 }
 
 int logi_flush(void)
 {
-    lock();
-        int status = dest.flush(&dest);
-    unlock();
-
-    return status;
+    return dest.flush(&dest);
 }
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
-
-const char* log_get_default_daemon_destination(void)
+const char* logi_get_default_daemon_destination(void)
 {
     /*
      * Locking is unnecessary because the pathname of the LDM log file is
@@ -895,7 +768,7 @@ const char* log_get_default_daemon_destination(void)
     return get_ldm_logfile_pathname();
 }
 
-int log_set_facility(
+int logi_set_facility(
         const int facility)
 {
     int  status;
@@ -906,53 +779,39 @@ int log_set_facility(
         status = -1; // `facility` is invalid
     }
     else {
-        lock();
-            syslog_facility = facility;
-            /*
-             * The destination is re-initialized in case it's the system logging
-             * daemon.
-             */
-            status = dest_set();
-        unlock();
+        syslog_facility = facility;
+        /*
+         * The destination is re-initialized in case it's the system logging
+         * daemon.
+         */
+        status = dest_set();
     }
 
     return status;
 }
 
-int log_get_facility(void)
+int logi_get_facility(void)
 {
-    lock();
-        int facility = syslog_facility;
-    unlock();
-
-    return facility;
+    return syslog_facility;
 }
 
-const char* log_get_id(void)
+const char* logi_get_id(void)
 {
-    lock(); // For visibility of changes
-        const char* const id = ident;
-    unlock();
-
-    return id;
+    return ident;
 }
 
-void log_set_options(
+void logi_set_options(
         const unsigned options)
 {
-    lock();
-        syslog_options = options;
-        // The destination is re-initialized in case it's the system logging daemon.
-        int status = dest_set();
-        assert(status == 0);
-    unlock();
+    syslog_options = options;
+
+    // The destination is re-initialized in case it's the system logging daemon.
+    int status = dest_set();
+
+    assert(status == 0);
 }
 
-unsigned log_get_options(void)
+unsigned logi_get_options(void)
 {
-    lock(); // For visibility of changes
-        const int opts = syslog_options;
-    unlock();
-
-    return opts;
+    return syslog_options;
 }

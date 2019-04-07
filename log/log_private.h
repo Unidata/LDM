@@ -535,7 +535,7 @@ int logi_fini(void);
  * @param[in] string   The message.
  * @retval    0        Success
  * @retval    -1       Error
- * @threadsafety       Safe
+ * @threadsafety       Unsafe
  * @asyncsignalsafety  Unsafe
  */
 int logi_log(
@@ -566,6 +566,25 @@ int logi_internal(
         const log_level_t      level,
         const log_loc_t* const loc,
                                ...);
+
+const char*
+logi_get_default_daemon_destination(void);
+
+int
+logi_set_facility(const int facility);
+
+int
+logi_get_facility(void);
+
+const char*
+logi_get_id(void);
+
+void
+logi_set_options(
+        const unsigned options);
+
+unsigned
+logi_get_options(void);
 
 #ifdef __cplusplus
     }

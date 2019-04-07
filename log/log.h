@@ -55,7 +55,7 @@ typedef enum {
  *
  * @retval ""          The system logging daemon
  * @return             The pathname of the standard LDM log file
- * @threadsafety       Safe
+ * @threadsafety       safe
  * @asyncsignalsafety  Unsafe
  */
 const char* log_get_default_daemon_destination(void);
@@ -251,7 +251,7 @@ unsigned log_get_options(void);
  *                      system logging daemon.
  * @retval    0         Success.
  * @retval    -1        Error.
- * @threadsafety        Safe
+ * @threadsafety        Unsafe
  * @asyncsignalsafety   Unsafe
  */
 int log_set_facility(
