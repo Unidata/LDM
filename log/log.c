@@ -453,7 +453,7 @@ static const char* get_default_destination(void)
     assertLocked();
 
     return avoid_stderr
-            ? log_get_default_daemon_destination()
+            ? logi_get_default_daemon_destination()
             : "-";
 }
 
@@ -534,8 +534,6 @@ static int init(
 static bool is_level_enabled(
         const log_level_t level)
 {
-    assertLocked();
-
     return logl_vet_level(level) && level >= log_level;
 }
 
