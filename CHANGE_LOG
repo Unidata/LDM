@@ -1,4 +1,4 @@
-6.13.11.29	2019-04-05T12:28:54-0600
+6.13.11.30	2019-04-07T17:29:08-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -35,6 +35,9 @@
           names line up
         * Corrected assertion in log2slog::logi_internal() to the lock is
           *not* acquired
+        * Removed mutex from implementations: Locking occurs in log.c only
+        * Eliminated call to pthread_atfork()
+        * Moved log_...() functions from implementations to log.c
 
     NOAAPort:
         Ensured initialization of last received frame index if and when the

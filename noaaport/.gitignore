@@ -48,3 +48,5 @@ Grib2Decoder.h
 /nbs_ingest
 /g2vcrdnssl1.tbl
 /fileReader.h.tmp
+/nbs_test.pq
+/output.gini
