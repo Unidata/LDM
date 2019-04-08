@@ -593,7 +593,6 @@ static int file_init(
 /**
  * Sets the logging destination object. Uses `log_dest`.
  *
- * @pre                 Module is locked
  * @retval  0           Success
  * @retval -1           Failure. Logging destination is unchanged. `log_add()`
  *                      called.
@@ -761,10 +760,6 @@ int logi_flush(void)
 
 const char* logi_get_default_daemon_destination(void)
 {
-    /*
-     * Locking is unnecessary because the pathname of the LDM log file is
-     * immutable
-     */
     return get_ldm_logfile_pathname();
 }
 
