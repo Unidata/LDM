@@ -567,22 +567,69 @@ int logi_internal(
         const log_loc_t* const loc,
                                ...);
 
+/**
+ * Returns the default destination for log messages when the process is a
+ * daemon.
+ *
+ * @retval ""          System logging daemon
+ * @retval "-"         Standard error stream
+ * @return             Pathname of log file
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
 const char*
 logi_get_default_daemon_destination(void);
 
+/**
+ * Sets the facility for log messages sent to the system logging daemon.
+ *
+ * @param[in] facility  Facility for log messages to the system logging daemon
+ * @retval    -1        Failure
+ * @retval    0         Success
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
+ */
 int
 logi_set_facility(const int facility);
 
+/**
+ * Returns the facility being used for log messages sent to the system logging
+ * daemon.
+ *
+ * @return              System logging daemon facility
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
+ */
 int
 logi_get_facility(void);
 
+/**
+ * Returns the identifier for log messages.
+ *
+ * @return              Identifier for log messages
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
+ */
 const char*
 logi_get_id(void);
 
+/**
+ * Sets the options for log messages sent to the system logging daemon.
+ *
+ * @param[in] options   Options for system logging daemon messages
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Unsafe
+ */
 void
-logi_set_options(
-        const unsigned options);
+logi_set_options(const unsigned options);
 
+/**
+ * Returns the options for log messages sent to the system logging daemon.
+ *
+ * @return              Options for system logging daemon messages
+ * @threadsafety        Safe
+ * @asyncsignalsafety   Safe
+ */
 unsigned
 logi_get_options(void);
 
