@@ -93,19 +93,24 @@ static int reinit(void)
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @retval    0        Success.
- * @retval    -1       Error. Logging module is in an unspecified state.
+ * @retval    0        Success
+ * @retval    -1       Failure
  */
 int logi_init(
         const char* const id)
 {
-    const char* const progname = logl_basename(id);
-    int               status = openulog(progname, LOG_PID, LOG_LDM, log_dest);
+    int status = -1;
 
-    if (status != -1) {
-        // Allow all levels because the higher layer will control
-        (void)setulogmask(LOG_UPTO(LOG_DEBUG));
-        status = 0;
+    if (id != NULL) {
+        const char* const progname = logl_basename(id);
+        int               status = openulog(progname, LOG_PID, LOG_LDM,
+                log_dest);
+
+        if (status != -1) {
+            // Allow all levels because the higher layer will control
+            (void)setulogmask(LOG_UPTO(LOG_DEBUG));
+            status = 0;
+        }
     }
 
     return status;
@@ -255,10 +260,12 @@ const char* logi_get_id(void)
     return getulogident();
 }
 
-void logi_set_options(
+int logi_set_options(
         const unsigned options)
 {
     ulog_set_options(~0u, options);
+
+    return 0;
 }
 
 unsigned logi_get_options(void)

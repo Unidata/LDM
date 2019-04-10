@@ -45,7 +45,7 @@
 /**
  * The persistent destination specification.
  */
-char log_dest[_XOPEN_PATH_MAX];
+char log_dest[_XOPEN_PATH_MAX] = "-"; // Standard error stream by default
 
 /**
  * Destination object for log messages.
@@ -596,7 +596,7 @@ static int file_init(
  * @retval  0           Success
  * @retval -1           Failure. Logging destination is unchanged. `log_add()`
  *                      called.
- * @threadsafety        Safe
+ * @threadsafety        Unsafe
  * @asyncsignalsafety   Unsafe
  */
 static int dest_set()
@@ -670,34 +670,31 @@ int logi_internal(
 }
 
 /**
- * Initializes the logging module. Should be called before any other function.
- * `log_dest` must be set.
+ * Initializes the logging module.
  * - log_get_id()           will return the filename component of `id`
  * - log_get_facility()     will return `LOG_LDM`
  * - log_get_level()        will return `LOG_LEVEL_NOTICE`
  * - log_get_options()      will return `LOG_PID | LOG_NDELAY`
- * - log_get_destination()  will return
- *                            - The pathname of the LDM log file if
- *                              log_avoid_stderr() has been called
- *                            - "-" otherwise
+ * - log_get_destination()  will return the destination for log messages
+ *                              - ""   System logging daemon
+ *                              - "-"  Standard error stream
+ *                              -      Else  pathname of log file
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @retval    0        Success.
- * @retval    -1       Error. Logging module is in an unspecified state.
- * @threadsafety       Safe
+ * @retval    0        Success
+ * @retval    -1       Failure
+ * @threadsafety       Unsafe
  * @asyncsignalsafety  Unsafe
  */
-int logi_init(
-        const char* const id)
+int logi_init(const char* const id)
 {
-    int status;
+    int status = -1;
 
-    if (id == NULL) {
-        status = EINVAL;
-    }
-    else {
+    if (id != NULL) {
+        (void)strcpy(log_dest, STDERR_SPEC);
         (void)stderr_init(&dest);
+
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
 
@@ -711,7 +708,7 @@ int logi_init(
         status = dest_set();
     } // Valid argument
 
-    return status ? -1 : 0;
+    return status;
 }
 
 int logi_reinit(void)
@@ -739,6 +736,7 @@ int logi_set_id(
 int logi_fini(void)
 {
     dest.fini(&dest);
+    (void)strcpy(log_dest, "-"); // Standard error stream by default
 
     return 0;
 }
@@ -795,15 +793,12 @@ const char* logi_get_id(void)
     return ident;
 }
 
-void logi_set_options(
-        const unsigned options)
+int logi_set_options(const unsigned options)
 {
     syslog_options = options;
 
     // The destination is re-initialized in case it's the system logging daemon.
-    int status = dest_set();
-
-    assert(status == 0);
+    return dest_set();
 }
 
 unsigned logi_get_options(void)

@@ -108,22 +108,6 @@ int logl_level_to_priority(
         const log_level_t level);
 
 /**
- * Acquires this module's mutex.
- *
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-void logl_lock(void);
-
-/**
- * Releases this module's mutex.
- *
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-void logl_unlock(void);
-
-/**
  * Vets a logging level.
  *
  * @param[in] level    The logging level to be vetted.
@@ -449,7 +433,7 @@ void* logl_realloc(
  ******************************************************************************/
 
 /**
- * Sets the logging destination.
+ * Sets the logging destination. May be called before `logi_init()`.
  *
  * @pre                Module is locked
  * @param[in] dest     New destination. One of
@@ -483,9 +467,9 @@ logi_get_destination(void);
  *
  * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
  *                     free.
- * @retval    0        Success.
- * @retval    -1       Error. Logging module is in an unspecified state.
- * @threadsafety       Safe
+ * @retval    0        Success
+ * @retval    -1       Failure
+ * @threadsafety       Unsafe
  * @asyncsignalsafety  Unsafe
  */
 int logi_init(
@@ -518,7 +502,7 @@ int logi_set_id(
 
 /**
  * Finalizes the logging module's implementation. Should be called eventually
- * after `log_impl_init()`, after which no more logging should occur.
+ * after `logi_init()`, after which no more logging should occur.
  *
  * @retval 0           Success.
  * @retval -1          Failure. Logging module is in an unspecified state.
@@ -617,10 +601,12 @@ logi_get_id(void);
  * Sets the options for log messages sent to the system logging daemon.
  *
  * @param[in] options   Options for system logging daemon messages
+ * @retval    0         Success
+ * @retval    -1        Failure
  * @threadsafety        Safe
  * @asyncsignalsafety   Unsafe
  */
-void
+int
 logi_set_options(const unsigned options);
 
 /**
