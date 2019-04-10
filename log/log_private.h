@@ -568,7 +568,7 @@ logi_get_default_daemon_destination(void);
  * @param[in] facility  Facility for log messages to the system logging daemon
  * @retval    -1        Failure
  * @retval    0         Success
- * @threadsafety        Safe
+ * @threadsafety        Unsafe
  * @asyncsignalsafety   Unsafe
  */
 int
