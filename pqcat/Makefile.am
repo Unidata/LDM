@@ -9,14 +9,13 @@
 PQ_SUBDIR	= @PQ_SUBDIR@
 bin_PROGRAMS	= pqcat
 AM_CPPFLAGS	= \
-    -I$(top_srcdir)/log \
-    -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
+    -I$(top_builddir)           -I$(top_srcdir) \
+    -I$(top_builddir)/log       -I$(top_srcdir)/log \
+    -I$(top_builddir)/protocol  -I$(top_srcdir)/protocol \
     -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
-    -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/pq \
-    -I$(top_srcdir)/misc \
-    -I$(top_srcdir) \
-    -I$(top_srcdir)/mcast_lib/ldm7
+    -I$(top_builddir)/registry  -I$(top_srcdir)/registry \
+    -I$(top_builddir)/pq        -I$(top_srcdir)/pq \
+    -I$(top_builddir)/misc      -I$(top_srcdir)/misc
 pqcat_LDADD	= $(top_builddir)/lib/libldm.la
 dist_man1_MANS	= pqcat.1
 TAGS_FILES	= \
