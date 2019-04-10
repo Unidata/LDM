@@ -76,17 +76,9 @@ typedef struct msg_queue {
 } msg_queue_t;
 
 /**
- * Whether or not this module is initialized.
- */
-static bool                  isInitialized = false;
-/**
  * Key for the thread-specific queue of log messages.
  */
 static pthread_key_t         queueKey;
-/**
- * The thread identifier of the thread on which `log_init()` was called.
- */
-static pthread_t             init_thread;
 /**
  * Whether or not to avoid using the standard error stream.
  */
@@ -302,21 +294,6 @@ static bool queue_is_empty(
 }
 
 /**
- * Indicates if the message queue of the current thread is empty.
- *
- * @retval true        Iff the queue is empty
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static bool logl_is_queue_empty()
-{
-    msg_queue_t* const queue = queue_get();
-    const bool         is_empty = queue_is_empty(queue);
-
-    return is_empty;
-}
-
-/**
  * Returns the next unused entry in a message-queue. Creates it if necessary.
  *
  * @param[in] queue    The message-queue.
@@ -359,15 +336,14 @@ static int queue_getNextEntry(
 }
 
 /**
- * Clears the accumulated log-messages of the current thread.
+ * Clears the accumulated log-messages of the current thread. Doesn't delete
+ * them.
  *
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-static void queue_clear()
+static void queue_clear(msg_queue_t* const queue)
 {
-    msg_queue_t*   queue = queue_get();
-
     if (NULL != queue)
         queue->last = NULL;
 }
@@ -380,8 +356,7 @@ static void queue_clear()
  * @asyncsignalsafety  Unsafe
  */
 static void
-queue_fini(
-        msg_queue_t* const queue)
+queue_fini(msg_queue_t* const queue)
 {
     Message* msg;
     Message* next;
@@ -393,55 +368,36 @@ queue_fini(
     }
 }
 
-#ifdef NDEBUG
-    #define LOGL_ASSERT(expr)
-#else
-    #define LOGL_ASSERT(expr) do { \
-        if (!(expr)) { \
-            logl_internal(LOG_LEVEL_ERROR, "Assertion failure: %s", #expr); \
-            abort(); \
-        } \
-    } while (false)
-#endif
-
-void logl_lock(void)
-{
-    int status = pthread_mutex_lock(&log_mutex);
-
-#ifdef EOWNERDEAD
-    if (status == EOWNERDEAD)
-        /*
-         * The current process is a child of a fork()ed process. It's OK if the
-         * logging state is inconsistent because the worse that can happen is
-         * a corrupted log message.
-         */
-#endif
-
-    assert(status == 0);
-}
-
-void logl_unlock(void)
-{
-    int status = pthread_mutex_unlock(&log_mutex);
-
-    assert(status == 0);
-}
-
 /**
- * Asserts that the current thread has acquired this module's lock.
- */
-static void assertLocked(void)
-{
-    assert(pthread_mutex_trylock(&log_mutex));
-}
-
-/**
- * Returns the default destination for log messages, which depends on whether or
- * not log_avoid_stderr() has been called. If it hasn't been called, then the
- * default destination will be the standard error stream; otherwise, the default
- * destination will be that given by log_get_default_daemon_destination().
+ * Frees the log-message resources of the current thread. Should only be called
+ * when no more logging by the current thread will occur.
  *
- * @pre                Module is locked
+ * @param[in] loc      Location in user-code
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+static void queue_free(const log_loc_t* const loc)
+{
+    msg_queue_t* queue = queue_get();
+
+    if (!queue_is_empty(queue)) {
+        logl_add(loc, "Message-queue isn't empty");
+        log_flush_error();
+    }
+
+    if (queue) {
+        queue_fini(queue);
+        free(queue);
+        (void)pthread_setspecific(queueKey, NULL);
+    }
+}
+
+/**
+ * Returns the default destination for log messages. If `log_avoid_stderr()`
+ * hasn't been called, then the default destination will be the standard error
+ * stream; otherwise, the default destination will be that given by
+ * log_get_default_daemon_destination().
+ *
  * @retval ""          Log to the system logging daemon
  * @retval "-"         Log to the standard error stream
  * @return             The pathname of the log file
@@ -450,77 +406,45 @@ static void assertLocked(void)
  */
 static const char* get_default_destination(void)
 {
-    assertLocked();
-
     return avoid_stderr
             ? logi_get_default_daemon_destination()
             : "-";
 }
 
 /**
- * Initializes this logging module. Called by `log_init()`.
+ * Locks this module.
  *
- * @param[in] id       The pathname of the program (e.g., `argv[0]`). Caller may
- *                     free.
- * @retval     0       Success
- * @retval     ENOMEM  Out-of-memory.
- * @retval     EINVAL  `log_mutex` is invalid.
- * @retval     EPERM   Module is already initialized.
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
+ * @retval EBUSY    Mutex is already locked
+ * @retval EDEADLK  A deadlock condition was detected or the current thread
+ *                  already owns the mutex
+ * @retval 0        Success
  */
-static int init(
-        const char* const id)
+static int
+lock()
 {
-    int status;
-    pthread_mutexattr_t mutexAttr;
+    return pthread_mutex_lock(&log_mutex);
+}
 
-    status = pthread_mutexattr_init(&mutexAttr);
+/**
+ * Unlocks this module.
+ *
+ * @retval EPERM  The current thread doesn't own the mutex
+ * @retval 0      Success
+ */
+static int
+unlock(void)
+{
+    return pthread_mutex_unlock(&log_mutex);
+}
 
-    if (status) {
-        logl_internal(LOG_LEVEL_ERROR, "pthread_mutexattr_init() failed: "
-                "%s", strerror(status));
-    }
-    else {
-        (void)pthread_mutexattr_setprotocol(&mutexAttr,
-                        PTHREAD_PRIO_INHERIT);
+/**
+ * Asserts that the current thread has acquired this module's lock.
+ */
+static void assertLocked(void)
+{
+    int status = pthread_mutex_trylock(&log_mutex);
 
-        /*
-         * The following mutex isn't error-checking or recursive because a
-         * glibc-created child process can't release such mutexes because
-         * the thread in the child isn't the same as the thread in the
-         * parent. See
-         * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
-         * As a consequence, failure to lock or unlock the mutex must not
-         * result in a call to a logging function that attempts to lock or
-         * unlock the mutex.
-         */
-        status = pthread_mutex_init(&log_mutex, &mutexAttr);
-
-        if (status) {
-            logl_internal(LOG_LEVEL_ERROR, "pthread_mutex_init() failed: "
-                    "%s", strerror(status));
-        }
-        else {
-            log_level = LOG_LEVEL_NOTICE;
-            status = logi_init(id);
-
-            if (status == 0) {
-                init_thread = pthread_self();
-
-                // `avoid_stderr` must be set before `get_default_destination()`
-                avoid_stderr = !log_is_stderr_useful();
-                logl_lock();
-                    status = logi_set_destination(get_default_destination());
-                logl_unlock();
-                isInitialized = status == 0;
-            }
-        }
-
-        (void)pthread_mutexattr_destroy(&mutexAttr);
-    } // `mutexAttr` initialized
-
-    return status;
+    assert(status);
 }
 
 /**
@@ -531,8 +455,7 @@ static int init(
  * @threadsafety       Safe
  * @asyncsignalsafety  Safe
  */
-static bool is_level_enabled(
-        const log_level_t level)
+static bool is_level_enabled(const log_level_t level)
 {
     return logl_vet_level(level) && level >= log_level;
 }
@@ -566,79 +489,11 @@ static inline int refresh_if_necessary(void)
 }
 
 /**
- * Logs the currently-accumulated log-messages of the current thread and resets
- * the message-queue for the current thread.
- *
- * @param[in] level    The level at which to log the messages. One of
- *                     LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
- *                     LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
- *                     behavior is undefined.
- * @retval    0        Success
- * @retval    -1       Error
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static int flush(
-    const log_level_t level)
-{
-    int          status = 0; // Success
-    msg_queue_t* queue = queue_get();
-
-    if (NULL != queue && NULL != queue->last) {
-        logl_lock();
-
-        if (is_level_enabled(level)) {
-            (void)refresh_if_necessary();
-
-            for (const Message* msg = queue->first; NULL != msg;
-                    msg = msg->next) {
-                status = logi_log(level, &msg->loc, msg->string);
-
-                if (status)
-                    break;
-
-                if (msg == queue->last)
-                    break;
-            } // Message loop
-
-            status = logi_flush();
-        } // Messages should be printed
-
-        logl_unlock();
-        queue_clear();
-    } // Have messages
-
-    return status;
-}
-
-/******************************************************************************
- * Package-private API:
- ******************************************************************************/
-
-/**
- *  Logging level.
- */
-volatile sig_atomic_t log_level = LOG_LEVEL_NOTICE;
-
-/**
  * The mapping from logging levels to system logging daemon priorities:
  */
-static int log_syslog_priorities[] = {
+static int syslog_priorities[] = {
         LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR
 };
-
-int logl_level_to_priority(
-        const log_level_t level)
-{
-    return logl_vet_level(level) ? log_syslog_priorities[level] : LOG_ERR;
-}
-
-const char* logl_basename(
-        const char* const pathname)
-{
-    const char* const cp = strrchr(pathname, '/');
-    return cp ? cp + 1 : pathname;
-}
 
 /**
  * Tries to return a formatted variadic message.
@@ -710,6 +565,26 @@ static char* formatMsg(
     return msg;
 }
 
+/******************************************************************************
+ * Package-private API:
+ ******************************************************************************/
+
+/**
+ *  Logging level.
+ */
+volatile sig_atomic_t log_level = LOG_LEVEL_NOTICE;
+
+int logl_level_to_priority(const log_level_t level)
+{
+    return logl_vet_level(level) ? syslog_priorities[level] : LOG_ERR;
+}
+
+const char* logl_basename(const char* const pathname)
+{
+    const char* const cp = strrchr(pathname, '/');
+    return cp ? cp + 1 : pathname;
+}
+
 int logl_vlog_1(
         const log_loc_t* const  loc,
         const log_level_t       level,
@@ -718,17 +593,17 @@ int logl_vlog_1(
 {
     int status;
 
-    logl_lock();
+    lock();
 
     if (!is_level_enabled(level)) {
-        logl_unlock();
+        unlock();
         status = 0; // Success
     }
     else {
         char* msg = formatMsg(format, args);
 
         if (msg == NULL) {
-            logl_unlock();
+            unlock();
             status = -1;
         }
         else {
@@ -739,7 +614,7 @@ int logl_vlog_1(
             if (status == 0)
                 status = logi_flush();
 
-            logl_unlock();
+            unlock();
             free(msg);
         } // Have message
     } // Message should be logged
@@ -846,34 +721,73 @@ void* logl_realloc(
     return obj;
 }
 
+/**
+ * Logs the currently-accumulated log-messages of the current thread and resets
+ * the message-queue for the current thread.
+ *
+ * @param[in] level    The level at which to log the messages. One of
+ *                     LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
+ *                     LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
+ *                     behavior is undefined.
+ * @retval    0        Success
+ * @retval    -1       Error
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+int logl_flush(
+        const log_loc_t* const loc,
+        const log_level_t      level)
+{
+    int                status = 0; // Success
+    msg_queue_t* const queue = queue_get();
+
+    if (!queue_is_empty(queue)) {
+        /*
+         * The following message is added so that the location of the call to
+         * log_flush() is logged in case the call needs to be adjusted.
+        logl_add(loc, "Log messages flushed");
+         */
+        if (is_level_enabled(level)) {
+            if (lock()) {
+                status = -1;
+            }
+            else {
+                (void)refresh_if_necessary();
+
+                for (const Message* msg = queue->first; NULL != msg;
+                        msg = msg->next) {
+                    status = logi_log(level, &msg->loc, msg->string);
+
+                    if (status)
+                        break;
+
+                    if (msg == queue->last)
+                        break;
+                } // Message loop
+
+                status = logi_flush();
+
+                if (unlock())
+                    status = -1;
+            } // Module locked
+        } // Messages should be printed
+
+        queue_clear(queue);
+    } // Message queue isn't empty
+
+    return status;
+}
+
 int logl_vlog_q(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
         va_list                         args)
 {
-    int status;
-
-    if (format && *format) {
-#if 1
+    if (format && *format)
         logl_vadd(loc, format, args);
-    }
-    return flush(level);
-#else
-        StrBuf* sb = sb_get();
-        if (sb == NULL) {
-            logl_internal(LOG_LEVEL_ERROR,
-                    "Couldn't get thread-specific string-buffer");
-        }
-        else if (sbPrintV(sb, format, args) == NULL) {
-            logl_internal(LOG_LEVEL_ERROR,
-                    "Couldn't format message into string-buffer");
-        }
-        else {
-            logi_log(level, loc, sbString(sb));
-        }
-    }
-#endif
+
+    return logl_flush(loc, level);
 }
 
 int logl_log_1(
@@ -940,135 +854,127 @@ int logl_errno_q(
     return status;
 }
 
-int logl_flush(
-        const log_loc_t* const loc,
-        const log_level_t      level)
-{
-    int status = 0; // Success
+/******************************************************************************
+ * Public API:
+ ******************************************************************************/
 
-    if (!logl_is_queue_empty()) {
-        /*
-         * The following message is added so that the location of the call to
-         * log_flush() is logged in case the call needs to be adjusted.
-        logl_add(loc, "Log messages flushed");
-         */
-        status = flush(level);
+bool log_stderr_is_open(void)
+{
+    struct stat stderr_stat;
+
+    return fstat(STDERR_FILENO, &stderr_stat) == 0;
+}
+
+int log_init(const char* const id)
+{
+    int status = logi_init(id);
+
+    if (status) {
+        perror("logi_init()");
+    }
+    else {
+        // `avoid_stderr` must be set before `get_default_destination()`
+        avoid_stderr = !log_stderr_is_open();
+        status = logi_set_destination(get_default_destination());
+
+        if (status) {
+            perror("logi_set_destination()");
+        }
+        else {
+            pthread_mutexattr_t mutexAttr;
+
+            if (pthread_mutexattr_init(&mutexAttr)) {
+                perror("pthread_mutexattr_init()");
+                status = -1;
+            }
+            else {
+                (void)pthread_mutexattr_setprotocol(&mutexAttr,
+                        PTHREAD_PRIO_INHERIT);
+
+                /*
+                 * The following mutex isn't error-checking or recursive because
+                 * a glibc-created child process can't release such mutexes
+                 * because the thread in the child isn't the same as the thread
+                 * in the parent. See
+                 * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
+                 * As a consequence, failure to lock or unlock the mutex must
+                 * not result in a call to a logging function that attempts to
+                 * lock or unlock the mutex.
+                 */
+                if (pthread_mutex_init(&log_mutex, &mutexAttr)) {
+                    perror("pthread_mutex_init()");
+                    status = -1;
+                }
+
+                (void)pthread_mutexattr_destroy(&mutexAttr);
+            } // `mutexAttr` initialized
+        } // logging destination set in implementation
+    } // Implementation initialized
+
+    return status;
+}
+
+int log_fini_located(const log_loc_t* const loc)
+{
+    int status = 0;
+
+    queue_free(loc);
+
+    if (pthread_mutex_destroy(&log_mutex))
+        status = -1;
+
+    if (logi_fini())
+        status = -1;
+
+    return status;
+}
+
+void
+log_free_located(const log_loc_t* const loc)
+{
+    queue_free(loc);
+}
+
+int log_avoid_stderr(void)
+{
+    int status;
+
+    if (lock()) {
+        status = -1;
+    }
+    else {
+        avoid_stderr = true;
+
+        // Don't change if unnecessary
+        if (LOG_IS_STDERR_SPEC(logi_get_destination()))
+            status = logi_set_destination(
+                    logi_get_default_daemon_destination());
+
+        if (unlock())
+            status = -1;
     }
 
     return status;
 }
 
-/**
- * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current thread will occur.
- *
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static void logl_free(
-        const log_loc_t* const loc)
-{
-    msg_queue_t* queue = queue_get();
-
-    if (!queue_is_empty(queue)) {
-        logl_log_q(loc, LOG_LEVEL_WARNING,
-                "logl_free() called with the above messages still in the "
-                "message-queue");
-    }
-
-    if (queue) {
-        queue_fini(queue);
-        free(queue);
-        (void)pthread_setspecific(queueKey, NULL);
-    }
-}
-
-/**
- * Finalizes the logging module. Frees all thread-specific resources. Frees all
- * thread-independent resources if the current thread is the one on which
- * log_init() was called.
- *
- * @retval -1          Failure
- * @retval  0          Success
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static int logl_fini(
-        const log_loc_t* const loc)
+int log_refresh(void)
 {
     int status;
 
-    if (!isInitialized) {
-        // Can't log an error message because not initialized
+    if (lock()) {
         status = -1;
     }
     else {
-        logl_free(loc);
-        if (!pthread_equal(init_thread, pthread_self())) {
-            status = 0;
-        }
-        else {
-            status = logi_fini();
-        }
-    }
-    return status ? -1 : 0;
+        refresh_needed = 1;
+
+        if (unlock())
+            status = -1;
+    } // Module is locked
+
+    return status;
 }
 
-/******************************************************************************
- * Public API:
- ******************************************************************************/
-
-bool log_is_stderr_useful(void)
-{
-    static struct stat dev_null_stat;
-    static bool        initialized = false;
-
-    if (!initialized) {
-        (void)stat("/dev/null", &dev_null_stat); // Can't fail
-        initialized = true;
-    }
-
-    struct stat stderr_stat;
-
-    return (fstat(STDERR_FILENO, &stderr_stat) == 0) &&
-        ((stderr_stat.st_ino != dev_null_stat.st_ino) ||
-                (stderr_stat.st_dev != dev_null_stat.st_dev));
-}
-
-int log_init(
-        const char* const id)
-{
-    int status;
-
-    if (isInitialized) {
-        logl_internal(LOG_LEVEL_ERROR, "Logging module is already initialized");
-        status = EPERM;
-    }
-    else {
-        status = init(id);
-    }
-
-    return status == 0 ? 0 : -1;
-}
-
-void log_avoid_stderr(void)
-{
-    logl_lock();
-        avoid_stderr = true;
-
-        // Don't change if unnecessary
-            if (LOG_IS_STDERR_SPEC(logi_get_destination()))
-                (void)logi_set_destination(log_get_default_daemon_destination());
-    logl_unlock();
-}
-
-void log_refresh(void)
-{
-    refresh_needed = 1;
-}
-
-int log_set_id(
-        const char* const id)
+int log_set_id(const char* const id)
 {
     int status;
 
@@ -1076,10 +982,16 @@ int log_set_id(
         status = -1;
     }
     else {
-        logl_lock();
+        if (lock()) {
+            status = -1;
+        }
+        else {
             status = logi_set_id(id);
-        logl_unlock();
-    }
+
+            if (unlock())
+                status = -1;
+        } // Module is locked
+    } // Valid ID
 
     return status;
 }
@@ -1100,25 +1012,35 @@ int log_set_upstream_id(
                 isFeeder ? "feed" : "noti");
         id[sizeof(id)-1] = 0;
 
-        logl_lock();
+        if (lock()) {
+            status = -1;
+        }
+        else {
             status = logi_set_id(id);
-        logl_unlock();
-    }
+
+            if (unlock())
+                status = -1;
+        } // Module is locked
+    } // Valid host ID
 
     return status;
 }
 
 const char* log_get_default_destination(void)
 {
-    logl_lock();
-        const char* dest = get_default_destination();
-    logl_unlock();
+    const char* dest = NULL;
+
+    if (lock() == 0) {
+        dest = get_default_destination();
+
+        if (unlock())
+            dest = NULL;
+    } // Module is locked
 
     return dest;
 }
 
-int log_set_destination(
-        const char* const dest)
+int log_set_destination(const char* const dest)
 {
     int status;
 
@@ -1126,9 +1048,15 @@ int log_set_destination(
         status = -1;
     }
     else {
-        logl_lock();
+        if (lock()) {
+            status = -1;
+        }
+        else {
             status = logi_set_destination(dest);
-        logl_unlock();
+
+            if (unlock())
+                status = -1;
+        } // Module is locked
     }
 
     return status;
@@ -1136,15 +1064,19 @@ int log_set_destination(
 
 const char* log_get_destination(void)
 {
-    logl_lock();
-        const char* dest = logi_get_destination();
-    logl_unlock();
+    const char* dest = NULL;
+
+    if (lock() == 0) {
+        dest = logi_get_destination();
+
+        if (unlock())
+            dest = NULL;
+    } // Module is locked
 
     return dest;
 }
 
-int log_set_level(
-        const log_level_t level)
+int log_set_level(const log_level_t level)
 {
     int status;
 
@@ -1174,8 +1106,7 @@ log_level_t log_get_level(void)
     return log_level;
 }
 
-bool log_is_level_enabled(
-        const log_level_t level)
+bool log_is_level_enabled(const log_level_t level)
 {
     return is_level_enabled(level);
 }
@@ -1183,46 +1114,38 @@ bool log_is_level_enabled(
 void
 log_clear(void)
 {
-    queue_clear();
-}
+    msg_queue_t*   queue = queue_get();
 
-void
-log_free_located(
-        const log_loc_t* const loc)
-{
-    logl_free(loc);
-}
-
-int log_fini_located(
-        const log_loc_t* const loc)
-{
-    int status = logl_fini(loc);
-
-    if (status == 0) {
-        status = pthread_mutex_destroy(&log_mutex);
-
-        if (status == 0)
-            isInitialized = false;
-    }
-
-    return status ? -1 : 0;
+    queue_clear(queue);
 }
 
 const char* log_get_default_daemon_destination(void)
 {
-    logl_lock();
-        const char* const dest = logi_get_default_daemon_destination();
-    logl_unlock();
+    const char* dest = NULL;
+
+    if (lock() == 0) {
+        dest = logi_get_default_daemon_destination();
+
+        if (unlock())
+            dest = NULL;
+    } // Module is locked
 
     return dest;
 }
 
-int log_set_facility(
-        const int facility)
+int log_set_facility(const int facility)
 {
-    logl_lock();
-        int status = logi_set_facility(facility);
-    logl_unlock();
+    int status;
+
+    if (lock()) {
+        status = -1;
+    }
+    else {
+        status = logi_set_facility(facility);
+
+        if (unlock())
+            status = -1;
+    } // Module is locked
 
     return status;
 }
@@ -1231,35 +1154,63 @@ int log_get_facility(void)
 {
     int status;
 
-    logl_lock();
+    if (lock()) {
+        status = -1;
+    }
+    else {
         status = logi_get_facility();
-    logl_unlock();
+
+        if (unlock())
+            status = -1;
+    } // Module is locked
 
     return status;
 }
 
 const char* log_get_id(void)
 {
-    logl_lock();
-        const char* ident = logi_get_id();
-    logl_unlock();
+    const char* ident = NULL;
+
+    if (lock() == 0) {
+        ident = logi_get_id();
+
+        if (unlock())
+            ident = NULL;
+    } // Module is locked
 
     return ident;
 }
 
-void log_set_options(
-        const unsigned options)
+int log_set_options(const unsigned options)
 {
-    logl_lock();
+    int status;
+
+    if (lock()) {
+        status = -1;
+    }
+    else {
         logi_set_options(options);
-    logl_unlock();
+
+        if (unlock())
+            status = -1;
+    } // Module is locked
+
+    return status;
 }
 
 unsigned log_get_options(void)
 {
-    logl_lock();
-        unsigned options = logi_get_options();
-    logl_unlock();
+    unsigned options;
+
+    if (lock()) {
+        abort();
+    }
+    else {
+        options = logi_get_options();
+
+        if (unlock())
+            abort();
+    } // Module is locked
 
     return options;
 }

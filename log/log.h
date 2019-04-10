@@ -75,17 +75,15 @@ const char* log_get_default_daemon_destination(void);
 const char* log_get_default_destination(void);
 
 /**
- * Indicates if the standard error file descriptor refers to a file that is not
- * `/dev/null`. This function may be called at any time.
+ * Indicates if the standard error file descriptor is open. This function may be
+ * called at any time.
  *
- * @retval true        Standard error file descriptor refers to a file that is
- *                     not `/dev/null`
- * @retval false       Standard error file descriptor is closed or refers to
- *                     `/dev/null`.
+ * @retval true        Standard error file descriptor is open
+ * @retval false       Standard error file descriptor is closed
  * @threadsafety       Safe
  * @asyncsignalsafety  Safe
  */
-bool log_is_stderr_useful(void);
+bool log_stderr_is_open(void);
 
 /**
  * Initializes the logging module. Should be called before most other functions.
@@ -108,10 +106,12 @@ int log_init(
  * Tells this module to avoid using the standard error stream (because the
  * process has become a daemon, for example).
  *
+ * @retval     0       Success
+ * @retval     -1      Failure
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-void log_avoid_stderr(void);
+int log_avoid_stderr(void);
 
 /**
  * Refreshes the logging module. If logging is to the system logging daemon,
@@ -120,10 +120,12 @@ void log_avoid_stderr(void);
  * error stream, then it will continue to be if log_avoid_stderr() hasn't been
  * called; otherwise, logging will be to the provider default.
  *
+ * @retval 0           Success
+ * @retval -1          Failure
  * @threadsafety       Safe
- * @asyncsignalsafety  Safe
+ * @asyncsignalsafety  Unsafe
  */
-void log_refresh(void);
+int log_refresh(void);
 
 /**
  * Finalizes the logging module. Should be called eventually after log_init(),
@@ -220,10 +222,12 @@ const char* log_get_id(void);
  *                         LOG_NDELAY  Don't delay open (default)
  *                         LOG_NOWAIT  Don't wait for console forks: DEPRECATED
  *                         LOG_PERROR  Log to stderr as well
+ * @retval    0        Success
+ * @retval    -1       Failure
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-void log_set_options(
+int log_set_options(
         const unsigned options);
 
 /**
