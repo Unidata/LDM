@@ -1129,16 +1129,7 @@ log_flush(const log_level_t level)
 
 const char* log_get_default_daemon_destination(void)
 {
-    const char* dest = NULL;
-
-    if (lock() == 0) {
-        dest = logi_get_default_daemon_destination();
-
-        if (unlock())
-            dest = NULL;
-    } // Module is locked
-
-    return dest;
+    return logi_get_default_daemon_destination();
 }
 
 int log_set_facility(const int facility)
