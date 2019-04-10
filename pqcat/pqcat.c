@@ -1,15 +1,23 @@
 /**
  * Write data-products from the LDM product-queue to the standard output stream.
  *
- * Copyright 2018, University Corporation for Atmospheric Research
+ * Copyright 2019, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  */
 
-/* 
- *  dump a pq
- */
+#include "config.h"
 
+#include "atofeedt.h"
+#include "globals.h"
+#include "ldm.h"
+#include "ldmprint.h"
+#include "log.h"
+#include "md5.h"
+#include "pq.h"
+#include "RegularExpressions.h"
+
+#include <assert.h>
 #include <config.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -22,14 +30,6 @@
 #include <errno.h>
 #include <assert.h>
 #include <regex.h>
-#include "ldm.h"
-#include "globals.h"
-#include "atofeedt.h"
-#include "ldmprint.h"
-#include "log.h"
-#include "pq.h"
-#include "md5.h"
-#include "RegularExpressions.h"
 
 #ifdef NO_ATEXIT
 #include "atexit.h"
@@ -254,7 +254,8 @@ int main(int ac, char *av[])
         /*
          * Set up error logging.
          */
-        (void)log_init(progname);
+        status = log_init(progname);
+        assert(status == 0);
 
         clss.from = TS_ZERO; /* default dump the whole file */
         clss.to = TS_ENDT;
