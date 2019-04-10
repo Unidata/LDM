@@ -949,7 +949,8 @@ int main(
         pid_t pid;
         pid = ldmfork();
         if (pid == -1) {
-            log_error_q("Couldn't fork LDM daemon");
+            log_error("Couldn't fork LDM daemon");
+            log_flush_error();
             exit(2);
         }
 
