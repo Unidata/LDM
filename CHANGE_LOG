@@ -1,4 +1,4 @@
-6.13.11.33	2019-04-10T15:02:07-0600
+6.13.11.34	2019-04-10T16:42:26-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -43,6 +43,7 @@
         * Improved return values and initialization in log2slog(3) and
           log2ulog(3)
         * Refactored log.c
+        * log2ulog.c: Removed locking in logi_get_destination()
 
     NOAAPort:
         Ensured initialization of last received frame index if and when the
