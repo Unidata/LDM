@@ -245,7 +245,8 @@ feed_or_notify(
     status = lcf_reduceToAllowed(downName, &downAddr.sin_addr, origSub,
             &allowSub);
     if (status == ENOMEM) {
-        log_syserr_q("Couldn't compute wanted/allowed product intersection");
+        log_add_syserr("Couldn't compute wanted/allowed product intersection");
+        log_flush_error();
         svcerr_systemerr(xprt);
         goto free_up_filter;
     }
@@ -503,7 +504,8 @@ hiya_6_svc(
     maxHereis = isPrimary ? UINT_MAX : 0;
 
     if (error) {
-        log_syserr_q("Couldn't validate HIYA");
+        log_add_syserr("Couldn't validate HIYA");
+        log_flush_error();
         svcerr_systemerr(xprt);
         svc_destroy(xprt);
         exit(error);
@@ -524,8 +526,9 @@ hiya_6_svc(
 
             if (error) {
                 if (DOWN6_SYSTEM_ERROR == error) {
-                    log_syserr_q("Couldn't set product class: %s",
+                    log_add_syserr("Couldn't set product class: %s",
                             s_prod_class(NULL, 0, accept));
+                    log_flush_error();
                 }
                 else {
                     log_error_q("Couldn't set product class: %s",

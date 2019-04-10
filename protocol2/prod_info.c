@@ -286,7 +286,7 @@ pi_print(
         s_signaturet(NULL, 0, info->signature));
 
     if (nbytes < 0)
-        log_syserr_q("Couldn't format product information");
+        log_syserr("Couldn't format product information");
 
     return nbytes;
 }
@@ -327,7 +327,7 @@ scanBytes(
         log_add("scanBytes(): Premature EOF");
     }
     else if (ferror(file)) {
-        log_syserr_q("Couldn't scan input");
+        log_syserr("Couldn't scan input");
     }
     else {
         nbytes = len;
@@ -359,7 +359,7 @@ scanString(
     off_t       start = ftello(file);
 
     if (start == (off_t)-1) {
-        log_syserr_q("Couldn't get position in file");
+        log_syserr("Couldn't get position in file");
     }
     else {
         int     len;
@@ -367,7 +367,7 @@ scanString(
         errno = 0;
 
         if (fscanf(file, "{%d,", &len) != 1) {
-            log_syserr_q("Couldn't scan string-length");
+            log_syserr("Couldn't scan string-length");
         }
         else if (len > max) {
             log_add("scanString(): String is too long: %d > %lu",
@@ -411,7 +411,7 @@ pi_scan(
     off_t       start = ftello(file);
 
     if (start == (off_t)-1) {
-        log_syserr_q("Couldn't get position in file");
+        log_syserr("Couldn't get position in file");
     }
     else {
         char    buf[512];
@@ -422,7 +422,7 @@ pi_scan(
 
         if (fscanf(file, "{%80[^,]", buf) != 1 ||
                 tsParse(buf, &info->arrival) < 0) {
-            log_syserr_q("Couldn't scan product creation-time");
+            log_syserr("Couldn't scan product creation-time");
         }
         else if (fscanf(file, ",%511[^,]", buf) != 1 ||
                 strfeedtypet(buf, &info->feedtype) != FEEDTYPE_OK) {

@@ -51,7 +51,7 @@ so_buf(int sock, int optname)
         if(getsockopt(sock, SOL_SOCKET, optname,
                         (void*) &optval, &optlen) < 0)
         {
-                log_syserr_q("getsockopt %s", s_optname(optname));
+                log_syserr("getsockopt %s", s_optname(optname));
                 return 0;
         }
         /* else */
@@ -72,7 +72,7 @@ so_buf(int sock, int optname)
                 if(setsockopt(sock, SOL_SOCKET, optname,
                                 (char *) &optval, optlen) < 0)
                 {
-                        log_syserr_q("setsockopt %s %d", s_optname(optname), optval);
+                        log_syserr("setsockopt %s %d", s_optname(optname), optval);
                         return 0;
                 }
 #if 0 /* DEBUG verify */
@@ -80,7 +80,7 @@ so_buf(int sock, int optname)
                 if(getsockopt(sock, SOL_SOCKET, SO_SNDBUF,
                                 (char *) &optval, &optlen) < 0)
                 {
-                        log_syserr_q("getsockopt 2 %s", s_optname(optname));
+                        log_syserr("getsockopt 2 %s", s_optname(optname));
                 }
 #endif
         }
@@ -278,7 +278,8 @@ set_remote_class(
         newProdClass = dup_prod_class(prodClass);
 
         if (NULL == newProdClass) {
-            log_syserr_q("Couldn't duplicate product-class");
+            log_add_syserr("Couldn't duplicate product-class");
+            log_flush_error();
             return ENOMEM;
         }
     }

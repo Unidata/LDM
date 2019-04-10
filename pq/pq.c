@@ -3439,7 +3439,7 @@ fd_lock(const int fd, const int cmd, const short l_type,
                         {
                         pid_t conflict = fd_isLocked(fd, l_type, offset,
                                         l_whence, extent);
-                        log_errno_q(errnum,
+                        log_errno(errnum,
                                 "fcntl %s failed for rgn (%ld %s, %lu): %s",
                                 s_ltype(l_type), 
                                 (long)offset, s_whence(l_whence), (long)extent, 
@@ -3449,7 +3449,7 @@ fd_lock(const int fd, const int cmd, const short l_type,
                 }
                 else
                 {
-                        log_syserr_q("fcntl %s failed for rgn (%ld %s, %lu) %d",
+                        log_syserr("fcntl %s failed for rgn (%ld %s, %lu) %d",
                                 s_ltype(l_type), 
                                 (long)offset, s_whence(l_whence), (long)extent, 
                                 errnum);
@@ -3560,11 +3560,11 @@ unmapwrap(void *const ptr,
         {
 #ifdef MS_ASYNC
                 if(msync(ptr, extent, MS_ASYNC) == -1)
-                        log_syserr_q("msync: %ld %lu MS_ASYNC",
+                        log_syserr("msync: %ld %lu MS_ASYNC",
                                 (long)offset, (unsigned long)extent);
 #else
                 if(msync(ptr, extent) == -1)
-                        log_syserr_q("msync: %ld %lu",
+                        log_syserr("msync: %ld %lu",
                                 (long)offset, (unsigned long)extent);
 #endif
         }
@@ -3576,7 +3576,7 @@ unmapwrap(void *const ptr,
         if(munmap(ptr, extent) == -1)
         {
                 status = errno;
-                log_syserr_q("munmap: %ld %lu", (long)offset, (unsigned long)extent);
+                log_syserr("munmap: %ld %lu", (long)offset, (unsigned long)extent);
                 return status;
         }
 
@@ -4583,7 +4583,8 @@ pq2_try_del_prod(
                 status = EACCES;
             }
             else {
-                log_syserr_q("Couldn't get region (offset=%ld,extent=%lu)");
+                log_add_syserr("Couldn't get region (offset=%ld,extent=%lu)");
+                log_flush_error();
                 status = PQ_SYSTEM;
             }
         }
@@ -7152,8 +7153,9 @@ pq_getMetadataFromOffset(
         status = rgn_get(pq, offset, extent, 0, &vp);
 
         if (0 != status) {
-            log_syserr_q("Couldn't lock data-product's "
+            log_add_syserr("Couldn't lock data-product's "
                     "data-region in product-queue");
+            log_flush_error();
         }
         else {
             XDR       xdrs;
@@ -7409,7 +7411,8 @@ pq_setCursorFromSignature(
         status = ctl_get(pq, 0);
 
         if (ENOERR != status) {
-            log_syserr_q("Couldn't lock control-region of product-queue");
+            log_add_syserr("Couldn't lock control-region of product-queue");
+            log_flush_error();
         }
         else {
             tqelem* timeEntry;
@@ -7462,7 +7465,8 @@ pq_processProduct(
      * write-access by another process.
      */
     if (ctl_get(pq, 0)) {
-        log_syserr_q("Couldn't lock control-region of product-queue");
+        log_add_syserr("Couldn't lock control-region of product-queue");
+        log_flush_error();
         status = PQ_SYSTEM;
     }
     else {

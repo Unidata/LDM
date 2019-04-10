@@ -49,7 +49,7 @@ err_new(
     err = (ErrorObj*)malloc(sizeof(ErrorObj));
 
     if (NULL == err) {
-        log_syserr_q("malloc(%lu) failure",
+        log_syserr("malloc(%lu) failure",
             (unsigned long)sizeof(ErrorObj));
     }
     else {

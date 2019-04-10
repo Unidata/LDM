@@ -311,7 +311,7 @@ main(int ac, char *av[])
      */
     if(atexit(cleanup) != 0)
     {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         exit(1);
     }
 

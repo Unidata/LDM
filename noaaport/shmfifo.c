@@ -120,7 +120,7 @@ checkUnlocked(
         int     pid = semctl(shm->semid, SI_LOCK, GETPID);
 
         if (-1 == semval || -1 == pid) {
-            log_syserr_q("semctl() failure");
+            log_syserr("semctl() failure");
             status = ECANCELED;
         }
         else {
@@ -171,7 +171,7 @@ shmfifo_lock(
 
         /* dvbs_multicast(1) used to hang here */
         if (semop (shm->semid, op, 1) == -1) {
-            log_syserr_q("semop(2) failure");
+            log_syserr("semop(2) failure");
             status = ECANCELED;
         }
         else {
@@ -213,7 +213,7 @@ checkLocked(
         int     pid = semctl(shm->semid, SI_LOCK, GETPID);
 
         if (-1 == semval || -1 == pid) {
-            log_syserr_q("semctl() failure");
+            log_syserr("semctl() failure");
             status = ECANCELED;
         }
         else {
@@ -264,7 +264,7 @@ shmfifo_unlock(
         op[0].sem_flg = 0;
 
         if (semop(shm->semid, op, 1) == -1) {
-            log_syserr_q("semop(2) failure");
+            log_syserr("semop(2) failure");
             status = ECANCELED;
         }
         else {
@@ -467,7 +467,7 @@ shmfifo_wait(
             op[0].sem_flg = 0;
 
             if (semop(shm->semid, op, 1) == -1) {
-                log_syserr_q("semop() failure");
+                log_syserr("semop() failure");
                 status = ECANCELED;
             }
 
@@ -551,7 +551,7 @@ shmfifo_notify(
     if (0 == status) {
         if ((status = vetSemIndex(which)) == 0) {
             if (semctl(shm->semid, which, SETVAL, 1)) {
-                log_syserr_q("semctl() failure");
+                log_syserr("semctl() failure");
                 status = ECANCELED;
             }
             else {
@@ -666,7 +666,7 @@ struct shmhandle* shmfifo_new(void)
         (struct shmhandle*)malloc(sizeof(struct shmhandle));
 
     if (NULL == shm) {
-        log_syserr_q("Couldn't allocate %lu bytes",
+        log_syserr("Couldn't allocate %lu bytes",
             sizeof(struct shmhandle));
     }
     else {
@@ -807,7 +807,7 @@ struct shmhandle* shmfifo_create(
     }
 
     if (shmid == -1) {
-        log_syserr_q("shmget() failure: npages=%d, nkey=%d",
+        log_syserr("shmget() failure: npages=%d, nkey=%d",
             npages, nkey);
     }
     else {
@@ -815,7 +815,7 @@ struct shmhandle* shmfifo_create(
         struct shmprefix*       p = (struct shmprefix*)shmat(shmid, 0, 0);
 
         if (p == (void*)-1) {
-            log_syserr_q("shmat() failure: id=%d", shmid);
+            log_syserr("shmat() failure: id=%d", shmid);
         }
         else {
             int     semid;
@@ -843,7 +843,7 @@ struct shmhandle* shmfifo_create(
             }
 
             if (semid == -1) {
-                log_syserr_q("semget() failure");
+                log_syserr("semget() failure");
             }
             else {
                 unsigned short      values[SI_SEM_COUNT];
@@ -858,7 +858,7 @@ struct shmhandle* shmfifo_create(
                 arg.array = values;
 
                 if (semctl(semid, 0, SETALL, arg) == -1) {
-                    log_syserr_q("semctl() failure: semid=%d",
+                    log_syserr("semctl() failure: semid=%d",
                         semid);
                 }
                 else {
@@ -900,7 +900,7 @@ int shmfifo_attach(
     }
 
   if ((mem = shmat(shm->sid, 0, 0)) == (void*)-1) {
-      log_syserr_q("Couldn't attach to shared-memory: sid=%d", shm->sid);
+      log_syserr("Couldn't attach to shared-memory: sid=%d", shm->sid);
       return -1;
   }
 

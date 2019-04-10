@@ -223,7 +223,7 @@ nbs_status_t nbsa_recv_gini(
                 status = 0;
                 break;
             default:
-                log_errno_q(status, "Couldn't insert product: %s",
+                log_errno(status, "Couldn't insert product: %s",
                         s_prod_info(NULL, 0, info, 0));
                 status = NBS_STATUS_SYSTEM;
                 break;

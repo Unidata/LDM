@@ -131,8 +131,9 @@ static void myStartElement(
                     prodId = strdup((char*)nameValuePair[1]);
 
                     if (prodId == NULL) {
-                        log_syserr_q( "Couldn't duplicate product ID: \"%s\"",
+                        log_add_syserr( "Couldn't duplicate product ID: \"%s\"",
                                 nameValuePair[1]);
+                        log_flush_error();
                         currState = ERROR;
                     }
                 }
@@ -140,8 +141,9 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &prodSize)
                         != 1) {
 
-                        log_syserr_q("Invalid product size: \"%s\"",
+                        log_add_syserr("Invalid product size: \"%s\"",
                                 nameValuePair[1]);
+                        log_flush_error();
                         currState = ERROR;
                     }
                 }
@@ -149,8 +151,9 @@ static void myStartElement(
                     if (sscanf((const char*)nameValuePair[1], "%u", &delay)
                         != 1) {
 
-                        log_syserr_q("Invalid delay time: \"%s\"",
+                        log_add_syserr("Invalid delay time: \"%s\"",
                                 nameValuePair[1]);
+                        log_flush_error();
                         currState = ERROR;
                     }
                 }
@@ -246,7 +249,8 @@ static void xmlWarning(
     va_list     args;
 
     va_start(args, msg);
-    log_vlog_q(LOG_LEVEL_WARNING, msg, args);
+    log_vadd(msg, args);
+    log_flush(LOG_LEVEL_WARNING);
     va_end(args);
 }
 
@@ -267,7 +271,8 @@ static void xmlError(
     va_list     args;
 
     va_start(args, msg);
-    log_vlog_q(LOG_LEVEL_ERROR, msg, args);
+    log_vadd(msg, args);
+    log_flush(LOG_LEVEL_WARNING);
     va_end(args);
 
     currState = ERROR;
@@ -361,8 +366,9 @@ int cfOpen(const char* pathname)
             prodData = realloc(prodData, prodSize);
 
             if (prodData == NULL) {
-                log_syserr_q("Couldn't allocate %u bytes for product data",
+                log_add_syserr("Couldn't allocate %u bytes for product data",
                         prodSize);
+                log_flush_error();
                 status = ENOMEM;
             }
             else {
@@ -376,8 +382,9 @@ int cfOpen(const char* pathname)
                 prodXdrBuf = realloc(prodXdrBuf, prodXdrLen);
 
                 if (prodXdrBuf == NULL) {
-                    log_syserr_q("Couldn't allocate %lu bytes for product XDR "
+                    log_add_syserr("Couldn't allocate %lu bytes for product XDR "
                             "buffer", prodXdrLen);
+                    log_flush_error();
                     status = errno;
                 }
                 else {
@@ -440,7 +447,8 @@ int cfGetProduct(
         status = set_timestamp(&info->arrival);
 
         if (status  != 0) {
-            log_errno_q(status, "Couldn't set product arrival time");
+            log_add_errno(status, "Couldn't set product arrival time");
+            log_flush_error();
         }
         else {
             XDR      xdr;

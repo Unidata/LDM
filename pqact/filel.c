@@ -633,7 +633,7 @@ dupstrip(
 
     out = malloc(len);
     if (out == NULL ) {
-        log_syserr_q("dupstrip: malloc %ld failed", (long) len);
+        log_syserr("dupstrip: malloc %ld failed", (long) len);
         return NULL ;
     }
 
@@ -1046,7 +1046,7 @@ static void unio_close(
     log_debug("%d", entry->handle.fd);
     if (entry->handle.fd != -1) {
         if (close(entry->handle.fd) == -1) {
-            log_syserr_q("close: %s", entry->path);
+            log_syserr("close: %s", entry->path);
         }
     }
 
@@ -1433,7 +1433,8 @@ static int stdio_open(
             fl_closeLru(0);
         }
 
-        log_syserr_q("mkdirs_open: %s", path);
+        log_add_syserr("mkdirs_open: %s", path);
+        log_flush_error();
     }
     else {
         /*
@@ -1448,7 +1449,7 @@ static int stdio_open(
             entry->handle.stream = fdopen(fd, mode);
 
             if (NULL == entry->handle.stream) {
-                log_syserr_q("fdopen: %s", path);
+                log_syserr("fdopen: %s", path);
             }
             else {
                 if (!entry_isFlagSet(entry, O_TRUNC)) {
@@ -1456,7 +1457,7 @@ static int stdio_open(
                         /*
                          * The "file" must be a pipe or FIFO.
                          */
-                        log_syserr_q("stdio_open(): Couldn't seek to EOF: %s", path);
+                        log_syserr("stdio_open(): Couldn't seek to EOF: %s", path);
                     }
                 }
 
@@ -1483,7 +1484,7 @@ static void stdio_close(
             entry->handle.stream ? fileno(entry->handle.stream) : -1);
     if (entry->handle.stream != NULL ) {
         if (fclose(entry->handle.stream) == EOF) {
-            log_syserr_q("fclose: %s", entry->path);
+            log_syserr("fclose: %s", entry->path);
         }
     }
     entry->handle.stream = NULL;
@@ -1499,7 +1500,7 @@ static int stdio_sync(
 
     if (fflush(entry->handle.stream) == EOF) {
         if (EINTR != errno) {
-            log_syserr_q("Couldn't flush I/O to file \"%s\"", entry->path);
+            log_syserr("Couldn't flush I/O to file \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1526,7 +1527,7 @@ static int stdio_put(
 
     if (nwrote != sz) {
         if (errno != EINTR) {
-            log_syserr_q("fwrite() error: \"%s\"", entry->path);
+            log_syserr("fwrite() error: \"%s\"", entry->path);
             // disable flushing on I/O error
             entry_unsetFlag(entry, FL_NEEDS_SYNC);
         }
@@ -1582,7 +1583,7 @@ int stdio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr_q("Couldn't seek to BOF: %s",
+                    log_syserr("Couldn't seek to BOF: %s",
                             entry->path);
                 }
             }
@@ -1739,7 +1740,7 @@ static int pipe_open(
             fl_closeLru(0);
         }
 
-        log_syserr_q("Couldn't create pipe");
+        log_syserr("Couldn't create pipe");
     }
     else {
         /*
@@ -1787,7 +1788,7 @@ static int pipe_open(
                      */
                     if (STDIN_FILENO != pfd[0]) {
                         if (-1 == dup2(pfd[0], STDIN_FILENO)) {
-                            log_syserr_q("Couldn't redirect standard input to "
+                            log_syserr("Couldn't redirect standard input to "
                                     "read-end of pipe: pfd[0]=%d", pfd[0]);
                         }
                         else {
@@ -1800,7 +1801,7 @@ static int pipe_open(
                         endpriv();
                         log_info_q("Executing decoder \"%s\"", av[0]);
                         (void)execvp(av[0], &av[0]);
-                        log_syserr_q("Couldn't execute decoder \"%s\";"
+                        log_syserr("Couldn't execute decoder \"%s\";"
                                 "PATH=%s", av[0], getenv("PATH"));
                     }
 
@@ -1825,7 +1826,8 @@ static int pipe_open(
                     #endif
 
                     if (NULL == entry->handle.pbuf) {
-                        log_syserr_q("Couldn't create pipe-buffer");
+                        log_add_syserr("Couldn't create pipe-buffer");
+                        log_flush_error();
                     }
                     else {
                         entry->private = pid;
@@ -1889,7 +1891,7 @@ static void pipe_close(
     }
     if (pfd != -1) {
         if (close(pfd) == -1) {
-            log_syserr_q("pipe close: %s", entry->path);
+            log_syserr("pipe close: %s", entry->path);
         }
         /*
          * The close should cause termination of the child
@@ -2398,7 +2400,8 @@ int xpipe_prodput(
 static void ldmdb_fatal(
         const char * str)
 {
-    log_syserr_q("ldmdb_fatal(): %s", str);
+    log_add_syserr("ldmdb_fatal(): %s", str);
+    log_flush_error();
 }
 
 /*
@@ -2436,7 +2439,8 @@ static int ldmdb_open(
     {
         /* create directories if needed */
         if (diraccess(path, (R_OK | W_OK), !0) == -1) {
-            log_syserr_q("Couldn't access directories leading to %s", path);
+            log_add_syserr("Couldn't access directories leading to %s", path);
+            log_flush_error();
             return -1;
         }
     }
@@ -2453,7 +2457,7 @@ static int ldmdb_open(
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        log_syserr_q("gdbm_open: %s", path);
+        log_syserr("gdbm_open: %s", path);
         return -1;
     }
     entry->handle.db = db;
@@ -2547,12 +2551,12 @@ static int ldmdb_put(
         old_stuff = gdbm_fetch(entry->handle.db, key);
         log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr) {
-            log_syserr_q("Inconsistent Duplicate Key storage");
+            log_syserr("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = content.dsize + old_stuff.dsize;
         if (NULL == (new_stuff.dptr = malloc(size))) {
-            log_syserr_q("malloc failed");
+            log_syserr("malloc failed");
             free(old_stuff.dptr);
             return -1;
         }
@@ -2623,7 +2627,7 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
             fl_closeLru(0);
             fl_closeLru(0);
         }
-        log_syserr_q("ldmdb_open: %s", path);
+        log_syserr("ldmdb_open: %s", path);
         return -1;
     }
     strncpy(entry->path, path, PATH_MAX);
@@ -2691,13 +2695,13 @@ ldmdb_put(fl_entry *entry, const char *keystr,
         log_debug("\tConcatenating data under key %s", key.dptr);
         if (NULL == old_stuff.dptr)
         {
-            log_syserr_q("Inconsistent Duplicate Key storage");
+            log_syserr("Inconsistent Duplicate Key storage");
             return -1;
         }
         size = (int)(content.dsize+old_stuff.dsize);
         if (NULL == (new_stuff.dptr = malloc(size)))
         {
-            log_syserr_q("malloc failed");
+            log_syserr("malloc failed");
             free (old_stuff.dptr);
             return -1;
         }
@@ -2970,7 +2974,7 @@ pid_t reap(
             /*
              * Unwaited-for child processes exist.
              */
-            log_syserr_q("waitpid()");
+            log_syserr("waitpid()");
         }
     }
     else if (wpid != 0) {

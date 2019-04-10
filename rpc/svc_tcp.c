@@ -363,7 +363,7 @@ readtcp(
 	    log_add("EOF on socket %d", sock);
 	}
 	else {
-	    log_syserr_q("read() error on socket %d", sock);
+	    log_syserr("read() error on socket %d", sock);
 	}
 fatal_err:
 	((struct tcp_conn *)(xprt->xp_p1))->strm_stat = XPRT_DIED;
@@ -384,7 +384,7 @@ writetcp(
 
 	for (cnt = len; cnt > 0; cnt -= i, buf += i) {
 		if ((i = (int)write(xprt->xp_sock, buf, cnt)) < 0) {
-			log_syserr_q("writetcp(): write() error on socket %d",
+			log_syserr("writetcp(): write() error on socket %d",
 			    xprt->xp_sock);
 			((struct tcp_conn *)(xprt->xp_p1))->strm_stat =
 			    XPRT_DIED;

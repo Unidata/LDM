@@ -31,7 +31,7 @@ set_fd_nonblock(int fd)
 
 	if(flags == (unsigned)-1)
 	{
-		log_syserr_q("fcntl(..., F_GETFL,)");
+		log_syserr("fcntl(..., F_GETFL,)");
 		return 0;
 	}
 	/* else */
@@ -43,7 +43,7 @@ set_fd_nonblock(int fd)
 	flags |= NB_O_NONBLOCK;
 	if(fcntl(fd, F_SETFL, (int)flags) == -1)
 	{
-		log_syserr_q("fcntl(..., F_SETFL, O_NONBLOCK)");
+		log_syserr("fcntl(..., F_SETFL, O_NONBLOCK)");
 		return 0;
 	}
 
@@ -63,7 +63,7 @@ clr_fd_nonblock(int fd)
 
 	if(flags == -1)
 	{
-		log_syserr_q("fcntl(..., F_GETFL,)");
+		log_syserr("fcntl(..., F_GETFL,)");
 		return 0;
 	}
 	/* else */
@@ -75,7 +75,7 @@ clr_fd_nonblock(int fd)
 	flags &= ~NB_O_NONBLOCK;
 	if(fcntl(fd, F_SETFL, flags) == -1)
 	{
-		log_syserr_q("fcntl(..., F_SETFL, &= ~O_NONBLOCK)");
+		log_syserr("fcntl(..., F_SETFL, &= ~O_NONBLOCK)");
 		return 0;
 	}
 

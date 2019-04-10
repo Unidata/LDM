@@ -329,7 +329,8 @@ static int getConfiguration(int ac, char* const * const av) {
 
     /* Initialize statistics */
     if (set_timestamp(&stats.starttime) != ENOERR) {
-        log_syserr_q("Couldn't set timestamp");
+        log_add_syserr("Couldn't set timestamp");
+        log_flush_error();
         status = SYSTEM_ERROR;
     } else {
         stats.last_disco = stats.starttime;
@@ -568,12 +569,14 @@ static int executeConnection(void) {
                     } else if (EAGAIN == status || EACCES == status) {
                         log_debug("Hit a lock");
                     } else if (EIO == status) {
-                        log_syserr_q("Product-queue I/O error");
+                        log_add_syserr("Product-queue I/O error");
+                        log_flush_error();
                         status = PQ_ERROR;
                         break;
                     } else {
-                        log_syserr_q("Unexpected pq_sequence() return: %d",
+                        log_add_syserr("Unexpected pq_sequence() return: %d",
                                 status);
+                        log_flush_error();
                         status = PQ_ERROR;
                         break;
                     }
@@ -615,7 +618,7 @@ static int execute(void) {
      * Register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         status = SYSTEM_ERROR;
     } else {
         /*

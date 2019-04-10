@@ -350,7 +350,7 @@ int main(
      * privileges
      */
     if (mlockall( MCL_CURRENT|MCL_FUTURE ) != 0 )
-        log_syserr_q("mlockall");
+        log_syserr("mlockall");
 
     if (rtflag) {
 #if _XOPEN_REALTIME != -1
@@ -363,7 +363,7 @@ int main(
               if (status != -1)
                   log_notice_q("Realtime scheduler %d",status);
               else
-                  log_syserr_q("scheduler");
+                  log_syserr("scheduler");
            }
        }
 #else
@@ -372,7 +372,7 @@ int main(
     }
     else if (ipri != 0) {
        if (setpriority(PRIO_PROCESS, 0, ipri) != 0)
-           log_syserr_q("setpriority");
+           log_syserr("setpriority");
     }
 
     if ((pq == NULL) && (dumpflag)) {
@@ -397,7 +397,7 @@ int main(
      * Register atexit routine
      */
     if (atexit(cleanup) != 0) {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         exit(1);
     }
 
@@ -528,7 +528,7 @@ int main(
                        if (n == 0)
                           log_error_q("recvfrom returns zero");
                        else
-                          log_syserr_q("recvfrom failure");
+                          log_syserr("recvfrom failure");
                     }
 
                     haslogged = 1;

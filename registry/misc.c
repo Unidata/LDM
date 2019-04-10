@@ -34,7 +34,7 @@ void* reg_malloc(
     void*       ptr = malloc(nbytes);
 
     if (NULL == ptr) {
-        log_syserr_q("Couldn't allocate %lu bytes", nbytes);
+        log_syserr("Couldn't allocate %lu bytes", nbytes);
         *status = ENOMEM;
     }
     else {
@@ -71,8 +71,9 @@ RegStatus reg_clonePrefix(
         status = 0;
     }
     else {
-        log_syserr_q("Couldn't clone first %lu bytes of string \"%s\"",
+        log_add_syserr("Couldn't clone first %lu bytes of string \"%s\"",
             nbytes, string);
+        log_flush_error();
         status = ENOMEM;
     }
 

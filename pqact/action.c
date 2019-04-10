@@ -86,7 +86,8 @@ exec_prodput(
 
         pid = ldmfork();
         if (-1 == pid) {
-            log_syserr_q("Couldn't fork EXEC process");
+            log_add_syserr("Couldn't fork EXEC process");
+            log_flush_error();
         }
         else if (0 == pid) {
             // Child process.
@@ -115,7 +116,7 @@ exec_prodput(
             endpriv();
             log_info_q("Executing program \"%s\"", argv[0]);
             (void)execvp(argv[0], argv);
-            log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
+            log_syserr("Couldn't execute utility \"%s\"; PATH=%s", argv[0],
                     getenv("PATH"));
             exit(EXIT_FAILURE); // cleanup() calls log_fini()
         }

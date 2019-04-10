@@ -292,7 +292,7 @@ static int _fd_bufread(
 
         if (ready < 0) {
             if (errno != EINTR)
-              log_syserr_q("select");
+              log_syserr("select");
             else
               log_notice_q("select received interupt\0");
 
@@ -324,7 +324,7 @@ static int _fd_bufread(
             bread = bread + nread;
             
             if (nread == -1) {
-                log_syserr_q("_fd_bufread(): read() failure");
+                log_syserr("_fd_bufread(): read() failure");
                 return -2;
             }
             if (nread == 0) {
@@ -574,7 +574,7 @@ int main(
      * Register atexit routine
      */
     if (atexit(cleanup) != 0) {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         exit(-1);
     }
 

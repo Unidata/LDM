@@ -85,7 +85,8 @@ static void vlogMessage(
 {
     va_list args;
     va_start(args, format);
-    log_vlog_q(level, format, args);
+    log_vadd(format, args);
+    log_flush(level);
     va_end(args);
 }
 
@@ -436,14 +437,14 @@ static void test_log_syserr(void)
     status = log_set_destination(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 
-    log_errno_q(ENOMEM, NULL);
-    log_errno_q(ENOMEM, "LOG_ERRNO() previous message is part of this one");
-    log_errno_q(ENOMEM, "LOG_ERRNO() previous message is part of this one "
+    log_errno(ENOMEM, NULL);
+    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one");
+    log_errno(ENOMEM, "LOG_ERRNO() previous message is part of this one "
             "#%d", 2);
     errno = EEXIST;
-    log_syserr_q(NULL);
-    log_syserr_q("log_syserr_1() previous message is part of this one");
-    log_syserr_q("log_syserr_1() previous message is part of this one #%d", 2);
+    log_syserr(NULL);
+    log_syserr("log_syserr_1() previous message is part of this one");
+    log_syserr("log_syserr_1() previous message is part of this one #%d", 2);
 
     log_fini();
 

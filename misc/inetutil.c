@@ -604,7 +604,7 @@ hostent_new(
          */
         new = (struct hostent *) malloc(nbytes);
         if (NULL == new)
-            log_syserr_q(
+            log_syserr(
             "Couldn't allocate %lu bytes for information on host \"%s\"", 
                    (unsigned long) nbytes, name);
         else
@@ -1122,13 +1122,13 @@ udpSock_init(
     int status;
 
     if (-1 == fd) {
-        log_syserr_q("Couldn't create UDP socket");
+        log_syserr("Couldn't create UDP socket");
         status = 2;
     }
     else {
         status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
         if (status) {
-            log_syserr_q("Couldn't bind UDP socket");
+            log_syserr("Couldn't bind UDP socket");
             (void)close(fd);
             status = 2;
         }
@@ -1309,7 +1309,7 @@ sa_copy(
     char* const inetId = strdup(src->inetId);
 
     if (inetId == NULL) {
-        log_syserr_q("Couldn't copy Internet identifier");
+        log_syserr("Couldn't copy Internet identifier");
         return false;
     }
 

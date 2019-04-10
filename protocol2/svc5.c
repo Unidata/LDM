@@ -62,7 +62,8 @@ setNewInfo(
         newInfo = pi_new();
 
     if (NULL == newInfo) {
-        log_syserr_q("Couldn't allocate new prod_info structure");
+        log_add_syserr("Couldn't allocate new prod_info structure");
+        log_flush_error();
         error = ENOMEM;
     }
     else {
@@ -221,7 +222,8 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 case ENOERR:
                         break;
                 case EINVAL:
-                        log_errno_q(EINVAL, "hiya_acl_ck: BADPATTERN");
+                        log_add_errno(EINVAL, "hiya_acl_ck: BADPATTERN");
+                        log_flush_error();
                         reply.code = BADPATTERN;
                         return(&reply);
                 default:

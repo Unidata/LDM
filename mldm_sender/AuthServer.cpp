@@ -86,7 +86,7 @@ public:
     {
         auto status = ::pthread_cancel(thread.native_handle());
         if (status)
-            log_errno_q(status, "Couldn't cancel server-thread for authorization "
+            log_errno(status, "Couldn't cancel server-thread for authorization "
                     "message-queue %s", authMsgQ.getName().c_str());
         thread.join(); // Can't fail. Might hang, though
     }

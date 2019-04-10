@@ -202,12 +202,13 @@ static bool pti_init(void)
         log_add("The product-queue \"%s\" is corrupt\n", pqfname);
     }
     else if (status) {
-        log_errno_q(status, "Couldn't open product-queue \"%s\"", pqfname);
+        log_add_errno(status, "Couldn't open product-queue \"%s\"", pqfname);
+        log_flush_error();
     }
     else {
         prod.data = malloc(max_prod_size);
         if (prod.data == NULL) {
-            log_syserr_q("Couldn't allocate buffer for data-product");
+            log_syserr("Couldn't allocate buffer for data-product");
         }
         else {
             (void)strncpy(myname, ghostname(), sizeof(myname));
@@ -391,7 +392,7 @@ static bool pti_setCreationTime(
         if (timeval_isPositive(&sleepInterval)) {
             if (sleep(sleepInterval.tv_sec) != 0 ||
                     usleep(sleepInterval.tv_usec)) {
-                log_syserr_q("Couldn't sleep");
+                log_syserr("Couldn't sleep");
                 return false;
             }
         }
@@ -416,7 +417,7 @@ static bool pti_process_input_file()
     bool success;
 
     if (freopen(inputPathname, "r", stdin) == NULL) {
-        log_syserr_q("Couldn't open input-file \"%s\"", inputPathname);
+        log_syserr("Couldn't open input-file \"%s\"", inputPathname);
         success = false;
     }
     else {
@@ -446,7 +447,7 @@ static bool pti_process_input_file()
             (void)snprintf(id, sizeof(id), "%u", prod.info.seqno);
             prod.data = realloc(prod.data, prod.info.sz);
             if (prod.data == NULL) {
-                log_syserr_q("Couldn't allocate memory for data-product");
+                log_syserr("Couldn't allocate memory for data-product");
                 success = false;
                 break;
             }
@@ -477,7 +478,8 @@ static bool pti_process_input_file()
                 success = false;
                 break;
             case ENOMEM:
-                log_errno_q(status, "Queue full?");
+                log_add_errno(status, "Queue full?");
+                log_flush_error();
                 success = false;
                 break;
             case EINTR:

@@ -338,7 +338,7 @@ retry:
         if(sock == -1)
         {
                 status = errno;
-                log_syserr_q("dup %d", cfd);
+                log_syserr("dup %d", cfd);
                 goto out;
         }
         *sockp = sock;

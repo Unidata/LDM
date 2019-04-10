@@ -109,18 +109,18 @@ int pmNew(
     ProductMaker*   w = (ProductMaker*)malloc(sizeof(ProductMaker));
 
     if (NULL == w) {
-        log_syserr_q("Couldn't allocate new product-maker");
+        log_syserr("Couldn't allocate new product-maker");
     }
     else {
         MD5_CTX*    md5ctxp = new_MD5_CTX();
 
         if (NULL == md5ctxp) {
-            log_syserr_q("Couldn't allocate MD5 object");
+            log_syserr("Couldn't allocate MD5 object");
             free(w);
         }
         else {
             if ((status = pthread_mutex_init(&w->mutex, NULL)) != 0) {
-                log_errno_q(status, "Couldn't initialize product-maker mutex");
+                log_errno(status, "Couldn't initialize product-maker mutex");
                 free(w);
                 free_MD5_CTX(md5ctxp);
                 status = 2;

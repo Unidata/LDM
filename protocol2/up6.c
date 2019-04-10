@@ -459,13 +459,13 @@ static up6_error_t up6_run(
     flags = fcntl(_socket, F_GETFL);
 
     if (-1 == flags) {
-        log_syserr_q("fcntl(F_GETFL) failure");
+        log_syserr("fcntl(F_GETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else if ((flags & O_NONBLOCK)
             && -1 == fcntl(_socket, F_SETFL, flags & ~O_NONBLOCK)) {
 
-        log_syserr_q("fcntl(F_SETFL) failure");
+        log_syserr("fcntl(F_SETFL) failure");
         errCode = UP6_SYSTEM_ERROR;
     }
     else {

@@ -363,7 +363,8 @@ new_palt_fromStr(char *buf)
         if(pal->pmatchp == NULL)
         {
                 regfree(&pal->prog);
-                log_syserr_q("malloc failed");
+                log_add_syserr("malloc failed");
+                log_flush_error();
                 goto err;
         }
 
@@ -382,7 +383,7 @@ new_palt_fromStr(char *buf)
                 pal->private = malloc(len+1);
                 if(pal->private == NULL)
                 {
-                        log_syserr_q("malloc failed");
+                        log_syserr("malloc failed");
                         goto err;
                 }
                 (void) strcpy(pal->private, tabtoks[3]);
@@ -416,7 +417,7 @@ readPatFile(const char *path)
     FILE        *fp = fopen(path, "r");
 
     if (fp == NULL) {
-        log_syserr_q("Couldn't open configuration-file \"%s\"", path);
+        log_syserr("Couldn't open configuration-file \"%s\"", path);
         status = -1;
     }
     else {
@@ -541,8 +542,10 @@ utcToEpochTime(
 
     epochTime = timegm(&localTime);
 
-    if (epochTime == (time_t)-1)
-        log_syserr_q("timegm() failure");
+    if (epochTime == (time_t)-1) {
+        log_add_syserr("timegm() failure");
+        log_flush_error();
+    }
 
 #else
     /*
@@ -562,7 +565,7 @@ utcToEpochTime(
     epochTime = mktime(&localTime);
 
     if (epochTime == (time_t)-1)
-        log_syserr_q("mktime() failure");
+        log_syserr("mktime() failure");
 
 #endif
 
@@ -600,7 +603,7 @@ seq_sub(
            static char     seq_exp[] = "\\(seq\\)";
 
            if (regcomp(&seqprog, seq_exp, REG_EXTENDED) != 0)
-              log_syserr_q("Bad regular expression or out of memory: %s", seq_exp);
+              log_syserr("Bad regular expression or out of memory: %s", seq_exp);
            seqfirst = 0;
         }
 
@@ -680,7 +683,7 @@ date_sub(
         static char     date_exp[] = "\\(([0-9]{2}):([^)]*)\\)";
 
         if (regcomp(&prog, date_exp, REG_EXTENDED) != 0)
-            log_syserr_q("Bad regular expression or out of memory: %s", date_exp);
+            log_syserr("Bad regular expression or out of memory: %s", date_exp);
 
         first = 0;
     }

@@ -415,14 +415,14 @@ main(int ac, char *av[])
             char    buf[_POSIX_PATH_MAX];   /* includes NUL */
 #endif
             if (getcwd(buf, sizeof(buf)) == NULL) {
-                log_syserr_q("Couldn't get current working directory");
+                log_syserr("Couldn't get current working directory");
                 exit(EXIT_FAILURE);
             }
             (void)strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
             (void)strncat(buf, conffilename, sizeof(buf)-strlen(buf)-1);
             conffilename = strdup(buf);
             if (conffilename == NULL) {
-                log_syserr_q("Couldn't duplicate string \"%s\"", buf);
+                log_syserr("Couldn't duplicate string \"%s\"", buf);
                 exit(EXIT_FAILURE);
             }
         }
@@ -491,7 +491,7 @@ main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 log_notice_q("Exiting");
                 exit(EXIT_FAILURE);
                 /*NOTREACHED*/
@@ -597,7 +597,7 @@ main(int ac, char *av[])
                 /* change to data directory */
                 if (chdir(datadir) == -1)
                 {
-                        log_syserr_q("cannot chdir to %s", datadir);
+                        log_syserr("cannot chdir to %s", datadir);
                         exit(4);
                         /*NOTREACHED*/
                 }
@@ -655,7 +655,8 @@ main(int ac, char *av[])
                     || status == EDEADLOCK
 #endif
                 ) {
-                    log_syserr_q(NULL);
+                    log_add_syserr(NULL);
+                    log_flush_error();
                     /*
                      * Close the least recently used file descriptor.
                      */

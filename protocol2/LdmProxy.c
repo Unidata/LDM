@@ -681,14 +681,14 @@ lp_new(
     LdmProxy*           proxy = (LdmProxy*)malloc(nbytes);
 
     if (NULL == proxy) {
-        log_syserr_q("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
+        log_syserr("Couldn't allocate %lu bytes for new LdmProxy", nbytes);
         status = LP_SYSTEM;
     }
     else {
         proxy->host = strdup(host);
 
         if (NULL == proxy->host) {
-            log_syserr_q("Couldn't duplicate string \"%s\"", host);
+            log_syserr("Couldn't duplicate string \"%s\"", host);
             status = LP_SYSTEM;
         }
         else {

@@ -278,7 +278,7 @@ new_prod_class(
     clssp = (prod_class_t*)malloc(sz);
 
     if (clssp == NULL) {
-        log_syserr_q("Couldn't allocate %lu bytes for product-class", sz);
+        log_syserr("Couldn't allocate %lu bytes for product-class", sz);
     }
     else {
         (void)memset(clssp, 0, sz);
@@ -342,8 +342,9 @@ cp_prod_class(
                 prodSpec);
 
             if (status != ENOERR) {
-                log_syserr_q("Couldn't copy product-specification \"%s\"",
+                log_add_syserr("Couldn't copy product-specification \"%s\"",
                         sprint_prod_spec(buf, sizeof(buf), prodSpec));
+                log_flush_error();
                 return status;
             }
         }

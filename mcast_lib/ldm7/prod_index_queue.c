@@ -223,14 +223,14 @@ piq_initMutex(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        log_errno_q(status, "Couldn't initialize mutex attributes");
+        log_errno(status, "Couldn't initialize mutex attributes");
     }
     else {
         (void)pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
 
         if ((status = pthread_mutexattr_settype(&mutexAttr,
                 PTHREAD_MUTEX_RECURSIVE))) {
-            log_errno_q(status, "Couldn't set recursive mutex attribute");
+            log_errno(status, "Couldn't set recursive mutex attribute");
         }
         else if ((status = pthread_mutex_init(mutex, &mutexAttr))) {
             log_add_syserr("Couldn't initialize mutex");
@@ -259,7 +259,7 @@ piq_initLock(
         if (0 == status)
             return true;
 
-        log_errno_q(status, "Couldn't initialize condition-variable");
+        log_errno(status, "Couldn't initialize condition-variable");
         (void)pthread_mutex_destroy(&fiq->mutex);
     }
 

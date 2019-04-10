@@ -89,7 +89,7 @@ static pid_t reap(
 #endif
     if (wpid == -1) {
         if (!(errno == ECHILD && pid == -1)) /* Only complain when relevant */
-            log_syserr_q("waitpid");
+            log_syserr("waitpid");
         return -1;
     }
     /* else */
@@ -437,7 +437,7 @@ static int create_ldm_tcp_svc(
     if (sock < 0) {
         error = errno;
 
-        log_syserr_q("Couldn't get socket for server");
+        log_syserr("Couldn't get socket for server");
     }
     else {
         (void)ensure_close_on_exec(sock);
@@ -484,7 +484,7 @@ static int create_ldm_tcp_svc(
                 if (getsockname(sock, (struct sockaddr *) &addr, &len) < 0) {
                     error = errno;
 
-                    log_syserr_q("Couldn't get local address of server's socket");
+                    log_syserr("Couldn't get local address of server's socket");
                 }
                 else {
                     port = (short) ntohs((short) addr.sin_port);
@@ -496,7 +496,7 @@ static int create_ldm_tcp_svc(
                     if (listen(sock, 32) != 0) {
                         error = errno;
 
-                        log_syserr_q("Couldn't listen() on server's socket");
+                        log_syserr("Couldn't listen() on server's socket");
                     }
                     else {
                         *sockp = sock;
@@ -703,7 +703,7 @@ handle_connection(const int sock)
             goto again;
         }
         /* else */
-        log_syserr_q("accept() failure");
+        log_syserr("accept() failure");
         return;
     }
 
@@ -733,8 +733,10 @@ handle_connection(const int sock)
         /* LOG_NOTICE("child %d", pid); */
         (void) close(xp_sock);
 
-        if (cps_add(pid))
-            log_syserr_q("Couldn't add child PID to set");
+        if (cps_add(pid)) {
+            log_add_syserr("Couldn't add child PID to set");
+            log_flush_error();
+        }
 
         return;
     }
@@ -772,7 +774,7 @@ static void sock_svc(
              * Handle EINTR as a special case.
              */
             if (errno != EINTR) {
-                log_syserr_q("sock select");
+                log_syserr("sock select");
                 done = 1;
                 exit(1);
             }
@@ -985,7 +987,7 @@ int main(
      * register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         log_notice_q("Exiting");
         exit(1);
     }

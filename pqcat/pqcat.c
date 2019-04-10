@@ -100,7 +100,7 @@ writeprod(const prod_info *infop, const void *datap,
                         infop->sz)
         {
                 int errnum = errno;
-                log_syserr_q( "data write failed") ;
+                log_syserr( "data write failed") ;
                 return errnum;
         }
 
@@ -279,7 +279,7 @@ int main(int ac, char *av[])
                 case 'c':
                         md5ctxp = new_MD5_CTX();
                         if(md5ctxp == NULL)
-                                log_syserr_q("new_md5_CTX failed");
+                                log_syserr("new_md5_CTX failed");
                         break;
                 case 'v':
                         if (!log_is_enabled_info)
@@ -376,7 +376,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 

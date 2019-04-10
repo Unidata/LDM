@@ -104,8 +104,9 @@ decodeCommandLine(
 
                 if (sscanf(optarg, "%12lu %n", &n, &nbytes) != 1 ||
                         optarg[nbytes] != 0) {
-                    log_syserr_q("Couldn't decode FIFO size in pages: \"%s\"",
+                    log_add_syserr("Couldn't decode FIFO size in pages: \"%s\"",
                             optarg);
+                    log_flush_error();
                     status = EINVAL;
                 }
                 else {
@@ -538,7 +539,7 @@ static int spawnProductMaker(
         status = pthread_create(thread, attr, pmStart, pm);
 
         if (status) {
-            log_errno_q(status, "Couldn't start product-maker thread");
+            log_errno(status, "Couldn't start product-maker thread");
             status = SYSTEM_FAILURE;
         }
         else {
@@ -861,7 +862,7 @@ initThreadAttr(
     int status = pthread_attr_init(attr);
 
     if (status) {
-        log_errno_q(status, "Couldn't initialize thread attributes object");
+        log_errno(status, "Couldn't initialize thread attributes object");
         status = (EBUSY == status) ? USAGE_ERROR : SYSTEM_FAILURE;
     }
     else if (isMcastInput) {
@@ -1024,7 +1025,7 @@ waitOnReader(
     int   status = pthread_join(thread, &voidPtr);
 
     if (status) {
-        log_errno_q(status, "Couldn't join input-reader thread");
+        log_errno(status, "Couldn't join input-reader thread");
         status = SYSTEM_FAILURE;
     }
     else {

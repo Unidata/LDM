@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -366,7 +366,7 @@ bool log_is_level_enabled(
 #define log_debug(...) do {\
     if (LOG_LEVEL_DEBUG >= log_level) {\
         LOG_LOC_DECL(loc);\
-        logl_log_1(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
+        logl_log(&loc, LOG_LEVEL_DEBUG, __VA_ARGS__);\
     }\
 } while (0)
 
@@ -379,7 +379,7 @@ bool log_is_level_enabled(
 #define log_info(...) do {\
     if (LOG_LEVEL_INFO >= log_level) {\
         LOG_LOC_DECL(loc);\
-        logl_log_1(&loc, LOG_LEVEL_INFO, __VA_ARGS__);\
+        logl_log(&loc, LOG_LEVEL_INFO, __VA_ARGS__);\
     }\
 } while (0)
 
@@ -392,7 +392,7 @@ bool log_is_level_enabled(
 #define log_notice(...) do {\
     if (LOG_LEVEL_NOTICE >= log_level) {\
         LOG_LOC_DECL(loc);\
-        logl_log_1(&loc, LOG_LEVEL_NOTICE, __VA_ARGS__);\
+        logl_log(&loc, LOG_LEVEL_NOTICE, __VA_ARGS__);\
     }\
 } while (0)
 
@@ -405,7 +405,7 @@ bool log_is_level_enabled(
 #define log_warning(...) do {\
     if (LOG_LEVEL_WARNING >= log_level) {\
         LOG_LOC_DECL(loc);\
-        logl_log_1(&loc, LOG_LEVEL_WARNING, __VA_ARGS__);\
+        logl_log(&loc, LOG_LEVEL_WARNING, __VA_ARGS__);\
     }\
 } while (0)
 
@@ -418,7 +418,7 @@ bool log_is_level_enabled(
 #define log_error(...) do {\
     if (LOG_LEVEL_ERROR >= log_level) {\
         LOG_LOC_DECL(loc);\
-        logl_log_1(&loc, LOG_LEVEL_ERROR, __VA_ARGS__);\
+        logl_log(&loc, LOG_LEVEL_ERROR, __VA_ARGS__);\
     }\
 } while (0)
 
@@ -431,7 +431,7 @@ bool log_is_level_enabled(
  */
 #define log_errno(errnum, ...) do {\
     LOG_LOC_DECL(loc);\
-    logl_errno_1(&loc, errnum, __VA_ARGS__);\
+    logl_errno(&loc, errnum, __VA_ARGS__);\
 } while (0)
 
 /**
@@ -487,48 +487,11 @@ bool log_is_level_enabled(
 
 /**
  * The following macros add a message to the current thread's queue of
- * messages, logs the queue, and then clear the queue:
+ * messages, log the queue, and then clear the queue:
  *
  * The argument-list of the variadic macros must comprise at least a
  * `NULL` argument in order to avoid a syntax error.
  */
-
-/**
- * Adds a variadic message to the message-queue of the current thread, logs the
- * queue at a given level, and then clears the queue.
- *
- * @param[in] level  The level at which to log the queue.
- * @param[in] fmt    Format of the message.
- * @param[in] args   The arguments of the format.
- */
-#define log_vlog_q(level, fmt, args) do { \
-    LOG_LOC_DECL(loc); \
-    logl_vlog_q(&loc, level, fmt, args); \
-} while (false)
-
-/**
- * Adds a message to the current thread's queue of messages based on a system
- * error number (e.g., `errno`), logs the queue at the error level, and then
- * clears the queue.
- *
- * @param[in] n    The system error number (e.g., `errno`).
- * @param[in] ...  Optional arguments of the message -- starting with the format
- *                 of the message.
- */
-#define log_errno_q(n, ...) do {\
-    LOG_LOC_DECL(loc); \
-    logl_errno_q(&loc, n, __VA_ARGS__); \
-} while (false)
-
-/**
- * Adds a message to the current thread's queue of messages based on the system
- * error number (i.e., `errno`), logs the queue at the error level, and then
- * clears the queue.
- *
- * @param[in] ...  Optional arguments of the message -- starting with the format
- *                 of the message.
- */
-#define log_syserr_q(...)      log_errno_q(errno, __VA_ARGS__)
 
 /**
  * Adds a message to the current thread's queue of messages, logs the queue at
@@ -593,14 +556,11 @@ bool log_is_level_enabled(
  *                   LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
  *                   LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
  *                   behavior is undefined.
+ * @retval    0      Success
+ * @retval    -1     Failure
  */
-#define log_flush(level) do { \
-    int prevState; \
-    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState); \
-    LOG_LOC_DECL(loc); \
-    logl_flush(&loc, level); \
-    (void)pthread_setcancelstate(prevState, &prevState); \
-} while (false)
+int
+log_flush(const log_level_t level);
 
 /**
  * Logs the message-queue of the current thread at the ERROR level and then
@@ -662,7 +622,8 @@ bool log_is_level_enabled(
  *                 format of the message.
  */
 #define log_abort(...) do { \
-    log_error_q(__VA_ARGS__); \
+    log_add(__VA_ARGS__); \
+    log_flush(LOG_LEVEL_ERROR); \
     abort(); \
 } while (false)
 

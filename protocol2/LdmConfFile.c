@@ -97,13 +97,13 @@ sus_new(
     char*   str = strdup(string);
 
     if (str == NULL) {
-        log_syserr_q("Couldn't duplicate string \"%s\"", string);
+        log_syserr("Couldn't duplicate string \"%s\"", string);
     }
     else {
         SUS*    sus = malloc(sizeof(SUS));
 
         if (sus == NULL) {
-            log_syserr_q("Couldn't allocate new string/unsigned object");
+            log_syserr("Couldn't allocate new string/unsigned object");
         }
         else {
             sus->string = str;
@@ -558,7 +558,7 @@ getPreviousProdInfo(
                 status = 1;
             }
             else {
-                log_syserr_q("Couldn't open \"%s\"", statePath);
+                log_syserr("Couldn't open \"%s\"", statePath);
             }
         }
         else {
@@ -575,7 +575,7 @@ getPreviousProdInfo(
                 (void)fscanf(file, "%*[^\n]\n");
 
             if (ferror(file)) {
-                log_syserr_q("Couldn't skip comments in " "\"%s\"", statePath);
+                log_syserr("Couldn't skip comments in " "\"%s\"", statePath);
             }
             else {
                 (void)ungetc(c, file);
@@ -623,7 +623,8 @@ initSavedInfo(
     prod_info*  info = pi_new();
 
     if (info == NULL) {
-        log_syserr_q("Couldn't allocate product-information structure");
+        log_add_syserr("Couldn't allocate product-information structure");
+        log_flush_error();
         status = -1;
     }
     else {
@@ -663,7 +664,8 @@ initSavedInfo(
 
         if (status == 0) {
             if (savedInfo_set(info)) {
-                log_syserr_q("Couldn't set product-information");
+                log_add_syserr("Couldn't set product-information");
+                log_flush_error();
 
                 status = -1;
             }
@@ -1104,13 +1106,13 @@ sub_new(
     char* const pat = strdup(pattern);
 
     if (pat == NULL) {
-        log_syserr_q("Couldn't duplicate string \"%s\"", pattern);
+        log_syserr("Couldn't duplicate string \"%s\"", pattern);
     }
     else {
         Subscription*   sub = malloc(sizeof(Subscription));
 
         if (sub == NULL) {
-            log_syserr_q("Couldn't allocate new subscription object");
+            log_syserr("Couldn't allocate new subscription object");
         }
         else {
             sub->feedtype = feedtype;
@@ -1445,7 +1447,7 @@ serverEntry_new(
         ServerEntry*  entry = malloc(sizeof(ServerEntry));
 
         if (entry == NULL) {
-            log_syserr_q("Couldn't allocate new server-entry object");
+            log_syserr("Couldn't allocate new server-entry object");
         }
         else {
             entry->serverInfo = clone;
@@ -1726,7 +1728,7 @@ subEntry_new(
         SubEntry*   entry = malloc(sizeof(SubEntry));
 
         if (entry == NULL) {
-            log_syserr_q("Couldn't allocate new subscription-entry");
+            log_syserr("Couldn't allocate new subscription-entry");
         }
         else {
             entry->next = NULL;
@@ -1763,7 +1765,7 @@ subEntry_add(
             (size_t)((entry->serverCount+1)*sizeof(ServerInfo*)));
 
     if (NULL == servers) {
-        log_syserr_q("Couldn't allocate new server-information array");
+        log_syserr("Couldn't allocate new server-information array");
     }
     else {
         const ServerInfo* const clone = serverInfo_clone(server);
@@ -1817,7 +1819,7 @@ subEntry_startRequester(
             sp->pattern = strdup(sub_getPattern(entry->subscription));
 
             if (sp->pattern == NULL) {
-                log_syserr_q("Couldn't duplicate pattern \"%s\"",
+                log_syserr("Couldn't duplicate pattern \"%s\"",
                         sub_getPattern(entry->subscription));
                 status = errno;
             }
@@ -2302,7 +2304,7 @@ proc_exec(Process *proc)
 
         endpriv();
         (void)execvp(proc->wrdexp.we_wordv[0], proc->wrdexp.we_wordv);
-        log_syserr_q("Couldn't execute utility \"%s\"; PATH=%s",
+        log_syserr("Couldn't execute utility \"%s\"; PATH=%s",
                 proc->wrdexp.we_wordv[0], getenv("PATH"));
         _exit(127) ;
     }
@@ -3167,7 +3169,7 @@ lcf_savePreviousProdInfo(void)
         file = fopen(tmpStatePath, "w");
 
         if (file == NULL) {
-            log_syserr_q("Couldn't open \"%s\" for writing",
+            log_syserr("Couldn't open \"%s\" for writing",
                 tmpStatePath);
         }
         else {
@@ -3175,7 +3177,7 @@ lcf_savePreviousProdInfo(void)
 "# The following is the product-information of the last,\n"
 "# successfully-received data-product.  Do not modify it unless\n"
 "# you know exactly what you're doing!\n", file) < 0) {
-                log_syserr_q("Couldn't write comment to \"%s\"", tmpStatePath);
+                log_syserr("Couldn't write comment to \"%s\"", tmpStatePath);
             }
             else {
                 if (pi_print(info, file) < 0 || fputc('\n', file) == EOF) {
@@ -3184,11 +3186,11 @@ lcf_savePreviousProdInfo(void)
                 }
                 else {
                     if (fclose(file) != 0) {
-                        log_syserr_q("Error closing \"%s\"",
+                        log_syserr("Error closing \"%s\"",
                             tmpStatePath);
                     }
                     else if (rename(tmpStatePath, statePath) == -1) {
-                        log_syserr_q("Couldn't rename "
+                        log_syserr("Couldn't rename "
                             "\"%s\" to \"%s\"",
                             tmpStatePath, statePath);
                     }

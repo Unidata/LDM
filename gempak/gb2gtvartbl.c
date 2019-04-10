@@ -77,7 +77,8 @@ initEntry(
         void* node = tsearch(entry, &cache, compare);
 
         if (NULL == node) {
-            log_syserr_q("Couldn't allocate new tsearch(3) node");
+            log_add_syserr("Couldn't allocate new tsearch(3) node");
+            log_flush_error();
             status = ENOMEM;
         }
         else {
@@ -106,7 +107,7 @@ addEntry(
     Entry* ent = malloc(sizeof(Entry));
 
     if (NULL == ent) {
-        log_syserr_q("Couldn't allocate new cache entry");
+        log_syserr("Couldn't allocate new cache entry");
         status = ENOMEM;
     }
     else {

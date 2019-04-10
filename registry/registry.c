@@ -641,7 +641,7 @@ static RegStatus initRegistry(
             _atexitCalled = 1;
         }
         else {
-            log_syserr_q("Couldn't register registry cleanup routine");
+            log_syserr("Couldn't register registry cleanup routine");
         }
     }
  

@@ -84,7 +84,8 @@ copyProduct(
                     log_is_enabled_debug));
         return 0;
     default:
-        log_syserr_q("Product copy failed");
+        log_add_syserr("Product copy failed");
+        log_flush_error();
         return 1;
     }
 }
@@ -284,7 +285,7 @@ int main(
      * Register exit handler
      */
     if(atexit(cleanup) != 0) {
-        log_syserr_q("atexit");
+        log_syserr("atexit");
         return 1;
     }
 

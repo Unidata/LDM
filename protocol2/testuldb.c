@@ -174,7 +174,7 @@ static pid_t spawn_upstream(
     pid_t   pid = fork();
 
     if (pid < 0) {
-        log_syserr_q("Couldn't fork child process");
+        log_syserr("Couldn't fork child process");
         return pid;
     }
 
@@ -493,7 +493,7 @@ static void test_random(
                 }
             }
             else {
-                log_syserr_q("waitpid() failure");
+                log_syserr("waitpid() failure");
                 CU_ASSERT_TRUE(0);
             }
         }

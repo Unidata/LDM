@@ -66,7 +66,8 @@ initTheXbuf(
 		if(theBuf == NULL)
 		{
 			const int status = errno == 0 ? ENOMEM : errno;
-			log_syserr_q("new_xbuf");
+			log_add_syserr("new_xbuf");
+                        log_flush_error();
 			return status;
 		}
 	}
@@ -106,7 +107,8 @@ feedTheXbuf(const int ifd)
 
 		if (theBuf == NULL) {
 			status = errno == 0 ? ENOMEM : errno;
-			log_syserr_q("expand_xbuf");
+			log_add_syserr("expand_xbuf");
+                        log_flush_error();
 			return status;
 		}
 	}
@@ -114,7 +116,8 @@ feedTheXbuf(const int ifd)
 	status = (*read_feed)(ifd, (char *)theBuf->put, CHUNKSIZE, &nn);
 	if(status != ENOERR)
 	{
-		log_errno_q(status, "read_feed");
+		log_add_errno(status, "read_feed");
+                log_flush_error();
 		return status;
 	}
 	/* else */

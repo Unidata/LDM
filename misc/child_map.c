@@ -69,7 +69,7 @@ ChildMap* cm_new(void)
     ChildMap*   map = (ChildMap*)malloc(sizeof(ChildMap));
 
     if (NULL == map) {
-        log_syserr_q("Couldn't allocate new child-map");
+        log_syserr("Couldn't allocate new child-map");
     }
     else {
         map->root = NULL;
@@ -77,7 +77,8 @@ ChildMap* cm_new(void)
         map->buf = strBuf_new(132);
 
         if (NULL == map->buf) {
-            log_syserr_q("Couldn't allocate command-line buffer");
+            log_add_syserr("Couldn't allocate command-line buffer");
+            log_flush_error();
             free(map);
 
             map = NULL;
@@ -142,21 +143,21 @@ int cm_add_string(
             Entry* const    entry = (Entry*)malloc(sizeof(Entry));
 
             if (NULL == entry) {
-                log_syserr_q("Couldn't allocate new entry");
+                log_syserr("Couldn't allocate new entry");
                 status = 2;
             }
             else {
                 entry->command = strdup(command);
 
                 if (NULL == entry->command) {
-                    log_syserr_q("Couldn't duplicate command-line");
+                    log_syserr("Couldn't duplicate command-line");
                     status = 2;
                 }
                 else {
                     entry->pid = pid;
 
                     if (NULL == tsearch(entry, &map->root, compare)) {
-                        log_syserr_q("Couldn't add entry to map");
+                        log_syserr("Couldn't add entry to map");
                         status = 2;
                     }
                     else {
@@ -209,9 +210,10 @@ int cm_add_argv(
             if (0 < i)
                 (void)strBuf_appendString(map->buf, " ");
             if (0 != strBuf_appendString(map->buf, argv[i])) {
-                log_syserr_q(
+                log_add_syserr(
                         "Couldn't append to command-line buffer: \"%s\"",
                         argv[i]);
+                log_flush_error();
                 status = 2;
                 break;
             }

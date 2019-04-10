@@ -68,7 +68,7 @@ fileNew(
         f->path = strdup(path);
 
         if (NULL == f->path) {
-            log_syserr_q("Couldn't duplicate string \"%s\"", path);
+            log_syserr("Couldn't duplicate string \"%s\"", path);
             status = ENOMEM;
             free(f);
         }
@@ -113,7 +113,7 @@ fileGetSize(
     struct stat     stat;
 
     if (fstat(file->fd, &stat) == -1) {
-        log_syserr_q("Couldn't fstat(2) file \"%s\"", file->path);
+        log_syserr("Couldn't fstat(2) file \"%s\"", file->path);
         return EIO;
     }
 
@@ -210,7 +210,7 @@ fileUnlock(
         flock.l_len = 0;                /* to end */
 
         if (fcntl(file->fd, F_SETLK, &flock) == -1) {
-            log_syserr_q("Couldn't unlock file \"%s\"", file->path);
+            log_syserr("Couldn't unlock file \"%s\"", file->path);
             status = EIO;
         }
         else {
@@ -218,7 +218,7 @@ fileUnlock(
         }
 
         if (close(file->fd) == -1) {
-            log_syserr_q("Couldn't close file \"%s\"", file->path);
+            log_syserr("Couldn't close file \"%s\"", file->path);
             status = EIO;
         }
     }
@@ -273,7 +273,7 @@ fileDelete(
     }
     else {
         if (unlink(file->path) == -1) {
-            log_syserr_q("Couldn't unlink(2) file \"%s\"", file->path);
+            log_syserr("Couldn't unlink(2) file \"%s\"", file->path);
             status = EIO;
         }
         else {
@@ -324,7 +324,7 @@ getXmlFilePath(
     char* const         p = (char*)malloc(nbytes);
 
     if (NULL == p) {
-        log_syserr_q("Couldn't allocate %lu bytes for pathname", nbytes);
+        log_syserr("Couldn't allocate %lu bytes for pathname", nbytes);
         status = ENOMEM;
     }
     else {
@@ -361,7 +361,7 @@ actOnNode(
     char* const dupKey = strdup(key);
 
     if (NULL == dupKey) {
-        log_syserr_q("Couldn't duplicate string \"%s\"", key);
+        log_syserr("Couldn't duplicate string \"%s\"", key);
         status = ENOMEM;
     }
     else {
@@ -460,7 +460,8 @@ writeXmlIfAppropriate(
         const char* const   path = fileGetPath(backend->file);
 
         if (xmlSaveFormatFile(path, backend->doc, 1) == -1) {
-            log_syserr_q("Couldn't write XML file \"%s\"", path);
+            log_add_syserr("Couldn't write XML file \"%s\"", path);
+            log_flush_error();
             status = EIO;
         }
 
@@ -624,7 +625,7 @@ buildSortedIndex(
         IndexElt*   index = (IndexElt*)malloc(nodeCount * sizeof(IndexElt));
 
         if (NULL == index) {
-            log_syserr_q("Couldn't allocate %d elements for sorted index",
+            log_syserr("Couldn't allocate %d elements for sorted index",
                     nodeCount);
             status = ENOMEM;
         }
@@ -687,7 +688,8 @@ createNewDocument(
     xmlDocPtr   doc = xmlNewDoc((const xmlChar*)"1.0");
 
     if (NULL == doc) {
-        log_syserr_q("Couldn't create new XML document");
+        log_add_syserr("Couldn't create new XML document");
+        log_flush_error();
         status = ENOMEM;
     }
     else {
@@ -695,7 +697,8 @@ createNewDocument(
                 (const xmlChar*)REGISTRY_ELTNAME, NULL);
 
         if (NULL == rootNode) {
-            log_syserr_q("Couldn't create root-node of XML document");
+            log_add_syserr("Couldn't create root-node of XML document");
+            log_flush_error();
             status = ENOMEM;
         }
         else {
@@ -894,7 +897,7 @@ beOpen(
     Backend*    back = (Backend*)malloc(sizeof(Backend));
 
     if (NULL == back) {
-        log_syserr_q("Couldn't allocate %lu bytes", (long)sizeof(Backend));
+        log_syserr("Couldn't allocate %lu bytes", (long)sizeof(Backend));
         status = ENOMEM;
     }
     else {
@@ -1043,7 +1046,7 @@ bePut(
         char* const dupKey = strdup(key);
 
         if (NULL == dupKey) {
-            log_syserr_q("Couldn't duplicate string \"%s\"", key);
+            log_syserr("Couldn't duplicate string \"%s\"", key);
             status = ENOMEM;
         }
         else {
@@ -1325,7 +1328,8 @@ beGetValue(
     char*       content = (char*)xmlNodeGetContent(elt->xmlNode);
 
     if (NULL == content) {
-        log_syserr_q("Couldn't get value of key \"%s\"", key);
+        log_add_syserr("Couldn't get value of key \"%s\"", key);
+        log_flush_error();
     }
     else {
         if (sb_set(backend->content, content, NULL)) {

@@ -235,7 +235,7 @@ main (int ac, char *av[])
    */
   if (atexit (cleanup) != 0)
     {
-      log_syserr_q ("atexit");
+      log_syserr ("atexit");
       exit (1);
     }
 
@@ -255,7 +255,8 @@ main (int ac, char *av[])
   if (status = pq_open (pqfname, PQ_DEFAULT, &pq))
     {
       if (status > 0) {
-          log_syserr_q("\"%s\" failed", pqfname);
+          log_add_syserr("\"%s\" failed", pqfname);
+          log_flush_error();
       }
       else {
           log_error_q("\"%s\" failed: %s", pqfname, "Internal error");
@@ -279,7 +280,7 @@ main (int ac, char *av[])
     md5ctxp = new_MD5_CTX ();
     if (md5ctxp == NULL)
       {
-	log_syserr_q ("new_md5_CTX failed");
+	log_syserr ("new_md5_CTX failed");
 	exit (6);
       }
 
@@ -307,13 +308,13 @@ main (int ac, char *av[])
 	fd = open (filename, O_RDONLY, 0);
 	if (fd == -1)
 	  {
-	    log_syserr_q ("open: %s", filename);
+	    log_syserr ("open: %s", filename);
 	    continue;
 	  }
 
 	if (fstat (fd, &statb) == -1)
 	  {
-	    log_syserr_q ("fstat: %s", filename);
+	    log_syserr ("fstat: %s", filename);
 	    (void) close (fd);
 	    continue;
 	  }
@@ -322,7 +323,7 @@ main (int ac, char *av[])
 				       PROT_READ, MAP_PRIVATE, fd,
 				       0)) == MAP_FAILED)
 	  {
-	    log_syserr_q ("allocation failed");
+	    log_syserr ("allocation failed");
 	  }
 	else
 	  {
@@ -375,7 +376,8 @@ main (int ac, char *av[])
 			status = set_timestamp (&prod.info.arrival);
 			if (status != ENOERR)
 			  {
-			    log_syserr_q ("could not set timestamp");
+			    log_add_syserr("could not set timestamp");
+                            log_flush_error();
 			  }
 			/*
 			 * Insert the product
@@ -456,7 +458,7 @@ main (int ac, char *av[])
                         strlen(filename) + 128);
                 if(statusmess == NULL) 
 		  {
-              	    log_syserr_q("could not malloc status message %ld\0",
+              	    log_syserr("could not malloc status message %ld\0",
               	            stat_size);
            	  }
            	else

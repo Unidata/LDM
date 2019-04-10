@@ -47,7 +47,7 @@ reader_init(
     int                 status = pthread_mutexattr_init(&attr);
 
     if (status) {
-        log_errno_q(status, "Couldn't initialize mutex attributes");
+        log_errno(status, "Couldn't initialize mutex attributes");
         status = 2;
     }
     else {
@@ -59,7 +59,7 @@ reader_init(
         status = pthread_mutex_init(&reader->mutex, &attr);
 
         if (status) {
-            log_errno_q(status, "Couldn't initialize mutex");
+            log_errno(status, "Couldn't initialize mutex");
             status = 2;
         }
         else {

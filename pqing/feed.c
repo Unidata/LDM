@@ -72,7 +72,8 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if (addrbyhost(remote, &addr) != 0)
         {
                 status = ENOENT;
-                log_syserr_q("gethostbyname(%s)", remote);
+                log_add_syserr("gethostbyname(%s)", remote);
+                log_flush_error();
                 return status;
         }
 
@@ -80,7 +81,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if(sock < 0)
         {
                 status = errno;
-                log_syserr_q("socket");
+                log_syserr("socket");
                 return status;
         }
 #if 0 /* doesnt seem to help. See VOODOO in pqing.c */
@@ -90,7 +91,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
                                 (char *) &optval, (int) sizeof(optval)) < 0)
                 {
                         status = errno;
-                        log_syserr_q("setsockopt SO_KEEPALIVE");
+                        log_syserr("setsockopt SO_KEEPALIVE");
                         return status;
                 }
         }
@@ -100,7 +101,7 @@ port_open(const char *remote, unsigned short port, int *const fdp)
         if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         {
                 status = errno;
-                log_syserr_q("connect");
+                log_syserr("connect");
                 (void) close(sock);
                 return status;
         }

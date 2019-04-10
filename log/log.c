@@ -585,7 +585,7 @@ const char* logl_basename(const char* const pathname)
     return cp ? cp + 1 : pathname;
 }
 
-int logl_vlog_1(
+int logl_vlog(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
@@ -737,9 +737,7 @@ void* logl_realloc(
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int logl_flush(
-        const log_loc_t* const loc,
-        const log_level_t      level)
+int logl_flush(const log_level_t level)
 {
     int                status = 0; // Success
     msg_queue_t* const queue = queue_get();
@@ -790,10 +788,10 @@ int logl_vlog_q(
     if (format && *format)
         logl_vadd(loc, format, args);
 
-    return logl_flush(loc, level);
+    return logl_flush(level);
 }
 
-int logl_log_1(
+int logl_log(
         const log_loc_t* const restrict loc,
         const log_level_t               level,
         const char* const restrict      format,
@@ -802,13 +800,13 @@ int logl_log_1(
     va_list args;
 
     va_start(args, format);
-        int status = logl_vlog_1(loc, level, format, args);
+        int status = logl_vlog(loc, level, format, args);
     va_end(args);
 
     return status;
 }
 
-int logl_errno_1(
+int logl_errno(
         const log_loc_t* const     loc,
         const int                  errnum,
         const char* const restrict fmt,
@@ -817,10 +815,10 @@ int logl_errno_1(
     va_list args;
 
     va_start(args, fmt);
-        int status = logl_log_1(loc, LOG_LEVEL_ERROR, "%s", strerror(errnum));
+        int status = logl_log(loc, LOG_LEVEL_ERROR, "%s", strerror(errnum));
 
         if (status == 0)
-            status = logl_vlog_1(loc, LOG_LEVEL_ERROR, fmt, args);
+            status = logl_vlog(loc, LOG_LEVEL_ERROR, fmt, args);
     va_end(args);
 
     return status;
@@ -1028,16 +1026,7 @@ int log_set_upstream_id(
 
 const char* log_get_default_destination(void)
 {
-    const char* dest = NULL;
-
-    if (lock() == 0) {
-        dest = get_default_destination();
-
-        if (unlock())
-            dest = NULL;
-    } // Module is locked
-
-    return dest;
+    return get_default_destination();
 }
 
 int log_set_destination(const char* const dest)
@@ -1117,6 +1106,25 @@ log_clear(void)
     msg_queue_t*   queue = queue_get();
 
     queue_clear(queue);
+}
+
+int
+log_flush(const log_level_t level)
+{
+    int status = -1;
+    int prevState;
+
+    if (pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &prevState) == 0) {
+        status = 0;
+
+        if (logl_flush(level))
+            status = -1;
+
+        if (pthread_setcancelstate(prevState, &prevState))
+            status = -1;
+    } // Thread cancellation is disabled
+
+    return status;
 }
 
 const char* log_get_default_daemon_destination(void)

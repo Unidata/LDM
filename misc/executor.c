@@ -74,7 +74,7 @@ static int mutex_init(
     int                 status = pthread_mutexattr_init(&mutexAttr);
 
     if (status) {
-        log_errno_q(status, "Couldn't initialize mutex attributes");
+        log_errno(status, "Couldn't initialize mutex attributes");
     }
     else {
         status = pthread_mutexattr_setprotocol(&mutexAttr, PTHREAD_PRIO_INHERIT);
@@ -85,7 +85,7 @@ static int mutex_init(
         log_assert(status != EPERM);
         log_assert(status != EBUSY);
         if (status)
-            log_errno_q(status, "Couldn't initialize mutex");
+            log_errno(status, "Couldn't initialize mutex");
 
         (void)pthread_mutexattr_destroy(&mutexAttr);
     }
@@ -542,7 +542,7 @@ static int exe_init(
         status = pthread_cond_init(&exe->cond, NULL);
         log_assert(status != EBUSY);
         if (status) {
-            log_errno_q(status,
+            log_errno(status,
                     "Couldn't initialize executor condition variable");
         }
         else {
@@ -664,7 +664,7 @@ static int exe_submitJob(
     else {
         status = pthread_create(&job->thread, NULL, job_start, job);
         if (status) {
-            log_errno_q(status, "Couldn't create new thread");
+            log_errno(status, "Couldn't create new thread");
             exe_removeFromList(exe, job);
         }
         else {
@@ -709,7 +709,7 @@ static int shutdown(
 
     if (status == 0 && exe->errCode) {
         status = exe->errCode;
-        log_errno_q(status, "The executor encountered an error");
+        log_errno(status, "The executor encountered an error");
     }
 
     return status;
@@ -1081,7 +1081,7 @@ int exe_free(
 
                 status = exe->errCode;
                 if (status)
-                    log_errno_q(status, "The executor encountered an error");
+                    log_errno(status, "The executor encountered an error");
 
                 exe_unlock(exe);
                 int tmpStatus = pthread_mutex_destroy(&exe->mutex);

@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -144,7 +144,7 @@ const char* logl_basename(
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int logl_vlog_1(
+int logl_vlog(
         const log_loc_t* const  loc,
         const log_level_t       level,
         const char* const       format,
@@ -162,7 +162,7 @@ int logl_vlog_1(
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int logl_log_1(
+int logl_log(
         const log_loc_t* const loc,
         const log_level_t      level,
         const char* const      format,
@@ -182,7 +182,7 @@ int logl_log_1(
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int logl_errno_1(
+int logl_errno(
         const log_loc_t* const loc,
         const int              errnum,
         const char* const      fmt,
@@ -250,7 +250,6 @@ int logl_errno_q(
  * Logs the currently-accumulated log-messages of the current thread and resets
  * the message-queue for the current thread.
  *
- * @param[in] loc      Location.
  * @param[in] level    The level at which to log the messages. One of
  *                     LOG_LEVEL_ERROR, LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE,
  *                     LOG_LEVEL_INFO, or LOG_LEVEL_DEBUG; otherwise, the
@@ -260,9 +259,7 @@ int logl_errno_q(
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int logl_flush(
-        const log_loc_t* const loc,
-        const log_level_t      level);
+int logl_flush(const log_level_t level);
 
 /**
  * Adds a variadic log-message to the message-queue for the current thread.
@@ -423,8 +420,9 @@ void* logl_realloc(
         log_clear();\
     }\
     else {\
-        LOG_LOC_DECL(loc);\
-        logl_log_q(&loc, level, __VA_ARGS__);\
+        LOG_LOC_DECL(loc); \
+        logl_add(&loc, __VA_ARGS__); \
+        log_flush(level); \
     }\
 } while (0)
 

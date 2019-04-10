@@ -276,7 +276,8 @@ blkdata_5_svc(datapkt *dpkp, struct svc_req *rqstp)
         if( write(STDOUT_FILENO, dpkp->data.dbuf_val, dpkp->data.dbuf_len) !=
                         dpkp->data.dbuf_len)
         {
-                log_syserr_q( "data write failed") ;
+                log_add_syserr( "data write failed") ;
+                log_flush_error();
                 exit(1) ;
         }
 
@@ -481,7 +482,8 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_add_syserr("atexit");
+                log_flush_error();
                 exit(1);
         }
 

@@ -275,7 +275,7 @@ int main(
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 exit(exit_system);
         }
 
@@ -321,7 +321,7 @@ int main(
         md5ctxp = new_MD5_CTX();
         if(md5ctxp == NULL)
         {
-                log_syserr_q("new_md5_CTX failed");
+                log_syserr("new_md5_CTX failed");
                 exit(exit_md5);
         }
 
@@ -342,14 +342,14 @@ int main(
                 fd = open(filename, O_RDONLY, 0);
                 if(fd == -1)
                 {
-                        log_syserr_q("open: %s", filename);
+                        log_syserr("open: %s", filename);
                         exitCode = exit_infile;
                         continue;
                 }
 
                 if( fstat(fd, &statb) == -1) 
                 {
-                        log_syserr_q("fstat: %s", filename);
+                        log_syserr("fstat: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -375,7 +375,8 @@ int main(
                 /* These members, and seqno, vary over the loop. */
                 status = set_timestamp(&prod.info.arrival);
                 if(status != ENOERR) {
-                        log_syserr_q("set_timestamp: %s, filename");
+                        log_add_syserr("set_timestamp: %s, filename");
+                        log_flush_error();
                         exitCode = exit_infile;
                         continue;
                 }
@@ -385,7 +386,7 @@ int main(
                         PROT_READ, MAP_PRIVATE, fd, 0);
                 if(prod.data == MAP_FAILED)
                 {
-                        log_syserr_q("mmap: %s", filename);
+                        log_syserr("mmap: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -401,7 +402,7 @@ int main(
                 (void)exitIfDone(1);
 
                 if (status != 0) {
-                    log_syserr_q("mm_md5: %s", filename);
+                    log_syserr("mm_md5: %s", filename);
                     (void) munmap(prod.data, prod.info.sz);
                     (void) close(fd);
                     exitCode = exit_infile;
@@ -411,7 +412,8 @@ int main(
                 /* These members, and seqno, vary over the loop. */
                 status = set_timestamp(&prod.info.arrival);
                 if(status != ENOERR) {
-                        log_syserr_q("set_timestamp: %s, filename");
+                        log_add_syserr("set_timestamp: %s, filename");
+                        log_flush_error();
                         exitCode = exit_infile;
                         continue;
                 }
@@ -476,7 +478,7 @@ int main(
 
                 if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
                 {
-                        log_syserr_q("rewind: %s", filename);
+                        log_syserr("rewind: %s", filename);
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -495,7 +497,7 @@ int main(
                     (void)exitIfDone(1);
 
                     if (nread != prod.info.sz) {
-                        log_syserr_q("read %s %u", filename, prod.info.sz);
+                        log_syserr("read %s %u", filename, prod.info.sz);
                         status = EIO;
                     }
                     else {

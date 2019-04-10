@@ -135,7 +135,7 @@ run_child(int argc, char *argv[])
 
                 (void) execvp(argv[0], &argv[0]);
 
-                log_syserr_q("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
+                log_syserr("Couldn't execute decoder \"%s\"; PATH=%s", argv[0],
                         getenv("PATH"));
                 _exit(127);
         }
@@ -287,7 +287,7 @@ reap_act(int options)
                     if(!(errno == ECHILD && act_pid == -1))
                     {
                              /* Only complain if relevant */
-                            log_syserr_q("waitpid");
+                            log_syserr("waitpid");
                     }
                     return -1;
             }
@@ -541,10 +541,12 @@ expire(pqueue *epq, const unsigned interval, const double age)
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        log_errno_q(status, NULL);
+                        log_add_errno(status, NULL);
+                        log_flush_error();
                         break;
                 default:
-                        log_errno_q(status, "pq_seqdel failed");
+                        log_add_errno(status, "pq_seqdel failed");
+                        log_flush_error();
                         break;
                 }
                 break;
@@ -732,7 +734,7 @@ int main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 
@@ -753,7 +755,8 @@ int main(int ac, char *av[])
                             opqfname);
                 }
                 else {
-                    log_errno_q(status, "pq_open failed: %s", opqfname);
+                    log_add_errno(status, "pq_open failed: %s", opqfname);
+                    log_flush_error();
                 }
                 exit(1);
         }
@@ -774,7 +777,8 @@ int main(int ac, char *av[])
                             pqfname);
                 }
                 else {
-                    log_errno_q(status, "pq_open failed: %s", pqfname);
+                    log_add_errno(status, "pq_open failed: %s", pqfname);
+                    log_flush_error();
                 }
                 exit(1);
         }
@@ -820,7 +824,8 @@ int main(int ac, char *av[])
                         log_debug("Hit a lock");
                         break;
                 default:
-                        log_errno_q(status, "pq_sequence failed");
+                        log_add_errno(status, "pq_sequence failed");
+                        log_flush_error();
                         exit(1);
                         break;
                 }

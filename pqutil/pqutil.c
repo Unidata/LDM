@@ -320,7 +320,7 @@ init_options(pqueue     *pq,
 
     md5ctxp = new_MD5_CTX();
     if (md5ctxp == NULL) {
-        log_syserr_q("new_MD5_CTX failed");
+        log_syserr("new_MD5_CTX failed");
         exit(6);
     }
 
@@ -790,7 +790,7 @@ read_file(pqueue *pq,
     else {
 
         if((fd = open(crec.cmd_val, O_RDONLY)) < 0) {            /* bad open */
-            log_syserr_q("Error opening %s", crec.cmd_val);
+            log_syserr("Error opening %s", crec.cmd_val);
             return;
         }
     }
@@ -810,7 +810,7 @@ read_file(pqueue *pq,
 
             status = read(fd, prodrec->data, prodrec->info.sz);
             if (status < 0) {
-                log_syserr_q("Bad file read: %s", crec.cmd_val);
+                log_syserr("Bad file read: %s", crec.cmd_val);
                 free(prodrec->data);
                 close(fd);
                 return;
@@ -852,7 +852,7 @@ read_file(pqueue *pq,
 
             status = read(fd, dbuf, prodrec->info.sz);
             if (status < 0) {
-                log_syserr_q("Bad file read: %s", crec.cmd_val);
+                log_syserr("Bad file read: %s", crec.cmd_val);
                 close(fd);
                 return;
             }
@@ -883,7 +883,7 @@ read_file(pqueue *pq,
         int     bufcnt = 0;                     /* number of bytes in buffer */
 
         if((prodrec->data = malloc(DBUFMAX)) == NULL) {
-            log_syserr_q("malloc failed");
+            log_syserr("malloc failed");
             return;
         }
 
@@ -1009,7 +1009,7 @@ big_product(pqueue      *pq,
             int fd;                                 /* input file descriptor */
 
             if ((fd = open(crec.cmd_val, O_RDONLY)) < 0) {       /* bad open */
-                log_syserr_q("Error opening %s", crec.cmd_val);
+                log_syserr("Error opening %s", crec.cmd_val);
                 return;
             }
 
@@ -1024,7 +1024,7 @@ big_product(pqueue      *pq,
 
             status = read(fd, prod_ptr, f_stat.st_size);
             if (status < 0) {
-                log_syserr_q("Bad file read: %s", strerror(errno));
+                log_syserr("Bad file read: %s", strerror(errno));
                 close(fd);
                 return;
             }
@@ -1088,7 +1088,7 @@ disp_stdout(const prod_info     *infop,
         infop->sz) {
         int errnum = errno;
 
-        log_syserr_q("data write failed");
+        log_syserr("data write failed");
         return(errnum);
     }
 
@@ -1115,13 +1115,13 @@ disp_file(const prod_info       *infop,
     if ((fd = open(crec.cmd_val, O_CREAT|O_WRONLY|O_APPEND, 0664)) < 0) {
                                                                  /* bad open */
         errnum = errno;
-        log_syserr_q("Error opening %s", crec.cmd_val);
+        log_syserr("Error opening %s", crec.cmd_val);
         return(errnum);
     }
 
     if (write(fd, datap, infop->sz) != infop->sz) {
         errnum = errno;
-        log_syserr_q("data write failed");
+        log_syserr("data write failed");
         close(fd);
         return(errnum);
     }
@@ -1232,7 +1232,7 @@ watch_queue(pqueue      *pq,
                 errno = 0;
                 continue;
             }
-            log_syserr_q("select");
+            log_syserr("select");
             exit(1);
         }
 

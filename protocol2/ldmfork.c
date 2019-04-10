@@ -169,7 +169,7 @@ pid_t ldmfork(void)
         }
         else if (-1 == pid) {
             /* System error */
-            log_syserr_q("Couldn't fork a child process");
+            log_syserr("Couldn't fork a child process");
         }
     }
 

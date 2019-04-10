@@ -712,7 +712,7 @@ mls_tryMulticast(
         unblockTermSigs();
     }
     else if (status < 0) {
-        log_errno_q(status, "Error in product-queue");
+        log_errno(status, "Error in product-queue");
         status = LDM7_PQ;
     }
 

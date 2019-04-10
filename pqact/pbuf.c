@@ -43,7 +43,7 @@ new_pbuf(
         pipe_buf = fpathconf(pfd, _PC_PIPE_BUF);
         if(pipe_buf == -1L)
         {
-                log_syserr_q("fpathconf %d, _PC_PIPE_BUF", pfd);
+                log_syserr("fpathconf %d, _PC_PIPE_BUF", pfd);
                 goto err;
         }
 #endif

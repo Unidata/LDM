@@ -383,7 +383,8 @@ toClients(timestampt arrival,
 
         /* else, error */
         if (status > 0) {
-            log_errno_q(status, "pq_insert");
+            log_add_errno(status, "pq_insert");
+            log_flush_error();
         }
         else {
             log_error_q("pq_insert: Internal error");
@@ -589,7 +590,7 @@ main(int ac, char *av[])
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 return 1;
         }
 
@@ -711,7 +712,7 @@ main(int ac, char *av[])
         md5ctxp = new_MD5_CTX();
         if(md5ctxp == NULL)
         {
-                log_syserr_q("new_md5_CTX failed");
+                log_syserr("new_md5_CTX failed");
                 return 1;
         }
 
@@ -816,7 +817,7 @@ if (INPUT_IS_SOCKET)
                                 errno = 0;
                                 continue;
                         }
-                        log_syserr_q("select");
+                        log_syserr("select");
                         return 1;
                 }
                 /* else */

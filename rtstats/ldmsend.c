@@ -457,7 +457,7 @@ ldmsend(
     if(md5ctxp == NULL)
     {
         status = errno;
-        log_syserr_q("new_md5_CTX failed");
+        log_syserr("new_md5_CTX failed");
     }
     else {
         if(signed_on_hiya) {

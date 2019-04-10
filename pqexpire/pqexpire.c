@@ -369,7 +369,7 @@ char *av[];
          */
         if(atexit(cleanup) != 0)
         {
-                log_syserr_q("atexit");
+                log_syserr("atexit");
                 exit(1);
         }
 
@@ -501,10 +501,12 @@ char *av[];
                 case EDEADLOCK:
 #endif
                 case EDEADLK:
-                        log_errno_q(status, NULL);
+                        log_add_errno(status, NULL);
+                        log_flush_error();
                         break;
                 default:
-                        log_errno_q(status, "pq_seqdel failed");
+                        log_add_errno(status, "pq_seqdel failed");
+                        log_flush_error();
                         exit(1);
                         break;
                 }

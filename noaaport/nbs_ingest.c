@@ -356,7 +356,7 @@ static bool init(void)
 {
     int status = mutex_init(&mutex, PTHREAD_MUTEX_ERRORCHECK, true);
     if (status) {
-        log_errno_q(status, "Couldn't initialize mutex");
+        log_errno(status, "Couldn't initialize mutex");
     }
     else {
         status = open_pq(&pq, getQueuePath());

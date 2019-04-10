@@ -34,11 +34,12 @@ timer_new(
     Timer*              timer = (Timer*)malloc(nbytes);
 
     if (NULL == timer) {
-        log_syserr_q("Couldn't allocate %lu bytes", nbytes);
+        log_syserr("Couldn't allocate %lu bytes", nbytes);
     }
     else {
         if (0 != set_timestamp(&timer->started)) {
-            log_syserr_q("Couldn't get time");
+            log_add_syserr("Couldn't get time");
+            log_flush_error();
             free(timer);
             timer = NULL;
         }

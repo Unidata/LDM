@@ -166,7 +166,7 @@ surf_split(const prod_info *infop, const void *datap,
                 dbuf = malloc(size);
 
                 if (dbuf == NULL) {
-                    log_syserr_q("Couldn't allocate %lu-byte buffer",
+                    log_syserr("Couldn't allocate %lu-byte buffer",
                         (unsigned long)size);
                     dbufSize = 0;
                     return -1;

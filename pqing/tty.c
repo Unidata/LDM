@@ -313,7 +313,8 @@ read_tty(int ifd, char *rbuf, size_t nbytes, size_t *ngotp)
 	int status = rtty_read(ifd, rbuf, &nread, perrsp);
 	if(status != ENOERR)
 	{
-		log_errno_q(status, NULL);
+		log_add_errno(status, NULL);
+                log_flush_error();
 		return status;
 	}
 	/* else */

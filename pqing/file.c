@@ -51,7 +51,7 @@ file_open(const char *feedfname, int *const fdp)
         if(fd < 0)
         {
                 const int status = errno;
-                log_syserr_q("Couldn't open file \"%s\"", feedfname);
+                log_syserr("Couldn't open file \"%s\"", feedfname);
                 return status;
         }
 
