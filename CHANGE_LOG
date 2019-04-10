@@ -1,4 +1,4 @@
-6.13.11.31	2019-04-10T09:00:01-0600
+6.13.11.32	2019-04-10T10:11:18-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -11,9 +11,11 @@
               with an error to indicate a problem
         * DownHelp(3): Eliminated SIGSEGV due to incorrect format for `size_t`
           variable in error message
-        * LdmConfFile(3) EXEC action:
-            * Replaced blocking of SIGUSR1 before execvp() with ignoring it
-            * Added ignoring of SIGUSR2 before execvp()
+        * LdmConfFile(3):
+            * EXEC action:
+                * Replaced blocking of SIGUSR1 before execvp() with ignoring it
+                * Added ignoring of SIGUSR2 before execvp()
+            * Eliminated memory-leak found by Coverity Scan
 
     pqact(1):
         * Made processes created via EXEC entries in a pqact(1)
