@@ -2813,6 +2813,9 @@ lcf_getUpstreamFilter(
                     break;              /* first match controls */
                 }                       /* feedtype & server-information match */
             }                           /* ACL entry loop */
+
+            if (errObj)
+                break;
         }                               /* wanted product-specification loop */
 
         if (errObj) {
