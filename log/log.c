@@ -593,31 +593,34 @@ int logl_vlog_1(
 {
     int status;
 
-    lock();
-
-    if (!is_level_enabled(level)) {
-        unlock();
-        status = 0; // Success
+    if (lock()) {
+        status = -1;
     }
     else {
-        char* msg = formatMsg(format, args);
-
-        if (msg == NULL) {
-            unlock();
-            status = -1;
+        if (!is_level_enabled(level)) {
+            status = 0; // Success
         }
         else {
-            (void)refresh_if_necessary();
+            char* msg = formatMsg(format, args);
 
-            status = logi_log(level, loc, msg);
+            if (msg == NULL) {
+                status = -1;
+            }
+            else {
+                (void)refresh_if_necessary();
 
-            if (status == 0)
-                status = logi_flush();
+                status = logi_log(level, loc, msg);
 
-            unlock();
-            free(msg);
-        } // Have message
-    } // Message should be logged
+                if (status == 0)
+                    status = logi_flush();
+
+                free(msg);
+            } // Have message
+        } // Message should be logged
+
+        if (unlock())
+            status = -1;
+    } // Module locked
 
     return status;
 }
@@ -937,7 +940,7 @@ log_free_located(const log_loc_t* const loc)
 
 int log_avoid_stderr(void)
 {
-    int status;
+    int status = 0;
 
     if (lock()) {
         status = -1;
@@ -959,16 +962,13 @@ int log_avoid_stderr(void)
 
 int log_refresh(void)
 {
-    int status;
+    int status = -1;
 
-    if (lock()) {
-        status = -1;
-    }
-    else {
+    if (lock() == 0) {
         refresh_needed = 1;
 
-        if (unlock())
-            status = -1;
+        if (unlock() == 0)
+            status = 0;
     } // Module is locked
 
     return status;
@@ -1183,19 +1183,9 @@ const char* log_get_id(void)
 
 int log_set_options(const unsigned options)
 {
-    int status;
-
-    if (lock()) {
-        status = -1;
-    }
-    else {
-        logi_set_options(options);
-
-        if (unlock())
-            status = -1;
-    } // Module is locked
-
-    return status;
+    return (lock() || logi_set_options(options) || unlock())
+            ? -1
+            : 0;
 }
 
 unsigned log_get_options(void)
