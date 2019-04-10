@@ -159,11 +159,7 @@ int logi_set_destination(const char* const dest)
 const char*
 logi_get_destination(void)
 {
-    lock();
-        const char* const dest = log_dest;
-    unlock();
-
-    return dest;
+    return log_dest;
 }
 
 /**
