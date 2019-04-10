@@ -42,7 +42,7 @@ static void test_open_on_dev_null_if_closed(
     CU_ASSERT_EQUAL_FATAL(status, 0);
     status = open_on_dev_null_if_closed(STDERR_FILENO, O_RDWR);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-    CU_ASSERT_FALSE_FATAL(log_is_stderr_useful());
+    CU_ASSERT_TRUE_FATAL(log_stderr_is_open());
     CU_ASSERT_TRUE_FATAL(fcntl(STDERR_FILENO, F_GETFD) >= 0);
 }
 
