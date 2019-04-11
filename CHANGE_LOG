@@ -1,4 +1,4 @@
-6.13.11.36	2019-04-11T12:35:58-0600
+6.13.11.37	2019-04-11T16:19:23-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -16,6 +16,9 @@
                 * Replaced blocking of SIGUSR1 before execvp() with ignoring it
                 * Added ignoring of SIGUSR2 before execvp()
             * Eliminated memory-leak found by Coverity Scan
+        * Removed calls to open_on_dev_null_if_closed() to accomodate
+          replacement of log_is_stderr_valid() with log_stderr_is_open(), which
+          returns true if stderr is legitimately redirected to /dev/null
 
     pqact(1):
         * Made processes created via EXEC entries in a pqact(1)
@@ -41,6 +44,8 @@
                 * log_roll_level()
                 * log_refresh() s
                 * log_avoid_stderr()
+            * Allowed logging levels above LOG_LEVEL_ERROR but below or less
+              than LOG_LEVEL_EMERG to be valid
         * log2slog(3):
             * Changed alignment of location field from right to left so that
               file names line up
