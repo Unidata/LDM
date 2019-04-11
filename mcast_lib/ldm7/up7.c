@@ -13,7 +13,7 @@
  * after the initial subscription, all exchanges are asynchronous; consequently,
  * the servers don't interfere with the (non-existent) RPC replies.
  *
- * Copyright 2018 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -998,7 +998,7 @@ sendIfNotSignature(
             status = EIO;
         }
         else {
-            log_notice("Backlog product sent: %s", s_prod_info(NULL, 0, info,
+            log_info("Backlog product sent: %s", s_prod_info(NULL, 0, info,
                     log_is_enabled_debug));
             status = 0;
         }
