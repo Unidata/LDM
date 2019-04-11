@@ -82,7 +82,7 @@ static pthread_key_t         queueKey;
 /**
  * Whether or not to avoid using the standard error stream.
  */
-static bool                  avoid_stderr;
+static volatile sig_atomic_t avoid_stderr;
 /**
  * Whether this module needs to be refreshed.
  */
@@ -474,13 +474,19 @@ static bool is_level_enabled(const log_level_t level)
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-static inline int refresh_if_necessary(void)
+static int refresh_if_necessary(void)
 {
     assertLocked();
 
     int status = 0;
 
     if (refresh_needed) {
+        if (avoid_stderr && LOG_IS_STDERR_SPEC(logi_get_destination())) {
+            // The logging destination must be changed
+            status = logi_set_destination(
+                    logi_get_default_daemon_destination());
+        }
+
         status = logi_reinit();
         refresh_needed = 0;
     }
@@ -936,26 +942,10 @@ log_free_located(const log_loc_t* const loc)
     queue_free(loc);
 }
 
-int log_avoid_stderr(void)
+void log_avoid_stderr(void)
 {
-    int status = 0;
-
-    if (lock()) {
-        status = -1;
-    }
-    else {
-        avoid_stderr = true;
-
-        // Don't change if unnecessary
-        if (LOG_IS_STDERR_SPEC(logi_get_destination()))
-            status = logi_set_destination(
-                    logi_get_default_daemon_destination());
-
-        if (unlock())
-            status = -1;
-    }
-
-    return status;
+    avoid_stderr = true;
+    refresh_needed = true;
 }
 
 void log_refresh(void)

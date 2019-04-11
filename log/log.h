@@ -106,12 +106,10 @@ int log_init(
  * Tells this module to avoid using the standard error stream (because the
  * process has become a daemon, for example).
  *
- * @retval     0       Success
- * @retval     -1      Failure
  * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
+ * @asyncsignalsafety  Safe
  */
-int log_avoid_stderr(void);
+void log_avoid_stderr(void);
 
 /**
  * Refreshes the logging module. If logging is to the system logging daemon,
