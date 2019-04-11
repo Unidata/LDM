@@ -1,4 +1,4 @@
-6.13.11.35	2019-04-11T08:43:47-0600
+6.13.11.36	2019-04-11T12:35:58-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -28,24 +28,23 @@
           message
         * Removed SIGALRM from handled signals because pq(1) handles it
 
-    log(3):
+    logging:
         * Improved concurrency locking for access by multiple threads
-        * Maked log_roll_level() async-signal-safe so that it can be safely
-          called from a signal handler
-        * Added description of SIGUSR1 action to simple logging documentation
-        * Changed alignment of location field from right to left so that file
-          names line up
-        * Corrected assertion in log2slog::logi_internal() to the lock is
-          *not* acquired
-        * Removed mutex from implementations: Locking occurs in log.c only
-        * Eliminated call to pthread_atfork()
+            * Removed mutex-locking from implementations: Locking occurs in
+              log.c only
+            * Eliminated calls to pthread_atfork()
         * Moved log_...() functions from implementations to log.c
-        * Improved return values and initialization in log2slog(3) and
-          log2ulog(3)
-        * Refactored log.c
-        * log2ulog.c: Removed locking in logi_get_destination()
-        * Removed locking from log_refresh() so that it can be called by a
-          signal handler
+        * Improved return values and initialization in implementations
+        * log.c:
+            * Refactored
+            * Made functions async-signal-safe:
+                * log_roll_level()
+                * log_refresh() s
+                * log_avoid_stderr()
+        * log2slog(3):
+            * Changed alignment of location field from right to left so that
+              file names line up
+            * Added description of SIGUSR1 action
 
     NOAAPort:
         Ensured initialization of last received frame index if and when the
