@@ -100,7 +100,7 @@ ssh -T $ldmUser@$host bash --login <<EOF
         echo "Throwing the runtime switch"
         rm runtime
         ln -s $pkgId runtime
-        ldmadmin start
+        ldmadmin start -v
     else
         echo "LDM wasn't previously installed or isn't running. New installation not started."
         rm -f runtime
