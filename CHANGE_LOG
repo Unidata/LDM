@@ -1,4 +1,4 @@
-6.13.11.34	2019-04-10T16:42:26-0600
+6.13.11.34	2019-04-11T08:43:30-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -33,7 +33,7 @@
         * Maked log_roll_level() async-signal-safe so that it can be safely
           called from a signal handler
         * Added description of SIGUSR1 action to simple logging documentation
-        * Changed alignment of locatio field from right to left so that file
+        * Changed alignment of location field from right to left so that file
           names line up
         * Corrected assertion in log2slog::logi_internal() to the lock is
           *not* acquired
@@ -44,6 +44,8 @@
           log2ulog(3)
         * Refactored log.c
         * log2ulog.c: Removed locking in logi_get_destination()
+        * Removed locking from log_refresh() so that it can be called by a
+          signal handler
 
     NOAAPort:
         Ensured initialization of last received frame index if and when the
