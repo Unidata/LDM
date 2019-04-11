@@ -120,12 +120,10 @@ int log_avoid_stderr(void);
  * error stream, then it will continue to be if log_avoid_stderr() hasn't been
  * called; otherwise, logging will be to the provider default.
  *
- * @retval 0           Success
- * @retval -1          Failure
  * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
+ * @asyncsignalsafety  Safe
  */
-int log_refresh(void);
+void log_refresh(void);
 
 /**
  * Finalizes the logging module. Should be called eventually after log_init(),

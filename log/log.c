@@ -958,18 +958,9 @@ int log_avoid_stderr(void)
     return status;
 }
 
-int log_refresh(void)
+void log_refresh(void)
 {
-    int status = -1;
-
-    if (lock() == 0) {
-        refresh_needed = 1;
-
-        if (unlock() == 0)
-            status = 0;
-    } // Module is locked
-
-    return status;
+    refresh_needed = 1;
 }
 
 int log_set_id(const char* const id)
