@@ -1,4 +1,4 @@
-6.13.11.37	2019-04-11T16:19:23-0600
+6.13.11.37	2019-04-11T16:46:46-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
@@ -102,6 +102,8 @@
             * Deleted logging of child command that error-exits
             * Added to mldm_ensureExec() removal of terminated sender from
               mldm_sender_map(3)
+        * Up7(3): Demoted "Backlog product sent:..." log-message from NOTE to
+          INFO
         * vlanUtil(1):
             * Addd "/sbin" to PATH to get ip(1)
             * Removed address de-assignment from "destroy" because deleting the
@@ -150,6 +152,7 @@
                   file
                 * Added test for "runtime" and improved messages
                 * Modified to delete previous installed versions
+                * Added "-v" option to "ldmadmin start"
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
                 * Added the MAX
