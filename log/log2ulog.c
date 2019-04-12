@@ -96,8 +96,7 @@ static int reinit(void)
  * @retval    0        Success
  * @retval    -1       Failure
  */
-int logi_init(
-        const char* const id)
+int logi_init(const char* const id)
 {
     int status = -1;
 
