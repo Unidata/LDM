@@ -1285,9 +1285,9 @@ int main(
      * be reported.
      */
     const char* const progname = basename(argv[0]);
-    if (log_init(argv[0])) {
+    if (log_init(progname)) {
         log_syserr("Couldn't initialize logging module");
-        status = EXIT_FAILURE;
+        status = -1;
     }
     else {
         (void)log_set_level(LOG_LEVEL_WARNING);
@@ -1300,7 +1300,7 @@ int main(
         char*             interface = NULL; // Listen on all interfaces
         const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 University "
                 "Corporation for Atmospheric Research";
-        int status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
+        status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
                 &mcastSpec, &interface);
 
         if (status) {
@@ -1323,5 +1323,6 @@ int main(
 
         log_fini();
     }
+
     return status ? 1 : 0;
 }
