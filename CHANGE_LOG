@@ -1,10 +1,10 @@
-6.13.11.37	2019-04-11T16:46:46-0600
+6.13.11.38	2019-04-12T11:27:43-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
           number because 
-            * No downstream, receiving LDM could connect to the server without
-              knowing the transitory port number; 
+            * A receiving LDM can't connect to the server without knowing the
+              transitory port number; 
             * The LDM server can't communicate a transitory port number to the
               outside world; and
             * Using a transitory port number prevented the LDM from terminating
@@ -50,6 +50,9 @@
             * Changed alignment of location field from right to left so that
               file names line up
             * Added description of SIGUSR1 action
+        * Ensured that all programs check the return-value of
+            * log_init()
+            * log_set_destination()
 
     NOAAPort:
         Ensured initialization of last received frame index if and when the
