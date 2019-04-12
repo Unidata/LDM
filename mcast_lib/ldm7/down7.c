@@ -2244,7 +2244,7 @@ downlet_recvProd(
 
             (void)s_prod_info(buf, sizeof(buf), &prod->info,
                     log_is_enabled_debug);
-            log_info("%s: %s", backlog ? "Backlog: " : "Inserted: ", buf);
+            log_info("%s: %s", backlog ? "Backlog" : "Inserted", buf);
         }
         down7_incNumProds();
     }
