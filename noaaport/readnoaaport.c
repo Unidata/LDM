@@ -498,7 +498,11 @@ int main(
             }
             /* else */
             logfname = optarg;
-            (void)log_set_destination(logfname);
+            if (log_set_destination(optarg)) {
+                log_syserr("Couldn't set logging destination to \"%s\"",
+                        optarg);
+                exit(1);
+            }
             break;
         case 'q':
             pqfname = optarg;

@@ -203,7 +203,11 @@ int main(int argc, char *argv[])
                         tag = optarg;
                         break;
                 case 'l':               /* logfname */
-                        (void)log_set_destination(optarg);
+                        if (log_set_destination(optarg)) {
+                            log_syserr("Couldn't set logging destination to \"%s\"",
+                                    optarg);
+                            usage(argv[0]);
+                        }
                         break;
                 case '?':
                 default:

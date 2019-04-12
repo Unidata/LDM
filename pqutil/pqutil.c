@@ -1388,7 +1388,11 @@ main(int argc, char *argv[])
                 break;
 
             case 'l':
-                (void)log_set_destination(optarg);
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    usage(argv[0]);
+                }
                 break;
 
             case 'a':                                               /* align */
@@ -1466,7 +1470,11 @@ main(int argc, char *argv[])
                 break;
 
             case 'w':                                  /* set the watch flag */
-                (void)log_set_destination("-");
+                if (log_set_destination("-")) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    usage(argv[0]);
+                }
                 watch_flag = 1;
                 break;
 

@@ -80,7 +80,11 @@ static bool pti_decodeCommandLine(
             }
             break;
         case 'l':
-            (void)log_set_destination(optarg);
+            if (log_set_destination(optarg)) {
+                log_syserr("Couldn't set logging destination to \"%s\"",
+                        optarg);
+                success = false;
+            }
             break;
         case 'm':
             if (sscanf(optarg, "%lu", &max_prod_size) != 1) {

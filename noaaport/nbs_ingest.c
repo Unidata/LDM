@@ -81,7 +81,11 @@ static bool decode_command_line(
             iface_ip_addr = optarg;
             break;
         case 'l':
-            (void)log_set_destination(optarg);
+            if (log_set_destination(optarg)) {
+                log_syserr("Couldn't set logging destination to \"%s\"",
+                        optarg);
+                success = false;
+            }
             break;
         case 'q':
             pqfname = optarg;

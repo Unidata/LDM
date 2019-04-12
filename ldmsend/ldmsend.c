@@ -370,7 +370,11 @@ main(
                 (void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
             case 'l':
-                (void)log_set_destination(optarg);
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    exit(1);
+                }
                 break;
             case 'h':
                 remote = optarg;

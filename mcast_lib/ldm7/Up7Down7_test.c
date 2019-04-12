@@ -1306,7 +1306,11 @@ int main(
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
         switch (ch) {
             case 'l': {
-                (void)log_set_destination(optarg);
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    exit(1);
+                }
                 break;
             }
             case 'v':

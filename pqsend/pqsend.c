@@ -376,7 +376,11 @@ static int getConfiguration(int ac, char* const * const av) {
                 }
                 break;
             case 'l':
-                (void) log_set_destination(optarg);
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    status = INVOCATION_ERROR;
+                }
                 break;
             case 'o':
                 timeOffset.tv_sec = atoi(optarg);

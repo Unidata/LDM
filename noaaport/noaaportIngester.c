@@ -124,8 +124,11 @@ decodeCommandLine(
                 *interface = optarg;
                 break;
             case 'l':
-                if (log_set_destination(optarg))
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
                     status = EINVAL;
+                }
                 break;
             case 'm':
                 *mcastSpec = optarg;

@@ -623,7 +623,11 @@ int main(int ac, char *av[])
                 case 'l':
                         argv[argc++] = "-l";
                         argv[argc++] = optarg;
-                        (void)log_set_destination(optarg);
+                        if (log_set_destination(optarg)) {
+                            log_syserr("Couldn't set logging destination to \"%s\"",
+                                    optarg);
+                            usage(progname);
+                        }
                         break;
                 case 'd':
                         datadir = optarg;

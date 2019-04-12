@@ -257,7 +257,11 @@ main(int ac, char *av[])
                 list_extents = 1;
                 break;
             case 'l':
-                (void)log_set_destination(optarg);
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"",
+                            optarg);
+                    usage(progname);
+                }
                 break;
             case 'q':
                 setQueuePath(optarg);
