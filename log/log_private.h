@@ -441,7 +441,7 @@ void* logl_realloc(
  * @retval  0          Success
  * @retval -1          Failure. Logging destination is unchanged. log_add()
  *                     called.
- * @threadsafety       Safe
+ * @threadsafety       UnSafe
  * @asyncsignalsafety  Unsafe
  */
 int logi_set_destination(const char* dest);
@@ -480,7 +480,7 @@ int logi_init(
  *
  * @retval   -1        Failure
  * @retval    0        Success
- * @threadsafety       Safe
+ * @threadsafety       Unsafe
  * @asyncsignalsafety  Unsafe
  */
 int logi_reinit(void);
