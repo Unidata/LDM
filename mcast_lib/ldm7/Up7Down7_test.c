@@ -1296,7 +1296,10 @@ int main(
 {
     int status = 1; // Failure
 
-    (void)log_init(argv[0]);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
     log_set_level(LOG_LEVEL_DEBUG);
 
     opterr = 1; // Prevent getopt(3) from printing error messages

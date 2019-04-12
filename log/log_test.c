@@ -160,8 +160,7 @@ static void logRandomMessages(
 
 static void test_init_fini(void)
 {
-    int status = log_init(progname);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    CU_ASSERT_EQUAL_FATAL(log_init(progname), 0);
     log_fini();
 }
 

@@ -247,26 +247,33 @@ int main(
         char* const * argv)
 {
     int exitCode = 1;
-    log_init(argv[0]);
-    //log_set_level(LOG_LEVEL_DEBUG);
+    int status;
 
-    if (argv[1])
-        pathname = argv[1];
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exitCode = EXIT_FAILURE;
+    }
+    else {
+        //log_set_level(LOG_LEVEL_DEBUG);
 
-    if (CUE_SUCCESS == CU_initialize_registry()) {
-        CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
+        if (argv[1])
+            pathname = argv[1];
 
-        if (NULL != testSuite) {
-            if (CU_ADD_TEST(testSuite, test_gini)) {
-                CU_basic_set_mode(CU_BRM_VERBOSE);
-                (void) CU_basic_run_tests();
+        if (CUE_SUCCESS == CU_initialize_registry()) {
+            CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
+
+            if (NULL != testSuite) {
+                if (CU_ADD_TEST(testSuite, test_gini)) {
+                    CU_basic_set_mode(CU_BRM_VERBOSE);
+                    (void) CU_basic_run_tests();
+                }
             }
+
+            exitCode = CU_get_number_of_tests_failed();
+            CU_cleanup_registry();
         }
 
-        exitCode = CU_get_number_of_tests_failed();
-        CU_cleanup_registry();
+        log_fini();
     }
-
-    log_fini();
     return exitCode;
 }

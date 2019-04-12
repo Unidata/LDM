@@ -285,7 +285,10 @@ main(int ac, char *av[])
         /*
          * Setup default logging before anything else.
          */
-        (void)log_init(progname);
+        if (log_init(progname)) {
+            log_syserr("Couldn't initialize logging module");
+            exit(1);
+        }
 
         const char*  pqfname = getQueuePath();
 

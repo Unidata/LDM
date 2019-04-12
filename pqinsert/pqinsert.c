@@ -205,7 +205,10 @@ int main(
             exit_md5 = 6        /* couldn't initialize MD5 processing */
         } exitCode = exit_success;
 
-        (void)log_init(progname);
+        if (log_init(av[0])) {
+            log_syserr("Couldn't initialize logging module");
+            exit(1);
+        }
 
 #if !USE_MMAP
         pqeIndex = PQE_NONE;

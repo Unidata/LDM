@@ -807,7 +807,11 @@ int main(
     unsigned    logOpts = 0;
     bool        becomeDaemon = true; // default
 
-    (void)log_init(av[0]);
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
+
     ensureDumpable();
     const char* pqfname = getQueuePath();
 

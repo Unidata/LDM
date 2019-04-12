@@ -99,51 +99,55 @@ int main(
 {
     int status = 0;
 
-    log_init(argv[0]);
-
-    try {
-        double seconds;
-
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = 1;
+    }
+    else {
         try {
-            decodeCommand(argc, argv, seconds);
-        }
-        catch (const std::exception& ex) {
-            usage();
-            throw;
-        }
+            double seconds;
 
-        DelayQ            delayQ{Duration{seconds}};
-        std::future<void> fut = std::async(std::launch::async, writeLines,
-                &delayQ);
-
-        try {
-            for (;;) {
-                std::string line;
-
-                std::getline(std::cin, line);
-
-                if (std::cin.eof())
-                    break;
-                if (std::cin.bad())
-                    throw std::system_error(errno, std::system_category(),
-                            "Error reading from standard input");
-
-                delayQ.push(line);
+            try {
+                decodeCommand(argc, argv, seconds);
             }
-        }
-        catch (const std::exception& ex) {
+            catch (const std::exception& ex) {
+                usage();
+                throw;
+            }
+
+            DelayQ            delayQ{Duration{seconds}};
+            std::future<void> fut = std::async(std::launch::async, writeLines,
+                    &delayQ);
+
+            try {
+                for (;;) {
+                    std::string line;
+
+                    std::getline(std::cin, line);
+
+                    if (std::cin.eof())
+                        break;
+                    if (std::cin.bad())
+                        throw std::system_error(errno, std::system_category(),
+                                "Error reading from standard input");
+
+                    delayQ.push(line);
+                }
+            }
+            catch (const std::exception& ex) {
+                stopWriter(delayQ);
+                fut.get();
+                throw;
+            }
+
             stopWriter(delayQ);
             fut.get();
-            throw;
         }
-
-        stopWriter(delayQ);
-        fut.get();
-    }
-    catch (const std::exception& ex) {
-        log_add(ex.what());
-        log_flush_error();
-        status = 1;
+        catch (const std::exception& ex) {
+            log_add(ex.what());
+            log_flush_error();
+            status = 1;
+        }
     }
 
     return status;

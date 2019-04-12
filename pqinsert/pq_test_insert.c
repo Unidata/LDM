@@ -563,25 +563,30 @@ int main(
         int   ac,
         char* av[])
 {
+    int         status = EXIT_FAILURE;
+
     // Done first in case something happens that needs to be reported.
    progname = basename(av[0]);
-   (void)log_init(progname);
 
-    int         status = EXIT_FAILURE;
-    if (!pti_decodeCommandLine(ac, av)) {
-        log_error_q("Couldn't decode command-line");
-        pti_usage();
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
     }
     else {
-        if (!pti_initAndExecute()) {
-            log_flush_error();
+        if (!pti_decodeCommandLine(ac, av)) {
+            log_error_q("Couldn't decode command-line");
+            pti_usage();
         }
         else {
-            status = EXIT_SUCCESS;
+            if (!pti_initAndExecute()) {
+                log_flush_error();
+            }
+            else {
+                status = EXIT_SUCCESS;
+            }
         }
-    }
 
-    log_fini();
+        log_fini();
+    }
 
     return status;
 }

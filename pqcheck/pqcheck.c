@@ -114,7 +114,10 @@ int main(int ac, char *av[])
         /*
          * Set up error logging.
          */
-        (void)log_init(progname);
+        if (log_init(progname)) {
+            log_syserr("Couldn't initialize logging module");
+            return EXIT_FAILURE;
+        }
 
         {
             extern int opterr;

@@ -358,169 +358,172 @@ feedmeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 
 int main(int ac, char *av[])
 {
-        int      TotalTimeo = DEFAULT_TOTALTIMEO;
-        unsigned timeo = DEFAULT_TIMEO; 
-        unsigned interval = DEFAULT_TIMEO; 
-        prod_spec spec;
-        int status;
-        prod_class *clssp;
+    int      TotalTimeo = DEFAULT_TOTALTIMEO;
+    unsigned timeo = DEFAULT_TIMEO;
+    unsigned interval = DEFAULT_TIMEO;
+    prod_spec spec;
+    int status;
+    prod_class *clssp;
 
-        /*
-         * initialize logger
-         */
-        (void)log_init(av[0]);
+    /*
+     * initialize logger
+     */
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
 
-        if(set_timestamp(&clss.from) != 0)
-        {
-                (void)fprintf(stderr, "Couldn't set timestamp\n");
-                exit(1);
-        }
-        clss.to = TS_ENDT;
-        clss.psa.psa_len = 1;
-        clss.psa.psa_val = &spec;
-        spec.feedtype = DEFAULT_FEEDTYPE;
-        spec.pattern = DEFAULT_PATTERN;
+    if(set_timestamp(&clss.from) != 0)
+    {
+            (void)fprintf(stderr, "Couldn't set timestamp\n");
+            exit(1);
+    }
+    clss.to = TS_ENDT;
+    clss.psa.psa_len = 1;
+    clss.psa.psa_val = &spec;
+    spec.feedtype = DEFAULT_FEEDTYPE;
+    spec.pattern = DEFAULT_PATTERN;
 
-        { /* Begin getopt block */
-        extern int optind;
-        extern int opterr;
-        extern char *optarg;
-        int ch;
-        int fterr;
+    { /* Begin getopt block */
+    extern int optind;
+    extern int opterr;
+    extern char *optarg;
+    int ch;
+    int fterr;
 
-        opterr = 1;
+    opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxl:f:o:t:h:p:T:")) != EOF)
-                switch (ch) {
-                case 'v':
-                        if (!log_is_enabled_info)
-                            (void)log_set_level(LOG_LEVEL_INFO);
-                        break;
-                case 'x':
-                        (void)log_set_level(LOG_LEVEL_DEBUG);
-                        break;
-                case 'l':
-                        log_set_destination(optarg);
-                        break;
-                case 'h':
-                        remote = optarg;
-                        break;
-                case 'p':
-                        spec.pattern = optarg;
-                        /* compiled below */
-                        break;
-                case 'f':
-                        fterr = strfeedtypet(optarg, &spec.feedtype);
-                        if(fterr != FEEDTYPE_OK)
-                        {
-                                (void)fprintf(stderr, "Bad feedtype \"%s\", "
-                                    "%s\n", optarg, strfeederr(fterr));
-                                usage(av[0]);   
-                        }
-                        break;
-                case 'o':
-                        clss.from.tv_sec -= atoi(optarg);
-                        break;
-                case 'T':
-                        TotalTimeo = atoi(optarg);
-                        if(TotalTimeo <= 0)
-                        {
-                                (void)fprintf(stderr,
-                                    "%s: invalid TotalTimeo %s", av[0], optarg);
-                                usage(av[0]);   
-                        }
-                        break;
-                case 't':
-                        timeo = (unsigned)atoi(optarg);
-                        if(timeo == 0 || timeo > 32767)
-                        {
-                                (void)fprintf(stderr,
-                                    "%s: invalid timeout %s", av[0], optarg);
-                                usage(av[0]);   
-                        }
-                        break;
-                case '?':
-                        usage(av[0]);
-                        break;
-                }
+    while ((ch = getopt(ac, av, "vxl:f:o:t:h:p:T:")) != EOF)
+            switch (ch) {
+            case 'v':
+                    if (!log_is_enabled_info)
+                        (void)log_set_level(LOG_LEVEL_INFO);
+                    break;
+            case 'x':
+                    (void)log_set_level(LOG_LEVEL_DEBUG);
+                    break;
+            case 'l':
+                    log_set_destination(optarg);
+                    break;
+            case 'h':
+                    remote = optarg;
+                    break;
+            case 'p':
+                    spec.pattern = optarg;
+                    /* compiled below */
+                    break;
+            case 'f':
+                    fterr = strfeedtypet(optarg, &spec.feedtype);
+                    if(fterr != FEEDTYPE_OK)
+                    {
+                            (void)fprintf(stderr, "Bad feedtype \"%s\", "
+                                "%s\n", optarg, strfeederr(fterr));
+                            usage(av[0]);
+                    }
+                    break;
+            case 'o':
+                    clss.from.tv_sec -= atoi(optarg);
+                    break;
+            case 'T':
+                    TotalTimeo = atoi(optarg);
+                    if(TotalTimeo <= 0)
+                    {
+                            (void)fprintf(stderr,
+                                "%s: invalid TotalTimeo %s", av[0], optarg);
+                            usage(av[0]);
+                    }
+                    break;
+            case 't':
+                    timeo = (unsigned)atoi(optarg);
+                    if(timeo == 0 || timeo > 32767)
+                    {
+                            (void)fprintf(stderr,
+                                "%s: invalid timeout %s", av[0], optarg);
+                            usage(av[0]);
+                    }
+                    break;
+            case '?':
+                    usage(av[0]);
+                    break;
+            }
 
-        if(ac - optind > 0)
-                usage(av[0]);
+    if(ac - optind > 0)
+            usage(av[0]);
 
-        if (re_isPathological(spec.pattern))
-        {
-                (void)fprintf(stderr,
-                    "Adjusting pathological regular-expression: "
-                    "\"%s\"\n", spec.pattern);
-                re_vetSpec(spec.pattern);
-        }
-        status = regcomp(&spec.rgx,
-                spec.pattern,
-                REG_EXTENDED|REG_NOSUB);
-        if(status != 0)
-        {
-                (void)fprintf(stderr, "Bad regular expression \"%s\"\n",
-                        spec.pattern);
-                usage(av[0]);
-        }
+    if (re_isPathological(spec.pattern))
+    {
+            (void)fprintf(stderr,
+                "Adjusting pathological regular-expression: "
+                "\"%s\"\n", spec.pattern);
+            re_vetSpec(spec.pattern);
+    }
+    status = regcomp(&spec.rgx,
+            spec.pattern,
+            REG_EXTENDED|REG_NOSUB);
+    if(status != 0)
+    {
+            (void)fprintf(stderr, "Bad regular expression \"%s\"\n",
+                    spec.pattern);
+            usage(av[0]);
+    }
 
-        if(TotalTimeo < timeo)
-        {
-                (void)fprintf(stderr, "TotalTimeo %d < timeo %u\n",
-                         TotalTimeo, timeo);
-                usage(av[0]);
-        }
+    if(TotalTimeo < timeo)
+    {
+            (void)fprintf(stderr, "TotalTimeo %d < timeo %u\n",
+                     TotalTimeo, timeo);
+            usage(av[0]);
+    }
 
-        } /* End getopt block */
+    } /* End getopt block */
 
-        log_notice_q("Starting Up: %s: %s",
-                        remote,
-                        s_prod_class(NULL, 0, &clss));
+    log_notice_q("Starting Up: %s: %s",
+                    remote,
+                    s_prod_class(NULL, 0, &clss));
 
-        /*
-         * register exit handler
-         */
-        if(atexit(cleanup) != 0)
-        {
-                log_add_syserr("atexit");
-                log_flush_error();
-                exit(1);
-        }
+    /*
+     * register exit handler
+     */
+    if(atexit(cleanup) != 0)
+    {
+            log_add_syserr("atexit");
+            log_flush_error();
+            exit(1);
+    }
 
-        /*
-         * set up signal handlers
-         */
-        set_sigactions();
+    /*
+     * set up signal handlers
+     */
+    set_sigactions();
 
 
-        /*
-         * Try forever.
-         */
-        while (exitIfDone(0))
-        {
-                clssp = &clss;
-                status = forn5(FEEDME, remote, &clssp,
-                                timeo, TotalTimeo, feedmeprog_5);
+    /*
+     * Try forever.
+     */
+    while (exitIfDone(0))
+    {
+            clssp = &clss;
+            status = forn5(FEEDME, remote, &clssp,
+                            timeo, TotalTimeo, feedmeprog_5);
 
-                (void)exitIfDone(0);
+            (void)exitIfDone(0);
 
-                switch(status) {
-                        /* problems with remote, retry */       
-                case ECONNABORTED:
-                case ECONNRESET:
-                case ETIMEDOUT:
-                case ECONNREFUSED:
-                        (void)sleep(interval);
-                        break;
-                case 0:
-                        /* assert(done); */
-                        break;
-                default:
-                        /* some wierd error */
-                        done = 1;
-                        exit(1);
-                }
-        }
+            switch(status) {
+                    /* problems with remote, retry */
+            case ECONNABORTED:
+            case ECONNRESET:
+            case ETIMEDOUT:
+            case ECONNREFUSED:
+                    (void)sleep(interval);
+                    break;
+            case 0:
+                    /* assert(done); */
+                    break;
+            default:
+                    /* some wierd error */
+                    done = 1;
+                    exit(1);
+            }
+    }
 
-        return 0;
+    return 0;
 }

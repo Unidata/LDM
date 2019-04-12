@@ -208,7 +208,10 @@ int main(
     /*
      * Set up error logging.
      */
-    (void)log_init(progname);
+    if (log_init(progname)) {
+        log_syserr("Couldn't initialize logging module");
+        return 1;
+    }
 
     clss.from = TS_ZERO; /* default dump the whole file */
     clss.to = TS_ENDT;

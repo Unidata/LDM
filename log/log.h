@@ -99,8 +99,7 @@ bool log_stderr_is_open(void);
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-int log_init(
-        const char* const id);
+int log_init(const char* const id);
 
 /**
  * Tells this module to avoid using the standard error stream (because the

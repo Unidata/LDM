@@ -469,31 +469,38 @@ int main(
         int   ac,
         char* av[])
 {
+    int status;
+
     // Done first in case something happens that needs to be reported.
     progname = basename(av[0]);
-    (void)log_init(progname);
-    log_notice_q("Starting up");
-
-    int status = EXIT_FAILURE;
-    if (!decode_command_line(ac, av)) {
-        log_error_q("Couldn't decode command-line");
-        print_usage();
-    }
-    else if (!init()) {
-        log_error_q("Couldn't initialize program");
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = EXIT_FAILURE;
     }
     else {
-        if (!execute()) {
-            log_error_q("Couldn't execute program");
+        log_notice_q("Starting up");
+
+        status = EXIT_FAILURE;
+        if (!decode_command_line(ac, av)) {
+            log_error_q("Couldn't decode command-line");
+            print_usage();
+        }
+        else if (!init()) {
+            log_error_q("Couldn't initialize program");
         }
         else {
-            print_stats();
-            status = EXIT_SUCCESS;
+            if (!execute()) {
+                log_error_q("Couldn't execute program");
+            }
+            else {
+                print_stats();
+                status = EXIT_SUCCESS;
+            }
+            fini();
         }
-        fini();
-    }
 
-    log_notice_q("Exiting");
-    log_fini();
+        log_notice_q("Exiting");
+        log_fini();
+    }
     return status;
 }

@@ -164,7 +164,10 @@ int main(
     int exitCode = 1;
     const char* progname = basename((char*) argv[0]);
 
-    (void)log_init(progname);
+    if (log_init(progname)) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

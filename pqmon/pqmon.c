@@ -233,7 +233,10 @@ main(int ac, char *av[])
     /*
      * Set up default logging before calling anything that might log.
      */
-    (void)log_init(progname);
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
 
     {
         extern int optind;

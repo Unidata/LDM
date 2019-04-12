@@ -51,22 +51,28 @@ int main(
         const char* const * argv)
 {
     int exitCode = 1;
-    log_init(argv[0]);
 
-    if (CUE_SUCCESS == CU_initialize_registry()) {
-        CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exitCode = EXIT_FAILURE;
+    }
+    else {
+        if (CUE_SUCCESS == CU_initialize_registry()) {
+            CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
-        if (NULL != testSuite) {
-            if (CU_ADD_TEST(testSuite, test_open_on_dev_null_if_closed)) {
-                CU_basic_set_mode(CU_BRM_VERBOSE);
-                (void) CU_basic_run_tests();
+            if (NULL != testSuite) {
+                if (CU_ADD_TEST(testSuite, test_open_on_dev_null_if_closed)) {
+                    CU_basic_set_mode(CU_BRM_VERBOSE);
+                    (void) CU_basic_run_tests();
+                }
             }
+
+            exitCode = CU_get_number_of_tests_failed();
+            CU_cleanup_registry();
         }
 
-        exitCode = CU_get_number_of_tests_failed();
-        CU_cleanup_registry();
+        log_fini();
     }
 
-    log_fini();
     return exitCode;
 }

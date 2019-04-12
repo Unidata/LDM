@@ -227,7 +227,7 @@ int main(
     int status = log_init(argv[0]);
 
     if (status) {
-        (void) fprintf(stderr, "Couldn't initialize logging system\n");
+        (void) fprintf(stderr, "Couldn't initialize logging module");
     }
     else {
         if (CUE_SUCCESS == CU_initialize_registry()) {

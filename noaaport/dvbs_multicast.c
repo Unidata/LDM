@@ -273,7 +273,10 @@ int main(
     static char*        prodident = "dvbs";
 
     /* Initialize the logger. */
-    (void)log_init(argv[0]);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
     (void)log_set_level(LOG_LEVEL_ERROR);
     const char*         pqfname = getQueuePath();
 

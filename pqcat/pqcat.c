@@ -254,8 +254,10 @@ int main(int ac, char *av[])
         /*
          * Set up error logging.
          */
-        status = log_init(progname);
-        assert(status == 0);
+        if (log_init(progname)) {
+            log_syserr("Couldn't initialize logging module");
+            exit(1);
+        }
 
         clss.from = TS_ZERO; /* default dump the whole file */
         clss.to = TS_ENDT;

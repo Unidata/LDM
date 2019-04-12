@@ -47,110 +47,114 @@ int main(
     int               status = 0;
     int               delete = 0;
 
-    (void)log_init(progname);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = EXIT_FAILURE;
+    }
+    else {
+        {
+            int ch;
 
-    {
-        int ch;
+            opterr = 0; /* Suppress getopt(3) error messages */
 
-        opterr = 0; /* Suppress getopt(3) error messages */
+            while (0 == status && (ch = getopt(argc, argv, "d")) != -1) {
+                switch (ch) {
+                case 'd':
+                    delete = 1;
+                    break;
+                default:
+                    log_add("Unknown option: %c", optopt);
+                    printUsage(progname);
+                    status = 1;
+                    break;
+                }
+            }
 
-        while (0 == status && (ch = getopt(argc, argv, "d")) != -1) {
-            switch (ch) {
-            case 'd':
-                delete = 1;
-                break;
-            default:
-                log_add("Unknown option: %c", optopt);
+            if (0 == status && optind < argc) {
+                log_add("Too many arguments");
                 printUsage(progname);
                 status = 1;
-                break;
             }
         }
 
-        if (0 == status && optind < argc) {
-            log_add("Too many arguments");
-            printUsage(progname);
-            status = 1;
-        }
-    }
-
-    if (0 == status) {
-        if (delete) {
-            status = uldb_delete(NULL);
-            if (status) {
-                if (ULDB_EXIST == status) {
-                    log_info_q("The upstream LDM database doesn't exist");
-                    status = 2;
-                }
-                else {
-                    log_error_q("Couldn't open the upstream LDM database");
-                    status = 3;
-                }
-            }
-        }
-        else {
-            status = uldb_open(NULL);
-            if (status) {
-                if (ULDB_EXIST == status) {
-                    log_add("The upstream LDM database doesn't exist. "
-                            "Is the LDM running?");
-                    log_flush_notice();
-                    status = 2;
-                }
-                else {
-                    log_error_q("Couldn't open the upstream LDM database");
-                    status = 3;
+        if (0 == status) {
+            if (delete) {
+                status = uldb_delete(NULL);
+                if (status) {
+                    if (ULDB_EXIST == status) {
+                        log_info_q("The upstream LDM database doesn't exist");
+                        status = 2;
+                    }
+                    else {
+                        log_error_q("Couldn't open the upstream LDM database");
+                        status = 3;
+                    }
                 }
             }
             else {
-                uldb_Iter* iter;
-
-                status = uldb_getIterator(&iter);
+                status = uldb_open(NULL);
                 if (status) {
-                    log_error_q("Couldn't get database iterator");
-                    status = 3;
+                    if (ULDB_EXIST == status) {
+                        log_add("The upstream LDM database doesn't exist. "
+                                "Is the LDM running?");
+                        log_flush_notice();
+                        status = 2;
+                    }
+                    else {
+                        log_error_q("Couldn't open the upstream LDM database");
+                        status = 3;
+                    }
                 }
                 else {
-                    const uldb_Entry* entry;
+                    uldb_Iter* iter;
 
-                    status = 0;
+                    status = uldb_getIterator(&iter);
+                    if (status) {
+                        log_error_q("Couldn't get database iterator");
+                        status = 3;
+                    }
+                    else {
+                        const uldb_Entry* entry;
 
-                    for (entry = uldb_iter_firstEntry(iter); NULL != entry;
-                            entry = uldb_iter_nextEntry(iter)) {
-                        prod_class* prodClass;
+                        status = 0;
 
-                        if (uldb_entry_getProdClass(entry, &prodClass)) {
-                            log_error_q(
-                                    "Couldn't get product-class of database entry");
-                            status = 3;
-                            break;
-                        }
-                        else {
-                            const struct sockaddr_in* sockAddr =
-                                    uldb_entry_getSockAddr(entry);
-                            char buf[2048];
-                            const char* const type =
-                                    uldb_entry_isNotifier(entry) ?
-                                            "notifier" : "feeder";
+                        for (entry = uldb_iter_firstEntry(iter); NULL != entry;
+                                entry = uldb_iter_nextEntry(iter)) {
+                            prod_class* prodClass;
 
-                            (void) s_prod_class(buf, sizeof(buf), prodClass);
-                            (void) printf("%ld %d %s %s %s %s\n",
-                                    (long) uldb_entry_getPid(entry),
-                                    uldb_entry_getProtocolVersion(entry), type,
-                                    hostbyaddr(sockAddr), buf,
-                                    uldb_entry_isPrimary(entry)
-                                            ? "primary" : "alternate");
-                            free_prod_class(prodClass);
-                        } /* "prodClass" allocated */
-                    } /* entry loop */
+                            if (uldb_entry_getProdClass(entry, &prodClass)) {
+                                log_error_q(
+                                        "Couldn't get product-class of database entry");
+                                status = 3;
+                                break;
+                            }
+                            else {
+                                const struct sockaddr_in* sockAddr =
+                                        uldb_entry_getSockAddr(entry);
+                                char buf[2048];
+                                const char* const type =
+                                        uldb_entry_isNotifier(entry) ?
+                                                "notifier" : "feeder";
 
-                    uldb_iter_free(iter);
-                } /* got database iterator */
+                                (void) s_prod_class(buf, sizeof(buf), prodClass);
+                                (void) printf("%ld %d %s %s %s %s\n",
+                                        (long) uldb_entry_getPid(entry),
+                                        uldb_entry_getProtocolVersion(entry), type,
+                                        hostbyaddr(sockAddr), buf,
+                                        uldb_entry_isPrimary(entry)
+                                                ? "primary" : "alternate");
+                                free_prod_class(prodClass);
+                            } /* "prodClass" allocated */
+                        } /* entry loop */
 
-                (void) uldb_close();
-            } /* database opened */
-        }
-    } /* correct invocation syntax */
+                        uldb_iter_free(iter);
+                    } /* got database iterator */
+
+                    (void) uldb_close();
+                } /* database opened */
+            }
+        } /* correct invocation syntax */
+    }
 
     exit(status);
 }

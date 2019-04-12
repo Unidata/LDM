@@ -990,44 +990,50 @@ int
 main(   const int    argc,
         char** const argv)
 {
+    int status;
+
     /*
      * Initialize logging. Done first in case something happens that needs to
      * be reported.
      */
-    log_init(argv[0]);
-
-    /*
-     * Decode the command-line.
-     */
-    int status = mls_decodeCommandLine(argc, argv);
-
-    if (status) {
-        log_add("Couldn't decode command-line");
-        if (1 == status)
-            mls_usage();
-        log_flush_error();
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = 1;
     }
     else {
-        mls_setSignalHandling();
+        /*
+         * Decode the command-line.
+         */
+        status = mls_decodeCommandLine(argc, argv);
 
-        status = mls_execute();
         if (status) {
-            log_error_q("Couldn't execute multicast LDM sender");
-            switch (status) {
-                case LDM7_INVAL: status = 1; break;
-                case LDM7_PQ:    status = 3; break;
-                case LDM7_MCAST: status = 4; break;
-                default:         status = 2; break;
-            }
+            log_add("Couldn't decode command-line");
+            if (1 == status)
+                mls_usage();
+            log_flush_error();
         }
+        else {
+            mls_setSignalHandling();
 
-        log_notice("Terminating");
+            status = mls_execute();
+            if (status) {
+                log_error_q("Couldn't execute multicast LDM sender");
+                switch (status) {
+                    case LDM7_INVAL: status = 1; break;
+                    case LDM7_PQ:    status = 3; break;
+                    case LDM7_MCAST: status = 4; break;
+                    default:         status = 2; break;
+                }
+            }
 
-        if (status)
-            smi_free(mcastInfo);
-    } // `groupInfo` allocated
+            log_notice("Terminating");
 
-    log_fini();
+            if (status)
+                smi_free(mcastInfo);
+        } // `groupInfo` allocated
+
+        log_fini();
+    }
 
     return status;
 }

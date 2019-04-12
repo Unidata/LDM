@@ -249,7 +249,10 @@ char *av[];
         /*
          * initialize logger
          */
-        (void)log_init(av[0]);
+        if (log_init(av[0])) {
+            log_syserr("Couldn't initialize logging module");
+            exit(1);
+        }
 
         (void) set_timestamp(&stats.starttime);
         stats.firsthit = TS_ENDT;

@@ -1275,43 +1275,50 @@ int main(
     const int argc,           /**< [in] Number of arguments */
     char*     argv[])         /**< [in] Arguments */
 {
+    int status;
+
     /*
      * Initialize logging. Done first in case something happens that needs to
      * be reported.
      */
     const char* const progname = basename(argv[0]);
-    (void)log_init(progname);
-    (void)log_set_level(LOG_LEVEL_WARNING);
-
-    enableSigUsr1(false);  // ignore SIGUSR1 initially
-
-    size_t            npages = 5000;
-    char*             prodQueuePath = NULL;
-    char*             mcastSpec = NULL; // Read from standard input stream
-    char*             interface = NULL; // Listen on all interfaces
-    const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 University "
-            "Corporation for Atmospheric Research";
-    int status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
-            &mcastSpec, &interface);
-
-    if (status) {
-        log_error_q("Couldn't decode command-line");
-        usage(progname, npages, COPYRIGHT_NOTICE);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = EXIT_FAILURE;
     }
     else {
-        log_notice("Starting up %s", PACKAGE_VERSION);
-        log_notice("%s", COPYRIGHT_NOTICE);
+        (void)log_set_level(LOG_LEVEL_WARNING);
 
-        tryLockingProcessInMemory(); // because NOAAPORT is realtime
+        enableSigUsr1(false);  // ignore SIGUSR1 initially
 
-        status = execute(mcastSpec, interface, npages, prodQueuePath);
+        size_t            npages = 5000;
+        char*             prodQueuePath = NULL;
+        char*             mcastSpec = NULL; // Read from standard input stream
+        char*             interface = NULL; // Listen on all interfaces
+        const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 University "
+                "Corporation for Atmospheric Research";
+        int status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
+                &mcastSpec, &interface);
 
         if (status) {
-            log_add("Couldn't ingest NOAAPort data");
-            log_flush_error();
+            log_error_q("Couldn't decode command-line");
+            usage(progname, npages, COPYRIGHT_NOTICE);
         }
-    }                               /* command line decoded */
+        else {
+            log_notice("Starting up %s", PACKAGE_VERSION);
+            log_notice("%s", COPYRIGHT_NOTICE);
 
-    log_fini();
+            tryLockingProcessInMemory(); // because NOAAPORT is realtime
+
+            status = execute(mcastSpec, interface, npages, prodQueuePath);
+
+            if (status) {
+                log_add("Couldn't ingest NOAAPort data");
+                log_flush_error();
+            }
+        }                               /* command line decoded */
+
+        log_fini();
+    }
     return status ? 1 : 0;
 }

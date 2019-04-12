@@ -370,273 +370,277 @@ int main(
     int                 status;
     const char* const   progname = basename(argv[0]);
 
-    (void)log_init(progname);
-
-    if ((status = sb_new(&_valuePath, 80))) {
-        log_error_q("Couldn't initialize utility");
-        status = SYSTEM_ERROR;
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = EXIT_FAILURE;
     }
     else {
-        enum {
-            UNKNOWN,
-            CREATE,
-            PRINT,
-            PUT_BOOL,
-            PUT_STRING,
-            PUT_UINT,
-            PUT_SIGNATURE,
-            PUT_TIME,
-            RESET,
-            REMOVE
-        }               action = UNKNOWN;
-        const char*     string;
-        signaturet      signature;
-        timestampt      timestamp;
-        unsigned long   uint;
-        int             boolean;
-        int             ch;
-        int             quiet = 0;
-
-        opterr = 0;                     /* supress getopt(3) error messages */
-
-        while (0 == status && (ch = getopt(argc, argv, ":b:cd:h:qRrs:t:u:vx"))
-                != -1) {
-            switch (ch) {
-            case 'b': {
-                if (strcasecmp(optarg, "TRUE") == 0) {
-                    boolean = 1;
-                }
-                else if (strcasecmp(optarg, "FALSE") == 0) {
-                    boolean = 0;
-                }
-                else {
-                    log_add("Not a boolean value: \"%s\"", optarg);
-                    status = COMMAND_SYNTAX;
-                }
-
-                if (status == 0) {
-                    if (CREATE == action) {
-                        log_error_q("Create option ignored");
-                    }
-                    action = PUT_BOOL;
-                }
-                break;
-            }
-            case 'c': {
-                if (UNKNOWN != action) {
-                    log_add("Can't mix create action with other actions");
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    action = CREATE;
-                }
-                break;
-            }
-            case 'd': {
-                if ((status = reg_setDirectory(optarg)))
-                    status = SYSTEM_ERROR;
-                break;
-            }
-            case 'h': {
-                status = sigParse(optarg, &signature);
-
-                if (0 > status || 0 != optarg[status]) {
-                    log_add("Not a signature: \"%s\"", optarg);
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    if (CREATE == action) {
-                        log_info_q("Create action ignored");
-                    }
-                    action = PUT_SIGNATURE;
-                    status = 0;
-                }
-                break;
-            }
-            case 'q': {
-                quiet = 1;
-                break;
-            }
-            case 'R': {
-                if (UNKNOWN != action) {
-                    log_add("Can't mix reset action with other actions");
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    action = RESET;
-                }
-                break;
-            }
-            case 'r': {
-                if (UNKNOWN != action) {
-                    log_add("Can't mix remove action with other actions");
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    action = REMOVE;
-                }
-                break;
-            }
-            case 's': {
-                if (CREATE == action) {
-                    log_info_q("Create action  ignored");
-                }
-                string = optarg;
-                action = PUT_STRING;
-                break;
-            }
-            case 't': {
-                status = tsParse(optarg, &timestamp);
-
-                if (0 > status || 0 != optarg[status]) {
-                    log_add("Not a timestamp: \"%s\"", optarg);
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    if (CREATE == action) {
-                        log_info_q("Create action ignored");
-                    }
-                    action = PUT_TIME;
-                    status = 0;
-                }
-                break;
-            }
-            case 'u': {
-                char*   end;
-
-                errno = 0;
-                uint = strtoul(optarg, &end, 0);
-
-                if (0 != *end || (0 == uint && 0 != errno)) {
-                    log_add("Not an unsigned integer: \"%s\"", optarg);
-                    status = COMMAND_SYNTAX;
-                }
-                else {
-                    if (CREATE == action) {
-                        log_info_q("Create option ignored");
-                    }
-                    action = PUT_UINT;
-                }
-                break;
-            }
-            case 'v': {
-                if (!log_is_enabled_info)
-                    (void)log_set_level(LOG_LEVEL_INFO);
-                break;
-            }
-            case 'x': {
-                (void)log_set_level(LOG_LEVEL_DEBUG);
-                break;
-            }
-            case ':': {
-                log_add("Option \"-%c\" requires an operand", optopt);
-                status = COMMAND_SYNTAX;
-                break;
-            }
-            default:
-                log_add("Unknown option: \"%c\"", optopt);
-                status = COMMAND_SYNTAX;
-                /* no break */
-            }
-        }                               /* options loop */
-
-        if (status) {
-            log_flush_error();
-
-            if (COMMAND_SYNTAX == status)
-                usage(progname);
+        if ((status = sb_new(&_valuePath, 80))) {
+            log_error_q("Couldn't initialize utility");
+            status = SYSTEM_ERROR;
         }
         else {
-            const int     argCount = argc - optind;
+            enum {
+                UNKNOWN,
+                CREATE,
+                PRINT,
+                PUT_BOOL,
+                PUT_STRING,
+                PUT_UINT,
+                PUT_SIGNATURE,
+                PUT_TIME,
+                RESET,
+                REMOVE
+            }               action = UNKNOWN;
+            const char*     string;
+            signaturet      signature;
+            timestampt      timestamp;
+            unsigned long   uint;
+            int             boolean;
+            int             ch;
+            int             quiet = 0;
 
-            if (UNKNOWN == action)
-                action = PRINT;
+            opterr = 0;                     /* supress getopt(3) error messages */
 
-            switch (action) {
-                case CREATE: {
-                    if (0 < argCount) {
-                        log_error_q("Too many arguments");
-                        usage(progname);
-                        status = COMMAND_SYNTAX;
+            while (0 == status && (ch = getopt(argc, argv, ":b:cd:h:qRrs:t:u:vx"))
+                    != -1) {
+                switch (ch) {
+                case 'b': {
+                    if (strcasecmp(optarg, "TRUE") == 0) {
+                        boolean = 1;
+                    }
+                    else if (strcasecmp(optarg, "FALSE") == 0) {
+                        boolean = 0;
                     }
                     else {
-                        status = createRegistry();
-                    }
-                    break;
-                }
-                case RESET: {
-                    if (0 < argCount) {
-                        log_error_q("Too many arguments");
-                        usage(progname);
+                        log_add("Not a boolean value: \"%s\"", optarg);
                         status = COMMAND_SYNTAX;
                     }
-                    else {
-                        status = resetRegistry();
-                    }
-                    break;
-                }
-                case REMOVE: {
-                    if (0 == argCount) {
-                        log_error_q(
-                            "Removal action requires absolute pathname(s)");
-                        usage(progname);
-                        status = COMMAND_SYNTAX;
-                    }
-                    else {
-                        log_debug("Removing registry");
-                        status = actUponPathList(argv + optind, deletePath,
-                            quiet);
-                    }
-                    break;
-                }
-                case PRINT: {
-                    log_debug("Printing registry");
-                    status = (0 == argCount)
-                        ? printPath("/", quiet)
-                        : actUponPathList(argv + optind, printPath, quiet);
-                    break;
-                }
-                default: {
-                    /*
-                     * Must be some kind of "put".
-                     */
-                    if (0 == argCount) {
-                        log_error_q("Put action requires value pathname");
-                        usage(progname);
-                        status = COMMAND_SYNTAX;
-                    }
-                    else {
-                        switch (action) {
-                        case PUT_BOOL:
-                            status = reg_putBool(argv[optind], boolean);
-                            break;
-                        case PUT_UINT:
-                            status = reg_putUint(argv[optind], uint);
-                            break;
-                        case PUT_STRING:
-                            status = reg_putString(argv[optind], string);
-                            break;
-                        case PUT_TIME:
-                            status = reg_putTime(argv[optind], &timestamp);
-                            break;
-                        case PUT_SIGNATURE:
-                            status = reg_putSignature(argv[optind], signature);
-                            break;
-                        default:
-                            abort();
+
+                    if (status == 0) {
+                        if (CREATE == action) {
+                            log_error_q("Create option ignored");
                         }
-                        if (status) {
-                            log_flush_error();
-                            status = SYSTEM_ERROR;
-                        }
+                        action = PUT_BOOL;
                     }
-                }                       /* put switch */
-                /* no break */
-            }                           /* "action" switch */
-        }                               /* decoded options */
+                    break;
+                }
+                case 'c': {
+                    if (UNKNOWN != action) {
+                        log_add("Can't mix create action with other actions");
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        action = CREATE;
+                    }
+                    break;
+                }
+                case 'd': {
+                    if ((status = reg_setDirectory(optarg)))
+                        status = SYSTEM_ERROR;
+                    break;
+                }
+                case 'h': {
+                    status = sigParse(optarg, &signature);
 
-        sb_free(_valuePath);
-    }                                   /* "_valuePath" allocated */
+                    if (0 > status || 0 != optarg[status]) {
+                        log_add("Not a signature: \"%s\"", optarg);
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        if (CREATE == action) {
+                            log_info_q("Create action ignored");
+                        }
+                        action = PUT_SIGNATURE;
+                        status = 0;
+                    }
+                    break;
+                }
+                case 'q': {
+                    quiet = 1;
+                    break;
+                }
+                case 'R': {
+                    if (UNKNOWN != action) {
+                        log_add("Can't mix reset action with other actions");
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        action = RESET;
+                    }
+                    break;
+                }
+                case 'r': {
+                    if (UNKNOWN != action) {
+                        log_add("Can't mix remove action with other actions");
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        action = REMOVE;
+                    }
+                    break;
+                }
+                case 's': {
+                    if (CREATE == action) {
+                        log_info_q("Create action  ignored");
+                    }
+                    string = optarg;
+                    action = PUT_STRING;
+                    break;
+                }
+                case 't': {
+                    status = tsParse(optarg, &timestamp);
+
+                    if (0 > status || 0 != optarg[status]) {
+                        log_add("Not a timestamp: \"%s\"", optarg);
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        if (CREATE == action) {
+                            log_info_q("Create action ignored");
+                        }
+                        action = PUT_TIME;
+                        status = 0;
+                    }
+                    break;
+                }
+                case 'u': {
+                    char*   end;
+
+                    errno = 0;
+                    uint = strtoul(optarg, &end, 0);
+
+                    if (0 != *end || (0 == uint && 0 != errno)) {
+                        log_add("Not an unsigned integer: \"%s\"", optarg);
+                        status = COMMAND_SYNTAX;
+                    }
+                    else {
+                        if (CREATE == action) {
+                            log_info_q("Create option ignored");
+                        }
+                        action = PUT_UINT;
+                    }
+                    break;
+                }
+                case 'v': {
+                    if (!log_is_enabled_info)
+                        (void)log_set_level(LOG_LEVEL_INFO);
+                    break;
+                }
+                case 'x': {
+                    (void)log_set_level(LOG_LEVEL_DEBUG);
+                    break;
+                }
+                case ':': {
+                    log_add("Option \"-%c\" requires an operand", optopt);
+                    status = COMMAND_SYNTAX;
+                    break;
+                }
+                default:
+                    log_add("Unknown option: \"%c\"", optopt);
+                    status = COMMAND_SYNTAX;
+                    /* no break */
+                }
+            }                               /* options loop */
+
+            if (status) {
+                log_flush_error();
+
+                if (COMMAND_SYNTAX == status)
+                    usage(progname);
+            }
+            else {
+                const int     argCount = argc - optind;
+
+                if (UNKNOWN == action)
+                    action = PRINT;
+
+                switch (action) {
+                    case CREATE: {
+                        if (0 < argCount) {
+                            log_error_q("Too many arguments");
+                            usage(progname);
+                            status = COMMAND_SYNTAX;
+                        }
+                        else {
+                            status = createRegistry();
+                        }
+                        break;
+                    }
+                    case RESET: {
+                        if (0 < argCount) {
+                            log_error_q("Too many arguments");
+                            usage(progname);
+                            status = COMMAND_SYNTAX;
+                        }
+                        else {
+                            status = resetRegistry();
+                        }
+                        break;
+                    }
+                    case REMOVE: {
+                        if (0 == argCount) {
+                            log_error_q(
+                                "Removal action requires absolute pathname(s)");
+                            usage(progname);
+                            status = COMMAND_SYNTAX;
+                        }
+                        else {
+                            log_debug("Removing registry");
+                            status = actUponPathList(argv + optind, deletePath,
+                                quiet);
+                        }
+                        break;
+                    }
+                    case PRINT: {
+                        log_debug("Printing registry");
+                        status = (0 == argCount)
+                            ? printPath("/", quiet)
+                            : actUponPathList(argv + optind, printPath, quiet);
+                        break;
+                    }
+                    default: {
+                        /*
+                         * Must be some kind of "put".
+                         */
+                        if (0 == argCount) {
+                            log_error_q("Put action requires value pathname");
+                            usage(progname);
+                            status = COMMAND_SYNTAX;
+                        }
+                        else {
+                            switch (action) {
+                            case PUT_BOOL:
+                                status = reg_putBool(argv[optind], boolean);
+                                break;
+                            case PUT_UINT:
+                                status = reg_putUint(argv[optind], uint);
+                                break;
+                            case PUT_STRING:
+                                status = reg_putString(argv[optind], string);
+                                break;
+                            case PUT_TIME:
+                                status = reg_putTime(argv[optind], &timestamp);
+                                break;
+                            case PUT_SIGNATURE:
+                                status = reg_putSignature(argv[optind], signature);
+                                break;
+                            default:
+                                abort();
+                            }
+                            if (status) {
+                                log_flush_error();
+                                status = SYSTEM_ERROR;
+                            }
+                        }
+                    }                       /* put switch */
+                    /* no break */
+                }                           /* "action" switch */
+            }                               /* decoded options */
+
+            sb_free(_valuePath);
+        }                                   /* "_valuePath" allocated */
+    }
 
     return status;
 }

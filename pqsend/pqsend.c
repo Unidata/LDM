@@ -706,17 +706,23 @@ static int execute(void) {
  *      INTERRUPTED             The process received a SIGTERM.
  */
 int main(int ac, char* const * const av) {
-    (void) log_init(av[0]);
+    int status;
 
-    int status = getConfiguration(ac, av);
-    if (0 != status) {
-        log_error_q("Couldn't get execution parameters");
-        if (INVOCATION_ERROR == status)
-            printUsage(av[0]);
-    } else {
-        status = execute();
-        if (0 != status)
-            log_flush_error();
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = EXIT_FAILURE;
+    }
+    else {
+        status = getConfiguration(ac, av);
+        if (0 != status) {
+            log_error_q("Couldn't get execution parameters");
+            if (INVOCATION_ERROR == status)
+                printUsage(av[0]);
+        } else {
+            status = execute();
+            if (0 != status)
+                log_flush_error();
+        }
     }
 
     return status;

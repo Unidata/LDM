@@ -221,7 +221,10 @@ main(
     int		argc,
     char**	argv)
 {
-    (void)log_init(argv[0]);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
     (void)log_set_level(LOG_LEVEL_NOTICE);
 
     opmock_test_suite_reset();

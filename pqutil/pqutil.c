@@ -1355,7 +1355,10 @@ main(int argc, char *argv[])
 
 
 /* initialize logger */
-    (void)log_init(argv[0]);
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
 
     if (isatty(fileno(stdin)))
         tty_flag = 1;
