@@ -345,7 +345,7 @@ static int stream_log(
 
             // Process
             (void)snprintf(buf, buflen, "%s[%d]", ident, pid);
-            (void)fprintf(dest->stream, "%27s ", buf);
+            (void)fprintf(dest->stream, "%-27s ", buf);
 
             // Location
             (void)snprintf(buf, buflen, "%s:%s()", basename, loc->func);
