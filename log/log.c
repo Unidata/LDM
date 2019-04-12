@@ -471,7 +471,6 @@ static bool is_level_enabled(const log_level_t level)
  * @pre                Module is locked
  * @retval  0          Success
  * @retval -1          Failure
- * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
 static int refresh_if_necessary(void)
@@ -486,9 +485,14 @@ static int refresh_if_necessary(void)
             status = logi_set_destination(
                     logi_get_default_daemon_destination());
         }
+        else {
+            status = 0;
+        }
 
-        status = logi_reinit();
-        refresh_needed = 0;
+        if (status == 0) {
+            status = logi_reinit();
+            refresh_needed = 0;
+        }
     }
 
     return status;
