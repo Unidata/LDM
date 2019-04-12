@@ -247,7 +247,6 @@ int main(
         char* const * argv)
 {
     int exitCode = 1;
-    int status;
 
     if (log_init(argv[0])) {
         log_syserr("Couldn't initialize logging module");
