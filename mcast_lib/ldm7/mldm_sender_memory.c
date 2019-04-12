@@ -45,7 +45,8 @@ parsePid(
 
     if (fscanf(file, "%ld", &pid) != 1) {
         if (ferror(file)) {
-            log_syserr_q("Couldn't parse PID");
+            log_add_syserr("Couldn't parse PID");
+            log_flush_error();
         }
         else {
             log_add("Couldn't parse PID");
@@ -76,7 +77,8 @@ getPidFromFile(
             pid = 0;
         }
         else {
-            log_syserr_q("Couldn't open PID file \"%s\"", pathname);
+            log_add_syserr("Couldn't open PID file \"%s\"", pathname);
+            log_flush_error();
             pid = -1;
         }
     }

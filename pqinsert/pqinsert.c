@@ -160,7 +160,8 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
                 nread = read(fd, buf, sizeof(buf));
                 if(nread <= 0)
                 {
-                        log_syserr_q("fd_md5: read");
+                        log_add_syserr("fd_md5: read");
+                        log_flush_error();
                         return -1;
                 } /* else */
                 MD5Update(md5ctxp, buf, nread);
@@ -477,7 +478,8 @@ int main(
                 (void)exitIfDone(1);
 
                 if (status != 0) {
-                        log_syserr_q("xx_md5: %s", filename);
+                        log_add_syserr("xx_md5: %s", filename);
+                        log_flush_error();
                         (void) close(fd);
                         exitCode = exit_infile;
                         continue;
@@ -495,7 +497,8 @@ int main(
                 status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
 
                 if(status != ENOERR) {
-                    log_syserr_q("pqe_new: %s", filename);
+                    log_add_syserr("pqe_new: %s", filename);
+                    log_flush_error();
                     exitCode = exit_infile;
                 }
                 else {
