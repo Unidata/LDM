@@ -613,7 +613,7 @@ static inline int flushIfAppropriate(
  * @param[in] in       Input character array.
  * @param[in] len      Input size in bytes.
  * @param[in] outlenp  Output size in bytes.
- * @retval    NULL     System failure. `log_syserr_q()` called.
+ * @retval    NULL     System failure. `log_syserr()` called.
  * @return             Pointer to new character array. Caller should free when
  *                     it's no longer needed.
  */
@@ -2607,7 +2607,8 @@ ldmdb_open(fl_entry *entry, int ac, char **av)
     /* create directories if needed */
     if(diraccess(path, (R_OK | W_OK), 1) == -1)
     {
-        log_syserr_q("Couldn't access directories leading to %s", path);
+        log_add_syserr("Couldn't access directories leading to %s", path);
+        log_flush_error();
         return -1;
     }
 
