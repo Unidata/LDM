@@ -1,4 +1,4 @@
-6.13.11.42	2019-04-12T15:00:13-0600
+6.13.11.43	2019-04-13T08:34:31-0600
     ldmd(8):
         * Eliminated having the operating-system assign a transitory port
           number for the LDM server if the server couldn't get its official port
