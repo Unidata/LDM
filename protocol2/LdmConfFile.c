@@ -504,7 +504,7 @@ static char     statePath[_POSIX_PATH_MAX];
  *      1               No product-information available for the given request.
  */
 static int
-getPreviousProdInfo(
+getPrevProdInfo(
     const char* const           upId,
     const unsigned              port,
     const prod_class_t* const   prodClass,
@@ -631,7 +631,7 @@ initSavedInfo(
         /*
          * Try getting product-information from the previous session.
          */
-        status = getPreviousProdInfo(upId, port, prodClass, info);
+        status = getPrevProdInfo(upId, port, prodClass, info);
 
         if (status == 1) {
             /*
