@@ -789,6 +789,9 @@ requester_exec(
             (void)exitIfDone(0);
 
             if (!errObj) {
+                // No error object ==> socket was disconnected
+                log_add("req6_new() returned");
+
                 /*
                  * NB: If the selection-criteria is modified at this point by
                  * taking into account the most-recently received data-product
@@ -802,8 +805,14 @@ requester_exec(
                     isPrimary = !isPrimary;
                     doSleep = 0; /* reconnect immediately */
 
-                    log_notice_q("Switching data-product transfer-mode to %s",
+                    // Local disconnection ==> single log message
+                    log_clear();
+                    log_notice("Switching data-product transfer-mode to %s",
                                 isPrimary ? "primary" : "alternate");
+                }
+                else {
+                    // Remote disconnection ==> all log messages
+                    log_flush_notice();
                 }
             } /* req6_new() success */
             else {
