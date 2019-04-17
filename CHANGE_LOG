@@ -1,24 +1,30 @@
-6.13.11.43	2019-04-13T08:34:31-0600
+6.13.11.44	2019-04-17T15:23:19-0600
     ldmd(8):
-        * Eliminated having the operating-system assign a transitory port
-          number for the LDM server if the server couldn't get its official port
-          number because 
-            * A receiving LDM can't connect to the server without knowing the
-              transitory port number; 
-            * The LDM server can't communicate a transitory port number to the
-              outside world; and
-            * Using a transitory port number prevented the LDM from terminating
-              with an error to indicate a problem
-        * DownHelp(3): Eliminated SIGSEGV due to incorrect format for `size_t`
-          variable in error message
-        * LdmConfFile(3):
-            * EXEC action:
-                * Replaced blocking of SIGUSR1 before execvp() with ignoring it
-                * Added ignoring of SIGUSR2 before execvp()
-            * Eliminated memory-leak found by Coverity Scan
-        * Removed calls to open_on_dev_null_if_closed() to accomodate
-          replacement of log_is_stderr_valid() with log_stderr_is_open(), which
-          returns true if stderr is legitimately redirected to /dev/null
+        * Top-level Server:
+            * Eliminated having the operating-system assign a transitory port
+              number for the LDM server if the server couldn't get its official
+              port number because 
+                * A receiving LDM can't connect to the server without knowing
+                  the transitory port number; 
+                * The LDM server can't communicate a transitory port number to
+                  the outside world; and
+                * Using a transitory port number prevented the LDM from
+                  terminating with an error to indicate a problem
+            * LdmConfFile(3):
+                * EXEC action:
+                    * Replaced blocking of SIGUSR1 before execvp() with ignoring
+                      it
+                    * Added ignoring of SIGUSR2 before execvp()
+                * Eliminated memory-leak found by Coverity Scan
+            * Removed calls to open_on_dev_null_if_closed() to accomodate
+              replacement of log_is_stderr_valid() with log_stderr_is_open(),
+              which returns true if stderr is legitimately redirected to
+              /dev/null
+        * Downstream/Receiving LDM:
+            * DownHelp(3): Eliminated SIGSEGV due to incorrect format for
+              `size_t` variable in error message
+            * Shortened getPreviousProdInfo() to getPrevProdInfo() for logging
+            * Improved log message(s) resulting from socket disconnection
 
     pqact(1):
         * Made processes created via EXEC entries in a pqact(1)
@@ -164,6 +170,7 @@
                 * Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
                 * Added University of Missouri's host
                 * Changed LDM7 host names to state abbreviations
+                * Sequenced deployment to non-NWSC nodes alphabetically
         * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
           during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
