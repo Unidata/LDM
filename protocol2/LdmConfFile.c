@@ -790,7 +790,6 @@ requester_exec(
 
             if (!errObj) {
                 // No error object ==> socket was disconnected
-                log_add("req6_new() returned");
 
                 /*
                  * NB: If the selection-criteria is modified at this point by
@@ -805,13 +804,13 @@ requester_exec(
                     isPrimary = !isPrimary;
                     doSleep = 0; /* reconnect immediately */
 
-                    // Local disconnection ==> single log message
+                    // Local disconnection ==> log single message
                     log_clear();
                     log_notice("Switching data-product transfer-mode to %s",
                                 isPrimary ? "primary" : "alternate");
                 }
                 else {
-                    // Remote disconnection ==> all log messages
+                    // Remote disconnection ==> log all messages
                     log_flush_notice();
                 }
             } /* req6_new() success */
@@ -880,20 +879,25 @@ requester_exec(
                         log_debug("forn5(...) = %d", feedCode);
 
                         if (feedCode == ECONNABORTED) {
-                            log_notice_q("Connection aborted");
+                            log_add("Connection aborted");
+                            log_flush_notice();
                         }
                         else if (feedCode == ECONNRESET) {
-                            log_notice_q("Connection closed by upstream LDM");
+                            log_add("Connection closed by upstream LDM");
+                            log_flush_notice();
                         }
                         else if (feedCode == ETIMEDOUT) {
-                            log_notice_q("Connection timed-out");
+                            log_add("Connection timed-out");
+                            log_flush_notice();
                             doSleep = 0; /* reconnect immediately */
                         }
                         else if (feedCode == ECONNREFUSED) {
-                            log_notice_q("Connection refused");
+                            log_add("Connection refused");
+                            log_flush_notice();
                         }
                         else if (feedCode != 0){
-                            log_error_q("Unexpected forn5() return: %d", feedCode);
+                            log_add("Unexpected forn5() return: %d", feedCode);
+                            log_flush_error();
 
                             errCode = EXIT_FAILURE; /* terminate */
                         }
@@ -918,7 +922,8 @@ requester_exec(
                      */
                     const unsigned  sleepAmount = 2*interval;
 
-                    log_info_q("Sleeping %u seconds before retrying...", sleepAmount);
+                    log_add("Sleeping %u seconds before retrying...", sleepAmount);
+                    log_flush_notice();
                     (void)sleep(sleepAmount);
                     (void)exitIfDone(0);
 
