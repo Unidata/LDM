@@ -9266,3 +9266,20 @@ long pqe_get_count(
     pq_unlockIf(pq);
     return pqe_count;
 }
+
+/**
+ * Returns the magic number of a product-queue.
+ *
+ * @param[in]  pq     Product-queue
+ * @retval     0      `pq == NULL`
+ * @retval     -1     `pq->base == NULL`
+ * @return            The magic number of `pq`
+ */
+size_t pq_getMagic(const pqueue* const pq)
+{
+    return pq == NULL
+            ? 0
+            : pq->base == NULL
+              ? -1
+              : ((pqctl*)pq->base)->magic;
+}

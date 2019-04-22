@@ -1,4 +1,4 @@
-6.13.11.45	2019-04-18T13:13:52-0600
+6.13.11.45	2019-04-22T11:14:58-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -27,7 +27,7 @@
             * Improved log message(s) resulting from socket disconnection
 
     pqact(1):
-        * Made processes created via EXEC entries in a pqact(1)
+        * Made processes created via EXEC entries in pqact(1)
           configuration-files process group leaders so that they don't receive
           signals sent to the LDM system's process group. This was done because
           such processes are unlikely to handle such signals. This feature can
@@ -37,7 +37,7 @@
           message
         * Removed SIGALRM from handled signals because pq(1) handles it
 
-    logging:
+    Logging:
         * Improved concurrency locking for access by multiple threads
             * Removed mutex-locking from implementations: Locking occurs in
               log.c only
@@ -48,7 +48,7 @@
             * Refactored
             * Made functions async-signal-safe:
                 * log_roll_level()
-                * log_refresh() s
+                * log_refresh()
                 * log_avoid_stderr()
             * Allowed logging levels above LOG_LEVEL_ERROR but below or less
               than LOG_LEVEL_EMERG to be valid
@@ -62,9 +62,14 @@
             * log_set_destination()
         * Eliminated use of log_syserr_q()
 
+    Product-Queue (pq.c):
+        Created pq_getMagic() to obtain the magic number for debugging purposes
+
     NOAAPort:
-        Ensured initialization of last received frame index if and when the
-        run number changes. This lint was found by Coverity Scan.
+        * Ensured initialization of last received frame index if and when the
+          run number changes. This lint was found by Coverity Scan.
+        * ldmProductQueue: Created lpqGetMagic() to obtain magic number of
+          product-queue for debugging purposes
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -86,7 +91,8 @@
         * down7(3):
             * Corrected AL2S VLAN endpoint <-> FMTP interface
               consistency-test
-            * Added "sh" to vlanUtil(1) command 
+            * Added "sh" to vlanUtil(1) command because Linux won't execute a
+              setuid script that's owned by root
             * Increased RPC timeout for subscribe_7() because adding a node to
               an AL2S multipoint VLAN can take longer than the default RPC
               client timeout.
@@ -97,7 +103,8 @@
               messages
             * Removed lint found by Coverity Scan
         * OESS Scripts:
-            * Replaced calls to ulogger(1) with sys.stderr.write()
+            * Replaced calls to ulogger(1) with sys.stderr.write() because
+              sudo() handles the child process writing to stderr
             * provision.py:
                 * Replaced writing of circuit-ID to stderr with writing to
                   stdout
@@ -110,7 +117,7 @@
               executable
             * Removed acquisition of root privileges when calling "provision.py"
             * Added printing of "provision.py" command-string on failure
-            * Deleted logging of child command that error-exits
+            * Deleted logging of child process that error-exits
             * Added to mldm_ensureExec() removal of terminated sender from
               mldm_sender_map(3)
         * Up7(3): Demoted "Backlog product sent:..." log-message from NOTE to
@@ -125,16 +132,16 @@
               sender
             * Added broadcast address to `ip addr add`
         * Sender code:
-            * Disallowed multicast interface parameter as the interface must be
-              the same as the FMTP server address
-            * Ensured that the FMTP server address is in the subnet of its FMTP
-              clients
+            * Disallowed multicast interface parameter because the interface
+              must be the same as the FMTP server address
+            * Ensured that the FMTP server address is in in the same subnet as
+              its FMTP clients
         * Internet(3): Created ::to_string(struct sockaddr&)
         * mldm_sender(1):
-            * Improved MldmRpcCmd server starting-up message
+            * Improved MldmRpcCmd server start-up message
             * Corrected removal of secret file
         * CidrAddr(3):
-            * Made cidrAddr_copy() more robust to verity subscription reply
+            * Made cidrAddr_copy() more robust to verify subscription reply
             * Created cidrAddr_snprintf(), which doesn't allocate memory
         * FmtpClntAddrs::Impl(3): Corrected vetting of FMTP server address in
           constructor
@@ -147,10 +154,10 @@
             * fmtpSendv3(3):
                 * ::RunRetxThread(): Don't terminate process on
                   TcpSend::parserHeader() error
-                * Adapted logMsg() to use LDM logging
+                * Adapted ::logMsg() to use LDM logging
                 * Eliminated this module terminating the process if an exception
                   occurs
-                * Eliminated slicing of the exception that causeed an instance
+                * Eliminated slicing of the exception that caused an instance
                   to stop working
 
     Developer:
@@ -159,23 +166,23 @@
                 * Added determination of "-r" host-suffix
                 * Added removal of runtime link if LDM wasn't running
                 * Added "-r <root>" option
-                * Handle $sudoUser not being able to create root-actions log
-                  file
-                * Added test for "runtime" and improved messages
+                * Handle $sudoUser not being able to create log file for "make
+                  root-actions"
+                * Added test for "runtime" link and improved messages
                 * Modified to delete previous installed versions
                 * Added "-v" option to "ldmadmin start"
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
-                * Added the MAX
+                * Added the MAX's host
                 * Set privileged user to "ldm7" for sudo(8) on "fdt-uva"
                 * Added University of Missouri's host
-                * Changed LDM7 host names to state abbreviations
+                * Changed host names to state abbreviations
                 * Sequenced deployment to non-NWSC nodes alphabetically
-        * Up7Down7_test(1): Ensured that CU_ASSERT_* functions aren't called
+        * Up7Down7_test(1): Ensured that CU_ASSERT_*() functions aren't called
           during teardown
         * GitHub: Added deletion of temporary branch in makefile rule "push-%"
         * ldm7PreInstall:
-            * Don't use devtools-2 g++ if on a CentOS7 system
+            * Eliminated the use devtools-2's g++ if on a CentOS7 system
             * Changed an "install" to "update"
 
 6.13.10	2019-03-06T14:17:16-0700

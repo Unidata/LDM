@@ -182,6 +182,7 @@ int lpqInsert(
         status = 2;
     }
     else {
+        log_debug("pq magic: %zu", pq_getMagic(lpq->pq));
         if ((status = pq_insert(lpq->pq, prod)) != 0) {
             if (PQUEUE_DUP == status) {
                 status = 3;
@@ -234,4 +235,9 @@ int lpqClose(
     }
 
     return status;
+}
+
+size_t lpqGetMagic(const LdmProductQueue* const lpq)
+{
+    return pq_getMagic(lpq->pq);
 }

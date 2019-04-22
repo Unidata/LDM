@@ -119,7 +119,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-LDADD 			= $(top_builddir)/lib/libldm.la -lxml2
+LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
   LDADD 	+= retrans/lib.la
 endif
@@ -287,10 +287,11 @@ sudo:
 	@echo >/dev/tty
 endif
 
-valgrind-noaaportIngester:      noaaportIngester
+valgrind-noaaportIngester:      .libs/lt-noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
-	LDM_REGISTRY_DIR=../regutil $(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=yes .libs/noaaportIngester -b 1 -q \
+	LDM_REGISTRY_DIR=../regutil \
+            valgrind \
+	    --leak-check=yes .libs/lt-noaaportIngester -b 1 -q \
 	    /tmp/noaaportIngester-test.pq <$(srcdir)/nwstgdump.data
 	rm /tmp/noaaportIngester-test.pq
 

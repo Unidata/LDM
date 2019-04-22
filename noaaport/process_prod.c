@@ -19,11 +19,12 @@
 #include <unistd.h>
 #include "nport.h"
 
+#include "inetutil.h"
 #include "ldm.h"
 #include "ldmProductQueue.h"
-#include "md5.h"
-#include "inetutil.h"
 #include "log.h"
+#include "md5.h"
+#include "pq.h"
 
 /*
  * The following is declared here because it isn't declared elsewhere.
@@ -118,6 +119,7 @@ process_prod(
     product          prod;
     char             prodId[1024];
 
+    log_debug("pq magic: %zu", lpqGetMagic(lpq));
     if ((strcmp(psh->metadata, " !grib2/") == 0) &&
             (psh->metaoff > 0) && (psh->metaoff < (heapsize - 16))) {
         char*         cpos;
