@@ -12,6 +12,7 @@
 #include <config.h>
 
 #include "ldm.h"
+#include "ldmfork.h"
 #include "log.h"
 #include "fifo.h"
 #include "getFacilityName.h"
@@ -1292,34 +1293,46 @@ int main(
     else {
         (void)log_set_level(LOG_LEVEL_WARNING);
 
-        enableSigUsr1(false);  // ignore SIGUSR1 initially
-
-        size_t            npages = 5000;
-        char*             prodQueuePath = NULL;
-        char*             mcastSpec = NULL; // Read from standard input stream
-        char*             interface = NULL; // Listen on all interfaces
-        const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 University "
-                "Corporation for Atmospheric Research";
-        status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
-                &mcastSpec, &interface);
-
-        if (status) {
-            log_error_q("Couldn't decode command-line");
-            usage(progname, npages, COPYRIGHT_NOTICE);
+        /*
+         * Open the standard error stream on `/dev/null` if it's closed because
+         * some of the NOAAPort library functions mistakenly write to it.
+         */
+        if (open_on_dev_null_if_closed(STDERR_FILENO, O_WRONLY)) {
+            log_add("Couldn't open standard error stream on \"/dev/null\"");
+            log_flush_error();
+            status = -1;
         }
         else {
-            log_notice("Starting up %s", PACKAGE_VERSION);
-            log_notice("%s", COPYRIGHT_NOTICE);
+            enableSigUsr1(false);  // ignore SIGUSR1 initially
 
-            tryLockingProcessInMemory(); // because NOAAPORT is realtime
-
-            status = execute(mcastSpec, interface, npages, prodQueuePath);
+            size_t            npages = 5000;
+            char*             prodQueuePath = NULL;
+            // Read from standard input stream
+            char*             mcastSpec = NULL;
+            char*             interface = NULL; // Listen on all interfaces
+            const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 "
+                    "University Corporation for Atmospheric Research";
+            status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
+                    &mcastSpec, &interface);
 
             if (status) {
-                log_add("Couldn't ingest NOAAPort data");
-                log_flush_error();
+                log_error_q("Couldn't decode command-line");
+                usage(progname, npages, COPYRIGHT_NOTICE);
             }
-        }                               /* command line decoded */
+            else {
+                log_notice("Starting up %s", PACKAGE_VERSION);
+                log_notice("%s", COPYRIGHT_NOTICE);
+
+                tryLockingProcessInMemory(); // because NOAAPORT is realtime
+
+                status = execute(mcastSpec, interface, npages, prodQueuePath);
+
+                if (status) {
+                    log_add("Couldn't ingest NOAAPort data");
+                    log_flush_error();
+                }
+            }                               /* command line decoded */
+        } // Closed `stderr` opened on `/dev/null`
 
         log_fini();
     }
