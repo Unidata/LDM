@@ -7,7 +7,6 @@
 #include "fifo.h"
 #include "goes.h"
 #include "ldm.h"
-#include "ldmProductQueue.h"
 #include "log.h"
 #include "md5.h"
 #include "nport.h"
@@ -857,7 +856,7 @@ int    nnnxxx_offset;
             if (NWSTG == 1) {
                 memset(psh->pname, 0, sizeof(psh->pname));
 
-                if (readccb(buf + IOFF + sbn->len + pdh->len +  pdh->pshlen,
+                if (readccb(buf + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         ccb, psh, pdh->dbsize) == -1)
                     log_error_q("Error reading ccb, using default name");
 
