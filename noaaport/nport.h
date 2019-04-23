@@ -196,6 +196,10 @@ int readsbn(char *buf, sbn_struct *sbn);
 int readpdh(char *buf, pdh_struct *pdh);
 int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz );
 int readpsh(char *buf, psh_struct *psh);
-int readccb(char *buf,ccb_struct *ccb, psh_struct *psh, int blen);
+int readccb(
+        char* const                  buf,
+        ccb_struct* const            ccb,
+        psh_struct* const            psh,
+        const int                    blen);
 
 #endif /* __nport__ */
