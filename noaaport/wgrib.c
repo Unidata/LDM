@@ -1,3 +1,5 @@
+#include "log.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -638,8 +640,9 @@ extern enum Def_NCEP_Table def_ncep_table;
 
 
 
-static struct ParmTable *Parm_Table(unsigned char *pds) {
-
+static struct ParmTable*
+Parm_Table(unsigned char* pds)
+{
     int i, center, subcenter, ptable, process;
     static int missing_count = 0, reanal_opn_count = 0;
 
@@ -663,8 +666,8 @@ static struct ParmTable *Parm_Table(unsigned char *pds) {
 	if (def_ncep_table == opn_nowarn) return &parm_table_ncep_opn[0];
 	if (def_ncep_table == rean_nowarn) return &parm_table_ncep_reanal[0];
         if (reanal_opn_count++ == 0) {
-	    fprintf(stderr, "Using NCEP %s table, see -ncep_opn, -ncep_rean options\n",
-               (def_ncep_table == opn) ?  "opn" : "reanalysis");
+	    log_warning("Using NCEP %s table, see -ncep_opn, -ncep_rean "
+	            "options", (def_ncep_table == opn) ?  "opn" : "reanalysis");
 	}
         return (def_ncep_table == opn) ?  &parm_table_ncep_opn[0] 
 		: &parm_table_ncep_reanal[0];
@@ -673,16 +676,15 @@ static struct ParmTable *Parm_Table(unsigned char *pds) {
     if (center == ECMWF && ptable == 128) return &parm_table_ecmwf_128[0];
     if (center == ECMWF && ptable == 160) return &parm_table_ecmwf_160[0];
 
-
 #ifndef P_TABLE_FIRST
     i = setup_user_table(center, subcenter, ptable);
     if (i == 1) return &parm_table_user[0];
 #endif
 
     if ((ptable > 3 || (PDS_PARAM(pds)) > 127) && missing_count++ == 0) {
-	fprintf(stderr,
-            "\nUndefined parameter table (center %d-%d table %d), using NCEP-opn\n",
-            center, subcenter, ptable);
+	log_warning(
+            "Undefined parameter table {center: %d, subcenter: %d, table %d}. "
+	    "Using NCEP-opn", center, subcenter, ptable);
     }
     return &parm_table_ncep_opn[0];
 }
@@ -692,18 +694,17 @@ static struct ParmTable *Parm_Table(unsigned char *pds) {
  */
 
 char *k5toa(unsigned char *pds) {
-
     return (Parm_Table(pds) + PDS_PARAM(pds))->name;
 }
 
 /*
  * return comment field of the PDS_PARAM(pds)
- */
 
 char *k5_comments(unsigned char *pds) {
 
     return (Parm_Table(pds) + PDS_PARAM(pds))->comment;
 }
+ */
 
 /* 1996				wesley ebisuzaki
  *
