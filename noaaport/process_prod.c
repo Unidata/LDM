@@ -119,7 +119,6 @@ process_prod(
     product          prod;
     char             prodId[1024];
 
-    log_debug("pq magic: %zu", lpqGetMagic(lpq));
     if ((strcmp(psh->metadata, " !grib2/") == 0) &&
             (psh->metaoff > 0) && (psh->metaoff < (heapsize - 16))) {
         char*         cpos;
