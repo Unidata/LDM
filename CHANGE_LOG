@@ -1,4 +1,4 @@
-6.13.11.46	2019-04-22T11:15:35-0600
+6.13.11.47	2019-04-23T14:33:55-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -57,6 +57,7 @@
                 * Process
                 * Code location
             * Added description of SIGUSR1 action
+            * Reintroduced line numbers in log messages
         * Ensured that all programs check the return-value of
             * log_init()
             * log_set_destination()
@@ -65,11 +66,14 @@
     Product-Queue (pq.c):
         Created pq_getMagic() to obtain the magic number for debugging purposes
 
-    NOAAPort:
+    noaaportIngester(1):
         * Ensured initialization of last received frame index if and when the
           run number changes. This lint was found by Coverity Scan.
         * ldmProductQueue: Created lpqGetMagic() to obtain magic number of
           product-queue for debugging purposes
+        * Redirected stderr to /dev/null if it's closed because some NOAAPort
+          functions mistakenly write to it and it was open on the product-queue
+          causing an assertion failure
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
