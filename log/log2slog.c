@@ -348,8 +348,9 @@ static int stream_log(
             (void)fprintf(dest->stream, "%-27s ", buf);
 
             // Location
-            (void)snprintf(buf, buflen, "%s:%s()", basename, loc->func);
-            (void)fprintf(dest->stream, "%-32s ", buf);
+            (void)snprintf(buf, buflen, "%s:%s:%d", basename, loc->func,
+                    loc->line);
+            (void)fprintf(dest->stream, "%-35s ", buf);
 
             // Error level
             (void)fprintf(dest->stream, "%-5s ", levelId);
