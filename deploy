@@ -74,6 +74,8 @@ ssh -T $ldmUser@$host bash --login <<EOF
 EOF
 
 echo -en '\a'
+sleep 1
+echo -en '\a'
 
 if test "${useSudo+true}"; then
     echo "Making root actions using account '$sudoUser' and sudo(8)"
