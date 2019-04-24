@@ -1,4 +1,4 @@
-6.13.11.52	2019-04-24T10:15:30-0600
+6.13.11.53	2019-04-24T10:31:44-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -194,9 +194,10 @@
             * Eliminated the use devtools-2's g++ if on a CentOS7 system
             * Changed an "install" to "update"
         * Travis CI (.travis.yml):
-            * Updated COVERITY_SCAN_TOKEN in "secure" declaration of ".travis.yml"
             * Deleted "https://" from Coverity Scan hostname
             * Changed "/etc/ssl/certs/ca-" to "/etc/ssl/certs/ca-bundle.crt"
+            * Ensured last "/"-separated component in "secure" declaration
+              starts with letter
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
