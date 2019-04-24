@@ -1,4 +1,4 @@
-6.13.11.53	2019-04-24T10:31:44-0600
+6.13.11.54	2019-04-24T10:49:05-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -198,6 +198,8 @@
             * Changed "/etc/ssl/certs/ca-" to "/etc/ssl/certs/ca-bundle.crt"
             * Ensured last "/"-separated component in "secure" declaration
               starts with letter
+            * Changed pathname of certificate file to
+              "/etc/ssl/certs/ca-certificates.crt"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
