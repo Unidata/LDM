@@ -1,4 +1,4 @@
-6.13.11.47	2019-04-23T14:33:55-0600
+6.13.11.48	2019-04-24T08:33:31-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -57,7 +57,11 @@
                 * Process
                 * Code location
             * Added description of SIGUSR1 action
-            * Reintroduced line numbers in log messages
+            * Reintroduced line numbers in code location field
+        * Replaced log_is_stderr_valid() (which returned false if stderr was
+          open on "/dev/null") with log_stderr_is_open() (which returns true in
+          that case) in order to handle legitimate redirection by the user to
+          "/dev/null"
         * Ensured that all programs check the return-value of
             * log_init()
             * log_set_destination()
@@ -175,6 +179,7 @@
                 * Added test for "runtime" link and improved messages
                 * Modified to delete previous installed versions
                 * Added "-v" option to "ldmadmin start"
+                * Changed one beep to two
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
                 * Added the MAX's host
@@ -188,6 +193,8 @@
         * ldm7PreInstall:
             * Eliminated the use devtools-2's g++ if on a CentOS7 system
             * Changed an "install" to "update"
+        * Travis CI:
+            Updated COVERITY_SCAN_TOKEN in "secure" declaration of ".travis.yml"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
