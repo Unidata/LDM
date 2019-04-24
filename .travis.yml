@@ -11,7 +11,8 @@ sudo: required
 language: cpp
 
 before_install:
-  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-bundle.crt
+  - sudo ls -l /etc/ssl/certs/
+  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-certificates.crt
   - sudo apt-get install libxml2-dev libpng12-dev zlib1g-dev libcunit1-dev doxygen
   - sudo iptables -F
   - mkdir m4
