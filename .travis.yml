@@ -2,7 +2,7 @@ env:
   global:
     # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
     # via the "travis encrypt" command using the project repo's public key
-    - secure: "RsmH/S/+U03iEJ8klqzomM+jDkbZt1LTDYsgUfsSnRQQllTuG8Q3DI8mVTRQLabXau52J8Mi+/oftAfb7rPFl9aC8WKhdQv1lqQ6mggXDRw5T6rJfSPbKvg07tEbPfQHAbzB+6OgsXd28XP6EPBzrcESE6gG+rPF8vcKnS+USPM="
+    - secure: "P4cn8ChfFmTXqtJCiNSEEhXDGFV8WUK7XbXaoH3VC4fuZQdQs+vmzDh/64XqU2mZKcsm+VcAZ6yqBTSbgzsSsNNlpiYENIx6lMgxESWnH8oLXoP9yv1t2Wsf/ojs+sV9o6LCHgf/7kuyjRRoomqQjwA26rbAiNexlMDJEhctMOk="
 
 dist: trusty
 sudo: required
