@@ -1405,7 +1405,8 @@ static McastEntry  key;
 static float       retxTimeout = -1.0; // Negative => use FMTP default
 
 /// Name of AL2S Workgroup
-static const char* wrkGrpName = "UCAR-LDM"; // Default value
+//static const char* wrkGrpName = "UCAR-LDM"; // Default value
+static const char* wrkGrpName = "Virginia"; // Default value
 
 /// Receiving (remote) virtual-circuit endpoint
 static VcEndPoint* recvEnd = NULL;
