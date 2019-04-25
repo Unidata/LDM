@@ -1,4 +1,4 @@
-6.13.11.54	2019-04-24T10:49:05-0600
+6.13.11.55	2019-04-25T12:02:55-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -200,6 +200,8 @@
               starts with letter
             * Changed pathname of certificate file to
               "/etc/ssl/certs/ca-certificates.crt"
+            * Broke download of Coverity certificate into multiple lines
+            * Added command `sudo update-ca-certificates`
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
