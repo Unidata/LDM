@@ -14,7 +14,7 @@ before_install:
     echo -n | openssl s_client -connect scan.coverity.com:443 |
     sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' |
     sudo tee -a /etc/ssl/certs/ca-certificates.crt
-  # The Coverity Scan certificate is missing a necessary certificate
+  # The Coverity Scan certificate-chain is missing an intermediate certificate
   - >
     sudo curl -s -L https://entrust.com/root-certificates/entrust_l1k.cer -o
     /usr/local/share/ca-certificates/entrust_l1k.crt
