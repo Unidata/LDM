@@ -1,4 +1,4 @@
-6.13.11.56	2019-04-26T10:48:07-0600
+6.13.11.57	2019-04-26T10:55:10-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -197,8 +197,7 @@
             * Changed an "install" to "update"
         * Travis CI (.travis.yml):
             * Deleted "https://" from Coverity Scan hostname
-            * Changed "/etc/ssl/certs/ca-" to "/etc/ssl/certs/ca-bundle.crt"
-            * Ensured last "/"-separated component in "secure" declaration
+            * Ensured that last "/"-separated component in "secure" declaration
               starts with letter
             * Changed pathname of certificate file to
               "/etc/ssl/certs/ca-certificates.crt"
