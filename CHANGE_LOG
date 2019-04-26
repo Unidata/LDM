@@ -1,4 +1,4 @@
-6.13.11.55	2019-04-25T12:02:55-0600
+6.13.11.56	2019-04-26T10:48:07-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -128,6 +128,8 @@
             * Deleted logging of child process that error-exits
             * Added to mldm_ensureExec() removal of terminated sender from
               mldm_sender_map(3)
+            * Changed AL2S workgroup name from "UCAR-LDM" to "Virginia" so that
+              Yuanlong could more easily diagnose problems
         * Up7(3): Demoted "Backlog product sent:..." log-message from NOTE to
           INFO
         * vlanUtil(1):
@@ -201,7 +203,8 @@
             * Changed pathname of certificate file to
               "/etc/ssl/certs/ca-certificates.crt"
             * Broke download of Coverity certificate into multiple lines
-            * Added command `sudo update-ca-certificates`
+            * Added download of certificate that Coverity Scan's certificate is
+              missing
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
