@@ -43,7 +43,8 @@ while getopts M:mnr:su:v: opt; do
     esac
 done
 shift `expr $OPTIND - 1`
-host=${1?Host not specified}
+
+host=${1:?Host not specified}
 
 ps -fu $LOGNAME | grep 'ssh upc'  | grep -v grep >/dev/null && host=$host-r
 
@@ -77,8 +78,8 @@ echo -en '\a'
 sleep 1
 echo -en '\a'
 
-if test "${useSudo+true}"; then
-    echo "Making root actions using account '$sudoUser' and sudo(8)"
+if test "${useSudo}"; then
+    echo "Making root actions using account \"$sudoUser\" and sudo(8)"
     ssh $sudoUser@$host bash --login <<EOF
         set -e
         cd ~$ldmUser/$pkgId/src
