@@ -21,11 +21,11 @@ from subprocess import call
 global values1
 values1 = {}
 link = []
-(username,passwd)=account.readAccount(sys.argv[2])
-wg_id=account.getWkGpID(sys.argv[1],username,passwd)
-ct_id=account.getCtID(wg_id, sys.argv[3],username,passwd)
+(workgroup,username,passwd)=account.readAccount(sys.argv[1])
+wg_id=account.getWkGpID(workgroup,username,passwd)
+ct_id=account.getCtID(wg_id, sys.argv[2],username,passwd)
 if ct_id == 0:
-	values1 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'node' : [sys.argv[4], sys.argv[7]], 'interface' : [sys.argv[5], sys.argv[8]], 'tag' : [sys.argv[6], sys.argv[9]]}
+	values1 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'node' : [sys.argv[3], sys.argv[6]], 'interface' : [sys.argv[4], sys.argv[7]], 'tag' : [sys.argv[5], sys.argv[8]]}
 	data = urllib.urlencode(values1, doseq=True)
 	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data)
@@ -39,7 +39,7 @@ if ct_id == 0:
 	jsonData = json.loads(result)
 	searchResults = jsonData['results']
 else:
-	jsonData = edit.edit_endpoint(wg_id,sys.argv[4],sys.argv[5],sys.argv[6],ct_id,"add",username,passwd)
+	jsonData = edit.edit_endpoint(wg_id,sys.argv[3],sys.argv[4],sys.argv[5],ct_id,"add",username,passwd)
 	searchResults = jsonData['results']
 	
 if (searchResults == None):

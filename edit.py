@@ -60,7 +60,7 @@ def edit_endpoint(wg_id,node_id,interface_id,vlan_id,ct_id,function,username,pas
 			interface.remove(interface_id)
 		if vlan_id in tag:
 			tag.remove(vlan_id)
-	values2 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[3], 'node' : node, 'interface' : interface, 'tag' : tag}
+	values2 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'node' : node, 'interface' : interface, 'tag' : tag}
 	data = urllib.urlencode(values2, doseq=True)	
 	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data)
