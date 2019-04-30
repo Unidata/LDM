@@ -660,7 +660,7 @@ shmfifo_print (const struct shmhandle* const shm)
  * @retval !NULL        Pointer to an allocated shared-memory structure.
  * @retval NULL         Failure. An error message is logged.
  */
-struct shmhandle* shmfifo_new(void)
+ShmHandle* shmfifo_new(void)
 {
     struct shmhandle*   shm =
         (struct shmhandle*)malloc(sizeof(struct shmhandle));
@@ -690,6 +690,12 @@ void shmfifo_free(
     free(shm);
 }
 
+/**
+ * Sets the privileges of a shared-memory FIFO?
+ *
+ * @param[in] shm   Shared-memory FIFO
+ * @param[in] priv  Privileges?
+ */
 void
 shmfifo_setpriv (struct shmhandle *shm, void *priv)
 {
@@ -698,6 +704,12 @@ shmfifo_setpriv (struct shmhandle *shm, void *priv)
   (void)shmfifo_unlock (shm);
 }
 
+/**
+ * Gets the privileges of a shared-memory FIFO?
+ *
+ * @param[in] shm   Shared-memory FIFO
+ * @param[in] priv  Privileges?
+ */
 void
 shmfifo_getpriv (struct shmhandle *shm, void *priv)
 {
@@ -778,7 +790,8 @@ int shmfifo_shm_from_key(
  *                      shared-memory FIFO.
  * @retval NULL         Failure. An error message is logged.
  */
-struct shmhandle* shmfifo_create(
+ShmHandle*
+shmfifo_create(
     const int   npages,         /**< size of the FIFO in pages */
     const int   privsz,         /**< <size of the private portion of the FIFO
                                  in bytes */
@@ -909,6 +922,13 @@ int shmfifo_attach(
   return 1;
 }
 
+/**
+ * Indicates if a shared-memory FIFO is empty.
+ *
+ * @param[in] shm  Shared-memory FIFO
+ * @retval    1    Yes
+ * @retval    0    No
+ */
 int
 shmfifo_empty (struct shmhandle *shm)
 {
@@ -924,6 +944,11 @@ shmfifo_empty (struct shmhandle *shm)
   return 0;
 }
 
+/**
+ * Detaches a shared-memory FIFO.
+ *
+ * @param[in,out] shm  Shared memory FIFO
+ */
 void
 shmfifo_detach (struct shmhandle *shm)
 {
@@ -1148,6 +1173,11 @@ shmfifo_put(
     return status;
 }
 
+/**
+ * Releases the memory of a shared-memory FIFO.
+ *
+ * @param[in,out] shm  Shared-memory FIFO
+ */
 void
 shmfifo_dealloc (struct shmhandle *shm)
 {

@@ -31,6 +31,7 @@ struct shmhandle
    int semid; /* semaphore id */
    int sz;    /* size of shared mem in bytes */
 };
+typedef struct shmhandle ShmHandle;
 
 struct shmprefix
 {  int counter;
@@ -55,7 +56,15 @@ union semun {
 };
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Public functions */
 @FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
