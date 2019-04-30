@@ -3,11 +3,21 @@
  *   See file COPYRIGHT for copying and redistribution conditions.
  */
 
-#ifndef WRITER_H
-#define WRITER_H
+#ifndef PRODUCT_MAKER_H
+#define PRODUCT_MAKER_H
+
+#include "ldmProductQueue.h"
 
 typedef struct productMaker   ProductMaker;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 @FUNCTION_DECLARATIONS@
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
