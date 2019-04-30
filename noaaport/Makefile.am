@@ -17,7 +17,6 @@ DOXYGEN                 = @DOXYGEN@
 
 EXTRA_DIST              = \
 	Doxyfile \
-	extractDecls \
 	fifo.hin \
 	getFacilityName.hin \
 	html \
@@ -145,16 +144,16 @@ $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 	cd $(srcdir) && $(DOXYGEN) Doxyfile
 
 .hin.h:
-	./extractDecls $*.hin $*.c >$@.tmp
+	$(top_srcdir)/extractDecls $*.hin $*.c >$@.tmp
 	mv -f $@.tmp $@
-shmfifo.h:		shmfifo.c shmfifo.hin extractDecls
-ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
-fifo.h:			fifo.c fifo.hin extractDecls
-reader.h:		reader.c reader.hin extractDecls
-getFacilityName.h:	getFacilityName.c getFacilityName.hin extractDecls
-Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin extractDecls
-ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin extractDecls
-productMaker.h:		productMaker.c productMaker.hin extractDecls
+shmfifo.h:		shmfifo.c shmfifo.hin
+ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin
+fifo.h:			fifo.c fifo.hin
+reader.h:		reader.c reader.hin
+getFacilityName.h:	getFacilityName.c getFacilityName.hin
+Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin
+ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin
+productMaker.h:		productMaker.c productMaker.hin
 
 .c.i:
 	$(COMPILE) -E $< >$@
