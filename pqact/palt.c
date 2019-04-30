@@ -1221,7 +1221,7 @@ prodAction(product *prod, palt *pal, const void *xprod, size_t xlen)
         OUTBUF[sizeof(OUTBUF)-1] = 0;
         SWITCH_BUFS;
 
-        log_info("%s: %s and the ident is \"%s\"",
+        log_debug("%s: {cmd: \"%s\", ident: \"%s\"}",
                 s_actiont(&pal->action), INBUF, prod->info.ident);
 
         argc = tokenize(INBUF, argv, ARRAYLEN(argv));
