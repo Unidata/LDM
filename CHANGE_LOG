@@ -1,13 +1,12 @@
-6.13.11.58	2019-04-26T15:29:47-0600
+6.13.11.59	2019-04-30T14:35:21-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
               number for the LDM server if the server couldn't get its official
-              port number because 
                 * A receiving LDM can't connect to the server without knowing
                   the transitory port number; 
-                * The LDM server can't communicate a transitory port number to
-                  the outside world; and
+                * The LDM server doesn't communicate the transitory port number
+                  to the outside world; and
                 * Using a transitory port number prevented the LDM from
                   terminating with an error to indicate a problem
             * LdmConfFile(3):
@@ -23,7 +22,8 @@
         * Downstream/Receiving LDM:
             * DownHelp(3): Eliminated SIGSEGV due to incorrect format for
               `size_t` variable in error message
-            * Shortened getPreviousProdInfo() to getPrevProdInfo() for logging
+            * Renamed getPreviousProdInfo() to getPrevProdInfo() to shorten
+              log messages
             * Improved log message(s) resulting from socket disconnection
 
     pqact(1):
@@ -33,9 +33,10 @@
           such processes are unlikely to handle such signals. This feature can
           be disabled via the configure(1) script's option
           "--disable-setpgid_exec".
-        * pbuf.c: Corrected format for printing ssize_t variable in error
+        * pbuf.c: Corrected format for printing of `ssize_t` variable in error
           message
         * Removed SIGALRM from handled signals because pq(1) handles it
+        * Demoted prodAction() log message from INFO to DEBUG and improved it
 
     Logging:
         * Improved concurrency locking for access by multiple threads
@@ -50,8 +51,8 @@
                 * log_roll_level()
                 * log_refresh()
                 * log_avoid_stderr()
-            * Allowed logging levels above LOG_LEVEL_ERROR but below or less
-              than LOG_LEVEL_EMERG to be valid
+            * Allowed logging levels from LOG_LEVEL_ERROR to LOG_LEVEL_EMERG to
+              be valid
         * log2slog(3):
             * Changed alignment of fields from right to left:
                 * Process
@@ -60,24 +61,24 @@
             * Reintroduced line numbers in code location field
         * Replaced log_is_stderr_valid() (which returned false if stderr was
           open on "/dev/null") with log_stderr_is_open() (which returns true in
-          that case) in order to handle legitimate redirection by the user to
-          "/dev/null"
+          that case) in order to handle legitimate redirection of stderr by the
+          user to "/dev/null"
         * Ensured that all programs check the return-value of
             * log_init()
             * log_set_destination()
-        * Eliminated use of log_syserr_q()
+        * Eliminated use of deprecated log_syserr_q()
 
     Product-Queue (pq.c):
         Created pq_getMagic() to obtain the magic number for debugging purposes
 
     noaaportIngester(1):
-        * Ensured initialization of last received frame index if and when the
-          run number changes. This lint was found by Coverity Scan.
+        * Ensured initialization of the index of the last received frame if and
+          when the run number changes. This lint was found by Coverity Scan.
         * ldmProductQueue: Created lpqGetMagic() to obtain magic number of
           product-queue for debugging purposes
-        * Redirected stderr to /dev/null if it's closed because some NOAAPort
+        * Redirected stderr to /dev/null if it's closed because some GRIB/GEMPAK
           functions mistakenly write to it and it was open on the product-queue
-          causing an assertion failure
+          -- causing an assertion failure
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -196,18 +197,14 @@
             * Eliminated the use devtools-2's g++ if on a CentOS7 system
             * Changed an "install" to "update"
         * Travis CI (.travis.yml):
-            * Deleted "https://" from Coverity Scan hostname
+            * Corrected command to download Coverity Scan's certificate-chain
             * Ensured that last "/"-separated component in "secure" declaration
               starts with letter
-            * Changed pathname of certificate file to
-              "/etc/ssl/certs/ca-certificates.crt"
-            * Broke download of Coverity certificate into multiple lines
-            * Added download of certificate that Coverity Scan's certificate is
-              missing
-            * Move dependent package installations from "before_install:" to
+            * Broke download of Coverity's certificate into multiple lines
+            * Added installation of certificate that's missing in Coverity
+              Scan's certificate-chain
+            * Moved dependent package installations from "before_install:" to
               "addons:apt:packages:"
-            * Install Coverity's missing certificate before installing
-              Coverity's
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
