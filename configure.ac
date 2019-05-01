@@ -19,11 +19,11 @@ AC_ARG_ENABLE([debug],
 	yes) enable_debug=true
             case "$CFLAGS" in
                 *-g*);;
-                *) CFLAGS="${CFLAGS+ }-g -O0";;
+                *) CFLAGS="${CFLAGS:+$CFLAGS }-g -O0";;
             esac
             case "$CXXFLAGS" in
                 *-g*);;
-                *) CXXFLAGS="${CXXFLAGS+ }-g -O0";;
+                *) CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0";;
             esac
             ;;
 	no) enable_debug=false
