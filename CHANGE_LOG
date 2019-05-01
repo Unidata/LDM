@@ -1,4 +1,4 @@
-6.13.11.60	2019-04-30T16:20:11-0600
+6.13.11.61	2019-05-01T14:24:28-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -71,16 +71,21 @@
     Product-Queue (pq.c):
         Created pq_getMagic() to obtain the magic number for debugging purposes
 
-    noaaportIngester(1):
-        * Ensured initialization of the index of the last received frame if and
-          when the run number changes. This lint was found by Coverity Scan.
-        * ldmProductQueue: Created lpqGetMagic() to obtain magic number of
-          product-queue for debugging purposes
-        * Redirected stderr to /dev/null if it's closed because some GRIB/GEMPAK
-          functions mistakenly write to it and it was open on the product-queue
-          -- causing an assertion failure
-        * Makefile.am: Replace local extractDecls(1) script with use of the one
-          in the top-level directory because it includes a warning.
+    NOAAPort:
+        noaaportIngester(1):
+            * Ensured initialization of the index of the last received frame if and
+              when the run number changes. This lint was found by Coverity Scan.
+            * ldmProductQueue: Created lpqGetMagic() to obtain magic number of
+              product-queue for debugging purposes
+            * Redirected stderr to /dev/null if it's closed because some GRIB/GEMPAK
+              functions mistakenly write to it and it was open on the product-queue
+              -- causing an assertion failure
+        dvbs_multicast(1):
+            Adapted to use extractDecls(1) script in the top-level directory
+            because it includes a warning
+
+    Misc:
+        Compiled under "gcc -Wall" and fixed all warnings
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -207,6 +212,8 @@
               Scan's certificate-chain
             * Moved dependent package installations from "before_install:" to
               "addons:apt:packages:"
+        * configure.ac: Modified to allow "./configure ... CC='gcc -std=c99' 
+          CFLAGS=-Wall"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
