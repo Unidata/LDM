@@ -180,12 +180,10 @@ char *av[] ;
         int verbose = 0 ;
         int interval = 0 ;
         int timeo = DEFAULT_TIMEO ; 
-        int logoptions = (LOG_CONS|LOG_PID) ;
         int nremotes = 0 ;
 #define MAX_REMOTES 14 /* 2 * MAX_REMOTES + 3 < max_open_file_descriptors */
         h_clnt stats[MAX_REMOTES + 1] ;
         h_clnt *sp ;
-        unsigned        port = 0;
 
         /*
          * initialize logger
@@ -242,23 +240,7 @@ char *av[] ;
                                 LDMPROG, FIVE, IPPROTO_TCP) ;
                         break ;
                 case 'P': {
-                    char*       suffix = "";
-                    long        p;
-
-                    errno = 0;
-                    p = strtol(optarg, &suffix, 0);
-
-                    if (0 != errno || 0 != *suffix ||
-                        0 >= p || 0xffff < p) {
-
-                        (void)fprintf(stderr, "%s: invalid port %s\n",
-                             av[0], optarg);
-                        usage(av[0]);   
-                    }
-                    else {
-                        port = p;
-                    }
-
+                    log_warning("Port specification is ignored");
                     break;
                 }
                 case 't':

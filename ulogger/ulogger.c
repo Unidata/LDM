@@ -68,35 +68,35 @@ static const code_t log_levels[] = {
         {NULL,           -1}};
 
 static code_t facilitynames[] = {
-        "auth",         LOG_AUTH,
+        {"auth",         LOG_AUTH},
 #ifdef LOG_AUTHPRIV
-        "authpriv",     LOG_AUTHPRIV,
+        {"authpriv",     LOG_AUTHPRIV},
 #endif
 #ifdef LOG_CRON
-        "cron",         LOG_CRON,
+        {"cron",         LOG_CRON},
 #endif
-        "daemon",       LOG_DAEMON,
-        "kern",         LOG_KERN,
-        "lpr",          LOG_LPR,
-        "mail",         LOG_MAIL,
+        {"daemon",       LOG_DAEMON},
+        {"kern",         LOG_KERN},
+        {"lpr",          LOG_LPR},
+        {"mail",         LOG_MAIL},
 #ifdef LOG_NEWS
-        "news",         LOG_NEWS,
+        {"news",         LOG_NEWS},
 #endif
-        "security",     LOG_AUTH,               // DEPRECATED
-        "syslog",       LOG_SYSLOG,
-        "user",         LOG_USER,
+        {"security",     LOG_AUTH},               // DEPRECATED}
+        {"syslog",       LOG_SYSLOG},
+        {"user",         LOG_USER},
 #ifdef LOG_UUCP
-        "uucp",         LOG_UUCP,
+        {"uucp",         LOG_UUCP},
 #endif
-        "local0",       LOG_LOCAL0,
-        "local1",       LOG_LOCAL1,
-        "local2",       LOG_LOCAL2,
-        "local3",       LOG_LOCAL3,
-        "local4",       LOG_LOCAL4,
-        "local5",       LOG_LOCAL5,
-        "local6",       LOG_LOCAL6,
-        "local7",       LOG_LOCAL7,
-        NULL,           -1,
+        {"local0",       LOG_LOCAL0},
+        {"local1",       LOG_LOCAL1},
+        {"local2",       LOG_LOCAL2},
+        {"local3",       LOG_LOCAL3},
+        {"local4",       LOG_LOCAL4},
+        {"local5",       LOG_LOCAL5},
+        {"local6",       LOG_LOCAL6},
+        {"local7",       LOG_LOCAL7},
+        {NULL,           -1}
 };
 
 static void
@@ -167,14 +167,13 @@ int main(int argc, char *argv[])
         int pri = LOG_LEVEL_NOTICE;
         int facility = LOG_LDM;
         int ch, logflags = 0;
-        char *tag, buf[1024];
+        char buf[1024];
 
         if (log_init(argv[0])) {
             fprintf(stderr, "log_init() failure\n");
             return 1;
         }
 
-        tag = NULL;
 #ifdef LOG_PERROR
         while ((ch = getopt(argc, argv, "f:ip:st:l:")) != EOF)
 #else
@@ -200,7 +199,7 @@ int main(int argc, char *argv[])
                         break;
 #endif
                 case 't':               /* tag */
-                        tag = optarg;
+                        log_warning("Tag option is ignored");
                         break;
                 case 'l':               /* logfname */
                         if (log_set_destination(optarg)) {

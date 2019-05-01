@@ -248,7 +248,6 @@ int main(int ac, char *av[])
         prod_spec spec;
         int status = 0;
         int interval = DEFAULT_INTERVAL;
-        int logoptions = (LOG_CONS|LOG_PID) ;
         int queueSanityCheck = FALSE;
 
         /*

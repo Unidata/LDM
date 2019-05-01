@@ -189,8 +189,6 @@ static pid_t reap(
 static void cleanup(
         void)
 {
-    const char* const pqfname = getQueuePath();
-
     log_notice_q("Exiting");
 
     lcf_savePreviousProdInfo();
@@ -804,7 +802,6 @@ int main(
     int         doSomething = 1;
     in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY);
     unsigned    ldmPort = LDM_PORT;
-    unsigned    logOpts = 0;
     bool        becomeDaemon = true; // default
 
     if (log_init(av[0])) {

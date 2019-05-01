@@ -845,7 +845,7 @@ shmfifo_create(
             /* Get semaphore */
             if (nkey == -1) {
                 semid = semget(IPC_PRIVATE, SI_SEM_COUNT,
-                    IPC_CREAT | IPC_EXCL + 0600);
+                    (IPC_CREAT | IPC_EXCL) + 0600);
             }
             else {
                 /*

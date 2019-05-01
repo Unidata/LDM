@@ -551,8 +551,8 @@ static gini_status_t wmoheader_deserialize(
         unsigned* const restrict      nscanned)
 {
     int               status;
-    const char*       cp = buf;
-    const char* const out = buf + GINI_MIN(WMO_HEADER_MAX_ENCODED_LEN, nbytes);
+    const char*       cp = (const char*)buf;
+    const char* const out = cp + GINI_MIN(WMO_HEADER_MAX_ENCODED_LEN, nbytes);
     int               nchar = 0;
     for (; cp < out && *cp != '\n'; cp++) {
         if (*cp != '\r')
@@ -1392,8 +1392,6 @@ static gini_status_t gini_add_missing_records(
     log_assert(gini != NULL);
     log_assert(gini->started);
     int            status = 0;
-    const uint8_t* data;
-    unsigned       nbytes;
     unsigned       iblock = gini->num_blocks_actual;
     unsigned       gap_nrecs;
     for (; nrecs; nrecs -= gap_nrecs) {

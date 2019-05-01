@@ -259,7 +259,7 @@ main (int ac, char *av[])
   /*
    * open the product queue
    */
-  if (status = pq_open (pqfname, PQ_DEFAULT, &pq))
+  if ((status = pq_open (pqfname, PQ_DEFAULT, &pq)))
     {
       if (status > 0) {
           log_add_syserr("\"%s\" failed", pqfname);
@@ -461,8 +461,8 @@ main (int ac, char *av[])
 		char *statusmess;
 		log_notice_q("stats_size %ld %ld\0",stat_size,sinfo_cnt);
 
-		statusmess = (char *)malloc((30 * sinfo_cnt) + stat_size +
-                        strlen(filename) + 128);
+		statusmess = calloc((30 * sinfo_cnt) + stat_size +
+                        strlen(filename) + 128, sizeof(char));
                 if(statusmess == NULL) 
 		  {
               	    log_syserr("could not malloc status message %ld\0",
@@ -473,17 +473,15 @@ main (int ac, char *av[])
 		    char tmpprod[512];
                     sinfo = shead; slast = NULL;
 
-                    memset(statusmess, 0, sizeof(statusmess));
-
                     status = set_timestamp(&prod.info.arrival);
                     /* ctime ends with \n\0" */
-                    sprintf(statusmess,"%s complete (%ld bytes) at %sInserted %ld of %ld\n\0",
+                    sprintf(statusmess,"%s complete (%ld bytes) at %sInserted %ld of %ld\n",
                        filename,(long)statb.st_size, ctime(&prod.info.arrival.tv_sec),
                        insert_sum,(long)statb.st_size);
 
                     while(sinfo != NULL) 
 		      {
-                        sprintf(tmpprod,"%3d %5d %8d %s\n\0",sinfo->insertstatus,
+                        sprintf(tmpprod,"%3d %5d %8d %s\n",sinfo->insertstatus,
                             sinfo->seqno,sinfo->prodsz,sinfo->prodname);
                         strcat(statusmess,tmpprod);
 
@@ -497,7 +495,7 @@ main (int ac, char *av[])
 
 		    shead = NULL;
 
-                    sprintf(tmpprod,".status.%s %06d\0",filename, prod.info.seqno);
+                    sprintf(tmpprod,".status.%s %06d",filename, prod.info.seqno);
                     prod.info.ident = tmpprod;
                     prod.data = statusmess;
                     prod.info.sz = strlen(statusmess);

@@ -471,6 +471,7 @@ up7Proxy_reqProd(const FmtpProdIndex iProd)
     return status;
 }
 
+#if 0
 /**
  * Tests the connection to an upstream LDM7 by sending a no-op/no-reply message
  * to it. Doesn't block.
@@ -503,6 +504,7 @@ up7Proxy_testConnection()
 
     return status;
 }
+#endif
 
 /******************************************************************************
  * Miscellaneous concurrent task stuff
@@ -1890,7 +1892,6 @@ downlet_getSocket(
     struct sockaddr* const restrict sockAddr)
 {
     struct sockaddr addr;
-    socklen_t       sockLen;
     int             status = isa_initSockAddr(ldmSrvr, family, false, &addr);
 
     if (status) {

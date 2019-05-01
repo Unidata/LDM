@@ -385,7 +385,7 @@ main(int ac, char *av[])
                 exit(1);
             }
 
-            if (status = pq_isFull(pq, &isFull)) {
+            if ((status = pq_isFull(pq, &isFull))) {
                 log_error_q("pq_isFull() failed: %s (errno = %d)", strerror(status),
                     status);
                 exit(1);
@@ -402,7 +402,7 @@ main(int ac, char *av[])
                 timestampt      mostRecent;
                 timestampt      minResidenceTime;
 
-                if (status = pq_getMostRecent(pq, &mostRecent)) {
+                if ((status = pq_getMostRecent(pq, &mostRecent))) {
                     log_error_q("pq_getMostRecent() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);
@@ -412,8 +412,8 @@ main(int ac, char *av[])
                     ? d_diff_timestamp(&now, &mostRecent)
                     : -1;
 
-                if (status = pq_getMinVirtResTimeMetrics(pq,
-                            &minResidenceTime, &mvrtSize, &mvrtSlots)) {
+                if ((status = pq_getMinVirtResTimeMetrics(pq,
+                            &minResidenceTime, &mvrtSize, &mvrtSlots))) {
                     log_error_q("pq_getMinResidency() failed: %s (errno = %d)",
                         strerror(status), status);
                     exit(1);

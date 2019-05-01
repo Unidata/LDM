@@ -200,8 +200,6 @@ int main(
     prod_class_t        clss;
     prod_spec           spec;
     int                 status = 0;
-    int                 interval = DEFAULT_INTERVAL;
-    int                 queueSanityCheck = FALSE;
     char                *inPath;
     char                *outPath;
 

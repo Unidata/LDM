@@ -59,7 +59,6 @@ static bool pti_decodeCommandLine(
     extern int   opterr;
     extern char* optarg;
     int          ch;
-    int          seq = seq_start;
     bool         success = true;
 
     // Error messages are being explicitly handled
@@ -124,8 +123,6 @@ static bool pti_decodeCommandLine(
             success = false;
         }
     }
-
-    const char*  pqPathname = getQueuePath();
 
     if (success) {
         ac -= optind;

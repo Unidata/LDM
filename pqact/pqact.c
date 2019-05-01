@@ -270,17 +270,14 @@ int
 main(int ac, char *av[])
 {
         int          status = 0;
-        char*        logfname = 0;
         /// Data directory, conffile paths may be relative
         const char*  datadir;
         int          interval = DEFAULT_INTERVAL;
         prod_spec    spec;
         prod_class_t clss;
         int          toffset = TOFFSET_NONE;
-        int          loggingToStdErr = 0;
         unsigned     queue_size = 5000;
         const char*  progname = basename(av[0]);
-        unsigned     logopts = LOG_CONS|LOG_PID;
 
         /*
          * Setup default logging before anything else.

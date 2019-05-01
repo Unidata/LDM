@@ -517,9 +517,7 @@ mldm_ensureExec(
             /*
              * Sets `childPid`, `fmtpSrvrPort`, and `mldmCmdPort`
              */
-            struct in_addr addr;
-            status = mldm_spawn(info, ttl, subnetLen, retxTimeout,
-                    pqPathname);
+            status = mldm_spawn(info, ttl, subnetLen, retxTimeout, pqPathname);
 
             if (status) {
                 log_add("Couldn't spawn multicast LDM sender process");

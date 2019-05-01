@@ -201,7 +201,7 @@ getValueNode(
                 pair->key);
 
         if (keyNode != NULL && keyNode->type == YAML_SCALAR_NODE &&
-                strcmp(keyNode->data.scalar.value, keyStr) == 0)
+                strcmp((const char*)keyNode->data.scalar.value, keyStr) == 0)
             return yaml_document_get_node(document, pair->value);
     }
 
@@ -260,7 +260,7 @@ initLastMcastProd(
         return false;
     }
 
-    const char* sigStr = valueNode->data.scalar.value;
+    const char* sigStr = (const char*)valueNode->data.scalar.value;
 
     if (sigParse(sigStr, &mrm->lastMcastProd) == -1) {
         log_add("Unable to parse last multicast data-product signature \"%s\"",
@@ -304,8 +304,9 @@ initMissedFilesFromSequence(
         }
         unsigned long fileId;
         int           nbytes;
-        if (sscanf(itemNode->data.scalar.value, "%80lu %n", &fileId, &nbytes)
-                != 1 || itemNode->data.scalar.value[nbytes] != 0) {
+        if (sscanf((const char*)itemNode->data.scalar.value, "%80lu %n",
+                &fileId, &nbytes) != 1 || itemNode->data.scalar.value[nbytes] !=
+                0) {
             log_add_syserr("Couldn't decode missed-file identifier \"%s\"",
                     itemNode->data.scalar.value);
             return false;
@@ -699,8 +700,8 @@ appendFileIds(
 
         (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)iProd);
 
-        int  scalarNode = yaml_document_add_scalar(document, NULL, buf, -1,
-                YAML_PLAIN_SCALAR_STYLE);
+        int  scalarNode = yaml_document_add_scalar(document, NULL,
+                (yaml_char_t*)buf, -1, YAML_PLAIN_SCALAR_STYLE);
 
         if (!scalarNode) {
             log_add("yaml_document_add_scalar() failure");
@@ -788,7 +789,8 @@ addMissedMcastFiles(
     if (seq) {
         // ASSUMPTION: The 3rd argument isn't modified
         int  key = yaml_document_add_scalar(document, NULL,
-                (char*)MISSED_MCAST_FILES_KEY, -1, YAML_PLAIN_SCALAR_STYLE);
+                (yaml_char_t*)MISSED_MCAST_FILES_KEY, -1,
+                YAML_PLAIN_SCALAR_STYLE);
 
         if (key == 0) {
             log_add("yaml_document_add_scalar() failure");
@@ -825,16 +827,16 @@ appendStringMapping(
 {
     bool success = false;
     // ASSUMPTION: The 3rd argument isn't modified
-    int  key = yaml_document_add_scalar(document, NULL, (char*)keyStr, -1,
-            YAML_PLAIN_SCALAR_STYLE);
+    int  key = yaml_document_add_scalar(document, NULL, (yaml_char_t*)keyStr,
+            -1, YAML_PLAIN_SCALAR_STYLE);
 
     if (key == 0) {
         log_add("yaml_document_add_scalar() failure");
     }
     else {
         // ASSUMPTION: The 3rd argument isn't modified
-        int value = yaml_document_add_scalar(document, NULL, (char*)valueStr, -1,
-                YAML_PLAIN_SCALAR_STYLE);
+        int value = yaml_document_add_scalar(document, NULL,
+                (yaml_char_t*)valueStr, -1, YAML_PLAIN_SCALAR_STYLE);
 
         if (value == 0) {
             log_add("yaml_document_add_scalar() failure");

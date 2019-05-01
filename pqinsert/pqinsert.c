@@ -301,7 +301,7 @@ int main(
         /*
          * open the product queue
          */
-        if(status = pq_open(pqfname, PQ_DEFAULT, &pq))
+        if((status = pq_open(pqfname, PQ_DEFAULT, &pq)))
         {
                 if (PQ_CORRUPT == status) {
                     log_error_q("The product-queue \"%s\" is inconsistent\n",

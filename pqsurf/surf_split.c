@@ -467,6 +467,8 @@ surf_split(const prod_info *infop, const void *datap,
                         else
                                 continue; /* don't know what it is, "NIL=" */
                         break;
+                default:
+                    ;
                 }
 
                 /* safety net */

@@ -34,10 +34,10 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
  * S. Gilbert/NCEP      10/05           Use new routines to read tables *
  ***********************************************************************/
 {
-    int     ret, ier, lvl1, lvl2, iver, lclver, ilen, disc, cat, id, pdtn;
+    int     ier, lvl1, lvl2, iver, lclver, ilen;
     G2level g2lev;
     G2lvls  *g2lvltbl;
-    char    vparm[12], ctemp[20];
+    char    vparm[12];
     float   rlevel[2];
     double  sfact;
     const char* filename;
@@ -51,10 +51,6 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
      */
     iver=cmsg->gfld->idsect[2];
     lclver=cmsg->gfld->idsect[3];
-    disc=cmsg->gfld->discipline;
-    cat=cmsg->gfld->ipdtmpl[0];
-    id=cmsg->gfld->ipdtmpl[1];
-    pdtn=cmsg->gfld->ipdtnum;
     lvl1=cmsg->gfld->ipdtmpl[9];
     lvl2=cmsg->gfld->ipdtmpl[12];
 
@@ -76,12 +72,6 @@ void gb2_vcrd ( char *wmolvltbl, char *lcllvltbl, Gribmsg *cmsg,
      * Steve Emmerson 2018-08-30
      */
     if ((iver != 255) && (
-#if 0
-         (disc < 192   || disc == 255  ) &&
-         (cat  < 192   || cat  == 255  ) &&
-         (id   < 192   || id   == 255  ) &&
-         (pdtn < 32768 || pdtn == 65535) &&
-#endif
          (lclver == 0  || lclver == 255) &&  // Allow missing value
          (lvl1 < 192   || lvl1 == 255  ) &&  // Allow missing value
          (lvl2 < 192   || lvl2 == 255  ))) { // Allow missing value

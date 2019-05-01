@@ -697,6 +697,8 @@ set_option(prod_class *clssp,
         strcpy(prod_rec->info.ident,crec.cmd_val);
         log_info_q("Product ID set to %s", prod_rec->info.ident);
         break;
+    default:
+        ;
     }
 
 } /*set_option*/
@@ -764,6 +766,8 @@ show_option(const prod_class *clssp,
     case OPT_IDENT:
         printf("Product ID is \"%s\"\n", prodp->info.ident);
         break;
+    default:
+        ;
     }
 
 } /*show_option*/
@@ -1069,6 +1073,9 @@ big_product(pqueue      *pq,
 
         in_progress = 0;
         prod_cnt = 0;
+        break;
+    default:
+        ;
     }
 
 } /*big_product*/

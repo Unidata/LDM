@@ -80,10 +80,9 @@ void grdnav_init()
  */
 int ced_num ( g2int *gdtmpl, g2int gdtlen)
 {
-int kx, ky, try_quick, loglev, numerr, ier;
-float angl[3], llt, lln, ult, uln, basic_angle;
+int kx, ky, try_quick;
+float llt, lln, ult, uln, basic_angle;
 static char _proj[] = "CED";
-char errgrp[20], errstr[81];
 nav_list *q;
 static nav_list *lastmatch=NULL;
 
@@ -151,7 +150,7 @@ return ( 255 );
 int mer_num ( g2int *gdtmpl, g2int gdtlen)
 {
 int kx, ky, try_quick;
-float angl[3], llt, lln, ult, uln, basic_angle=1.0e6;
+float llt, lln, ult, uln, basic_angle=1.0e6;
 static char _proj[] = "MER";
 nav_list *q;
 static nav_list *lastmatch=NULL;
@@ -202,10 +201,9 @@ return ( 255 );
 
 int lcc_num ( g2int *gdtmpl, g2int gdtlen)
 {
-int kx, ky, try_quick, loglev, numerr, ier;
-float angl[3], llt, lln, ult=RMISSD, uln=RMISSD;
+int kx, ky, try_quick;
+float angl[3], llt, lln;
 static char _proj[] = "LCC";
-char errgrp[20], errstr[81];
 nav_list *q;
 static nav_list *lastmatch=NULL;
 
@@ -281,10 +279,9 @@ return ( 255 );
 
 int str_num ( g2int *gdtmpl, g2int gdtlen)
 {
-int kx, ky, try_quick, loglev, numerr, ier;
-float angl[3], llt, lln, ult=RMISSD, uln=RMISSD;
+int kx, ky, try_quick;
+float angl[3], llt, lln;
 static char _proj[] = "STR";
-char errgrp[20], errstr[81];
 nav_list *q;
 static nav_list *lastmatch=NULL;
 

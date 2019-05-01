@@ -183,9 +183,6 @@ void* pmStart(
     MD5_CTX*            md5ctxp = productMaker->md5ctxp;
     int                 logResync = 1;
     prodstore           prod;
-    int                 firstBlk = 0;
-    int                 lastBlk = 0;
-    unsigned long       curr_prod_seqno;        
     
     int unCompress = NO; /* By default uncompress is disabled */
     int fillScan = NO;   /* By default scanlines are not filled *
@@ -340,7 +337,6 @@ int    nnnxxx_offset;
         psh_struct          saved_psh_struct;
         pdb_struct          saved_pdb_struct;
         int                 saved_nfrags;
-        int                 saved_prod_compr_flag;
         int                 frags_left;
         int                 n_scanlines;
 
@@ -364,7 +360,7 @@ int    nnnxxx_offset;
             continue;
         }
 
-        while ((status = readsbn(buf, sbn)) != 0) {
+        while ((status = readsbn((char*)buf, sbn)) != 0) {
             log_debug("Not SBN start");
 
             IOFF = 1;
@@ -489,7 +485,7 @@ int    nnnxxx_offset;
 
         /* End of SBN version low 4 bits */
 
-        if (readpdh(buf + IOFF + sbn->len, pdh) == -1) {
+        if (readpdh((char*)buf + IOFF + sbn->len, pdh) == -1) {
             log_error_q("problem with pdh, PUNT");
             continue;
         }
@@ -558,7 +554,7 @@ int    nnnxxx_offset;
                 continue;
             }
 
-            if (readpsh(buf + IOFF + sbn->len + pdh->len, psh) == -1) {
+            if (readpsh((char*)buf + IOFF + sbn->len + pdh->len, psh) == -1) {
                 log_error_q("problem with readpsh");
                 continue;
             }
@@ -666,8 +662,6 @@ int    nnnxxx_offset;
                     /** then the remaining number of frags should be filled with  blank   **/
                     /** scanlines in the GOES imagery **/
 
-                    int last4byte_offset;
-
                     if((pdh->seqno != prod.seqno) &&
                            ((prod.nfrag != pfrag->fragnum + 1))){
                         frags_left = prod.nfrag - pfrag->fragnum - 1;
@@ -701,10 +695,12 @@ int    nnnxxx_offset;
                             uncomprLen = 0;
                             comprLen = 0;
 
-                            deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines),
-                                   comprBuf, &comprLen, ANY_BLK );
-                            inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
-                            deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+                            deflateData((char*)uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines),
+                                   (char*)comprBuf, &comprLen, ANY_BLK );
+                            inflateData((char*)comprBuf, comprLen,
+                                    (char*)uncomprBuf, &uncomprLen, ANY_BLK );
+                            deflateData((char*)uncomprBuf, uncomprLen,
+                                    (char*)comprDataBuf, &comprDataLen, ANY_BLK );
 
                             for(int cnt = 0; cnt < (frags_left - 1); cnt++){
                                 memcpy(memheap + heapcount, comprBuf, comprLen);
@@ -718,10 +714,13 @@ int    nnnxxx_offset;
                             for(int ii=1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
                                 uncomprBuf[ii] =  0;
 
-                            deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines),
-                                    comprBuf, &comprLen, ANY_BLK );
-                            inflateData(comprBuf, comprLen, uncomprBuf, &uncomprLen, ANY_BLK );
-                            deflateData(uncomprBuf, uncomprLen, comprDataBuf, &comprDataLen, ANY_BLK );
+                            deflateData((char*)uncomprBuf,
+                                    (GOES_BLNK_FRM_LEN * n_scanlines),
+                                    (char*)comprBuf, &comprLen, ANY_BLK);
+                            inflateData((char*)comprBuf, comprLen,
+                                    (char*)uncomprBuf, &uncomprLen, ANY_BLK );
+                            deflateData((char*)uncomprBuf, uncomprLen,
+                                    (char*)comprDataBuf, &comprDataLen, ANY_BLK);
         /**** FOR NOW   *****/
                             for(int cnt = 0; cnt < 1; cnt++){
                                 memcpy(memheap + heapcount, comprBuf, comprLen);
@@ -767,7 +766,7 @@ int    nnnxxx_offset;
 #endif
                 if(unCompress) {
                       log_info_q("resetting inflate due to prod error....");
-                      inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
+                      inflateData((char*)buf + dataoff , datalen , (char*)uncomprBuf, &uncomprLen, END_BLK );
                 }
 
                 ds_free();
@@ -837,7 +836,7 @@ int    nnnxxx_offset;
             MD5Init(md5ctxp);
 
             if (GOES == 1) {
-                if (readpdb (buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb,
+                if (readpdb ((char*)buf + IOFF + sbn->len + pdh->len + pdh->pshlen, psh, pdb,
                         PROD_COMPRESSED, pdh->dbsize) == -1) {
                     log_error_q ("Error reading pdb, punt");
                     continue;
@@ -856,7 +855,7 @@ int    nnnxxx_offset;
             if (NWSTG == 1) {
                 memset(psh->pname, 0, sizeof(psh->pname));
 
-                if (readccb(buf + IOFF + sbn->len + pdh->len + pdh->pshlen,
+                if (readccb((char*)buf + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         ccb, psh, pdh->dbsize) == -1)
                     log_error_q("Error reading ccb, using default name");
 
@@ -994,13 +993,15 @@ int    nnnxxx_offset;
                                 uncomprLen = 0;
                                 comprLen = 0;
 
-                                deflateData(uncomprBuf,
-                                        (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
-                                        &comprLen, ANY_BLK );
-                                inflateData(comprBuf, comprLen, uncomprBuf,
-                                        &uncomprLen, ANY_BLK );
-                                deflateData(uncomprBuf, uncomprLen, comprDataBuf,
-                                        &comprDataLen, ANY_BLK );
+                                deflateData((char*)uncomprBuf,
+                                        (GOES_BLNK_FRM_LEN * n_scanlines),
+                                        (char*)comprBuf, &comprLen, ANY_BLK );
+                                inflateData((char*)comprBuf, comprLen,
+                                        (char*)uncomprBuf, &uncomprLen,
+                                        ANY_BLK );
+                                deflateData((char*)uncomprBuf, uncomprLen,
+                                        (char*)comprDataBuf, &comprDataLen,
+                                        ANY_BLK );
 
                                 for(int cnt = 0; cnt < (frags_left - 1); cnt++){
                                     memcpy(memheap + heapcount, comprBuf, comprLen);
@@ -1014,14 +1015,15 @@ int    nnnxxx_offset;
                                 for(int ii=1; ii < (GOES_BLNK_FRM_LEN * n_scanlines); ii +=2)
                                     uncomprBuf[ii] =  0;
 
-                                deflateData(uncomprBuf,
-                                        (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
-                                        &comprLen, ANY_BLK );
+                                deflateData((char*)uncomprBuf,
+                                        (GOES_BLNK_FRM_LEN * n_scanlines),
+                                        (char*)comprBuf, &comprLen, ANY_BLK );
 
-                                inflateData(comprBuf, comprLen, uncomprBuf,
-                                        &uncomprLen, ANY_BLK );
-                                deflateData(uncomprBuf, uncomprLen, comprBuf,
-                                        &comprLen, ANY_BLK );
+                                inflateData((char*)comprBuf, comprLen,
+                                        (char*)uncomprBuf, &uncomprLen,
+                                        ANY_BLK);
+                                deflateData((char*)uncomprBuf, uncomprLen,
+                                        (char*)comprBuf, &comprLen, ANY_BLK );
 
         /**** FOR NOW   *****/
                                 for(int cnt = 0; cnt < 1; cnt++){
@@ -1083,9 +1085,9 @@ int    nnnxxx_offset;
                             comprLen = 0;
 
                             //deflateData(uncomprBuf, (GOES_BLNK_FRM_LEN * n_scanlines * frags_left),
-                            deflateData(uncomprBuf,
-                                    (GOES_BLNK_FRM_LEN * n_scanlines), comprBuf,
-                                    &comprLen, ANY_BLK );
+                            deflateData((char*)uncomprBuf,
+                                    (GOES_BLNK_FRM_LEN * n_scanlines),
+                                    (char*)comprBuf, &comprLen, ANY_BLK );
         /**** FOR NOW   *****/
 
                             for(int cnt = 0; cnt < frags_left; cnt++){
@@ -1138,7 +1140,7 @@ int    nnnxxx_offset;
                                 pdb->nx, pdh->dbsize);
                         }
                         else {
-                            pngwrite(buf + dataoff + (nscan * pdb->nx));
+                            pngwrite((char*)buf + dataoff + (nscan * pdb->nx));
                         }
                     }
                 }
@@ -1147,8 +1149,8 @@ int    nnnxxx_offset;
                         memset(uncomprBuf, 0, MAXBYTES_DATA);
                         uncomprLen = 0;
                         /** Uncompress the frame and add to the memheap **/
-                        inflateData(buf + dataoff, datalen, uncomprBuf, &uncomprLen,
-                                ANY_BLK );
+                        inflateData((char*)buf + dataoff, datalen,
+                                (char*)uncomprBuf, &uncomprLen, ANY_BLK );
                         memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
                         MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
                                                                         uncomprLen);
@@ -1165,7 +1167,7 @@ int    nnnxxx_offset;
             else {
                 if (!PROD_COMPRESSED) {
                     png_set_memheap(memheap, md5ctxp);
-                    png_header(buf + dataoff, datalen);
+                    png_header((char*)buf + dataoff, datalen);
                     /*
                      * Add 1 to number of scanlines, image ends with
                      * f0f0f0f0...
@@ -1178,8 +1180,8 @@ int    nnnxxx_offset;
                     if(unCompress) {
                         /** Uncompress the frame and add to the memheap **/
                         inflateData(NULL, 0, NULL, &uncomprLen, BEGIN_BLK );
-                        inflateData(buf + dataoff + 21, datalen - 21, uncomprBuf,
-                                &uncomprLen, ANY_BLK );
+                        inflateData((char*)buf + dataoff + 21, datalen - 21,
+                                (char*)uncomprBuf, &uncomprLen, ANY_BLK );
                         memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
                         MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
                               uncomprLen);
@@ -1235,7 +1237,8 @@ int    nnnxxx_offset;
 #endif
                     if(unCompress) {
                         log_info_q("resetting inflate due to prod error....");
-                        inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, END_BLK );
+                        inflateData((char*)buf + dataoff , datalen ,
+                                (char*)uncomprBuf, &uncomprLen, END_BLK );
                     }
 
                     ds_free();
@@ -1333,8 +1336,10 @@ int    nnnxxx_offset;
                      ** and get the offset required to pass on to inflate.
                      ** For other blocks, simply pass the buffer to inflate. **/
 
-                    wmo_offset = prod_get_WMO_offset(buf + dataoff, datalen, &wmolen);
-                    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(buf + dataoff, datalen, &nxlen);
+                    wmo_offset = prod_get_WMO_offset((char*)buf + dataoff,
+                            datalen, &wmolen);
+                    nnnxxx_offset =  prod_get_WMO_nnnxxx_offset(
+                            (char*)buf + dataoff, datalen, &nxlen);
 
                     log_debug(" Block# %d  wmo_offset [%d] wmolen [%zd] ",
                             pdh->dbno, wmo_offset, wmolen);
@@ -1342,20 +1347,23 @@ int    nnnxxx_offset;
                     log_debug("Seq#:%ld Block# %d ",prod.seqno, pdh->dbno );
                     if((nnnxxx_offset == -1 && nxlen == 0) && (wmolen > 0)) {
                         /** Product does not contain NNNXXX **/
-                        inflateData(buf + dataoff + wmolen, datalen - wmolen, uncomprBuf, &uncomprLen, ANY_BLK );
+                        inflateData((char*)buf + dataoff + wmolen,
+                                datalen - wmolen, (char*)uncomprBuf,
+                                &uncomprLen, ANY_BLK );
                     }
                     else{
                         /** Product has NNNXXX (AWIPS Prod ID) **/
                         if((nnnxxx_offset > 0 && nxlen > 0) && (wmolen > 0)){
-                            inflateData(buf + dataoff + wmolen + nxlen,
-                                    datalen - wmolen - nxlen, uncomprBuf,
+                            inflateData((char*)buf + dataoff + wmolen + nxlen,
+                                    datalen - wmolen - nxlen, (char*)uncomprBuf,
                                     &uncomprLen, ANY_BLK );
                         }
                     }
                 }
                 else{ /** Continuation block **/
                     log_debug(" Block# %d  contd block", pdh->dbno);
-                    inflateData(buf + dataoff , datalen , uncomprBuf, &uncomprLen, ANY_BLK );
+                    inflateData((char*)buf + dataoff , datalen ,
+                            (char*)uncomprBuf, &uncomprLen, ANY_BLK );
                     log_debug("Seq#:%ld Block# %d  contd block ",prod.seqno, pdh->dbno);
                 }
                 memcpy(memheap + heapcount, uncomprBuf, uncomprLen);
@@ -1515,8 +1523,6 @@ int    nnnxxx_offset;
             saved_pdb_struct = *pdb;
             saved_pdh_struct = *pdh;
             saved_nfrags = prod.nfrag;
-            saved_prod_compr_flag = PROD_COMPRESSED;
-            curr_prod_seqno = prod.seqno;
         }
                 
 #ifdef RETRANS_SUPPORT
@@ -1615,27 +1621,19 @@ static int inflateData(
     unsigned long*    outLen,
     unsigned int      blk)
 {
-  int have;
-  int readsz;
-  int bsize;
   int zerr;
-  int flush;
   char out[CHUNK_SZ];
   char in[CHUNK_SZ];
-  int ret,nwrite,idx = -1;
+  int ret;
   int savedByteCntr=0;
   unsigned char *dstBuf;
-  int  firstCall = 1;
   int totalBytesIn=0;
   int inflatedBytes=0;
   int decompByteCounter = 0;
-  int num=0;
   static int isStreamSet = NO;
 
 
   ret = Z_OK;
-  readsz = 0;
-  bsize = CHUNK_SZ;
 
  /** special case - close the stream when there is product error **/
   if(blk == END_BLK && isStreamSet) {
@@ -1677,10 +1675,10 @@ static int inflateData(
       memcpy(in, inBuf + totalBytesIn, compChunkSize);
 
       i_zstrm.avail_in = inLen - totalBytesIn;
-      i_zstrm.next_in = in ;
+      i_zstrm.next_in = (Bytef*)in ;
 
       i_zstrm.avail_out = CHUNK_SZ;
-      i_zstrm.next_out = out;
+      i_zstrm.next_out = (Bytef*)out;
       inflatedBytes = 0;
 
       while(ret != Z_STREAM_END) {
@@ -1702,7 +1700,7 @@ static int inflateData(
          decompByteCounter += inflatedBytes;
 
          if(totalBytesIn == inLen)
-              idx = getIndex(out, 0, inflatedBytes);
+              (void)getIndex(out, 0, inflatedBytes);
          memcpy(dstBuf + savedByteCntr, out, inflatedBytes);
          savedByteCntr = decompByteCounter;
        }
@@ -1744,12 +1742,11 @@ static int deflateData(
     unsigned long*    outLen,
     unsigned int      blk)
 {
-    int ret,idx = -1;
+    int ret;
     int savedByteCntr=0;
     unsigned char in[CHUNK_SZ];
     unsigned char out[CHUNK_SZ];
     int flush;
-    int  firstCall = 0;
     int totalBytesComp=0;
     int compressedBytes=0;
     int compressedByteCounter = 0;

@@ -374,22 +374,6 @@ smo_remove(const pid_t pid)
     return status;
 }
 
-/**
- * Clears the map.
- *
- * @threadsafety        Compatible but not safe
- */
-static void
-smo_clear(void)
-{
-    log_debug("smo_clear() entered");
-    smo_abortIfUnlocked();
-
-    (void)memset(smo->procInfos, 0, sizeof(ProcInfo)*NUM_FEEDTYPES);
-
-    log_debug("smo_clear() returning");
-}
-
 /******************************************************************************
  * Public API:
  ******************************************************************************/

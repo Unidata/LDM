@@ -32,24 +32,23 @@ char *bpos;
 char *FF;
 int *blen,*mode,*submode;
 {
-int iret;
 char chvalue;
 short sval;
 
 *blen = 0;
 
-iret = read_char1(bpos,&chvalue);
+(void)read_char1(bpos,&chvalue);
 
 *FF = (chvalue >> 6) ;
 if(*FF == 3)
    {
    /*printf("FF flag 3 mode %d\n",chvalue & 0x3F );*/
    }
-iret = read_short1(bpos,&sval); bpos+=2;
+(void)read_short1(bpos,&sval); bpos+=2;
 *blen = sval & 0x3FFF;
-iret = read_char1(bpos,&chvalue); bpos++;
+(void)read_char1(bpos,&chvalue); bpos++;
 *mode = chvalue;
-iret = read_char1(bpos,&chvalue); bpos++;
+(void)read_char1(bpos,&chvalue); bpos++;
 *submode = chvalue;
 /*printf("FF %d len %d mode %d sub %d\n",*FF,*blen,*mode,*submode);*/
 }
@@ -60,7 +59,7 @@ void block_1_1(buf,len)
 char *buf;
 int len;
 {
-int i,iret,year,month,day,hour,minute;
+int i,year,month,day,hour,minute;
 char chvalue;
 short sval;
   
@@ -82,15 +81,15 @@ if(len*2 > 31)
    }
    
 i = 20;
-iret = read_short1(buf+i,&sval); i+=2;
+(void)read_short1(buf+i,&sval); i+=2;
 year = sval;
-iret = read_char1(buf+i,&chvalue); i++;
+(void)read_char1(buf+i,&chvalue); i++;
 month = chvalue;
-iret = read_char1(buf+i,&chvalue); i++;
+(void)read_char1(buf+i,&chvalue); i++;
 day = chvalue;
-iret = read_char1(buf+i,&chvalue); i++;
+(void)read_char1(buf+i,&chvalue); i++;
 hour = chvalue;
-iret = read_char1(buf+i,&chvalue); i++;
+(void)read_char1(buf+i,&chvalue); i++;
 minute = chvalue;
 sprintf(dstr,"%04d%02d%02d %02d%02d",
         year,month,day,hour,minute);

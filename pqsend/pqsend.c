@@ -487,8 +487,6 @@ static int getConfiguration(int ac, char* const * const av) {
  */
 static int executeConnection(void) {
     int status;
-    CLIENT* clnt = NULL;
-    ErrorObj* error;
     timestampt now;
 
     if (stats_req) {

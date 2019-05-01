@@ -300,7 +300,6 @@ scan_wmo (xbuf * buf)
 scan_wmo_parity (xbuf * buf)
 #endif
 {
-	extern char *parity;
 	int sent = 0;
 	int ch;
 
@@ -338,6 +337,8 @@ scan_wmo_parity (xbuf * buf)
 				log_error_q("Parity error                     %s",
 					wmo_err_ident(buf));
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 1);
 			state = HEADER_SEEN;
@@ -375,6 +376,8 @@ scan_wmo_parity (xbuf * buf)
 				log_error_q("Parity error                     %s",
 					wmo_err_ident(buf));
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 0);
 			state = SEARCH;

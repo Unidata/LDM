@@ -60,7 +60,6 @@ md5p = md5ctxp;
 
 void pngout_init(int width,int height)
 {
-char filename[80];
 int bit_depth=8;
 int color_type=PNG_COLOR_TYPE_GRAY;
 int interlace_type = PNG_INTERLACE_NONE;

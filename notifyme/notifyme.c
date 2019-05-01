@@ -241,8 +241,6 @@ int main(int ac, char *av[])
         prod_spec     spec;
         int           status;
         prod_class_t* clssp;
-        unsigned      port = 0;
-        unsigned      logOpts = LOG_CONS | LOG_PID;
 
         /*
          * initialize logger
@@ -292,23 +290,7 @@ int main(int ac, char *av[])
                         remote = optarg;
                         break;
                 case 'P': {
-                    char*       suffix = "";
-                    long        p;
-
-                    errno = 0;
-                    p = strtol(optarg, &suffix, 0);
-
-                    if (0 != errno || 0 != *suffix ||
-                        0 >= p || 0xffff < p) {
-
-                        (void)fprintf(stderr, "%s: invalid port %s\n",
-                             av[0], optarg);
-                        usage(av[0]);   
-                    }
-                    else {
-                        port = p;
-                    }
-
+                    log_warning("Port specification is ignored");
                     break;
                 }
                 case 'p':

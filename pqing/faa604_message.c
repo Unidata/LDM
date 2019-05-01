@@ -282,7 +282,6 @@ faa604_send_buf(xbuf *buf)
 int
 scan_faa604_parity (xbuf * buf)
 {
-	extern char *parity;
 	int sent = 0;
 	int ch;
 
@@ -314,6 +313,8 @@ scan_faa604_parity (xbuf * buf)
 				log_error_q("Parity error             - %s",
 					faa604_err_ident(buf));
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 1);
 			state = HEADER_SEEN;
@@ -351,6 +352,8 @@ scan_faa604_parity (xbuf * buf)
 				log_error_q("Parity error             - %s",
 					faa604_err_ident(buf));
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 0);
 			state = SEARCH;
@@ -376,7 +379,6 @@ scan_faa604_parity (xbuf * buf)
 int
 scan_faa604 (xbuf * buf)
 {
-	extern char *parity;
 	int sent = 0;
 	int ch;
 
@@ -402,6 +404,8 @@ scan_faa604 (xbuf * buf)
 				log_error_q("Lone SOH error           - %s",
 					faa604_err_ident(buf));
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 1);
 			state = HEADER_SEEN;
@@ -434,6 +438,8 @@ scan_faa604 (xbuf * buf)
 				state = SEARCH;
 			}
 				break;
+			default:
+			    ;
 			}
 			justify_xbuf (buf, 0);
 			state = SEARCH;

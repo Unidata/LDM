@@ -454,9 +454,6 @@ int main(
     extern int          opterr;
     extern char*        optarg;
     int                 ch;
-    const char*         logfname = NULL;        /* use system logging daemon */
-    unsigned            logOptions = LOG_CONS | LOG_PID;
-    unsigned            logFacility = LOG_LDM;  /* use default LDM facility */
     MD5_CTX*            md5ctxp = NULL;
     /*unsigned char *compr;
     long                comprLen = 10000 * sizeof (int);*/
@@ -497,7 +494,6 @@ int main(
                 usage(argv[0]);
             }
             /* else */
-            logfname = optarg;
             if (log_set_destination(optarg)) {
                 log_syserr("Couldn't set logging destination to \"%s\"",
                         optarg);

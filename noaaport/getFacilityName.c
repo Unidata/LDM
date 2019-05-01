@@ -34,10 +34,7 @@ const char* getFacilityName(
     const unsigned    facility) /**< [in] Integer representation of the logging
                                   *  facility */
 {
-    int         i;
-    const char* name = NULL;
-
-    for (i = 0; NULL != facilitynames[i].c_name; i++) {
+    for (int i = 0; NULL != facilitynames[i].c_name; i++) {
         if (facility == facilitynames[i].c_val)
             return facilitynames[i].c_name;
     }
