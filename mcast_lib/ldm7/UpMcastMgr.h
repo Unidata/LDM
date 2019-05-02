@@ -79,16 +79,6 @@ void
 umm_setRetxTimeout(const float minutes);
 
 /**
- * Sets the name of the AL2S workgroup. Only necessary if the multicast LDM
- * senders will use an AL2S multipoint VLAN.
- *
- * @param[in] name  Name of the AL2S workgroup. Caller must not free until done
- *                  with this module.
- */
-void
-umm_setWrkGrpName(const char* name);
-
-/**
  * Adds a potential multicast LDM sender. The sender is not started. This
  * function should be called for all potential senders before any child
  * process is forked so that all child processes will have this information.

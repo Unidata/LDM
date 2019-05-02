@@ -704,7 +704,6 @@ oess_destroy(void)
 /**
  * Creates an AL2S virtual circuit between two end-points.
  *
- * @param[in]  wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in]  desc         Description of virtual circuit
  * @param[in]  sendEnd      Sending (local) end of the virtual circuit. If the
  *                          endpoint isn't valid, then the circuit will not be
@@ -721,7 +720,6 @@ oess_destroy(void)
  */
 static int
 oess_provision(
-        const char* const restrict       wrkGrpName,
         const char* const restrict       desc,
         const VcEndPoint* const restrict sendEnd,
         const VcEndPoint* const restrict recvEnd,
@@ -729,12 +727,12 @@ oess_provision(
 {
     int  status;
 
-    if (wrkGrpName == NULL || desc == NULL || sendEnd == NULL ||
-            recvEnd == NULL || circuitId == NULL) {
+    if (desc == NULL || sendEnd == NULL || recvEnd == NULL ||
+            circuitId == NULL) {
         char* sendEndId = sendEnd ? vcEndPoint_format(sendEnd) : NULL;
         char* recvEndId = recvEnd ? vcEndPoint_format(recvEnd) : NULL;
-        log_add("NULL argument: wrkGrpName=%s, desc=%s, sendEnd=%s,"
-                "recvEnd=%s, circuitId=%p", wrkGrpName, desc, sendEndId,
+        log_add("NULL argument: {desc: %s, sendEnd: %s,"
+                "recvEnd: %s, circuitId: %p}", desc, sendEndId,
                 recvEndId, circuitId);
         free(sendEndId);
         free(recvEndId);
@@ -748,7 +746,7 @@ oess_provision(
         (void)snprintf(recvVlanTag, sizeof(recvVlanTag), "%hu", recvEnd->vlanId);
 
         const char* const cmdVec[] = {"provision.py",
-                wrkGrpName, oessPathname, desc,
+                oessPathname, desc,
                 recvEnd->switchId, recvEnd->portId, recvVlanTag,
                 sendEnd->switchId, sendEnd->portId, sendVlanTag,
                 NULL};
@@ -811,20 +809,17 @@ oess_provision(
 /**
  * Destroys an Al2S virtual circuit.
  *
- * @param[in] wrkGrpName   Name of the AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in] desc         Description of circuit (e.g., "NEXRAD2 feed")
  * @param[in] recvEnd      Receiving (remote) end of the virtual circuit
  */
 static void
 oess_remove(
-        const char* const restrict       wrkGrpName,
         const char* const restrict       desc,
         const VcEndPoint* const restrict recvEnd)
 {
-    if (wrkGrpName == NULL || desc == NULL || recvEnd == NULL) {
+    if (desc == NULL || recvEnd == NULL) {
         char* recvEndId = recvEnd ? vcEndPoint_format(recvEnd) : NULL;
-        log_add("NULL argument: wrkGrpName=%s, desc=%s, recvEnd=%s",
-                wrkGrpName, desc, recvEndId);
+        log_add("NULL argument: {desc: %s, recvEnd: %s}", desc, recvEndId);
         free(recvEndId);
     }
     else {
@@ -834,9 +829,8 @@ oess_remove(
                 recvEnd->vlanId);
 
         const char* const cmdVec[] = {"remove.py",
-                wrkGrpName, oessPathname, desc,
-                recvEnd->switchId, recvEnd->portId, recvVlanTag,
-                NULL};
+                oessPathname, desc, recvEnd->switchId, recvEnd->portId,
+                recvVlanTag, NULL};
         ChildCmd*         cmd = childCmd_execvp(cmdVec[0], cmdVec);
 
         if (cmd == NULL) {
@@ -1189,7 +1183,6 @@ me_newDesc(const McastEntry* const restrict entry)
  * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
  *
  * @param[in,out] entry       Multicast entry
- * @param[in]     wrkGrpName  Name of AL2S workgroup or `NULL`
  * @param[in]     feed        LDM feed
  * @param[in]     rmtVcEnd    Remote end of virtual circuit
  * @retval        0           Success
@@ -1198,7 +1191,6 @@ me_newDesc(const McastEntry* const restrict entry)
 static Ldm7Status
 me_createVirtCirc(
         McastEntry* const restrict       entry,
-        const char* const restrict       wrkGrpName,
         const VcEndPoint* const restrict rmtVcEnd)
 {
     int         status;
@@ -1209,7 +1201,7 @@ me_createVirtCirc(
         status = LDM7_SYSTEM;
     }
     else {
-        status = oess_provision(wrkGrpName, desc, entry->vcEnd, rmtVcEnd,
+        status = oess_provision(desc, entry->vcEnd, rmtVcEnd,
                 &entry->circuitId);
 
         if (status)
@@ -1225,13 +1217,11 @@ me_createVirtCirc(
  * Destroys the virtual circuit of a multicast entry.
  *
  * @param[in,out] entry       Multicast entry
- * @param[in]     wrkGrpName  Name of AL2S workgroup (e.g., "UCAR-LDM")
  * @param[in]     recvEnd     Receiving (remote) virtual-circuit endpoint
  */
 static void
 me_destroyVirtCirc(
         McastEntry* const restrict       entry,
-        const char* const restrict       wrkGrpName,
         const VcEndPoint* const restrict recvEnd)
 {
     if (entry->circuitId) {
@@ -1241,7 +1231,7 @@ me_destroyVirtCirc(
             log_add("Couldn't get description of AL2S virtual-circuit");
         }
         else {
-            oess_remove(wrkGrpName, desc, recvEnd);
+            oess_remove(desc, recvEnd);
             free(desc);
             free(entry->circuitId);
             entry->circuitId = NULL;
@@ -1271,7 +1261,6 @@ me_usesVlan(McastEntry* const entry)
  *   - Returns the CIDR address for the FMTP client if appropriate
  *
  * @param[in]  entry        Multicast entry
- * @param[in]  wrkGrpName   Name of AL2S workgroup
  * @param[in]  clntAddr     Address of client in network byte order
  * @param[in]  rmtVcEnd     Remote virtual-circuit endpoint or `NULL`. Caller
  *                          may free.
@@ -1288,7 +1277,6 @@ me_usesVlan(McastEntry* const entry)
 static Ldm7Status
 me_subscribe(
         McastEntry* const restrict          entry,
-        const char* const restrict          wrkGrpName,
         const in_addr_t                     clntAddr,
         const VcEndPoint* const restrict    rmtVcEnd,
         const float                         retxTimeout,
@@ -1296,7 +1284,7 @@ me_subscribe(
         CidrAddr* const restrict            fmtpClntCidr)
 {
     int status = me_usesVlan(entry)
-            ? me_createVirtCirc(entry, wrkGrpName, rmtVcEnd)
+            ? me_createVirtCirc(entry, rmtVcEnd)
             : 0;
 
     if (status == 0) {
@@ -1338,7 +1326,7 @@ me_subscribe(
         } // Multicast LDM sender is running
 
         if (status && me_usesVlan(entry))
-            me_destroyVirtCirc(entry, wrkGrpName, rmtVcEnd);
+            me_destroyVirtCirc(entry, rmtVcEnd);
     } // Virtual circuit to FMTP client created if appropriate
 
     return status;
@@ -1350,10 +1338,6 @@ me_subscribe(
  *
  * @param[in,out] entry         Multicast entry
  * @param[in]     fmtpClntAddr  Address of FMTP client
- * @param[in]     wrkGrpName    Name of AL2S workgroup. Only necessary if the
- *                              multicast LDM sender associated with `entry`
- *                              communicates with the FMTP client using an AL2S
- *                              multipoint VLAN.
  * @param[in]     recvEnd       Receiving (remote) virtual-circuit endpoint
  * @retval        LDM7_OK       Success. `fmtpClntAddr` is available for subsequent
  *                              reservation.
@@ -1365,7 +1349,6 @@ static Ldm7Status
 me_unsubscribe(
         McastEntry* const restrict       entry,
         const in_addr_t                  fmtpClntAddr,
-        const char* const restrict       wrkGrpName,
         const VcEndPoint* const restrict recvEnd)
 {
     int status = 0;
@@ -1379,7 +1362,7 @@ me_unsubscribe(
                     inet_ntoa(addr));
         }
 
-        me_destroyVirtCirc(entry, wrkGrpName, recvEnd);
+        me_destroyVirtCirc(entry, recvEnd);
     } // Associated multicast LDM sender uses a multipoint VLAN
 
     return status;
@@ -1401,10 +1384,6 @@ static McastEntry  key;
 
 /// FMTP retransmission timeout in minutes
 static float       retxTimeout = -1.0; // Negative => use FMTP default
-
-/// Name of AL2S Workgroup
-//static const char* wrkGrpName = "UCAR-LDM"; // Default value
-static const char* wrkGrpName = "Virginia"; // Default value
 
 /// Receiving (remote) virtual-circuit endpoint
 static VcEndPoint* recvEnd = NULL;
@@ -1443,12 +1422,6 @@ void
 umm_setRetxTimeout(const float minutes)
 {
     retxTimeout = minutes;
-}
-
-void
-umm_setWrkGrpName(const char* const name)
-{
-    wrkGrpName = name;
 }
 
 Ldm7Status
@@ -1528,8 +1501,8 @@ umm_subscribe(
                  * Sets the port numbers of the FMTP server & RPC-command server
                  * of the multicast LDM sender process if appropriate
                  */
-                status = me_subscribe(entry, wrkGrpName, clntAddr, recvEnd,
-                        retxTimeout, smi, fmtpClntCidr);
+                status = me_subscribe(entry, clntAddr, recvEnd, retxTimeout,
+                        smi, fmtpClntCidr);
 
                 if (status) {
                     log_add("me_subscribe() failure");
@@ -1598,7 +1571,7 @@ umm_unsubscribe(
             status = LDM7_INVAL;
         }
         else  {
-            status = me_unsubscribe(entry, fmtpClntAddr, wrkGrpName, recvEnd);
+            status = me_unsubscribe(entry, fmtpClntAddr, recvEnd);
 
             if (status)
                 log_add("me_unsubscribe() failure");
