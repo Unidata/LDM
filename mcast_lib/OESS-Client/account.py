@@ -22,9 +22,10 @@ gh_url = 'https://al2s.net.internet2.edu/oess/services-kerb/data.cgi'
 def readAccount(filename):
 	f = open(filename, 'r')
 	yamlData = yaml.load(f)
+	workgroup = yamlData['workgroup']
 	username = yamlData['username']
 	passwd = yamlData['passwd']
-	return (username,passwd)
+	return (workgroup,username,passwd)
 
 def getWkGpID(workgroup_name,username,passwd):
 	values1 = {'method' : 'get_workgroups'}

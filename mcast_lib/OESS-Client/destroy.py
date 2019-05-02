@@ -19,9 +19,9 @@ import account
 import edit
 from subprocess import call
 global values1
-(username,passwd)=account.readAccount(sys.argv[2])
-wg_id=account.getWkGpID(sys.argv[1],username,passwd)
-ct_id=account.getCtID(wg_id, sys.argv[3],username,passwd)
+(workgroup,username,passwd)=account.readAccount(sys.argv[1])
+wg_id=account.getWkGpID(workgroup,username,passwd)
+ct_id=account.getCtID(wg_id, sys.argv[2],username,passwd)
 values1 = {'method' : 'remove_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'remove_time' : -1}
 data = urllib.urlencode(values1, doseq=True)
 gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
