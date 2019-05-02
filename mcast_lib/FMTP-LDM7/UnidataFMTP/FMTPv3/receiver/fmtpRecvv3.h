@@ -68,6 +68,7 @@ struct ProdTracker
     void*        prodptr;
     uint32_t     seqnum;
     uint16_t     paylen;
+    uint32_t     numRetrans;
 };
 
 typedef std::unordered_map<uint32_t, ProdTracker> TrackerMap;

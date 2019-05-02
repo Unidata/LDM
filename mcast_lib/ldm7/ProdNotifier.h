@@ -56,7 +56,8 @@ typedef int     (*EopFunc)(
                     void* const restrict            prod,
                     const size_t                    prodSize,
                     const pqe_index* const restrict pqeIndex,
-                    const double                    duration);
+                    const double                    duration,
+                    const unsigned                  numRetrans);
 typedef void    (*MissedProdFunc)(
                     void* const restrict            obj,
                     const FmtpProdIndex             iProd,
@@ -102,11 +103,13 @@ public:
     /**
      * @param[in] stopTime         When end-of-product message arrived
      * @param[in] prodIndex        The FMTP index of the product.
+     * @param[in] numRetrans       Number of FMTP data-block retransmissions
      * @throws std::runtime_error  Receiving application error.
      */
     void endProd(
             const struct timespec& stopTime,
-            const FmtpProdIndex    prodIndex);
+            const FmtpProdIndex    prodIndex,
+            const uint32_t         numRetrans);
     void missedProd(FmtpProdIndex prodIndex);
 
 private:

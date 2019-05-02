@@ -176,11 +176,13 @@ void ProdNotifier::startProd(
 /**
  * @param[in] stopTime         When end-of-product message arrived
  * @param[in] prodIndex        The FMTP index of the product.
+ * @param[in] numRetrans       Number of FMTP data-block retransmissions
  * @throws std::runtime_error  Receiving application error.
  */
 void ProdNotifier::endProd(
         const struct timespec& stopTime,
-        const FmtpProdIndex    prodIndex)
+        const FmtpProdIndex    prodIndex,
+        const uint32_t         numRetrans)
 {
     log_debug("Entered: prodIndex=%lu", (unsigned long)prodIndex);
 
@@ -196,7 +198,7 @@ void ProdNotifier::endProd(
                 (stopTime.tv_nsec - prodInfo.startTime.tv_nsec)/1e9;
 
         if (eop_func(mlr, prodIndex, prodInfo.pqRegion, prodInfo.size,
-                &prodInfo.index, duration)) {
+                &prodInfo.index, duration, numRetrans)) {
             log_flush_error();
             log_free(); // to prevent memory leak by FMTP thread
             throw std::runtime_error(

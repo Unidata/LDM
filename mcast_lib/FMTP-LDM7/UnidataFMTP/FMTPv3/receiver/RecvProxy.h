@@ -52,12 +52,14 @@ public:
      * Notifies the receiving application about the complete reception of the
      * previous product. This method is thread-safe.
      *
-     * @param[in] stop   Time of arrival of end-of-product packet
-     * @param[in] iProd  FMTP product-index
+     * @param[in] stop        Time of arrival of end-of-product packet
+     * @param[in] iProd       FMTP product-index
+     * @param[in] numRetrans  Number of FMTP data-block retransmissions
      */
     virtual void endProd(
             const struct timespec& stop,
-            uint32_t               iProd) = 0;
+            uint32_t               iProd,
+            uint32_t               numRetrans) = 0;
 
     /**
      * Notifies the receiving application about a product that the FMTP layer

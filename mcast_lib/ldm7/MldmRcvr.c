@@ -186,22 +186,23 @@ lastReceived(
  * product. Finishes inserting the FMTP product (which is an XDR-encoded
  * data-product) into the associated LDM product-queue.
  *
- * @param[in,out]  mlr       Pointer to the associated multicast LDM receiver.
- * @param[in]      prodIndex FMTP product-index
- * @param[in]      prodStart Pointer to the start of the XDR-encoded
- *                           data-product in the product-queue or NULL,
- *                           indicating a duplicate product.
- * @param[in]      prodSize  The size of the XDR-encoded data-product in bytes.
- *                           Ignored if `prodStart == NULL`.
- * @param[in]      pqeIndex  Reference to the reserved space in the product-
- *                           queue. Ignored if `prodStart == NULL`.
- * @param[in]      duration  Amount of time, in seconds, it took to transmit the
- *                           product
- * @retval         0         Success. `pqe_discard()` called.
- * @retval         EPROTO    RPC decode error. `pqe_discard()` called.
- *                           `log_add()` called.
- * @retval         EIO       Product-queue error. `pqe_discard()` called.
- *                           `log_add()` called.
+ * @param[in,out]  mlr         Pointer to the associated multicast LDM receiver.
+ * @param[in]      prodIndex   FMTP product-index
+ * @param[in]      prodStart   Pointer to the start of the XDR-encoded
+ *                             data-product in the product-queue or NULL,
+ *                             indicating a duplicate product.
+ * @param[in]      prodSize    The size of the XDR-encoded data-product in
+ *                             bytes. Ignored if `prodStart == NULL`.
+ * @param[in]      pqeIndex    Reference to the reserved space in the product-
+ *                             queue. Ignored if `prodStart == NULL`.
+ * @param[in]      duration    Amount of time, in seconds, it took to transmit
+ *                             the product
+ * @param[in]      numRetrans  Number of FMTP data-block retransmissions
+ * @retval         0           Success. `pqe_discard()` called.
+ * @retval         EPROTO      RPC decode error. `pqe_discard()` called.
+ *                             `log_add()` called.
+ * @retval         EIO         Product-queue error. `pqe_discard()` called.
+ *                             `log_add()` called.
  */
 static int
 eop_func(
@@ -210,7 +211,8 @@ eop_func(
         void* const restrict            prodStart,
         const size_t                    prodSize,
         const pqe_index* const restrict pqeIndex,
-        const double                    duration)
+        const double                    duration,
+        const unsigned                  numRetrans)
 {
     /*
      * This function is called on both the FMTP multicast and unicast threads.
@@ -250,8 +252,9 @@ eop_func(
                 lastReceived(mlr, info);
 
                 char infoStr[LDM_INFO_MAX];
-                log_info("Received in %.7f s: index=%lu, info=\"%s\"",
-                        duration, (unsigned long)prodIndex,
+                log_info("Received: {time: %.7f s, index: %lu, retrans: %u, "
+                        "info: \"%s\"}",
+                        duration, (unsigned long)prodIndex, numRetrans,
                         s_prod_info(infoStr, sizeof(infoStr), info,
                                 log_is_enabled_debug));
 
