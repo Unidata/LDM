@@ -1,4 +1,4 @@
-6.13.11.62	2019-05-02T12:39:13-0600
+6.13.11.62	2019-05-02T16:49:50-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -118,6 +118,7 @@
             * Differentiated "backlog" from "backstop" product-insertion
               messages
             * Removed lint found by Coverity Scan
+            * Added number of FMTP retransmissions to "Received" log message
         * OESS Scripts:
             * Replaced calls to ulogger(1) with sys.stderr.write() because
               sudo() handles the child process writing to stderr
@@ -179,6 +180,9 @@
                   occurs
                 * Eliminated slicing of the exception that caused an instance
                   to stop working
+            * fmtpRecvv3(3):
+                Added per-product tracking of number of FMTP data-block
+                retransmissions
 
     Developer:
         * Deployment:
