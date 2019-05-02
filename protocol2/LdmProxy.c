@@ -339,7 +339,6 @@ my_csbd_5(
     LdmProxy* const     proxy,
     product* const      product)
 {
-    CLIENT* const       clnt = proxy->clnt;
     LdmProxyStatus      status = 0;     /* success */
     ldm_replyt          reply;
     prod_info* const    info = &product->info;

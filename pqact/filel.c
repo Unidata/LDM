@@ -217,7 +217,7 @@ static struct fl {
     int size;
     fl_entry *head;
     fl_entry *tail;
-} thefl[] = { 0, NULL, NULL };
+} thefl[] = {{ 0, NULL, NULL }};
 
 #define TO_HEAD(entry) \
         if(thefl->head != entry) fl_makeHead(entry)
@@ -761,8 +761,6 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 	char *p_wmo;
 	int i_bbb;
 	int spaces;
-	int	ttaaii_found = 0;
-	int	ddhhmm_found = 0;
 	int	crcrlf_found = 0;
 	int	bbb_found = 0;
 	int wmo_offset = -1;
@@ -775,7 +773,6 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 			/* 'TTAAII ' */
 			if (isdigit(p_wmo[WMO_I1]) && isdigit(p_wmo[WMO_I2]) &&
 			   (isspace(p_wmo[WMO_I2+1]) || isalpha(p_wmo[WMO_I2+1]))) {
-				ttaaii_found = 1;
 				wmo_offset = p_wmo - buf;
 				p_wmo += WMO_I2 + 1;
 				break;
@@ -812,7 +809,6 @@ int getWmoOffset (char *buf, size_t buflen, size_t *p_wmolen) {
 		if (isdigit(*p_wmo) && isdigit(*(p_wmo+1)) &&
 		    isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3)) &&
 		    isdigit(*(p_wmo+4)) && isdigit(*(p_wmo+5))) {
-			ddhhmm_found = 1;
 			p_wmo += 6;
 		}
 	}

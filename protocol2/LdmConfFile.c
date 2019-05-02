@@ -1683,6 +1683,8 @@ host_set_match(const peer_info *rmtip, const host_set *hsp)
                 if(regexec(&hsp->rgx, rmtip->name, 0, NULL, 0) == 0)
                         return 1;
                 break;
+        case HS_NONE:
+                break; // Because `gcc -Wall`
         }
         return 0;
 }
@@ -2409,10 +2411,7 @@ lcf_freeExec(
 static int
 lcf_startExecs(void)
 {
-    Process*      entry = processes;
-    Process**     prev = &processes;
-
-    for (; entry != NULL; prev = &entry->next, entry = entry->next) {
+    for (Process* entry = processes; entry != NULL; entry = entry->next) {
         pid_t pid = proc_exec(entry);
 
         if (pid < 0)
@@ -2550,6 +2549,8 @@ lcf_newHostSet(enum host_set_type type, const char *cp, const regex_t *rgxp)
                         hsp->cp = cp;
                         hsp->rgx = *rgxp;
                         break;
+                case HS_NONE:
+                        break; // Because `gcc -Wall`
                 }
         }
 

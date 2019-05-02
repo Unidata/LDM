@@ -52,11 +52,6 @@ struct job {
     bool             canceled;   ///< Job was canceled?
 };
 
-static void
-executor_afterCompletion(
-        Executor* const restrict executor,
-        Job* const restrict      job);
-
 inline static void
 job_lock(Job* const job)
 {

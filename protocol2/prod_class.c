@@ -26,8 +26,8 @@
 #endif /*!ENOERR */
 
 
-const prod_spec _spec_all = {ANY, ".*", 0};
-const prod_spec _spec_none = {NONE, NULL, 0};
+const prod_spec _spec_all = {ANY, ".*", {}};
+const prod_spec _spec_none = {NONE, NULL, {}};
 
 const prod_class_t _clss_all = {
         {0, 0}, /* TS_ZERO */

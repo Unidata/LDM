@@ -127,7 +127,7 @@ upFilter_addComponent(
                 (unsigned long)nbytes, strerror(errno));
         }
         else {
-            if (errObj = pat_clone(&elt->okPattern, okPattern)) {
+            if ((errObj = pat_clone(&elt->okPattern, okPattern))) {
                 errObj = ERR_NEW(0, errObj, "Couldn't clone \"OK\" pattern");
                 free(elt);
             }
@@ -136,7 +136,7 @@ upFilter_addComponent(
                     elt->notPattern = NULL;
                 }
                 else {
-                    if (errObj = pat_clone(&elt->notPattern, notPattern)) {
+                    if ((errObj = pat_clone(&elt->notPattern, notPattern))) {
                         errObj = ERR_NEW(0, errObj,
                             "Couldn't clone \"not\" pattern");
                         pat_free(elt->okPattern);

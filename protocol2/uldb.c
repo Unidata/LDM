@@ -736,8 +736,6 @@ static uldb_Status entry_getProdClass(
 
         for (eps = epc_firstProdSpec(epc); NULL != eps;
                 eps = epc_nextProdSpec(epc, eps)) {
-            prod_spec prodSpec;
-
             if ((status = eps_get(eps, ps)) != 0)
                 break;
 

@@ -817,6 +817,8 @@ s_ldm_errt(ldm_errt code)
         case RESTART : return "RESTART";
         case REDIRECT : return "REDIRECT";
         case RECLASS : return "RECLASS";
+        case BADPATTERN : return "BAD_PATTERN";
+        case RESEND : return "RESEND";
         }
         /* default */
         return "";

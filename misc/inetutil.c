@@ -98,8 +98,7 @@ ipv4Sock_getLocalString(const int sock)
 {
     struct sockaddr_in addr;
     socklen_t          sockAddrLen = sizeof(addr);
-    int                status = getsockname(sock, (struct sockaddr*)&addr,
-            &sockAddrLen);
+    (void)getsockname(sock, (struct sockaddr*)&addr, &sockAddrLen);
     return sockAddrIn_format(&addr);
 }
 

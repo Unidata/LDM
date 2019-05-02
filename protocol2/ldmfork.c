@@ -20,6 +20,7 @@
  * Private:
  ******************************************************************************/
 
+#if 0
 /**
  * Returns the maximum number of open file descriptors.
  *
@@ -50,25 +51,7 @@ open_max(void)
     #endif
     return open_max;
 }
-
-/**
- * Closes all file descriptors that are equal to or greater than a given file
- * descriptor.
- *
- * @param[in] bottom  The smallest file descriptor to be closed
- * @retval -1         Failure. log_add() called.
- * @return            The maximum number of open file descriptors
- */
-static int
-close_rest(
-        const int bottom)
-{
-    const int max_open = open_max();
-    if (max_open > 0)
-        for (int fd = bottom; fd < max_open; fd++)
-            (void)close(fd) ;
-    return max_open;
-}
+#endif
 
 /******************************************************************************
  * Public API:

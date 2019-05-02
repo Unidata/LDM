@@ -307,8 +307,8 @@ decodeRequestEntry(
             } /* have port specification */
         
             if (0 == errCode) {
-                if (errCode = lcf_addRequest(feedtype, prodPattern, hostId,
-                        localPort)) {
+                if ((errCode = lcf_addRequest(feedtype, prodPattern, hostId,
+                        localPort))) {
                 }
             } /* "localPort" set */
         } /* valid hostname */

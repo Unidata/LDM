@@ -39,7 +39,7 @@ else
 
 int get_grib_info(unsigned char *data, off_t filelen, off_t *off, size_t *len, int *gversion)
 {
-int i, ioff;
+int ioff;
 size_t griblen=0;
 unsigned int b1,b2,b3,b4;
 

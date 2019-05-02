@@ -130,33 +130,6 @@ ldm_clnt_tcp_create(
 }
 
 
-static ErrorObj*
-ldm_clnt_nullproc(CLIENT* const clnt)
-{
-    struct timeval timeout;
-    ErrorObj*       error;
-
-    log_assert(NULL != clnt);
-
-    timeout.tv_sec = 25;        /* RPC default */
-    timeout.tv_usec = 0;
-
-    if (clnt_call(clnt, NULLPROC, xdr_void, NULL, xdr_void,
-            NULL, timeout) == 0) {
-        error = NULL;
-    }
-    else {
-        struct rpc_err rpcErr;
-
-        clnt_geterr(clnt, &rpcErr);
-
-        error = ERR_NEW(rpcErr.re_status, NULL, clnt_errmsg(clnt));
-    }
-
-    return error;
-}
-
-
 /*
  * Attempts to connect to an upstream LDM using a range of LDM versions.  The
  * versions are tried, in order, from highest to lowest.  This function returns

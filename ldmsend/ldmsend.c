@@ -335,8 +335,6 @@ main(
     prod_spec       spec;
     int             seq_start = 0;
     int             status;
-    ErrorObj*       error;
-    unsigned        remotePort = LDM_PORT;
 
     /*
      * Set up error logging
@@ -389,22 +387,7 @@ main(
                 }
                 break;
             case 'P': {
-                char*       suffix = "";
-                long        port;
-
-                errno = 0;
-                port = strtol(optarg, &suffix, 0);
-
-                if (0 != errno || 0 != *suffix ||
-                    0 >= port || 0xffff < port) {
-
-                    (void)fprintf(stderr, "%s: invalid port %s\n",
-                         av[0], optarg);
-                    usage(av[0]);   
-                }
-
-                remotePort = (unsigned)port;
-
+                log_warning("Port specification is ignored");
                 break;
             }
             case 's':
