@@ -58,7 +58,7 @@ scp $tarball $ldmUser@$host:
 # ssh(1) is used thrice because some security policies doesn't allow
 # ssh(1)ing to the remote host and then executing su(1) in a here-document.
 
-ssh -T $ldmUser@$host bash --login <<EOF
+ssh -x -T $ldmUser@$host bash --login <<EOF
     set -e
 
     echo Unpacking
@@ -80,7 +80,7 @@ echo -en '\a'
 
 if test "${useSudo}"; then
     echo "Making root actions using account \"$sudoUser\" and sudo(8)"
-    ssh $sudoUser@$host bash --login <<EOF
+    ssh -x $sudoUser@$host bash --login <<EOF
         set -e
         cd ~$ldmUser/$pkgId/src
         # $sudoUser might not be able to create a file in the current directory
@@ -90,14 +90,14 @@ if test "${useSudo}"; then
 EOF
 else
     echo "Making root actions using account '$rootUser'"
-    ssh -T $rootUser@$host bash --login <<EOF
+    ssh -x -T $rootUser@$host bash --login <<EOF
         set -e
         cd ~$ldmUser/$pkgId/src
         $makePath root-actions >&root-actions.log
 EOF
 fi
 
-ssh -T $ldmUser@$host bash --login <<EOF
+ssh -x -T $ldmUser@$host bash --login <<EOF
     set -e
     if test -e runtime && ldmadmin stop; then
         echo "Throwing the runtime switch"
