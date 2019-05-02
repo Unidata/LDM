@@ -1,4 +1,4 @@
-6.13.11.61	2019-05-01T14:24:28-0600
+6.13.11.62	2019-05-02T12:39:13-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -125,6 +125,8 @@
                 * Replaced writing of circuit-ID to stderr with writing to
                   stdout
                 * Added case where multipoint VLAN already exists
+            * Scripts now expect the name of the OESS workgroup to be in the
+              OESS account file
         * UpMcastMgr(3):
             * Changed default extension of OESS account-file from "json" to
               "yaml"
@@ -190,6 +192,8 @@
                 * Modified to delete previous installed versions
                 * Added "-v" option to "ldmadmin start"
                 * Changed one beep to two
+                * Disabled X11 forwarding by ssh(1) ("-x" option) because it
+                  1) isn't needed; and 2) fails on some hosts
             * deployAll(1):
                 * Removed determination of "-r" host-suffix
                 * Added the MAX's host
