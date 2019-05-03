@@ -1,4 +1,4 @@
-6.13.11.62	2019-05-02T16:49:50-0600
+6.13.11.63	2019-05-03T12:54:33-0600
     ldmd(8):
         * Top-level Server:
             * Eliminated having the operating-system assign a transitory port
@@ -85,7 +85,7 @@
             because it includes a warning
 
     Misc:
-        Compiled under "gcc -Wall" and fixed all warnings
+        Compiled under "gcc -Wall" and fixed almost all warnings
 
     Multicast:
         * ChildCmd(3) (was ChildCommand(3)):
@@ -222,6 +222,10 @@
               "addons:apt:packages:"
         * configure.ac: Modified to allow "./configure ... CC='gcc -std=c99' 
           CFLAGS=-Wall"
+        * SCM:
+            * Deleted "oess" subtree and renamed "oess-client" subtree to
+              "oess"
+            * Fixed broken "pull-%" rule: made it explicit for "oess" and "fmtp"
 
 6.13.10	2019-03-06T14:17:16-0700
     Logging:
