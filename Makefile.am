@@ -366,11 +366,11 @@ available:	ftp web-update
 publish:
 	bash delivery/publish $(FTPHOST) $(distArchive)
 
-pull-oess-client:
-	git fetch oess-client
+pull-oess:
+	git fetch oess
 # The following command uses the wrong subdirectory
 #	git merge --strategy=subtree --squash $*/master
-	git merge -X subtree=mcast_lib/OESS-Client --squash oess-client/master
+	git merge -X subtree=mcast_lib/OESS-Client --squash oess/master
 	git commit -m "Pulled OESS-Client"
 
 pull-fmtp:
