@@ -366,12 +366,19 @@ available:	ftp web-update
 publish:
 	bash delivery/publish $(FTPHOST) $(distArchive)
 
-pull-%:
-	git fetch $*
+pull-oess-client:
+	git fetch oess-client
 # The following command uses the wrong subdirectory
 #	git merge --strategy=subtree --squash $*/master
-	git merge -X subtree=mcast_lib/OESS-Client --squash $*/master
-	git commit -m "Pulled $*"
+	git merge -X subtree=mcast_lib/OESS-Client --squash oess-client/master
+	git commit -m "Pulled OESS-Client"
+
+pull-fmtp:
+	git fetch fmtp
+# The following command uses the wrong subdirectory
+#	git merge --strategy=subtree --squash $*/master
+	git merge -X subtree=mcast_lib/FMTP-LDM7 --squash fmtp/master
+	git commit -m "Pulled FMTP-LDM7"
 
 push-%:
 	git checkout -b backport-$* $*/master
