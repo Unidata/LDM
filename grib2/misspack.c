@@ -71,7 +71,7 @@ void misspack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
       g2int  glength, grpwidth;
       g2int  i, n, iofst, imin, ival1, ival2, isd, minsd, nbitsd;
       g2int  nbitsgref, left, iwmax, ngwidthref, nbitsgwidth, ilmax;
-      g2int  nglenref, nglenlast, nbitsglen, ij;
+      g2int  nglenref, nglenlast, nbitsglen;
       g2int  j, missopt, nonmiss, itemp, maxorig, nbitorig, miss1, miss2;
       g2int  ngroups, ng, num0, num1, num2;
       g2int  imax, lg, mtemp, ier, igmax;
@@ -472,7 +472,6 @@ void misspack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
         */
         /*write(77,*)'IFLDS: ',(ifld(j),j=1,ndpts)*/
         n=0;
-        ij=0;
         for ( ng=0; ng<ngroups; ng++) {
            glength=glen[ng]+nglenref;
            if (ng == (ngroups-1) ) glength=nglenlast;

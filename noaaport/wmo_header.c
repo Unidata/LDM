@@ -86,26 +86,17 @@ int wmo_header(
     int           llen;
     int           allnum;
     int           nonalph;
-    int           ier;
     unsigned char model_id;
     unsigned char grid_id;
     unsigned char center_id;
     unsigned char dattim[6];
     unsigned char vcordid;
     unsigned char level[2];
-    unsigned char b1;
-    unsigned char b2;
-    unsigned char b3;
-    unsigned char b4;
-    short         icenter_id;
-    short         tmps;
-    unsigned int  lensec;
     int           YYYY;
     int           vYYYY;
     int           vMM;
     int           vDD;
     int           vHH;
-    int           vtime;
     int           gversion;
     time_t        time1;
     time_t        time2;
@@ -130,7 +121,7 @@ int wmo_header(
     cpos = pos;
 
     if (isdigit(cpos[0])) {
-        ier = sscanf(cpos, "%d", &hdr.ii);
+        (void)sscanf(cpos, "%d", &hdr.ii);
 
         while(isdigit(cpos[0]))
             cpos++;
@@ -184,8 +175,7 @@ int wmo_header(
              if (dattim[0] > 0)
                  dattim[5] = dattim[5] - 1;
              YYYY = (int)dattim[5]*100 + (int)dattim[0];
-             vtime = verf_time((unsigned char*)cpos+8, &vYYYY, &vMM, &vDD,
-                     &vHH);
+             (void)verf_time((unsigned char*)cpos+8, &vYYYY, &vMM, &vDD, &vHH);
 
              tm1.tm_year  = YYYY - 1900;
              tm1.tm_mon   = dattim[1] - 1;

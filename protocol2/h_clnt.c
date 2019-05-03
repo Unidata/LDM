@@ -1083,6 +1083,8 @@ h_clnt_call(
                         state = hC_clnt_call(hcp, proc,
                                                 xargs, argsp, xres, resp, remaining);
                         break;
+                case H_NONE: // Because `gcc -Wall`
+                    break;
                 }
 
                 if(state == RESPONDING)
@@ -1146,6 +1148,8 @@ h_clnt_open(h_clnt *hcp, unsigned int timeout)
                 case H_CLNTED :
                 case RESPONDING :
                         break;
+                case H_NONE: // Because `gcc -Wall`
+                    break;
                 }
 
                 remaining = time_remaining(hcp, end);

@@ -537,14 +537,26 @@ contractMapAndMap(
      * The file must be memory-mapped before it can be consolidated; thus, the
      * steps are: map, consolidate, shift, unmap, decrease size, and (re)map.
      */
-    int status;
+    int status = mapMap();
 
-    (status = mapMap()) ||
-    (status = consolidateMap(maxSigs)) ||
-    (status = shiftMapDown(maxSigsFromFileSize(newSize))) ||
-    (status = unmapMap()) ||
-    (status = truncateMap(newSize)) ||
-    (status = mapMap());
+    if (status == 0) {
+        status = consolidateMap(maxSigs);
+
+        if (status == 0) {
+            status = shiftMapDown(maxSigsFromFileSize(newSize));
+
+            if (status == 0) {
+                status = unmapMap();
+
+                if (status == 0) {
+                    status = truncateMap(newSize);
+
+                    if (status == 0)
+                        status = mapMap();
+                }
+            }
+        }
+    }
 
     return status;
 }

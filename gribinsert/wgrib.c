@@ -3276,9 +3276,7 @@ int verf_time(unsigned char *pds, int *year, int *month, int *day, int *hour) {
 
 void ensemble(unsigned char *pds, int mode) {
 
-    int pdslen;
-
-    pdslen = PDS_LEN(pds);
+    (void)PDS_LEN(pds);
 
     if (PDS_Center(pds) == ECMWF) {
     }

@@ -117,10 +117,8 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       g2int   lensec4,lensec5,lensec6,lensec7;
       g2int   issec3,isprevbmap,lpos3=0,JJ,KK,MM;
       g2int   *coordieee;
-      g2int   width,height,iscan,itemp;
       g2float *pfld;
       gtemplate  *mappds,*mapdrs;
-      unsigned int allones=4294967295u;
  
       ierr=0;
 /*

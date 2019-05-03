@@ -245,6 +245,8 @@ sRetransmit(wmo_header_t *hdr)
                         sprintf(buf,"P%c%c", c1, c2);
                         return buf;
                 }
+        case ORIGINAL:  // Because `gcc -Wall`
+            break;
         }
         /* default */
         return NULL;
