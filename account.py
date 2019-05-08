@@ -8,7 +8,7 @@ file      account.py
 author    Yuanlong Tan <yt4xb@virginia.edu>
 version   1.0
 date      Mar. 1, 2019
-brief     Read OESS API account
+brief     Read OESS API account, and translate account info to OESS API parameters
 """
 
 import yaml
