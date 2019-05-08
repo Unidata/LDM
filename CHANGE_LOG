@@ -1,3 +1,11 @@
+6.13.12.1	2019-05-08T14:24:31-0600
+    Multicast:
+        Merged new OESS scripts that handle identical switch names, port names,
+        or VLAN tags.
+
+    Developer:
+        Remove publishing rules from makefiles in favor of using "publish.sh"
+
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
         * Top-level Server:
