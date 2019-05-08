@@ -47,21 +47,20 @@ def edit_endpoint(wg_id,node_id,interface_id,vlan_id,ct_id,function,username,pas
 	    if er['tag'] != None:
 		tag.append(er['tag'])
 	if function == 'add':
-		if node_id not in node:
-			node.append(node_id)
-		if interface_id not in interface:
-			interface.append(interface_id)
-		if vlan_id not in tag:
-			tag.append(vlan_id)
+		node.append(node_id)
+		interface.append(interface_id)
+		tag.append(vlan_id)
 	elif function == 'del':
-		if node_id in node:
-			node.remove(node_id)
-		if interface_id in interface:
-			interface.remove(interface_id)
-		if vlan_id in tag:
-			tag.remove(vlan_id)
+		for i in range(len(node)):
+			if node_id == node[i]:
+				if interface_id == interface[i] and vlan_id == tag[i]:
+					del node[i]
+					del interface[i]
+					del tag[i]
+					break
+			
 	values2 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'circuit_id' : ct_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'node' : node, 'interface' : interface, 'tag' : tag}
-	data = urllib.urlencode(values2, doseq=True)	
+	data = urllib.urlencode(values2, doseq=True)
 	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data)
 	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
