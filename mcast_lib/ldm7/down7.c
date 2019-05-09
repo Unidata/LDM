@@ -2644,7 +2644,7 @@ down7_run()
             }
 
             log_debug("Sleeping");
-            sleep(interval); // Problem might be temporary
+            sleep(4*interval); // Problem might be temporary
         } // One-time, downstream LDM7 execution loop
 
         down7.state = TASK_STOPPED;
