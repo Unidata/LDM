@@ -268,6 +268,8 @@ unsigned short TcpSend::getPortNum()
  *
  * @throw  std::system_error    if `tcpAddr` is invalid.
  * @throw  std::system_error    if socket creation fails.
+ * @throw  std::system_error    if SO_REUSEADDR can't be enabled on the socket
+ * @throw  std::system_error    if SO_KEEPALIVE can't be enabled on the socket
  * @throw  std::system_error    if socket bind() operation fails.
  */
 void TcpSend::Init()
@@ -278,12 +280,27 @@ void TcpSend::Init()
     pmtu = MIN_MTU; /* initialize pmtu with defined min MTU */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
+    if (sockfd < 0)
         throw std::system_error(errno, std::system_category(),
                 "TcpSend::Init() error creating socket");
-    }
 
     try {
+        /**
+         * According to section 7.12 of "UNIX Network Programming", Vol 1, 3rd
+         * edition, 2003, by Richard Stevens, SO_REUSEADDR "should always be set
+         * for a TCP server before it calls bind".
+         */
+        const int yes = true;
+        if (::setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) <
+                0)
+            throw std::system_error(errno, std::system_category(),
+                    "TcpSend::Init() Couldn't enable IP address reuse option");
+
+        if (::setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) <
+                0)
+            throw std::system_error(errno, std::system_category(),
+                    "TcpSend::Init() Couldn't enable TCP keep-alive option");
+
         (void) memset((char *) &servAddr, 0, sizeof(servAddr));
         servAddr.sin_family = AF_INET;
         in_addr_t inAddr = inet_addr(tcpAddr.c_str());
