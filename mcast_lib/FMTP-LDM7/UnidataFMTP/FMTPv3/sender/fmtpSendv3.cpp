@@ -802,7 +802,10 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
 {
     FmtpHeader recvheader;
 
-    logMsg("fmtpSendv3::RunRetxThread(): Entered");
+#ifdef LDM_LOGGING
+    log_debug("Entered");
+#endif
+
     while(1) {
         /* Receive the message from tcp connection and parse the header */
         int parsestate;
@@ -1413,8 +1416,8 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
 {
 #ifdef LDM_LOGGING
     pthread_cleanup_push(freeLogging, nullptr);
+    log_debug("Entered");
 #endif
-    logMsg("fmtpSendv3::StartRetxThread(): Entered");
     StartRetxThreadInfo* newptr = static_cast<StartRetxThreadInfo*>(ptr);
     try {
         newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
