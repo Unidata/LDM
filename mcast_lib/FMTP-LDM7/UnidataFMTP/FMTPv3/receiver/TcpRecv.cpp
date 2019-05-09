@@ -151,6 +151,7 @@ ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
  * or a severe error occurs.
  *
  * @throws std::system_error  if the socket is not created.
+ * @throw  std::system_error  if SO_KEEPALIVE can't be enabled on the socket
  * @throws std::system_error  if connect() returns errors.
  */
 void TcpRecv::initSocket()
@@ -160,6 +161,14 @@ void TcpRecv::initSocket()
     if (sockfd < 0)
         throw std::system_error(errno, std::system_category(),
                 "TcpRecv::initSocket() error creating socket");
+
+    const int yes = true;
+    if (::setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) < 0) {
+        close(sockfd);
+        throw std::system_error(errno, std::system_category(),
+                "TcpRecv::initSocket() Couldn't enable TCP keep-alive "
+                "option");
+    }
 
     /*
      * Binding the socket to the VLAN interface isn't necessary to ensure that
