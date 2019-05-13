@@ -20,18 +20,23 @@
 //#define HELLO_PORT  1 // Requires superuser privileges
 #define HELLO_PORT  38800
 
-//#define HELLO_GROUP "239.0.0.37" // Works
+//#define HELLO_GROUP "239.0.0.37" // Works. 239/8 is "administratively scoped"
 
-// Unicast-prefix-based multicast address based on UCAR subnet
-//#define HELLO_GROUP "234.128.117.1"
-
+#if 0
 /*
- * Source-specific multicast address based on UCAR subnet. According to RFC4607:
- *   - Address in the range 232.0.0.0/24 are reserved and must not be used
+ * Unicast-based multicast address based on UCAR subnet.
+ */
+#define HELLO_GROUP "234.128.117.1"
+#else
+/*
+ * Source-specific multicast (SSM) address. According to RFC4607:
+ *   - Source-specific multicast address in the range 232.0.0.0/24 are reserved
+ *     and must not be used
  *   - "The policy for allocating the rest of the SSM addresses to sending
  *     applications is strictly locally determined by the sending host."
  */
 #define HELLO_GROUP "232.128.117.1"
+#endif
 
 
 #ifdef __cplusplus
