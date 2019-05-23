@@ -1084,7 +1084,11 @@ ucastRcvr_stop(void)
  * Submodule for local VLAN interface
  ******************************************************************************/
 
-static const char vlanUtil[] = "vlanUtil";
+/*
+ * For an unknown reason, sh(1) on Ubuntu doesn't find vlanUtil(1) unless the
+ * absolute pathname is given.
+ */
+static const char vlanUtil[] = LDM_BIN_DIR "vlanUtil";
 
 /**
  * Creates a local VLAN interface. Replaces the relevant routing, address, and
