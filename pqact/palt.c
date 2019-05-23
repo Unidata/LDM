@@ -295,7 +295,7 @@ tabTokenize(char *buf,
                 cp = strchr(*tokensp, '\t');
                 if( cp == NULL )
                         break; /* normal loop exit */
-                if(cp == *tokensp) /* handle multple tabs */
+                if(cp == *tokensp) /* handle multiple tabs */
                 {
                         (*tokensp)++;
                         continue;
