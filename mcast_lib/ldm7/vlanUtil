@@ -91,15 +91,15 @@ create()
                 echo 1>&2 "Couldn't enable interface $virtIface"
                 status=1
             else
-                bcastAddr=`echo $ifaceCidr | tr . ' ' | tr / ' ' | awk '{
-                    subnetAddr=lshift(lshift(lshift($1,8)+$2,8)+$3,8)+$4;
-                    hostMask=lshift(1,32-$5)-1;
-                    bcastAddr=or(subnetAddr,hostMask);
-                    print rshift(bcastAddr,24) "." \
-                            and(rshift(bcastAddr,16),0xFF) "." \
-                            and(rshift(bcastAddr,8),0xFF) "." \
-                            and(bcastAddr,0xFF);
-                }'`
+                set `echo $ifaceCidr | tr . ' ' | tr / ' '`
+                subnetAddr=$((((((($1<<8)+$2)<<8)+$3)<<8)+$4))
+                hostMask=$(((1<<(32-$5))-1));
+                bcastAddr=$(($subnetAddr|$hostMask))
+                printf "%d.%d.%d.%d\n" \
+                    $(($bcastAddr>>24)) \
+                    $((($bcastAddr>>16)&0xFF)) \
+                    $((($bcastAddr>>8)&0xFF)) \
+                    $(($bcastAddr&0xFF))
                 if ! ip addr add "$ifaceCidr" broadcast $bcastAddr \
                         dev "$virtIface"; then
                     echo 1>&2 "Couldn't add address $ifaceCidr to interface " \
