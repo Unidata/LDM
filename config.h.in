@@ -133,6 +133,9 @@
 /* Root directory of the LDM installation */
 #undef LDMHOME
 
+/* Pathname of installed-programs directory */
+#undef LDM_BIN_DIR
+
 /* Pathname of default LDM configuration-file */
 #undef LDM_CONFIG_PATH
 
