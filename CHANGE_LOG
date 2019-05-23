@@ -1,18 +1,25 @@
-6.13.12.2	2019-05-09T14:29:42-0600
+6.13.12.3	2019-05-23T13:16:08-0600
     Multicast:
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
             have the same switch name, port name, or VLAN tag
         Down7:
-            Increased sleep duration between subscription attempts from 30
-            seconds to 120 seconds
+            * Increased sleep duration between subscription attempts from 30
+              seconds to 120 seconds
+            * Specified absolute pathname of vlanUtil(1) to workaround Ubuntu's
+              execvp(2)
         FMTP:
             * fmtpSendv3: Improved debug logging
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
+        vlanUtil(1):
+            Replaced use of gawk(1)-only bit operations with shell's for
+            portability
 
     Developer:
-        Remove publishing rules from makefiles in favor of using "publish.sh"
+        * Removed publishing rules from makefiles in favor of using "publish.sh"
+        * send_recv_test.h: Improved commentary on multicast addresses
+        * Added LDM_BIN_DIR to configure.ac
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
