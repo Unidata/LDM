@@ -1,4 +1,4 @@
-6.13.12.3	2019-05-23T13:16:08-0600
+6.13.12.4	2019-05-24T07:56:16-0600
     Multicast:
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
@@ -7,7 +7,7 @@
             * Increased sleep duration between subscription attempts from 30
               seconds to 120 seconds
             * Specified absolute pathname of vlanUtil(1) to workaround Ubuntu's
-              execvp(2)
+              non-standard execvp(2)
         FMTP:
             * fmtpSendv3: Improved debug logging
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
@@ -20,6 +20,7 @@
         * Removed publishing rules from makefiles in favor of using "publish.sh"
         * send_recv_test.h: Improved commentary on multicast addresses
         * Added LDM_BIN_DIR to configure.ac
+        * push(1): Replaced "commit -a" with list of modified files
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
