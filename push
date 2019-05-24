@@ -42,7 +42,7 @@ if git branch | grep -w master >/dev/null; then
     mv delivery/release-vars.sh.tmp delivery/release-vars.sh
 
     # Commit the changes.
-    git commit -a -m "v$versionId"
+    git commit -a -m "v$versionId" CHANGE_LOG configure.ac delivery/release-vars.sh
 
     # Tag the current version.
     git tag -f "v$versionId"
