@@ -458,16 +458,22 @@ mls_doneWithProduct(
 {
     off_t offset;
     int   status = om_get(indexToOffsetMap, prodIndex, &offset);
+
     if (status) {
-        log_error_q("Couldn't get file-offset corresponding to product-index %lu",
+        log_add("Couldn't get file-offset corresponding to product-index %lu",
                 (unsigned long)prodIndex);
+        log_flush_error();
     }
     else {
+        log_debug("Releasing product {index: %lu, offset: %ld}",
+                 (unsigned long)prodIndex, (long)offset);
+
         status = pq_release(pq, offset);
+
         if (status) {
-            log_error_q("Couldn't release data-product in product-queue "
-                    "corresponding to file-offset %ld, product-index %lu",
-                    (long)offset, (unsigned long)prodIndex);
+            log_add("Couldn't release data-product {index: %lu, "
+                    "offset: %ld}", (unsigned long)prodIndex, (long)offset);
+            log_flush_error();
         }
     }
 }
@@ -624,7 +630,17 @@ mls_mcastProd(
 
             if (status) {
                 off_t off;
+
                 (void)om_get(indexToOffsetMap, iProd, &off);
+
+                status = pq_release(pq, offset);
+
+                if (status) {
+                    log_add("Couldn't release data-product {index: %lu, "
+                            "offset: %ld}", (unsigned long)iProd, (long)offset);
+                    log_flush_error();
+                }
+
                 status = LDM7_MCAST;
             }
             else {
