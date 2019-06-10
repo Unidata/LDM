@@ -722,7 +722,7 @@ requester_exec(
      * taking action.  NOTE: Generally smaller than ldmd.c's
      * "inactive_timeo".  TODO: Make configurable.
      */
-    unsigned int        maxSilence = 2 * interval;
+    unsigned int        maxSilence = 10 * interval;
     int                 backoffTime =
         toffset == TOFFSET_NONE
             ? max_latency
