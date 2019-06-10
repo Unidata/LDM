@@ -39,112 +39,32 @@
 #include "requester6.h"
 
 static int      dataSocket = -1;
-static int      isAliveSocket = -1;
-
-#define ENABLE_IS_ALIVE 1
-
-
-#if ENABLE_IS_ALIVE
-/*
- * @return !0 if upstream LDM is alive.
- * @return  0 if upstream LDM is dead.
- */
-static int is_upstream_alive(
-    const char* const         upName,
-    struct sockaddr_in* const upAddr,
-    unsigned int              upId)
-{
-    int                 alive = 0;      /* dead */
-    ErrorObj*           error;
-    int                 hasAddress;
-
-    /*
-     * Verify that the upstream host still has the original IP address.  This
-     * detects failures due to a reconnection by the upstream host to its
-     * Internet Service Provider resulting in a different IP address (e.g., the
-     * UCAR HAIPER plane).
-     */
-    error = hostHasIpAddress(upName, upAddr->sin_addr.s_addr, &hasAddress);
-
-    if (error) {
-        err_log_and_free(
-            ERR_NEW1(0, error, "Couldn't get IP address for upstream host %s",
-                upName),
-            ERR_ERROR);
-    }
-    else if (!hasAddress) {
-        err_log_and_free(
-            ERR_NEW2(0, NULL, "Upstream host %s no longer has IP address %s",
-                upName, inet_ntoa(upAddr->sin_addr)),
-            ERR_NOTICE);
-    }
-    else {
-        CLIENT *clnt;
-        /*
-         * In the following, a definitive negative response from the upstream
-         * LDM server is necessary in order to consider the upstream LDM
-         * process dead. This prevents unnecessary reconnections due to network
-         * congestion.
-         */
-        isAliveSocket = RPC_ANYSOCK;
-        clnt = clnttcp_create(upAddr, LDMPROG, SIX, &isAliveSocket, 0, 0);
-
-        if(clnt == NULL) {
-            alive = 1;
-
-            err_log_and_free(
-                ERR_NEW1(0,
-                    ERR_NEW(0, NULL, clnt_spcreateerror("")), 
-                    "Couldn't connect to upstream LDM on %s; "
-                        "assuming sending LDM is alive",
-                    upName),
-                ERR_INFO);
-        }
-        else {
-            bool_t* isAlive = is_alive_6(&upId, clnt);
-
-            if (isAlive != NULL) {
-                alive = *isAlive;
-            }
-            else {
-                alive = 1;
-
-                err_log_and_free(
-                    ERR_NEW1(0,
-                        ERR_NEW(0, NULL, clnt_errmsg(clnt)), 
-                        "No IS_ALIVE reply from upstream LDM on %s; "
-                            "assuming sending LDM is alive",
-                        upName),
-                    ERR_INFO);
-            }
-
-            auth_destroy(clnt->cl_auth);
-            clnt_destroy(clnt);
-
-            /*
-             * The socket should have been closed by clnt_destroy() because 
-             * RPC_ANYSOCK was specified.  But this can't hurt.
-             */
-            (void)close(isAliveSocket);
-            isAliveSocket = -1;
-        }                               /* valid client and socket */
-    }                                   /* upstream host has same IP address */
-
-    return alive;
-}
-#endif
-
 
 /**
  * Runs the downstream LDM server. On return, the socket will be closed.
  *
- * @retval NULL     Success.
- * @return          Error object. err_code() values:
- *                      REQ6_SYSTEM_ERROR   err_cause() will be the system error.
- *                      REQ6_DISCONNECT     The upstream LDM closed the
- *                                          connection. err_cause() will be NULL.
- *                      REQ6_TIMED_OUT      The connection timed-out.
- *                                          err_cause() will be NULL.
+ * @param[in]     socket           Transport socket
+ * @param[in]     inactiveTimeout  Timeout, in seconds, for the upstream LDM
+ *                                 before closing the connection and
+ *                                 re-connecting
+ * @param[in]     upName           Name of upstream host.
+ * @param[in,out] upAddr           IP address of upstream LDM server
+ * @param[in]     upId             PID of associated upstream LDM
+ * @param[in]     pqPathname       Pathname of product-queue.
+ * @param[in]     expect           Data-products to expect
+ * @param[in]     pq               Product-queue.  Must be open for writing.
+ * @param[in]     isPrimary        Whether or not the initial data-product
+ *                                 exchange-mode should use HEREIS or
+ *                                 COMINGSOON/BLKDATA messages.
+ * @retval NULL   Success.
+ * @return        Error object. err_code() values:
+ *                  - REQ6_SYSTEM_ERROR
+ *                        err_cause() will be the system error.
+ *                  - REQ6_DISCONNECT
+ *                        The upstream LDM closed the connection. err_cause()
+ *                        will be NULL.
+ *                  - REQ6_TIMED_OUT
+ *                        The connection timed-out. err_cause() will be NULL.
  */
 static ErrorObj*
 run_service(
@@ -216,19 +136,10 @@ run_service(
                         }
                         else {
                             if (status == ETIMEDOUT) {
-                                log_info("Connection from upstream LDM silent "
-                                        "for %u seconds", inactiveTimeout);
-
-#if ENABLE_IS_ALIVE
-                                if (is_upstream_alive(upName, upAddr, upId)) {
-                                    log_info("Upstream LDM is alive. "
-                                            "Waiting...");
-                                    continue;
-                                }
-#endif
-
                                 error = ERR_NEW1(REQ6_TIMED_OUT, NULL,
-                                    "Upstream LDM died: pid=%u", upId);
+                                        "No heartbeat from upstream LDM for %u "
+                                        "seconds. Disconnecting.",
+                                        inactiveTimeout);
                             }
                             else if (status) {
                                 error = ERR_NEW1(REQ6_SYSTEM_ERROR, NULL,
@@ -515,46 +426,43 @@ adjustByLastInfo(
  ******************************************************************************/
 
 
-/*
- * Initializes this requester.  The class of products actually received will be
- * the intersection of the requested class and the class allowed by the upstream
- * LDM.  This function logs messages via ulog(3).
+/**
+ * Initializes requester.  The class of products actually received will be the
+ * intersection of the requested class and the class allowed by the upstream
+ * LDM.
  *
- * Arguments:
- *      upName                  Name of upstream host.
- *      port                    The port on which to connect.
- *      request                 Pointer to class of products to request.
- *      inactiveTimeout         if this much time, in seconds, passes without
- *                              hearing from upstream LDM, then check that it's
- *                              not dead.
- *      pqPathname              The pathname of the product-queue.
- *      *pq                     The product-queue.  Must be open for writing.
- *      isPrimary               Whether or not the initial data-product
+ * @param[in] upName            Name of upstream host.
+ * @param[in] port              The port on which to connect.
+ * @param[in] request           Pointer to class of products to request.
+ * @param[in] inactiveTimeout   The amount of time, in seconds, without hearing
+ *                              from upstream LDM before taking action
+ * @param[in] pqPathname        The pathname of the product-queue.
+ * @param[in] pq                The product-queue.  Must be open for writing.
+ * @param[in] isPrimary         Whether or not the initial data-product
  *                              exchange-mode should use HEREIS or
  *                              COMINGSOON/BLKDATA messages.
- * Returns:
- *      NULL                    Success.  as_shouldSwitch() might be true.
- *      else                    Error.  err_code() values:
- *                                 REQ6_TIMED_OUT
+ * @retval NULL                 Success.  as_shouldSwitch() might be true.
+ * @return                      Error object: err_code() values:
+ *                                 - REQ6_TIMED_OUT
  *                                      The connection timed-out.
- *                                 REQ6_UNKNOWN_HOST
+ *                                 - REQ6_UNKNOWN_HOST
  *                                      The upstream host is unknown.
- *                                 REQ6_BAD_VERSION
+ *                                 - REQ6_BAD_VERSION
  *                                      The upstream LDM isn't version 6.
- *                                 REQ6_NO_CONNECT
+ *                                 - REQ6_NO_CONNECT
  *                                      Couldn't connect to upstream LDM.
- *                                 REQ6_DISCONNECT
+ *                                 - REQ6_DISCONNECT
  *                                      Connection established, but then closed.
- *                                 REQ6_BAD_PATTERN
+ *                                 - REQ6_BAD_PATTERN
  *                                      The upstream LDM couldn't compile the
  *                                      regular expression of the request.
- *                                 REQ6_NOT_ALLOWED,
+ *                                 - REQ6_NOT_ALLOWED,
  *                                      The upstream LDM refuses to send the
  *                                      requested products.
- *                                 REQ6_BAD_RECLASS,
+ *                                 - REQ6_BAD_RECLASS,
  *                                      The upstream LDM replied with an invalid
  *                                      RECLASS message.
- *                                 REQ6_SYSTEM_ERROR
+ *                                 - REQ6_SYSTEM_ERROR
  *                                      A fatal system-error occurred.
  */
 ErrorObj*
@@ -661,10 +569,5 @@ req6_close()
     if (dataSocket >= 0) {
         (void)close(dataSocket);
         dataSocket = -1;
-    }
-
-    if (isAliveSocket >= 0) {
-        (void)close(isAliveSocket);
-        isAliveSocket = -1;
     }
 }
