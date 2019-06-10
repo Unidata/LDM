@@ -125,7 +125,7 @@ fmtpSender_getNextProdIndex(
  */
 int
 fmtpSender_send(
-    FmtpSender* const    sender,
+    FmtpSender* const     sender,
     const void* const     data,
     const size_t          nbytes,
     const void* const     metadata,
