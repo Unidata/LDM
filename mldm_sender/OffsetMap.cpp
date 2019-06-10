@@ -26,7 +26,9 @@ off_t OffsetMap::get(
         const McastProdIndex prodIndex)
 {
     std::unique_lock<std::mutex> lock(mutex);
-    return map.at(prodIndex);
+    auto offset = map.at(prodIndex);
+    map.erase(prodIndex);
+    return offset;
 }
 
 OffMap* om_new()
