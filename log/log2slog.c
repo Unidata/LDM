@@ -333,29 +333,31 @@ static int stream_log(
     if (status == 0) {
         while (*msg) {
             // Timestamp
-            (void)fprintf(dest->stream,
+            int pos = fprintf(dest->stream,
                     "%04d%02d%02dT%02d%02d%02d.%06ldZ ",
                     year, month, tm.tm_mday, tm.tm_hour,
                     tm.tm_min, tm.tm_sec, microseconds);
 
-            #define MIN(a, b) ((a) <= (b) ? (a) : (b))
-
-            static char      buf[265]; // NB: Requires locking
-            static const int buflen = sizeof(buf) - 1;
-
             // Process
-            (void)snprintf(buf, buflen, "%s[%d]", ident, pid);
-            (void)fprintf(dest->stream, "%-27s ", buf);
+            pos += fprintf(dest->stream, "%s[%d] ", ident, pid);
 
             // Location
-            (void)snprintf(buf, buflen, "%s:%s:%d", basename, loc->func,
+            static const int LOC_POS = 52;
+            if (pos < LOC_POS)
+                pos += fprintf(dest->stream, "%*s", LOC_POS - pos, "");
+            pos += fprintf(dest->stream, "%s:%s:%d ", basename, loc->func,
                     loc->line);
-            (void)fprintf(dest->stream, "%-35s ", buf);
 
             // Error level
-            (void)fprintf(dest->stream, "%-5s ", levelId);
+            static const int LVL_POS = 88;
+            if (pos < LVL_POS)
+                pos += fprintf(dest->stream, "%*s", LVL_POS - pos, "");
+            pos += fprintf(dest->stream, "%s ", levelId);
 
             // Message
+            static const int MSG_POS = 94;
+            if (pos < MSG_POS)
+                pos += fprintf(dest->stream, "%*s", MSG_POS - pos, "");
             const char* const newline = strchr(msg, '\n');
             if (newline) {
                 (void)fprintf(dest->stream, "%.*s\n", (int)(newline-msg), msg);
