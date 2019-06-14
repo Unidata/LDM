@@ -34,3 +34,4 @@ ANTI_DOS:/server/enable-anti-DOS:Whether or not to enable the anti-denial-of-ser
 SURFQUEUE_PATH:/surf-queue/path:The pathname of the <tt>pqsurf(1)</tt> product-queue.  The default is set by the <tt>configure(1)</tt> script.:@QUEUE_DIR@/pqsurf.pq
 SURFQUEUE_SIZE:/surf-queue/size:The size of the <a href="glindex.html#pqsurf">pqsurf</a> queue in bytes.  The suffixes <tt>K</tt>, <tt>M</tt>, and <tt>G</tt> may be used for multiplying by 1e3, 1e6, and 1e9, respectively.:2M:surf_size
 OESS_PATHNAME:/oess-pathname:Pathname of the file containing OESS account information.:@ETC_DIR@/OESS-account.yaml
+RETX_TIMEOUT:/fmtp-retx-timeout:FMTP retransmission timeout in seconds:300
