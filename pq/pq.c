@@ -4724,7 +4724,7 @@ pq2_del_oldest(
             return status;
     }
 
-    log_error_q("no unlocked products left to delete!");
+    log_add("No unlocked products left to delete!");
 
     return status;
 
@@ -6280,10 +6280,11 @@ vetCreationTime(
  *
  * @param[in] pq           The product-queue.
  * @param[in] prod         The data-product.
- * @retval ENOERR          Success.
- * @retval EINVAL          Invalid argument.
- * @retval PQ_DUP          Product already exists in the queue.
- * @retval PQ_BIG          Product is too large to insert in the queue.
+ * @retval    ENOERR       Success.
+ * @retval    EACCES       Couldn't make room: no unlocked products left to delete
+ * @retval    EINVAL       Invalid argument.
+ * @retval    PQ_DUP       Product already exists in the queue.
+ * @retval    PQ_BIG       Product is too large to insert in the queue.
  */
 int
 pq_insertNoSig(pqueue *pq, const product *prod)
@@ -8012,7 +8013,7 @@ pq_sequenceLock(
         const prod_class_t* const restrict clss,
         pq_seqfunc* const                  ifMatch,
         void* const                        otherargs,
-        off_t* const restrict              offset)
+        off_t* const                       offset)
 {
     return pq_sequenceHelper(pq, mt, clss, ifMatch, otherargs, offset);
 }
