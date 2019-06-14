@@ -28,6 +28,7 @@
 #include "pq.h"
 #include "prod_class.h"
 #include "prod_index_map.h"
+#include "registry.h"
 #include "StrBuf.h"
 #include "timestamp.h"
 
@@ -70,10 +71,10 @@ static FmtpSender*          fmtpSender;
  */
 static unsigned              ttl = 1; // Won't be forwarded by any router.
 /**
- * Ratio of product-hold duration to multicast duration. If negative, then the
- * default timeout is used.
+ * FMTP retransmission timeout in seconds. If negative, then the FMTP default
+ * timeout is used.
  */
-static float                 retxTimeout = -1;  // Use FMTP module's default
+static int                   retxTimeout = -1;  // Use FMTP module's default
 /**
  * Termination signals.
  */
@@ -145,10 +146,10 @@ Options:\n\
                       \"%s\".\n\
     -n subnetLen      Bit-length of FMTP subnet prefix. Default is 0.\n\
     -q prodQueue      Pathname of product-queue. Default is \"%s\".\n\
-    -r retxTimeout    FMTP retransmission timeout in minutes. Duration that a\n\
-                      product will be held by the FMTP layer before being\n\
-                      released. If negative, then the default FMTP timeout is\n\
-                      used.\n\
+    -r retxTimeout    FMTP retransmission timeout in seconds. Duration that a\n\
+                      product that's being sent will be held by the FMTP layer\n\
+                      before being released. If negative, then the default\n\
+                      FMTP timeout is used. Default is %d.\n\
     -s serverAddr     IPv4 socket address for FMTP server in the form\n\
                       <nnn.nnn.nnn.nnn>[:<port>]. Default is all interfaces\n\
                       and O/S-assigned port number.\n\
@@ -169,7 +170,8 @@ Operands:\n\
     groupId:groupPort Internet service address of multicast group, where\n\
                       <groupId> is either group-name or dotted-decimal IPv4\n\
                       address and <groupPort> is port number.\n",
-            log_get_id(), log_get_default_destination(), getDefaultQueuePath());
+            log_get_id(), log_get_default_destination(), getDefaultQueuePath(),
+            retxTimeout);
 }
 
 /**
@@ -228,8 +230,9 @@ mls_decodeOptions(
                 break;
             }
             case 'r': {
-                int   nbytes;
-                if (1 != sscanf(optarg, "%f %n", &retxTimeout, &nbytes) ||
+                int nbytes;
+
+                if (1 != sscanf(optarg, "%d %n", &retxTimeout, &nbytes) ||
                         0 != optarg[nbytes]) {
                     log_add("Couldn't decode FMTP retransmission timeout "
                             "option-argument \"%s\"", optarg);
@@ -532,7 +535,7 @@ mls_init()
 
     if ((status = fmtpSender_create(&fmtpSender, fmtpSrvrInetAddr,
             &fmtpSrvrPort, mcastGrpInetAddr, mcastGrpPort, ttl,
-            iProd, retxTimeout, mls_doneWithProduct, authorizer))) {
+            iProd, retxTimeout/60.0, mls_doneWithProduct, authorizer))) {
         log_add("Couldn't create FMTP sender");
         status = (status == 1)
                 ? LDM7_INVAL
@@ -607,8 +610,8 @@ mls_mcastProd(
     FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
     int            status = om_put(indexToOffsetMap, iProd, offset);
     if (status) {
-        log_add("Couldn't add product %lu, offset %lu to map",
-                (unsigned long)iProd, (unsigned long)offset);
+        log_add("Couldn't add to index-to-offset map: {index: %lu, offset: %ld}",
+                (unsigned long)iProd, (long)offset);
     }
     else {
         /*
@@ -620,8 +623,8 @@ mls_mcastProd(
 
         if (status) {
             char buf[LDM_INFO_MAX];
-            log_add("Couldn't add to product-index map: prodIndex=%lu, "
-                    "prodInfo=%s", (unsigned long)iProd,
+            log_add("Couldn't add to product-index map: {index: %lu, "
+                    "info: %s}", (unsigned long)iProd,
                     s_prod_info(buf, sizeof(buf), info, 1));
         }
         else {
@@ -1021,6 +1024,18 @@ main(   const int    argc,
         status = 1;
     }
     else {
+        char* paramStr;
+
+        if (reg_getString(REG_RETX_TIMEOUT, &paramStr) == 0) {
+            int nbytes;
+
+            if (1 != sscanf(optarg, "%d %n", &retxTimeout, &nbytes) ||
+                    0 != optarg[nbytes]) {
+                log_add("Couldn't decode registry parameter %s: \"%s\"",
+                        REG_RETX_TIMEOUT, paramStr);
+            }
+        }
+
         /*
          * Decode the command-line.
          */
