@@ -1,12 +1,16 @@
-6.13.12.6	2019-06-12T15:07:11-0600
+6.13.12.7	2019-06-17T15:01:49-0600
     Logging:
-        Replaced fixed-width fields in default log messages with canonical
-        column-start positions to reduce line lengths
+        Replaced minimum field-width in default log messages with canonical
+        column-start positions to reduce line lengths and CPU usage
 
     Requester6:
         Replaced use of IS_ALIVE with fixed timeout of 5 minutes
         
     Multicast:
+        Product-Queue (pq.c):
+            Added disabling of cancellation state on entry and reversion on
+            exit.
+
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
             have the same switch name, port name, or VLAN tag
@@ -26,9 +30,13 @@
         OffsetMap:
             Added missing deletion of entry by om_get()
         mldm_sender(1)
-            Improved releasing of product:
+            - Improved releasing of product:
                 - Added product release on multicast failure
                 - Added debug message about releasing locked product
+            - Added registry parameter "/fmtp-retx-timeout" for FMTP timout in
+              seconds
+            - Modified "-r fmtp_timeout" option to be in seconds
+            - Modified to use registry parameter "/fmtp-retx-timeout"
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
