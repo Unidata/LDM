@@ -3419,46 +3419,43 @@ fd_isLocked(const int fd, const short l_type,
  *              waiting for that lock to become free would cause a deadlock.
  */
 static int
-fd_lock(const int fd, const int cmd, const short l_type,
-        const off_t offset, const short l_whence, const size_t extent)
+fd_lock(
+        const int     fd,
+        const int     cmd,
+        const short   l_type,
+        const off_t   offset,
+        const short   l_whence,
+        const size_t  extent)
 {
-        struct flock lock;
+    int          status;
+    struct flock lock;
 
-        lock.l_type = l_type;
-        lock.l_start = offset;
-        lock.l_whence = l_whence;
-        lock.l_len = (off_t)extent;
-        /* return (fcntl(fd, cmd, &lock) < 0 ? errno : 0); */
-        if (fcntl(fd, cmd, &lock) < 0)
-        {
-                int errnum = errno;
+    lock.l_type = l_type;
+    lock.l_start = offset;
+    lock.l_whence = l_whence;
+    lock.l_len = (off_t)extent;
 
-                if(errnum == EDEADLK || errnum == EAGAIN || errnum == EACCES)
-                {
-                        if(errnum == EDEADLK || cmd != F_SETLK)
-                        {
-                        pid_t conflict = fd_isLocked(fd, l_type, offset,
-                                        l_whence, extent);
-                        log_errno(errnum,
-                                "fcntl %s failed for rgn (%ld %s, %lu): %s",
-                                s_ltype(l_type), 
-                                (long)offset, s_whence(l_whence), (long)extent, 
-                                strerror(errnum));
-                        log_error_q("conflicting pid %d", (int)conflict);
-                        }
-                }
-                else
-                {
-                        log_syserr("fcntl %s failed for rgn (%ld %s, %lu) %d",
-                                s_ltype(l_type), 
-                                (long)offset, s_whence(l_whence), (long)extent, 
-                                errnum);
-                }
-                
-                return errnum;
+    if (fcntl(fd, cmd, &lock) < 0) {
+        status = errno;
+
+        if (status == EDEADLK) {
+            pid_t conflict = fd_isLocked(fd, l_type, offset, l_whence, extent);
+            log_errno(status, "fcntl(%d, %s) deadlock for region {whence: %s, "
+                    "off: %ld, extent: %zu} due to PID %ld", fd,
+                    s_ltype(l_type), s_whence(l_whence), (long)offset, extent,
+                    (long)conflict);
         }
-        /* else */
-        return 0;
+        else if (status != EAGAIN && status != EACCES) {
+            log_syserr("fcntl(%d, %s) failed for region {whence: %s, off: %ld, "
+                    "extent: %zu}", fd, s_ltype(l_type),  s_whence(l_whence),
+                    (long)offset, extent);
+        }
+    }
+    else {
+        status = 0;
+    }
+
+    return status;
 }
 
 /******************************************************************************
@@ -5576,11 +5573,14 @@ unwind_mask:
 /******************************************************************************
  * Product-Queue Functions:
  ******************************************************************************/
+static int entryState;
 
 static void
 pq_lockIf(pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE)) {
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &entryState);
+
         int status = pthread_mutex_lock(&pq->mutex);
 
         if (status) {
@@ -5602,6 +5602,9 @@ pq_unlockIf(pqueue* const pq)
             log_flush_error();
             abort();
         }
+
+        int lockState;
+        (void)pthread_setcancelstate(entryState, &lockState);
     }
 }
 
