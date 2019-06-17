@@ -76,7 +76,7 @@ umm_remove(const pid_t pid);
  * @see                `umm_subscribe()`
  */
 void
-umm_setRetxTimeout(const float minutes);
+umm_setRetxTimeout(const int seconds);
 
 /**
  * Adds a potential multicast LDM sender. The sender is not started. This

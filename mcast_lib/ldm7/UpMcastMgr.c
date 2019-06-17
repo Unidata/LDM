@@ -185,7 +185,7 @@ mldm_getSrvrPorts(const int pipe)
  *                             <255  Unrestricted in scope. Global.
  * @param[in] subnetLen      Number of bits in the network prefix of the private
  *                           AL2S network.
- * @param[in] retxTimeout    FMTP retransmission timeout in minutes. Duration
+ * @param[in] retxTimeout    FMTP retransmission timeout in seconds. Duration
  *                           that a product will be held by the FMTP layer
  *                           before being released. If negative, then the
  *                           default timeout is used.
@@ -199,7 +199,7 @@ mldm_exec(
     const SepMcastInfo* const restrict info,
     const unsigned short               ttl,
     const unsigned short               subnetLen,
-    const float                        retxTimeout,
+    const int                          retxTimeout,
     const char* const restrict         pqPathname,
     const int                          pipe)
 {
@@ -243,7 +243,7 @@ mldm_exec(
 
     char* retxTimeoutArg = NULL;
     if (status == 0 && retxTimeout >= 0) {
-        retxTimeoutArg = ldm_format(4, "%f", retxTimeout);
+        retxTimeoutArg = ldm_format(4, "%d", retxTimeout);
         if (retxTimeoutArg == NULL) {
             log_add("Couldn't create FMTP retransmission timeout "
                     "option-argument");
@@ -384,7 +384,7 @@ mldm_stopSndr()
  * @param[in]     ttl            Time-to-live of multicast packets.
  * @param[in]     subnetLen      Number of bits in the network prefix of the
  *                               private AL2S network.
- * @param[in]     retxTimeout    FMTP retransmission timeout in minutes.
+ * @param[in]     retxTimeout    FMTP retransmission timeout in seconds.
  *                               Duration that a product will be held by the
  *                               FMTP layer before being released. If negative,
  *                               then the default timeout is used.
@@ -399,7 +399,7 @@ mldm_spawn(
     const SepMcastInfo* const restrict info,
     const unsigned short               ttl,
     const unsigned short               subnetLen,
-    const float                        retxTimeout,
+    const int                          retxTimeout,
     const char* const restrict         pqPathname)
 {
     int   fds[2];
@@ -460,7 +460,7 @@ mldm_spawn(
  * @param[in] ttl          Time-to-live of multicast packets
  * @param[in] subnetLen    Number of bits in the network prefix of the private
  *                         AL2S network.
- * @param[in] retxTimeout  FMTP retransmission timeout in minutes. A negative
+ * @param[in] retxTimeout  FMTP retransmission timeout in seconds. A negative
  *                         value obtains the FMTP default.
  * @param[in] pqPathname   Pathname of product-queue
  * @retval    0            Success. The multicast LDM sender associated with the
@@ -476,7 +476,7 @@ mldm_ensureExec(
         const SepMcastInfo* const restrict info,
         const unsigned short               ttl,
         const unsigned short               subnetLen,
-        const float                        retxTimeout,
+        const int                          retxTimeout,
         const char* const restrict         pqPathname)
 {
     /*
@@ -1126,7 +1126,7 @@ me_compareOrConflict(
  * Starts a multicast LDM sender process if necessary.
  *
  * @param[in,out]  entry        Multicast entry
- * @param[in]      retxTimeout  FMTP retransmission timeout in minutes. A
+ * @param[in]      retxTimeout  FMTP retransmission timeout in seconds. A
  *                              negative value obtains the FMTP default.
  * @retval         0            Success. The multicast LDM sender associated
  *                              with the given multicast group is running or was
@@ -1139,7 +1139,7 @@ me_compareOrConflict(
 static Ldm7Status
 me_startIfNot(
         McastEntry* const entry,
-        const float       retxTimeout)
+        const int         retxTimeout)
 {
     // Sets `mldmCmdPort`
     int status = mldm_ensureExec(entry->info,
@@ -1264,7 +1264,7 @@ me_usesVlan(McastEntry* const entry)
  * @param[in]  clntAddr     Address of client in network byte order
  * @param[in]  rmtVcEnd     Remote virtual-circuit endpoint or `NULL`. Caller
  *                          may free.
- * @param[in]  retxTimeout  FMTP retransmission timeout in minutes. A negative
+ * @param[in]  retxTimeout  FMTP retransmission timeout in seconds. A negative
  *                          value obtains the FMTP default.
  * @param[out] smi          Separated-out multicast information. Set only on
  *                          success.
@@ -1279,7 +1279,7 @@ me_subscribe(
         McastEntry* const restrict          entry,
         const in_addr_t                     clntAddr,
         const VcEndPoint* const restrict    rmtVcEnd,
-        const float                         retxTimeout,
+        const int                           retxTimeout,
         const SepMcastInfo** const restrict smi,
         CidrAddr* const restrict            fmtpClntCidr)
 {
@@ -1383,7 +1383,7 @@ static void*       mcastEntries;
 static McastEntry  key;
 
 /// FMTP retransmission timeout in minutes
-static float       retxTimeout = -1.0; // Negative => use FMTP default
+static int         retxTimeout = -1; // Negative => use FMTP default
 
 /// Receiving (remote) virtual-circuit endpoint
 static VcEndPoint* recvEnd = NULL;
@@ -1419,9 +1419,9 @@ umm_getMcastEntry(const feedtypet feed)
 }
 
 void
-umm_setRetxTimeout(const float minutes)
+umm_setRetxTimeout(const int seconds)
 {
-    retxTimeout = minutes;
+    retxTimeout = seconds;
 }
 
 Ldm7Status
