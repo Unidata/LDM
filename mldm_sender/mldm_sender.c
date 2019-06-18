@@ -606,9 +606,9 @@ mls_mcastProd(
         const size_t                    size,
         void* const restrict            arg)
 {
-    off_t          offset = *(off_t*)arg;
+    off_t         offset = *(off_t*)arg;
     FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
-    int            status = om_put(indexToOffsetMap, iProd, offset);
+    int           status = om_put(indexToOffsetMap, iProd, offset);
     if (status) {
         log_add("Couldn't add to index-to-offset map: {index: %lu, offset: %ld}",
                 (unsigned long)iProd, (long)offset);
@@ -692,57 +692,6 @@ mls_setProdClass(
 }
 
 /**
- * Tries to multicast the next data-product from a multicast LDM sender's
- * product-queue. Will block for 30 seconds or until a SIGCONT is received if
- * the next data-product doesn't exist.
- *
- * @param[in] prodClass    Class of data-products to multicast.
- * @retval    0            Success.
- * @retval    LDM7_MCAST   Multicast layer error. `log_add()` called.
- * @retval    LDM7_PQ      Product-queue error. `log_add()` called.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
- */
-static int
-mls_tryMulticast(
-        prod_class* const restrict prodClass)
-{
-    // TODO: Keep product locked until FMTP notification, then release
-
-    off_t offset;
-    int   status = pq_sequenceLock(pq, TV_GT, prodClass, mls_mcastProd,
-            &offset, &offset);
-
-    if (PQUEUE_END == status) {
-        /* No matching data-product. */
-        /*
-         * The following code ensures that a termination signal isn't delivered
-         * between the time that the done flag is checked and the thread is
-         * suspended.
-         */
-        blockTermSigs();
-
-        if (!done) {
-            /*
-             * Block until a signal handler is called or the timeout occurs. NB:
-             * `pq_suspend()` unblocks SIGCONT and SIGALRM.
-             *
-             * Keep timeout duration consistent with function description.
-             */
-            (void)pq_suspendAndUnblock(30, termSigs, NELT(termSigs));
-        }
-
-        status = 0;           // no problems here
-        unblockTermSigs();
-    }
-    else if (status < 0) {
-        log_errno(status, "Error in product-queue");
-        status = LDM7_PQ;
-    }
-
-    return status;
-}
-
-/**
  * Blocks signals used by the product-queue for the current thread.
  */
 static inline void      // inlined because small and only called in one place
@@ -775,13 +724,43 @@ mls_startMulticasting(void)
     if (status == 0) {
         pq_cset(pq, &prodClass->from);  // sets product-queue cursor
 
-        /*
-         * The `done` flag is checked before `mls_tryMulticast()` is called
-         * because that function is potentially lengthy and a SIGTERM might
-         * have already been received.
-         */
-        while (0 == status && !done)
-            status = mls_tryMulticast(prodClass);
+        while (0 == status && !done) {
+            off_t offset;
+
+            /*
+             * `offset` is set by `pq_sequenceLock()` and then passed to
+             * `mls_mcastProd()`
+             */
+            status = pq_sequenceLock(pq, TV_GT, prodClass, mls_mcastProd,
+                    &offset, &offset);
+
+            if (PQUEUE_END == status) {
+                // No matching data-product. Not a problem.
+                status = 0;
+
+                /*
+                 * The following ensures that a termination signal isn't
+                 * delivered between the time that `done` is checked and the
+                 * thread is suspended.
+                 */
+                blockTermSigs();
+
+                if (!done) {
+                    /*
+                     * Block until a signal handler is called or the timeout
+                     * occurs. NB: `pq_suspendAndUnblock()` unblocks SIGCONT and
+                     * SIGALRM.
+                     */
+                    (void)pq_suspendAndUnblock(30, termSigs, NELT(termSigs));
+                }
+
+                unblockTermSigs();
+            }
+            else if (status < 0) {
+                log_errno(status, "Error in product-queue");
+                status = LDM7_PQ;
+            }
+        } // While loop
 
         free_prod_class(prodClass);
     } // `prodClass` allocated
