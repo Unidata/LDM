@@ -395,7 +395,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 
         /* Set the retransmission timeout parameters */
         setTimerParameters(senderProdMeta);
-        /* start a new timer for this product in a separate thread */
+        /* start a timer for this product */
         timerDelayQ.push(prodIndex, senderProdMeta->retxTimeoutPeriod);
     }
     catch (std::runtime_error& e) {
