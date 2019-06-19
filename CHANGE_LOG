@@ -1,4 +1,4 @@
-6.13.12.7	2019-06-17T15:01:49-0600
+6.13.12.8	2019-06-19T14:38:31-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -35,8 +35,9 @@
                 - Added debug message about releasing locked product
             - Added registry parameter "/fmtp-retx-timeout" for FMTP timout in
               seconds
-            - Modified "-r fmtp_timeout" option to be in seconds
             - Modified to use registry parameter "/fmtp-retx-timeout"
+            - Modified "-r <fmtp_timeout>" option to be in seconds
+            - Merged mls_tryMulticast() into mls_startMulticasting()
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
