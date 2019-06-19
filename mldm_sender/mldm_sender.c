@@ -1008,7 +1008,7 @@ main(   const int    argc,
         if (reg_getString(REG_RETX_TIMEOUT, &paramStr) == 0) {
             int nbytes;
 
-            if (1 != sscanf(optarg, "%d %n", &retxTimeout, &nbytes) ||
+            if (1 != sscanf(paramStr, "%d %n", &retxTimeout, &nbytes) ||
                     0 != optarg[nbytes]) {
                 log_add("Couldn't decode registry parameter %s: \"%s\"",
                         REG_RETX_TIMEOUT, paramStr);
