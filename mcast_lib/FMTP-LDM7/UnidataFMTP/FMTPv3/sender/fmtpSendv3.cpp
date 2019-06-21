@@ -29,6 +29,7 @@
 
 
 #include "fmtpSendv3.h"
+#include "SockToIndexMap.h"
 #ifdef LDM_LOGGING
 #include "log.h"
 #endif
@@ -42,7 +43,6 @@
 #include <stdexcept>
 #include <cstdint>
 #include <system_error>
-
 
 
 #ifndef NULL
@@ -238,7 +238,8 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
     notifyprodidx(0),
     suppressor(0),
-    udpSerializer{udpsend}
+    udpSerializer{udpsend},
+    unreleasedProds()
 {
 }
 
@@ -277,7 +278,7 @@ void fmtpSendv3::clearRuninProdSet(int run)
  */
 uint32_t fmtpSendv3::getNotify()
 {
-    std::unique_lock<std::mutex> lock(notifycvmtx);
+    Lock lock(notifycvmtx);
     notify_cv.wait(lock);
     return suppressor->query();
 }
@@ -303,7 +304,7 @@ unsigned short fmtpSendv3::getTcpPortNum()
  */
 uint32_t fmtpSendv3::releaseMem()
 {
-    std::unique_lock<std::mutex> lock(notifyprodmtx);
+    Lock lock(notifyprodmtx);
     memrelease_cv.wait(lock);
     return notifyprodidx;
 }
@@ -361,6 +362,12 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
     throwIfBroken();
 
     try {
+        /*
+         * Add this product to the set of unreleased products for all
+         * unicast sockets
+         */
+        unreleasedProds.insert(tcpsend->getConnSockList(), prodIndex);
+
         if (data == NULL)
             throw std::runtime_error(
                     "fmtpSendv3::sendProduct() data pointer is NULL");
@@ -429,7 +436,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
 void fmtpSendv3::SetSendRate(uint64_t speed)
 {
     rateshaper.SetRate(speed);
-    std::unique_lock<std::mutex> lock(linkmtx);
+    Guard guard(linkmtx);
     linkspeed = speed;
 }
 
@@ -541,9 +548,8 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
 
     /* Get a full list of current connected sockets and add to unfinished set */
     std::list<int> currSockList = tcpsend->getConnSockList();
-    std::list<int>::iterator it;
-    for (it = currSockList.begin(); it != currSockList.end(); ++it)
-        senderProdMeta->unfinReceivers.insert(*it);
+    senderProdMeta->unfinReceivers.insert(currSockList.begin(),
+            currSockList.end());
 
     /* Add current RetxMetadata into sendMetadata::indexMetaMap */
     sendMeta->addRetxMetadata(senderProdMeta);
@@ -652,46 +658,42 @@ void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
  * Handles a notice from a receiver that a data-product has been completely
  * received.
  *
- * @param[in] recvheader  The FMTP header of the notice.
- * @param[in] retxMeta    Associated retransmission entry or `0`, in which case
- *                        nothing is done.
+ * @param[in] prodindex   Index of the product
  * @param[in] sock        The receiver's socket.
  */
-void fmtpSendv3::handleRetxEnd(FmtpHeader*   const recvheader,
-                               RetxMetadata* const retxMeta,
-                               const int           sock)
+void fmtpSendv3::handleRetxEnd(const uint32_t prodindex,
+                               const int      sock)
 {
-    if (retxMeta) {
+    /**
+     * Remove the specific receiver from the unfinished receiver
+     * set. Only if the product is removed by clearUnfinishedSet(),
+     * it returns a true value.
+     */
+    if (sendMeta->clearUnfinishedSet(prodindex, sock, tcpsend)) {
         /**
-         * Remove the specific receiver from the unfinished receiver
-         * set. Only if the product is removed by clearUnfinishedSet(),
-         * it returns a true value.
+         * Only if the product is removed by clearUnfinishedSet()
+         * since this receiver is the last one in the unfinished set,
+         * notify the sending application.
          */
-        if (sendMeta->clearUnfinishedSet(recvheader->prodindex, sock,
-                                         tcpsend)) {
-            /**
-             * Only if the product is removed by clearUnfinishedSet()
-             * since this receiver is the last one in the unfinished set,
-             * notify the sending application.
-             */
-            if (notifier) {
-                notifier->notifyOfEop(recvheader->prodindex);
-            }
-            else {
-                suppressor->remove(recvheader->prodindex);
-                /**
-                 * Updates the most recently acknowledged product and notifies
-                 * a dummy notification handler (getNotify()).
-                 */
-                {
-                    std::unique_lock<std::mutex> lock(notifyprodmtx);
-                    notifyprodidx = recvheader->prodindex;
-                }
-                notify_cv.notify_one();
-                memrelease_cv.notify_one();
-            }
+        if (notifier) {
+            notifier->notifyOfEop(prodindex);
         }
-    }
+        else {
+            suppressor->remove(prodindex);
+            /**
+             * Updates the most recently acknowledged product and notifies
+             * a dummy notification handler (getNotify()).
+             */
+            {
+                Guard guard(notifyprodmtx);
+                notifyprodidx = prodindex;
+            }
+            notify_cv.notify_one();
+            memrelease_cv.notify_one();
+        }
+    } // Only `sock` hadn't released `prodindex`
+
+    unreleasedProds.erase(sock, prodindex);
 }
 
 
@@ -848,7 +850,8 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
                     std::cout << debugmsg << std::endl;
                     WriteToLog(debugmsg);
                 #endif
-                handleRetxEnd(&recvheader, retxMeta, retxsockfd);
+                if (retxMeta)
+                    handleRetxEnd(recvheader.prodindex, retxsockfd);
             }
             else if (recvheader.flags == FMTP_BOP_REQ) {
                 #ifdef DEBUG2
@@ -1418,9 +1421,13 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
     pthread_cleanup_push(freeLogging, nullptr);
     log_debug("Entered");
 #endif
-    StartRetxThreadInfo* newptr = static_cast<StartRetxThreadInfo*>(ptr);
+
+    StartRetxThreadInfo* retxInfo = static_cast<StartRetxThreadInfo*>(ptr);
+    const auto           sd = retxInfo->retxsockfd;
+    fmtpSendv3*          fmtpSender = retxInfo->retxmitterptr;
+
     try {
-        newptr->retxmitterptr->RunRetxThread(newptr->retxsockfd);
+        fmtpSender->RunRetxThread(sd);
     }
     catch (const std::exception& e) {
         /*
@@ -1428,14 +1435,25 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
          * will be called.
          */
         logMsg(e);
-        newptr->retxmitterptr->tcpsend->rmSockInList(newptr->retxsockfd);
-        close(newptr->retxsockfd);
+        fmtpSender->tcpsend->rmSockInList(sd);
+        close(sd);
         pthread_t thisThread = ::pthread_self();
-        newptr->retxmitterptr->retxThreadList.remove(thisThread);
+        fmtpSender->retxThreadList.remove(thisThread);
 
-        // TODO: notify timer not to wait for the offline receiver
+        /*
+         * Handle the unicast socket's unreleased products by simulating
+         * complete reception by the socket of its unreleased products.
+         *
+         * Was: TODO: notify timer not to wait for the offline receiver
+         */
+        auto indexes = fmtpSender->unreleasedProds.find(sd); // Shared pointer
+        auto end = indexes->end();
+        for (auto index = indexes->begin(); index != end; ++index)
+            fmtpSender->handleRetxEnd(*index, sd);
+
         // TODO: notify application a receiver went offline?
     }
+
 #ifdef LDM_LOGGING
     pthread_cleanup_pop(true);
 #endif
@@ -1445,7 +1463,7 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
 
 void fmtpSendv3::taskBroke(const std::exception_ptr& ex)
 {
-    std::unique_lock<std::mutex> lock(exitMutex);
+    Guard guard(exitMutex);
 
     if (!except)
         except = ex;
@@ -1453,7 +1471,7 @@ void fmtpSendv3::taskBroke(const std::exception_ptr& ex)
 
 void fmtpSendv3::throwIfBroken()
 {
-    std::unique_lock<std::mutex> lock(exitMutex);
+    Guard guard(exitMutex);
 
     if (except)
         std::rethrow_exception(except);
@@ -1507,29 +1525,36 @@ void fmtpSendv3::timerThread()
         /* notify all unACKed receivers with an EOP. */
         sendMeta->notifyUnACKedRcvrs(prodindex, &EOPmsg, tcpsend);
 
-        const bool isRemoved = sendMeta->rmRetxMetadata(prodindex);
-        /**
-         * Only if the product is removed by this remove call, notify the
-         * sending application. Since timer and retx thread access the
-         * RetxMetadata exclusively, notify_of_eop() will be called only once.
-         */
-        if (notifier && isRemoved) {
-            notifier->notifyOfEop(prodindex);
-        }
-        else if (isRemoved) {
-            suppressor->remove(prodindex);
+        if (sendMeta->rmRetxMetadata(prodindex)) {
             /**
-             * Updates the most recently acknowledged product and notifies
-             * a dummy notification handler (getNotify()).
+             * Only if the product is removed by this remove call, notify the
+             * sending application. Since timer and retx thread access the
+             * RetxMetadata exclusively, notify_of_eop() will be called only once.
              */
-            {
-                std::unique_lock<std::mutex> lock(notifyprodmtx);
-                notifyprodidx = prodindex;
+            if (notifier) {
+                notifier->notifyOfEop(prodindex);
             }
-            notify_cv.notify_one();
-            memrelease_cv.notify_one();
-        }
-    }
+            else {
+                suppressor->remove(prodindex);
+                /**
+                 * Updates the most recently acknowledged product and notifies
+                 * a dummy notification handler (getNotify()).
+                 */
+                {
+                    Guard guard(notifyprodmtx);
+                    notifyprodidx = prodindex;
+                }
+                notify_cv.notify_one();
+                memrelease_cv.notify_one();
+            }
+
+            /*
+             * Remove product from the set of unreleased products for all
+             * unicast sockets
+             */
+            unreleasedProds.erase(tcpsend->getConnSockList(), prodindex);
+        } // Product was removed from the set of retransmittable products
+    } // While loop
 }
 
 

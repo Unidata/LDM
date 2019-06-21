@@ -50,6 +50,7 @@
 #include "UdpSend.h"
 #include "fmtpBase.h"
 #include "Serializer.h"
+#include "SockToIndexMap.h"
 
 
 class fmtpSendv3;
@@ -184,12 +185,10 @@ private:
      * Handles a notice from a receiver that a data-product has been completely
      * received.
      *
-     * @param[in] recvheader  The FMTP header of the notice.
-     * @param[in] retxMeta    The associated retransmission entry.
+     * @param[in] prodindex   Index of the product
      * @param[in] sock        The receiver's socket.
      */
-    void handleRetxEnd(FmtpHeader* const  recvheader,
-                       RetxMetadata* const retxMeta, const int sock);
+    void handleRetxEnd(const uint32_t prodindex, const int sock);
     /**
      * Handles a notice from a receiver that BOP for a product is missing.
      *
@@ -286,6 +285,9 @@ private:
     fmtpSendv3& operator=(const fmtpSendv3&);
     void WriteToLog(const std::string& content);
 
+    typedef std::mutex              Mutex;
+    typedef std::lock_guard<Mutex>  Guard;
+    typedef std::unique_lock<Mutex> Lock;
 
     uint32_t            prodIndex;
     /** underlying udp layer instance */
@@ -301,13 +303,13 @@ private:
     pthread_t           timer_t;
     /** tracks all the dynamically created retx threads */
     RetxThreads         retxThreadList;
-    std::mutex          linkmtx;
+    Mutex               linkmtx;
     uint64_t            linkspeed;
-    std::mutex          exitMutex;
+    Mutex               exitMutex;
     std::exception_ptr  except;
     RateShaper          rateshaper;
-    std::mutex          notifyprodmtx;
-    std::mutex          notifycvmtx;
+    Mutex               notifyprodmtx;
+    Mutex               notifycvmtx;
     uint32_t            notifyprodidx;
     std::condition_variable notify_cv;
     std::condition_variable memrelease_cv;
@@ -315,7 +317,12 @@ private:
     SilenceSuppressor*  suppressor;
     /* sender maximum retransmission timeout */
     double              tsnd;
-
+    /**
+     *  Map from unicast socket descriptor to indexes of products that the
+     *  socket has locked. This information is necessary to ensure that such
+     *  products are released if the connection is broken.
+     */
+    SockToIndexMap      unreleasedProds;
 
     /* member variables for measurement use only */
     bool                txdone;
