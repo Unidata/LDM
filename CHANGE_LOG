@@ -1,4 +1,4 @@
-6.13.12.9	2019-06-19T15:18:36-0600
+6.13.12.10	2019-06-22T14:20:00-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -10,7 +10,6 @@
         Product-Queue (pq.c):
             Added disabling of cancellation state on entry and reversion on
             exit.
-
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
             have the same switch name, port name, or VLAN tag
@@ -20,24 +19,33 @@
             * Specified absolute pathname of vlanUtil(1) to workaround Ubuntu's
               non-standard execvp(2)
         FMTP:
-            * fmtpSendv3: Improved debug logging
+            * fmtpSendv3:
+                * Improved debug logging
+                * Added release of products held by a unicast socket that just
+                  disconnected to prevent all products in the queue from
+                  eventually being locked
+            * Release products held by socket that just disconnected
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
+            * Created socket-to-prodIndex map to support releasing of products
+              held by a unicast socket that disconnected
         vlanUtil(1):
-            - Replaced use of gawk(1)-only bit operations with shell's for
+            * Replaced use of gawk(1)-only bit operations with shell's for
               portability
-            - Corrected setting of broadcast address string
+            * Corrected setting of broadcast address string
         OffsetMap:
             Added missing deletion of entry by om_get()
         mldm_sender(1)
-            - Improved releasing of product:
-                - Added product release on multicast failure
-                - Added debug message about releasing locked product
-            - Added registry parameter "/fmtp-retx-timeout" for FMTP timout in
+            * Improved releasing of product:
+                * Added product release on multicast failure
+                * Added debug message about releasing locked product
+            * Added registry parameter "/fmtp-retx-timeout" for FMTP timout in
               seconds
-            - Modified to use registry parameter "/fmtp-retx-timeout"
-            - Modified "-r <fmtp_timeout>" option to be in seconds
-            - Merged mls_tryMulticast() into mls_startMulticasting()
+            * Modified to use registry parameter "/fmtp-retx-timeout"
+            * Modified "-r <fmtp_timeout>" option to be in seconds
+            * Merged mls_tryMulticast() into mls_startMulticasting()
+        UpMcastMgr.c:
+            Added check of logging destination for mldm_sender(1) execution
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
