@@ -210,7 +210,13 @@ mldm_exec(
     args[i++] = "mldm_sender";
 
     const char* logDestArg = log_get_destination();
-    if (strcmp(log_get_default_destination(), logDestArg)) {
+    const char* defLogDest = log_get_default_destination();
+    if (logDestArg == NULL || defLogDest == NULL) {
+        log_add("Couldn't get logging destinations: {logDestArg: %p, "
+                "defLogDest: %p", logDestArg, defLogDest);
+        status = LDM7_SYSTEM;
+    }
+    else if (strcmp(defLogDest, logDestArg)) {
         args[i++] = "-l";
         args[i++] = (char*)logDestArg; // Safe cast
     } // Non-default logging destination
