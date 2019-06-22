@@ -1441,8 +1441,10 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
         fmtpSender->retxThreadList.remove(thisThread);
 
         /*
-         * Handle the unicast socket's unreleased products by simulating
-         * complete reception by the socket of its unreleased products.
+         * Handle the unreleased products of the disconnected unicast socket by
+         * simulating complete reception by the socket of those products; thus,
+         * enabling the application to free any resources associated with the
+         * products.
          *
          * Was: TODO: notify timer not to wait for the offline receiver
          */
