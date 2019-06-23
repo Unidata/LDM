@@ -1446,11 +1446,14 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
          * enabling the application to free any resources associated with the
          * products.
          *
+         * The set of indexes is copied because `fmtpSender->handleRetxEnd()`
+         * modifies `fmtpSender->unreleasedProds`.
+         *
          * Was: TODO: notify timer not to wait for the offline receiver
          */
-        auto indexes = fmtpSender->unreleasedProds.find(sd); // Shared pointer
-        auto end = indexes->end();
-        for (auto index = indexes->begin(); index != end; ++index)
+        SockToIndexMap::IndexSet indexes(fmtpSender->unreleasedProds.find(sd));
+        auto                     end = indexes.end();
+        for (auto index = indexes.begin(); index != end; ++index)
             fmtpSender->handleRetxEnd(*index, sd);
 
         // TODO: notify application a receiver went offline?
