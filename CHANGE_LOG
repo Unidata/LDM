@@ -1,4 +1,4 @@
-6.13.12.10	2019-06-22T14:20:00-0600
+6.13.12.11	2019-06-23T11:22:35-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
