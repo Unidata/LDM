@@ -318,9 +318,11 @@ private:
     /* sender maximum retransmission timeout */
     double              tsnd;
     /**
-     *  Map from unicast socket descriptor to indexes of products that the
-     *  socket has locked. This information is necessary to ensure that such
-     *  products are released if the connection is broken.
+     *  Map from unicast socket descriptor to indexes of products that have not
+     *  been released (i.e., haven't been acknowledged as being received and for
+     *  which the timer has not expired). This information is necessary to
+     *  ensure that the application releases any resources associated with such
+     *  products if the connection is broken.
      */
     SockToIndexMap      unreleasedProds;
 
