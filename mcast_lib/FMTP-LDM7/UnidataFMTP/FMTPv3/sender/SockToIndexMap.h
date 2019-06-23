@@ -38,13 +38,26 @@
 
 class SockToIndexMap final
 {
-    typedef std::set<uint32_t>     Set;
-    typedef std::map<int, Set>     Map;
-    typedef std::mutex             Mutex;
-    typedef std::lock_guard<Mutex> Guard;
+public:
+    typedef std::set<uint32_t>       IndexSet;
+
+private:
+    typedef std::map<int, IndexSet>  Map;
+    typedef std::mutex               Mutex;
+    typedef std::lock_guard<Mutex>   Guard;
 
     Map           map;
     mutable Mutex mutex;
+
+    inline void guardedErase(
+            const int      sd,
+            const uint32_t index)
+    {
+        auto indexes = map.find(sd);
+
+        if (indexes != map.end())
+            indexes->second.erase(index);
+    }
 
 public:
     typedef Map::iterator iterator;
@@ -65,15 +78,11 @@ public:
     }
 
     void erase(
-            const int      sock,
+            const int      sd,
             const uint32_t index)
     {
         Guard guard(mutex);
-
-        auto indexes = map.find(sock);
-
-        if (indexes != map.end())
-            indexes->second.erase(index);
+        guardedErase(sd, index);
     }
 
     void erase(
@@ -82,12 +91,8 @@ public:
     {
         Guard guard(mutex);
 
-        for (auto sd : socks) {
-            auto indexes = map.find(sd);
-
-            if (indexes != map.end())
-                indexes->second.erase(index);
-        }
+        for (auto sd : socks)
+            guardedErase(sd, index);
     }
 
     void erase(const int sd)
@@ -96,17 +101,10 @@ public:
         map.erase(sd);
     }
 
-    typedef std::shared_ptr<Set> FindResult;
-
-    FindResult find(const int sd) const
+    const IndexSet& find(const int sd)
     {
         Guard guard(mutex);
-        auto  indexes = map.find(sd);
-
-        return FindResult(
-                (indexes == map.end())
-                    ? new Set()
-                    : new Set(indexes->second));
+        return map[sd];
     }
 };
 
