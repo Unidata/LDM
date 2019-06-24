@@ -19,6 +19,7 @@
 
 #ifdef __cplusplus
 
+#include <ctime>
 #include <unordered_map>
 #include <mutex>
 
@@ -40,8 +41,15 @@ public:
     inline off_t get(McastProdIndex prodIndex);
 
 private:
-    std::unordered_map<McastProdIndex, off_t> map;
-    std::mutex                                mutex;
+    typedef struct {
+        off_t           offset;
+        struct timeval  added;
+    }                              Element;
+    typedef std::mutex             Mutex;
+    typedef std::lock_guard<Mutex> Guard;
+
+    std::unordered_map<McastProdIndex, Element> map;
+    Mutex                                       mutex;
 };
 
 #endif

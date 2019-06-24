@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 University Corporation for Atmospheric Research. All rights
+ * Copyright 2019 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -13,20 +13,35 @@
 #include "OffsetMap.h"
 
 #include <exception>
+#include <sys/time.h>
 
 void OffsetMap::put(
         const McastProdIndex prodIndex,
         const off_t          offset)
 {
-    std::unique_lock<std::mutex> lock(mutex);
-    map[prodIndex] = offset;
+    Guard guard(mutex);
+    map[prodIndex].offset = offset;
+    ::gettimeofday(&map[prodIndex].added, nullptr);
 }
 
 off_t OffsetMap::get(
         const McastProdIndex prodIndex)
 {
-    std::unique_lock<std::mutex> lock(mutex);
-    auto offset = map.at(prodIndex);
+    Guard          guard(mutex);
+    Element&       elt = map.at(prodIndex);
+    auto           offset = elt.offset;
+
+    struct timeval now;
+    ::gettimeofday(&now, nullptr);
+    unsigned long  sec = now.tv_sec - elt.added.tv_sec;
+    long           usec = now.tv_usec - elt.added.tv_usec;
+    if (usec < 0) {
+        sec -= 1;
+        usec += 1000000;
+    }
+    log_notice("{count: %lu, offset: %ld, duration: %lu.%05ld s}", map.size(),
+            offset, sec, usec);
+
     map.erase(prodIndex);
     return offset;
 }
