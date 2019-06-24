@@ -4704,6 +4704,7 @@ pq2_del_oldest(
 
     /* Delete the oldest unlocked data-product. */
     size_t  rlix;
+    size_t  numLocked = 0;
     for (tqelem* tqep = tqe_first(pq->tqp);
             tqep && (rlix = rl_find(pq->rlp, tqep->offset)) != RL_NONE;
             tqep = tq_next(pq->tqp, tqep)) {
@@ -4719,9 +4720,12 @@ pq2_del_oldest(
         }
         if (status != EACCES)
             return status;
+
+        ++numLocked;
     }
 
-    log_add("No unlocked products left to delete!");
+    log_add("All %zu products are locked. No unlocked products left to delete!",
+            numLocked);
 
     return status;
 
