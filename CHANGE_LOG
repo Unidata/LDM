@@ -1,4 +1,4 @@
-6.13.12.12	2019-06-24T10:24:17-0600
+6.13.12.12	2019-06-24T16:22:28-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -53,6 +53,7 @@
         * send_recv_test.h: Improved commentary on multicast addresses
         * Added LDM_BIN_DIR to configure.ac
         * push(1): Replaced "commit -a" with list of modified files
+        * Instrumented OffsetMap
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
