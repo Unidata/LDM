@@ -1,4 +1,4 @@
-6.13.12.11	2019-06-23T11:22:35-0600
+6.13.12.12	2019-06-24T10:24:17-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -8,8 +8,9 @@
         
     Multicast:
         Product-Queue (pq.c):
-            Added disabling of cancellation state on entry and reversion on
-            exit.
+            * Added disabling of cancellation state on entry and reversion on
+              exit
+            * Added number of locked products to log message
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
             have the same switch name, port name, or VLAN tag
