@@ -3389,34 +3389,35 @@ fd_isLocked(const int fd, const short l_type,
  *
  * Returns:
  *      0       Success
- *      EACCESS or EAGAIN
- *              The "cmd" argument is F_SETLK: the type of lock (l_type) is a
+ *      EACCES  The "cmd" argument is F_SETLK: the type of lock (l_type) is a
  *              shared (F_RDLCK) or exclusive (F_WRLCK) lock and the segment
  *              of a file to be locked is already exclusive-locked by another
  *              process, or the type is an exclusive lock and some portion of
  *              the segment of a file to be locked is already shared-locked or
- *              exclusive-locked by another process.
+ *              exclusive-locked by another process. `log_add()` not called.
  *      EBADF   The "fd" argument is not a valid open file descriptor, or the
  *              argument "cmd" is F_SETLK or F_SETLKW, the type of lock, l_type,
  *              is a shared lock (F_RDLCK), and "fd" is not a valid file
  *              descriptor open for reading, or the type of lock l_type, is an
  *              exclusive lock (F_WRLCK), and "fd" is not a valid file
- *              descriptor open for writing.
+ *              descriptor open for writing. `log_add()` called.
  *      EINVAL  The "cmd" argument is invalid, or the "cmd" argument is F_GETLK,
  *              F_SETLK or F_SETLKW and "l_type", "offset", "l_whence", or
  *              "extent" is not valid, or "fd" refers to a file that does not 
- *              support locking.
+ *              support locking. `log_add()` called.
  *      ENOLCK  The argument "cmd" is F_SETLK or F_SETLKW and satisfying the
  *              lock or unlock request would result in the number of locked
  *              regions in the system exceeding a system-imposed limit.
+ *              `log_add()` called.
  *      EOVERFLOW
  *              The "cmd" argument is F_GETLK, F_SETLK or F_SETLKW and the
  *              smallest or, if "extent" is non-zero, the largest offset of any
  *              byte in the requested segment cannot be represented correctly
- *              in an object of type off_t.
+ *              in an object of type off_t. `log_add()` called.
  *      EDEADLK The "cmd" argument is F_SETLKW, the lock is blocked by some lock
  *              from another process and putting the calling process to sleep,
  *              waiting for that lock to become free would cause a deadlock.
+ *              `log_add()` called.
  */
 static int
 fd_lock(
@@ -3438,14 +3439,17 @@ fd_lock(
     if (fcntl(fd, cmd, &lock) < 0) {
         status = errno;
 
-        if (status == EDEADLK) {
+        if (status == EAGAIN) {
+            status = EACCES;
+        }
+        else if (status == EDEADLK) {
             pid_t conflict = fd_isLocked(fd, l_type, offset, l_whence, extent);
             log_errno(status, "fcntl(%d, %s) deadlock for region {whence: %s, "
                     "off: %ld, extent: %zu} due to PID %ld", fd,
                     s_ltype(l_type), s_whence(l_whence), (long)offset, extent,
                     (long)conflict);
         }
-        else if (status != EAGAIN && status != EACCES) {
+        else if (status != EACCES) {
             log_syserr("fcntl(%d, %s) failed for region {whence: %s, off: %ld, "
                     "extent: %zu}", fd, s_ltype(l_type),  s_whence(l_whence),
                     (long)offset, extent);
@@ -3667,6 +3671,7 @@ rgn2_lock(pqueue *const pq,
  * @retval 0          Success.
  * @retval EBADF      The product-queue's file descriptor is invalid.
  * @retval EINVAL     The region is not valid.
+ * @retval EINVAL     The region is not locked.
  * @retval EOVERFLOW  The region is too large.
  */
 static int
@@ -3769,6 +3774,7 @@ rgn2_reserve(
  *                         - RGN_MODIFIED   Region was modified
  * @retval        0       Success
  * @retval        EINVAL  Region with given offset isn't in use
+ * @retval        EINVAL  The region is not locked.
  * @see `region_reserve()`
  */
 static int
@@ -4346,6 +4352,7 @@ mm0_ftom(pqueue *const pq,
  *                         - RGN_MODIFIED   Region was modified
  * @retval EINVAL     The region could not be found in the list of in-use
  *                    regions.
+ * @retval EINVAL     The region is not locked.
  * @retval EBADF      The product-queue's file descriptor is invalid.
  * @retval EOVERFLOW  The (offset + extent) specification of the region is
  *                    invalid.
@@ -4407,6 +4414,13 @@ isProductMappingNecessary(
 
 /*
  * Release/unlock a data region. This function is the complement of `rgn_get()`.
+ *
+ * @retval EINVAL     The region could not be found in the list of in-use
+ *                    regions.
+ * @retval EINVAL     The region is not locked.
+ * @retval EBADF      The product-queue's file descriptor is invalid.
+ * @retval EOVERFLOW  The (offset + extent) specification of the region is
+ *                    invalid.
  */
 static inline int
 rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
@@ -8226,9 +8240,10 @@ pq_next(
  * be deleted to make room for another product.
  *
  * @retval 0            Success.
- * @retval PQ_CORRUPT   If the product-queue is corrupt.
- * @retval PQ_INVAL     If the product-queue is closed.
- * @retval PQ_NOTFOUND  If `offset` doesn't refer to a locked product.
+ * @retval PQ_CORRUPT   Product-queue is corrupt. `log_add()` called.
+ * @retval PQ_INVAL     Product-queue is closed. `log_add()` called.
+ * @retval PQ_NOTFOUND  `offset` doesn't refer to a locked product. `log_add()`
+ *                      called.
  */
 int
 pq_release(
@@ -8236,8 +8251,12 @@ pq_release(
         const off_t   offset)
 {
     pq_lockIf(pq);
-    const int status = rgn_rel(pq, offset, 0);
+        const int status = rgn_rel(pq, offset, 0);
     pq_unlockIf(pq);
+
+    if (status)
+        log_add_errno(status, "Couldn't release offset %ld", offset);
+
     return status == EBADF
             ? PQ_INVAL
             : status == EINVAL
@@ -8896,6 +8915,7 @@ pqe_new(pqueue *pq,
 
         indexp->offset = sxep->offset;
         memcpy(indexp->signature, sxep->sxi, sizeof(signaturet));
+        indexp->sig_is_set = true;
         pq->pqe_count++;
         /*FALLTHROUGH*/
 
