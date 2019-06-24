@@ -683,7 +683,7 @@ Parm_Table(unsigned char* pds)
 
     if ((ptable > 3 || (PDS_PARAM(pds)) > 127) && missing_count++ == 0) {
 	log_warning(
-            "Undefined parameter table {center: %d, subcenter: %d, table %d}. "
+            "Undefined parameter table {center: %d, subcenter: %d, table: %d}. "
 	    "Using NCEP-opn", center, subcenter, ptable);
     }
     return &parm_table_ncep_opn[0];
