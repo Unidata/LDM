@@ -1,4 +1,4 @@
-6.13.12.12	2019-06-24T16:22:28-0600
+6.13.12.12	2019-06-25T15:30:34-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -30,12 +30,15 @@
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
             * Created socket-to-prodIndex map to support releasing of products
               held by a unicast socket that disconnected
+            * Modified logMsg(std::string) to always log at NOTE level
         vlanUtil(1):
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
             * Corrected setting of broadcast address string
         OffsetMap:
-            Added missing deletion of entry by om_get()
+            * Added missing deletion of entry by om_get()
+            * Modified OffsetMap::get() to indicate no-entry instead of throwing
+              an exception
         mldm_sender(1)
             * Improved releasing of product:
                 * Added product release on multicast failure
@@ -45,6 +48,7 @@
             * Modified to use registry parameter "/fmtp-retx-timeout"
             * Modified "-r <fmtp_timeout>" option to be in seconds
             * Merged mls_tryMulticast() into mls_startMulticasting()
+            * Added error message on fmtpSender_send() failure
         UpMcastMgr.c:
             Added check of logging destination for mldm_sender(1) execution
 
