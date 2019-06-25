@@ -24,26 +24,49 @@ void OffsetMap::put(
     ::gettimeofday(&map[prodIndex].added, nullptr);
 }
 
-off_t OffsetMap::get(
-        const McastProdIndex prodIndex)
+bool OffsetMap::get(
+        const McastProdIndex prodIndex,
+        off_t&               offset)
 {
-    Guard          guard(mutex);
-    Element&       elt = map.at(prodIndex);
-    auto           offset = elt.offset;
+    bool           found;
+    struct timeval added;
+    size_t         size;
 
-    struct timeval now;
-    ::gettimeofday(&now, nullptr);
-    unsigned long  sec = now.tv_sec - elt.added.tv_sec;
-    long           usec = now.tv_usec - elt.added.tv_usec;
-    if (usec < 0) {
-        sec -= 1;
-        usec += 1000000;
+    {
+        Guard guard(mutex);
+        auto  elt = map.find(prodIndex);
+
+        if (elt == map.end()) {
+            found = false;
+        }
+        else {
+            found = true;
+            offset = elt->second.offset;
+            added = elt->second.added;
+            size = map.size();
+
+            map.erase(prodIndex);
+        }
+    } // End guarded access
+
+    if (found) {
+        struct timeval now;
+
+        ::gettimeofday(&now, nullptr);
+
+        unsigned long  sec = now.tv_sec - added.tv_sec;
+        long           usec = now.tv_usec - added.tv_usec;
+
+        if (usec < 0) {
+            sec -= 1;
+            usec += 1000000;
+        }
+
+        log_notice("{count: %lu, offset: %ld, duration: %lu.%05ld s}",
+                size, offset, sec, usec);
     }
-    log_notice("{count: %lu, offset: %ld, duration: %lu.%05ld s}", map.size(),
-            offset, sec, usec);
 
-    map.erase(prodIndex);
-    return offset;
+    return found;
 }
 
 OffMap* om_new()
@@ -84,11 +107,12 @@ int om_get(
         off_t* const         offset)
 {
     try {
-        *offset = ((OffsetMap*)offMap)->get(prodIndex);
-        return 0;
+        return ((OffsetMap*)offMap)->get(prodIndex, *offset)
+                ? 0
+                : LDM7_INVAL;
     }
     catch (const std::exception& e) {
-        log_add("%s", e.what());
+        log_error("%s", e.what());
         return LDM7_INVAL;
     }
 }

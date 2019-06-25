@@ -32,18 +32,24 @@ public:
      * @param[in] offset     The offset.
      */
     inline void put(McastProdIndex prodIndex, off_t offset);
+
     /**
-     * Removes and returns the offset corresponding to a product-index.
-     * @param[in] prodIndex       The product-index.
-     * @return                    The corresponding offset.
-     * @throws std::out_of_range if the corresponding offset doesn't exist.
+     * Returns the offset corresponding to a product-index and deletes the
+     * entry.
+     *
+     * @param[in]  prodIndex  The product-index
+     * @param[out] offset     Corresponding offset
+     * @retval     `false`    No corresponding offset. `offset` is unset.
+     * @retval     `true`     Corresponding offset. `offset` is set.
      */
-    inline off_t get(McastProdIndex prodIndex);
+    inline bool get(
+            McastProdIndex prodIndex,
+            off_t&         offset);
 
 private:
     typedef struct {
-        off_t           offset;
         struct timeval  added;
+        off_t           offset;
     }                              Element;
     typedef std::mutex             Mutex;
     typedef std::lock_guard<Mutex> Guard;
