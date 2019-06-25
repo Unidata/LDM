@@ -628,13 +628,21 @@ mls_mcastProd(
                     s_prod_info(buf, sizeof(buf), info, 1));
         }
         else {
+            char buf[LDM_INFO_MAX];
+
             status = fmtpSender_send(fmtpSender, xprod, size,
                     (void*)info->signature, sizeof(signaturet), &iProd);
 
             if (status) {
+                log_add("Couldn't multicast product {index: %lu, info: \"%s\"}",
+                        (unsigned long)iProd,
+                        s_prod_info(buf, sizeof(buf), info,
+                                log_is_enabled_debug));
+
                 off_t off;
 
                 (void)om_get(indexToOffsetMap, iProd, &off);
+                log_assert(off == offset);
 
                 status = pq_release(pq, offset);
 
@@ -647,14 +655,13 @@ mls_mcastProd(
                 status = LDM7_MCAST;
             }
             else {
-                char buf[LDM_INFO_MAX];
                 log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
                         (unsigned long)iProd,
                         s_prod_info(buf, sizeof(buf), info,
                                 log_is_enabled_debug));
             }
-        }
-    }
+        } // Signature added to product-index map
+    } // Offset added to index-to-offset map
 
     return status;
 }
@@ -1031,7 +1038,8 @@ main(   const int    argc,
 
             status = mls_execute();
             if (status) {
-                log_error_q("Couldn't execute multicast LDM sender");
+                log_add("Couldn't execute multicast LDM sender");
+                log_flush_error();
                 switch (status) {
                     case LDM7_INVAL: status = 1; break;
                     case LDM7_PQ:    status = 3; break;
