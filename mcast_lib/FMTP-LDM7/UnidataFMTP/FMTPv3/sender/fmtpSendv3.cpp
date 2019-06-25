@@ -69,7 +69,7 @@ static void freeLogging(void* arg)
 inline static void logMsg(const std::string& msg)
 {
 #ifdef LDM_LOGGING
-    log_add(msg.c_str());
+    log_notice(msg.c_str());
 #else
     //std::cerr << msg << std::endl;
 #endif
@@ -94,11 +94,6 @@ static void logMsg(
     }
 
     logMsg(ex.what());
-
-#ifdef LDM_LOGGING
-    if (isOutermost)
-        log_flush_error();
-#endif
 }
 
 /**
@@ -596,11 +591,10 @@ void* fmtpSendv3::coordinator(void* ptr)
             /* If new receiver accepted, measure its path MTU and update */
             sendptr->tcpsend->updatePathMTU(newtcpsockfd);
 
-            int initState;
-            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &initState);
+            int cancelState;
+            ::pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
             sendptr->StartNewRetxThread(newtcpsockfd);
-            int ignoredState;
-            pthread_setcancelstate(initState, &ignoredState);
+            ::pthread_setcancelstate(cancelState, &cancelState);
         }
     }
     catch (std::runtime_error& e) {
