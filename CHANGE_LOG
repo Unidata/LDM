@@ -1,4 +1,4 @@
-6.13.12.12	2019-06-25T15:30:34-0600
+6.13.12.13	2019-06-26T08:53:00-0600
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -31,6 +31,7 @@
             * Created socket-to-prodIndex map to support releasing of products
               held by a unicast socket that disconnected
             * Modified logMsg(std::string) to always log at NOTE level
+            * Added rcvrCount()
         vlanUtil(1):
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
@@ -49,6 +50,7 @@
             * Modified "-r <fmtp_timeout>" option to be in seconds
             * Merged mls_tryMulticast() into mls_startMulticasting()
             * Added error message on fmtpSender_send() failure
+            * Don't multicast product if no FMTP receivers
         UpMcastMgr.c:
             Added check of logging destination for mldm_sender(1) execution
 
