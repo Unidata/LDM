@@ -145,6 +145,13 @@ public:
     /* ----------- testapp-specific APIs end ----------- */
 
     unsigned short getTcpPortNum();
+    /**
+     * Returns the number of receivers
+     *
+     * @return           Number of receivers
+     * @exceptionsafety  No throw
+     */
+    int            rcvrCount() const noexcept;
     uint32_t       getNextProdIndex() const {return prodIndex;}
     uint32_t       sendProduct(void* data, uint32_t dataSize);
     uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,

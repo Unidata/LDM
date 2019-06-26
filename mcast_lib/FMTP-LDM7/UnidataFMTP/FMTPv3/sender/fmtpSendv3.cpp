@@ -304,6 +304,11 @@ uint32_t fmtpSendv3::releaseMem()
     return notifyprodidx;
 }
 
+int fmtpSendv3::rcvrCount() const noexcept
+{
+    return tcpsend->sockListSize();
+}
+
 
 /**
  * Transfers a contiguous block of memory (without metadata).

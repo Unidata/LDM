@@ -606,62 +606,76 @@ mls_mcastProd(
         const size_t                    size,
         void* const restrict            arg)
 {
-    off_t         offset = *(off_t*)arg;
-    FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
-    int           status = om_put(indexToOffsetMap, iProd, offset);
-    if (status) {
-        log_add("Couldn't add to index-to-offset map: {index: %lu, offset: %ld}",
-                (unsigned long)iProd, (long)offset);
+    int status;
+
+    if (fmtpSender_rcvrCount(fmtpSender) == 0) {
+        /*
+         * There's no sense locking a product in the product-queue if the FMTP
+         * module doesn't have any receivers.
+         */
+        status = 0;
     }
     else {
-        /*
-         * The signature is added to the product-index map before the product is
-         * sent so that it can be found if the receiving LDM-7 immediately
-         * requests it.
-         */
-        status = pim_put(iProd, (const signaturet*)&info->signature);
+        off_t         offset = *(off_t*)arg;
+        FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
+
+        status = om_put(indexToOffsetMap, iProd, offset);
 
         if (status) {
-            char buf[LDM_INFO_MAX];
-            log_add("Couldn't add to product-index map: {index: %lu, "
-                    "info: %s}", (unsigned long)iProd,
-                    s_prod_info(buf, sizeof(buf), info, 1));
+            log_add("Couldn't add to index-to-offset map: {index: %lu, offset: "
+                    "%ld}", (unsigned long)iProd, (long)offset);
         }
         else {
-            char buf[LDM_INFO_MAX];
-
-            status = fmtpSender_send(fmtpSender, xprod, size,
-                    (void*)info->signature, sizeof(signaturet), &iProd);
+            /*
+             * The signature is added to the product-index map before the
+             * product is sent so that it can be found if the receiving LDM-7
+             * immediately requests it.
+             */
+            status = pim_put(iProd, (const signaturet*)&info->signature);
 
             if (status) {
-                log_add("Couldn't multicast product {index: %lu, info: \"%s\"}",
-                        (unsigned long)iProd,
-                        s_prod_info(buf, sizeof(buf), info,
-                                log_is_enabled_debug));
-
-                off_t off;
-
-                (void)om_get(indexToOffsetMap, iProd, &off);
-                log_assert(off == offset);
-
-                status = pq_release(pq, offset);
-
-                if (status) {
-                    log_add("Couldn't release data-product {index: %lu, "
-                            "offset: %ld}", (unsigned long)iProd, (long)offset);
-                    log_flush_error();
-                }
-
-                status = LDM7_MCAST;
+                char buf[LDM_INFO_MAX];
+                log_add("Couldn't add to product-index map: {index: %lu, "
+                        "info: %s}", (unsigned long)iProd,
+                        s_prod_info(buf, sizeof(buf), info, 1));
             }
             else {
-                log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
-                        (unsigned long)iProd,
-                        s_prod_info(buf, sizeof(buf), info,
-                                log_is_enabled_debug));
-            }
-        } // Signature added to product-index map
-    } // Offset added to index-to-offset map
+                char buf[LDM_INFO_MAX];
+
+                status = fmtpSender_send(fmtpSender, xprod, size,
+                        (void*)info->signature, sizeof(signaturet), &iProd);
+
+                if (status) {
+                    log_add("Couldn't multicast product {index: %lu, info: "
+                            "\"%s\"}", (unsigned long)iProd,
+                            s_prod_info(buf, sizeof(buf), info,
+                                    log_is_enabled_debug));
+
+                    off_t off;
+
+                    (void)om_get(indexToOffsetMap, iProd, &off);
+                    log_assert(off == offset);
+
+                    status = pq_release(pq, offset);
+
+                    if (status) {
+                        log_add("Couldn't release data-product {index: %lu, "
+                                "offset: %ld}", (unsigned long)iProd,
+                                (long)offset);
+                        log_flush_error();
+                    }
+
+                    status = LDM7_MCAST;
+                }
+                else {
+                    log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                            (unsigned long)iProd,
+                            s_prod_info(buf, sizeof(buf), info,
+                                    log_is_enabled_debug));
+                }
+            } // Signature added to product-index map
+        } // Offset added to index-to-offset map
+    } // FMTP module has at least one receiver
 
     return status;
 }

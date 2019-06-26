@@ -105,6 +105,15 @@ fmtpSender_create(
     void*                  authorizer);
 
 /**
+ * Returns the number of receivers that the FMTP sender has.
+ *
+ * @param[in]  FMTP sender
+ * @return     Number of receivers
+ */
+int
+fmtpSender_rcvrCount(FmtpSender* const sender);
+
+/**
  * Returns the product-index of the next product to be sent.
  * @param[in]  sender  FMTP sender.
  * @return             The product-index of the next product to be sent.

@@ -571,6 +571,12 @@ fmtpSender_create(
     return status;
 }
 
+int
+fmtpSender_rcvrCount(FmtpSender* const sender)
+{
+    return sender->fmtpSender->rcvrCount();
+}
+
 /**
  * Returns the product-index of the next product to be sent.
  * @param[in]  sender  FMTP sender.

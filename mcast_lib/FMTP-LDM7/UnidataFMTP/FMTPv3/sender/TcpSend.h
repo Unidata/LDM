@@ -57,6 +57,13 @@ public:
     void dismantleConn(int sockfd);
     /** return the reference of a socket list */
     const std::list<int> getConnSockList();
+    /**
+     * Returns the number of sockets in the socket-list.
+     *
+     * @return           Number of sockets in the socket-list
+     * @exceptionsafety  No throw
+     */
+    int sockListSize() const noexcept;
     int getMinPathMTU();
     unsigned short getPortNum();
     void Init(); /*!< start point that upper layer should call */
@@ -73,11 +80,14 @@ public:
     void updatePathMTU(int sockfd);
 
 private:
+    typedef std::mutex             Mutex;
+    typedef std::lock_guard<Mutex> Guard;
+
     struct sockaddr_in servAddr;
     std::string        tcpAddr;
     unsigned short     tcpPort;
     std::list<int>     connSockList;
-    std::mutex         sockListMutex; /*!< to protect shared sockList */
+    mutable Mutex      sockListMutex; /*!< to protect shared sockList */
     std::atomic<int>   pmtu; /* min path MTU of the mcast group */
 
     /**

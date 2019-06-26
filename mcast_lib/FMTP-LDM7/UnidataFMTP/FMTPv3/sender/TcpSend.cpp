@@ -78,7 +78,7 @@ TcpSend::TcpSend(std::string tcpaddr, unsigned short tcpport)
 TcpSend::~TcpSend()
 {
     {
-        std::unique_lock<std::mutex> lock(sockListMutex); // cache coherence
+        Guard guard(sockListMutex); // cache coherence
         connSockList.clear();
     }
 }
@@ -188,7 +188,7 @@ int TcpSend::acceptConn()
     setKeepAlive(newsockfd);
 
     {
-        std::unique_lock<std::mutex> lock(sockListMutex);
+        Guard guard(sockListMutex);
         connSockList.push_back(newsockfd);
     }
 
@@ -221,8 +221,15 @@ void TcpSend::dismantleConn(int sockfd)
  */
 const std::list<int> TcpSend::getConnSockList()
 {
-    std::unique_lock<std::mutex> lock(sockListMutex);
+    Guard guard(sockListMutex);
     return connSockList;
+}
+
+
+int TcpSend::sockListSize() const noexcept
+{
+    Guard guard(sockListMutex);
+    return connSockList.size();
 }
 
 
@@ -394,7 +401,7 @@ int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
  */
 void TcpSend::rmSockInList(int sockfd)
 {
-    std::unique_lock<std::mutex> lock(sockListMutex);
+    Guard guard(sockListMutex);
     connSockList.remove(sockfd);
 }
 
