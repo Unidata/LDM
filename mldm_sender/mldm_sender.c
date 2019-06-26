@@ -597,6 +597,10 @@ mls_destroy(void)
  * @retval    0            Success.
  * @retval    LDM7_MCAST   Multicast layer error. `log_add()` called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ * @retval    PQ_CORRUPT   Product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_INVAL     Product-queue is closed. `log_add()` called.
+ * @retval    PQ_NOTFOUND  `arg` doesn't refer to a locked product. `log_add()`
+ *                         called.
  */
 static int
 mls_mcastProd(
@@ -606,17 +610,23 @@ mls_mcastProd(
         const size_t                    size,
         void* const restrict            arg)
 {
-    int status;
+    int   status;
+    off_t offset = *(off_t*)arg;
 
     if (fmtpSender_rcvrCount(fmtpSender) == 0) {
         /*
-         * There's no sense locking a product in the product-queue if the FMTP
-         * module doesn't have any receivers.
+         * There's no sense keeping a locked product in the product-queue if the
+         * FMTP module doesn't have any receivers.
          */
-        status = 0;
+        status = pq_release(pq, offset);
+
+        if (status) {
+            log_add("Couldn't release data-product {offset: %ld}",
+                    (long)offset);
+            log_flush_error();
+        }
     }
     else {
-        off_t         offset = *(off_t*)arg;
         FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
 
         status = om_put(indexToOffsetMap, iProd, offset);
