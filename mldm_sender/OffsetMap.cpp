@@ -43,7 +43,6 @@ bool OffsetMap::get(
             found = true;
             offset = elt->second.offset;
             added = elt->second.added;
-            size = map.size();
 
             map.erase(prodIndex);
         }
@@ -62,8 +61,7 @@ bool OffsetMap::get(
             usec += 1000000;
         }
 
-        log_notice("{count: %lu, offset: %ld, duration: %lu.%05ld s}",
-                size, offset, sec, usec);
+        log_notice("{offset: %ld, duration: %lu.%05ld s}", offset, sec, usec);
     }
 
     return found;
