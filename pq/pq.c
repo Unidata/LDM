@@ -3233,6 +3233,8 @@ struct pqueue {
         char             pathname[PATH_MAX];
         /// Number of reserved products
         long             pqe_count;
+        /// Number of locked, read-only products
+        long             locked_count;
 
         /// Mutex for concurrent access by multiple threads
         pthread_mutex_t  mutex;
@@ -5779,6 +5781,7 @@ pq_new(
     pq->cursor = TS_NONE;
     pq->cursor_offset = OFF_NONE;
     pq->pqe_count = 0;
+    pq->locked_count = 0;
 
     return pq;
 }
@@ -7859,8 +7862,13 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
     /*FALLTHROUGH*/
     unwind_rgn:
             xdr_destroy(&xdrs);
-            if (off == NULL)
-                (void) rgn_rel(pq, offset, 0); // release the data segment
+            if (off) {
+                pq->locked_count++;
+                log_notice("locked_count: %ld", pq->locked_count);
+            }
+            else {
+                (void)rgn_rel(pq, offset, 0); // release the data segment
+            }
 
     return status;
 
@@ -8254,8 +8262,12 @@ pq_release(
         const int status = rgn_rel(pq, offset, 0);
     pq_unlockIf(pq);
 
-    if (status)
+    if (status) {
         log_add_errno(status, "Couldn't release offset %ld", offset);
+    }
+    else {
+        pq->locked_count--;
+    }
 
     return status == EBADF
             ? PQ_INVAL
