@@ -7615,7 +7615,7 @@ pq_processProduct(
  * the current cursor value.
  *
  * If no product is in the inventory which which meets the
- * above spec, return PQUEUE_END.
+ * above spec, return PQ_END.
  *
  * Otherwise, if the product info matches class,
  * execute ifMatch(xprod, len, otherargs) and return the
@@ -7628,50 +7628,20 @@ pq_processProduct(
  * @param[in]  ifMatch    Function to call for matching products.
  * @param[in]  otherargs  Optional argument to `ifMatch`.
  * @param[out] off        Offset to the region in the product-queue or NULL. If
- *                        NULL, then upon return the product is unlocked and may
- *                        be deleted by another process to make room for a new
- *                        product. If non-NULL, then this variable is set before
- *                        `ifMatch()` is called and, upon return, the product is
- *                        locked against deletion by another process and the
- *                        caller should call `pq_release(*off)` when the product
- *                        may be deleted to make room for a new product.
- * @retval 0          Product didn't match `clss`
- * @retval PQUEUE_END No next product
- * @return            The return-value of `ifMatch()`.
- * @retval EACCESS or EAGAIN
- *                    A necessary region of the product-queue is locked by
- *                    another process.
- * @retval EINVAL     The product-queue file doesn't support locking.
- * @retval ENOLCK     The number of locked regions would exceed a system-imposed
- *                    limit.
- * @retval EDEADLK    A deadlock in region locking has been detected.
- * @retval EBADF      The file descriptor of the product-queue is invalid.
- * @retval EIO        An I/O error occurred while reading from the product-
- *                    queue file.
- * @retval EOVERFLOW  The size of the product-queue cannot be represented
- *                    correctly.
- * @retval EINTR      A signal was caught during execution.
- * @retval EFBIG or EINVAL
- *                    The size of the product-queue is greater than the maximum
- *                    file size.
- * @retval EROFS      The product-queue resides on a read-only file system.
- * @retval EAGAIN     The product-queue could not be locked in memory, if
- *                    required by mlockall(), due to a lack of resources.
- * @retval EINVAL     Logic error in the in-memory location of the product-
- *                    queue.
- * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
- *                    limit (per process or per system).
- * @retval ENODEV     The product-queue's file descriptor refers to a file whose
- *                    type is not supported by mmap().
- * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
- *                    address space of a process.
- * @retval ENOMEM     The product-queue could not be locked in memory, if
- *                    required by mlockall(), because it would require more
- *                    space than the system is able to supply.
- * @retval ENOTSUP    The O/S does not support the combination of accesses
- *                    requested.
- * @retval ENXIO      The size of the product-queue is inconsistent with its
- *                    file descriptor.
+ *                        NULL, then, upon return, the product is unlocked and may
+ *                        be deleted to make room for a new product. If
+ *                        non-NULL, then this variable is set before `ifMatch()`
+ *                        is called and the product's state upon return from
+ *                        this function depends on that function's return-value:
+ *                          - 0     The product is locked against deletion and
+ *                                  the caller should call `pq_release(*off)`
+ *                                  when the product may be deleted
+ *                          - else  The product is unlocked and may be deleted
+ * @retval     PQ_CORRUPT Product-queue is corrupt
+ * @retval     PQ_END     No next product
+ * @retval     PQ_INVAL   Invalid argument
+ * @retval     PQ_SYSTEM  System error
+ * @return                Return-value of `ifMatch()`
  */
 static int
 pq_sequenceHelper(pqueue *pq, pq_match mt,
@@ -7680,204 +7650,226 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
         void* restrict               otherargs,
         off_t* const restrict        off)
 {
-    int status = ENOERR;
-    tqelem *tqep;
-    region *rp = NULL;
-    off_t  offset = OFF_NONE;
-    size_t extent = 0;
-    void *vp = NULL;
-    struct infobuf
-    {
-            prod_info b_i;
-            char b_origin[HOSTNAMESIZE + 1];
-            char b_ident[KEYSIZE + 1];
-    } buf;
-    prod_info *info ;
-    void *datap;
-    XDR xdrs;
-    timestampt pq_time;
+    int status;
 
-    if(pq == NULL)
-            return EINVAL;
+    if (pq == NULL) {
+        status = PQ_INVAL;
+    }
+    else {
+        pq_lockIf(pq); {
+            bool threadLocked = true;
 
-    /* all this to avoid malloc in the xdr calls */
-    (void) memset(&buf, 0, sizeof(buf));
-    info = &buf.b_i;
-    info->origin = &buf.b_origin[0];
-    info->ident = &buf.b_ident[0];
-
-    pq_lockIf(pq);
-        /* if necessary, initialize cursor */
-        if(tvIsNone(pq->cursor))
-        {
+            /* If necessary, initialize cursor */
+            if (tvIsNone(pq->cursor)) {
                 log_assert(mt != TV_EQ);
-                if(mt == TV_LT) {
-                        pq->cursor = TS_ENDT;
+                if (mt == TV_LT) {
+                    pq->cursor = TS_ENDT;
                 }
                 else {
-                        pq->cursor = TS_ZERO;
+                    pq->cursor = TS_ZERO;
                 }
-        }
-
-        /* Read lock pq->xctl.  */
-        status = ctl_get(pq, 0);
-        if(status != ENOERR) {
-            goto unwind_lock;
-        }
-
-        /* find the specified queue element */
-        tqep = tqe_find(pq->tqp, &pq->cursor, mt);
-        if(tqep == NULL)
-        {
-                status = PQUEUE_END;
-                goto unwind_ctl;
-        }
-        /* update cursor */
-        /* pq->cursor = tqep->tv; */
-        pq_cset(pq, &tqep->tv);
-        pq_coffset(pq, tqep->offset);
-
-        /*
-         * Spec'ing clss NULL or ifMatch NULL
-         * _just_ sequences cursor.
-         * This feature used by the 'pqexpire' program.
-         */
-        if(clss == NULL || ifMatch == NULL)
-        {
-                log_debug("NOOP");
-                goto unwind_ctl;
-        }
-        /* else */
-
-        /* get the actual data region */
-        status = rl_r_find(pq->rlp, tqep->offset, &rp);
-        if(status == 0
-                 || rp->offset != tqep->offset
-                 || Extent(rp) > pq_getDataSize(pq)
-                )
-        {
-                char ts[20];
-                (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                log_error_q("Queue corrupt: tq: %s %s at %ld",
-                        ts,
-                        status ? "invalid region" : "no data",
-                        tqep->offset);
-                /*
-                 * we can't fix it (tq_delete(pq->tqp, tqep)) here
-                 * since we don't have write permission
-                 */
-                status = ENOERR;
-                goto unwind_ctl;
-        }
-        status = rgn_get(pq, rp->offset, Extent(rp), 0, &vp);
-        if(status != ENOERR)
-        {
-                goto unwind_ctl;
-        }
-        log_assert(vp != NULL);
-        offset = rp->offset;
-        extent = Extent(rp);
-
-        // Delay to process product, useful to see if it's falling behind
-        if(log_is_enabled_debug) {
-          timestampt now;
-          pq_time = tqep->tv;
-          if(gettimeofday(&now, 0) == 0) {
-            double delay = d_diff_timestamp(&now, &tqep->tv);
-            log_debug("Delay: %.4f sec", delay);
-          }
-        }
-
-        /* We've got the data, so we can let go of the ctl */
-        status = ctl_rel(pq, 0);
-        log_assert(status == 0);
-
-    pq_unlockIf(pq);
-
-    /*
-     * Decode it
-     */
-    xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
-
-    if(!xdr_prod_info(&xdrs, info))
-    {
-            log_error_q("xdr_prod_info() failed") ;
-            status = EIO;
-            goto unwind_rgn;
-    }
-
-    log_assert(info->sz <= xdrs.x_handy);
-    /* rather than copy the data, just use the existing buffer */
-    datap = xdrs.x_private;
-
-#if PQ_SEQ_TRACE
-    log_debug("%s %u",
-            s_prod_info(NULL, 0, info, 1), xdrs.x_handy) ;
-#endif
-
-    /*
-     * Log time-interval from product-creation to queue-insertion.
-     */
-    if(log_is_enabled_debug) {
-        double latency = d_diff_timestamp(&pq_time, &info->arrival);
-        log_debug("time(insert)-time(create): %.4f s", latency);
-    }
-
-    /*
-     * Do the work.
-     */
-    log_assert(clss != NULL);
-    if(clss == PQ_CLASS_ALL || prodInClass(clss, info))
-    {
-            /* do the ifMatch function */
-            log_assert(ifMatch != NULL);
-            {
-                    /* change extent into xlen_product */
-                    const size_t xsz = _RNDUP(info->sz, 4);
-                    if(xdrs.x_handy > xsz)
-                    {
-                            extent -= (xdrs.x_handy - xsz);
-                    }
             }
-            if (off)
-                *off = offset;
-            /*
-             * Because calling a foreign function with an acquired lock
-             * might result in deadlock:
-             */
-            status =  (*ifMatch)(info, datap, vp, extent, otherargs);
-            if(status)
-              {             /* back up, presumes clock tick > usec
-                               (not always true) */
-                    if(mt == TV_GT) {
-                            timestamp_decr(&pq->cursor);
-                            pq_coffset(pq, OFF_NONE);
-                    }
-                    else if(mt == TV_LT) {
-                            pq_coffset(pq, offset + 1);
-                    }
-              }
-    }
 
-    /*FALLTHROUGH*/
-    unwind_rgn:
-            xdr_destroy(&xdrs);
-            if (off) {
-                pq->locked_count++;
-                log_notice("locked_count: %ld", pq->locked_count);
+            // Read lock the control-header
+            status = ctl_get(pq, 0);
+
+            if (status) {
+                status = PQ_SYSTEM;
             }
             else {
-                (void)rgn_rel(pq, offset, 0); // release the data segment
-            }
+                bool ctlLocked = true;
 
-    return status;
+                // Find the specified queue element
+                tqelem* tqep = tqe_find(pq->tqp, &pq->cursor, mt);
 
-    unwind_ctl:
-        (void) ctl_rel(pq, 0);
-        /*FALLTHROUGH*/
+                if (tqep == NULL) {
+                    status = PQUEUE_END;
+                }
+                else {
+                    // Update cursor
+                    pq_cset(pq, &tqep->tv);
+                    pq_coffset(pq, tqep->offset);
 
-unwind_lock:
-    pq_unlockIf(pq);
+                    /*
+                     * Spec'ing clss NULL or ifMatch NULL _just_ sequences
+                     * the cursor. This feature used by the 'pqexpire' program.
+                     */
+                    if (clss == NULL || ifMatch == NULL) {
+                        log_debug("NOOP");
+                    }
+                    else {
+                        // Get the actual data region
+                        region* rp;
+
+                        status = rl_r_find(pq->rlp, tqep->offset, &rp);
+
+                        if (status == 0
+                                 || rp->offset != tqep->offset
+                                 || Extent(rp) > pq_getDataSize(pq)) {
+                            char ts[20];
+
+                            (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
+                            log_add("Queue corrupt: tq: %s %s at %ld",
+                                    ts,
+                                    status ? "invalid region" : "no data",
+                                    tqep->offset);
+                            log_flush_error();
+                            /*
+                             * We can't fix it (tq_delete(pq->tqp, tqep)) here
+                             * since we don't have write permission
+                             */
+                            status = PQ_CORRUPT;
+                        }
+                        else {
+                            void* vp = NULL;
+
+                            status = rgn_get(pq, rp->offset, Extent(rp), 0, &vp);
+
+                            if (status) {
+                                status = PQ_SYSTEM;
+                            }
+                            else {
+                                log_assert(vp != NULL);
+
+                                size_t extent = Extent(rp);
+                                off_t  offset = rp->offset;
+                                // Did product match `clss`?
+                                bool   matched = false;
+
+                                /*
+                                 * Delay to process product, useful to see if
+                                 * it's falling behind
+                                 */
+                                if (log_is_enabled_debug) {
+                                    timestampt now;
+
+                                    if (gettimeofday(&now, 0) == 0) {
+                                        double delay = d_diff_timestamp(&now,
+                                                &tqep->tv);
+                                        log_debug("Delay: %.4f sec", delay);
+                                    }
+                                }
+
+                                /*
+                                 * We've got the data, so we can let go of the
+                                 * control-header
+                                 */
+                                status = ctl_rel(pq, 0);
+                                log_assert(status == 0);
+                                ctlLocked = false;
+
+                                /*
+                                 * No race conditions from here on. Also,
+                                 * calling a foreign function with an acquired
+                                 * lock might result in deadlock.
+                                 */
+                                pq_unlockIf(pq);
+                                threadLocked = false;
+
+                                /* All this to avoid malloc in the xdr calls */
+                                struct infobuf {
+                                    prod_info b_i;
+                                    char      b_origin[HOSTNAMESIZE + 1];
+                                    char      b_ident[KEYSIZE + 1];
+                                }          buf;
+                                (void)memset(&buf, 0, sizeof(buf));
+                                prod_info* info ;
+                                info = &buf.b_i;
+                                info->origin = &buf.b_origin[0];
+                                info->ident = &buf.b_ident[0];
+
+                                // Decode the product's information
+                                XDR xdrs;
+                                xdrmem_create(&xdrs, vp, (u_int)extent,
+                                        XDR_DECODE) ;
+
+                                if (!xdr_prod_info(&xdrs, info)) {
+                                    log_error_q("xdr_prod_info() failed") ;
+                                    status = PQ_SYSTEM;
+                                }
+                                else {
+                                    log_assert(info->sz <= xdrs.x_handy);
+
+                                    /*
+                                     * Rather than copy the data, just use the
+                                     * existing buffer
+                                     */
+                                    void* datap = xdrs.x_private;
+
+#if PQ_SEQ_TRACE
+                                    log_debug("%s %u",
+                                            s_prod_info(NULL, 0, info, 1),
+                                            xdrs.x_handy) ;
+#endif
+
+                                    /*
+                                     * Log time-interval from product-creation
+                                     * to queue-insertion.
+                                     */
+                                    if (log_is_enabled_debug) {
+                                        double latency = d_diff_timestamp(
+                                                &tqep->tv, &info->arrival);
+                                        log_debug("time(insert)-time(create): "
+                                                "%.4f s", latency);
+                                    }
+
+                                    // Do the work.
+                                    if (clss == PQ_CLASS_ALL ||
+                                            prodInClass(clss, info)) {
+                                        matched = true;
+
+                                        {
+                                            // Change extent into xlen_product
+                                            const size_t xsz =
+                                                    _RNDUP(info->sz, 4);
+                                            if (xdrs.x_handy > xsz)
+                                                extent -= (xdrs.x_handy - xsz);
+                                        }
+
+                                        if (off) {
+                                            *off = offset;
+                                            pq->locked_count++;
+                                            log_notice("locked_count: %ld",
+                                                    pq->locked_count);
+                                        }
+
+                                        status = ifMatch(info, datap, vp,
+                                                extent, otherargs);
+
+                                        if (status) {
+                                            /*
+                                             * Back up, presumes clock tick >
+                                             * usec (not always true)
+                                             */
+                                            if (mt == TV_GT) {
+                                                timestamp_decr(&pq->cursor);
+                                                pq_coffset(pq, OFF_NONE);
+                                            }
+                                            else if (mt == TV_LT) {
+                                                pq_coffset(pq, offset + 1);
+                                            }
+                                        } // Problem with `ifMatch()`
+                                    } // Product matches
+                                } // Product information decoded
+
+                                xdr_destroy(&xdrs);
+
+                                // Release the data segment if appropriate
+                                if (off == NULL || status || !matched)
+                                    (void)rgn_rel(pq, offset, 0);
+                            } // Region locked
+                        } // Region found
+                    } // `clss != NULL && ifMatch != NULL`
+                } // Time-queue element found
+
+                if (ctlLocked)
+                    (void)ctl_rel(pq, 0);
+            } // Control-header was locked
+
+            if (threadLocked)
+                pq_unlockIf(pq);
+        } // `pq_lockIf() was called
+    } // `pq != NULL`
 
     return status;
 }
@@ -7911,43 +7903,11 @@ unwind_lock:
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval 0          Product didn't match `clss`
- * @retval PQUEUE_END No next product
- * @return            The return-value of `ifMatch()`.
- * @retval EACCESS or EAGAIN
- *                    A necessary region of the product-queue is locked by
- *                    another process.
- * @retval EINVAL     The product-queue file doesn't support locking.
- * @retval ENOLCK     The number of locked regions would exceed a system-imposed
- *                    limit.
- * @retval EDEADLK    A deadlock in region locking has been detected.
- * @retval EBADF      The file descriptor of the product-queue is invalid.
- * @retval EIO        An I/O error occurred while reading from the product-
- *                    queue file.
- * @retval EOVERFLOW  The size of the product-queue cannot be represented
- *                    correctly.
- * @retval EINTR      A signal was caught during execution.
- * @retval EFBIG or EINVAL
- *                    The size of the product-queue is greater than the maximum
- *                    file size.
- * @retval EROFS      The product-queue resides on a read-only file system.
- * @retval EAGAIN     The product-queue could not be locked in memory, if
- *                    required by mlockall(), due to a lack of resources.
- * @retval EINVAL     Logic error in the in-memory location of the product-
- *                    queue.
- * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
- *                    limit (per process or per system).
- * @retval ENODEV     The product-queue's file descriptor refers to a file whose
- *                    type is not supported by mmap().
- * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
- *                    address space of a process.
- * @retval ENOMEM     The product-queue could not be locked in memory, if
- *                    required by mlockall(), because it would require more
- *                    space than the system is able to supply.
- * @retval ENOTSUP    The O/S does not support the combination of accesses
- *                    requested.
- * @retval ENXIO      The size of the product-queue is inconsistent with its
- *                    file descriptor.
+ * @retval    PQ_CORRUPT  Product-queue is corrupt
+ * @retval    PQ_END      No next product
+ * @retval    PQ_INVAL    Invalid argument
+ * @retval    PQ_SYSTEM   System error
+ * @return                Return-value of `ifMatch()`
  */
 int
 pq_sequence(
@@ -7997,43 +7957,11 @@ pq_sequence(
  *                        locked against deletion by another process and the
  *                        caller should call `pq_release(*off)` when the product
  *                        may be deleted to make room for a new product.
- * @retval 0          Product didn't match `clss`
- * @retval PQUEUE_END No next product
- * @return            The return-value of `ifMatch()`.
- * @retval EACCESS or EAGAIN
- *                    A necessary region of the product-queue is locked by
- *                    another process.
- * @retval EINVAL     The product-queue file doesn't support locking.
- * @retval ENOLCK     The number of locked regions would exceed a system-imposed
- *                    limit.
- * @retval EDEADLK    A deadlock in region locking has been detected.
- * @retval EBADF      The file descriptor of the product-queue is invalid.
- * @retval EIO        An I/O error occurred while reading from the product-
- *                    queue file.
- * @retval EOVERFLOW  The size of the product-queue cannot be represented
- *                    correctly.
- * @retval EINTR      A signal was caught during execution.
- * @retval EFBIG or EINVAL
- *                    The size of the product-queue is greater than the maximum
- *                    file size.
- * @retval EROFS      The product-queue resides on a read-only file system.
- * @retval EAGAIN     The product-queue could not be locked in memory, if
- *                    required by mlockall(), due to a lack of resources.
- * @retval EINVAL     Logic error in the in-memory location of the product-
- *                    queue.
- * @retval EMFILE     The number of mapped regions would exceed an O/S-dependent
- *                    limit (per process or per system).
- * @retval ENODEV     The product-queue's file descriptor refers to a file whose
- *                    type is not supported by mmap().
- * @retval ENOMEM     The size of the product-queue exceeds that allowed for the
- *                    address space of a process.
- * @retval ENOMEM     The product-queue could not be locked in memory, if
- *                    required by mlockall(), because it would require more
- *                    space than the system is able to supply.
- * @retval ENOTSUP    The O/S does not support the combination of accesses
- *                    requested.
- * @retval ENXIO      The size of the product-queue is inconsistent with its
- *                    file descriptor.
+ * @retval     PQ_CORRUPT Product-queue is corrupt
+ * @retval     PQ_END     No next product
+ * @retval     PQ_INVAL   Invalid argument
+ * @retval     PQ_SYSTEM  System error
+ * @return                Return-value of `ifMatch()`
  */
 int
 pq_sequenceLock(
@@ -8259,15 +8187,14 @@ pq_release(
         const off_t   offset)
 {
     pq_lockIf(pq);
-        const int status = rgn_rel(pq, offset, 0);
+        int status = rgn_rel(pq, offset, 0);
+
+        if (status == 0)
+            pq->locked_count--;
     pq_unlockIf(pq);
 
-    if (status) {
+    if (status)
         log_add_errno(status, "Couldn't release offset %ld", offset);
-    }
-    else {
-        pq->locked_count--;
-    }
 
     return status == EBADF
             ? PQ_INVAL
