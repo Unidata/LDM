@@ -596,11 +596,8 @@ mls_destroy(void)
  *                         data-product.
  * @retval    0            Success.
  * @retval    LDM7_MCAST   Multicast layer error. `log_add()` called.
+ * @retval    LDM7_NORCVR  Product not set because FMTP module has no receivers
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
- * @retval    PQ_CORRUPT   Product-queue is corrupt. `log_add()` called.
- * @retval    PQ_INVAL     Product-queue is closed. `log_add()` called.
- * @retval    PQ_NOTFOUND  `arg` doesn't refer to a locked product. `log_add()`
- *                         called.
  */
 static int
 mls_mcastProd(
@@ -614,17 +611,7 @@ mls_mcastProd(
     off_t offset = *(off_t*)arg;
 
     if (fmtpSender_rcvrCount(fmtpSender) == 0) {
-        /*
-         * There's no sense keeping a locked product in the product-queue if the
-         * FMTP module doesn't have any receivers.
-         */
-        status = pq_release(pq, offset);
-
-        if (status) {
-            log_add("Couldn't release data-product {offset: %ld}",
-                    (long)offset);
-            log_flush_error();
-        }
+        status = LDM7_NORCVR;
     }
     else {
         FmtpProdIndex iProd = fmtpSender_getNextProdIndex(fmtpSender);
@@ -665,15 +652,6 @@ mls_mcastProd(
 
                     (void)om_get(indexToOffsetMap, iProd, &off);
                     log_assert(off == offset);
-
-                    status = pq_release(pq, offset);
-
-                    if (status) {
-                        log_add("Couldn't release data-product {index: %lu, "
-                                "offset: %ld}", (unsigned long)iProd,
-                                (long)offset);
-                        log_flush_error();
-                    }
 
                     status = LDM7_MCAST;
                 }
@@ -788,8 +766,11 @@ mls_startMulticasting(void)
                 unblockTermSigs();
             }
             else if (status < 0) {
-                log_errno(status, "Error in product-queue");
+                log_add("Error in product-queue");
                 status = LDM7_PQ;
+            }
+            else if (status && status != LDM7_NORCVR) {
+                log_add("Couldn't process product");
             }
         } // While loop
 
