@@ -1,4 +1,10 @@
-6.13.12.13	2019-06-26T13:39:03-0600
+6.13.12.14	2019-06-27T11:37:14-0600
+    Product-Queue (pq.c):
+        * Refactored pq_sequenceHelper(): the product will now be unlocked upon
+          return if the offset argument is NULL, the product doesn't match the
+          class specification, or an error occurs
+        * Changed return values of pq_sequence() and pq_sequenceLock()
+
     Logging:
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
@@ -52,6 +58,8 @@
             * Merged mls_tryMulticast() into mls_startMulticasting()
             * Added error message on fmtpSender_send() failure
             * Don't multicast product if no FMTP receivers
+            * Modified mcastProd() to return LDM7_NORCVR and not explicitly
+              release product
         UpMcastMgr.c:
             Added check of logging destination for mldm_sender(1) execution
 
