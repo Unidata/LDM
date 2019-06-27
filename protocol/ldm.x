@@ -882,7 +882,8 @@ enum Ldm7Status {
     LDM7_NOENT,    /* no such entry */
     LDM7_DUP,      /* duplicate entry */
     LDM7_EXISTS,   /* something exists */
-    LDM7_PQ        /* Error in product-queue */
+    LDM7_PQ,       /* Error in product-queue */
+    LDM7_NORCVR    /* No FMTP receiver */
 };
 
 #if RPC_CLNT
