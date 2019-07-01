@@ -31,9 +31,15 @@ password_manager.add_password(None, gh_url2, username, passwd)
 auth_manager = urllib2.HTTPBasicAuthHandler(password_manager)
 opener = urllib2.build_opener(auth_manager)
 urllib2.install_opener(opener)
-handler = urllib2.urlopen(req)
-result = handler.read()
-jsonData = json.loads(result)
+try:	
+	handler = urllib2.urlopen(req)
+	result = handler.read()
+	jsonData = json.loads(result)
+	searchResults = jsonData['results']
+except urllib2.URLError:
+	jsonData= {'error_text': 'URLError', 'results':None}
+except urllib2.HTTPError:
+	jsonData = {'error_text': 'HTTPError', 'results':None}
 searchResults = jsonData['results']
 
 if (searchResults == None):
