@@ -325,7 +325,7 @@ mls_decodeOperands(
  *
  * @param[in]  argc          Number of arguments.
  * @param[in]  argv          Arguments.
- * @retval     0             Success. `*mcastGrpInfo` is set. `*ttl` might be
+ * @retval     0             Success. `*mcastInfo` is allocated. `*ttl` might be
  *                           set.
  * @retval     1             Invalid command line. `log_add()` called.
  * @retval     2             System failure. `log_add()` called.
@@ -482,10 +482,10 @@ mls_doneWithProduct(
 }
 
 /**
- * Initializes the resources of this module. Sets `mcastGrpInfo`; in particular,
- * sets the actual port number used by the FMTP TCP server (in case the number
- * was chosen by the operating-system). Upon return, all FMTP threads have been
- * created -- in particular,  the FMTP TCP server is listening.
+ * Initializes the resources of this module. Sets the port number used by the
+ * FMTP server in `mcastInfo` if the number was chosen by the operating-system.
+ * Upon return, all FMTP threads have been created -- in particular,  the FMTP
+ * TCP server is listening.
  *
  * @retval    0              Success. `*sender` is set.
  * @retval    LDM7_INVAL     An Internet identifier couldn't be converted to an
@@ -573,9 +573,9 @@ mls_destroy(void)
 {
     int status = fmtpSender_terminate(fmtpSender);
 
-    smi_free(mcastInfo);
     (void)pim_close();
     (void)pq_close(pq);
+    om_free(indexToOffsetMap);
 
     return (status == 0)
             ? 0
@@ -969,7 +969,7 @@ mls_execute(void)
                      * something goes wrong.
                      */
                     char* miStr = smi_toString(mcastInfo);
-                    log_notice("Starting up: mcastGrpInfo=%s, ttl=%u, "
+                    log_notice("Starting up: mcastInfo=%s, ttl=%u, "
                             "fmtpSubnetLen=%u, pq=\"%s\", mldmCmdPort=%u",
                             miStr, ttl, subnetLen, getQueuePath(),
                             mldmSrvr_getPort(mldmCmdSrvr));
@@ -1030,7 +1030,7 @@ main(   const int    argc,
         /*
          * Decode the command-line.
          */
-        status = mls_decodeCommandLine(argc, argv);
+        status = mls_decodeCommandLine(argc, argv); // Allocates `mcastInfo`
 
         if (status) {
             log_add("Couldn't decode command-line");
@@ -1057,7 +1057,7 @@ main(   const int    argc,
 
             if (status)
                 smi_free(mcastInfo);
-        } // `groupInfo` allocated
+        } // `mcastInfo` allocated
 
         log_fini();
     }
