@@ -6,10 +6,11 @@ set -x
 # Ensures installation of packages on which the LDM7 depends
 ensureDependencies() {
     if type yum; then
-        yum -y install zlib-devel libxml2-devel libyaml-devel gnuplot python
+        yum -y install perl zlib-devel libxml2-devel libyaml-devel gnuplot \
+                python
 #                python2-pip
     elif type apt-get; then
-        apt-get -y install libz-dev libxml2-dev libyaml-dev gnuplot python
+        apt-get -y install perl libz-dev libxml2-dev libyaml-dev gnuplot python
 #                python-pip
     else
         echo "No yum(8) or apt-get(8) utility available" 1>&2
@@ -24,7 +25,7 @@ ensureCxx11() {
         if type yum; then
             yum -y install gcc
             if fgrep 'release 7' /etc/redhat-release; then
-                yum -y install g++
+                yum -y install gcc-g++
             else
                 wget http://people.centos.org/tru/devtools-2/devtools-2.repo \
                         -O /etc/yum.repos.d/devtools-2.repo
