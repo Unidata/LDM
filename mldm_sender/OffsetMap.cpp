@@ -61,7 +61,7 @@ bool OffsetMap::get(
             usec += 1000000;
         }
 
-        log_notice("{offset: %ld, duration: %lu.%05ld s}", offset, sec, usec);
+        log_debug("{offset: %ld, duration: %lu.%05ld s}", offset, sec, usec);
     }
 
     return found;
