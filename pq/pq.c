@@ -7829,7 +7829,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                                         if (off) {
                                             *off = offset;
                                             pq->locked_count++;
-                                            log_notice("locked_count: %ld",
+                                            log_debug("locked_count: %ld",
                                                     pq->locked_count);
                                         }
 
