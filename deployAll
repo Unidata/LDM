@@ -15,7 +15,8 @@ cd `dirname $0`
 deploy -M /usr/ccs/bin/make -n burns
 
 # Non-operational, NWSC systems (password required)
-for i in 0 1 2 3 4 5 6 7; do
+#for i in 0 1 2 3 4 5 6 7; do
+for i in 6; do
     deploy -v 6.13.11 node$i
 done
 
@@ -24,6 +25,7 @@ deploy -m              -u ldm7 ca
 deploy -m              -u ldm7 co
 deploy -m -r centos -s -u ldm7 md
 deploy -m                      mo
+deploy -m                      nj
 deploy -m           -s         ut
 deploy -m -r ldm7   -s -u ldm7 va
 deploy -m           -s         wa
