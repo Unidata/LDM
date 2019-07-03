@@ -1,8 +1,5 @@
-6.13.12.14	2019-06-27T11:37:14-0600
+6.13.12.15	2019-07-03T13:36:45-0600
     Product-Queue (pq.c):
-        * Refactored pq_sequenceHelper(): the product will now be unlocked upon
-          return if the offset argument is NULL, the product doesn't match the
-          class specification, or an error occurs
         * Changed return values of pq_sequence() and pq_sequenceLock()
 
     Logging:
@@ -15,9 +12,14 @@
     Multicast:
         Product-Queue (pq.c):
             * Added disabling of cancellation state on entry and reversion on
-              exit
-            * Added number of locked products to log message
-            * Modified pq_sequenceHelper() to print number of locked products
+              return
+            * pq_sequenceHelper():
+                * Print number of locked products
+                * The product will now be unlocked upon return if
+                    * The offset argument is NULL
+                    * The product doesn't match the class specification
+                    * An error occurs, either in the product-queue or the
+                      caller's function
         OESS scripts:
             Modified to handle different virtual circuits that, nevertheles,
             have the same switch name, port name, or VLAN tag
@@ -60,6 +62,7 @@
             * Don't multicast product if no FMTP receivers
             * Modified mcastProd() to return LDM7_NORCVR and not explicitly
               release product
+            * Eliminated double free()ing of `mcastInfo`
         UpMcastMgr.c:
             Added check of logging destination for mldm_sender(1) execution
 
@@ -69,6 +72,10 @@
         * Added LDM_BIN_DIR to configure.ac
         * push(1): Replaced "commit -a" with list of modified files
         * Instrumented OffsetMap
+        * Only deploy to NWSC node6
+        * ldm7PreInstall: Added perl and corrected g++ package-name (gcc-g++)
+        * OffsetMap.cpp: Demoted get() log message from NOTE to DEBUG
+        * pq.c: Demoted pq_sequenceHelper() log message from NOTE to DEBUG
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
