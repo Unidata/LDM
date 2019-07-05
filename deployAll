@@ -17,7 +17,7 @@ deploy -M /usr/ccs/bin/make -n burns
 # Non-operational, NWSC systems (password required)
 #for i in 0 1 2 3 4 5 6 7; do
 for i in 6; do
-    deploy -v 6.13.11 node$i
+    deploy node$i
 done
 
 # LDM7 systems (no password required)
