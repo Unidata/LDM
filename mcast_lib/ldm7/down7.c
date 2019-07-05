@@ -249,46 +249,6 @@ up7Proxy_destroy(void)
 }
 
 /**
- * Increases the timeout of an RPC client. Returns the previous timeout.
- *
- * @param[in,out] clnt         RPC client
- * @param[out]    initTimeout  RPC timeout on entry to this function
- * @retval        `true`       Success. `initTimeout` is set.
- * @retval        `false`      Failure. `initTimeout` might be modified.
- *                             `log_add()` called.
- */
-static bool
-up7Proxy_incTimeout(
-        CLIENT* const restrict         clnt,
-        struct timeval* const restrict initTimeout)
-{
-    struct timeval timeout;
-    bool           success = false;
-
-    if (!clnt_control(clnt, CLGET_TIMEOUT, initTimeout)) {
-        log_add("Couldn't get RPC client timeout");
-    }
-    else {
-        timeout.tv_sec = 2*initTimeout->tv_sec;
-        timeout.tv_usec = 2*initTimeout->tv_usec;
-
-        if (timeout.tv_usec >= 1000000) {
-            timeout.tv_sec += 1;
-            timeout.tv_usec -= 1000000;
-        }
-
-        if (!clnt_control(clnt, CLSET_TIMEOUT, &timeout)) {
-            log_add("Couldn't set RPC client timeout");
-        }
-        else {
-            success = true;
-        }
-    }
-
-    return success;
-}
-
-/**
  * Subscribes to an upstream LDM7 server. This is a potentially length
  * operation.
  *
@@ -331,12 +291,15 @@ up7Proxy_subscribe(
         /*
          * The RPC timeout is increased because adding a node to an AL2S
          * multipoint VLAN can take longer than the default RPC timeout.
+         *
+         * NB: The RPC-timeout is set by the first `clnt_call()`
          */
-        struct timeval initTimeout;
-        const bool     timeoutSet = up7Proxy_incTimeout(clnt, &initTimeout);
+        struct timeval timeout = {};
+        timeout.tv_sec = 120;
 
-        if (!timeoutSet)
-            log_flush_warning();
+        log_notice("Setting LDM7 subscription-timeout to %ld s",
+                (long)timeout.tv_sec);
+        (void)clnt_control(clnt, CLSET_TIMEOUT, &timeout); // Can't fail
 
         /*
          * WARNING: If a standard RPC implementation is used, then it is likely
@@ -347,8 +310,9 @@ up7Proxy_subscribe(
          */
         SubscriptionReply* reply = subscribe_7(&request, clnt);
 
-        if (timeoutSet)
-            (void)clnt_control(clnt, CLSET_TIMEOUT, &initTimeout);
+        timeout.tv_sec = 60; // Keep consonant with TIMEOUT in `fix_clnt.pl`
+        log_notice("Resetting LDM7 RPC-timeout to %ld s", (long)timeout.tv_sec);
+        (void)clnt_control(clnt, CLSET_TIMEOUT, &timeout);
 
         if (reply == NULL) {
             log_add("subscribe_7() returned NULL: %s", clnt_errmsg(clnt));
