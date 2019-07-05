@@ -668,8 +668,6 @@ sndr_start(
         }
     }
 
-    const struct in_addr mcastIface = {inet_addr(LOCAL_HOST)};
-
     // The upstream multicast manager takes responsibility for freeing
     // `mcastInfo`
     const unsigned short subnetLen = 24;
@@ -1223,7 +1221,6 @@ test_up7Down7(
     int      status;
 
     // Block pq-used `SIGALRM` and `SIGCONT` to prevent `sleep()` returning
-    struct sigaction sigAction, prevSigAction;
     sigset_t         sigMask, prevSigMask;
     sigemptyset(&sigMask);
     sigaddset(&sigMask, SIGALRM);
