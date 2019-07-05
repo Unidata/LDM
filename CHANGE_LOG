@@ -1,4 +1,4 @@
-6.13.12.15	2019-07-03T13:36:45-0600
+6.13.12.16	2019-07-05T09:46:35-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
 
@@ -28,6 +28,9 @@
               seconds to 120 seconds
             * Specified absolute pathname of vlanUtil(1) to workaround Ubuntu's
               non-standard execvp(2)
+            * Replaced reliance on getting the RPC timeout from the client
+              handle to explicitly setting the subscription-timeout because the
+              RPC timeout is unset until the first call to `clnt_call()`
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
