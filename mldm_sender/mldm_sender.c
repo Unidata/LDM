@@ -611,6 +611,7 @@ mls_mcastProd(
     off_t offset = *(off_t*)arg;
 
     if (fmtpSender_rcvrCount(fmtpSender) == 0) {
+        log_info("Product not multicast because no receivers");
         status = LDM7_NORCVR;
     }
     else {
@@ -730,7 +731,10 @@ mls_startMulticasting(void)
     prod_class* prodClass;
     int         status = mls_setProdClass(&prodClass);
 
-    if (status == 0) {
+    if (status) {
+        log_add("mls_setProdClass() failure");
+    }
+    else {
         pq_cset(pq, &prodClass->from);  // sets product-queue cursor
 
         while (0 == status && !done) {
@@ -769,8 +773,13 @@ mls_startMulticasting(void)
                 log_add("Error in product-queue");
                 status = LDM7_PQ;
             }
-            else if (status && status != LDM7_NORCVR) {
-                log_add("Couldn't process product");
+            else if (status) {
+                if (status == LDM7_NORCVR) {
+                    status = 0; // Continue
+                }
+                else {
+                    log_add("Couldn't process product");
+                }
             }
         } // While loop
 
@@ -976,7 +985,14 @@ mls_execute(void)
                     free(miStr);
                     status = mls_startMulticasting();
 
+                    if (status)
+                        log_add("mls_startMulticasting() failure");
+
                     int msStatus = mls_destroy();
+
+                    if (msStatus)
+                        log_add("mls_destroy() failure");
+
                     if (status == 0)
                         status = msStatus;
                 } // Port numbers successfully written to standard output stream
