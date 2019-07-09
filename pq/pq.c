@@ -7903,11 +7903,11 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval    PQ_CORRUPT  Product-queue is corrupt
- * @retval    PQ_END      No next product
- * @retval    PQ_INVAL    Invalid argument
- * @retval    PQ_SYSTEM   System error
- * @return                Return-value of `ifMatch()`
+ * @retval    PQ_CORRUPT  Product-queue is corrupt (NB: <0)
+ * @retval    PQ_END      No next product (NB: <0)
+ * @retval    PQ_INVAL    Invalid argument (NB: <0)
+ * @retval    PQ_SYSTEM   System error (NB: <0)
+ * @return                Return-value of `ifMatch()`. Should be >0.
  */
 int
 pq_sequence(
@@ -7957,11 +7957,11 @@ pq_sequence(
  *                        locked against deletion by another process and the
  *                        caller should call `pq_release(*off)` when the product
  *                        may be deleted to make room for a new product.
- * @retval     PQ_CORRUPT Product-queue is corrupt
- * @retval     PQ_END     No next product
- * @retval     PQ_INVAL   Invalid argument
- * @retval     PQ_SYSTEM  System error
- * @return                Return-value of `ifMatch()`
+ * @retval     PQ_CORRUPT Product-queue is corrupt (NB: <0)
+ * @retval     PQ_END     No next product (NB: <0)
+ * @retval     PQ_INVAL   Invalid argument (NB: <0)
+ * @retval     PQ_SYSTEM  System error (NB: <0)
+ * @return                Return-value of `ifMatch()`. Should be >0.
  */
 int
 pq_sequenceLock(
