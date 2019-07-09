@@ -1,6 +1,8 @@
-6.13.12.16	2019-07-05T09:46:35-0600
+6.13.12.17	2019-07-09T12:31:58-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
+        * Documented that pq_sequence() and pq_sequenceLock() error codes are
+          negative
 
     Logging:
         Replaced minimum field-width in default log messages with canonical
@@ -8,7 +10,11 @@
 
     Requester6:
         Replaced use of IS_ALIVE with fixed timeout of 5 minutes
-        
+
+    ldmadmin(1):
+        plotmetrics: Corrected sense of local/remote port connections. They were
+        reversed all this time.
+
     Multicast:
         Product-Queue (pq.c):
             * Added disabling of cancellation state on entry and reversion on
@@ -66,6 +72,8 @@
             * Modified mcastProd() to return LDM7_NORCVR and not explicitly
               release product
             * Eliminated double free()ing of `mcastInfo`
+            * Continue if no receivers
+            * Log more errors
         UpMcastMgr.c:
             Added check of logging destination for mldm_sender(1) execution
 
