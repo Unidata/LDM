@@ -1750,7 +1750,7 @@ sub getLoad
     return (split(/,?\s+/, $output))[-3, -2, -1];
 }
 #
-# Command for getting the number of connections to the LDM port (local, remote):
+# Command for getting the number of connections to the LDM port (remote, local):
 sub getPortCount
 {
     my($totalCount) = 0;
@@ -1761,17 +1761,17 @@ sub getPortCount
 	}
     }
     (close FH || !$!) or die "Can't close(): status=$?";
-    my($remoteCount) = 0;
+    my($lclCount) = 0;
     open(FH, "uldbutil 2>/dev/null |") or die "Can't fork() uldbutil(1): $!";
     while (<FH>) {
-        $remoteCount++;
+        $lclCount++;
     }
     (close FH || !$!) or die "Can't close(): status=$?";
-    my $localCount = $totalCount - $remoteCount;
-    if ($localCount < 0) {
-        $localCount = 0;
+    my $rmtCount = $totalCount - $lclCount;
+    if ($rmtCount < 0) {
+        $rmtCount = 0;
     }
-    return ($localCount, $remoteCount);
+    return ($rmtCount, $lclCount);
 }
 #
 # Command for getting product-queue metrics (age, #prods, #bytes):
