@@ -1,4 +1,4 @@
-6.13.12.17	2019-07-09T12:31:58-0600
+6.13.12.18	2019-07-11T11:09:18-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
@@ -27,8 +27,9 @@
                     * An error occurs, either in the product-queue or the
                       caller's function
         OESS scripts:
-            Modified to handle different virtual circuits that, nevertheles,
-            have the same switch name, port name, or VLAN tag
+            * Modified to handle different virtual circuits that, nevertheles,
+              have the same switch name, port name, or VLAN tag
+            * Corrected URL for OESS services
         Down7:
             * Increased sleep duration between subscription attempts from 30
               seconds to 120 seconds
@@ -87,6 +88,7 @@
         * ldm7PreInstall: Added perl and corrected g++ package-name (gcc-g++)
         * OffsetMap.cpp: Demoted get() log message from NOTE to DEBUG
         * pq.c: Demoted pq_sequenceHelper() log message from NOTE to DEBUG
+        * Added "delayQueue/" to Git.
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
