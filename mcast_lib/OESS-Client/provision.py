@@ -27,7 +27,7 @@ ct_id=account.getCtID(wg_id, sys.argv[2],username,passwd)
 if ct_id == 0:
 	values1 = {'method' : 'provision_circuit', 'workgroup_id' : wg_id, 'provision_time' : -1, 'remove_time' : -1, 'description' : sys.argv[2], 'node' : [sys.argv[3], sys.argv[6]], 'interface' : [sys.argv[4], sys.argv[7]], 'tag' : [sys.argv[5], sys.argv[8]]}
 	data = urllib.urlencode(values1, doseq=True)
-	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provision.cgi'
+	gh_url2 = 'https://al2s.net.internet2.edu/oess/services-kerb/provisioning.cgi'
 	req = urllib2.Request(gh_url2, data)
 	password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
 	password_manager.add_password(None, gh_url2, username, passwd)
