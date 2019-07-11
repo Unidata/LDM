@@ -271,15 +271,17 @@ rpmlint:
 pull-oess:
 	git fetch oess
 # The following command uses the wrong subdirectory
-#	git merge --strategy=subtree --squash $*/master
-	git merge -X subtree=mcast_lib/OESS-Client --squash oess/master
+#	git merge --strategy=subtree --squash oess/master
+	git merge --strategy=subtree -X subtree=mcast_lib/OESS-Client \
+		--squash oess/master
 	git commit -m "Pulled OESS-Client"
 
 pull-fmtp:
 	git fetch fmtp
 # The following command uses the wrong subdirectory
-#	git merge --strategy=subtree --squash $*/master
-	git merge -X subtree=mcast_lib/FMTP-LDM7 --squash fmtp/master
+#	git merge --strategy=subtree --squash fmtp/master
+	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
+		--squash fmtp/master
 	git commit -m "Pulled FMTP-LDM7"
 
 push-%:
