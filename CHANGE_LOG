@@ -1,4 +1,4 @@
-6.13.12.18	2019-07-11T11:09:18-0600
+6.13.12.19	2019-07-18T13:56:21-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
@@ -44,11 +44,10 @@
                 * Added release of products held by a unicast socket that just
                   disconnected to prevent all products in the queue from
                   eventually being locked
-            * Release products held by socket that just disconnected
+                * Release products held by socket that just disconnected
+                * Eliminated deadlock
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
-            * Created socket-to-prodIndex map to support releasing of products
-              held by a unicast socket that disconnected
             * Modified logMsg(std::string) to always log at NOTE level
             * Added rcvrCount()
         vlanUtil(1):
@@ -89,6 +88,7 @@
         * OffsetMap.cpp: Demoted get() log message from NOTE to DEBUG
         * pq.c: Demoted pq_sequenceHelper() log message from NOTE to DEBUG
         * Added "delayQueue/" to Git.
+        * Corrected target "push-%" in to-level makefile
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
