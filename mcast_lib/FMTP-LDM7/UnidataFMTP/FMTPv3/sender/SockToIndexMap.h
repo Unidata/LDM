@@ -68,8 +68,8 @@ public:
     {}
 
     void insert(
-            const std::list<int>& socks,
-            const uint32_t        index)
+            const std::set<int>& socks,
+            const uint32_t       index)
     {
         Guard guard(mutex);
 
@@ -86,8 +86,8 @@ public:
     }
 
     void erase(
-            const std::list<int>& socks,
-            const uint32_t        index)
+            const std::set<int>& socks,
+            const uint32_t       index)
     {
         Guard guard(mutex);
 

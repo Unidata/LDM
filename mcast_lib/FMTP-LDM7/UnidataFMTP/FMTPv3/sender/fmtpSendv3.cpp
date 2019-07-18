@@ -3,6 +3,7 @@
  *
  * @file      fmtpSendv3.cpp
  * @author    Shawn Chen  <sc7cq@virginia.edu>
+ * @author    Steve Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 16, 2014
  *
@@ -233,8 +234,7 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
     notifyprodidx(0),
     suppressor(0),
-    udpSerializer{udpsend},
-    unreleasedProds()
+    udpSerializer{udpsend}
 {
 }
 
@@ -362,12 +362,6 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
     throwIfBroken();
 
     try {
-        /*
-         * Add this product to the set of unreleased products for all
-         * unicast sockets
-         */
-        unreleasedProds.insert(tcpsend->getConnSockList(), prodIndex);
-
         if (data == NULL)
             throw std::runtime_error(
                     "fmtpSendv3::sendProduct() data pointer is NULL");
@@ -546,8 +540,8 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
     /* Update current product pointer in RetxMetadata */
     senderProdMeta->dataprod_p       = (void*)data;
 
-    /* Get a full list of current connected sockets and add to unfinished set */
-    std::list<int> currSockList = tcpsend->getConnSockList();
+    /* Get a list of current connected sockets and add to unfinished set */
+    std::set<int> currSockList = tcpsend->getConnSockList();
     senderProdMeta->unfinReceivers.insert(currSockList.begin(),
             currSockList.end());
 
@@ -653,6 +647,27 @@ void fmtpSendv3::handleRetxReq(FmtpHeader* const   recvheader,
 }
 
 
+void fmtpSendv3::doneWithProd(const uint32_t prodindex)
+{
+    if (notifier) {
+        notifier->notifyOfEop(prodindex);
+    }
+    else {
+        suppressor->remove(prodindex);
+        /**
+         * Updates the most recently acknowledged product and notifies
+         * a dummy notification handler (getNotify()).
+         */
+        {
+            Guard guard(notifyprodmtx);
+            notifyprodidx = prodindex;
+        }
+        notify_cv.notify_one();
+        memrelease_cv.notify_one();
+    }
+}
+
+
 /**
  * Handles a notice from a receiver that a data-product has been completely
  * received.
@@ -674,25 +689,8 @@ void fmtpSendv3::handleRetxEnd(const uint32_t prodindex,
          * since this receiver is the last one in the unfinished set,
          * notify the sending application.
          */
-        if (notifier) {
-            notifier->notifyOfEop(prodindex);
-        }
-        else {
-            suppressor->remove(prodindex);
-            /**
-             * Updates the most recently acknowledged product and notifies
-             * a dummy notification handler (getNotify()).
-             */
-            {
-                Guard guard(notifyprodmtx);
-                notifyprodidx = prodindex;
-            }
-            notify_cv.notify_one();
-            memrelease_cv.notify_one();
-        }
-    } // Only `sock` hadn't released `prodindex`
-
-    unreleasedProds.erase(sock, prodindex);
+        doneWithProd(prodindex);
+    } // Only `sock` hadn't acknowledged `prodindex`
 }
 
 
@@ -1439,21 +1437,11 @@ void* fmtpSendv3::StartRetxThread(void* ptr)
         pthread_t thisThread = ::pthread_self();
         fmtpSender->retxThreadList.remove(thisThread);
 
-        /*
-         * Handle the unreleased products of the disconnected unicast socket by
-         * simulating complete reception by the socket of those products; thus,
-         * enabling the application to free any resources associated with the
-         * products.
-         *
-         * The set of indexes is copied because `fmtpSender->handleRetxEnd()`
-         * modifies `fmtpSender->unreleasedProds`.
-         *
-         * Was: TODO: notify timer not to wait for the offline receiver
-         */
-        SockToIndexMap::IndexSet indexes(fmtpSender->unreleasedProds.find(sd));
-        auto                     end = indexes.end();
-        for (auto index = indexes.begin(); index != end; ++index)
-            fmtpSender->handleRetxEnd(*index, sd);
+        // Handle the unacknowledged products of the disconnected unicast socket
+        std::list<uint32_t> indexes;
+        fmtpSender->sendMeta->deleteReceiver(sd, indexes);
+        for (auto index : indexes)
+            fmtpSender->doneWithProd(index);
 
         // TODO: notify application a receiver went offline?
     }
@@ -1535,28 +1523,7 @@ void fmtpSendv3::timerThread()
              * sending application. Since timer and retx thread access the
              * RetxMetadata exclusively, notify_of_eop() will be called only once.
              */
-            if (notifier) {
-                notifier->notifyOfEop(prodindex);
-            }
-            else {
-                suppressor->remove(prodindex);
-                /**
-                 * Updates the most recently acknowledged product and notifies
-                 * a dummy notification handler (getNotify()).
-                 */
-                {
-                    Guard guard(notifyprodmtx);
-                    notifyprodidx = prodindex;
-                }
-                notify_cv.notify_one();
-                memrelease_cv.notify_one();
-            }
-
-            /*
-             * Remove product from the set of unreleased products for all
-             * unicast sockets
-             */
-            unreleasedProds.erase(tcpsend->getConnSockList(), prodindex);
+            doneWithProd(prodindex);
         } // Product was removed from the set of retransmittable products
     } // While loop
 }

@@ -189,6 +189,13 @@ private:
     void handleRetxReq(FmtpHeader* const  recvheader,
                        RetxMetadata* const retxMeta, const int sock);
     /**
+     * Notifies the application or the suppressor that this instance is finished
+     * with a product.
+     *
+     * @param[in] prodindex  Index of the product
+     */
+	void doneWithProd(uint32_t prodindex);
+    /**
      * Handles a notice from a receiver that a data-product has been completely
      * received.
      *
@@ -324,14 +331,6 @@ private:
     SilenceSuppressor*  suppressor;
     /* sender maximum retransmission timeout */
     double              tsnd;
-    /**
-     *  Map from unicast socket descriptor to indexes of products that have not
-     *  been released (i.e., haven't been acknowledged as being received and for
-     *  which the timer has not expired). This information is necessary to
-     *  ensure that the application releases any resources associated with such
-     *  products if the connection is broken.
-     */
-    SockToIndexMap      unreleasedProds;
 
     /* member variables for measurement use only */
     bool                txdone;

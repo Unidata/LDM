@@ -40,6 +40,7 @@
 #include <atomic>
 #include <list>
 #include <mutex>
+#include <set>
 #include <string>
 
 #include "TcpBase.h"
@@ -55,8 +56,9 @@ public:
 
     int acceptConn();
     void dismantleConn(int sockfd);
-    /** return the reference of a socket list */
-    const std::list<int> getConnSockList();
+    /// Return the list of currently-connected sockets
+    const std::set<int> getConnSockList();
+    bool isMember(int sd) const;
     /**
      * Returns the number of sockets in the socket-list.
      *
@@ -86,7 +88,7 @@ private:
     struct sockaddr_in servAddr;
     std::string        tcpAddr;
     unsigned short     tcpPort;
-    std::list<int>     connSockList;
+    std::set<int>      connSockList;
     mutable Mutex      sockListMutex; /*!< to protect shared sockList */
     std::atomic<int>   pmtu; /* min path MTU of the mcast group */
 

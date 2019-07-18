@@ -112,11 +112,13 @@ public:
                             TcpSend* tcpsend);
     bool releaseMetadata(uint32_t prodindex);
     bool rmRetxMetadata(uint32_t prodindex);
+    void getUnAckedProds(int sd, std::list<uint32_t>& indexes) const;
+    void deleteReceiver(int sd, std::list<uint32_t>& prodIndexes);
 
 private:
     /* first: prodindex; second: pointer to metadata of the specified prodindex */
     std::map<uint32_t, RetxMetadata*> indexMetaMap;
-    std::mutex                        indexMetaMapLock;
+    mutable std::mutex                indexMetaMapLock;
 };
 
 

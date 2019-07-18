@@ -189,7 +189,7 @@ int TcpSend::acceptConn()
 
     {
         Guard guard(sockListMutex);
-        connSockList.push_back(newsockfd);
+        connSockList.insert(newsockfd);
     }
 
     return newsockfd;
@@ -211,18 +211,29 @@ void TcpSend::dismantleConn(int sockfd)
     }
 }
 
-
 /**
- * Accept incoming tcp connection requests and push them into the socket list.
- * Then return the current socket list.
+ * Returns the set of currently-connected sockets.
  *
- * @param[in] none
- * @return    connSockList          connected socket list (a collection of
+ * @return    Set of currently-connected sockets
  */
-const std::list<int> TcpSend::getConnSockList()
+const std::set<int> TcpSend::getConnSockList()
 {
     Guard guard(sockListMutex);
     return connSockList;
+}
+
+
+/**
+ * Indicates if a socket is a member of the set of currently-connected sockets.
+ *
+ * @param[in] sd       Socket descriptor
+ * @retval    `true`   Socket is currently connected
+ * @retval    `false`  Socket is not currently connected
+ */
+bool TcpSend::isMember(const int sd) const
+{
+    Guard guard(sockListMutex);
+    return connSockList.find(sd) != connSockList.end();
 }
 
 
@@ -402,7 +413,7 @@ int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
 void TcpSend::rmSockInList(int sockfd)
 {
     Guard guard(sockListMutex);
-    connSockList.remove(sockfd);
+    connSockList.erase(sockfd);
 }
 
 
