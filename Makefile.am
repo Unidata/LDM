@@ -285,11 +285,11 @@ pull-fmtp:
 	git commit -m "Pulled FMTP-LDM7"
 
 push-%:
-	git checkout -b backport-$* $*/master
+	git checkout -b backport-% %/master
 	git merge --strategy=subtree master
-	git push $* HEAD:master
+	git push % HEAD:master
 	git checkout master
-	git branch -d backport-$*
+	git branch -d backport-%
 	
 .PHONY:		\
     ensure-ldmhome-links \
