@@ -105,12 +105,15 @@ const uint16_t FMTP_RETX_EOP  = 0x0400;
 
 
 /** For communication between mcast thread and retx thread */
-const int MISSING_BOP  = 1;
-const int MISSING_DATA = 2;
-const int MISSING_EOP  = 3;
-const int SHUTDOWN     = 4;
+typedef enum {
+    MISSING_BOP = 1,
+    MISSING_DATA,
+    MISSING_EOP,
+	RETX_EOP,
+    SHUTDOWN
+} ReqType;
 typedef struct recvInternalRetxReqMessage {
-    int reqtype;
+    ReqType  reqtype;
     uint32_t prodindex;
     uint32_t seqnum;
     uint16_t payloadlen;

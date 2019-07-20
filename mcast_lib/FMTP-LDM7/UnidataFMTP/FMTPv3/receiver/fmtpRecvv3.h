@@ -74,8 +74,61 @@ struct ProdTracker
 typedef std::unordered_map<uint32_t, ProdTracker> TrackerMap;
 typedef std::unordered_map<uint32_t, bool> EOPStatusMap;
 
-
 class fmtpRecvv3 {
+
+	/**
+	 * A thread-safe queue of messages from this receiver to the FMTP sender.
+	 */
+    class MsgQueue
+    {
+        typedef std::queue<INLReqMsg>   Queue;
+        typedef std::mutex              Mutex;
+        typedef std::lock_guard<Mutex>  Guard;
+        typedef std::unique_lock<Mutex> Lock;
+        typedef std::condition_variable Cond;
+
+        Queue         queue;
+        mutable Mutex mutex;
+        mutable Cond  cond;
+
+    public:
+        /**
+         * Constructs.
+         */
+        MsgQueue();
+
+        /**
+         * Adds a message to the tail of the queue.
+         *
+         * @param[in] msg  Message to be added
+         * @threadsafety   Safe
+         */
+        void push(const INLReqMsg& msg);
+
+        /**
+         * Adds a message to the tail of the queue.
+         *
+         * @param[in] msg  Message to be added
+         * @threadsafety   Safe
+         */
+        template<typename... Args>
+        void emplace(Args&&... args);
+
+        /**
+         * Returns a reference to the message at the head of the queue.
+         *
+         * @return Reference to the message at the head of the queue
+         * @threadsafety   Safe
+         */
+        const INLReqMsg& front() const;
+
+        /**
+         * Deletes the message at the head of the queue.
+         * @threadsafety   Safe
+         */
+        void pop();
+    };
+
 public:
     /**
      * Constructs.
@@ -132,6 +185,12 @@ private:
      * @throw std::runtime_error  if the packet has in invalid payload length.
      */
     void decodeHeader(char* const packet, FmtpHeader& header);
+    void updateAckedProd(const uint32_t prodindex);
+    void doneWithProd(
+            const bool       inTracker,
+            struct timespec& now,
+            const uint32_t   prodindex,
+            const uint32_t   numRetrans);
     void EOPHandler(const FmtpHeader& header);
     bool getEOPStatus(const uint32_t prodindex);
     bool hasLastBlock(const uint32_t prodindex);
@@ -254,7 +313,8 @@ private:
     bool sendEOPRetxReq(uint32_t prodindex);
     bool sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
                          uint16_t payloadlen);
-    bool sendRetxEnd(uint32_t prodindex);
+    bool sendRetxEOP(const uint32_t prodindex);
+    bool sendRetxEnd(uint32_t prodindex) const;
     static void*  StartRetxRequester(void* ptr);
     static void*  StartRetxHandler(void* ptr);
     static void*  StartMcastHandler(void* ptr);
@@ -292,9 +352,7 @@ private:
     EOPStatusMap            EOPmap;
     std::mutex              EOPmapmtx;
     ProdSegMNG*             pSegMNG;
-    std::queue<INLReqMsg>   msgqueue;
-    std::condition_variable msgQfilled;
-    std::mutex              msgQmutex;
+    MsgQueue                msgQueue;
     /* track all the missing BOP until received */
     std::unordered_set<uint32_t> misBOPset;
     std::mutex              BOPSetMtx;

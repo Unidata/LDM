@@ -59,6 +59,43 @@ static void freeLogging(void* arg)
 }
 #endif
 
+fmtpRecvv3::MsgQueue::MsgQueue()
+	: queue{}
+    , mutex{}
+    , cond{}
+{}
+
+void fmtpRecvv3::MsgQueue::push(const INLReqMsg& msg)
+{
+    Guard guard(mutex);
+    queue.push(msg);
+    cond.notify_one();
+}
+
+template<typename... Args>
+void fmtpRecvv3::MsgQueue::emplace(Args&&... args)
+{
+    Guard guard(mutex);
+    queue.emplace(args...);
+    cond.notify_one();
+}
+
+const INLReqMsg& fmtpRecvv3::MsgQueue::front() const
+{
+    Lock lock(mutex);
+
+    while (queue.empty())
+        cond.wait(lock);
+
+    return queue.front();
+}
+
+void fmtpRecvv3::MsgQueue::pop()
+{
+    Guard guard(mutex);
+	queue.pop();
+}
+
 /**
  * Constructs the receiver side instance (for integration with LDM).
  *
@@ -91,8 +128,7 @@ fmtpRecvv3::fmtpRecvv3(
     mcastSock(0),
     retxSock(0),
     pSegMNG(new ProdSegMNG()),
-    msgQfilled(),
-    msgQmutex(),
+	msgQueue(),
     BOPSetMtx(),
     exitMutex(),
     exitCond(),
@@ -125,11 +161,11 @@ fmtpRecvv3::~fmtpRecvv3()
     close(mcastSock);
     (void)close(retxSock); // failure is irrelevant
     {
-        std::unique_lock<std::mutex> lock(BOPSetMtx);
+        std::lock_guard<std::mutex> lock(BOPSetMtx);
         misBOPset.clear();
     }
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         trackermap.clear();
     }
     delete tcprecv;
@@ -163,7 +199,7 @@ uint32_t fmtpRecvv3::getNotify()
  */
 void fmtpRecvv3::SetLinkSpeed(uint64_t speed)
 {
-    std::unique_lock<std::mutex> lock(linkmtx);
+    std::lock_guard<std::mutex> lock(linkmtx);
     linkspeed = speed;
 }
 
@@ -234,7 +270,7 @@ void fmtpRecvv3::Start()
     stopJoinMcastHandler();
 
     {
-        std::unique_lock<std::mutex> lock(exitMutex);
+        std::lock_guard<std::mutex> lock(exitMutex);
         if (except) {
             /**
              * The actual exception object that exception_ptr is pointing to
@@ -258,7 +294,7 @@ void fmtpRecvv3::Start()
 void fmtpRecvv3::Stop()
 {
     {
-        std::unique_lock<std::mutex> lock(exitMutex);
+        std::lock_guard<std::mutex> lock(exitMutex);
         stopRequested = true;
         exitCond.notify_one();
     }
@@ -286,7 +322,7 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
     std::pair<std::unordered_set<uint32_t>::iterator, bool> retval;
     int size = 0;
     {
-        std::unique_lock<std::mutex> lock(BOPSetMtx);
+        std::lock_guard<std::mutex> lock(BOPSetMtx);
         retval = misBOPset.insert(prodindex);
         size = misBOPset.size();
     }
@@ -440,7 +476,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
     bool insertion = pSegMNG->addProd(header.prodindex, BOPmsg.prodsize);
     bool inTracker;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         inTracker = trackermap.count(header.prodindex);
     }
     if (insertion && !inTracker) {
@@ -458,7 +494,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
         /* Atomic insertion for BOP of new product */
         {
             ProdTracker tracker = {BOPmsg.prodsize, prodptr, 0, 0, 0};
-            std::unique_lock<std::mutex> lock(trackermtx);
+            std::lock_guard<std::mutex> lock(trackermtx);
             trackermap[header.prodindex] = tracker;
         }
 
@@ -477,7 +513,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
          */
         double sleeptime = 0.0;
         {
-            std::unique_lock<std::mutex> lock(trackermtx);
+            std::lock_guard<std::mutex> lock(trackermtx);
             if (trackermap.count(header.prodindex)) {
                 sleeptime =
                     Frcv * ((double)trackermap[header.prodindex].prodsize /
@@ -490,7 +526,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
         }
         /* add the new product into timer queue */
         {
-            std::unique_lock<std::mutex> lock(timerQmtx);
+            std::lock_guard<std::mutex> lock(timerQmtx);
             timerParam timerparam = {header.prodindex, sleeptime};
             timerParamQ.push(timerparam);
             timerQfilled.notify_all();
@@ -509,7 +545,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
 
     #ifdef MEASURE
         {
-            std::unique_lock<std::mutex> lock(trackermtx);
+            std::lock_guard<std::mutex> lock(trackermtx);
             if (trackermap.count(header.prodindex)) {
                 ProdTracker tracker = trackermap[header.prodindex];
                 measure->insert(header.prodindex, tracker.prodsize);
@@ -555,7 +591,7 @@ void fmtpRecvv3::checkPayloadLen(const FmtpHeader& header, const size_t nbytes)
  */
 void fmtpRecvv3::clearEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    std::lock_guard<std::mutex> lock(EOPmapmtx);
     EOPmap.erase(prodindex);
 }
 
@@ -595,6 +631,40 @@ void fmtpRecvv3::decodeHeader(char* const  packet, FmtpHeader& header)
 }
 
 
+void fmtpRecvv3::updateAckedProd(const uint32_t prodindex)
+{
+    /**
+     * Updates the most recently acknowledged product and notifies a dummy
+     * notification handler (getNotify()).
+     */
+    {
+        std::lock_guard<std::mutex> lock(notifyprodmtx);
+        notifyprodidx = prodindex;
+    }
+    notify_cv.notify_one();
+}
+
+
+void fmtpRecvv3::doneWithProd(
+        const bool       inTracker,
+        struct timespec& now,
+		const uint32_t   prodindex,
+        const uint32_t   numRetrans)
+{
+    if (notifier && inTracker) {
+        notifier->endProd(now, prodindex, numRetrans);
+    }
+    else if (inTracker) {
+    	updateAckedProd(prodindex);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(trackermtx);
+        trackermap.erase(prodindex);
+    }
+}
+
+
 /**
  * Handles a received EOP from the unicast thread. Check the bitmap to see if
  * all the data blocks are received. If true, notify the RecvApp. If false,
@@ -615,39 +685,22 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
     clock_gettime(CLOCK_REALTIME, &now);
 
     /**
-     * if segmap check tells everything is completed, then sends the
+     * If all data-blocks have been received, then send a
      * RETX_END message back to sender. Meanwhile notify receiving
      * application.
      */
     if (pSegMNG->delIfComplete(header.prodindex)) {
-        sendRetxEnd(header.prodindex);
+        //sendRetxEnd(header.prodindex);
+        msgQueue.push(INLReqMsg{RETX_EOP, header.prodindex, 0, 0});
         bool     inTracker;
         uint32_t numRetrans;
         {
-            std::unique_lock<std::mutex> lock(trackermtx);
+            std::lock_guard<std::mutex> lock(trackermtx);
             inTracker = trackermap.count(header.prodindex);
             if (inTracker)
                 numRetrans = trackermap[header.prodindex].numRetrans;
         }
-        if (notifier && inTracker) {
-            notifier->endProd(now, header.prodindex, numRetrans);
-        }
-        else if (inTracker) {
-            /**
-             * Updates the most recently acknowledged product and notifies
-             * a dummy notification handler (getNotify()).
-             */
-            {
-                std::unique_lock<std::mutex> lock(notifyprodmtx);
-                notifyprodidx = header.prodindex;
-            }
-            notify_cv.notify_one();
-        }
-
-        {
-            std::unique_lock<std::mutex> lock(trackermtx);
-            trackermap.erase(header.prodindex);
-        }
+        doneWithProd(inTracker, now, header.prodindex, numRetrans);
 
         #ifdef MODBASE
             uint32_t tmpidx = header.prodindex % MODBASE;
@@ -698,7 +751,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
             uint32_t prodsize;
             bool     haveProdsize;
             {
-                std::unique_lock<std::mutex> lock(trackermtx);
+                std::lock_guard<std::mutex> lock(trackermtx);
                 haveProdsize = trackermap.count(header.prodindex) > 0;
                 if (haveProdsize)
                     prodsize = trackermap[header.prodindex].prodsize;
@@ -717,7 +770,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
  */
 bool fmtpRecvv3::getEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    std::lock_guard<std::mutex> lock(EOPmapmtx);
     return EOPmap[prodindex];
 }
 
@@ -740,7 +793,7 @@ bool fmtpRecvv3::hasLastBlock(const uint32_t prodindex)
  */
 void fmtpRecvv3::initEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    std::lock_guard<std::mutex> lock(EOPmapmtx);
     EOPmap[prodindex] = false;
 }
 
@@ -913,7 +966,7 @@ void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
 
     bool hasBOP = false;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
             hasBOP = true;
         }
@@ -959,8 +1012,7 @@ void fmtpRecvv3::pushMissingDataReq(const uint32_t prodindex,
                                     const uint32_t seqnum,
                                     const uint16_t datalen)
 {
-    INLReqMsg reqmsg = {MISSING_DATA, prodindex, seqnum, datalen};
-    msgqueue.push(reqmsg);
+    msgQueue.push(INLReqMsg{MISSING_DATA, prodindex, seqnum, datalen});
 }
 
 
@@ -971,10 +1023,7 @@ void fmtpRecvv3::pushMissingDataReq(const uint32_t prodindex,
  */
 void fmtpRecvv3::pushMissingBopReq(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(msgQmutex);
-    INLReqMsg                    reqmsg = {MISSING_BOP, prodindex, 0, 0};
-    msgqueue.push(reqmsg);
-    msgQfilled.notify_one();
+    msgQueue.push(INLReqMsg{MISSING_BOP, prodindex, 0, 0});
 }
 
 
@@ -985,10 +1034,7 @@ void fmtpRecvv3::pushMissingBopReq(const uint32_t prodindex)
  */
 void fmtpRecvv3::pushMissingEopReq(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(msgQmutex);
-    INLReqMsg                    reqmsg = {MISSING_EOP, prodindex, 0, 0};
-    msgqueue.push(reqmsg);
-    msgQfilled.notify_one();
+    msgQueue.push(INLReqMsg{MISSING_EOP, prodindex, 0, 0});
 }
 
 
@@ -1082,9 +1128,9 @@ void fmtpRecvv3::retxHandler()
             uint32_t seqnum      = 0;
             uint32_t lastprodidx = 0xFFFFFFFF;
             {
-                std::unique_lock<std::mutex> lock(antiracemtx);
+                std::lock_guard<std::mutex> lock(antiracemtx);
                 {
-                    std::unique_lock<std::mutex> lock(trackermtx);
+                    std::lock_guard<std::mutex> lock(trackermtx);
                     if (trackermap.count(header.prodindex)) {
                         ProdTracker tracker  = trackermap[header.prodindex];
                         prodsize             = tracker.prodsize;
@@ -1146,7 +1192,7 @@ void fmtpRecvv3::retxHandler()
             uint32_t prodsize = 0;
             void*    prodptr  = NULL;
             {
-                std::unique_lock<std::mutex> lock(trackermtx);
+                std::lock_guard<std::mutex> lock(trackermtx);
                 if (trackermap.count(header.prodindex)) {
                     ProdTracker& tracker = trackermap[header.prodindex];
                     prodsize = tracker.prodsize;
@@ -1223,34 +1269,17 @@ void fmtpRecvv3::retxHandler()
             pSegMNG->set(header.prodindex, header.seqnum, header.payloadlen);
 
             if (pSegMNG->delIfComplete(header.prodindex)) {
-                sendRetxEnd(header.prodindex);
+                //sendRetxEnd(header.prodindex);
+                msgQueue.push(INLReqMsg{RETX_EOP, header.prodindex, 0, 0});
                 bool     inTracker;
                 uint32_t numRetrans;
                 {
-                    std::unique_lock<std::mutex> lock(trackermtx);
+                    std::lock_guard<std::mutex> lock(trackermtx);
                     inTracker = trackermap.count(header.prodindex);
                     if (inTracker)
                         numRetrans = trackermap[header.prodindex].numRetrans;
                 }
-                if (notifier && inTracker) {
-                    notifier->endProd(now, header.prodindex, numRetrans);
-                }
-                else if (inTracker) {
-                    /**
-                     * Updates the most recently acknowledged product and notifies
-                     * a dummy notification handler (getNotify()).
-                     */
-                    {
-                        std::unique_lock<std::mutex> lock(notifyprodmtx);
-                        notifyprodidx = header.prodindex;
-                    }
-                    notify_cv.notify_one();
-                }
-
-                {
-                    std::unique_lock<std::mutex> lock(trackermtx);
-                    trackermap.erase(header.prodindex);
-                }
+                doneWithProd(inTracker, now, header.prodindex, numRetrans);
 
                 #ifdef DEBUG2
                     std::string debugmsg = "[MSG] Product #" +
@@ -1322,19 +1351,11 @@ void fmtpRecvv3::retxHandler()
                     notifier->missedProd(header.prodindex);
                 }
                 else {
-                    /**
-                     * Updates the most recently acknowledged product and
-                     * notifies a dummy notification handler (getNotify()).
-                     */
-                    {
-                        std::unique_lock<std::mutex> lock(notifyprodmtx);
-                        notifyprodidx = header.prodindex;
-                    }
-                    notify_cv.notify_one();
+                    updateAckedProd(header.prodindex);
                 }
 
                 {
-                    std::unique_lock<std::mutex> lock(trackermtx);
+                    std::lock_guard<std::mutex> lock(trackermtx);
                     trackermap.erase(header.prodindex);
                 }
             }
@@ -1359,29 +1380,29 @@ void fmtpRecvv3::retxRequester()
 {
     while(1)
     {
-        INLReqMsg reqmsg;
-
-        {
-            std::unique_lock<std::mutex> lock(msgQmutex);
-            while (msgqueue.empty())
-                msgQfilled.wait(lock);
-            reqmsg = msgqueue.front();
-        }
+        const INLReqMsg& reqmsg = msgQueue.front();
 
         if (reqmsg.reqtype == SHUTDOWN)
             break; // leave "shutdown" message in queue
 
-        if ( ((reqmsg.reqtype == MISSING_BOP) &&
-                sendBOPRetxReq(reqmsg.prodindex)) ||
-            ((reqmsg.reqtype == MISSING_DATA) &&
-                sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
-                                reqmsg.payloadlen)) ||
-            ((reqmsg.reqtype == MISSING_EOP) &&
-                sendEOPRetxReq(reqmsg.prodindex)) )
-        {
-            std::unique_lock<std::mutex> lock(msgQmutex);
-            msgqueue.pop();
+        bool success = false;
+
+        if (reqmsg.reqtype == MISSING_BOP) {
+            success = sendBOPRetxReq(reqmsg.prodindex);
         }
+        else if (reqmsg.reqtype == MISSING_DATA) {
+            success = sendDataRetxReq(reqmsg.prodindex, reqmsg.seqnum,
+                    reqmsg.payloadlen);
+        }
+        else if (reqmsg.reqtype == MISSING_EOP) {
+            success = sendEOPRetxReq(reqmsg.prodindex);
+        }
+        else if (reqmsg.reqtype == RETX_EOP) {
+        	success = sendRetxEnd(reqmsg.prodindex);
+        }
+
+        if (success)
+            msgQueue.pop();
     }
 }
 
@@ -1395,7 +1416,7 @@ void fmtpRecvv3::retxRequester()
  */
 bool fmtpRecvv3::rmMisBOPinSet(uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(BOPSetMtx);
+    std::lock_guard<std::mutex> lock(BOPSetMtx);
     bool rmsuccess = misBOPset.erase(prodindex);
     return rmsuccess;
 }
@@ -1428,7 +1449,7 @@ void fmtpRecvv3::retxEOPHandler(const FmtpHeader& header)
 
     bool hasBOP = false;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
             hasBOP = true;
         }
@@ -1473,7 +1494,7 @@ void fmtpRecvv3::readMcastData(const FmtpHeader& header)
     ssize_t nbytes = 0;
     void*   prodptr = NULL;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
             ProdTracker tracker = trackermap[header.prodindex];
             prodptr = tracker.prodptr;
@@ -1547,7 +1568,7 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
 {
     uint32_t seqnum = 0;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         if (trackermap.count(prodindex)) {
             ProdTracker tracker = trackermap[prodindex];
             seqnum = tracker.seqnum + tracker.paylen;
@@ -1559,7 +1580,14 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
      * block sequence number.
      */
     if (seqnum != mostRecent) {
-        std::unique_lock<std::mutex> lock(msgQmutex);
+        // TODO: Merged RETX_REQ cannot be implemented so far, because
+        // current FMTP header has a limited payloadlen field of 16 bits.
+        // A merged RETX_REQ could have more than 65535 in payloadlen, the
+        // field thus needs to be upgraded to 32 bits. We will do this in
+        // the next version of FMTP.
+        //
+        /* merged requests, multiple missing blocks in one request */
+        // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
 
         for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
             pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
@@ -1582,17 +1610,6 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
                 WriteToLog(debugmsg);
             #endif
         }
-
-        // TODO: Merged RETX_REQ cannot be implemented so far, because
-        // current FMTP header has a limited payloadlen field of 16 bits.
-        // A merged RETX_REQ could have more than 65535 in payloadlen, the
-        // field thus needs to be upgraded to 32 bits. We will do this in
-        // the next version of FMTP.
-        //
-        /* merged requests, multiple missing blocks in one request */
-        // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
-
-        msgQfilled.notify_one();
     }
 }
 
@@ -1681,7 +1698,7 @@ void fmtpRecvv3::recvMemData(const FmtpHeader& header)
     //int state = 0;
     uint32_t prodsize = 0;
     {
-        std::unique_lock<std::mutex> lock(trackermtx);
+        std::lock_guard<std::mutex> lock(trackermtx);
         if (trackermap.count(header.prodindex)) {
             ProdTracker tracker = trackermap[header.prodindex];
             prodsize = tracker.prodsize;
@@ -1706,11 +1723,11 @@ void fmtpRecvv3::recvMemData(const FmtpHeader& header)
     if (prodsize > 0) {
         readMcastData(header);
         {
-            std::unique_lock<std::mutex> lock(antiracemtx);
+            std::lock_guard<std::mutex> lock(antiracemtx);
             requestAnyMissingData(header.prodindex, header.seqnum);
             /* update most recent seqnum and payloadlen */
             {
-                std::unique_lock<std::mutex> lock(trackermtx);
+                std::lock_guard<std::mutex> lock(trackermtx);
                 if (trackermap.count(header.prodindex)) {
                     trackermap[header.prodindex].seqnum = header.seqnum;
                     trackermap[header.prodindex].paylen = header.payloadlen;
@@ -1833,14 +1850,15 @@ bool fmtpRecvv3::sendDataRetxReq(uint32_t prodindex, uint32_t seqnum,
     return (-1 != tcprecv->sendData(&header, sizeof(FmtpHeader), NULL, 0));
 }
 
-
 /**
  * Sends a retransmission end message to the sender to indicate the product
  * indexed by prodindex has been completely received.
  *
  * @param[in] prodindex        The product index of the finished product.
+ * @retval    `true`           Success
+ * @retval    `false`          Failure
  */
-bool fmtpRecvv3::sendRetxEnd(uint32_t prodindex)
+bool fmtpRecvv3::sendRetxEnd(const uint32_t prodindex) const
 {
     FmtpHeader header;
     header.prodindex  = htonl(prodindex);
@@ -1888,12 +1906,7 @@ void* fmtpRecvv3::StartRetxRequester(void* ptr)
  */
 void fmtpRecvv3::stopJoinRetxRequester()
 {
-    {
-        std::unique_lock<std::mutex> lock(msgQmutex);
-        INLReqMsg reqmsg = {SHUTDOWN};
-        msgqueue.push(reqmsg);
-        msgQfilled.notify_one();
-    }
+    msgQueue.push(INLReqMsg{SHUTDOWN});
 
     int status = pthread_join(retx_rq, NULL);
     if (status) {
@@ -2072,7 +2085,7 @@ void fmtpRecvv3::stopJoinTimerThread()
 {
     timerParam timerparam;
     {
-        std::unique_lock<std::mutex> lock(timerQmtx);
+        std::lock_guard<std::mutex> lock(timerQmtx);
         timerParam timerparam = {0, -1.0};
         timerParamQ.push(timerparam);
         timerQfilled.notify_one();
@@ -2095,7 +2108,7 @@ void fmtpRecvv3::stopJoinTimerThread()
  */
 void fmtpRecvv3::setEOPStatus(const uint32_t prodindex)
 {
-    std::unique_lock<std::mutex> lock(EOPmapmtx);
+    std::lock_guard<std::mutex> lock(EOPmapmtx);
     EOPmap[prodindex] = true;
 }
 
@@ -2131,7 +2144,7 @@ void fmtpRecvv3::timerThread()
 
         /** pop the current entry in timer queue when timer wakes up */
         {
-            std::unique_lock<std::mutex> lock(timerQmtx);
+            std::lock_guard<std::mutex> lock(timerQmtx);
             timerParamQ.pop();
         }
 
@@ -2172,7 +2185,7 @@ void fmtpRecvv3::timerThread()
 void fmtpRecvv3::taskExit(const std::exception_ptr& e)
 {
     {
-        std::unique_lock<std::mutex> lock(exitMutex);
+        std::lock_guard<std::mutex> lock(exitMutex);
         if (!except) {
             /**
              * make_exception_ptr() will make a copy of the exception of the
