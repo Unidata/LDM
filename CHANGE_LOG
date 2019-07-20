@@ -1,4 +1,4 @@
-6.13.12.19	2019-07-18T13:56:21-0600
+6.13.12.20	2019-07-20T15:09:07-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
@@ -46,10 +46,15 @@
                   eventually being locked
                 * Release products held by socket that just disconnected
                 * Eliminated deadlock
+                * Added rcvrCount()
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
             * Modified logMsg(std::string) to always log at NOTE level
-            * Added rcvrCount()
+            * fmtpRecvv3:
+                Moved direct sending of product-EOP to sender on unicast
+                reception thread to adding message to retransmission queue on
+                that thread to obviate deadlock between that thread and sender's
+                retransmission thread.
         vlanUtil(1):
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
