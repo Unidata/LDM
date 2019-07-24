@@ -143,8 +143,9 @@ void ProdNotifier::startProd(
                     pqRegion, &pqeIndex);
 
             if (status) {
-                log_add("bop_func() failure on product %lu",
-                        (unsigned long)iProd);
+                log_add("bop_func() failure on {iProd: %lu, prodSize: %zu, "
+                		"metaSize: %u}", (unsigned long)iProd, prodSize,
+						metaSize);
 
                 if (status == E2BIG || status == EEXIST) {
                     log_flush_warning();
@@ -229,8 +230,8 @@ void ProdNotifier::missedProd(const FmtpProdIndex prodIndex)
         pqe_index pqeIndex;
         bool      found;
         {
-            std::unique_lock<std::mutex> lock(mutex);
-            auto                         iter = prodInfos.find(prodIndex);
+            std::lock_guard<std::mutex> lock(mutex);
+            auto                        iter = prodInfos.find(prodIndex);
 
             found = iter != prodInfos.end();
 
@@ -246,6 +247,8 @@ void ProdNotifier::missedProd(const FmtpProdIndex prodIndex)
         missed_prod_func(mlr, prodIndex, found ? &pqeIndex : nullptr);
     }
     catch (const std::exception& e) {
+    	log_add(e.what());
+    	log_flush_error();
         log_free(); // to prevent memory leak by FMTP thread
         throw;
     }
