@@ -767,6 +767,8 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
  * Gets the EOP arrival status.
  *
  * @param[in] prodindex    Product index which the EOP belongs to.
+ * @retval    `true`       EOP has been received
+ * @retval    `false`      EOP has not been received
  */
 bool fmtpRecvv3::getEOPStatus(const uint32_t prodindex)
 {
