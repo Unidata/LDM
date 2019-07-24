@@ -252,7 +252,7 @@ eop_func(
                 lastReceived(mlr, info);
 
                 char infoStr[LDM_INFO_MAX];
-                log_info("Received: {time: %.7f s, index: %lu, retrans: %u, "
+                log_info("Received: {delay: %.7f s, index: %lu, retrans: %u, "
                         "info: \"%s\"}",
                         duration, (unsigned long)prodIndex, numRetrans,
                         s_prod_info(infoStr, sizeof(infoStr), info,
@@ -290,8 +290,8 @@ missed_prod_func(
 
     Mlr* mlr = obj;
 
-    if (pqeIndex)
-        (void)pqe_discard(mlr->pq, pqeIndex);
+    if (pqeIndex && pqe_discard(mlr->pq, pqeIndex))
+		log_flush_error();
 
     downlet_missedProduct(iProd);
 }
