@@ -8942,7 +8942,7 @@ pqe_newDirect(
                     status = rpqe_new(pq, size, signature, ptrp, &sxep);
                     if (status) {
                         if (status != PQ_DUP)
-                            log_add("rpqe_new() failure");
+                            log_add("rpqe_new() failure: {size: %zu}", size);
                     }
                     else {
                         /*
@@ -8975,7 +8975,7 @@ pqe_newDirect(
  * @param[in] pqe_index  Pointer to the region-index set by `pqe_new()` or
  *                       `pqe_newDirect()`.  Shall not be NULL.
  * @retval 0             Success.
- * @return               <errno.h> error code.
+ * @return               <errno.h> error code. `log_add()` called.
  */
 int
 pqe_discard(
@@ -8987,7 +8987,10 @@ pqe_discard(
         off_t offset = pqeOffset(*index);
 
         status = (pq->mtof)(pq, offset, 0);
-        if(status == ENOERR) {
+        if(status) {
+        	log_add("Couldn't unlock region with offset %ld", (long)offset);
+        }
+        else {
             /*
              * Write lock pq->xctl.
              */
