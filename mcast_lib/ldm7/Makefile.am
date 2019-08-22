@@ -53,7 +53,7 @@ AM_CPPFLAGS		= -I$(builddir) -I$(srcdir) \
 			  -I$(srcdir)/../FMTP-LDM7/UnidataFMTP/FMTPv3/sender \
 			  -I$(top_builddir)/misc -I$(top_srcdir)/misc \
 			  -I$(top_srcdir)/rpc
-dist_bin_SCRIPTS	= vlanUtil
+dist_bin_SCRIPTS	= vlanUtil setMcastRate
 # UpMcastMgr_test(1) calls mldm_sender(1), which calls
 # pim_openForWriting(3), which creates *.map files in the product-queue
 # directory

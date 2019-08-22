@@ -1,0 +1,63 @@
+# tc.sh
+#  Created on: Aug 22, 2019
+#      Author: Yuanlong Tan, Steve Emmerson
+
+# Exit on error
+set -e
+
+# tc(1) is in "/sbin"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+
+printUsage()
+{
+    name=`basename $0`
+    cat 1>&2 <<EOF
+Usage:
+    $name create <virtIface> <rate> <bufSize> <mcastCidr>
+    $name destroy <virtIface>
+Operands:
+    <virtIface>   Specification of virtual interface (e.g., "eth0.4000")
+    <rate>        Sending rate in bits-per-second (e.g., "500mbit", "5kbit")
+    <bufSize>     Buffer size in bytes (e.g., "600mb", "6kb")
+    <mcastCidr>   IP address and prefix length of multicast group (e.g., 
+                  "224.0.0.1/32")
+EOF
+}
+
+# Destroys a tc(1) configuration if it exists
+destroy()
+{
+    virtIface="${1:?Virtual interface not specified}"
+
+    tc qdisc del dev $virtIface root
+}
+
+# Creates a VLAN after first destroying any previously-existing one.
+create()
+{
+    virtIface="${1:?Virtual interface not specified}"
+    rate="${2:?Rate not specified}"
+    bufSize="${3:?Buffer size not specified}"
+    mcastCidr="${4:?Multicast CIDR not specified}"
+
+    tc qdisc add dev $virtIface root handle 1: htb default 2
+    tc class add dev $virtIface parent 1: classid 1:1 htb rate $rate ceil $rate
+    tc qdisc add dev $virtIface parent 1:1 handle 10: bfifo limit $bufSize
+    tc class add dev $virtIface parent 1: classid 1:2 htb rate $rate ceil $rate
+    tc qdisc add dev $virtIface parent 1:2 handle 11: bfifo limit $bufSize
+    tc filter add dev $virtIface protocol ip parent 1:0 prio 1 u32 match ip \
+        dst $mcastCidr flowid 1:1
+    tc filter add dev $virtIface protocol ip parent 1:0 prio 1 u32 match ip \
+        dst 0/0 flowid 1:2
+}
+
+case "$1" in
+    create)
+        shift
+        create "$@";;
+    destroy)
+        shift
+        destroy "$@";;
+    *)  printUsage
+        exit 1;;
+esac
