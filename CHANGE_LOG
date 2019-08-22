@@ -1,8 +1,10 @@
-6.13.12.20	2019-07-20T15:09:07-0600
+6.13.12.21	2019-08-22T15:59:24-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
           negative
+        * Improved error-message in pqe_newDirect()
+        * Added error-message to pqe_discard()
 
     Logging:
         Replaced minimum field-width in default log messages with canonical
@@ -12,8 +14,9 @@
         Replaced use of IS_ALIVE with fixed timeout of 5 minutes
 
     ldmadmin(1):
-        plotmetrics: Corrected sense of local/remote port connections. They were
-        reversed all this time.
+        * plotmetrics: Corrected sense of local/remote port connections. They
+          were reversed all this time.
+        * Put $LDMHOME/util at head of PATH to support customization
 
     Multicast:
         Product-Queue (pq.c):
@@ -33,11 +36,18 @@
         Down7:
             * Increased sleep duration between subscription attempts from 30
               seconds to 120 seconds
+            * Increased RPC subscription timeout to 10 minutes
             * Specified absolute pathname of vlanUtil(1) to workaround Ubuntu's
               non-standard execvp(2)
             * Replaced reliance on getting the RPC timeout from the client
               handle to explicitly setting the subscription-timeout because the
               RPC timeout is unset until the first call to `clnt_call()`
+            * MldmRcvr.c:
+                * eop_func(): Improved INFO message
+                * missed_prod_func(): Added flushing of errors
+            * ProdNotifier.cpp:
+                * startProd(): Improved error-message
+                * missedProd(): Added error-message
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
@@ -59,6 +69,9 @@
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
             * Corrected setting of broadcast address string
+        setMcastRate(1):
+            * Created to set the multicast sending rate. Uses tc(1). Must be
+              executed by root.
         OffsetMap:
             * Added missing deletion of entry by om_get()
             * Modified OffsetMap::get() to indicate no-entry instead of throwing
