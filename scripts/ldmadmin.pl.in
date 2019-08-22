@@ -42,7 +42,7 @@ $line_prefix = "";
 $pqact_conf_option = 0;
 
 # Ensure that the utilities of this version are favored
-$ENV{'PATH'} = "@EXEC_PREFIX@:$ENV{'PATH'}";
+$ENV{'PATH'} = "$ldmhome/util:@EXEC_PREFIX@:$ENV{'PATH'}";
 
 # we want a flush after every print statement
 $| = 1;
