@@ -1,4 +1,7 @@
-6.13.12.22	2019-08-30T09:58:13-0600
+6.13.12.23	2019-08-30T12:29:37-0600
+    Installation:
+        Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
+
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
