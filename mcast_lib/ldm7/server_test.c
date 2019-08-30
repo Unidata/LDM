@@ -3,9 +3,9 @@
 #define SELECT   1
 #define PSELECT  2
 #define POLL     3
+#define POLLFUNC POLL
 #define SELECT_TYPE (POLLFUNC == SELECT || POLLFUNC == PSELECT)
 #define POLL_TYPE (POLLFUNC == POLL)
-#define POLLFUNC POLL
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -202,8 +202,13 @@ static int server_destroy(
                 status = errno;
             }
             else {
-        #elif 1
+        #elif 0
             if (close(server->fds[1])) { // (p)select() & poll() return
+                status = errno;
+            }
+            else {
+        #elif 1
+            if (shutdown(server->sock, SHUT_RDWR)) { // (p)select() & poll() return
                 status = errno;
             }
             else {
