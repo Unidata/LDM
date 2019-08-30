@@ -1,4 +1,4 @@
-6.13.12.21	2019-08-22T15:59:24-0600
+6.13.12.22	2019-08-30T09:58:13-0600
     Product-Queue (pq.c):
         * Changed return values of pq_sequence() and pq_sequenceLock()
         * Documented that pq_sequence() and pq_sequenceLock() error codes are
@@ -10,8 +10,13 @@
         Replaced minimum field-width in default log messages with canonical
         column-start positions to reduce line lengths and CPU usage
 
-    Requester6:
-        Replaced use of IS_ALIVE with fixed timeout of 5 minutes
+    Downstream LDM-6:
+        * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
+        * Created vetProduct() and modified down6_hereis() and
+          down6_comingsoon() to use it.
+        * Changed logging level of "too-old" and "unrequested" products from
+          INFO to NOTE in order to unconditionally reveal why products aren't
+          getting inserted into the product-queue when the connection is slow.
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
