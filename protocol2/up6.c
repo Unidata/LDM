@@ -359,12 +359,12 @@ static int feed(
     ErrorObj** const errObj = (ErrorObj**) arg;
 
     if (upFilter_isMatch(_upFilter, info)) {
-        int isDebug = log_is_enabled_debug;
-
-        if (log_is_enabled_info || isDebug)
-            err_log_and_free(ERR_NEW1(0, NULL, "sending: %s",
-                    s_prod_info(NULL, 0, info, isDebug)),
-                    isDebug ? ERR_DEBUG : ERR_INFO);
+    	if (log_is_enabled_debug) {
+    		log_debug("sending: %s", s_prod_info(NULL, 0, info, true));
+    	}
+    	else {
+    		log_info("sending: %s", s_prod_info(NULL, 0, info, false));
+    	}
 
         *errObj = _isPrimary ? hereis(info, data) : csbd(info, data);
     } /* product passes up-filter */
