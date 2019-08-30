@@ -14,11 +14,8 @@ cd `dirname $0`
 # NOAAPort ingest test system (password required)
 deploy -M /usr/ccs/bin/make -n burns
 
-# Non-operational, NWSC systems (password required)
-#for i in 0 1 2 3 4 5 6 7; do
-for i in 6; do
-    deploy node$i
-done
+# Non-operational backend cluster node
+deploy uni14
 
 # LDM7 systems (no password required)
 deploy -m              -u ldm7 ca
