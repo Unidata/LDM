@@ -42,7 +42,7 @@ typedef enum {
 
 
 static struct pqueue* _pq;              /* product-queue */
-static prod_class_t*    _class;           /* product-class to accept */
+static prod_class_t*    _class;         /* product-class to accept */
 static char*          _datap;           /* BLKDATA area */
 static prod_info*     _info;            /* product-info */
 static unsigned       _remaining;       /* remaining BLKDATA bytes */
@@ -198,80 +198,83 @@ prod_class_t *down6_get_prod_class()
 }
 
 
-/*
- * Handles a product.  This function prints diagnostic messages via the ulog(3)
- * module.  On successful return, savedInfo_get() will return the metadata 
- * of the product.
+/**
+ * Vets a product by determining if it's in the desired product class.
+ * @param[in] infop               Product metadata
+ * @retval    0                   Product is in the desired product class
+ * @retval    DOWN6_UNWANTED      Product is not in the desired product class.
+ *                                Notice message logged.
+ * @retval    ENOMEM              Out of memory.  Error message logged.
+ * @retval    DOWN6_SYSTEM_ERROR  System failure. Error message logged.
+ */
+static int
+vetProduct(const prod_info *infop)
+{
+	int status;
+
+	(void)set_timestamp(&_class->from);
+	_class->from.tv_sec -= max_latency;
+	dh_setInfo(_info, infop, _upName);
+
+	if (prodInClass(_class, infop)) {
+		status = 0;
+	}
+	else {
+		const char* reason = tvCmp(_class->from, infop->arrival, >)
+				? "too-old" : "unrequested";
+		log_notice("Ignoring %s product: %s", reason,
+					s_prod_info(NULL, 0, infop, log_is_enabled_debug));
+
+		status = savedInfo_set(_info);
+		if (status) {
+			log_error("Couldn't save product-information: %s",
+					savedInfo_strerror(status));
+			status = DOWN6_SYSTEM_ERROR;
+		}
+		else {
+			status = DOWN6_UNWANTED;
+		}
+	}                               // product not in desired class
+
+	return status;
+}
+
+
+/**
+ * Handles a product. On successful return, `savedInfo_get()` will return the
+ * metadata of the product.
  *
- * This function updates "_class->from".
+ * This function updates `_class->from`.
  *
- * Arguments:
- *      prod         Pointer to the data-product.
- * Returns:
- *      0                       Success.
- *      DOWN6_UNWANTED          Unwanted data-product (e.g., duplicate, too 
- *                              old).
- *      DOWN6_PQ                The product couldn't be inserted into the
- *                              product-queue.
- *      DOWN6_PQ_BIG            The product is too big to be inserted into
- *                              the product-queue.
- *      DOWN6_SYSTEM_ERROR      System error.
- *      DOWN6_UNINITIALIZED     Module not initialized.
+ * @param[in] prod                 Pointer to the data-product.
+ * @retval    0                    Success.
+ * @retval    DOWN6_UNWANTED       Unwanted data-product (e.g., duplicate, too
+ *                                 old). Notice logged.
+ * @retval    DOWN6_PQ             The product couldn't be inserted into the
+ *                                 product-queue. Error logged.
+ * @retval    DOWN6_PQ_BIG         The product is too big to be inserted into
+ *                                 the product-queue. Error logged.
+ * @retval    DOWN6_SYSTEM_ERROR   System error. Error logged.
+ * @retval    DOWN6_UNINITIALIZED  Module not initialized. Error logged.
  */
 int
 down6_hereis(
     product*    prod)
 {
-    int         errCode = 0;            /* success */
+    int         status = 0;            /* success */
 
     if (!_initialized) {
-        log_error_q("Module not initialized");
-        errCode = DOWN6_UNINITIALIZED;
+        log_error("Module not initialized");
+        status = DOWN6_UNINITIALIZED;
     }
     else {
-        prod_info *infop = &prod->info;
+    	status = vetProduct(&prod->info);
 
-        (void)set_timestamp(&_class->from);
-        _class->from.tv_sec -= max_latency;
-        dh_setInfo(_info, infop, _upName);
-
-        if (!prodInClass(_class, infop)) {
-            if (tvCmp(_class->from, infop->arrival, >)) {
-                if (log_is_enabled_info) {
-                    err_log_and_free(
-                        ERR_NEW1(0, NULL, "Ignoring too-old product: %s",
-                            s_prod_info(NULL, 0, infop,
-                                    log_is_enabled_debug)),
-                        ERR_INFO);
-                }
-            }
-            else if (log_is_enabled_info) {
-                err_log_and_free(
-                    ERR_NEW1(0, NULL, "Ignoring unrequested product: %s",
-                        s_prod_info(NULL, 0, infop,
-                                log_is_enabled_debug)),
-                    ERR_INFO);
-            }
-            errCode = savedInfo_set(_info);
-            if (errCode) {
-                err_log_and_free(
-                    ERR_NEW1(0, NULL,
-                        "Couldn't save product-information: %s",
-                        savedInfo_strerror(errCode)),
-                    ERR_FAILURE);
-
-                errCode = DOWN6_SYSTEM_ERROR;
-            }
-            else {
-                errCode = DOWN6_UNWANTED;
-            }
-        }
-        else {
-            errCode = dh_saveProd(_pq, _info, prod->data, 1, 1);
-        }                               /* product in desired class */
+    	if (status == 0)
+            status = dh_saveProd(_pq, _info, prod->data, 1, 1);
     }                                   /* module initialized */
 
-    return errCode;
+    return status;
 }
 
 
@@ -305,31 +308,31 @@ int down6_notification(prod_info *info)
 }
 
 
-/*
+/**
  * Handles a product that will be delivered in pieces.
  *
- * This function updates "_class->from".
+ * This function updates `_class->from`.
  *
- * Arguments:
- *      argp      Pointer to the product delivery parameters.
- * Returns:
- *      0                       Success.
- *      DOWN6_UNWANTED          Unwanted data-product (e.g., duplicate, too 
- *                              old, too big).
- *      DOWN6_PQ                Fatal problem with product-queue.
- *      DOWN6_PQ_BIG            Data-product too big for product-queue
- *      DOWN6_SYSTEM_ERROR      System error.
- *      DOWN6_UNINITIALIZED     Module not initialized.
+ * @param[in] argp                 Pointer to COMINGSOON argument
+ * @retval    0                    Success.
+ * @retval    DOWN6_UNWANTED       Unwanted data-product (e.g., duplicate, too
+ *                                 old). Notice logged.
+ * @retval    DOWN6_PQ             The product couldn't be inserted into the
+ *                                 product-queue. Error logged.
+ * @retval    DOWN6_PQ_BIG         The product is too big to be inserted into
+ *                                 the product-queue. Error logged.
+ * @retval    DOWN6_SYSTEM_ERROR   System error. Error logged.
+ * @retval    DOWN6_UNINITIALIZED  Module not initialized. Error logged.
  */
 int
 down6_comingsoon(
     comingsoon_args*    argp)
 {
-    int         errCode = 0;            /* success */
+    int         status = 0;            /* success */
 
     if (!_initialized) {
         log_error_q("Module not initialized");
-        errCode = DOWN6_UNINITIALIZED;
+        status = DOWN6_UNINITIALIZED;
     }
     else {
         prod_info *infop = argp->infop;
@@ -342,49 +345,17 @@ down6_comingsoon(
             _expectBlkdata = 0;
         }
 
-        (void)set_timestamp(&_class->from);
-        _class->from.tv_sec -= max_latency;
-        dh_setInfo(_info, infop, _upName);
+    	status = vetProduct(infop);
 
-        if (!prodInClass(_class, infop)) {
-            if (tvCmp(_class->from, infop->arrival, >)) {
-                if (log_is_enabled_info)
-                    err_log_and_free(
-                        ERR_NEW1(0, NULL, "Ignoring too-old product: %s",
-                            s_prod_info(NULL, 0, infop,
-                                    log_is_enabled_debug)),
-                        ERR_INFO);
-            }
-            else if (log_is_enabled_info) {
-                err_log_and_free(
-                    ERR_NEW1(0, NULL, "Ignoring unrequested product: %s",
-                        s_prod_info(NULL, 0, infop,
-                                log_is_enabled_debug)),
-                    ERR_INFO);
-            }
-            errCode = savedInfo_set(_info);
-            if (errCode) {
-                err_log_and_free(
-                    ERR_NEW1(0, NULL,
-                        "Couldn't save product-information: %s",
-                        savedInfo_strerror(errCode)),
-                    ERR_FAILURE);
-
-                errCode = DOWN6_SYSTEM_ERROR;
-            }
-            else {
-                errCode = DOWN6_UNWANTED;
-            }
-        }                                   /* product isn't in desired class */
-        else {
+    	if (status == 0) {
             pqe_index      idx;             /* product-queue index */
 
             /*
              * Reserve space for the data-product in the product-queue.
              */
-            errCode = pqe_new(_pq, _info, (void **)&_datap, &idx);
+            status = pqe_new(_pq, _info, (void **)&_datap, &idx);
 
-            if (!errCode) {
+            if (!status) {
                 /*
                  * The data-product isn't in the product-queue.  Setup for
                  * receiving the product's data via BLKDATA messages.
@@ -399,7 +370,7 @@ down6_comingsoon(
                 _remaining = _info->sz;
                 _datap = xd_getBuffer(_remaining);
             }                           /* pqe_new() success */
-            else if (errCode == EINVAL) {
+            else if (status == EINVAL) {
                 /*
                  * The data-product is invalid.
                  */
@@ -409,11 +380,11 @@ down6_comingsoon(
                                 log_is_enabled_debug)),
                     ERR_FAILURE);
 
-                errCode = DOWN6_UNWANTED;
+                status = DOWN6_UNWANTED;
                 if (savedInfo_set(_info))
-                    errCode = DOWN6_SYSTEM_ERROR;
+                    status = DOWN6_SYSTEM_ERROR;
             }                           /* invalid product */
-            else if (errCode == PQUEUE_BIG) {
+            else if (status == PQUEUE_BIG) {
                 /*
                  * The data-product is too big to insert into the
                  * product-queue.
@@ -422,12 +393,12 @@ down6_comingsoon(
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
-                errCode = DOWN6_PQ_BIG;
+                status = DOWN6_PQ_BIG;
                 if (savedInfo_set(_info)) {
-                    errCode = DOWN6_SYSTEM_ERROR;
+                    status = DOWN6_SYSTEM_ERROR;
                 }
             }                           /* product too big */
-            else if (errCode == PQUEUE_DUP) {
+            else if (status == PQUEUE_DUP) {
                 /*
                  * The data-product is already in the product-queue.
                  */
@@ -437,9 +408,9 @@ down6_comingsoon(
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
-                errCode = DOWN6_UNWANTED;
+                status = DOWN6_UNWANTED;
                 if (savedInfo_set(_info)) {
-                    errCode = DOWN6_SYSTEM_ERROR;
+                    status = DOWN6_SYSTEM_ERROR;
                 }
                 else {
                     /*
@@ -457,22 +428,20 @@ down6_comingsoon(
                                 "data-product: %s", strerror(error)),
                             ERR_FAILURE);
 
-                        errCode = DOWN6_SYSTEM_ERROR;
+                        status = DOWN6_SYSTEM_ERROR;
                     }
                 }                   /* "savedInfo" updated */
             }                       /* duplicate data-product */
             else {
-                err_log_and_free(
-                    ERR_NEW2(0, NULL, "pqe_new() failed: %s: %s", 
-                        strerror(errCode), s_prod_info(NULL, 0, _info, 1)),
-                    ERR_FAILURE);
+            	log_error("pqe_new() failed: %s: %s",
+                        strerror(status), s_prod_info(NULL, 0, _info, 1));
 
-                errCode = DOWN6_PQ;     /* fatal product-queue error */
+                status = DOWN6_PQ;     /* fatal product-queue error */
             }                           /* general pqe_new() failure */
         }                               /* product is in desired class */
     }                                   /* module initialized */
 
-    return errCode;
+    return status;
 }
 
 
