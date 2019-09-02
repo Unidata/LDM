@@ -222,7 +222,7 @@ vetProduct(const prod_info *infop)
 	else {
 		const char* reason = tvCmp(_class->from, infop->arrival, >)
 				? "too-old" : "unrequested";
-		log_notice("Ignoring %s product: %s", reason,
+		log_warning("Ignoring %s product: %s", reason,
 					s_prod_info(NULL, 0, infop, log_is_enabled_debug));
 
 		status = savedInfo_set(_info);
