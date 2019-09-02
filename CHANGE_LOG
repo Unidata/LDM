@@ -1,4 +1,4 @@
-6.13.12.23	2019-08-30T12:29:37-0600
+6.13.12.24	2019-09-02T12:09:50-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -18,8 +18,12 @@
         * Created vetProduct() and modified down6_hereis() and
           down6_comingsoon() to use it.
         * Changed logging level of "too-old" and "unrequested" products from
-          INFO to NOTE in order to unconditionally reveal why products aren't
-          getting inserted into the product-queue when the connection is slow.
+          INFO to WARN in order to unconditionally reveal why products aren't
+          being inserted into the product-queue due to a slow connection
+          (because it's being throttled, for example). If this happens to you,
+          then you need to work with your network administrator to allow LDM
+          traffic to pass unhindered. NB: This means a cold-started LDM might
+          log some "too-old" warning messages initially.
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
