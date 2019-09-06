@@ -29,13 +29,15 @@
  * \c net.ipv4.ipfrag_max_dist must be modified from its default value of
  * of \c 64 in order for all broadcast UDP packets to be correctly received
  * without any gaps.
- * Its value should be \c 4096 or higher or the value should be
- * \c 0 in order to disable the check of the sequencing of IP fragments.
+ * Unfortunately, it is difficult to determine what that value should be (some
+ * sites have reported success with a value of \c 4096 or higher); consequently,
+ * we recommend a value of \c 0 to disable the check of the sequencing of IP
+ * fragments.
  * The value of parameter \c net.ipv4.conf.default.rp_filter should be
  * \c 2 in order to obtain correct support for a multi-homed system.
  * For example, as \c root, execute the commands
  * \verbatim
- sysctl -w net.ipv4.ipfrag_max_dist=4096
+ sysctl -w net.ipv4.ipfrag_max_dist=0
  sysctl -w net.ipv4.conf.default.rp_filter=2
  sysctl -p
 \endverbatim
