@@ -1,0 +1,11 @@
+# Script to start a program and restart it whenever it terminates.
+
+while true; do
+    "$@"
+    status=$?
+    ulogger -p error "Process '$@' terminated with status $status. Restarting"
+
+    # Edit/uncomment the following command to receive an email notification
+    # mailx -s "Process '$@' terminated with status $status. Restarting" \
+    #       $LOGNAME </dev/null
+done

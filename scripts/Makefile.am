@@ -1,4 +1,4 @@
-# Copyright 2009 University Corporation for Atmospheric Research
+# Copyright 2019 University Corporation for Atmospheric Research
 #
 # This file is part of the LDM package.  See the file COPYRIGHT
 # in the top-level source-directory of the package for copying and
@@ -18,7 +18,8 @@ EXTRA_DIST		= \
     syscheck.in
 dist_bin_SCRIPTS	= \
     wasReceived \
-    updateGempakTables
+    updateGempakTables \
+    keep_running
 nodist_bin_SCRIPTS	= \
     ldmadmin \
     ldmfail \

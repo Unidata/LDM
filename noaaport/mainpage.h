@@ -49,14 +49,16 @@
  * @section configuration Configuration
  * Edit the LDM configuration file, \c ~/etc/ldmd.conf, and add the entries
  * needed to read and process the DVB-S stream(s).  Here's one possibility
- * using the \link noaaportIngester.c \c noaaportIngester \endlink program:
+ * using the \link noaaportIngester.c \c noaaportIngester \endlink program and
+ * the \c keep_running script to ensure that the program is restarted if it
+ * crashes (due to a malformed GRIB2 message, for example):
  *
  * \verbatim
  # DVB-S ingest
- EXEC    "noaaportIngester -m 224.0.1.1"
- EXEC    "noaaportIngester -m 224.0.1.2"
- EXEC    "noaaportIngester -m 224.0.1.3"
- EXEC    "noaaportIngester -m 224.0.1.4"
+ EXEC    "keep_running noaaportIngester -m 224.0.1.1"
+ EXEC    "keep_running noaaportIngester -m 224.0.1.2"
+ EXEC    "keep_running noaaportIngester -m 224.0.1.3"
+ EXEC    "keep_running noaaportIngester -m 224.0.1.4"
 \endverbatim
  *
  * Alternatively, the deprecated \link dvbs_multicast.c \c dvbs_multicast
@@ -65,16 +67,16 @@
  *
  * \verbatim
  # DVB-S broadcast UDP listening and shared-memory writing processes
- EXEC    "dvbs_multicast -m 224.0.1.1"
- EXEC    "dvbs_multicast -m 224.0.1.2"
- EXEC    "dvbs_multicast -m 224.0.1.3"
- EXEC    "dvbs_multicast -m 224.0.1.4"
+ EXEC    "keep_running dvbs_multicast -m 224.0.1.1"
+ EXEC    "keep_running dvbs_multicast -m 224.0.1.2"
+ EXEC    "keep_running dvbs_multicast -m 224.0.1.3"
+ EXEC    "keep_running dvbs_multicast -m 224.0.1.4"
 
  # Shared-memory reading and data-product creation & insertion processes
- EXEC    "readnoaaport -m 224.0.1.1"
- EXEC    "readnoaaport -m 224.0.1.2"
- EXEC    "readnoaaport -m 224.0.1.3"
- EXEC    "readnoaaport -m 224.0.1.4"
+ EXEC    "keep_running readnoaaport -m 224.0.1.1"
+ EXEC    "keep_running readnoaaport -m 224.0.1.2"
+ EXEC    "keep_running readnoaaport -m 224.0.1.3"
+ EXEC    "keep_running readnoaaport -m 224.0.1.4"
 \endverbatim
  *
  * These \c ldmd.conf actions create a \link dvbs_multicast.c \c
@@ -102,13 +104,13 @@
  * the <tt>local</tt><em>X</em> logging facility:
  *
  * \verbatim
- EXEC    "noaaportIngester -m 224.0.1.1 -n -u 3"
+ EXEC    "keep_running noaaportIngester -m 224.0.1.1 -n -u 3"
 \endverbatim
  *
  * or
  *
  * \verbatim
- EXEC    "readnoaaport -m 224.0.1.1 -n -u 3"
+ EXEC    "keep_running readnoaaport -m 224.0.1.1 -n -u 3"
 \endverbatim
  *
  * If you are not interested in logging to seperate files, simply omit
