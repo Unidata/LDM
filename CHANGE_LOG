@@ -1,4 +1,4 @@
-6.13.12.24	2019-09-02T12:09:50-0600
+6.13.12.25	2019-09-27T15:30:33-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -21,14 +21,20 @@
           INFO to WARN in order to unconditionally reveal why products aren't
           being inserted into the product-queue due to a slow connection
           (because it's being throttled, for example). If this happens to you,
-          then you need to work with your network administrator to allow LDM
+          then you'll need to work with your network administrator to allow LDM
           traffic to pass unhindered. NB: This means a cold-started LDM might
-          log some "too-old" warning messages initially.
+          log some "too-old" warning messages, initially.
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
           were reversed all this time.
         * Put $LDMHOME/util at head of PATH to support customization
+
+    NOAAPort:
+        * Changed pre-installation instruction to recommend disabling UDP packet
+          sequence checking.
+        * Created keep_running(1) script to ensure than NOAAPort ingesters are
+          restarted if they crash. Added examples to NOAAPort documentation.
 
     Multicast:
         Product-Queue (pq.c):
