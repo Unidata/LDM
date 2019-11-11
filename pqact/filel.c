@@ -23,6 +23,7 @@
 #include <sys/sem.h>                                          
 #include <sys/shm.h>                                          
 #include <sys/stat.h>
+#include <time.h>
 #include <fcntl.h> /* O_RDONLY et al */
 #include <unistd.h> /* access, lseek */
 #include <signal.h>
@@ -128,7 +129,8 @@ typedef enum {
     DR_TERMINATED = 0,  ///< Child terminated
     DR_CLOSE,           ///< entry contained "-close" option
     DR_LRU,             ///< Close least-recently-used entry
-    DR_ERROR            ///< I/O error
+    DR_ERROR,           ///< I/O error
+    DR_UNUSED           ///< Unused for too long
 } DeleteReason;
 
 /*
@@ -138,7 +140,8 @@ static const char* const REASON_STRING[] = {
         "terminated",
         "closed",
         "least-recently-used",
-        "failed" };
+        "failed",
+        "unused"};
 
 union f_handle {
     int       fd;
@@ -163,6 +166,7 @@ struct fl_entry {
     struct fl_ops*   ops;
     f_handle         handle;
     unsigned long    private;           // pid, hstat*, R/W flg
+    time_t           inserted;        // Time of last access
     int              flags;
     ft_t             type;
     char             path[PATH_MAX];    // PATH_MAX includes NUL
@@ -313,6 +317,7 @@ fl_addToHead(
 
     entry->next = thefl->head;
     entry->prev = NULL;
+    entry->inserted = time(NULL);
     thefl->head = entry;
 
     if (thefl->tail == NULL)
@@ -441,17 +446,25 @@ fl_removeAndFree(
  * @param[in] block     Whether or not the I/O should block.
  */
 void
-fl_sync(
-        const int block)
+fl_sync(const int block)
 {
-    fl_entry *entry, *prev;
+    fl_entry*                  entry;
+    fl_entry*                  prev;
+    const time_t               now = time(NULL);
+	static const unsigned long maxTime = 86400;
+
     for (entry = thefl->tail; entry != NULL; entry = prev) {
         prev = entry->prev;
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block)) {
                 log_error_q("Couldn't sync entry");
                 fl_removeAndFree(entry, DR_ERROR); // public function so remove
+                entry = NULL;
             }
+        }
+        if (entry && (now - entry->inserted > maxTime)) {
+        	log_notice("Entry unused for %lu seconds", maxTime);
+			fl_removeAndFree(entry, DR_UNUSED);
         }
     }
 }
@@ -2847,6 +2860,7 @@ entry_new(
             entry->prev = NULL;
             entry->path[0] = 0;
             entry->private = 0;
+            entry->inserted = time(NULL);
 
             if (entry->ops->open(entry, argc, argv) == -1) {
                 free(entry);
