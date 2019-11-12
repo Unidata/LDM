@@ -130,7 +130,7 @@ typedef enum {
     DR_CLOSE,           ///< entry contained "-close" option
     DR_LRU,             ///< Close least-recently-used entry
     DR_ERROR,           ///< I/O error
-    DR_UNUSED           ///< Unused for too long
+    DR_INACTIVE         ///< Inactive for too long
 } DeleteReason;
 
 /*
@@ -141,7 +141,7 @@ static const char* const REASON_STRING[] = {
         "closed",
         "least-recently-used",
         "failed",
-        "unused"};
+        "inactive"};
 
 union f_handle {
     int       fd;
@@ -463,8 +463,8 @@ fl_sync(const int block)
             }
         }
         if (entry && (now - entry->inserted > maxTime)) {
-        	log_notice("Entry unused for %lu seconds", maxTime);
-			fl_removeAndFree(entry, DR_UNUSED);
+        	log_notice("Entry has been inactive for %lu seconds", maxTime);
+			fl_removeAndFree(entry, DR_INACTIVE);
         }
     }
 }
