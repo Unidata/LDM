@@ -14,3 +14,4 @@ ldmprint_test
 /timestamp_test
 /parser.c
 /scanner.c
+/tcp_prop
