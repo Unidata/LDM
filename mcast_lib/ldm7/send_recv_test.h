@@ -30,7 +30,7 @@
 #else
 /*
  * Source-specific multicast (SSM) address. According to RFC4607:
- *   - Source-specific multicast address in the range 232.0.0.0/24 are reserved
+ *   - Source-specific multicast address in the range 232.0.0/24 are reserved
  *     and must not be used
  *   - "The policy for allocating the rest of the SSM addresses to sending
  *     applications is strictly locally determined by the sending host."

@@ -13,6 +13,7 @@
 
 #define _XOPEN_SOURCE 600
 #define _BSD_SOURCE // For `struct ip_mreq_source`
+#define __USE_MISC // For `struct ip_mreq_source`
 
 #include "send_recv_test.h"
 
@@ -269,9 +270,9 @@ configure_socket(
      * Bind the local endpoint of the socket to the address and port number of
      * the multicast group.
      *
-     * Using `htonl(INADDR_ANY)` in the following will work but the socket will
-     * accept every packet destined to the port number regardless of destination
-     * IP address.
+     * Using `htonl(INADDR_ANY)` in the following will also work but the socket
+     * will receive every packet destined to the port number regardless of
+     * destination IP address.
      */
     success = bind(sock, (struct sockaddr*)groupSockAddr,
             sizeof(*groupSockAddr)) == 0;
