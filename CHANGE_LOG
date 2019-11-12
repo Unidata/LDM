@@ -1,4 +1,4 @@
-6.13.12.25	2019-09-27T15:30:33-0600
+6.13.12.26	2019-11-12T12:15:12-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -8,6 +8,12 @@
           negative
         * Improved error-message in pqe_newDirect()
         * Added error-message to pqe_discard()
+
+    pqact(1):
+        Added one-day timeout for inactive entries that, nevertheless, had open
+        file descriptors to eliminate the possibility of pqact(1) holding open
+        files that have been scoured and, consequently, filling up the disk with
+        invisible files.
 
     Logging:
         Replaced minimum field-width in default log messages with canonical
