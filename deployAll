@@ -17,6 +17,9 @@ deploy -M /usr/ccs/bin/make -n burns
 # Non-operational backend cluster node
 deploy uni14
 
+# Lead
+deploy lead
+
 # LDM7 systems (no password required)
 deploy -m              -u ldm7 ca
 deploy -m              -u ldm7 co

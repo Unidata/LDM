@@ -103,7 +103,7 @@ ssh -x -T $ldmUser@$host bash --login <<EOF
         echo "Throwing the runtime switch"
         rm runtime
         ln -s $pkgId runtime
-        ldmadmin start -v
+        ldmadmin start
     else
         echo "LDM wasn't previously installed or isn't running. New installation not started."
         rm -f runtime
@@ -112,6 +112,6 @@ ssh -x -T $ldmUser@$host bash --login <<EOF
     
     # Delete previous versions. NB: THIS SHOULD ONLY BE DONE ON NON-PRODUCTION
     # SYSEMS!
-    find . \( -name 'ldm-*.gz' -o \( -name 'ldm-*' -type d \) \) \
-            ! -name $pkgId ! -name $pkgId.tar.gz -print -prune | xargs rm -rf
+    #find . \( -name 'ldm-*.gz' -o \( -name 'ldm-*' -type d \) \) \
+            #! -name $pkgId ! -name $pkgId.tar.gz -print -prune | xargs rm -rf
 EOF
