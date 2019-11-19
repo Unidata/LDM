@@ -91,7 +91,7 @@ callgrind:	pqact
 	rm -f pqact_test.conf.state pqact_test.pq
 	kcachegrind
 
-valgrind:	pqact
+pqact.vg:	pqact
 	$(TESTS_ENVIRONMENT) $(LIBTOOL) --mode=execute valgrind \
-	    --leak-check=full --show-reachable=yes ./pqact -l /dev/null \
-	    -o 200000000
+	    --leak-check=full --show-reachable=yes ./pqact \
+	    -o 200000000 -q /dev/null >&$@
