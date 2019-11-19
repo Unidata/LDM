@@ -1095,6 +1095,12 @@ static int unio_put(
         TO_HEAD(entry);
         log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
+#if 0
+        double nbits = 8*sz;
+		time_t start;
+		(void)time(&start);
+#endif
+
         do {
             ssize_t nwrote = write(entry->handle.fd, data, sz);
 
@@ -1113,6 +1119,12 @@ static int unio_put(
                 return -1;
             }
         } while (sz);
+
+#if 0
+        unsigned long duration = time(NULL) - start;
+        if (nbits/duration < 1000000)
+            log_warning("Output rate < 1 MHz");
+#endif
 
         entry_setFlag(entry, FL_NEEDS_SYNC);
     }
