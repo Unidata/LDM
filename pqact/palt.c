@@ -1370,7 +1370,7 @@ processProduct(
         char        buf[LDM_INFO_MAX];
         timestampt  now;
         (void)set_timestamp(&now);
-        log_warning_q("Processed oldest product in full queue: age=%g s, prod=%s",
+        log_warning("Processed oldest product in full queue: age=%g s, prod=%s",
             d_diff_timestamp(&now, &queue_par->inserted),
             s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
     }
