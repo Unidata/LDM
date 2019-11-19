@@ -121,7 +121,8 @@ cleanup(void)
         if (pq)
             (void)pq_close(pq);
 
-        if (!tvEqual(palt_last_insertion, TS_ZERO)) {
+        if (tvCmp(palt_last_insertion, TS_ZERO, >=) &&
+				tvCmp(palt_last_insertion, TS_ENDT, <=)) {
             timestampt  now;
 
             (void)set_timestamp(&now);
@@ -573,8 +574,8 @@ main(int ac, char *av[])
                     char buf[80];
                     (void)strftime(buf, sizeof(buf), "%Y-%m-%d %T",
                         gmtime(&insertTime.tv_sec));
-                    log_notice_q("Starting from insertion-time %s.%06lu UTC", buf,
-                        (unsigned long)insertTime.tv_usec);
+                    log_notice_q("Starting from insertion-time %s.%06ld UTC", buf,
+                        (long)insertTime.tv_usec);
 
                     pq_cset(pq, &insertTime);
                     startAtTailEnd = false;
