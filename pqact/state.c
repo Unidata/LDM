@@ -103,7 +103,7 @@ int
 stateRead(
     timestampt* const   pqCursor)
 {
-    int         status;
+    int status;
 
     if (statePathname == NULL) {
         log_add("stateInit() not successfully called");
@@ -117,7 +117,7 @@ stateRead(
             status = -2;                /* couldn't open state-file */
         }
         else {
-            int         c;
+            int c;
 
             status = -3;                /* state-file is corrupt */
 
@@ -128,15 +128,18 @@ stateRead(
                 log_syserr("Couldn't read comments from \"%s\"", statePathname);
             }
             else {
-                unsigned long   seconds;
-                long            microseconds;
+                long   seconds;
+                long   microseconds;
 
                 ungetc(c, file);
 
-                if (fscanf(file, "%lu.%ld", &seconds, &microseconds) != 2) {
+                if (fscanf(file, "%ld.%ld", &seconds, &microseconds) != 2) {
                     log_add("Couldn't read time from \"%s\"", statePathname);
                 }
-                else {
+                else if (seconds < 0) {
+                    log_add("Negative seconds value in \"%s\"", statePathname);
+                }
+                else{
                     pqCursor->tv_sec = seconds;
                     pqCursor->tv_usec = microseconds;
                     status = 0;         /* success */
@@ -191,9 +194,9 @@ stateWrite(
                     tmpStatePathname);
             }
             else {
-                if (fprintf(file, "%lu.%06lu\n",
-                        (unsigned long)pqCursor->tv_sec, 
-                        (unsigned long)pqCursor->tv_usec) < 0) {
+                if (fprintf(file, "%ld.%06ld\n",
+                        (long)pqCursor->tv_sec,
+                        (long)pqCursor->tv_usec) < 0) {
                     log_syserr("Couldn't write time to \"%s\"",
                         tmpStatePathname);
                 }
