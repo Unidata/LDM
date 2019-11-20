@@ -82,16 +82,14 @@ products in the queue might rise.
 </p>
 
 <p align="justify">
-It is desirable to allocate on creation more product slots in the
-queue than are ever needed, so that products are only deleted for lack
-of space and not for lack of empty product slots.  On the other hand,
-allocating too many product slots that never get used wastes some
-space that could be used instead to hold more products.  Each product slot only has
-an overhead of about 68 bytes, so it is OK to over-allocate product
-slots to some extent to make sure you don't run out.  By default, an
-average product size of 4096 bytes is assumed to compute the default
-number of product slots to allocate for a queue of a specified
-size.
+It is desirable to allocate on creation more product slots in the queue than are
+ever needed, so that products are only deleted for lack of space and not for
+lack of empty product slots.  On the other hand, allocating too many product
+slots that never get used wastes some space that could be used instead to hold
+more products.  Each product slot only has an overhead of about 68 bytes,
+however, so it is OK to over-allocate product slots to some extent to make sure
+you don't run out.  By default, an average product size -- that is guaranteed to
+be incorrect -- is used to compute the default number of product slots.
 </p>
 
 <p align="justify">
