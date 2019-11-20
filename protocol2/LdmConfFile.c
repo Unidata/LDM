@@ -1809,11 +1809,16 @@ subEntry_add(
  * @return          System error code. log_add() called.
  */
 static int
-subEntry_startRequester(
+subEntry_start(
         SubEntry* const entry)
 {
     int         status = 0; /* success */
     unsigned    serverIndex;
+
+    if (entry->serverCount > 2)
+    	log_warning("Transfer-mode switching won't work correctly with more "
+    			"than 2 REQUESTs: {sub: %s, numReq: %u}",
+				sub_toString(entry->subscription), entry->serverCount);
 
     for (serverIndex = 0; serverIndex < entry->serverCount; serverIndex++) {
         prod_class_t*      clssp;
@@ -1969,7 +1974,7 @@ subs_startRequesters(void)
     SubEntry*   entry;
 
     for (entry = subsHead; entry != NULL; entry = entry->next) {
-        if ((status = subEntry_startRequester(entry)))
+        if ((status = subEntry_start(entry)))
             break;
     }
 #if 0   /* DEBUG */
