@@ -1817,7 +1817,7 @@ subEntry_start(
 
     if (entry->serverCount > 2)
     	log_warning("Transfer-mode switching won't work correctly with more "
-    			"than 2 REQUESTs: {sub: %s, numReq: %u}",
+    			"than 2 identical REQUESTs: {sub: %s, numReq: %u}",
 				sub_toString(entry->subscription), entry->serverCount);
 
     for (serverIndex = 0; serverIndex < entry->serverCount; serverIndex++) {
