@@ -696,17 +696,18 @@ typedef struct requester Requester;
 
 /**
  * Executes a requester.
- * <p>
+ *
  * This function calls exit(): it does not return.
  *
- * @param source        [in] Pointer to the name of the upstream host.
- * @param port          [in] The port on which to connect.
- * @param clssp         [in] Pointer to the class of desired data-products.  The
- *                      caller may free upon return.
- * @param isPrimary     [in] Whether or not the initial transfer-mode should be
- *                      primary (uses HEREIS) or not (uses COMINGSOON/BLKDATA).
- * @param serverCount   [in] The number of servers to which the same request
- *                      will be made.
+ * @param[in] source       Pointer to the name of the upstream host.
+ * @param[in] port         The port on which to connect.
+ * @param[in] clssp        Pointer to the class of desired data-products.  The
+ *                         caller may free upon return.
+ * @param[in] isPrimary    Whether or not the initial transfer-mode should be
+ *                         primary (uses HEREIS) or not (uses
+ *                         COMINGSOON/BLKDATA).
+ * @param[in] serverCount  The number of servers to which the same request
+ *                         will be made.
  */
 static void
 requester_exec(
@@ -945,17 +946,17 @@ requester_exec(
 /**
  * Spawns a requester.
  *
- * @param hostId        [in] Pointer to identifier of upstream host.
- * @param port          [in] The port on which to connect.
- * @param clssp         [in] Pointer to desired class of products.  Caller may free
- *                      upon return.
- * @param isPrimary     [in] Whether or not the data-product exchange-mode should be
- *                      primary (i.e., use HEREIS) or alternate (i.e., use
- *                      COMINGSOON/BLKDATA).
- * @param serverCount   [in] The number of servers to which the same request will be
- *                      made.
- * @retval 0            Success.
- * @retval -1           Failure.  errno is set.  "log_flush()" called.
+ * @param[in] hostId       Pointer to identifier of upstream host.
+ * @param[in] port         The port on which to connect.
+ * @param[in] clssp        Pointer to desired class of products.  Caller may
+ *                         free upon return.
+ * @param[in] isPrimary    Whether or not the data-product exchange-mode should
+ *                         be primary (i.e., use HEREIS) or alternate (i.e., use
+ *                         COMINGSOON/BLKDATA).
+ * @param[in] serverCount  The number of servers to which the same request will
+ *                         be made.
+ * @retval    0            Success.
+ * @retval    -1           Failure.  errno is set.  "log_flush()" called.
  */
 static pid_t
 requester_spawn(
@@ -985,20 +986,20 @@ requester_spawn(
 
 
 /**
- * Returns a new requester object.
+ * Returns a new, executing, requester object.
  *
- * @param server        [in] Pointer to remote location to which to connect.
- *                      Caller may free on return.  Must not be NULL.
- * @param clssp         [in] Pointer to desired class of data-products.  Caller
- *                      may free upon return.  Must not be NULL.
- * @param isPrimary     [in] Whether or not the data-product exchange-mode
- *                      should be primary (i.e., use HEREIS) or alternate
- *                      (i.e., use COMINGSOON/BLKDATA).
- * @param serverCount   [in] The number of servers to which the same request will
- *                      be made.
- * @retval NULL         Failure.  errno is set.
- * @return              Pointer to initialized requester structure.  The
- *                      associated requester is executing.
+ * @param[in] server       Pointer to remote location to which to connect.
+ *                         Caller may free on return.  Must not be NULL.
+ * @param[in] clssp        Pointer to desired class of data-products.  Caller
+ *                         may free upon return.  Must not be NULL.
+ * @param[in] isPrimary    Whether or not the data-product exchange-mode
+ *                         should be primary (i.e., use HEREIS) or alternate
+ *                         (i.e., use COMINGSOON/BLKDATA).
+ * @param[in] serverCount  The number of servers to which the same request will
+ *                         be made.
+ * @retval NULL            Failure.  errno is set.
+ * @return                 Pointer to initialized requester structure.  The
+ *                         associated requester is executing.
  */
 static Requester*
 requester_new(
@@ -1045,23 +1046,22 @@ requester_new(
 
 static Requester *requesters;
 
-/*
+/**
  * Creates a new requester and adds it to the list of requesters.  The new
  * requester is executing
  *
- * Arguments:
- *      server          Pointer to information on the server to which to
- *                      connect.  Caller may free on return.  Must not be NULL.
- *      clssp           Pointer to desired class of data-products.  Caller may
- *                      free upon return.  Must not be NULL.
- *      isPrimary       Whether or not the data-product exchange-mode should be
- *                      primary (i.e., use HEREIS) or alternate (i.e., use
- *                      COMINGSOON/BLKDATA).
- *      serverCount     The number of servers to which the same request will be
- *                      made.
- * Returns:
- *      0               Success.
- *      else            <errno.h> error-code.
+ * @param[in] server       Pointer to information on the server to which to
+ *                         connect.  Caller may free on return.  Must not be
+ *                         NULL.
+ * @param[in] clssp        Pointer to desired class of data-products.  Caller
+ *                         may free upon return.  Must not be NULL.
+ * @param[in] isPrimary    Whether or not the data-product exchange-mode should
+ *                         be primary (i.e., use HEREIS) or alternate (i.e., use
+ *                         COMINGSOON/BLKDATA).
+ * @param[in] serverCount  The number of servers to which the same request will
+ *                         be made.
+ * @retval 0               Success.
+ * @return                 <errno.h> error-code.
  */
 static int
 requester_add(
@@ -1071,8 +1071,7 @@ requester_add(
     unsigned            serverCount)
 {
     int         error = 0;              /* success */
-    Requester*  reqstrp =
-        requester_new(server, clssp, isPrimary, serverCount);
+    Requester*  reqstrp = requester_new(server, clssp, isPrimary, serverCount);
 
     if (reqstrp == NULL) {
         error = errno;
@@ -1719,19 +1718,21 @@ contains(const host_set *hsp, const char *name, const char *dotAddr)
  ******************************************************************************/
 
 struct subEntry {
+    struct subEntry*        prev;
     struct subEntry*        next;
     Subscription*           subscription;
     const ServerInfo**      servers;
     unsigned                serverCount;
+    bool                    hasMcast;
 };
 typedef struct subEntry SubEntry;
 
 /**
  * Returns a new subscription-entry.
  *
- * @param sub       [in] The subscription to be in the entry. Client may free
- *                  upon return.
- * @retval NULL     Failure. log_add() called.
+ * @param[in] sub   The subscription to be in the entry. Client may free upon
+ *                  return.
+ * @retval    NULL  Failure. log_add() called.
  * @return          Pointer to the new entry.
  */
 static SubEntry*
@@ -1747,10 +1748,12 @@ subEntry_new(
             log_syserr("Couldn't allocate new subscription-entry");
         }
         else {
+            entry->prev = NULL;
             entry->next = NULL;
             entry->subscription = subClone;
             entry->servers = NULL;
             entry->serverCount = 0;
+            entry->hasMcast = false;
 
             return entry;
         } /* "entry" allocated */
@@ -1765,11 +1768,10 @@ subEntry_new(
 /**
  * Adds server information to a subscription entry.
  *
- * @param entry         [in] The subscription entry.
- * @param server        [in] The server information. Client may free upon
- *                      return.
- * @retval 0            Success.
- * @retval -1           Failure. log_add() called.
+ * @param[in] entry   The subscription entry.
+ * @param[in] server  The server information. Client may free upon return.
+ * @retval    0       Success.
+ * @retval    -1      Failure. log_add() called.
  */
 static int
 subEntry_add(
@@ -1802,11 +1804,22 @@ subEntry_add(
 
 
 /**
- * Starts a downstream LDM for each server of a subscription entry.
+ * Marks a subscription-entry as being multicast.
  *
- * @param entry     [in] The subscription entry.
- * @retval 0        Success.
- * @return          System error code. log_add() called.
+ * @param[in] entry  Subscription entry to be so marked
+ */
+static void subEntry_hasMcast(SubEntry* const entry)
+{
+	entry->hasMcast = true;
+}
+
+
+/**
+ * Starts a downstream LDM requester for each server of a subscription entry.
+ *
+ * @param[in] entry  The subscription entry.
+ * @retval    0      Success.
+ * @return           System error code. log_add() called.
  */
 static int
 subEntry_start(
@@ -1814,11 +1827,22 @@ subEntry_start(
 {
     int         status = 0; /* success */
     unsigned    serverIndex;
+    unsigned    feedCount = entry->serverCount + (entry->hasMcast ? 1 : 0);
 
-    if (entry->serverCount > 2)
-    	log_warning("Transfer-mode switching won't work correctly with more "
-    			"than 2 identical REQUESTs: {sub: %s, numReq: %u}",
-				sub_toString(entry->subscription), entry->serverCount);
+    if (feedCount > 2) {
+		if (entry->hasMcast) {
+			log_warning("Transfer-mode switching won't work correctly with the "
+					"same subscription in 2 or more REQUESTs and a RECEIVE: "
+					"{sub: %s, numReq: %u}", sub_toString(entry->subscription),
+					feedCount);
+		}
+		else {
+			log_warning("Transfer-mode switching won't work correctly with the "
+					"same subscription in more than 2 REQUESTs: {sub: %s, "
+					"numReq: %u}", sub_toString(entry->subscription),
+					feedCount);
+		}
+    }
 
     for (serverIndex = 0; serverIndex < entry->serverCount; serverIndex++) {
         prod_class_t*      clssp;
@@ -1854,7 +1878,7 @@ subEntry_start(
                 }
                 else {
                     status = requester_add(requestServer, clssp,
-                            serverIndex == 0, entry->serverCount);
+                            serverIndex == 0, feedCount);
                 }
             } /* "sp->pattern" allocated */
 
@@ -1901,8 +1925,7 @@ static SubEntry*   subsTail = NULL;
 
 
 /**
- * Adds a subscription to the subscriptions table if it isn't already present.
- * Returns the corresponding entry.
+ * Adds a subscription to the subscriptions table.
  *
  * @param sub           [in] Pointer to the subscription. Client may free upon
  *                      return.
@@ -1910,30 +1933,92 @@ static SubEntry*   subsTail = NULL;
  * @return              Pointer to the corresponding entry.
  */
 static SubEntry*
-subs_addIfAbsent(
-        const Subscription* const   sub)
+subs_add(const Subscription* const sub)
 {
-    SubEntry*  entry;
+	SubEntry* const entry = subEntry_new(sub);
+
+	if (NULL == entry) {
+		log_add("Couldn't create new subscription-entry");
+	}
+	else {
+		if (NULL == subsHead) {
+			subsHead = entry;
+		}
+		else {
+			subsTail->next = entry;
+		}
+
+		entry->prev = subsTail;
+		subsTail = entry;
+	}
+
+    return entry;
+}
+
+
+/**
+ * Finds a subscription in the subscriptions table.
+ *
+ * @param sub           [in] Pointer to the subscription. Client may free upon
+ *                      return.
+ * @retval NULL         Subscription not found
+ * @return              Pointer to the corresponding entry.
+ */
+static SubEntry*
+subs_find(const Subscription* const sub)
+{
+    SubEntry* entry;
 
     for (entry = subsHead; entry != NULL; entry = entry->next)
         if (sub_equal(sub, entry->subscription))
-            return entry;
+            break;
 
-    entry = subEntry_new(sub);
+    return entry;
+}
 
-    if (NULL == entry) {
-        log_add("Couldn't create new subscription-entry");
-        return NULL;
-    }
 
-    if (NULL == subsHead) {
-        subsHead = entry;
+static void
+subs_delete(SubEntry* entry)
+{
+	if (entry->prev)
+		entry->prev->next = entry->next;
+
+	if (entry->next)
+		entry->next->prev = entry->prev;
+
+	subEntry_free(entry);
+}
+
+
+/**
+ * Adds a subscription to the subscriptions table if it isn't already present.
+ * Returns the corresponding entry.
+ *
+ * @param[in] sub          Pointer to the subscription. Client may free upon
+ *                         return.
+ * @param[out] isNewEntry  Whether or not the entry was created. Not set if
+ *                         `NULL`.
+ * @retval NULL            Failure. `isNewEntry` not set. log_add() called.
+ * @return                 Pointer to the corresponding entry.
+ */
+static SubEntry*
+subs_ensure(
+        const Subscription* const sub,
+		bool* const               isNewEntry)
+{
+    SubEntry* entry = subs_find(sub);
+    bool      isNew;
+
+    if (entry) {
+    	isNew = false;
     }
     else {
-        subsTail->next = entry;
+    	entry = subs_add(sub);
+    	isNew = true;
     }
 
-    subsTail = entry;
+    if (entry && isNewEntry)
+    	*isNewEntry = isNew;
 
     return entry;
 }
@@ -1945,14 +2030,9 @@ subs_addIfAbsent(
 static void
 subs_free(void)
 {
-    SubEntry* entry = subsHead;
-
-    while (entry != NULL) {
-        SubEntry*  nextEntry = entry->next;
-
+    for (SubEntry *next, *entry = subsHead; entry != NULL; entry = next) {
+    	next = entry->next;
         subEntry_free(entry);
-
-        entry = nextEntry;
     }
 
     subsHead = NULL;
@@ -2033,7 +2113,7 @@ addRequest(
                         "subscriptions", buf, sub_toString(sub));
             }
 
-            subEntry = subs_addIfAbsent(sub);
+            subEntry = subs_ensure(sub, NULL);
 
             if (subEntry == NULL) {
                 log_add("Couldn't get subscription entry");
@@ -2911,25 +2991,47 @@ lcf_addReceive(
         const char* restrict               portId,
         const VlanId                       vlanTag)
 {
-    int        status;
-    VcEndPoint vcEnd;
+    int           status;
+    VcEndPoint    vcEnd;
+	Subscription* sub = sub_new(feed, ".*");
 
-    if (!vcEndPoint_init(&vcEnd, vlanTag, switchId, portId)) {
-        log_add("Couldn't construct virtual-circuit endpoint");
-        status = ENOMEM;
-    }
-    else {
-        if (d7mgr_add(feed, ldmSrvr, fmtpIface, &vcEnd)) {
-            log_add("Couldn't add receiving LDM7");
-            status = ENOMEM;
-        }
-        else {
-            somethingToDo = true;
-            status = 0;
-        }
+	if (sub == NULL) {
+		log_add("Couldn't create subscription object");
+		status = ENOMEM;
+	}
+	else {
+		bool      isNewEntry;
+		SubEntry* subEntry = subs_ensure(sub, &isNewEntry);
 
-        vcEndPoint_destroy(&vcEnd);
-    } // `vcEnd` initialized
+		if (subEntry == NULL) {
+			status = ENOMEM;
+		}
+		else {
+			subEntry_hasMcast(subEntry); // Mark as being multicast
+
+			if (!vcEndPoint_init(&vcEnd, vlanTag, switchId, portId)) {
+				log_add("Couldn't construct virtual-circuit endpoint");
+				status = ENOMEM;
+			}
+			else {
+				if (d7mgr_add(feed, ldmSrvr, fmtpIface, &vcEnd)) {
+					log_add("Couldn't add receiving LDM7");
+					status = ENOMEM;
+				}
+				else {
+					somethingToDo = true;
+					status = 0;
+				}
+
+				vcEndPoint_destroy(&vcEnd);
+			} // `vcEnd` initialized
+
+			if (status && isNewEntry)
+				subs_delete(subEntry); // Delete multicast-only entry
+		} // `subEntry != NULL`
+
+		sub_free(sub);
+	} // `sub` allocated
 
     return status;
 }
