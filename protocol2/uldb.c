@@ -1512,7 +1512,8 @@ static uldb_Status sm_vetUpstreamLdm(
                 break;
             }
 
-            if (ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
+            if (entry->protoVers < 7 &&
+            		ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
                     && !isNotifier && !entry_isNotifier(entry)) {
                 if (entry_isSubsetOf(entry, allow)) {
                     char    buf[1024];
@@ -1525,7 +1526,8 @@ static uldb_Status sm_vetUpstreamLdm(
                                 buf);
                     }
                     else {
-                        log_notice_q("Terminated redundant upstream LDM %s", buf);
+                        log_notice_q("Terminated redundant upstream LDM %s",
+                        		buf);
                     }
                 }
                 else {
