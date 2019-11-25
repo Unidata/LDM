@@ -1512,7 +1512,7 @@ static uldb_Status sm_vetUpstreamLdm(
                 break;
             }
 
-            if (entry->protoVers < 7 &&
+            if (protoVers == entry->protoVers &&
             		ipAddressesAreEqual(sockAddr, entry_getSockAddr(entry))
                     && !isNotifier && !entry_isNotifier(entry)) {
                 if (entry_isSubsetOf(entry, allow)) {
