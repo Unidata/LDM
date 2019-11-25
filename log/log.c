@@ -215,6 +215,45 @@ static int msg_format(
 }
 
 /**
+ * Destroys a queue of log-messages.
+ *
+ * @param[in] queue    The queue of messages.
+ * @threadsafety       Safe
+ * @asyncsignalsafety  Unsafe
+ */
+static void
+queue_fini(msg_queue_t* const queue)
+{
+    Message* msg;
+    Message* next;
+
+    for (msg = queue->first; msg; msg = next) {
+        next = msg->next;
+        free(msg->string);
+        free(msg);
+    }
+
+    queue->first = NULL;
+}
+
+/**
+ * Thread-specific destructor of the message queue. Called at thread exit.
+ *
+ * @param[in] arg  Ignored
+ */
+static void queue_delete(void* arg)
+{
+
+    msg_queue_t* queue = pthread_getspecific(queueKey);
+
+    if (queue) {
+        queue_fini(queue);
+        free(queue);
+        (void)pthread_setspecific(queueKey, NULL);
+    }
+}
+
+/**
  * Creates the key for accessing the thread-specific queue of messages.
  *
  * @threadsafety       Safe
@@ -222,7 +261,7 @@ static int msg_format(
  */
 static void queue_create_key(void)
 {
-    int status = pthread_key_create(&queueKey, NULL);
+    int status = pthread_key_create(&queueKey, queue_delete);
 
     if (status != 0) {
         logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure: "
@@ -349,26 +388,6 @@ static void queue_clear(msg_queue_t* const queue)
 }
 
 /**
- * Destroys a queue of log-messages.
- *
- * @param[in] queue    The queue of messages.
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static void
-queue_fini(msg_queue_t* const queue)
-{
-    Message* msg;
-    Message* next;
-
-    for (msg = queue->first; msg; msg = next) {
-        next = msg->next;
-        free(msg->string);
-        free(msg);
-    }
-}
-
-/**
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  *
@@ -385,11 +404,7 @@ static void queue_free(const log_loc_t* const loc)
         log_flush_error();
     }
 
-    if (queue) {
-        queue_fini(queue);
-        free(queue);
-        (void)pthread_setspecific(queueKey, NULL);
-    }
+	queue_delete(NULL);
 }
 
 /**
@@ -435,6 +450,12 @@ static int
 unlock(void)
 {
     return pthread_mutex_unlock(&log_mutex);
+}
+
+static void
+unlock_cleanup(void* arg)
+{
+	(void)unlock();
 }
 
 /**
@@ -607,6 +628,8 @@ int logl_vlog(
         status = -1;
     }
     else {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
+
         if (!is_level_enabled(level)) {
             status = 0; // Success
         }
@@ -628,8 +651,7 @@ int logl_vlog(
             } // Have message
         } // Message should be logged
 
-        if (unlock())
-            status = -1;
+        pthread_cleanup_pop(true);
     } // Module locked
 
     return status;
@@ -763,6 +785,8 @@ int logl_flush(const log_level_t level)
                 status = -1;
             }
             else {
+				pthread_cleanup_push(unlock_cleanup, NULL);
+
                 (void)refresh_if_necessary();
 
                 for (const Message* msg = queue->first; NULL != msg;
@@ -778,8 +802,7 @@ int logl_flush(const log_level_t level)
 
                 status = logi_flush();
 
-                if (unlock())
-                    status = -1;
+				pthread_cleanup_pop(true);
             } // Module locked
         } // Messages should be printed
 
@@ -969,10 +992,11 @@ int log_set_id(const char* const id)
             status = -1;
         }
         else {
+			pthread_cleanup_push(unlock_cleanup, NULL);
+
             status = logi_set_id(id);
 
-            if (unlock())
-                status = -1;
+			pthread_cleanup_pop(true);
         } // Module is locked
     } // Valid ID
 
@@ -999,10 +1023,11 @@ int log_set_upstream_id(
             status = -1;
         }
         else {
+			pthread_cleanup_push(unlock_cleanup, NULL);
+
             status = logi_set_id(id);
 
-            if (unlock())
-                status = -1;
+			pthread_cleanup_pop(true);
         } // Module is locked
     } // Valid host ID
 
@@ -1026,10 +1051,11 @@ int log_set_destination(const char* const dest)
             status = -1;
         }
         else {
+			pthread_cleanup_push(unlock_cleanup, NULL);
+
             status = logi_set_destination(dest);
 
-            if (unlock())
-                status = -1;
+			pthread_cleanup_pop(true);
         } // Module is locked
     }
 
@@ -1041,10 +1067,11 @@ const char* log_get_destination(void)
     const char* dest = NULL;
 
     if (lock() == 0) {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
+
         dest = logi_get_destination();
 
-        if (unlock())
-            dest = NULL;
+        pthread_cleanup_pop(true);
     } // Module is locked
 
     return dest;
@@ -1125,10 +1152,11 @@ int log_set_facility(const int facility)
         status = -1;
     }
     else {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
+
         status = logi_set_facility(facility);
 
-        if (unlock())
-            status = -1;
+        pthread_cleanup_pop(true);
     } // Module is locked
 
     return status;
@@ -1142,10 +1170,11 @@ int log_get_facility(void)
         status = -1;
     }
     else {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
+
         status = logi_get_facility();
 
-        if (unlock())
-            status = -1;
+        pthread_cleanup_pop(true);
     } // Module is locked
 
     return status;
@@ -1167,9 +1196,18 @@ const char* log_get_id(void)
 
 int log_set_options(const unsigned options)
 {
-    return (lock() || logi_set_options(options) || unlock())
-            ? -1
-            : 0;
+	int status;
+
+	if (lock()) {
+		status = -1;
+	}
+	else {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
+    	status = logi_set_options(options);
+        pthread_cleanup_pop(true);
+	}
+
+	return status;
 }
 
 unsigned log_get_options(void)
@@ -1180,10 +1218,9 @@ unsigned log_get_options(void)
         abort();
     }
     else {
+    	pthread_cleanup_push(unlock_cleanup, NULL);
         options = logi_get_options();
-
-        if (unlock())
-            abort();
+        pthread_cleanup_pop(true);
     } // Module is locked
 
     return options;

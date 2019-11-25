@@ -187,6 +187,14 @@ static const char* level_to_string(
     return logl_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
+static void dest_unlock(dest_t* const dest)
+{
+	int status = dest->unlock(dest);
+
+	if (status && status != EINTR)
+		abort();
+}
+
 /******************************************************************************
  * Logging destination is the system logging daemon:
  ******************************************************************************/
@@ -331,6 +339,8 @@ static int stream_log(
     int               status = dest->lock(dest);
 
     if (status == 0) {
+    	pthread_cleanup_push(dest_unlock, dest);
+
         while (*msg) {
             // Timestamp
             int pos = fprintf(dest->stream,
@@ -369,7 +379,7 @@ static int stream_log(
             }
         } // Output-line loop
 
-        (void)dest->unlock(dest);
+        pthread_cleanup_pop(true);
     } // Log stream is locked
 
     return status;
@@ -594,7 +604,7 @@ static int file_init(
 }
 
 /**
- * Sets the logging destination object. Uses `log_dest`.
+ * Initializes the logging destination object. Uses `log_dest`.
  *
  * @retval  0           Success
  * @retval -1           Failure. Logging destination is unchanged. `log_add()`
@@ -602,7 +612,7 @@ static int file_init(
  * @threadsafety        Unsafe
  * @asyncsignalsafety   Unsafe
  */
-static int dest_set()
+static int dest_init()
 {
     dest_t new_dest;
     int    status =
@@ -633,7 +643,7 @@ int logi_set_destination(const char* const dest)
 
     ((char*)memmove(log_dest, dest, nchars))[nchars] = 0;
 
-    return dest_set(); // Uses `log_dest`
+    return dest_init(); // Uses `log_dest`
 }
 
 const char*
@@ -708,7 +718,7 @@ int logi_init(const char* const id)
         (void)memmove(ident, logl_basename(id), nbytes);
         ident[nbytes] = 0;
 
-        status = dest_set();
+        status = dest_init();
     } // Valid argument
 
     return status;
@@ -716,7 +726,7 @@ int logi_init(const char* const id)
 
 int logi_reinit(void)
 {
-    return dest_set();
+    return dest_init();
 }
 
 int logi_set_id(
@@ -733,7 +743,7 @@ int logi_set_id(
      * The destination is re-initialized in case it's the system logging
      * daemon.
      */
-    return dest_set();
+    return dest_init();
 }
 
 int logi_fini(void)
@@ -780,7 +790,7 @@ int logi_set_facility(
          * The destination is re-initialized in case it's the system logging
          * daemon.
          */
-        status = dest_set();
+        status = dest_init();
     }
 
     return status;
@@ -801,7 +811,7 @@ int logi_set_options(const unsigned options)
     syslog_options = options;
 
     // The destination is re-initialized in case it's the system logging daemon.
-    return dest_set();
+    return dest_init();
 }
 
 unsigned logi_get_options(void)
