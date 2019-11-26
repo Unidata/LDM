@@ -808,6 +808,9 @@ if (INPUT_IS_SOCKET)
                 }
 }
 #endif /* NET */
+				if (ifd < 0)
+					log_abort("Negative file-descriptor: %d", ifd);
+
                 timeo.tv_sec = 3;
                 timeo.tv_usec = 0;
                 FD_ZERO(&readfds);

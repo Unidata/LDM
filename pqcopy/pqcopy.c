@@ -332,7 +332,7 @@ int main(
      */
     pq_cset(inPq, &clss.from );
 
-    while(!done) {
+    for (;;) {
         if(stats_req) {
             dump_stats();
             stats_req = 0;
@@ -340,25 +340,28 @@ int main(
 
         status = pq_sequence(inPq, TV_GT, &clss, copyProduct, 0);
 
-        switch(status) {
-        case 0: /* no error */
-            continue;                   /* N.B., other cases sleep */
-        case PQUEUE_END:
-            log_debug("End of Queue");
-            done = 1;
-            status = 0;
-            break;
-        case EAGAIN:
-        case EACCES:
-            log_debug("Hit a lock");
-            return 1;
-            break;
-        default:
-            log_error_q("pq_sequence failed: %s (errno = %d)", strerror(status),
-                status);
-            return 1;
-            break;
-        }
+        if (status == 0)
+        	continue;
+
+		if (status == PQUEUE_END) {
+			log_debug("End of queue");
+			done = 1;
+			status = 0;
+		}
+		else if (status == EAGAIN || status == EACCES) {
+			log_debug("Hit a lock");
+			status = 1;
+		}
+		else {
+			if (status > 0) {
+				log_add("pq_sequence failed: %s (errno = %d)",
+						strerror(status), status);
+				log_flush_error();
+			}
+			status = 1;
+		}
+
+		break;
     }
 
     return status;

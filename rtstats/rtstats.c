@@ -423,10 +423,13 @@ int main(int ac, char *av[])
                         log_debug("Hit a lock");
                         break;
                 default:
-                        log_error_q("pq_sequence failed: %s (errno = %d)",
+                	if (status > 0) {
+                        log_add("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
-                        exit(1);
-                        break;
+                        log_flush_error();
+                	}
+					exit(1);
+					break;
                 }
 
                 syncbinstats(hostname);

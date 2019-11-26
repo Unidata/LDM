@@ -421,26 +421,26 @@ int main(int ac, char *av[])
                         stats_req = 0;
                 }
 
-                if (queueSanityCheck)
-                  status = pq_sequence(pq, TV_GT, &clss, tallyProds, 0);
-                else
-                  status = pq_sequence(pq, TV_GT, &clss, writeprod, 0);
+			    status = queueSanityCheck
+					? pq_sequence(pq, TV_GT, &clss, tallyProds, 0)
+                    : pq_sequence(pq, TV_GT, &clss, writeprod, 0);
 
-                switch(status) {
-                case 0: /* no error */
-                        continue; /* N.B., other cases sleep */
-                case PQUEUE_END:
-                        log_debug("End of Queue");
-                        break;
-                case EAGAIN:
-                case EACCES:
-                        log_debug("Hit a lock");
-                        break;
-                default:
-                        log_error_q("pq_sequence failed: %s (errno = %d)",
+                if (status == 0)
+					continue; /* N.B., other cases sleep */
+
+                if (status == PQUEUE_END) {
+					log_debug("End of Queue");
+                }
+                else if (status == EAGAIN || status == EACCES) {
+					log_debug("Hit a lock");
+                }
+                else {
+                	if (status > 0) {
+                        log_add("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
-                        exit(1);
-                        break;
+                        log_flush_error();
+                	}
+					exit(1);
                 }
 
                 if(interval == 0)

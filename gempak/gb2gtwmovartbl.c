@@ -56,7 +56,7 @@ void     gb2_gtwmovartbl(char *wmovartbl, int iver, G2vars_t **g2vartbl,
         sprintf( tmpname,"g2varswmo%d.tbl", iver );
     }
     else {
-        strcpy( tmpname, wmovartbl );
+        strncpy( tmpname, wmovartbl, sizeof(tmpname) )[sizeof(tmpname)-1] = 0;
     }
 
     /*

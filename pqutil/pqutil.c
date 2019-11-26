@@ -1151,25 +1151,22 @@ display_product(pqueue          *pq,
     int status = 0;                                /* function return status */
 
     while (1) {                   /* loop exit is controlled inside the loop */
-        if (!strcmp(crec.cmd_val, "-"))                   /* write to stdout */
-            status = pq_sequence(pq, direction, clssp, disp_stdout, 0);
-        else                                                /* write to file */
-            status = pq_sequence(pq, direction, clssp, disp_file, 0);
+		status = (strcmp(crec.cmd_val, "-"))
+            ? pq_sequence(pq, direction, clssp, disp_file, 0)
+            : pq_sequence(pq, direction, clssp, disp_stdout, 0);
 
-        switch(status) {
-        case 0:                                                  /* no error */
-            break;
+        if (status == 0)
+        	continue;
 
-        case PQUEUE_END:
-            log_debug("End of queue");
-            return;
-            break;
+		if (status == PQUEUE_END) {
+			log_debug("End of queue");
+		}
+		else if (status > 0) {
+			log_add("pq_sequence: %s", strerror(status));
+			log_flush_error();
+		}
 
-        default:
-            log_error_q("pq_sequence: %s", strerror(status));
-            return;
-            break;
-        }
+		break;
     }
 } /*display_product*/
 

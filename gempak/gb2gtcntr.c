@@ -50,7 +50,7 @@ void  gb2_gtcntr( int cntrid, char *tblnam, char *wmocntr, int *iret)
         strcpy( tmpname, deftbl );
     }
     else {
-        strcpy( tmpname, tblnam );
+        strncpy( tmpname, tblnam, sizeof(tmpname) )[sizeof(tmpname)-1] = 0;
     }
 
     /*
