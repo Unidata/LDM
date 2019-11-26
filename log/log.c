@@ -1225,3 +1225,16 @@ unsigned log_get_options(void)
 
     return options;
 }
+
+void log_abort_if_locked(void)
+{
+	const int status = pthread_mutex_trylock(&log_mutex);
+
+	if (status == 0) {
+		(void)pthread_mutex_unlock(&log_mutex);
+	}
+	else if (status == EBUSY) {
+		// Other errors are impossible or semantically consistent
+		abort();
+	}
+}

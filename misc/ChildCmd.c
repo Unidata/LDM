@@ -308,6 +308,8 @@ execute(
         const bool                 asRoot)
 {
     int         status;
+
+    log_abort_if_locked();
     const pid_t pid = fork();
 
     if (pid == -1) {

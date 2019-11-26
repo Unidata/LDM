@@ -642,6 +642,11 @@ log_flush(const log_level_t level);
     } while (false)
 #endif
 
+/**
+ * Calls `abort()` if the logging module holds a lock on a mutex.
+ */
+void log_abort_if_locked(void);
+
 #ifdef __cplusplus
     }
 #endif

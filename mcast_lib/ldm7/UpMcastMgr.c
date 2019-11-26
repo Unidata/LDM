@@ -416,6 +416,7 @@ mldm_spawn(
         status = LDM7_SYSTEM;
     }
     else {
+    	log_abort_if_locked();
         const pid_t pid = fork();
 
         if (pid == -1) {
