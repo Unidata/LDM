@@ -143,16 +143,12 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
    strcat(psh->pname,res_string);
    */
 
-   if ( zflag ) {
-      sprintf(ldmname,"satz");
-   }
-   else {
-      sprintf(ldmname,"sat");
+   if ( !zflag )
       /* set Octet 43 to "128" since we will encode the data block with png */
       wbuf[42] = 128;
-   }
 
-   sprintf(ldmname,"%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s", ldmname,
+   sprintf(ldmname,"%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
+		 zflag ? "satz" : "sat",
          psh->ptype,
          (char *)platform_id((unsigned char)pdb->platform),
          (char *)channel_id((unsigned char)pdb->channel),

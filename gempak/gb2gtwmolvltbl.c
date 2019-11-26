@@ -51,7 +51,7 @@ void  gb2_gtwmolvltbl( char *wmolvltbl, int iver, G2lvls **g2levtbl,
         sprintf( tmpname,"g2vcrdwmo%d.tbl", iver );
     }
     else {
-        strcpy( tmpname, wmolvltbl );
+        strncpy( tmpname, wmolvltbl, sizeof(tmpname) )[sizeof(tmpname)-1] = 0;
     }
 
     /*

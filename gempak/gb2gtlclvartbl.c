@@ -59,7 +59,7 @@ void  gb2_gtlclvartbl( char *lclvartbl, char *cntr, int lclver,
         sprintf( tmpname,"g2vars%s%d.tbl", cntr, lclver );
     }
     else {
-        strcpy( tmpname, lclvartbl );
+        strncpy( tmpname, lclvartbl, sizeof(tmpname) )[sizeof(tmpname)-1] = 0;
     }
 
     /*

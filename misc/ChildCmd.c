@@ -91,11 +91,12 @@ getline(char** const restrict  lineptr,
                 }
             }
             else {
-                *lineptr = line;
                 *size = SIZE;
                 nbytes = strlen(line);
             } // Line read
-        } // Line buffer allocated
+
+			*lineptr = line;
+        } // `line` allocated
     } // Valid arguments
 
     return nbytes;

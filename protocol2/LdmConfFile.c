@@ -2669,7 +2669,7 @@ lcf_addAllow(
     AllowEntry* entry = (AllowEntry*)malloc(sizeof(AllowEntry));
 
     if (NULL == entry) {
-        errObj = ERR_NEW1(0, NULL, "Couldn't allocate new allow-entry",
+        errObj = ERR_NEW1(0, NULL, "Couldn't allocate new allow-entry: %s",
             strerror(errno));
     }
     else {

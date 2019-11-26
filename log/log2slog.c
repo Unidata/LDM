@@ -280,6 +280,8 @@ static int syslog_init(
     dest->flush = syslog_flush;
     dest->get_fd = syslog_get_fd;
     dest->fini = syslog_fini;
+    dest->lock = NULL;
+    dest->unlock = NULL;
 
     return 0;
 }

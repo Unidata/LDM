@@ -54,7 +54,7 @@ void  gb2_gtlcllvltbl( char *lcllvltbl, char *cntr, int lclver,
         sprintf( tmpname,"g2vcrd%s%d.tbl", cntr, lclver );
     }
     else {
-        strcpy( tmpname, lcllvltbl );
+        strncpy( tmpname, lcllvltbl, sizeof(tmpname) )[sizeof(tmpname)-1] = 0;
     }
 
     /*

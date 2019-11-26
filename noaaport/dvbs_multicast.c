@@ -252,7 +252,7 @@ int main(
     int                 sd, rc, n;
     socklen_t           cliLen;
     struct ip_mreq      mreq;
-    struct sockaddr_in  cliAddr, servAddr;
+    struct sockaddr_in  cliAddr, servAddr = {};
     struct in_addr      mcastAddr;
     struct hostent*     h;
     /*

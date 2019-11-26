@@ -268,7 +268,7 @@ int wmo_header(
              }
 
              if (nonalph == 0 && allnum == 0)
-                strcpy(hdr.PIL, tpil);
+                strncpy(hdr.PIL, tpil, sizeof(hdr.PIL))[sizeof(hdr.PIL)-1] = 0;
           }
        }
     } // Not a GRIB product

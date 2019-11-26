@@ -2160,18 +2160,21 @@ uldb_Status uldb_addProcess(
 
             status = sm_add(&database.sharedMemory, pid, protoVers,
                     isNotifier, isPrimary, sockAddr, desired, &sub);
+            if (status)
+            	log_add("Couldn't add program to shared-memory database");
 
-            if (db_unlock(&database)) {
-                log_add("Couldn't unlock database");
-                status = ULDB_SYSTEM;
+            const int unlockStatus = db_unlock(&database);
+            if (unlockStatus) {
+				log_add("Couldn't unlock database");
+				status = ULDB_SYSTEM;
             }
 
-            if (status) {
-                free_prod_class(sub); /* NULL safe */
-            }
-            else if (allowed) {
-                *allowed = sub;
-            }
+			if (status || allowed == NULL) {
+				free_prod_class(sub); /* NULL safe */
+			}
+			else if (allowed) {
+				*allowed = sub;
+			}
         } /* database is locked */
 
         cs_leave(&origSigSet);

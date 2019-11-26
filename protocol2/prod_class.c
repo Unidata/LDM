@@ -264,7 +264,7 @@ free_prod_class(prod_class_t *clssp)
  * Returns:
  *      NULL            Out-of-memory. "log_add()" called.
  *      else            Pointer to the new product-class structure. The length
- *                      of the product-spcficiation array will be set but its
+ *                      of the product-specificiation array will be set but its
  *                      elements will be NULL.
  */
 prod_class_t *
@@ -457,8 +457,10 @@ clss_intersect(const prod_class_t *filt, const prod_class_t *want,
                 return errno;
 
         status = cp_prod_class(is, want, 0);
-        if(status != ENOERR)
+        if(status != ENOERR) {
+        		free_prod_class(is);
                 return status;
+        }
 
         /* else */
 
