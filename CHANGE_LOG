@@ -1,4 +1,4 @@
-6.13.12.28	2019-11-25T13:18:46-0700
+6.13.12.29	2019-11-26T10:02:31-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -20,8 +20,14 @@
           shouldn't make any difference.
 
     Logging:
-        Replaced minimum field-width in default log messages with canonical
-        column-start positions to reduce line lengths and CPU usage
+        * Replaced minimum field-width in default log messages with canonical
+          column-start positions to reduce line lengths and CPU usage
+        * Improve concurrency:
+            * Unlock file and mutex if thread cancelled. Only used by multical
+              module.
+            * Delete queue when thread exits
+            * Created abort_if_locked() for asserting that no mutex lock is held
+              prior to calling fork(). Only used by multicast module.
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
@@ -137,7 +143,9 @@
             * Continue if no receivers
             * Log more errors
         UpMcastMgr.c:
-            Added check of logging destination for mldm_sender(1) execution
+            * Added check of logging destination for mldm_sender(1) execution
+            * Assert that the logging module doesn't hold a mutex lock before
+              calling fork()
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
