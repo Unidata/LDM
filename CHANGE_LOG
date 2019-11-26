@@ -1,4 +1,4 @@
-6.13.12.29	2019-11-26T10:02:31-0700
+6.13.12.30	2019-11-26T14:13:52-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -23,11 +23,10 @@
         * Replaced minimum field-width in default log messages with canonical
           column-start positions to reduce line lengths and CPU usage
         * Improve concurrency:
-            * Unlock file and mutex if thread cancelled. Only used by multical
-              module.
+            * Unlock file and mutex if thread cancelled. Irrelevant for LDM6.
             * Delete queue when thread exits
             * Created abort_if_locked() for asserting that no mutex lock is held
-              prior to calling fork(). Only used by multicast module.
+              prior to calling fork(). Irrelevant for LDM6.
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
@@ -68,10 +67,12 @@
             when computing the number of product-slots to create in a new
             product-queue.
 
+    Miscellaneous:
+        Removed lint found by Coverity Scan
+
     Multicast:
         Product-Queue (pq.c):
-            * Added disabling of cancellation state on entry and reversion on
-              return
+            * Disable thread-cancellation on entry and revert on return
             * pq_sequenceHelper():
                 * Print number of locked products
                 * The product will now be unlocked upon return if
