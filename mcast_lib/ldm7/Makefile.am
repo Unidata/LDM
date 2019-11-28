@@ -167,7 +167,7 @@ TESTS			+= TcpSock_test
 Authorizer_test_SOURCES	= Authorizer_test.cpp
 Authorizer_test_LDADD	= $(LDADD) -lgtest
 check_PROGRAMS		+= Authorizer_test
-TESTS			+= Authorizer_test
+#TESTS			+= Authorizer_test
 
 #MldmAuth_test_SOURCES	= MldmAuth_test.cpp
 #MldmAuth_test_LDADD  	= $(LDADD) -lgtest
