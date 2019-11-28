@@ -54,12 +54,13 @@ lib_la_LIBADD		= $(builddir)/ulog/lib.la
 
 if HAVE_CUNIT
 check_PROGRAMS		= log_test
-TESTS			= log_test
 
 log_test_SOURCES	= log_test.c $(lib_la_SOURCES)
 log_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
 log_test_LDADD		= $(lib_la_LIBADD) $(top_builddir)/lib/libldm.la \
 			  @LIBS_CUNIT@
+
+TESTS			= $(check_PROGRAMS)
 
 SUFFIXES:	.vg .sup .supp
 
