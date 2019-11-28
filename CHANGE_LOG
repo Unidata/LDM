@@ -1,4 +1,4 @@
-6.13.12.31	2019-11-26T16:36:54-0700
+6.13.12.31	2019-11-28T13:12:09-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -24,7 +24,8 @@
           column-start positions to reduce line lengths and CPU usage
         * Improve concurrency:
             * Unlock file and mutex if thread cancelled. Irrelevant for LDM6.
-            * Delete queue when thread exits
+            * Added automatic deletion of message queue when thread exits, so 
+              calling log_free() is no longer necessary.
             * Created abort_if_locked() for asserting that no mutex lock is held
               prior to calling fork(). Irrelevant for LDM6.
 
@@ -160,6 +161,8 @@
         * pq.c: Demoted pq_sequenceHelper() log message from NOTE to DEBUG
         * Added "delayQueue/" to Git.
         * Corrected target "push-%" in to-level makefile
+        * Removed Authorizer_test from "make check" because GTest segfaults at
+          exit.
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
