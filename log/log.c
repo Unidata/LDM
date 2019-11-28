@@ -75,6 +75,9 @@ typedef struct msg_queue {
     Message*    last;           /* NULL => empty queue */
 } msg_queue_t;
 
+/// Is the logging module initialized?
+static bool isInitialized = false;
+
 /**
  * Key for the thread-specific queue of log messages.
  */
@@ -215,42 +218,49 @@ static int msg_format(
 }
 
 /**
- * Destroys a queue of log-messages.
+ * Indicates if a message queue is empty.
  *
- * @param[in] queue    The queue of messages.
+ * @param[in] queue    The message queue.
+ * @retval    true     Iff `queue == NULL` or the queue is empty
  * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
+ * @asyncsignalsafety  Safe
  */
-static void
-queue_fini(msg_queue_t* const queue)
+static bool queue_is_empty(
+        msg_queue_t* const queue)
 {
-    Message* msg;
-    Message* next;
+    return queue == NULL || queue->last == NULL;
+}
 
-    for (msg = queue->first; msg; msg = next) {
+/**
+ * Frees a thread-specific message queue. Called at thread exit. Logs an error
+ * message and the message queue if the queue isn't empty.
+ *
+ * @param[in] arg  Pointer previously associated with `queueKey`. Will not be
+ *                 `NULL` when called at thread exit.
+ */
+static void queue_free(void* const arg)
+{
+    msg_queue_t* const queue = (msg_queue_t*)arg;
+
+    if (!queue_is_empty(queue)) {
+		LOG_LOC_DECL(loc);
+		logl_add(&loc, "The following messages were not logged:");
+    	logl_flush(LOG_LEVEL_ERROR);
+    }
+
+    for (Message *msg = queue->first, *next; msg; msg = next) {
         next = msg->next;
         free(msg->string);
         free(msg);
     }
 
     queue->first = NULL;
+	free(queue);
 }
 
-/**
- * Thread-specific destructor of the message queue. Called at thread exit.
- *
- * @param[in] arg  Ignored
- */
-static void queue_delete(void* arg)
+static void queue_delete_key(void)
 {
-
-    msg_queue_t* queue = pthread_getspecific(queueKey);
-
-    if (queue) {
-        queue_fini(queue);
-        free(queue);
-        (void)pthread_setspecific(queueKey, NULL);
-    }
+	(void)pthread_key_delete(queueKey);
 }
 
 /**
@@ -261,11 +271,17 @@ static void queue_delete(void* arg)
  */
 static void queue_create_key(void)
 {
-    int status = pthread_key_create(&queueKey, queue_delete);
+    int status = pthread_key_create(&queueKey, queue_free);
 
     if (status != 0) {
-        logl_internal(LOG_LEVEL_ERROR, "pthread_key_create() failure: "
+        logl_internal(LOG_LEVEL_CRIT, "pthread_key_create() failure: "
                 "errno=\"%s\"", strerror(status));
+        abort();
+    }
+
+    if (atexit(queue_delete_key)) {
+        logl_internal(LOG_LEVEL_CRIT, "Couldn't register queue_delete_key() "
+        		"with atexit()");
         abort();
     }
 }
@@ -283,13 +299,6 @@ static void queue_create_key(void)
  */
 static msg_queue_t* queue_get(void)
 {
-    /**
-     * Whether or not the thread-specific queue key has been created.
-     */
-    static pthread_once_t key_creation_control = PTHREAD_ONCE_INIT;
-
-    (void)pthread_once(&key_creation_control, queue_create_key);
-
     msg_queue_t* queue = pthread_getspecific(queueKey);
 
     if (NULL == queue) {
@@ -312,24 +321,10 @@ static msg_queue_t* queue_get(void)
                 queue->first = NULL;
                 queue->last = NULL;
             }
-        }
-    }
+        } // `queue` allocated
+    } // queue didn't exist
 
     return queue;
-}
-
-/**
- * Indicates if a given message queue is empty.
- *
- * @param[in] queue    The message queue.
- * @retval    true     Iff `queue == NULL` or the queue is empty
- * @threadsafety       Safe
- * @asyncsignalsafety  Safe
- */
-static bool queue_is_empty(
-        msg_queue_t* const queue)
-{
-    return queue == NULL || queue->last == NULL;
 }
 
 /**
@@ -385,26 +380,6 @@ static void queue_clear(msg_queue_t* const queue)
 {
     if (NULL != queue)
         queue->last = NULL;
-}
-
-/**
- * Frees the log-message resources of the current thread. Should only be called
- * when no more logging by the current thread will occur.
- *
- * @param[in] loc      Location in user-code
- * @threadsafety       Safe
- * @asyncsignalsafety  Unsafe
- */
-static void queue_free(const log_loc_t* const loc)
-{
-    msg_queue_t* queue = queue_get();
-
-    if (!queue_is_empty(queue)) {
-        logl_add(loc, "Message-queue isn't empty");
-        log_flush_error();
-    }
-
-	queue_delete(NULL);
 }
 
 /**
@@ -901,49 +876,61 @@ bool log_stderr_is_open(void)
 
 int log_init(const char* const id)
 {
-    int status = logi_init(id);
+	int status;
 
-    if (status) {
-        perror("logi_init()");
-    }
-    else {
-        // `avoid_stderr` must be set before `get_default_destination()`
-        avoid_stderr = !log_stderr_is_open();
-        status = logi_set_destination(get_default_destination());
+	if (isInitialized) {
+		status = -1;
+	}
+	else {
+		static pthread_once_t queueKeyControl = PTHREAD_ONCE_INIT;
+		(void)pthread_once(&queueKeyControl, queue_create_key);
 
-        if (status) {
-            perror("logi_set_destination()");
-        }
-        else {
-            pthread_mutexattr_t mutexAttr;
+		isInitialized = true;
 
-            if (pthread_mutexattr_init(&mutexAttr)) {
-                perror("pthread_mutexattr_init()");
-                status = -1;
-            }
-            else {
-                (void)pthread_mutexattr_setprotocol(&mutexAttr,
-                        PTHREAD_PRIO_INHERIT);
+		status = logi_init(id);
 
-                /*
-                 * The following mutex isn't error-checking or recursive because
-                 * a glibc-created child process can't release such mutexes
-                 * because the thread in the child isn't the same as the thread
-                 * in the parent. See
-                 * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
-                 * As a consequence, failure to lock or unlock the mutex must
-                 * not result in a call to a logging function that attempts to
-                 * lock or unlock the mutex.
-                 */
-                if (pthread_mutex_init(&log_mutex, &mutexAttr)) {
-                    perror("pthread_mutex_init()");
-                    status = -1;
-                }
+		if (status) {
+			perror("logi_init()");
+		}
+		else {
+			// `avoid_stderr` must be set before `get_default_destination()`
+			avoid_stderr = !log_stderr_is_open();
+			status = logi_set_destination(get_default_destination());
 
-                (void)pthread_mutexattr_destroy(&mutexAttr);
-            } // `mutexAttr` initialized
-        } // logging destination set in implementation
-    } // Implementation initialized
+			if (status) {
+				perror("logi_set_destination()");
+			}
+			else {
+				pthread_mutexattr_t mutexAttr;
+
+				if (pthread_mutexattr_init(&mutexAttr)) {
+					perror("pthread_mutexattr_init()");
+					status = -1;
+				}
+				else {
+					(void)pthread_mutexattr_setprotocol(&mutexAttr,
+							PTHREAD_PRIO_INHERIT);
+
+					/*
+					 * The following mutex isn't error-checking or recursive because
+					 * a glibc-created child process can't release such mutexes
+					 * because the thread in the child isn't the same as the thread
+					 * in the parent. See
+					 * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
+					 * As a consequence, failure to lock or unlock the mutex must
+					 * not result in a call to a logging function that attempts to
+					 * lock or unlock the mutex.
+					 */
+					if (pthread_mutex_init(&log_mutex, &mutexAttr)) {
+						perror("pthread_mutex_init()");
+						status = -1;
+					}
+
+					(void)pthread_mutexattr_destroy(&mutexAttr);
+				} // `mutexAttr` initialized
+			} // logging destination set in implementation
+		} // Implementation initialized
+	} // Module wasn't initialized
 
     return status;
 }
@@ -952,22 +939,24 @@ int log_fini_located(const log_loc_t* const loc)
 {
     int status = 0;
 
-    queue_free(loc);
+    if (isInitialized) {
+		logl_log(loc, LOG_LEVEL_NOTICE, "Terminating logging");
 
-    if (pthread_mutex_destroy(&log_mutex))
-        status = -1;
+		if (logi_fini())
+			status = -1;
 
-    if (logi_fini())
-        status = -1;
+		if (pthread_mutex_destroy(&log_mutex))
+			status = -1;
+
+		isInitialized = false;
+    }
 
     return status;
 }
 
 void
 log_free_located(const log_loc_t* const loc)
-{
-    queue_free(loc);
-}
+{}
 
 void log_avoid_stderr(void)
 {

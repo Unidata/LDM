@@ -181,7 +181,7 @@ static void test_log_open_file(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -230,8 +230,8 @@ static void test_log_levels(void)
     int status;
     log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
             LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
-    for (int nlines = 1; nlines <= sizeof(logLevels)/sizeof(*logLevels);
-            nlines++) {
+    int         nlines[] = {1, 2, 4, 5, 6}; // NB: "Terminating logging" notice
+    for (int i = 0; i < sizeof(logLevels)/sizeof(log_level_t); ++i) {
         status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -239,13 +239,13 @@ static void test_log_levels(void)
         status = log_set_destination(tmpPathname);
         CU_ASSERT_EQUAL(status, 0);
 
-        log_set_level(logLevels[nlines-1]);
+        log_set_level(logLevels[i]);
         logMessages();
 
         log_fini();
 
         int n = numLines(tmpPathname);
-        CU_ASSERT_EQUAL(n, nlines);
+        CU_ASSERT_EQUAL(n, nlines[i]);
 
         //if (n != nlines)
             //exit(1);
@@ -383,7 +383,7 @@ static void test_log_vlog(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -422,10 +422,10 @@ static void test_log_add(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 3);
+    CU_ASSERT_EQUAL(n, 4);
 
-    status = unlink(tmpPathname);
-    CU_ASSERT_EQUAL(status, 0);
+    //status = unlink(tmpPathname);
+    //CU_ASSERT_EQUAL(status, 0);
 }
 
 static void test_log_syserr(void)
@@ -448,7 +448,7 @@ static void test_log_syserr(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 10);
+    CU_ASSERT_EQUAL(n, 11); // Plus "Terminating logging" notice
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -476,7 +476,7 @@ static void test_log_refresh(void)
     logMessages();
     log_fini();
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6); // Plus "Terminating logging" notice
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -599,11 +599,12 @@ static void test_fork(void)
         CU_ASSERT_EQUAL_FATAL(WEXITSTATUS(child_status), 0);
     }
 
+    log_fini();
+
     int n;
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 10);
+    CU_ASSERT_EQUAL(n, 12); // Plus 2 "Terminating logging" notices
 
-    log_fini();
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
 }
@@ -810,12 +811,12 @@ int main(
                     && CU_ADD_TEST(testSuite, test_sigusr1_prog)
                     && CU_ADD_TEST(testSuite, test_change_file)
                     && CU_ADD_TEST(testSuite, test_fork)
-                    /*
+                    /**/
                     && CU_ADD_TEST(testSuite, test_random)
                     && CU_ADD_TEST(testSuite, test_randomThreads)
                     && CU_ADD_TEST(testSuite, test_randomProcesses)
                     && CU_ADD_TEST(testSuite, test_performance)
-                    */) {
+                    /**/) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 if (CU_basic_run_tests() == 0)
                     exitCode = CU_get_number_of_tests_failed();

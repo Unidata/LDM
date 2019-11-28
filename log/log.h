@@ -307,6 +307,8 @@ const char* log_get_destination(void);
 void log_clear(void);
 
 /**
+ * DEPRECATED. No longer necessary.
+ *
  * Frees the log-message resources of the current thread. Should only be called
  * when no more logging by the current thread will occur.
  *
