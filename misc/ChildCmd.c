@@ -309,116 +309,114 @@ execute(
         const bool                 asRoot)
 {
     int         status;
+	const pid_t pid = fork();
 
-    log_abort_if_locked();
-    const pid_t pid = fork();
+	if (pid == -1) {
+		log_add_syserr("fork() failed");
+		status = errno;
+	}
+	else if (pid == 0) {
+		/* Child process */
+		(void)dup2(cmd->stdInPipe[0], STDIN_FILENO);
+		(void)dup2(cmd->stdOutPipe[1], STDOUT_FILENO);
+		(void)dup2(cmd->stdErrPipe[1], STDERR_FILENO);
+		(void)close(cmd->stdInPipe[1]);  // Write end of stdin pipe unneeded
+		(void)close(cmd->stdOutPipe[0]); // Read end of stdout pipe unneeded
+		(void)close(cmd->stdErrPipe[0]); // Read end of stderr pipe unneeded
 
-    if (pid == -1) {
-        log_add_syserr("fork() failed");
-        status = errno;
-    }
-    else if (pid == 0) {
-        /* Child process */
-        (void)dup2(cmd->stdInPipe[0], STDIN_FILENO);
-        (void)dup2(cmd->stdOutPipe[1], STDOUT_FILENO);
-        (void)dup2(cmd->stdErrPipe[1], STDERR_FILENO);
-        (void)close(cmd->stdInPipe[1]);  // Write end of stdin pipe unneeded
-        (void)close(cmd->stdOutPipe[0]); // Read end of stdout pipe unneeded
-        (void)close(cmd->stdErrPipe[0]); // Read end of stderr pipe unneeded
+		uid_t euid;
 
-        uid_t euid;
+		if (!asRoot) {
+			status = 0;
+		}
+		else {
+			euid = geteuid();
+			status = seteuid(0); // Get privilege to set real UID to root
 
-        if (!asRoot) {
-            status = 0;
-        }
-        else {
-            euid = geteuid();
-            status = seteuid(0); // Get privilege to set real UID to root
+			if (status) {
+				log_add_syserr("Couldn't get root privilege");
+			}
+			else {
+				status = setuid(0);
 
-            if (status) {
-                log_add_syserr("Couldn't get root privilege");
-            }
-            else {
-                status = setuid(0);
+				if (status)
+					log_add_syserr("Couldn't set UID to root");
+			}
+		}
 
-                if (status)
-                    log_add_syserr("Couldn't set UID to root");
-            }
-        }
+		if (status == 0) {
+			log_debug("Executing command \"%s\"", cmd->cmdStr);
+			(void)execvp(pathname, (char* const*)cmdVec);
 
-        if (status == 0) {
-            log_debug("Executing command \"%s\"", cmd->cmdStr);
-            (void)execvp(pathname, (char* const*)cmdVec);
+			if (asRoot)
+				(void)seteuid(euid);
 
-            if (asRoot)
-                (void)seteuid(euid);
+			log_add_syserr("execvp() failed");
+			log_flush_error();
+			log_fini();
+			exit(1);
+		} // Executing as root
+	}
+	else {
+		/* Parent process */
+		(void)close(cmd->stdInPipe[0]);  // Read end of stdin pipe unneeded
+		(void)close(cmd->stdOutPipe[1]); // Write end of stdout pipe unneeded
+		(void)close(cmd->stdErrPipe[1]); // Write end of stderr pipe unneeded
 
-            log_add_syserr("execvp() failed");
-            log_flush_error();
-            log_fini();
-            exit(1);
-        } // Executing as root
-    }
-    else {
-        /* Parent process */
-        (void)close(cmd->stdInPipe[0]);  // Read end of stdin pipe unneeded
-        (void)close(cmd->stdOutPipe[1]); // Write end of stdout pipe unneeded
-        (void)close(cmd->stdErrPipe[1]); // Write end of stderr pipe unneeded
+		cmd->stdInPipe[0] = -1;
+		cmd->stdOutPipe[1] = -1;
+		cmd->stdErrPipe[1] = -1;
 
-        cmd->stdInPipe[0] = -1;
-        cmd->stdOutPipe[1] = -1;
-        cmd->stdErrPipe[1] = -1;
+		cmd->stdIn = fdopen(cmd->stdInPipe[1], "w");
 
-        cmd->stdIn = fdopen(cmd->stdInPipe[1], "w");
+		if (cmd->stdIn == NULL) {
+			log_add_syserr("fdopen() failure");
+			status = errno;
+		}
+		else {
+			cmd->stdOut = fdopen(cmd->stdOutPipe[0], "r");
 
-        if (cmd->stdIn == NULL) {
-            log_add_syserr("fdopen() failure");
-            status = errno;
-        }
-        else {
-            cmd->stdOut = fdopen(cmd->stdOutPipe[0], "r");
+			if (cmd->stdOut == NULL) {
+				log_add_syserr("fdopen() failure");
+				status = errno;
+			}
+			else {
+				cmd->stdErr = fdopen(cmd->stdErrPipe[0], "r");
 
-            if (cmd->stdOut == NULL) {
-                log_add_syserr("fdopen() failure");
-                status = errno;
-            }
-            else {
-                cmd->stdErr = fdopen(cmd->stdErrPipe[0], "r");
+				if (cmd->stdErr == NULL) {
+					log_add_syserr("fdopen() failure");
+					status = errno;
+				}
+				else {
+					status = pthread_create(&cmd->stdErrThread, NULL,
+							childCmd_log, cmd);
 
-                if (cmd->stdErr == NULL) {
-                    log_add_syserr("fdopen() failure");
-                    status = errno;
-                }
-                else {
-                    status = pthread_create(&cmd->stdErrThread, NULL,
-                            childCmd_log, cmd);
+					if (status) {
+						log_add_errno(status, "Couldn't create thread to "
+								"log child's standard-error stream");
+					}
+					else {
+						cmd->pid = pid;
+					} // `stdErrThread` set
 
-                    if (status) {
-                        log_add_errno(status, "Couldn't create thread to "
-                                "log child's standard-error stream");
-                    }
-                    else {
-                        cmd->pid = pid;
-                    } // `stdErrThread` set
+					if (status) {
+						(void)fclose(cmd->stdErr);
+						cmd->stdErrPipe[0] = -1;
+					}
+				} // `proc->stdErr` allocated
 
-                    if (status) {
-                        (void)fclose(cmd->stdErr);
-                        cmd->stdErrPipe[0] = -1;
-                    }
-                } // `proc->stdErr` allocated
+				if (status) {
+					(void)fclose(cmd->stdOut);
+					cmd->stdOutPipe[0] = -1;
+				}
+			} // `proc->stdOut` allocated
 
-                if (status) {
-                    (void)fclose(cmd->stdOut);
-                    cmd->stdOutPipe[0] = -1;
-                }
-            } // `proc->stdOut` allocated
-
-            if (status) {
-                (void)fclose(cmd->stdIn);
-                cmd->stdInPipe[1] = -1;
-            }
-        } // `proc->stdIn` allocated
-    } // Parent process. `pid` set.
+			if (status) {
+				(void)fclose(cmd->stdIn);
+				cmd->stdInPipe[1] = -1;
+			}
+		} // `proc->stdIn` allocated
+	} // Parent process. `pid` set.
 
     return status;
 }
