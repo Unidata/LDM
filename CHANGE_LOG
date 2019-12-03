@@ -1,4 +1,4 @@
-6.13.12.32	2019-11-28T15:39:45-0700
+6.13.12.33	2019-12-03T15:12:11-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -12,8 +12,8 @@
     pqact(1):
         * Added one-day timeout for inactive entries that, nevertheless, had
           open file descriptors to eliminate the possibility of pqact(1) holding
-          open files that have been scoured and, consequently, filling up the
-          disk with invisible files.
+          open thousands of files that have been scoured and, consequently,
+          filling up the disk with invisible files.
         * Ensure valid time-of-last-insertion before writing state file at exit.
           Probably doesn't make any difference.
         * Correct parsing/formatting of state file with negative seconds. Again,
@@ -26,8 +26,7 @@
             * Unlock file and mutex if thread cancelled. Irrelevant for LDM6.
             * Added automatic deletion of message queue when thread exits, so 
               calling log_free() is no longer necessary.
-            * Created abort_if_locked() for asserting that no mutex lock is held
-              prior to calling fork(). Irrelevant for LDM6.
+            * Added use of pthread_atfork(). Irrelevant for LDM6.
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
@@ -163,6 +162,7 @@
         * Corrected target "push-%" in to-level makefile
         * Removed Authorizer_test from "make check" because GTest segfaults at
           exit.
+        * Created pthread_atfork_test.c
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
