@@ -53,7 +53,9 @@ endif
 lib_la_LIBADD		= $(builddir)/ulog/lib.la
 
 if HAVE_CUNIT
-check_PROGRAMS		= log_test
+check_PROGRAMS		= pthread_atfork_test log_test
+
+pthread_atfork_test_SOURCES	= pthread_atfork_test.c
 
 log_test_SOURCES	= log_test.c $(lib_la_SOURCES)
 log_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@ $(lib_la_CPPFLAGS)
