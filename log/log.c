@@ -76,7 +76,7 @@ typedef struct msg_queue {
 } msg_queue_t;
 
 /// Is the logging module initialized?
-static bool isInitialized = false;
+static volatile sig_atomic_t isInitialized = false;
 
 /**
  * Key for the thread-specific queue of log messages.
@@ -94,6 +94,48 @@ static volatile sig_atomic_t refresh_needed;
  * The mutex that makes this module thread-safe.
  */
 static pthread_mutex_t       log_mutex;
+
+/**
+ * Locks this module.
+ *
+ * @retval EBUSY    Mutex is already locked
+ * @retval EDEADLK  A deadlock condition was detected or the current thread
+ *                  already owns the mutex
+ * @retval 0        Success
+ */
+static int
+lock()
+{
+    return pthread_mutex_lock(&log_mutex);
+}
+
+/**
+ * Unlocks this module.
+ *
+ * @retval EPERM  The current thread doesn't own the mutex
+ * @retval 0      Success
+ */
+static int
+unlock(void)
+{
+    return pthread_mutex_unlock(&log_mutex);
+}
+
+static void
+unlock_cleanup(void* arg)
+{
+	(void)unlock();
+}
+
+/**
+ * Asserts that the current thread has acquired this module's lock.
+ */
+static void assertLocked(void)
+{
+    int status = pthread_mutex_trylock(&log_mutex);
+
+    assert(status);
+}
 
 /**
  * Initializes a location structure from another location structure.
@@ -263,26 +305,56 @@ static void queue_delete_key(void)
 	(void)pthread_key_delete(queueKey);
 }
 
+static void lock_or_abort(void)
+{
+	int status = lock();
+
+	if (status) {
+		fprintf(stderr, "Couldn't lock mutex: %s\n", strerror(status));
+		abort();
+	}
+}
+
+static void unlock_or_abort(void)
+{
+	int status = unlock();
+
+	if (status) {
+		fprintf(stderr, "Couldn't unlock mutex: %s\n", strerror(status));
+		abort();
+	}
+}
+
 /**
- * Creates the key for accessing the thread-specific queue of messages.
+ * Performs one-time initialization of this module.
  *
  * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  */
-static void queue_create_key(void)
+static void init_once(void)
 {
-    int status = pthread_key_create(&queueKey, queue_free);
+	int status = pthread_atfork(lock_or_abort, unlock_or_abort,
+			unlock_or_abort);
 
-    if (status != 0) {
-        logl_internal(LOG_LEVEL_CRIT, "pthread_key_create() failure: "
-                "errno=\"%s\"", strerror(status));
-        abort();
-    }
+	if (status) {
+		logl_internal(LOG_LEVEL_CRIT, "pthread_atfork() failure: %s",
+				strerror(status));
+		abort();
+	}
+	else {
+		int status = pthread_key_create(&queueKey, queue_free);
 
-    if (atexit(queue_delete_key)) {
-        logl_internal(LOG_LEVEL_CRIT, "Couldn't register queue_delete_key() "
-        		"with atexit()");
-        abort();
+		if (status != 0) {
+			logl_internal(LOG_LEVEL_CRIT, "pthread_key_create() failure: "
+					"errno=\"%s\"", strerror(status));
+			abort();
+		}
+
+		if (atexit(queue_delete_key)) {
+			logl_internal(LOG_LEVEL_CRIT, "Couldn't register "
+					"queue_delete_key() with atexit()");
+			abort();
+		}
     }
 }
 
@@ -402,48 +474,6 @@ static const char* get_default_destination(void)
 }
 
 /**
- * Locks this module.
- *
- * @retval EBUSY    Mutex is already locked
- * @retval EDEADLK  A deadlock condition was detected or the current thread
- *                  already owns the mutex
- * @retval 0        Success
- */
-static int
-lock()
-{
-    return pthread_mutex_lock(&log_mutex);
-}
-
-/**
- * Unlocks this module.
- *
- * @retval EPERM  The current thread doesn't own the mutex
- * @retval 0      Success
- */
-static int
-unlock(void)
-{
-    return pthread_mutex_unlock(&log_mutex);
-}
-
-static void
-unlock_cleanup(void* arg)
-{
-	(void)unlock();
-}
-
-/**
- * Asserts that the current thread has acquired this module's lock.
- */
-static void assertLocked(void)
-{
-    int status = pthread_mutex_trylock(&log_mutex);
-
-    assert(status);
-}
-
-/**
  * Indicates if a message at a given logging level would be logged.
  *
  * @param[in] level    The logging level
@@ -545,7 +575,8 @@ static ssize_t tryFormatingMsg(
 }
 
 /**
- * Returns a a formated variadic message.
+ * Returns a formated variadic message.
+ *
  * @param[in] format   Message format
  * @param[in] args     Optional format arguments
  * @retval    NULL     Out-of-memory. `logl_internal()` called.
@@ -883,7 +914,7 @@ int log_init(const char* const id)
 	}
 	else {
 		static pthread_once_t queueKeyControl = PTHREAD_ONCE_INIT;
-		(void)pthread_once(&queueKeyControl, queue_create_key);
+		(void)pthread_once(&queueKeyControl, init_once);
 
 		isInitialized = true;
 
@@ -901,33 +932,21 @@ int log_init(const char* const id)
 				perror("logi_set_destination()");
 			}
 			else {
-				pthread_mutexattr_t mutexAttr;
-
-				if (pthread_mutexattr_init(&mutexAttr)) {
-					perror("pthread_mutexattr_init()");
+				/*
+				 * For an unknown reason, a mutex that is robust,
+				 * error-checking, recursive, or prevents priority inversion,
+				 * cannot be unlocked by a child process created by `fork()` --
+				 * which defeats the reason for calling `pthread_atfork()`.
+				 * SRE 2019-12-03
+				 * $ uname -a
+				 * Linux gilda 3.10.0-862.14.4.el7.x86_64 #1 SMP Wed Sep 26 15:12:11 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
+				 * $ gcc -dumpversion
+				 * 4.8.5
+				 */
+				if (pthread_mutex_init(&log_mutex, NULL)) {
+					perror("pthread_mutex_init()");
 					status = -1;
 				}
-				else {
-					(void)pthread_mutexattr_setprotocol(&mutexAttr,
-							PTHREAD_PRIO_INHERIT);
-
-					/*
-					 * The following mutex isn't error-checking or recursive because
-					 * a glibc-created child process can't release such mutexes
-					 * because the thread in the child isn't the same as the thread
-					 * in the parent. See
-					 * <https://stackoverflow.com/questions/5473368/pthread-atfork-locking-idiom-broken>.
-					 * As a consequence, failure to lock or unlock the mutex must
-					 * not result in a call to a logging function that attempts to
-					 * lock or unlock the mutex.
-					 */
-					if (pthread_mutex_init(&log_mutex, &mutexAttr)) {
-						perror("pthread_mutex_init()");
-						status = -1;
-					}
-
-					(void)pthread_mutexattr_destroy(&mutexAttr);
-				} // `mutexAttr` initialized
 			} // logging destination set in implementation
 		} // Implementation initialized
 	} // Module wasn't initialized
@@ -1215,15 +1234,3 @@ unsigned log_get_options(void)
     return options;
 }
 
-void log_abort_if_locked(void)
-{
-	const int status = pthread_mutex_trylock(&log_mutex);
-
-	if (status == 0) {
-		(void)pthread_mutex_unlock(&log_mutex);
-	}
-	else if (status == EBUSY) {
-		// Other errors are impossible or semantically consistent
-		abort();
-	}
-}
