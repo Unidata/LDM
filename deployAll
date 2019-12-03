@@ -18,7 +18,7 @@ deploy -M /usr/ccs/bin/make -n burns
 deploy uni14
 
 # Lead
-deploy lead
+#deploy lead
 
 # LDM7 systems (no password required)
 deploy -m              -u ldm7 ca
