@@ -1,4 +1,4 @@
-6.13.12.33	2019-12-03T15:12:11-0700
+6.13.12.34	2019-12-04T08:37:31-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -27,6 +27,7 @@
             * Added automatic deletion of message queue when thread exits, so 
               calling log_free() is no longer necessary.
             * Added use of pthread_atfork(). Irrelevant for LDM6.
+        * Added "Terminating logging" message at INFO priority
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
