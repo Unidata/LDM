@@ -230,7 +230,7 @@ static void test_log_levels(void)
     int status;
     log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
             LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
-    int         nlines[] = {1, 2, 4, 5, 6}; // NB: "Terminating logging" notice
+    int         nlines[] = {1, 2, 3, 5, 6}; // NB: "INFO Terminating logging"
     for (int i = 0; i < sizeof(logLevels)/sizeof(log_level_t); ++i) {
         status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -448,7 +448,7 @@ static void test_log_syserr(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 11); // Plus "Terminating logging" notice
+    CU_ASSERT_EQUAL(n, 11); // Plus "INFO Terminating logging"
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -476,7 +476,7 @@ static void test_log_refresh(void)
     logMessages();
     log_fini();
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 6); // Plus "Terminating logging" notice
+    CU_ASSERT_EQUAL(n, 6); // Plus "INFO Terminating logging"
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -603,7 +603,7 @@ static void test_fork(void)
 
     int n;
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 12); // Plus 2 "Terminating logging" notices
+    CU_ASSERT_EQUAL(n, 12); // Plus 2 "INFO Terminating logging" messages
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
