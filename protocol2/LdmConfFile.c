@@ -706,8 +706,7 @@ typedef struct requester Requester;
  * @param[in] isPrimary    Whether or not the initial transfer-mode should be
  *                         primary (uses HEREIS) or not (uses
  *                         COMINGSOON/BLKDATA).
- * @param[in] serverCount  The number of servers to which the same request
- *                         will be made.
+ * @param[in] feedCount    The number of feeds for the same subscription.
  */
 static void
 requester_exec(
@@ -715,7 +714,7 @@ requester_exec(
     const unsigned      port,
     prod_class_t*       clssp,
     int                 isPrimary,
-    const unsigned      serverCount)
+    const unsigned      feedCount)
 {
     int                 errCode = 0;    /* success */
     /*
@@ -740,7 +739,7 @@ requester_exec(
     log_notice_q("Starting Up(%s): %s:%u %s", PACKAGE_VERSION, source, port,
         s_prod_class(NULL, 0, clssp));
 
-    (void)as_setLdmCount(serverCount);
+    (void)as_setLdmCount(feedCount);
 
     /*
      * Initialize the "savedInfo" module with the product-information
@@ -953,8 +952,7 @@ requester_exec(
  * @param[in] isPrimary    Whether or not the data-product exchange-mode should
  *                         be primary (i.e., use HEREIS) or alternate (i.e., use
  *                         COMINGSOON/BLKDATA).
- * @param[in] serverCount  The number of servers to which the same request will
- *                         be made.
+ * @param[in] feedCount    The number of feeds for the same subscription.
  * @retval    0            Success.
  * @retval    -1           Failure.  errno is set.  "log_flush()" called.
  */
@@ -964,7 +962,7 @@ requester_spawn(
     const unsigned      port,
     prod_class_t*       clssp,
     const int           isPrimary,
-    const unsigned      serverCount)
+    const unsigned      feedCount)
 {
         pid_t pid = ldmfork();
         if(pid == -1)
@@ -976,7 +974,7 @@ requester_spawn(
         if(pid == 0)
         {
                 endpriv();
-                requester_exec(hostId, port, clssp, isPrimary, serverCount);
+                requester_exec(hostId, port, clssp, isPrimary, feedCount);
                 /*NOTREACHED*/
         }
 
@@ -995,7 +993,7 @@ requester_spawn(
  * @param[in] isPrimary    Whether or not the data-product exchange-mode
  *                         should be primary (i.e., use HEREIS) or alternate
  *                         (i.e., use COMINGSOON/BLKDATA).
- * @param[in] serverCount  The number of servers to which the same request will
+ * @param[in] feedCount    The number of feeds for the same subscription.
  *                         be made.
  * @retval NULL            Failure.  errno is set.
  * @return                 Pointer to initialized requester structure.  The
@@ -1006,7 +1004,7 @@ requester_new(
     const ServerInfo*   server,
     prod_class_t*       clssp,
     const int           isPrimary,
-    const unsigned      serverCount)
+    const unsigned      feedCount)
 {
     Requester*  reqstrp = (Requester*)malloc(sizeof(Requester));
 
@@ -1031,7 +1029,7 @@ requester_new(
             reqstrp->clssp = clssp;
             reqstrp->pid =
                 requester_spawn(reqstrp->source, reqstrp->port, reqstrp->clssp,
-                    isPrimary, serverCount);
+                    isPrimary, feedCount);
         }                               /* "reqstrp->source" allocated */
 
         if (error) {
@@ -1058,7 +1056,7 @@ static Requester *requesters;
  * @param[in] isPrimary    Whether or not the data-product exchange-mode should
  *                         be primary (i.e., use HEREIS) or alternate (i.e., use
  *                         COMINGSOON/BLKDATA).
- * @param[in] serverCount  The number of servers to which the same request will
+ * @param[in] feedCount    The number of feeds for the same subscription.
  *                         be made.
  * @retval 0               Success.
  * @return                 <errno.h> error-code.
@@ -1068,10 +1066,10 @@ requester_add(
     const ServerInfo*   server,
     prod_class_t*       clssp,
     const int           isPrimary,
-    unsigned            serverCount)
+    unsigned            feedCount)
 {
     int         error = 0;              /* success */
-    Requester*  reqstrp = requester_new(server, clssp, isPrimary, serverCount);
+    Requester*  reqstrp = requester_new(server, clssp, isPrimary, feedCount);
 
     if (reqstrp == NULL) {
         error = errno;
@@ -1722,7 +1720,7 @@ struct subEntry {
     struct subEntry*        next;
     Subscription*           subscription;
     const ServerInfo**      servers;
-    unsigned                serverCount;
+    unsigned                requestCount;
     bool                    hasMcast;
 };
 typedef struct subEntry SubEntry;
@@ -1752,7 +1750,7 @@ subEntry_new(
             entry->next = NULL;
             entry->subscription = subClone;
             entry->servers = NULL;
-            entry->serverCount = 0;
+            entry->requestCount = 0;
             entry->hasMcast = false;
 
             return entry;
@@ -1780,7 +1778,7 @@ subEntry_add(
 {
     const ServerInfo** const    servers = (const ServerInfo**)realloc(
             entry->servers,
-            (size_t)((entry->serverCount+1)*sizeof(ServerInfo*)));
+            (size_t)((entry->requestCount+1)*sizeof(ServerInfo*)));
 
     if (NULL == servers) {
         log_syserr("Couldn't allocate new server-information array");
@@ -1789,9 +1787,9 @@ subEntry_add(
         const ServerInfo* const clone = serverInfo_clone(server);
 
         if (clone != NULL) {
-            servers[entry->serverCount] = clone;
+            servers[entry->requestCount] = clone;
             entry->servers = servers;
-            entry->serverCount++;
+            entry->requestCount++;
 
             return 0;
         } /* "clone" allocated */
@@ -1827,7 +1825,7 @@ subEntry_start(
 {
     int         status = 0; /* success */
     unsigned    serverIndex;
-    unsigned    feedCount = entry->serverCount + (entry->hasMcast ? 1 : 0);
+    unsigned    feedCount = entry->requestCount + (entry->hasMcast ? 1 : 0);
 
     if (feedCount > 2) {
 		if (entry->hasMcast) {
@@ -1844,7 +1842,7 @@ subEntry_start(
 		}
     }
 
-    for (serverIndex = 0; serverIndex < entry->serverCount; serverIndex++) {
+    for (serverIndex = 0; serverIndex < entry->requestCount; serverIndex++) {
         prod_class_t*      clssp;
         const ServerInfo*  requestServer = entry->servers[serverIndex];
 
@@ -1904,7 +1902,7 @@ subEntry_free(
 {
     int i;
 
-    for (i = 0; i < entry->serverCount; i++)
+    for (i = 0; i < entry->requestCount; i++)
         serverInfo_free(entry->servers[i]);
 
     free(entry->servers);
@@ -1927,9 +1925,9 @@ static SubEntry*   subsTail = NULL;
 /**
  * Adds a subscription to the subscriptions table.
  *
- * @param sub           [in] Pointer to the subscription. Client may free upon
+ * @param[in sub        Pointer to the subscription. Client may free upon
  *                      return.
- * @retval NULL         Failure. log_add() called.
+ * @retval   NULL       Failure. log_add() called.
  * @return              Pointer to the corresponding entry.
  */
 static SubEntry*
@@ -1994,10 +1992,9 @@ subs_delete(SubEntry* entry)
  * Adds a subscription to the subscriptions table if it isn't already present.
  * Returns the corresponding entry.
  *
- * @param[in] sub          Pointer to the subscription. Client may free upon
+ * @param[in]  sub         Pointer to the subscription. Client may free upon
  *                         return.
- * @param[out] isNewEntry  Whether or not the entry was created. Not set if
- *                         `NULL`.
+ * @param[out] isNewEntry  Whether or not the entry was created. May be `NULL`.
  * @retval NULL            Failure. `isNewEntry` not set. log_add() called.
  * @return                 Pointer to the corresponding entry.
  */
