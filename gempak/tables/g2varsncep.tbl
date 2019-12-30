@@ -402,6 +402,8 @@
 000 019 003 000 Mixed Layer Depth                m                    MIXHT            0  -9999.00
 000 019 022 000 Clear Air Turbulence (CAT)       %                    CAT              0  -9999.00
 000 019 028 000 Mnt Wave Turb (Eddy Dissip Rate) m^(2/3) s-1          MWTURB           0  -9999.00
+000 019 029 000 Clear Air Turb (Eddy Dissip Rate)m^(2/3) s-1          CATEDR           0  -9999.00
+000 019 031 000 Max Eddy Dissip Param in Layer   m^(2/3) s-1          MXEDPRM          0  -9999.00
 !
 000 019 192 000 Maximum snow albedo              %                    MXSALB           0  -9999.00
 000 019 193 000 Snow-free albedo                 %                    SNFALB           0  -9999.00
