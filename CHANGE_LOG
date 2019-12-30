@@ -1,4 +1,4 @@
-6.13.12.34	2019-12-04T08:37:31-0700
+6.13.12.35	2019-12-30T12:46:45-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -100,6 +100,8 @@
             * ProdNotifier.cpp:
                 * startProd(): Improved error-message
                 * missedProd(): Added error-message
+            * Included RECEIVE entry in computation of count of number of
+              upstream suppliers of a given feed
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
