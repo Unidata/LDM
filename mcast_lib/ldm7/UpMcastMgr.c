@@ -1332,7 +1332,9 @@ me_augmentVlan(
 			free(desc);
 		} // `desc` allocated
 
-		status = mldm_startMldmIfStopped(entry->info);
+		int status2 = mldm_startMldmIfStopped(entry->info);
+		if (status == 0)
+			status = status2;
 	} // Multicast LDM sender process was stopped or doesn't exist
 
     return status;
