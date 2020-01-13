@@ -460,6 +460,110 @@ mldm_spawn(
 }
 
 /**
+ * Suspends a multicast LDM sender process if it's running.
+ *
+ * @param[in] info         LDM7 multicast information
+ * @retval    0            Success. The multicast LDM sender associated with the
+ *                         given multicast group has been suspended or doesn't
+ *                         exist.
+ * @retval    LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+mldm_stopMldmIfRunning(const SepMcastInfo* const restrict info)
+{
+    /*
+     * The Multicast-LDM Sender Map (MSM) is locked because it might be accessed
+     * concurrently by multiple processes.
+     */
+    int status = msm_lock(true); // Lock for writing
+
+    if (status) {
+        log_add("Couldn't lock multicast sender map");
+    }
+    else {
+        status = msm_get(smi_getFeed(info), &childPid, &fmtpSrvrPort,
+                &mldmCmdPort);
+
+        if (status) {
+            if (status == LDM7_NOENT) {
+                log_debug("No multicast sender for feed %s",
+                        s_feedtypet(smi_getFeed(info)));
+                childPid = 0;
+                status = 0;
+            }
+            else {
+                log_add("msm_get() failure");
+            }
+        }
+        else if (kill(childPid, SIGSTOP)) {
+			log_warning("Couldn't send stop signal to multicast LDM sender "
+					"process %d for feed %s", childPid,
+					s_feedtypet(smi_getFeed(info)));
+			status = msm_remove(childPid);
+			log_assert(status == 0);
+			childPid = 0;
+        }
+
+        (void)msm_unlock();
+    } // Multicast sender map is locked
+
+    return status;
+}
+
+/**
+ * Suspends a multicast LDM sender process if it's running.
+ *
+ * @param[in] info         LDM7 multicast information
+ * @retval    0            Success. The multicast LDM sender associated with the
+ *                         given multicast group has been suspended or doesn't
+ *                         exist.
+ * @retval    LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
+ */
+static Ldm7Status
+mldm_startMldmIfStopped(const SepMcastInfo* const restrict info)
+{
+    /*
+     * The Multicast-LDM Sender Map (MSM) is locked because it might be accessed
+     * concurrently by multiple processes.
+     */
+    int status = msm_lock(true); // Lock for writing
+
+    if (status) {
+        log_add("Couldn't lock multicast sender map");
+    }
+    else {
+        status = msm_get(smi_getFeed(info), &childPid, &fmtpSrvrPort,
+                &mldmCmdPort);
+
+        if (status) {
+            if (status == LDM7_NOENT) {
+                log_debug("No multicast sender for feed %s",
+                        s_feedtypet(smi_getFeed(info)));
+                childPid = 0;
+                status = 0;
+            }
+            else {
+                log_add("msm_get() failure");
+            }
+        }
+        else if (kill(childPid, SIGCONT)) {
+			log_warning("Couldn't send continue signal to multicast LDM sender "
+					"process %d for feed %s", childPid,
+					s_feedtypet(smi_getFeed(info)));
+			status = msm_remove(childPid);
+			log_assert(status == 0);
+			childPid = 0;
+        }
+
+        (void)msm_unlock();
+    } // Multicast sender map is locked
+
+    return status;
+}
+
+/**
  * Ensures that a multicast LDM sender process is running.
  *
  * @param[in] info         LDM7 multicast information
@@ -1143,13 +1247,13 @@ me_compareOrConflict(
  * @retval         LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-me_startIfNot(
+me_execMldmIfNot(
         McastEntry* const entry,
         const int         retxTimeout)
 {
     // Sets `mldmCmdPort`
-    int status = mldm_ensureExec(entry->info,
-            entry->ttl, entry->subnetLen, retxTimeout, entry->pqPathname);
+    int status = mldm_ensureExec(entry->info, entry->ttl, entry->subnetLen,
+			retxTimeout, entry->pqPathname);
 
     if (status == 0) {
         status = isa_setPort(smi_getFmtpSrvr(entry->info),
@@ -1186,7 +1290,8 @@ me_newDesc(const McastEntry* const restrict entry)
 }
 
 /**
- * Creates an AL2S virtual-circuit between two end-points for a given LDM feed.
+ * Augments the multipoint VLAN by adding an AL2S virtual-circuit between
+ * two end-points for a given LDM feed.
  *
  * @param[in,out] entry       Multicast entry
  * @param[in]     feed        LDM feed
@@ -1195,54 +1300,88 @@ me_newDesc(const McastEntry* const restrict entry)
  * @retval        LDM7_SYSTEM Failure. `log_add()` called.
  */
 static Ldm7Status
-me_createVirtCirc(
+me_augmentVlan(
         McastEntry* const restrict       entry,
         const VcEndPoint* const restrict rmtVcEnd)
 {
-    int         status;
-    char* const desc = me_newDesc(entry);
+	/**
+	 * Because re-configuration of the AL2S multipoint VLAN can take minutes
+	 * and no downstream FMTP module will receive anything during that time,
+	 * any existing multicast LDM sender process is stopped while the re-
+	 * configuration occurs.
+	 */
+    int status = mldm_stopMldmIfRunning(entry->info);
 
-    if (desc == NULL) {
-        log_add("Couldn't get description of AL2S virtual-circuit");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = oess_provision(desc, entry->vcEnd, rmtVcEnd,
-                &entry->circuitId);
+	if (status) {
+		log_add("Couldn't stop multicast LDM sender process");
+	}
+	else {
+		char* const desc = me_newDesc(entry);
 
-        if (status)
-            log_add("Couldn't add host to AL2S virtual circuit");
+		if (desc == NULL) {
+			log_add("Couldn't get description of AL2S virtual-circuit");
+			status = LDM7_SYSTEM;
+		}
+		else {
+			status = oess_provision(desc, entry->vcEnd, rmtVcEnd,
+					&entry->circuitId);
 
-        free(desc);
-    } // `desc` allocated
+			if (status)
+				log_add("Couldn't add host to AL2S virtual circuit");
+
+			free(desc);
+		} // `desc` allocated
+
+		status = mldm_startMldmIfStopped(entry->info);
+	} // Multicast LDM sender process was stopped or doesn't exist
 
     return status;
 }
 
 /**
- * Destroys the virtual circuit of a multicast entry.
+ * Shrinks the multipoint VLAN by destroying the virtual circuit of a multicast
+ * entry.
  *
  * @param[in,out] entry       Multicast entry
  * @param[in]     recvEnd     Receiving (remote) virtual-circuit endpoint
+ * @retval        0           Success
+ * @retval        LDM7_SYSTEM Failure. `log_add()` called.
  */
-static void
-me_destroyVirtCirc(
+static Ldm7Status
+me_shrinkVlan(
         McastEntry* const restrict       entry,
         const VcEndPoint* const restrict recvEnd)
 {
-    if (entry->circuitId) {
-        char* const desc = me_newDesc(entry);
+	/**
+	 * Because re-configuration of the AL2S multipoint VLAN can take minutes and
+	 * no downstream FMTP module will receive anything during that time, any
+	 * existing multicast LDM sender process is stopped while the re-
+	 * configuration occurs.
+	 */
+    int status = mldm_stopMldmIfRunning(entry->info);
 
-        if (desc == NULL) {
-            log_add("Couldn't get description of AL2S virtual-circuit");
-        }
-        else {
-            oess_remove(desc, recvEnd);
-            free(desc);
-            free(entry->circuitId);
-            entry->circuitId = NULL;
-        }
-    }
+	if (status) {
+		log_add("Couldn't stop multicast LDM sender process");
+	}
+	else {
+		if (entry->circuitId) {
+			char* const desc = me_newDesc(entry);
+
+			if (desc == NULL) {
+				log_add("Couldn't get description of AL2S virtual-circuit");
+			}
+			else {
+				oess_remove(desc, recvEnd);
+				free(desc);
+				free(entry->circuitId);
+				entry->circuitId = NULL;
+			}
+		}
+
+		status = mldm_startMldmIfStopped(entry->info);
+    } // Multicast LDM sender process stopped or doesn't exist
+
+	return status;
 }
 
 /**
@@ -1289,51 +1428,53 @@ me_subscribe(
         const SepMcastInfo** const restrict smi,
         CidrAddr* const restrict            fmtpClntCidr)
 {
-    int status = me_usesVlan(entry)
-            ? me_createVirtCirc(entry, rmtVcEnd)
-            : 0;
+	int status = 0;
 
-    if (status == 0) {
-        /*
-         * Sets the port numbers of the FMTP server & RPC-command server of
-         * the multicast LDM sender process
-         */
-        status = me_startIfNot(entry, retxTimeout);
+	if (me_usesVlan(entry))
+		status = me_augmentVlan(entry, rmtVcEnd);
 
-        if (status) {
-            log_add("Couldn't ensure running multicast sender");
-        }
-        else {
-            //char* const str = smi_toString(entry->info);
-            //log_notice("me_setSubscriptionReply(): entry->info=%s", str);
-            //free(str);
+	if (status == 0) {
+		/*
+		 * Sets the port numbers of the FMTP server & RPC-command server
+		 * of the multicast LDM sender process
+		 */
+		status = me_execMldmIfNot(entry, retxTimeout);
 
-            if (me_usesVlan(entry)) {
-                in_addr_t fmtpClntAddr;
+		if (status) {
+			log_add("Couldn't ensure running multicast LDM sender process");
+		}
+		else {
+			//char* const str = smi_toString(entry->info);
+			//log_notice("me_setSubscriptionReply(): entry->info=%s", str);
+			//free(str);
 
-                status = mldm_getFmtpClntAddr(&fmtpClntAddr);
+			if (me_usesVlan(entry)) {
+				in_addr_t fmtpClntAddr;
 
-                if (status == 0)
-                    cidrAddr_init(fmtpClntCidr, fmtpClntAddr, entry->subnetLen);
-            } // Sending FMTP multicasts on multipoint VLAN
-            else {
-                status = mldm_allow(clntAddr);
+				status = mldm_getFmtpClntAddr(&fmtpClntAddr);
 
-                if (status) {
-                    log_add("mldm_allow() failure");
-                }
-                else {
-                    cidrAddr_init(fmtpClntCidr, clntAddr, 32);
-                }
-            } // Sending FMTP doesn't multicast on multipoint VLAN
+				if (status == 0)
+					cidrAddr_init(fmtpClntCidr, fmtpClntAddr,
+							entry->subnetLen);
+			} // Sending FMTP multicasts on multipoint VLAN
+			else {
+				status = mldm_allow(clntAddr);
 
-            if (status == 0)
-                *smi = entry->info;
-        } // Multicast LDM sender is running
+				if (status) {
+					log_add("mldm_allow() failure");
+				}
+				else {
+					cidrAddr_init(fmtpClntCidr, clntAddr, 32);
+				}
+			} // Sending FMTP doesn't multicast on multipoint VLAN
 
-        if (status && me_usesVlan(entry))
-            me_destroyVirtCirc(entry, rmtVcEnd);
-    } // Virtual circuit to FMTP client created if appropriate
+			if (status == 0)
+				*smi = entry->info;
+		} // Multicast LDM sender is running
+
+		if (status && me_usesVlan(entry))
+			me_shrinkVlan(entry, rmtVcEnd);
+	} // FMTP client added to multipoint VLAN if appropriate
 
     return status;
 }
@@ -1368,7 +1509,7 @@ me_unsubscribe(
                     inet_ntoa(addr));
         }
 
-        me_destroyVirtCirc(entry, recvEnd);
+        status = me_shrinkVlan(entry, recvEnd);
     } // Associated multicast LDM sender uses a multipoint VLAN
 
     return status;
