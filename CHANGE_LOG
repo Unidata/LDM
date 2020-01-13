@@ -1,4 +1,4 @@
-6.13.12.35	2019-12-30T12:46:45-0700
+6.13.12.36	2020-01-13T14:25:25-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -55,6 +55,8 @@
         * plotmetrics: Corrected sense of local/remote port connections. They
           were reversed all this time.
         * Put $LDMHOME/util at head of PATH to support customization
+        * Changed URL for GEMPAK tables updates from "git@github..." to 
+          "https://..." because the former required a key from Gilbert
 
     NOAAPort:
         * Changed pre-installation instruction to recommend disabling UDP packet
@@ -150,6 +152,8 @@
             * Added check of logging destination for mldm_sender(1) execution
             * Assert that the logging module doesn't hold a mutex lock before
               calling fork()
+            * Stop multicast LDM sender, mldm_sender(1), during multipoint VLAN
+              reconfiguration
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
