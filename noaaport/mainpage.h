@@ -117,7 +117,7 @@
  * that option is specified, then the ingest processes will log to the given
  * destination.
  *
- * @subsection syslogd Using \c syslogd(8) logging
+ * @subsection syslogd Using syslogd(8) logging
  * We've found it useful to override the
  * default logging destination and have each instance of
  * \link noaaportIngester.c \c noaaportIngester \endlink or
