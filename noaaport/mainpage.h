@@ -42,7 +42,9 @@
  sysctl -p
 \endverbatim
  * If, after making these changes and (re)starting the LDM, the LDM doesn't see
- * any incoming data, then you should try rebooting your system.
+ * any incoming data, then you should try rebooting your system and (optionally)
+ * using the \c tcpdump(8) utility to verify that UDP packets are arriving at
+ * the relevant interface.
  *
  * <hr>
  *
@@ -51,15 +53,23 @@
  * needed to read and process the DVB-S stream(s).  Here's one possibility
  * using the \link noaaportIngester.c \c noaaportIngester \endlink program and
  * the \c keep_running script to ensure that the program is restarted if it
- * crashes (due to a malformed GRIB2 message, for example):
+ * crashes (due to a malformed GRIB2 message, for example).
  *
  * \verbatim
- # DVB-S ingest
- EXEC    "keep_running noaaportIngester -m 224.0.1.1"
- EXEC    "keep_running noaaportIngester -m 224.0.1.2"
- EXEC    "keep_running noaaportIngester -m 224.0.1.3"
- EXEC    "keep_running noaaportIngester -m 224.0.1.4"
+ # NOAAPort DVB-S ingest
+ EXEC "keep_running noaaportIngester -m 224.0.1.1  -l var/logs/nwstg.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.2  -l var/logs/goes.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.3  -l var/logs/nwstg2.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.4  -l var/logs/oconus.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.5  -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.6  -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.7  -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.8  -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.9  -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.0.1.10 -l var/logs/nother.log"
+ EXEC "keep_running noaaportIngester -m 224.1.1.1  -l var/logs/wxwire.log"
 \endverbatim
+ * Note that the \c "-l" option is used to separate log messages.
  *
  * Alternatively, the deprecated \link dvbs_multicast.c \c dvbs_multicast
  * \endlink and \link readnoaaport.c \c
@@ -71,12 +81,14 @@
  EXEC    "keep_running dvbs_multicast -m 224.0.1.2"
  EXEC    "keep_running dvbs_multicast -m 224.0.1.3"
  EXEC    "keep_running dvbs_multicast -m 224.0.1.4"
+ ...
 
  # Shared-memory reading and data-product creation & insertion processes
  EXEC    "keep_running readnoaaport -m 224.0.1.1"
  EXEC    "keep_running readnoaaport -m 224.0.1.2"
  EXEC    "keep_running readnoaaport -m 224.0.1.3"
  EXEC    "keep_running readnoaaport -m 224.0.1.4"
+ ...
 \endverbatim
  *
  * These \c ldmd.conf actions create a \link dvbs_multicast.c \c
@@ -92,10 +104,22 @@
  * <hr>
  *
  * @section logging Logging
- * The programs in this system use the LDM 
- * logging facility.  The default log file for the LDM is, typically,
- * \c ~/logs/ldmd.log.  We've found it useful to override the
- * default logging and have each instance of
+ * The programs that ingest NOAAPort use the same logging mechanism as the
+ * rest of the LDM package. This means that the ingest programs will either use
+ * the default LDM logging mechanism or one based on \c syslogd(8) -- depending
+ * on how the package was configured. See the section on logging in the LDM
+ * reference documentation for details.
+ *
+ * @subsection default Using default LDM logging
+ * The destination for log messages depends on the \c -l \e pathname option. If
+ * no such option is specified, then the ingest processes will log
+ * to the default LDM log file (typically \c ~/var/logs/ldmd.log). If, however,
+ * that option is specified, then the ingest processes will log to the given
+ * destination.
+ *
+ * @subsection syslogd Using \c syslogd(8) logging
+ * We've found it useful to override the
+ * default logging destination and have each instance of
  * \link noaaportIngester.c \c noaaportIngester \endlink or
  * \link readnoaaport.c \c readnoaaport \endlink
  * write a notice of every processed product to its own log file.
@@ -114,13 +138,14 @@
 \endverbatim
  *
  * If you are not interested in logging to seperate files, simply omit
- * the \c -u \e X option.
+ * the \c -u \e X option and skip the rest of this section.
  *
- * Since LDM logging uses \c syslogd(8), one must add additional
- * configuration lines to \c /etc/syslog.conf. 
+ * If you do choose this approach, then you must add additional
+ * configuration lines to \c syslogd(8)'s configuration-file,
+ * \c /etc/syslog.conf.
  * The standard additions to \c /etc/syslog.conf for the LDM are:
  *
- * - Inclusion of \c local0.none in the default system logginf file
+ * - Inclusion of \c local0.none in the default system logging file
  *
  * - Addition of a line that says where to write log messages for log
  *   facility '0'.
@@ -133,7 +158,7 @@
  local0.debug                                                         /home/ldm/logs/ldmd.log
 \endverbatim
  *
- * To setup \c syslogd(8) to log to a different file for each ingest script,
+ * To setup \c syslogd(8) to log to a different file for each ingester,
  * one has to add more entries to \c /etc/syslog.conf.  Here is an example
  * of how we have \c /etc/syslog.conf setup on our Fedora system
  * that is running the LDM and ingesting the \c nwstg2 and \c oconus streams
