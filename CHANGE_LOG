@@ -1,4 +1,4 @@
-6.13.12.36	2020-01-13T14:25:25-0700
+6.13.12.37	2020-01-22T08:51:06-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -63,6 +63,7 @@
           sequence checking.
         * Created keep_running(1) script to ensure than NOAAPort ingesters are
           restarted if they crash. Added examples to NOAAPort documentation.
+        * Updated main page of Doxygen-based documentation
 
     Documentation:
         Troubleshooting webpage:
