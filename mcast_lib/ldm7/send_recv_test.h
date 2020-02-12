@@ -18,7 +18,7 @@
 
 //#define HELLO_PORT  12345
 //#define HELLO_PORT  1 // Requires superuser privileges
-#define HELLO_PORT  38800
+#define HELLO_PORT  3880
 
 //#define HELLO_GROUP "239.0.0.37" // Works. 239/8 is "administratively scoped"
 
