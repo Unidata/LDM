@@ -406,7 +406,12 @@ main(int ac, char *av[])
         }
 
         setQueuePath(pqfname);
-        log_notice_q("Starting Up");
+
+        {
+			char cmdBuf[LINE_MAX];
+			log_notice("Starting Up {cmd: \"%s\"}",
+					ldm_formatCmd(cmdBuf, sizeof(cmdBuf), ac, av));
+        }
 
         if ('/' != conffilename[0]) {
             /*
