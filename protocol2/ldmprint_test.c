@@ -175,6 +175,14 @@ static void test_pc_format(void)
     //(void)printf("buf = \"%s\"\n", buf);
 }
 
+static void test_formatCmd(void)
+{
+	const char* argv[] = {"cmd", "first", "whitespace arg", "last"};
+	char        buf[LINE_MAX];
+	CU_ASSERT_STRING_EQUAL(ldm_formatCmd(buf, sizeof(buf), 4, argv),
+			"cmd first \"whitespace arg\" last");
+}
+
 int main(
         const int argc,
         const char* const * argv)
@@ -197,7 +205,8 @@ int main(
                         CU_ADD_TEST(testSuite, test_ft_format_ids_ddplus) &&
                         CU_ADD_TEST(testSuite, test_ps_format) &&
                         CU_ADD_TEST(testSuite, test_ts_format) &&
-                        CU_ADD_TEST(testSuite, test_pc_format)) {
+                        CU_ADD_TEST(testSuite, test_pc_format) &&
+                        CU_ADD_TEST(testSuite, test_formatCmd)) {
                     CU_basic_set_mode(CU_BRM_VERBOSE);
                     (void) CU_basic_run_tests();
                 }

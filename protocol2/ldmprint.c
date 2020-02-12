@@ -1,5 +1,5 @@
 /*
- *   Copyright 2018, University Corporation for Atmospheric Research
+ *   Copyright 2020, University Corporation for Atmospheric Research
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
  */
@@ -13,10 +13,10 @@
 #include "ldmprint.h"
 #include "atofeedt.h"           /* for fassoc[] */
 #include "log.h"
-#include <timestamp.h>
+#include "timestamp.h"
 
-#include <log.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdarg.h>
@@ -158,6 +158,37 @@ ldm_format(
     char* buf = ldm_vformat(initSize, fmt, args);
     va_end(args);
     return buf;
+}
+
+
+const char*
+ldm_formatCmd(
+		char* const        buf,
+		const size_t       size,
+		int                argc,
+		const char* const* argv)
+{
+	size_t      nleft = size;
+	char*       cp = buf;
+	const char* delim = "";
+
+	for (int i = 0; i < argc; ++i) {
+		const char* const arg = argv[i];
+		const ssize_t     nbytes = (strcspn(arg, " \t") == strlen(arg))
+				? snprintf(cp, nleft, "%s%s", delim, arg)
+				: snprintf(cp, nleft, "%s\"%s\"", delim, arg);
+		delim = " ";
+
+		if (nbytes >= nleft) {
+			cp[nleft-1] = 0;
+			break;
+		}
+
+		nleft -= nbytes;
+		cp += nbytes;
+	}
+
+	return buf;
 }
 
 

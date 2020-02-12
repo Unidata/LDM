@@ -54,6 +54,22 @@ ldm_format(
     const char* const fmt,
     ...);
 
+/**
+ * Formats a command-line from an argument vector.
+ *
+ * @param[out] buf  Buffer into which to format the argument vector
+ * @param[in] size  Size of the buffer in bytes
+ * @param[in] argc  Number of arguments
+ * @param[in] argv  Argument vector
+ * @return          The buffer
+ */
+const char*
+ldm_formatCmd(
+		char* const        buf,
+		const size_t       size,
+		int                argc,
+		const char* const* argv);
+
 extern int
 sprint_time_t(char *buf, size_t bufsize, time_t ts); /* obsolete ? */
 
