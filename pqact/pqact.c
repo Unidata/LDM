@@ -121,17 +121,21 @@ cleanup(void)
         if (pq)
             (void)pq_close(pq);
 
-        if (tvCmp(palt_last_insertion, TS_ZERO, >=) &&
-				tvCmp(palt_last_insertion, TS_ENDT, <=)) {
+        if (tvCmp(palt_last_insertion, TS_ZERO, <) ||
+				tvCmp(palt_last_insertion, TS_ENDT, >)) {
+            log_notice("No product was processed");
+        }
+        else {
             timestampt  now;
 
             (void)set_timestamp(&now);
-            log_notice_q("Behind by %g s",
+            log_notice("Last product processed was inserted %g s ago",
                     d_diff_timestamp(&now, &palt_last_insertion));
 
             if (stateWrite(&palt_last_insertion) < 0) {
-                log_error_q("Couldn't save insertion-time of last processed "
+                log_add("Couldn't save insertion-time of last processed "
                     "data-product");
+                log_flush_error();
             }
         }
 

@@ -35,10 +35,10 @@
 #ifndef TEST_DATE_SUB
 
 /*
- * When last successfully-processed data-product was inserted into
+ * When the last, successfully-processed data-product was inserted into
  * product-queue:
  */
-timestampt                   palt_last_insertion = {0, 0};
+timestampt palt_last_insertion = {-1, -1}; // TS_NONE
 
 /* 
  * A pattern/action file "line" gets compiled into one of these.
