@@ -163,10 +163,10 @@ ldm_format(
 
 const char*
 ldm_formatCmd(
-		char* const        buf,
-		const size_t       size,
-		int                argc,
-		const char* const* argv)
+		char* const  buf,
+		const size_t size,
+		int          argc,
+		char** const argv)
 {
 	size_t      nleft = size;
 	char*       cp = buf;
