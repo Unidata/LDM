@@ -1,4 +1,4 @@
-6.13.12.38	2020-02-12T15:19:40-0700
+6.13.12.39	2020-02-14T09:16:30-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -19,6 +19,13 @@
         * Correct parsing/formatting of state file with negative seconds. Again,
           shouldn't make any difference.
         * Modified "Starting Up" message to log the command-line
+        * Changed log message at process termination from
+              Behind by %g s
+          to either
+              No product was processed
+          or
+              Last product processed was inserted %g s ago
+          to better reflect the meaning
 
     Logging:
         * Replaced minimum field-width in default log messages with canonical
