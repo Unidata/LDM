@@ -1225,7 +1225,7 @@ downlet_requestBacklog(const BacklogSpec* backlog);
  *   - The request has been successfully made;
  *   - An error occurs; or
  *   - `backlogger_stop()` is called
- * Calls `downlet_taskTerminate()` on exit.
+ * Calls `downlet_taskCompleted()` on exit.
  *
  * @param[in] arg   Ignored
  * @retval    NULL  Always
@@ -1468,7 +1468,7 @@ mcastRcvr_destroy()
 
 /**
  * Receives data-products via multicast. Doesn't return until `mcastRcvr_stop()`
- * is called or an error occurs. Calls `downlet_taskTerminated()` on exit.
+ * is called or an error occurs. Calls `downlet_taskCompleted()` on exit.
  *
  * @param[in] arg            Ignored
  * @retval    NULL           Always
