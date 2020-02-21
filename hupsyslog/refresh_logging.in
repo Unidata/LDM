@@ -11,7 +11,7 @@ set -e
 pid_pathname="$LDMHOME"/ldmd.pid 
 if test -r "$pid_pathname"; then
     if pid=`cat "$pid_pathname"`; then
-        # NB: Using command(1) avoids non-standard shell built-in kill(1)-s
-        command kill -s USR1 -- -"$pid"
+        # NB: Explicit pathname avoids non-standard shell built-in kill(1)-s
+        /bin/kill -s USR1 -- -"$pid"
     fi
 fi
