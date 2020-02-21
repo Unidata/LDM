@@ -1,4 +1,4 @@
-6.13.12.40	2020-02-14T13:22:34-0700
+6.13.12.41	2020-02-21T09:33:21-0700
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -28,14 +28,19 @@
           to better reflect the meaning
 
     Logging:
-        * Replaced minimum field-width in default log messages with canonical
-          column-start positions to reduce line lengths and CPU usage
-        * Improve concurrency:
-            * Unlock file and mutex if thread cancelled. Irrelevant for LDM6.
-            * Added automatic deletion of message queue when thread exits, so 
-              calling log_free() is no longer necessary.
-            * Added use of pthread_atfork(). Irrelevant for LDM6.
-        * Added "Terminating logging" message at INFO priority
+        * Library:
+                * Replaced minimum field-width in default log messages with
+                  canonical column-start positions to reduce line lengths and
+                  CPU usage
+                * Improved concurrency:
+                    * Unlocked file and mutex if thread cancelled. Irrelevant
+                      for LDM6.
+                    * Added automatic deletion of message queue when thread
+                      exits, so calling log_free() is no longer necessary.
+                    * Added use of pthread_atfork(). Irrelevant for LDM6.
+                * Added "Terminating logging" message at INFO priority
+        * refresh_logging(1): replaced "command kill" with "/bin/kill" to ensure
+          correct behavior
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
