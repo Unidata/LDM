@@ -125,6 +125,7 @@
 000 001 225 012 Freezing Rain                    kg m**-2             FRZL             0  -9999.00
 000 001 226 000 Pblackominant Weather            -                    PWTHER           0  -9999.00
 000 001 228 008 Flat Ice Accumulation (FRAM)     kg m**-2             FICEAC           0  -9999.00
+000 001 228 010 Flat Ice Accumulation (FRAM)     kg m**-2             FICEAC           0  -9999.00
 000 001 231 008 Precipitation Potential Index    %                    PPINDX           0  -9999.00
 000 001 232 005 Probability Cloud Ice Present    %                    PROBCIP          0  -9999.00
 000 001 233 000 Snow Liquid ratio                kg kg-1              SNOWLR           0  -9999.00
@@ -608,6 +609,7 @@
 010 003 200 000 Surface Salinity Trend           psu per day          SSST             0  -9999.00
 010 003 201 000 Kinetic Energy                   J kg-1               KENG             0  -9999.00
 010 003 202 000 Salt Flux                        kg m-2 s-1           SLTFL            0  -9999.00
+010 003 204 000 Freezing Spray                   -                    FRZSPR           0  -9999.00
 010 003 242 000 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 242 010 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 243 000 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
