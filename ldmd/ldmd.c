@@ -69,6 +69,7 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
+static int      doSomething = 1; ///< Do something or just check config-file?
 static unsigned maxClients = 256;
 static int      exit_status = 0;
 
@@ -254,7 +255,8 @@ static void cleanup(
         /*
          * Delete the upstream LDM database.
          */
-       (void) uldb_delete(NULL);
+       if (doSomething)
+		   (void) uldb_delete(NULL);
     }
 
     /*
@@ -799,7 +801,6 @@ int main(
     unpriv(); // Only become root when necessary
 
     int         status;
-    int         doSomething = 1;
     in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY);
     unsigned    ldmPort = LDM_PORT;
     bool        becomeDaemon = true; // default
