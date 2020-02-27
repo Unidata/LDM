@@ -192,6 +192,8 @@
 000 002 224 009 Ventilation Rate                 m**2 s**-1           VRATE            0  -9999.00
 000 002 225 000 Transport Wind Speed             m s-1                TRWSPD           0  -9999.00
 000 002 226 000 Transport Wind Direction         Deg                  TRWDIR           0  -9999.00
+000 002 231 000 Tropical Wind Direction          Deg                  TPWDIR           0  -9999.00
+000 002 232 000 Tropical Wind Speed              m s-1                TPWSPD           0  -9999.00
 !
 ! mass
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
