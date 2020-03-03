@@ -8,5 +8,5 @@ tmpdir=/tmp/gempak-tables$$
 git clone https://github.com/Unidata/GEMPAK-Tables.git $tmpdir
 cd $ldmhome/src/gempak/tables
 mv -f $tmpdir/* .
-make install >install.log 2>&1 && echo GEMPAK tables updated
+mv -f *.tbl $ldmhome/etc
 rm -rf $tmpdir
