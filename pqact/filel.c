@@ -1359,7 +1359,8 @@ int unio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_add_syserr("lseek() failure on file %s", entry->path);
+                    log_syserr("Couldn't seek to beginning of file %s",
+                    		entry->path);
                 }
             }
 
@@ -1368,8 +1369,17 @@ int unio_prodput(
                 log_add("Couldn't write product to file \"%s\"", entry->path);
             }
             else {
-                if (entry_isFlagSet(entry, FL_OVERWRITE))
-                    (void) ftruncate(entry->handle.fd, sz);
+                if (entry_isFlagSet(entry, FL_OVERWRITE)) {
+                	const off_t fileSize = lseek(entry->handle.fd, 0, SEEK_CUR);
+
+                	if (fileSize == (off_t)-1) {
+						log_syserr("Couldn't get position in file %s",
+								entry->path);
+                	}
+                	else {
+						(void) ftruncate(entry->handle.fd, fileSize);
+                	}
+                }
 
                 status = flushIfAppropriate(entry);
                 if (status) {
@@ -1604,16 +1614,26 @@ int stdio_prodput(
                     /*
                      * The "file" must be a pipe or FIFO.
                      */
-                    log_syserr("Couldn't seek to BOF: %s",
-                            entry->path);
+                    log_syserr("Couldn't seek to beginning of file %s",
+                    		entry->path);
                 }
             }
 
             status = stdio_put(entry, prodp->info.ident, data, sz);
 
             if (status == 0) {
-                if (entry_isFlagSet(entry, FL_OVERWRITE))
-                    (void) ftruncate(fileno(entry->handle.stream), sz);
+                if (entry_isFlagSet(entry, FL_OVERWRITE)) {
+                	const off_t fileSize = ftello(entry->handle.stream);
+
+                	if (fileSize == (off_t)-1) {
+						log_syserr("Couldn't get position in file %s",
+								entry->path);
+                	}
+                	else {
+						(void) ftruncate(fileno(entry->handle.stream),
+								fileSize);
+                	}
+                }
 
                 status = flushIfAppropriate(entry);
 
