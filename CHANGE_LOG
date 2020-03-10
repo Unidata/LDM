@@ -1,4 +1,4 @@
-6.13.12.41	2020-02-21T09:33:21-0700
+6.13.12.42	2020-03-10T13:08:03-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -26,21 +26,30 @@
           or
               Last product processed was inserted %g s ago
           to better reflect the meaning
+        * Corrected truncation of output file by the FILE action when both
+          "-overwrite" and "-metadata" are specified. Before, the file would be
+          truncated to the size of the data-product even though it now has a
+          metadata header. Thanks to Bryan for spotting and analyzing this.
 
     Logging:
         * Library:
-                * Replaced minimum field-width in default log messages with
-                  canonical column-start positions to reduce line lengths and
-                  CPU usage
-                * Improved concurrency:
-                    * Unlocked file and mutex if thread cancelled. Irrelevant
-                      for LDM6.
-                    * Added automatic deletion of message queue when thread
-                      exits, so calling log_free() is no longer necessary.
-                    * Added use of pthread_atfork(). Irrelevant for LDM6.
-                * Added "Terminating logging" message at INFO priority
+            * Replaced minimum field-width in default log messages with
+              canonical column-start positions to reduce line lengths and
+              CPU usage
+            * Improved concurrency:
+                * Unlocked file and mutex if thread cancelled. Irrelevant
+                  for LDM6.
+                * Added automatic deletion of message queue when thread
+                  exits, so calling log_free() is no longer necessary.
+                * Added use of pthread_atfork(). Irrelevant for LDM6.
+            * Added "Terminating logging" message at INFO priority
         * refresh_logging(1): replaced "command kill" with "/bin/kill" to ensure
           correct behavior
+
+    Top-level LDM server, ldmd(1):
+        * Eliminated superfluous error messages at process termination about the
+          upstream LDM database not existing if the "-n" (do nothing) option is
+          specified.
 
     Downstream LDM-6:
         * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
@@ -77,6 +86,19 @@
         * Created keep_running(1) script to ensure than NOAAPort ingesters are
           restarted if they crash. Added examples to NOAAPort documentation.
         * Updated main page of Doxygen-based documentation
+        * Added new parameters to the NCEP GEMPAK tables:
+            * 000 001 228 010 Flat Ice Accumulation (FRAM)     kg m**-2
+                  FICEAC           0  -9999.00
+            * 010 003 204 000 Freezing Spray                   -
+                  FRZSPR           0  -9999.00
+            * 000 002 231 000 Tropical Wind Direction          Deg
+                  TPWDIR           0  -9999.00
+            * 000 002 232 000 Tropical Wind Speed              m s-1
+                  TPWSPD           0  -9999.00
+            * 000 001 234 008 Precipitation Duration           hr
+                  PCPDUR           0  -9999.00
+        * updateGempakTables(1): changed the "make install..." to
+          "mv -f *.tbl..." to make it independent of the build mechanism.
 
     Documentation:
         Troubleshooting webpage:
