@@ -70,8 +70,8 @@
           multicast reception is enabled -- which isn't by default.
 
     Upstream LDM:
-        Don't terminate prevously-executing upstream LDM with a different
-        protocol vesion number.
+        Don't terminate previously-executing upstream LDM with a different
+        protocol version number.
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
@@ -83,7 +83,7 @@
     NOAAPort:
         * Changed pre-installation instruction to recommend disabling UDP packet
           sequence checking.
-        * Created keep_running(1) script to ensure than NOAAPort ingesters are
+        * Created keep_running(1) script to ensure that NOAAPort ingesters are
           restarted if they crash. Added examples to NOAAPort documentation.
         * Updated main page of Doxygen-based documentation
         * Added new parameters to the NCEP GEMPAK tables:

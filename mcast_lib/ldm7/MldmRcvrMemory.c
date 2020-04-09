@@ -1070,7 +1070,7 @@ dump(
  *
  * @pre              The multicast receiver memory is unlocked.
  * @param[in] mrm    The multicast receiver memory.
- * @param[in] fiq    The queue to use.
+ * @param[in] piq    The product-index queue to use.
  * @param[in] id     The product index to add.
  * @retval    true   Success.
  * @retval    false  Error. `log_add()` called.
@@ -1079,11 +1079,11 @@ dump(
 static bool
 addFile(
     McastReceiverMemory* const restrict mrm,
-    ProdIndexQueue* const restrict      fiq,
-    const FmtpProdIndex                iProd)
+    ProdIndexQueue* const restrict      piq,
+    const FmtpProdIndex                 iProd)
 {
     lock(mrm);
-    bool success = piq_add(fiq, iProd) == 0;
+    bool success = piq_add(piq, iProd) == 0;
     if (success)
         mrm->modified = true;
     unlock(mrm);

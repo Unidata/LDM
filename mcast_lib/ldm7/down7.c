@@ -46,17 +46,18 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <netdb.h>
+#include <poll.h>
 #include <pthread.h>
-#include <sys/select.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
-#include <poll.h>
-#include <sys/wait.h>
+#include <sys/select.h>
 #include <sys/socket.h>
-#include <netdb.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -475,10 +476,10 @@ up7Proxy_testConnection()
  ******************************************************************************/
 
 typedef enum {
-    TASK_UNINITIALIZED, ///< Task is uninitialized
-    TASK_INITIALIZED,   ///< Task is initialized
-    TASK_STARTED,       ///< Task has started
-    TASK_STOPPED        ///< Task has completed
+    TASK_UNINITIALIZED = 0, ///< Task is uninitialized. `static` value
+    TASK_INITIALIZED,       ///< Task is initialized
+    TASK_STARTED,           ///< Task has started
+    TASK_STOPPED            ///< Task has completed
 } TaskState;
 
 /******************************************************************************
@@ -571,54 +572,45 @@ backstop_run(void* const arg)
 {
     log_debug("Entered");
 
-    int status;
+	int status;
 
-    mutex_lock(&backstop.mutex);
-        const bool run = backstop.state == TASK_INITIALIZED;
+	for (;;) {
+		/*
+		 * The semantics and order of the following actions are necessary to
+		 * preserve the meaning of the two queues and to ensure that all missed
+		 * data-products are received following a restart.
+		 */
+		FmtpProdIndex iProd;
 
-        if (run)
-            backstop.state = TASK_STARTED;
-    mutex_unlock(&backstop.mutex);
+		if (!mrm_peekMissedFileWait(backstop.mrm, &iProd)) {
+			log_debug("The queue of missed data-products has been shutdown");
+			status = LDM7_SHUTDOWN;
+			break;
+		}
+		else {
+			if (!mrm_addRequestedFile(backstop.mrm, iProd)) {
+				log_add("Couldn't add FMTP product-index to requested-queue");
+				status = LDM7_SYSTEM;
+				break;
+			}
+			else {
+				/* The queue can't be empty */
+				(void)mrm_removeMissedFileNoWait(backstop.mrm, &iProd);
 
-    if (run) {
-        for (;;) {
-            /*
-             * The semantics and order of the following actions are necessary to
-             * preserve the meaning of the two queues and to ensure that all missed
-             * data-products are received following a restart.
-             */
-            FmtpProdIndex iProd;
+				status = up7Proxy_reqProd(iProd);
 
-            if (!mrm_peekMissedFileWait(backstop.mrm, &iProd)) {
-                log_debug("The queue of missed data-products has been shutdown");
-                status = LDM7_SHUTDOWN;
-                break;
-            }
-            else {
-                if (!mrm_addRequestedFile(backstop.mrm, iProd)) {
-                    log_add("Couldn't add FMTP product-index to requested-queue");
-                    status = LDM7_SYSTEM;
-                    break;
-                }
-                else {
-                    /* The queue can't be empty */
-                    (void)mrm_removeMissedFileNoWait(backstop.mrm, &iProd);
+				if (status) {
+					log_add("Couldn't request product");
+					break;
+				}
+			} // product-index added to requested-but-not-received queue
+		} // have peeked-at product-index from missed-but-not-requested queue
+	} // Indefinite loop
 
-                    status = up7Proxy_reqProd(iProd);
+	log_debug("Calling downlet_taskCompleted(%d)", status);
+	downlet_taskCompleted(status);
 
-                    if (status) {
-                        log_add("Couldn't request product");
-                        break;
-                    }
-                } // product-index added to requested-but-not-received queue
-            } // have peeked-at product-index from missed-but-not-requested queue
-        }
-
-        log_debug("Calling downlet_taskCompleted(%d)", status);
-        downlet_taskCompleted(status);
-
-        log_flush_error(); // Just in case
-    }
+	log_flush_error(); // Just in case
 
     log_debug("Returning");
     log_free();        // Because end of thread
@@ -646,15 +638,18 @@ backstop_start(McastReceiverMemory* const mrm)
         log_add("Couldn't initialize backstop");
     }
     else {
-        mutex_lock(&backstop.mutex);
-            status = pthread_create(&backstop.thread, NULL, backstop_run, NULL);
-        mutex_unlock(&backstop.mutex);
+		mutex_lock(&backstop.mutex);
+			status = pthread_create(&backstop.thread, NULL, backstop_run, NULL);
 
-        if (status) {
+			if (status == 0)
+				backstop.state = TASK_STARTED;
+		mutex_unlock(&backstop.mutex);
+
+		if (status) {
             log_add("Couldn't create thread for backstop");
             backstop_destroy();
             status = LDM7_SYSTEM;
-        }
+		}
     } // Backstop initialized
 
     return status;
@@ -855,112 +850,102 @@ ucastRcvr_run(void* const restrict arg)
 {
     log_debug("Entered");
 
-    mutex_lock(&ucastRcvr.mutex);
-        const bool run = ucastRcvr.state == TASK_INITIALIZED;
+	blockSigs(SIGCONT, SIGALRM, 0);
 
-        if (run)
-            ucastRcvr.state = TASK_STARTED;
-    mutex_unlock(&ucastRcvr.mutex);
+	int           status = 0;
+	const int     sock = ucastRcvr.xprt->xp_sock;
+	const int     timeout = interval * 1000; // Probably 30 seconds
+	struct pollfd pfd;
 
-    if (run) {
-        blockSigs(SIGCONT, SIGALRM, 0);
+	pfd.fd = sock;
+	pfd.events = POLLRDNORM;
 
-        int           status = 0;
-        const int     sock = ucastRcvr.xprt->xp_sock;
-        const int     timeout = interval * 1000; // Probably 30 seconds
-        struct pollfd pfd;
+	log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
+			timeout);
 
-        pfd.fd = sock;
-        pfd.events = POLLRDNORM;
+	mutex_lock(&ucastRcvr.mutex);
+		while (ucastRcvr.state == TASK_STARTED) {
 
-        log_info("Starting unicast receiver: sock=%d, timeout=%d ms", sock,
-                timeout);
+			// Excessive output
+			log_debug("Calling poll(): socket=%d, timeout=%d", sock,
+					timeout);
+			mutex_unlock(&ucastRcvr.mutex);
+				// poll() is async-signal safe
+				status = poll(&pfd, 1, timeout);
+			mutex_lock(&ucastRcvr.mutex);
 
+			if (0 == status) {
+				log_debug("Timeout");
+				continue; // Timeout
+			}
 
-        mutex_lock(&ucastRcvr.mutex);
-            while (ucastRcvr.state == TASK_STARTED) {
+			if (status < 0) {
+				if (errno == EINTR) {
+					log_debug("poll() was interrupted");
+					/*
+					 * Might not be meaningful. For example, the GNUlib
+					 * seteuid() function generates a non-standard signal in
+					 * order to synchronize UID changes amongst threads.
+					 */
+					status = 0;
+					continue;
+				}
+				log_debug("poll() failure");
+				log_add_syserr("poll() failure on socket %d to upstream "
+						"LDM7 %s", sock, ucastRcvr.remoteStr);
+				status = LDM7_SYSTEM;
+				break;
+			}
 
-                // Excessive output
-                log_debug("Calling poll(): socket=%d, timeout=%d", sock,
-                        timeout);
-                mutex_unlock(&ucastRcvr.mutex);
-                    // poll() is async-signal safe
-                    status = poll(&pfd, 1, timeout);
-                mutex_lock(&ucastRcvr.mutex);
+			if (pfd.revents & POLLERR) {
+				log_debug("Socket failure");
+				log_add("Error on socket %d to upstream LDM7 %s", sock,
+						ucastRcvr.remoteStr);
+				status = LDM7_SYSTEM;
+				break;
+			}
 
-                if (0 == status) {
-                    log_debug("Timeout");
-                    continue; // Timeout
-                }
+			if (pfd.revents & POLLHUP) {
+				log_debug("Socket closed");
+				log_add_syserr("Socket %d to upstream LDM7 %s was closed",
+						sock, ucastRcvr.remoteStr);
+				status = LDM7_SYSTEM;
+				break;
+			}
 
-                if (status < 0) {
-                    if (errno == EINTR) {
-                        log_debug("poll() was interrupted");
-                        /*
-                         * Might not be meaningful. For example, the GNUlib
-                         * seteuid() function generates a non-standard signal in
-                         * order to synchronize UID changes amongst threads.
-                         */
-                        status = 0;
-                        continue;
-                    }
-                    log_debug("poll() failure");
-                    log_add_syserr("poll() failure on socket %d to upstream "
-                            "LDM7 %s", sock, ucastRcvr.remoteStr);
-                    status = LDM7_SYSTEM;
-                    break;
-                }
+			if (pfd.revents & (POLLIN | POLLRDNORM)) {
+				/*
+				 * Processes RPC message. Calls select(). Calls
+				 * `ldmprog_7()`. Calls `svc_destroy(ucastRcvr.xprt)` on
+				 * error.
+				 */
+				log_debug("Got RPC message");
+				svc_getreqsock(sock);
 
-                if (pfd.revents & POLLERR) {
-                    log_debug("Socket failure");
-                    log_add("Error on socket %d to upstream LDM7 %s", sock,
-                            ucastRcvr.remoteStr);
-                    status = LDM7_SYSTEM;
-                    break;
-                }
+				if (!FD_ISSET(sock, &svc_fdset)) {
+					log_debug("Transport destroyed");
+					// `svc_getreqsock()` destroyed `ucastRcvr.xprt`
+					log_add("Connection to upstream LDM7 %s was closed by "
+							"RPC layer", ucastRcvr.remoteStr);
+					ucastRcvr.xprt = NULL; // To inform others
+					status = LDM7_RPC;
+					break;
+				}
+				else {
+					log_debug("RPC message processed");
+					status = 0;
+				}
+			} // Input is available
+		} // Input loop
+	mutex_unlock(&ucastRcvr.mutex);
 
-                if (pfd.revents & POLLHUP) {
-                    log_debug("Socket closed");
-                    log_add_syserr("Socket %d to upstream LDM7 %s was closed",
-                            sock, ucastRcvr.remoteStr);
-                    status = LDM7_SYSTEM;
-                    break;
-                }
+	if (status)
+		log_flush_error();
 
-                if (pfd.revents & (POLLIN | POLLRDNORM)) {
-                    /*
-                     * Processes RPC message. Calls select(). Calls
-                     * `ldmprog_7()`. Calls `svc_destroy(ucastRcvr.xprt)` on
-                     * error.
-                     */
-                    log_debug("Got RPC message");
-                    svc_getreqsock(sock);
+	log_debug("Calling downlet_taskCompleted(%d)", status);
+	downlet_taskCompleted(status);
 
-                    if (!FD_ISSET(sock, &svc_fdset)) {
-                        log_debug("Transport destroyed");
-                        // `svc_getreqsock()` destroyed `ucastRcvr.xprt`
-                        log_add("Connection to upstream LDM7 %s was closed by "
-                                "RPC layer", ucastRcvr.remoteStr);
-                        ucastRcvr.xprt = NULL; // To inform others
-                        status = LDM7_RPC;
-                        break;
-                    }
-                    else {
-                        log_debug("RPC message processed");
-                        status = 0;
-                    }
-                } // Input is available
-            } // Input loop
-        mutex_unlock(&ucastRcvr.mutex);
-
-        if (status)
-            log_flush_error();
-
-        log_debug("Calling downlet_taskCompleted(%d)", status);
-        downlet_taskCompleted(status);
-
-        unblockSigs(SIGCONT, SIGALRM, 0);
-    }
+	unblockSigs(SIGCONT, SIGALRM, 0);
 
     log_debug("Returning");
     log_free(); // Because end of thread
@@ -993,10 +978,18 @@ ucastRcvr_start(const int sock)
         mutex_lock(&ucastRcvr.mutex);
             status = pthread_create(&ucastRcvr.thread, NULL, ucastRcvr_run,
                     NULL);
-        mutex_unlock(&ucastRcvr.mutex);
+
+            if (status == 0) {
+            	/*
+            	 * State must be set while locked because `ucastRcvr_run()`
+            	 * accesses `ucastRcvr.state`
+            	 */
+            	ucastRcvr.state = TASK_STARTED;
+            }
+		mutex_unlock(&ucastRcvr.mutex);
 
         if (status) {
-            log_add("Couldn't create thread for unicast receiver");
+			log_add("Couldn't create thread for unicast receiver");
             ucastRcvr_destroy();
             status = LDM7_SYSTEM;
         }
@@ -1236,22 +1229,13 @@ backlogger_run(void* const arg)
 {
     log_debug("Entered");
 
-    mutex_lock(&backlogger.mutex);
-        const bool run = backlogger.state == TASK_INITIALIZED;
+	// SIGHUP sensitive
+	int status = downlet_requestBacklog(&backlogger.backlog);
 
-        if (run)
-            backlogger.state = TASK_STARTED;
-    mutex_unlock(&backlogger.mutex);
+	log_debug("Calling downlet_taskCompleted(%d)", status);
+	downlet_taskCompleted(status);
 
-    if (run) {
-        // SIGHUP sensitive
-        int status = downlet_requestBacklog(&backlogger.backlog);
-
-        log_debug("Calling downlet_taskCompleted(%d)", status);
-        downlet_taskCompleted(status);
-
-        log_flush_error(); // Just in case
-    }
+	log_flush_error(); // Just in case
 
     log_debug("Returning");
     log_free();        // Because end of thread
@@ -1286,6 +1270,9 @@ backlogger_start(
         mutex_lock(&backlogger.mutex);
             status = pthread_create(&backlogger.thread, NULL, backlogger_run,
                     NULL);
+
+            if (status == 0)
+            	backlogger.state = TASK_STARTED;
         mutex_unlock(&backlogger.mutex);
 
         if (status) {
@@ -1383,7 +1370,7 @@ mcastRcvr_init(
     log_assert(mcastInfo);
     log_assert(fmtpIface);
     log_assert(pq);
-    log_assert(mcastRcvr.state == TASK_UNINITIALIZED);
+    log_assert(mcastRcvr.state == TASK_UNINITIALIZED); // True because static & enum == 0
 
     (void)memset(&mcastRcvr, 0, sizeof(mcastRcvr));
 
@@ -1437,7 +1424,7 @@ mcastRcvr_init(
             if (status)
                 (void)mutex_destroy(&mcastRcvr.mutex);
         } // Mutex initialized
-    } // `fmtpSrvrId` is invalid
+    } // `fmtpSrvrId` is valid
 
     return status;
 }
@@ -1479,26 +1466,17 @@ mcastRcvr_run(void* const arg)
 {
     log_debug("Entered");
 
-    mutex_lock(&mcastRcvr.mutex);
-        const bool run = mcastRcvr.state == TASK_INITIALIZED;
+	int status = mlr_run(mcastRcvr.mlr);
+	/*
+	 * LDM7_INVAL     Invalid argument. `log_add()` called.
+	 * LDM7_MCAST     Multicast error. `log_add()` called.
+	 * LDM7_SHUTDOWN  Shutdown requested
+	 */
 
-        if (run)
-            mcastRcvr.state = TASK_STARTED;
-    mutex_unlock(&mcastRcvr.mutex);
+	log_debug("Calling downlet_taskCompleted(%d)", status);
+	downlet_taskCompleted(status);
 
-    if (run) {
-        int status = mlr_run(mcastRcvr.mlr);
-        /*
-         * LDM7_INVAL     Invalid argument. `log_add()` called.
-         * LDM7_MCAST     Multicast error. `log_add()` called.
-         * LDM7_SHUTDOWN  Shutdown requested
-         */
-
-        log_debug("Calling downlet_taskCompleted(%d)", status);
-        downlet_taskCompleted(status);
-
-        log_flush_error(); // Just in case
-    }
+	log_flush_error(); // Just in case
 
     log_debug("Returning");
     log_free();        // Because end of thread
@@ -1532,7 +1510,7 @@ mcastRcvr_start(
     log_assert(mcastInfo);
     log_assert(fmtpIface);
     log_assert(pq);
-    log_assert(mcastRcvr.state == TASK_UNINITIALIZED);
+    log_assert(mcastRcvr.state == TASK_UNINITIALIZED); // True because static & enum == 0
 
     int status = mcastRcvr_init(mcastInfo, fmtpIface, ifaceCidr, pq);
 
@@ -1540,16 +1518,19 @@ mcastRcvr_start(
         log_add("Couldn't initialize multicast receiver");
     }
     else {
-        mutex_lock(&mcastRcvr.mutex);
-            status = pthread_create(&mcastRcvr.thread, NULL, mcastRcvr_run,
-                    NULL);
-        mutex_unlock(&mcastRcvr.mutex);
+		mutex_lock(&mcastRcvr.mutex);
+			status = pthread_create(&mcastRcvr.thread, NULL, mcastRcvr_run,
+					NULL);
 
-        if (status) {
+			if (status == 0)
+				mcastRcvr.state = TASK_STARTED;
+		mutex_unlock(&mcastRcvr.mutex);
+
+		if (status) {
             log_add("Couldn't create thread for multicast receiver");
             mcastRcvr_destroy();
             status = LDM7_SYSTEM;
-        }
+		}
     } // Multicast receiver is initialized
 
     return status;
@@ -1558,7 +1539,7 @@ mcastRcvr_start(
 /**
  * Stops the multicast receiver concurrent task. Idempotent.
  *
- * @threadsafety       Compatible but unsafe
+ * @threadsafety       Safe
  * @asyncsignalsafety  Unsafe
  * @see `mcastRcvr_start()`
  * @see `mcastRcvr_run()`
@@ -1660,35 +1641,34 @@ static struct {
      */
     signaturet            prevLastMcast;
     pthread_mutex_t       mutex;            ///< Downstream LDM7 mutex
-    pthread_cond_t        cond;             ///< Downstream LDM7 condition var.
     uint64_t              numProds;         ///< Number of inserted products
     feedtypet             feedtype;         ///< Feed of multicast group
     VcEndPoint            vcEnd;            ///< Local virtual-circuit endpoint
     pthread_t             thread;           ///< Thread down7_run() executes on
-    int                   pipe[2];          ///< Signaling pipe
     bool                  prevLastMcastSet; ///< `prevLastMcast` set?
-    volatile sig_atomic_t terminate;        ///< Termination requested?
-    TaskState             state;            ///< State of downstream LDM7
-} down7;
+    volatile sig_atomic_t done;             ///< Termination requested?
+    volatile sig_atomic_t state;            ///< State of downstream LDM7
+    sem_t                 intrSem;          ///< Interrupt semaphore
+} down7 = {};
 
 /**
  * Data structure of the one-time, downstream LDM7. It is initialized and
  * destroyed on every connection attempt.
  */
 typedef struct downlet {
-    pthread_mutex_t mutex;            ///< Mutex
-    pthread_cond_t  cond;             ///< Condition variable
-    SepMcastInfo*   mcastInfo;        ///< information on multicast group
+    pthread_mutex_t       mutex;      ///< Mutex
+    pthread_cond_t        cond;       ///< Condition variable
+    SepMcastInfo*         mcastInfo;  ///< information on multicast group
     /**
      * IP address of interface to use for receiving multicast and unicast
      * FMTP packets
      */
-    char*           feedId;           ///< Desired feed specification
+    char*                 feedId;     ///< Desired feed specification
     /// Server-side transport for receiving products
-    SVCXPRT*        xprt;
-    CidrAddr        ifaceCidr;        ///< VLAN virtual interface CIDR address
-    int             sock;             ///< Socket with remote LDM7
-    int             taskStatus;       ///< Concurrent task status
+    SVCXPRT*              xprt;
+    CidrAddr              ifaceCidr;  ///< VLAN virtual interface CIDR address
+    int                   sock;       ///< Socket with remote LDM7
+    volatile sig_atomic_t taskStatus; ///< Concurrent task status
 } Downlet;
 static Downlet downlet;
 
@@ -1749,28 +1729,21 @@ downlet_stopTasks(void)
  *
  * @retval 0            Success
  * @retval LDM7_SYSTEM  System failure. `log_add()` called.
- * @return              Status of the first concurrent task to complete
+ * @return              `downlet.taskStatus`
  */
-static int
+static Ldm7Status
 downlet_wait(void)
 {
-    char byte;
-    int  status = read(down7.pipe[0], &byte, sizeof(byte));
+	while (!down7.done && downlet.taskStatus == 0) {
+		int status = sem_wait(&down7.intrSem);
+		if (status && errno != EINTR) {
+			log_add_syserr("sem_wait() failure");
+			return LDM7_SYSTEM;
+		}
+	}
 
-    if (status == -1) {
-        log_add_syserr("Couldn't read from signaling pipe");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        status = downlet.taskStatus;
-    }
-
-    return status;
+	return downlet.taskStatus;
 }
-
-// Forward declaration
-static int
-down7_signal();
 
 /**
  * Handles the termination of a concurrent task. If the task status is non-zero,
@@ -1798,16 +1771,8 @@ downlet_taskCompleted(const Ldm7Status status)
             }
         mutex_unlock(&downlet.mutex);
 
-        if (cancelDownlet) {
-#if 1
-            if (down7_signal()) {
-                log_add_syserr("Couldn't write to signaling pipe");
-                log_flush_error();
-            }
-#else
-            pthread_cond_signal(&downlet.cond);
-#endif
-        }
+        if (cancelDownlet && sem_post(&down7.intrSem))
+			log_syserr("sem_post() failure");
     } // Task status is non-zero
 }
 
@@ -2121,7 +2086,7 @@ downlet_run()
                 }
                 else {
                     /*
-                     * Returns when `down7_signal()` is called, either
+                     * Returns when `down7_halt()` is called, either
                      * internally on a subtask's thread or externally.
                      */
                     status = downlet_wait();
@@ -2280,7 +2245,7 @@ downlet_missedProduct(const FmtpProdIndex iProd)
  *                     LDM receiver. Caller may free when it's no longer needed.
  */
 void
-downlet_lastReceived(const prod_info* const restrict last)
+downlet_lastReceived(const prod_info* const last)
 {
     // Calls mrm_getLastMcastProd()
     int status = mcastRcvr_lastReceived(last->signature, down7.mrm);
@@ -2305,33 +2270,6 @@ downlet_lastReceived(const prod_info* const restrict last)
 /******************************************************************************
  * Downstream LDM7
  ******************************************************************************/
-
-/**
- * Waits for the downstream LDM7 to not be executing.
- *
- * @retval 0            Success
- * @retval LDM7_SYSTEM  System failure. `log_add()` called.
- */
-static Ldm7Status
-down7_wait(void)
-{
-    log_debug("Entered");
-
-    int status;
-
-    mutex_lock(&down7.mutex);
-        for (status = 0; status == 0 && down7.state == TASK_STARTED;
-            status = pthread_cond_wait(&down7.cond, &down7.mutex));
-    mutex_unlock(&down7.mutex);
-
-    if (status) {
-        log_add("pthread_cond_wait() failure");
-        status = LDM7_SYSTEM;
-    }
-
-    log_debug("Returning");
-    return status;
-}
 
 /**
  * Initializes this module.
@@ -2360,7 +2298,7 @@ down7_init(
         pqueue* const restrict              pq,
         McastReceiverMemory* const restrict mrm)
 {
-    log_debug("Entered");
+    log_debug("Entered. down7.done=%d", (int)down7.done);
 
     int status;
 
@@ -2378,115 +2316,98 @@ down7_init(
         status = LDM7_INVAL;
     }
     else {
-        (void)memset(&down7, 0, sizeof(down7));
-
         status = mutex_init(&down7.mutex, PTHREAD_MUTEX_ERRORCHECK, true);
 
         if (status) {
             status = LDM7_SYSTEM;
         }
         else {
-            status = pthread_cond_init(&down7.cond, NULL);
+			/*
+			 * The product-queue must be thread-safe because this module
+			 * accesses it on these threads:
+			 *   - FMTP multicast receiver
+			 *   - FMTP unicast receiver
+			 *   - LDM7 data-product receiver.
+			 */
+			if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
+				log_add("Product-queue %s isn't thread-safe: %0x",
+						pq_getPathname(pq), pq_getFlags(pq));
+				status = LDM7_INVAL;
+			}
+			else {
+				if ((down7.ldmSrvr = isa_clone(ldmSrvr)) == NULL) {
+					log_add("Couldn't clone LDM7 server address \"%s\"",
+							isa_toString(ldmSrvr));
+					status = LDM7_SYSTEM;
+				}
+				else {
+					down7.fmtpIface = strdup(fmtpIface);
 
-            if (status) {
-                log_add("pthread_cond_init() failure");
-                status = LDM7_SYSTEM;
-            }
-            else {
-                /*
-                 * The product-queue must be thread-safe because this module
-                 * accesses it on these threads:
-                 *   - FMTP multicast receiver
-                 *   - FMTP unicast receiver
-                 *   - LDM7 data-product receiver.
-                 */
-                if (!(pq_getFlags(pq) & PQ_THREADSAFE)) {
-                    log_add("Product-queue %s isn't thread-safe: %0x",
-                            pq_getPathname(pq), pq_getFlags(pq));
-                    status = LDM7_INVAL;
-                }
-                else {
-                    if ((down7.ldmSrvr = isa_clone(ldmSrvr)) == NULL) {
-                        log_add("Couldn't clone LDM7 server address \"%s\"",
-                                isa_toString(ldmSrvr));
-                        status = LDM7_SYSTEM;
-                    }
-                    else {
-                        down7.fmtpIface = strdup(fmtpIface);
+					if (down7.fmtpIface == NULL) {
+						log_add("Couldn't copy FMTP interface name");
+						status = LDM7_SYSTEM;
+					}
+					else {
+						if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
+							log_add("Couldn't copy local AL2S "
+									"virtual-circuit endpoint");
+							status = LDM7_SYSTEM;
+						}
+						else {
+							if (inAddrAny == NULL) {
+								inAddrAny = inetId_newFromStr("0.0.0.0");
 
-                        if (down7.fmtpIface == NULL) {
-                            log_add("Couldn't copy FMTP interface name");
-                            status = LDM7_SYSTEM;
-                        }
-                        else {
-                            if (!vcEndPoint_copy(&down7.vcEnd, vcEnd)) {
-                                log_add("Couldn't copy local AL2S "
-                                        "virtual-circuit endpoint");
-                                status = LDM7_SYSTEM;
-                            }
-                            else {
-                                status = pipe(down7.pipe);
+								if (inAddrAny == NULL) {
+									log_add("inetId_newFromStr() "
+											"failure");
+									status = LDM7_SYSTEM;
+								}
+								else if (sem_init(&down7.intrSem, 0, 0) ==
+										-1) {
+									log_add_syserr("Couldn't initialize "
+											"semaphore");
+									inetId_free(inAddrAny);
+									inAddrAny = NULL;
+									status = LDM7_SYSTEM;
+								} // `inAddrAny` initialized
+							} // `inAddrAny` uninitialized
 
-                                if (status) {
-                                    log_add_syserr("Couldn't create signaling "
-                                            "pipe");
-                                    status = LDM7_SYSTEM;
-                                }
-                                else {
-                                    if (inAddrAny == NULL) {
-                                        inAddrAny =
-                                                inetId_newFromStr("0.0.0.0");
+							if (status == 0) {
+								down7.pq = pq;
+								down7.feedtype = feed;
+								down7.mrm = mrm;
+								down7.state = TASK_INITIALIZED;
 
-                                        if (inAddrAny == NULL) {
-                                            log_add("inetId_newFromStr() "
-                                                    "failure");
-                                            status = LDM7_SYSTEM;
-                                        }
-                                    }
+								sigemptyset(&termMask);
+								sigaddset(&termMask, SIGTERM);
+							}
 
-                                    if (status == 0) {
-                                        down7.pq = pq;
-                                        down7.feedtype = feed;
-                                        down7.mrm = mrm;
-                                        down7.terminate = false;
-                                        down7.state = TASK_INITIALIZED;
+							if (status)
+								vcEndPoint_destroy(&down7.vcEnd);
+						} // `down7.vcEnd` initialized
 
-                                        sigemptyset(&termMask);
-                                        sigaddset(&termMask, SIGTERM);
-                                    }
-                                } // Signaling pipe created
+						if (status)
+							free(down7.fmtpIface);
+					} // `down7.fmtpIface` set
 
-                                if (status)
-                                    vcEndPoint_destroy(&down7.vcEnd);
-                            } // `down7.vcEnd` initialized
-
-                            if (status)
-                                free(down7.fmtpIface);
-                        } // `down7.fmtpIface` set
-
-                        if (status) {
-                            isa_free(down7.ldmSrvr);
-                            down7.ldmSrvr = NULL;
-                        }
-                    } // `down7.servAddr` initialized
-                } // Product-queue is thread-safe
-
-                if (status)
-                    (void)pthread_cond_destroy(&down7.cond);
-            } // Condition variable initialized
+					if (status) {
+						isa_free(down7.ldmSrvr);
+						down7.ldmSrvr = NULL;
+					}
+				} // `down7.servAddr` initialized
+			} // Product-queue is thread-safe
 
             if (status)
                 mutex_destroy(&down7.mutex);
         } // Downstream LDM7 mutex initialized
     } //  FMTP interface spec and local virtual-circuit endpoint are consistent
 
-    log_debug("Returning");
+    log_debug("Returning. down7.done=%d", (int)down7.done);
     return status;
 }
 
 /**
- * Destroys the downstream LDM7 module. Stops the module and waits for it to
- * complete if necessary.
+ * Destroys the downstream LDM7 module.
  *
  * @asyncsignalsafety  Unsafe
  */
@@ -2496,43 +2417,65 @@ down7_destroy(void)
     log_debug("Entered");
 
     if (down7.state != TASK_UNINITIALIZED) {
-        int status = mutex_lock(&down7.mutex);
-            log_assert(status == 0);
+		int status = mutex_lock(&down7.mutex);
+			log_assert(status == 0);
+			log_assert(down7.state != TASK_STARTED);
 
-            if (down7.state == TASK_INITIALIZED)
-                down7.terminate = 1;
+			if (sem_destroy(&down7.intrSem))
+				log_syserr("Couldn't destroy semaphore");
 
-            if (down7.state == TASK_STARTED) {
-                log_error("Module is executing. Stopping module.");
+			inetId_free(inAddrAny);
+			inAddrAny = NULL;
 
-                mutex_unlock(&down7.mutex);
-                    down7_halt();
-                    status = down7_wait();
-                mutex_lock(&down7.mutex);
+			vcEndPoint_destroy(&down7.vcEnd);
 
-                log_assert(status == 0);
-            }
+			free(down7.fmtpIface);
+			down7.fmtpIface = NULL;
 
-            inetId_free(inAddrAny);
-            inAddrAny = NULL;
+			isa_free(down7.ldmSrvr);
+			down7.ldmSrvr = NULL;
 
-            (void)close(down7.pipe[0]);
-            (void)close(down7.pipe[1]);
-
-            vcEndPoint_destroy(&down7.vcEnd);
-
-            free(down7.fmtpIface);
-            down7.fmtpIface = NULL;
-
-            isa_free(down7.ldmSrvr);
-            down7.ldmSrvr = NULL;
-
-            down7.state = TASK_UNINITIALIZED;
-        mutex_unlock(&down7.mutex);
-        mutex_destroy(&down7.mutex);
-    } // Module is not uninitialized
+			down7.state = TASK_UNINITIALIZED;
+		mutex_unlock(&down7.mutex);
+		mutex_destroy(&down7.mutex);
+    }
 
     log_debug("Returning");
+}
+
+/**
+ * Sleeps for a given amount of time or until `down7.intrSem` can be locked --
+ * whichever comes first.
+ *
+ * @param[in] amount       Amount of time, in seconds, to sleep
+ * @retval    0            Time was slept or `down7.intrSem` was locked
+ * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
+ */
+static Ldm7Status
+down7_sleep(const unsigned amount)
+{
+	int             status;
+	struct timespec until = {.tv_sec=time(NULL) + amount};
+
+	for (;;) {
+		status = sem_timedwait(&down7.intrSem, &until);
+
+		if (status == 0)
+			break;
+
+		if (errno == EINTR)
+			continue;
+		if (errno == ETIMEDOUT) {
+			status = 0;
+			break;
+		}
+
+		log_add_syserr("sem_timedwait() failure");
+		status = LDM7_SYSTEM;
+		break;
+	}
+
+	return status;
 }
 
 /**
@@ -2552,7 +2495,7 @@ down7_destroy(void)
 Ldm7Status
 down7_run()
 {
-    log_debug("Entered");
+    log_debug("Entered. down7.done=%d", (int)down7.done);
 
     int  status;
 
@@ -2578,48 +2521,45 @@ down7_run()
         free(vcEndId);
         free(feedId);
 
-        for (;;) {
-            mutex_lock(&down7.mutex);
-                if (down7.terminate) {
-                    status = 0; // `down7_halt()` was called
-                    break;
-                }
-            mutex_unlock(&down7.mutex);
-
+        while (!down7.done) {
             status = downlet_execute(); // Indefinite execution
 
             mrm_restart(down7.mrm);
 
-            if (status == LDM7_TIMEDOUT || status == LDM7_MCAST) {
-                log_flush_notice();
-                continue;
-            }
+			if (!down7.done) {
+				if (status == LDM7_TIMEDOUT || status == LDM7_MCAST) {
+					log_flush_notice();
+					continue;
+				}
 
-            mutex_lock(&down7.mutex);
-                if (down7.terminate) {
-                    status = 0; // `down7_halt()` was called
-                    break; // mutex_unlock() will be called
-                }
-            mutex_unlock(&down7.mutex);
+				if (status == LDM7_NOENT || status == LDM7_REFUSED ||
+						status == LDM7_UNAUTH) {
+					log_flush_warning();
+				}
+				else {
+					log_add("Error executing one-time, downstream LDM7");
+					log_flush_error();
+				}
 
-            if (status == LDM7_NOENT || status == LDM7_REFUSED ||
-                    status == LDM7_UNAUTH) {
-                log_flush_warning();
-            }
-            else {
-                log_add("Error executing one-time, downstream LDM7");
-                log_flush_error();
-            }
-
-            log_debug("Sleeping");
-            sleep(4*interval); // Problem might be temporary
+				// Problem might be temporary
+				log_debug("Sleeping");
+				status = down7_sleep(4*interval);
+				if (status == LDM7_SYSTEM) {
+					log_add("Couldn't sleep");
+					break;
+				}
+			} // Not done yet
         } // One-time, downstream LDM7 execution loop
 
-        down7.state = TASK_STOPPED;
-        int i = pthread_cond_signal(&down7.cond);
-        log_assert(i == 0);
-        mutex_unlock(&down7.mutex);
+		mutex_lock(&down7.mutex);
+			down7.state = TASK_STOPPED;
+		mutex_unlock(&down7.mutex);
     } // Downstream LDM7 should be executed
+
+    if (status && down7.done) {
+    	log_flush_debug();
+    	status = 0;
+    }
 
     log_debug("Returning");
 
@@ -2627,54 +2567,48 @@ down7_run()
 }
 
 /**
- * Signals the downstream LDM7 that it should terminate. May be called by a
- * signal handler.
+ * Indicates if the downstream LDM module has been initialized.
  *
- * @retval 0            Success
- * @retval LDM7_SYSTEM  System failure. `log_add()` called.
- * @asyncsignalsafety   Safe
+ * @retval `false`  No
+ * @retval `true`   Yes
  */
-static int
-down7_signal()
+bool
+down7_isInit()
 {
-    sigset_t prevMask;
-    sigprocmask(SIG_BLOCK, &termMask, &prevMask);
-        char       byte = 0;
-        Ldm7Status status = write(down7.pipe[1], &byte,
-                sizeof(byte)) == sizeof(byte)
-            ? 0
-            : LDM7_SYSTEM;
-    sigprocmask(SIG_SETMASK, &prevMask, NULL);
-
-    return status;
+	return down7.state != TASK_UNINITIALIZED;
 }
 
 /**
- * Asynchronously halts execution of the downstream LDM7 module. May be called
- * by a signal handler.
+ * Stops the downstream LDM7 module from running. May be called from a signal
+ * handler. Idempotent.
  *
- * @see `down7_run()`
+ * @threadsafety       Safe
  * @asyncsignalsafety  Safe
  */
 void
 down7_halt()
 {
-    /*
-     * A condition variable can't be used because the relevant pthread functions
-     * aren't async-signal safe
-     */
+	log_notice("down7.done=%d", (int)down7.done);
+	down7.done = 1;
 
-    down7.terminate = 1;
+	if (down7.state != TASK_UNINITIALIZED) {
+		/*
+		 * An async-signal safe semaphore is used instead of an async-signal
+		 * unsafe condition variable.
+		 */
+		if (sem_post(&down7.intrSem))
+			log_syserr("sem_post() failure");
 
-    (void)down7_signal();
-
-    /*
-     * If the current thread is the one that's executing `down7_run()`, then
-     * the thread has been interrupted; consequently, it isn't signaled but,
-     * rather, relies on having been interrupted for termination.
-     */
-    if (down7.thread && down7.thread != pthread_self())
-        (void)pthread_kill(down7.thread, SIGTERM);
+#if 0
+		/*
+		 * If the current thread is the one that's executing `down7_run()`, then
+		 * the thread has been interrupted; consequently, it isn't signaled but,
+		 * rather, relies on having been interrupted for termination.
+		 */
+		if (down7.thread && down7.thread != pthread_self())
+			(void)pthread_kill(down7.thread, SIGTERM);
+#endif
+	}
 }
 
 /**

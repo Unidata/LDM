@@ -236,7 +236,9 @@ eop_func(
         if (!xdr_prod_info(&xdrs, info)) {
             log_add("Couldn't decode LDM product metadata from %zu-byte FMTP "
                     "product", prodSize);
-            (void)pqe_discard(mlr->pq, pqeIndex);
+            if (pqe_discard(mlr->pq, pqeIndex))
+            	log_add("pqe_discard() failure on product {index: %lu, "
+            			"size: %zu", (unsigned long)prodIndex, prodSize);
             status = EPROTO;
         }
         else {
@@ -290,8 +292,10 @@ missed_prod_func(
 
     Mlr* mlr = obj;
 
-    if (pqeIndex && pqe_discard(mlr->pq, pqeIndex))
+    if (pqeIndex && pqe_discard(mlr->pq, pqeIndex)) {
+    	log_add("pqe_discard() failure on product %lu", (unsigned long)iProd);
 		log_flush_error();
+    }
 
     downlet_missedProduct(iProd);
 }
@@ -310,7 +314,7 @@ missed_prod_func(
  * @retval     LDM7_INVAL     `pq == NULL || missed_product == NULL ||
  *                            mcastInfo == NULL || downlet == NULL`. `log_add()`
  *                            called.
- * @retval     LDM7_FMTP     FMTP error. `log_add()` called.
+ * @retval     LDM7_FMTP      FMTP error. `log_add()` called.
  */
 static int
 init(

@@ -31,7 +31,7 @@
 #include <CUnit/Basic.h>
 
 #define               PQ_PATHNAME   "pq_test.pq"
-#define               NUM_PRODS            50000
+#define               NUM_PRODS            5000
 #define               MAX_PROD_SIZE       200000
 #define               PQ_DATA_SIZE     100000000
 #define               PQ_SLOT_COUNT         1000
@@ -54,6 +54,12 @@ static int setup(void)
 static int teardown(void)
 {
     return 0;
+}
+
+static void unlink_pq()
+{
+    int status = unlink(PQ_PATHNAME);
+    CU_ASSERT_EQUAL(status, 0);
 }
 
 static pqueue* create_pq(void)
@@ -79,12 +85,6 @@ static void close_pq(
 {
     int status = pq_close(pq);
     CU_ASSERT_EQUAL_FATAL(status, 0);
-}
-
-static void unlink_pq()
-{
-    int status = unlink(PQ_PATHNAME);
-    CU_ASSERT_EQUAL(status, 0);
 }
 
 /**
@@ -250,6 +250,7 @@ static int create_insert_close(
 static void test_pq_insert(
         void)
 {
+    unlink(PQ_PATHNAME);
     pqueue* const pq = create_pq();
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
     int status = insert_products(pq, insert_prod);
@@ -261,9 +262,9 @@ static void test_pq_insert(
     log_notice_q("Number of bytes    = %lu", num_bytes);
     log_notice_q("Number of products = %lu", NUM_PRODS);
     log_notice_q("Mean product size  = %lu", num_bytes / NUM_PRODS);
-    log_notice_q("Product rate       = %g/s", NUM_PRODS/dur);
-    log_notice_q("Byte rate          = %g/s", num_bytes/dur);
-    log_notice_q("Bit rate           = %g/s", CHAR_BIT*num_bytes/dur);
+    log_notice_q("Product rate       = %g Hz", NUM_PRODS/dur);
+    log_notice_q("Byte rate          = %g Hz", num_bytes/dur);
+    log_notice_q("Bit rate           = %g Hz", CHAR_BIT*num_bytes/dur);
 
     unlink_pq();
 }
@@ -271,6 +272,7 @@ static void test_pq_insert(
 static void test_pq_insert_reserve_no_sig(
         void)
 {
+    unlink(PQ_PATHNAME);
     pqueue* const pq = create_pq();
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
     int status = insert_products(pq, insert_prod_reserve_no_sig);
@@ -291,7 +293,8 @@ static void test_pq_insert_reserve_no_sig(
 
 static void test_pq_insert_children(void)
 {
-    int status;
+    unlink(PQ_PATHNAME);
+    int     status;
     pqueue* pq = create_pq();
     CU_ASSERT_NOT_EQUAL_FATAL(pq, NULL);
     close_pq(pq);
@@ -323,6 +326,7 @@ static void test_pq_insert_children(void)
 
 static void test_pq_sequence(void)
 {
+    unlink(PQ_PATHNAME);
     pqueue* pq = create_pq();
     CU_ASSERT_PTR_NOT_NULL_FATAL(pq);
     close_pq(pq);
@@ -364,7 +368,9 @@ int main(
         exitCode = 1;
     }
     else {
-        if (CUE_SUCCESS == CU_initialize_registry()) {
+    	//log_set_level(LOG_LEVEL_INFO);
+
+    	if (CUE_SUCCESS == CU_initialize_registry()) {
             CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);
 
             if (NULL != testSuite) {

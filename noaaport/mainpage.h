@@ -11,7 +11,7 @@
  * <hr>
  *
  * @section introduction Introduction
- * This system captures NOAAPORT broadcast UDP packets from a DVB-S receiver,
+ * This system captures NOAAPORT multicast UDP packets from a DVB-S receiver,
  * creates LDM data-products from the data, and inserts those products into an
  * LDM product-queue. The main programs of this system are 1) the \link
  * noaaportIngester.c \c noaaportIngester \endlink program; 2) the deprecated
@@ -26,16 +26,14 @@
  * @section preinstallation Preinstallation
  * Operating systems based on Redhat Linux (e.g., RHEL, Fedora, CentOS) must
  * have two kernel parameters modified from their default values. The parameter
- * \c net.ipv4.ipfrag_max_dist must be modified from its default value of
- * of \c 64 in order for all broadcast UDP packets to be correctly received
- * without any gaps.
- * Unfortunately, it is difficult to determine what that value should be (some
- * sites have reported success with a value of \c 4096 or higher); consequently,
- * we recommend a value of \c 0 to disable the check of the sequencing of IP
- * fragments.
- * The value of parameter \c net.ipv4.conf.default.rp_filter should be
+ * \c net.ipv4.ipfrag_max_dist controls the process by which UDP fragments are
+ * reassembled into a UDP packet. Because NOAAPORT UDP packets are not
+ * fragmented, this re-assembly process should be disabled by setting this
+ * parameter to \c 0 in order to prevent spurious gaps from occurring in the UDP
+ * packet stream.
+ * Also, the value of parameter \c net.ipv4.conf.default.rp_filter should be
  * \c 2 in order to obtain correct support for a multi-homed system.
- * For example, as \c root, execute the commands
+ * As \c root, execute the commands
  * \verbatim
  sysctl -w net.ipv4.ipfrag_max_dist=0
  sysctl -w net.ipv4.conf.default.rp_filter=2
@@ -76,7 +74,7 @@
  * readnoaaport \endlink programs could be used:
  *
  * \verbatim
- # DVB-S broadcast UDP listening and shared-memory writing processes
+ # DVB-S multicast UDP listening and shared-memory writing processes
  EXEC    "keep_running dvbs_multicast -m 224.0.1.1"
  EXEC    "keep_running dvbs_multicast -m 224.0.1.2"
  EXEC    "keep_running dvbs_multicast -m 224.0.1.3"

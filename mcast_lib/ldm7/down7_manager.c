@@ -77,10 +77,13 @@ executeDown7(
                 log_add("Couldn't initialize downstream LDM7");
             }
             else {
-                status = down7_run(); // Blocks until error or termination requested
+                // Blocks until error or termination requested
+                status = down7_run();
 
-                if (status == LDM7_INTR)
-                    status = 0; // Success
+                if (status) {
+                	log_add("Error executing downstream LDM7");
+                	log_flush_error();
+                }
 
                 down7_destroy();
             } // Downstream LDM7 initialized

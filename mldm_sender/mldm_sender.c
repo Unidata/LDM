@@ -945,6 +945,13 @@ mls_execute(void)
             log_add("Couldn't initialize authorization of remote clients");
         }
         else {
+			char* miStr = smi_toString(mcastInfo);
+			log_notice("Starting up: mcastInfo=%s, ttl=%u, "
+					"fmtpSubnetLen=%u, pq=\"%s\", mldmCmdPort=%u",
+					miStr, ttl, subnetLen, getQueuePath(),
+					mldmSrvr_getPort(mldmCmdSrvr));
+			free(miStr);
+
             status = mls_init();
             unblockTermSigs(); // Done creating child threads
 
@@ -977,12 +984,6 @@ mls_execute(void)
                      * so that the process will automatically terminate if
                      * something goes wrong.
                      */
-                    char* miStr = smi_toString(mcastInfo);
-                    log_notice("Starting up: mcastInfo=%s, ttl=%u, "
-                            "fmtpSubnetLen=%u, pq=\"%s\", mldmCmdPort=%u",
-                            miStr, ttl, subnetLen, getQueuePath(),
-                            mldmSrvr_getPort(mldmCmdSrvr));
-                    free(miStr);
                     status = mls_startMulticasting();
 
                     if (status)

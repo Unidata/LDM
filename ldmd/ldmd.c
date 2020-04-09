@@ -200,7 +200,10 @@ static void cleanup(
     down6_destroy();
 #if WANT_MULTICAST
     up7_destroy();
-    down7_destroy();
+    if (down7_isInit()) {
+    	down7_halt();
+		down7_destroy();
+    }
 #endif
 
     /*

@@ -243,7 +243,8 @@ ensureProductQueueOpen(void)
 
 /**
  * Creates the client-side RPC transport on the TCP connection of the
- * server-side RPC transport.
+ * server-side RPC transport for asynchronously sending backlog and missed
+ * data-products.
  *
  * @retval 0           Success
  * @retval LDM7_SYSTEM System error. `log_add()` called.
@@ -357,10 +358,11 @@ reduceFeed(
 }
 
 /**
- * Initializes the separate, server-side RPC transport. A separate transport is
- * created because `svc_getreqsock()` and `svc_getreqset()` mustn't be nested
- * because they destroy the transport on error and the outer one will,
- * consequently, cause a segfault.
+ * Initializes the separate, server-side RPC transport for the asynchronous
+ * backlog and backstop capabilities. A separate transport is created because
+ * `svc_getreqsock()` and `svc_getreqset()` mustn't be nested because they
+ * destroy the transport on error and the outer one will, consequently, cause a
+ * segfault.
  *
  * @param[in] xprt         Initial, server-side RPC transport
  * @retval    0            Success
@@ -470,7 +472,7 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
                     log_add("Couldn't add LDM7 process for client %s, feed "
                             "%s to upstream LDM database", remote_name(),
                             s_feedtypet(mcastInfo->feed));
-                    log_flush_error();
+                    log_flush_warning();
                 }
 
                 reply->SubscriptionReply_u.info.mcastInfo = *mcastInfo;
@@ -494,7 +496,9 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
 
 /**
  * Initializes this module.
- *   - Creates a separate, server-side RPC transport from the initial transport
+ *   - Creates separate, server-side and client-side RPC transports from the
+ *     initial server-side transport for asynchronously sending requested
+ *     data-products
  *   - Starts the multicast sender if necessary
  *   - Gets a CIDR address for the FMTP client if appropriate
  *   - Opens the product-to-index map
@@ -689,8 +693,8 @@ runSvc(void)
 
 /**
  * Indicates if the caller should send a reply to the downstream LDM7. Will
- * start a separate upstream LDM7 server if appropriate and not return until
- * that server terminates.
+ * start a separate, asynchronous upstream LDM7 server if appropriate and not
+ * return until that server terminates.
  *
  *
  * @param[in] xprt     Initial, server-side RPC transport
@@ -727,6 +731,8 @@ subscribe(
             else {
                 runSvc();
                 log_flush_error();
+                svc_destroy(xprt);
+                exit(1);
             }
         }
         else {

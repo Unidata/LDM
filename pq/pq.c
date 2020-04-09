@@ -141,6 +141,13 @@ log4(size_t n)
     return (int)(log(n + 0.5)/log(4.0));
 }
 
+typedef struct {
+	int            randomsLeft;
+	long           randomBits;
+	unsigned short xsubi[3];
+    size_t         prev_nelems;
+    size_t         size;
+} FbPar;
 
 /**
  * Return random level of
@@ -239,12 +246,12 @@ fb_stats_dump(fb *fbp)
 {
     int level;
     log_assert(fbp != NULL);
-    log_error_q("maxsize = %d", fbp->maxsize);
-    log_error_q("arena_sz = %d", fbp->arena_sz);
-    log_error_q("avail = %d", fbp->avail);
-    log_error_q("allocated = %d", fbp->allocated);
+    log_error("maxsize = %d", fbp->maxsize);
+    log_error("arena_sz = %d", fbp->arena_sz);
+    log_error("avail = %d", fbp->avail);
+    log_error("allocated = %d", fbp->allocated);
     for(level = 0; level <= fbp->maxsize; level++) {
-        log_error_q("nfree[%d]:\t%d\t%d", level, fbp->nfree[level],
+        log_error("nfree[%d]:\t%d\t%d", level, fbp->nfree[level],
                fbp->free[level]);
     }
 }
@@ -403,7 +410,7 @@ fb_rel(fb *fbp, int size, fblk_t fblk)
  *
  * @param[in] fbp       Pointer to fblk structure
  * @param[in] level     Level of fblk to return (origin 0).
- * @retval    OFF_NONE  if no fblk is available. `log_error_q()` called.
+ * @retval    OFF_NONE  if no fblk is available. `log_error()` called.
  * @return              An fblk of the given level.
  */
 static fblk_t 
@@ -443,7 +450,7 @@ fb_get(fb *fbp, int level)
      * All out of blocks. This means we tried to keep in the product-queue
      * significantly more products than the specified maximum number.
      */
-    log_error_q("\"fblk\" subsystem ran out of skip-list nodes. "
+    log_error("\"fblk\" subsystem ran out of skip-list nodes. "
             "Too many products in queue.");
     fb_stats_dump(fbp);
     return (fblk_t)OFF_NONE;
@@ -487,7 +494,7 @@ fb_get(fb *fbp, int level)
     /* else: all out of extra blocks too.  This means we tried to keep
        in product queue significantly more than the specified maximum
        number of products. */
-    log_error_q("fb layer ran out of product slots, too many products in queue");
+    log_error("fb layer ran out of product slots, too many products in queue");
     /* fb_stats_dump(fbp);   */
     return (fblk_t)OFF_NONE;
 #endif
@@ -529,6 +536,11 @@ struct tqueue
   tqelem tqep[TQ_NALLOC_INITIAL]; /* actually nalloc long */
 };
 typedef struct tqueue tqueue;
+
+typedef struct {
+    size_t prev_nelems;
+    size_t size;
+} TqPar;
 
 /* 
  * For a tq with the capacity to index nelems, return how much space
@@ -871,7 +883,7 @@ tqe_find(const tqueue *const tq, const timestampt *const key, const pq_match mt)
         } /* else */
         return (tqelem *) tqp;
     }
-    log_error_q("bad value for mt: %d", mt);
+    log_error("bad value for mt: %d", mt);
     return NULL;
 }
 
@@ -1281,6 +1293,10 @@ rlwo_sz(size_t nelems)
         return sz;
 }
 
+typedef struct {
+    size_t prev_nelems;
+    size_t size;
+} RlPar;
 
 /*
  * For a region list which is nelems long,
@@ -1331,7 +1347,7 @@ static void
 rl_foff_init(regionl *const rl)
 {
     region *rlrp = rl->rp;
-    static off_t huge_off_t =
+    const off_t huge_off_t =
          ((off_t)1 << (sizeof(off_t)*CHAR_BIT - 2)) +
         (((off_t)1 << (sizeof(off_t)*CHAR_BIT - 2)) - 1);
     region *foff_hd;
@@ -1368,6 +1384,11 @@ rl_foff_init(regionl *const rl)
     rl->foff = RL_FOFF_HD;
 }
 
+
+/* The maximum value of a "size_t": */
+static const size_t MAX_SIZE_T = ~(size_t)0;
+
+
 /*
  * Initialize freelist skip list by extent.
  */
@@ -1375,7 +1396,6 @@ static void
 rl_fext_init(regionl *const rl)
 {
     region *rlrp = rl->rp;
-    static size_t huge_size_t = 0;
     region *fext_hd;
     region *fext_tl;
     int maxlevel;
@@ -1383,17 +1403,6 @@ rl_fext_init(regionl *const rl)
     int i;
     fb *fbp = (fb *)((char *)rl + rl->fbp_off);
 
-    if(huge_size_t == 0) {      /* to mark end of skip list sorted by extent */
-        /*
-         * ULLONG_MAX is not used to set "huge_size_t" because some compilers
-         * can't handle it (e.g. SunOS 5.8's /opt/SUNWspro/bin/c89).  SRE
-         * 2002-10-18.
-         */
-        huge_size_t = ~huge_size_t;
-
-        log_assert(huge_size_t > 0);
-    }
-    
     /* create psuedo-regions to use for head and tail of freelist
        skip list by extent, makes list maintenance cleaner */
 #define RL_FEXT_HD 2
@@ -1407,7 +1416,7 @@ rl_fext_init(regionl *const rl)
 
     fext_tl = rlrp + RL_FEXT_TL; /* tail of skip list by extent */
     fext_tl->offset = 0;
-    fext_tl->extent = huge_size_t;
+    fext_tl->extent = MAX_SIZE_T;
     clear_IsAlloc(fext_tl);
     fext_tl->next = 0;  /* not used */
     fext_tl->prev = fb_get(fbp, 0); /* not used */
@@ -1799,7 +1808,7 @@ rlhash_del(regionl *const rl, size_t rlix)
  * @param[in,out] rl    Region list
  * @param[in]     rlix  Offset of region entry
  * @retval 0            Success
- * @retval PQ_SYSTEM    Couldn't get new node for skip-list. log_add() called.
+ * @retval PQ_SYSTEM    Couldn't get new node for skip-list. log_error() called.
  */
 static int
 rl_foff_add(regionl *const rl, size_t rlix)
@@ -1845,7 +1854,7 @@ rl_foff_add(regionl *const rl, size_t rlix)
     /* get new fblk of level k */
     rep->next = fb_get(fbp, k);
     if (rep->next == (fblk_t)OFF_NONE) {
-        log_add("Couldn't get skip-list node of level %d", k);
+        log_error("Couldn't get skip-list node of level %d", k);
         status = PQ_SYSTEM;
     }
     else {
@@ -1868,7 +1877,7 @@ rl_foff_add(regionl *const rl, size_t rlix)
  *
  * @param[in,out] rl  Region list
  * @param[in]         Offset to region entry
- * @retval PQ_SYSTEM  Couldn't get new skip-list node. `log_add()` called.
+ * @retval PQ_SYSTEM  Couldn't get new skip-list node. `log_error()` called.
  * @retval 0          Success
  */
 static int
@@ -1917,7 +1926,7 @@ rl_fext_add(regionl *const rl, size_t rlix)
     /* get new fblk of level k */
     rep->prev = fb_get(fbp, k);
     if (rep->prev == (fblk_t)OFF_NONE) {
-        log_add("Couldn't get new skip-list node of level %d", k);
+        log_error("Couldn't get new skip-list node of level %d", k);
         status = PQ_SYSTEM;
     }
     else {
@@ -1975,7 +1984,7 @@ rl_foff_dump(regionl *const rl)
  *
  * @param[in,out] rl    Region list
  * @param[in]     rlix  Offset of region entry
- * @retval PQ_SYSTEM    Couldn't get new skip-list node. `log_add()` called.
+ * @retval PQ_SYSTEM    Couldn't get new skip-list node. `log_error()` called.
  * @retval 0            Success
  */
 static int
@@ -1984,13 +1993,13 @@ rl_rel(regionl *const rl, size_t rlix)
     // Add to freelist skip list by offset */
     int status = rl_foff_add(rl, rlix);
     if (status) {
-        log_add("Couldn't add to offset free-list");
+        log_error("Couldn't add to offset free-list");
     }
     else {
         // Add to freelist skip list by extent
         status = rl_fext_add(rl, rlix);
         if (status) {
-            log_add("Couldn't add to extent free-list");
+            log_error("Couldn't add to extent free-list");
             rl_foff_del(rl, rlix);
         }
         else {
@@ -2235,7 +2244,7 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     if (rpix == RL_NONE) {
         /* This shouldn't happen if enough product slots are allocated
            by pqcreate ... */
-        log_error_q("Need more product slots, allocate more when creating queue");
+        log_error("Need more product slots, allocate more when creating queue");
         /* Can't call pq_del_oldest(), because that's who might have called us */
         return NULL;
     }
@@ -2248,7 +2257,7 @@ rl_add(regionl *const rl, off_t const offset, size_t const extent)
     // Insert into free list.  No need to consolidate.
     int status = rl_rel(rl, rpix);
     if (status) {
-        log_add("Couldn't insert region into free region list");
+        log_error("Couldn't insert region into free region list");
         rp_rel(rl, rpix);
         rep = NULL;
     }
@@ -2289,7 +2298,7 @@ rl_split(regionl *const rl, size_t rlix, size_t const extent)
             if(rem > rl->maxfextent)
                 rl->maxfextent = rem;
         } else {                /* out of empty slots, not enough allocated */
-            log_add("Couldn't add split-off region to free region list");
+            log_error("Couldn't add split-off region to free region list");
             status = ENOMEM;
         }
         return status;
@@ -2433,6 +2442,11 @@ sxwo_sz(size_t nelems)
         sz += nelems * sizeof(sxelem);
         return sz;
 }
+
+typedef struct {
+    size_t prev_nelems;
+    size_t size;
+} SxPar;
 
 /*
  * For a sx which is nelems long, return how much space it will
@@ -2626,7 +2640,7 @@ sx_add(sx *const sx, const signaturet sig, off_t const offset)
     /* get a new sxelem from the front of free list */
     sxix = sxelem_new(sx);
     if (sxix == SX_NONE) {
-        log_error_q("sx_add: no slots for signatures, too many products?");
+        log_error("sx_add: no slots for signatures, too many products?");
         return 0;
     }
     sxep = &sx->sxep[sxix];
@@ -2701,6 +2715,16 @@ sx_find_delete(sx *const sx, const signaturet sig)
  * (pq->rlp & pq->tqp)
  */
 
+typedef struct {
+    size_t prev_nelems_sz;
+    size_t size;
+    size_t prev_nelems_ptrs;
+    size_t rl_size;
+    size_t tq_size;
+    size_t fb_size;
+    size_t sx_size;
+} IxPar;
+
 /*
  * Return the amount of space required to store a
  * collection of indices, each of 'nelems'.
@@ -2774,7 +2798,7 @@ ix_ptrs(
     bool bounds_check = ((char*)(*sxpp) + sx_size) <= ((char*)ix + ixsz);
 #ifdef NDEBUG
     if (!bounds_check) {
-        log_error_q("ix=%p, ixsz=%zu, nelems=%zu, align=%zu, rl_size=%zu, "
+        log_error("ix=%p, ixsz=%zu, nelems=%zu, align=%zu, rl_size=%zu, "
                 "tq_size=%zu, fb_size=%zu, sx_size=%zu, *sxpp=%p",
                 ix, ixsz, nelems, align, rl_size, tq_size, fb_size, sx_size,
                 *sxpp);
@@ -3093,7 +3117,7 @@ riul_add(
  * Remove a region-in-use from the list of regions-in-use
  *
  * @param[in,out] rl  List of regions-in-use
- * @param[in]         In-use region to be removed from list
+ * @param[in]     rp  In-use region to be removed from list
  */
 static void
 riul_delete(
@@ -3235,9 +3259,13 @@ struct pqueue {
         long             pqe_count;
         /// Number of locked, read-only products
         long             locked_count;
+        /// Smallest amount of data seen so far
+		size_t           smallest_extent_seen;
 
         /// Mutex for concurrent access by multiple threads
         pthread_mutex_t  mutex;
+        /// Thread cancellation state
+		int              cancelState;
 };
 
 /* The total size of a product-queue in bytes: */
@@ -3313,7 +3341,7 @@ fgrow(const int fd, const off_t len, int sparse)
 #endif /* HAVE_FTRUNCATE */
         } else {                /* else, fill in all the zeros */
 #define N_ZEROS_GROW 8192
-            static int zeros[N_ZEROS_GROW];
+            static const int zeros[N_ZEROS_GROW];
             size_t zsize = N_ZEROS_GROW * sizeof(int);
             size_t clen = sb.st_size;
             off_t ii;
@@ -3396,30 +3424,30 @@ fd_isLocked(const int fd, const short l_type,
  *              of a file to be locked is already exclusive-locked by another
  *              process, or the type is an exclusive lock and some portion of
  *              the segment of a file to be locked is already shared-locked or
- *              exclusive-locked by another process. `log_add()` not called.
+ *              exclusive-locked by another process. `log_error()` not called.
  *      EBADF   The "fd" argument is not a valid open file descriptor, or the
  *              argument "cmd" is F_SETLK or F_SETLKW, the type of lock, l_type,
  *              is a shared lock (F_RDLCK), and "fd" is not a valid file
  *              descriptor open for reading, or the type of lock l_type, is an
  *              exclusive lock (F_WRLCK), and "fd" is not a valid file
- *              descriptor open for writing. `log_add()` called.
+ *              descriptor open for writing. `log_error()` called.
  *      EINVAL  The "cmd" argument is invalid, or the "cmd" argument is F_GETLK,
  *              F_SETLK or F_SETLKW and "l_type", "offset", "l_whence", or
  *              "extent" is not valid, or "fd" refers to a file that does not 
- *              support locking. `log_add()` called.
+ *              support locking. `log_error()` called.
  *      ENOLCK  The argument "cmd" is F_SETLK or F_SETLKW and satisfying the
  *              lock or unlock request would result in the number of locked
  *              regions in the system exceeding a system-imposed limit.
- *              `log_add()` called.
+ *              `log_error()` called.
  *      EOVERFLOW
  *              The "cmd" argument is F_GETLK, F_SETLK or F_SETLKW and the
  *              smallest or, if "extent" is non-zero, the largest offset of any
  *              byte in the requested segment cannot be represented correctly
- *              in an object of type off_t. `log_add()` called.
+ *              in an object of type off_t. `log_error()` called.
  *      EDEADLK The "cmd" argument is F_SETLKW, the lock is blocked by some lock
  *              from another process and putting the calling process to sleep,
  *              waiting for that lock to become free would cause a deadlock.
- *              `log_add()` called.
+ *              `log_error()` called.
  */
 static int
 fd_lock(
@@ -3530,9 +3558,9 @@ mapwrap(const int fd,
         if(mm == MAP_FAILED)
         {
                 status = errno;
-                log_add_syserr("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",
+                log_syserr("mmap() failure: *ptrp=%p, offset=%ld, extent=%lu",
                     *ptrp, (long)offset, (unsigned long)extent);
-                log_error_q("Product-queue size too big?");
+                log_error("Product-queue size too big?");
                 return status;
         }
 #if TRACE_MMAP
@@ -3716,11 +3744,11 @@ rgn2_unlock(
  * @param[in]     vp       Data area of region
  * @param[out]    rpp      Region in use entry
  * @retval        0        Success
- * @retval        EACCES   Region already reserved. `log_add()` *not* called.
- * @retval        EDEADLK  Deadlock condition detected. `log_add()` called.
+ * @retval        EACCES   Region already reserved. `log_error()` *not* called.
+ * @retval        EDEADLK  Deadlock condition detected. `log_error()` called.
  * @retval        ENOLCK   Number of file-locks would exceed system limit.
- *                         `log_add()` called.
- * @retval        ENOMEM   Insufficient memory available. `log_add()` called.
+ *                         `log_error()` called.
+ * @retval        ENOMEM   Insufficient memory available. `log_error()` called.
  * @see `rgn2_release()`
  */
 static int
@@ -3745,14 +3773,14 @@ rgn2_reserve(
                 status = EACCES;
             }
             else if (status) {
-                log_add_errno(status, "rgn_lock() failure");
+                log_errno(status, "rgn_lock() failure");
             }
             else {
                 status = riul_add(&pq->riulp, pq->pagesz, offset, extent, vp,
                         rflags, rpp);
 
                 if (status) {
-                    log_add_errno(status, "riul_add() failure");
+                    log_errno(status, "riul_add() failure");
                     (void)rgn2_unlock(pq, offset, extent,
                             fMask(rflags, RGN_MODIFIED|RGN_NOWAIT));
                 }
@@ -3764,7 +3792,7 @@ rgn2_reserve(
 }
 
 /**
- * Releases a region in a product-queue that was previously reserved by
+ * Releases a reserved region in a product-queue by
  *   - Deleting the relevant entry in the list of regions-in-use
  *   - Unlocking the relevant section of the product-queue file
  *
@@ -3789,7 +3817,7 @@ rgn2_release(
     riu* rp;
 
     if (riul_r_find(pq->riulp, offset, &rp) == 0) {
-        log_error_q("Region with offset %ld is not in use", (long)offset);
+        log_error("Region with offset %ld is not in use", (long)offset);
         status = EINVAL;
     }
     else {
@@ -3832,14 +3860,14 @@ rgn2_release(
  *                                      wait
  * @param[out]    ptrp    Location of region in memory
  * @retval        0       Success
- * @retval        EACCES  Region already reserved. `log_add()` *not* called.
- * @retval        EDEADLK Deadlock condition detected. `log_add()` called.
+ * @retval        EACCES  Region already reserved. `log_error()` *not* called.
+ * @retval        EDEADLK Deadlock condition detected. `log_error()` called.
  * @retval        ENOLCK  Number of file-locks would exceed system limit.
- *                        `log_add()` called.
- * @retval        ENOMEM  Insufficient memory available. `log_add()` called.
+ *                        `log_error()` called.
+ * @retval        ENOMEM  Insufficient memory available. `log_error()` called.
  * @retval        EIO     An I/O error occurred while accessing the file system.
- *                        `log_add()` called.
- * @retval        EINTR   A signal was caught during execution. `log_add()`
+ *                        `log_error()` called.
+ * @retval        EINTR   A signal was caught during execution. `log_error()`
  *                        called.
  * @see `f_mtof()`
  */
@@ -3871,14 +3899,14 @@ f_ftom(
 
     if (status != EACCES) {
         if (status) {
-            log_add("Couldn't reserve %lu bytes starting at offset %ld",
+            log_error("Couldn't reserve %lu bytes starting at offset %ld",
                     (unsigned long)extent, (long)offset);
         }
         else {
             vp = malloc(extent);
 
             if (vp == NULL) {
-                log_add_syserr("Couldn't malloc() %lu bytes",
+                log_syserr("Couldn't malloc() %lu bytes",
                         (unsigned long)extent);
                 status = errno;
             }
@@ -3890,13 +3918,13 @@ f_ftom(
                 ssize_t nread = pread(pq->fd, vp, extent, offset);
 
                 if (nread == -1) {
-                    log_add_syserr("Couldn't read %lu bytes from "
+                    log_syserr("Couldn't read %lu bytes from "
                             "product-queue starting at offset %ld",
                             (unsigned long)extent, (long)offset);
                     status = errno;
                 }
                 else if (nread && nread != extent) {
-                    log_add("Read %ld bytes from product-queue at offset %ld; "
+                    log_error("Read %ld bytes from product-queue at offset %ld; "
                             "expected to read %lu", (long)nread, (long)offset,
                             (unsigned long)extent);
                     status = EIO;
@@ -3930,11 +3958,11 @@ f_ftom(
  *                                         elsewhere
  *                        - RGN_MODIFIED   Region was modified
  * @retval        0       Success
- * @retval        EBADF   Product-queue isn't open for writing. `log_add()`
+ * @retval        EBADF   Product-queue isn't open for writing. `log_error()`
  *                        called.
- * @retval        EINVAL  Region with given offset isn't in use. `log_add()`
+ * @retval        EINVAL  Region with given offset isn't in use. `log_error()`
  *                        called.
- * @retval        EIO     I/O error. `log_add()` called.
+ * @retval        EIO     I/O error. `log_error()` called.
  * @see `mm_ftom()`
  */
 static int
@@ -3957,7 +3985,7 @@ f_mtof( pqueue *const pq,
     riu* rp;
 
     if (riul_r_find(pq->riulp, offset, &rp) == 0) {
-        log_add("Region with offset %ld isn't in use", (long)offset);
+        log_error("Region with offset %ld isn't in use", (long)offset);
         status = EINVAL;
     }
     else {
@@ -3975,13 +4003,13 @@ f_mtof( pqueue *const pq,
             ssize_t nwrote = pwrite(pq->fd, vp, extent, offset);
 
             if (nwrote == -1) {
-                log_add_syserr("Couldn't write %lu bytes to product-queue "
+                log_syserr("Couldn't write %lu bytes to product-queue "
                         "starting at offset %ld", (unsigned long)extent,
                         (long)offset);
                 status = errno;
             }
             else if (nwrote != extent) {
-                log_add("Wrote %ld bytes to product-queue at offset %ld; "
+                log_error("Wrote %ld bytes to product-queue at offset %ld; "
                         "expected to write %lu", nwrote, (long)offset,
                         (unsigned long)extent);
                 status = EIO;
@@ -4015,19 +4043,18 @@ f_mtof( pqueue *const pq,
  *                                      wait
  * @param[out]    ptrp    Location of mapped region in memory
  * @retval        0       Success
- * @retval        EACCES  Region already reserved. `log_add()` *not* called.
- * @retval        EDEADLK Deadlock condition detected. `log_add()` called.
+ * @retval        EACCES  Region already reserved. `log_error()` *not* called.
+ * @retval        EDEADLK Deadlock condition detected. `log_error()` called.
  * @retval        ENOLCK  Number of file-locks would exceed system limit.
- *                        `log_add()`
- *                        called.
- * @retval        ENOMEM  Insufficient memory available. `log_add()` called.
+ *                        `log_error()` called.
+ * @retval        ENOMEM  Insufficient memory available. `log_error()` called.
  * @retval        EIO     An I/O error occurred while accessing the file system.
- *                        `log_add()` called.
- * @retval        EINTR   A signal was caught during execution. `log_add()`
+ *                        `log_error()` called.
+ * @retval        EINTR   A signal was caught during execution. `log_error()`
  *                        called.
  * @retval        EMFILE  The number of mapped regions would exceed an
  *                        implementation-dependent limit (per process or per
- *                        system). `log_add()` called.
+ *                        system). `log_error()` called.
  * @see `mm_mtof()`
  */
 static int
@@ -4064,14 +4091,14 @@ mm_ftom(pqueue* const pq,
 
     if (status != EACCES) {
         if (status) {
-            log_add("rgn2_reserve() failure");
+            log_error("rgn2_reserve() failure");
         }
         else {
             if (fIsSet(prot, PROT_WRITE)) {
                 status = fgrow(pq->fd, offset+extent,
                         fIsSet(pq->pflags, PQ_SPARSE));
                 if (status)
-                    log_add_errno(status, "fgrow() failure");
+                    log_errno(status, "fgrow() failure");
             }
 
             if (status == 0) {
@@ -4131,7 +4158,7 @@ mm_mtof(pqueue *const pq,
 
     riu *rp = NULL;
     if (riul_r_find(pq->riulp, offset, &rp) == 0) {
-        log_add("Region with offset %ld is not in use", (long)offset);
+        log_error("Region with offset %ld is not in use", (long)offset);
         status = EINVAL;
     }
     else {
@@ -4153,12 +4180,12 @@ mm_mtof(pqueue *const pq,
         }
 
         if (status) {
-            log_add_errno(status, "unmapwrap() failure");
+            log_errno(status, "unmapwrap() failure");
         }
         else {
             status = rgn2_release(pq, offset, rflags);
             if (status)
-                log_add_errno(status, "rgn2_release() failure");
+                log_errno(status, "rgn2_release() failure");
         }
     } // Region found in regions-in-use list
 
@@ -4228,8 +4255,8 @@ mm0_map(pqueue *const pq)
         if(vp != NULL)
                 fSet(mflags, MAP_FIXED);
         log_debug("Mapping %ld", (long)st_size);
-        if (~(size_t)0 < st_size) {
-            log_error_q("File is too big to memory-map");
+        if (MAX_SIZE_T < st_size) {
+            log_error("File is too big to memory-map");
             pq->base = NULL;
             status = EFBIG;
             return status;
@@ -4256,7 +4283,7 @@ mm0_map(pqueue *const pq)
  *                    - RGN_WRITE   Region will be modified
  *                    - RGN_NOWAIT  Return immediately if can't lock, else wait
  *
- * `log_add()` is called for all of the following:
+ * `log_error()` is called for all of the following:
  * @retval EACCES     The region is already locked by another process.
  * @retval EINVAL     The product-queue file doesn't support locking.
  * @retval ENOLCK     The number of locked regions would exceed a system-imposed
@@ -4313,14 +4340,14 @@ mm0_ftom(pqueue *const pq,
 
     if (!pIf(fIsSet(rflags, RGN_WRITE),
                     !fIsSet(pq->pflags, PQ_READONLY))) {
-        log_error_q("Write access requested to readonly product-queue");
+        log_error("Write access requested to readonly product-queue");
         abort();
     }
 
     if (pq->base == NULL) {
         status = mm0_map(pq); // First time
         if (status)
-            log_add_errno(status, "mm0_map() failure");
+            log_errno(status, "mm0_map() failure");
     }
 
     if (status == 0) {
@@ -4331,7 +4358,7 @@ mm0_ftom(pqueue *const pq,
 
         if (status != EACCES) {
             if (status) {
-                log_add("rgn2_reserve() failure");
+                log_error("rgn2_reserve() failure");
             }
             else {
                 *ptrp = vp;
@@ -4382,10 +4409,6 @@ mm0_mtof(
 #endif /*HAVE_MMAP*/
 
 
-/* The maximum value of a "size_t": */
-static const size_t MAX_SIZE_T = ~(size_t)0;
-
-
 /**
  * Indicates if memory-mapping by individual data-products is necessary.
  *
@@ -4432,11 +4455,12 @@ rgn_rel(pqueue *const pq, off_t const offset, int const rflags)
 }
 
 /*
- * Get/lock a data region. This function is the complement of `rgn_rel()`.
+ * Get/lock a data region. This function is the complement of `rgn_rel()`. The
+ * region is added to the regions-in-use list.
  *
  * Returns:
  *      0       Success
- *      `log_add()` is called for all of the following:
+ *      `log_error()` is called for all of the following:
  *      EACCESS or EAGAIN
  *              "rflags" contains RGN_NOWAIT and the segment of a file to
  *              be locked is already exclusive-locked by another process,
@@ -4521,7 +4545,7 @@ xinfo_i(void *buf, size_t size, enum xdr_op op,
 
         if(!xdr_prod_info(xdrs, infop))
         {
-                log_error_q("xinfo:%s xdr_prod_info() failed",
+                log_error("xinfo:%s xdr_prod_info() failed",
                         infop->ident) ;
                 return NULL;
         }
@@ -4541,7 +4565,7 @@ xproduct(void *buf, size_t size, enum xdr_op op, product *prod)
 
         if (!xdr_product(xdrs, prod))
         {
-                log_error_q("%s xdr_product() failed",
+                log_error("%s xdr_product() failed",
                         prod->info.ident);
                 return 0;
         }
@@ -4582,7 +4606,7 @@ pq2_try_del_prod(
     int           status;
 
     if (offset != tqep->offset) {
-        log_error_q("Offset-to-region mismatch: time-entry=%ld, "
+        log_error("Offset-to-region mismatch: time-entry=%ld, "
                 "region-entry=%ld", (long)tqep->offset, (long)offset);
         status = PQ_CORRUPT;
     }
@@ -4596,8 +4620,7 @@ pq2_try_del_prod(
                 status = EACCES;
             }
             else {
-                log_add_syserr("Couldn't get region (offset=%ld,extent=%lu)");
-                log_flush_error();
+                log_syserr("Couldn't get region (offset=%ld,extent=%lu)");
                 status = PQ_SYSTEM;
             }
         }
@@ -4610,7 +4633,7 @@ pq2_try_del_prod(
             (void)memset(info, 0, sizeof(prod_info));
 
             if (!xdr_prod_info(&xdrs, info)) {
-                log_error_q("Couldn't XDR_DECODE data-product metadata");
+                log_error("Couldn't XDR_DECODE data-product metadata");
                 status = PQ_CORRUPT;
             }
             else {
@@ -4618,7 +4641,7 @@ pq2_try_del_prod(
                  * Remove the corresponding entry from the signature-map.
                  */
                 if (sx_find_delete(pq->sxp, info->signature) == 0) {
-                    log_error_q("pq_try_del_prod(): signature %s: Not Found",
+                    log_error("pq_try_del_prod(): signature %s: Not Found",
                             s_signaturet(NULL, 0, info->signature));
                     status = PQ_CORRUPT;
                 }
@@ -4740,7 +4763,7 @@ pq2_del_oldest(
         ++numLocked;
     }
 
-    log_add("All %zu products are locked. No unlocked products left to delete!",
+    log_error("All %zu products are locked. No unlocked products left to delete!",
             numLocked);
 
     return status;
@@ -4765,7 +4788,7 @@ pq2_del_oldest(
         rlix = rl_find(pq->rlp, tqep->offset);
 
         if (rlix == RL_NONE) {
-            log_error_q("no unlocked products left to delete!");
+            log_error("no unlocked products left to delete!");
             break;
         }
 
@@ -4836,7 +4859,7 @@ pq2_del_oldest(
         signature = infoBuf.info.signature;
 
         if (sx_find_delete(pq->sxp, signature) == 0) {
-            log_error_q("signature %s: Not Found",
+            log_error("signature %s: Not Found",
                     s_signaturet(NULL, 0, signature));
             status = EINVAL;
         }
@@ -4879,19 +4902,19 @@ rpqe_free(pqueue *pq, off_t offset, const signaturet signature)
         rlix = rl_find(pq->rlp, offset);
         if(rlix == RL_NONE)
         {
-                log_error_q("offset 0x%08lx: Not Found", (long)offset);
+                log_error("offset 0x%08lx: Not Found", (long)offset);
                 return EINVAL;
         }
         rp = pq->rlp->rp + rlix;
         if(IsFree(rp))
         {
-                log_error_q("0x%08lx: Already free", (long)offset);
+                log_error("0x%08lx: Already free", (long)offset);
                 return EINVAL;
         }
 
         if(sx_find_delete(pq->sxp, signature) == 0)
         {
-                log_error_q("signature %s: Not Found",
+                log_error("signature %s: Not Found",
                         s_signaturet(NULL, 0, signature));
                 return EINVAL;
         }
@@ -5023,7 +5046,6 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     int           status = ENOERR;
     size_t        rlix;            /* region list index */
     region*       hit = NULL;
-    static size_t smallest_extent_seen = UINT_MAX;
 
     /*
      * Check for duplicate
@@ -5044,8 +5066,8 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     }
 
     extent = _RNDUP(extent, pq->ctlp->align);
-    if (extent < smallest_extent_seen)
-        smallest_extent_seen = extent;
+    if (extent < pq->smallest_extent_seen)
+        pq->smallest_extent_seen = extent;
 
     // log_debug_1("Getting a region");
     rlix = rl_get(pq->rlp, extent);
@@ -5059,7 +5081,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
     #define PQ_FRAGMENT_HEURISTIC 64
     /* Don't bother to split off tiny fragments too small for any
        product we've seen */
-    if (extent + smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
+    if (extent + pq->smallest_extent_seen + PQ_FRAGMENT_HEURISTIC < hit->extent) {
         // log_debug_1("Splitting region");
         status = rl_split(pq->rlp, rlix, extent);
         if (status != ENOERR)
@@ -5080,7 +5102,7 @@ rpqe_new(pqueue *pq, size_t extent, const signaturet sxi,
         // log_debug_1("Adding signature");
         sxelem* const sxelem = sx_add(pq->sxp, sxi, hit->offset);
         if (sxelem == NULL) {
-            log_error_q("sx_add() failure");
+            log_error("sx_add() failure");
             status = ENOMEM;
             goto sx_add_failure;
         }
@@ -5144,9 +5166,11 @@ ctl_rel(pqueue *const pq, const int rflags)
 
         if(pq->ixp != NULL)
         {
-                status = (pq->mtof)(pq, pq->ixo, rflags|RGN_NOLOCK);
-                if(status != ENOERR)
-                        log_error_q("mtof ix: %s", strerror(status));
+                const int stat = (pq->mtof)(pq, pq->ixo, rflags|RGN_NOLOCK);
+                if(stat) {
+                        log_error("mtof() failure on indexes");
+                        status = stat;
+                }
                 pq->ixp = NULL;
                 pq->rlp = NULL;
                 pq->tqp = NULL;
@@ -5156,9 +5180,12 @@ ctl_rel(pqueue *const pq, const int rflags)
         
         if(pq->ctlp != NULL)
         {
-                status = (pq->mtof)(pq, 0, rflags);
-                if(status != ENOERR)
-                        log_error_q("mtof ctl: %s", strerror(status));
+                const int stat = (pq->mtof)(pq, 0, rflags);
+                if(status) {
+                        log_error("mtof() failure on control block");
+                        if (status == 0)
+								status = stat;
+                }
                 pq->ctlp = NULL;
         }
 
@@ -5267,8 +5294,8 @@ ctl_init(pqueue *const pq, size_t const align)
         {
                 off_t  datasz = pq->ixo - pq->datao;
 
-                if (~(size_t)0 < datasz) {
-                    log_error_q("Data portion of file is too big for one region");
+                if (MAX_SIZE_T < datasz) {
+                    log_error("Data portion of file is too big for one region");
                     return EFBIG;
                 }
                 {
@@ -5384,13 +5411,13 @@ remap:
         if(ctlp->magic != PQ_MAGIC)
         {
                 /* Not a product queue */
-                log_error_q("%s: Not a product queue", path);
+                log_error("%s: Not a product queue", path);
                 status = EINVAL;
                 goto unwind_map;
         }
         if (PQ_VERSION != ctlp->version && 7 != ctlp->version)
         {
-                log_error_q("%s: Product queue is version %d instead of expected version %d",
+                log_error("%s: Product queue is version %d instead of expected version %d",
                        path, ctlp->version, PQ_VERSION);
                 status = EINVAL;
                 goto unwind_map;
@@ -5399,7 +5426,7 @@ remap:
         {
                 /* Can't align */
                 /* TODO: If we use read()/write() not fatal ??? */
-                log_error_q("%s: Can't align", path);
+                log_error("%s: Can't align", path);
                 status = EINVAL;
                 goto unwind_map;
         }
@@ -5430,7 +5457,7 @@ remap:
             !(pq->ixsz >= pq->pagesz) ||
             !(pq->ixsz % pq->pagesz == 0)) {
 
-            log_error_q("pq->datao=%lu, pq->pagesz=%lu, pq->ixo=%lu, "
+            log_error("pq->datao=%lu, pq->pagesz=%lu, pq->ixo=%lu, "
                 "pq->ixsz=%lu",
                 (unsigned long)pq->datao, (unsigned long)pq->pagesz, 
                 (unsigned long)pq->ixo, (unsigned long)pq->ixsz);
@@ -5457,7 +5484,7 @@ remap:
 
         if (!(pq->rlp->nalloc == pq->nalloc && pq->tqp->nalloc == pq->nalloc
                         && pq->sxp->nalloc == pq->nalloc)) { 
-                log_error_q("pq->rlp->nalloc=%lu, pq->nalloc=%lu, "
+                log_error("pq->rlp->nalloc=%lu, pq->nalloc=%lu, "
                     "pq->tqp->nalloc=%lu, pq->sxp->nalloc=%lu",
                     (unsigned long)pq->rlp->nalloc,
                     (unsigned long)pq->nalloc, 
@@ -5593,19 +5620,16 @@ unwind_mask:
 /******************************************************************************
  * Product-Queue Functions:
  ******************************************************************************/
-static int entryState;
-
 static void
 pq_lockIf(pqueue* const pq)
 {
     if (fIsSet(pq->pflags, PQ_THREADSAFE)) {
-        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &entryState);
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &pq->cancelState);
 
         int status = pthread_mutex_lock(&pq->mutex);
 
         if (status) {
-            log_add_errno(status, "pthread_mutex_lock() failure");
-            log_flush_error();
+            log_errno(status, "pthread_mutex_lock() failure");
             abort();
         }
     }
@@ -5618,13 +5642,12 @@ pq_unlockIf(pqueue* const pq)
         int status = pthread_mutex_unlock(&pq->mutex);
 
         if (status) {
-            log_add_errno(status, "pthread_mutex_unlock() failure");
-            log_flush_error();
+            log_errno(status, "pthread_mutex_unlock() failure");
             abort();
         }
 
         int lockState;
-        (void)pthread_setcancelstate(entryState, &lockState);
+        (void)pthread_setcancelstate(pq->cancelState, &lockState);
     }
 }
 
@@ -5714,7 +5737,7 @@ pq_new(
     pq_setOffsetsAndSizes(pq, align, initialsz, maxProds);
 
     if (pq->ixo < pq->datao) {
-        log_error_q("Queue-size not supported by environment: initialsz=%ld, "
+        log_error("Queue-size not supported by environment: initialsz=%ld, "
                 "sizeof(off_t)=%lu, sizeof(size_t)=%lu", (long)initialsz,
                 (unsigned long)sizeof(off_t), (unsigned long)sizeof(size_t));
         errno = EINVAL;
@@ -5755,14 +5778,14 @@ pq_new(
         pthread_mutexattr_t attr;
         int                 status = pthread_mutexattr_init(&attr);
         if (status) {
-            log_add_errno(status, "Couldn't initialize mutex attributes");
+            log_errno(status, "Couldn't initialize mutex attributes");
         }
         else {
             (void)pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
             (void)pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
             status = pthread_mutex_init(&pq->mutex, &attr);
             if (status)
-                log_add_errno(status, "Couldn't initialize mutex");
+                log_errno(status, "Couldn't initialize mutex");
             (void)pthread_mutexattr_destroy(&attr);
         }
         if (status) {
@@ -5782,6 +5805,7 @@ pq_new(
     pq->cursor_offset = OFF_NONE;
     pq->pqe_count = 0;
     pq->locked_count = 0;
+	pq->smallest_extent_seen = UINT_MAX;
 
     return pq;
 }
@@ -5888,7 +5912,11 @@ pq_create(const char *path, mode_t mode,
 
         *pqp = pq;
 
-        (void) ctl_rel(pq, RGN_MODIFIED);
+        status = ctl_rel(pq, RGN_MODIFIED);
+        if (status) {
+        	log_error("ctl_rel() failure");
+        	goto unwind_open;
+        }
 
         return ENOERR;
 
@@ -5947,72 +5975,84 @@ pq_open(
             status = ctl_gopen(pq, path);
 
             if (!status) {
-                (void)ctl_rel(pq, 0);           /* release control-block */
+                status = ctl_rel(pq, 0);           /* release control-block */
 
-                if (!fIsSet(pflags, PQ_READONLY)) {
-                    status = ctl_get(pq, RGN_WRITE);
+                if (status) {
+                	log_error("ctl_rel() failure");
+                }
+                else {
+					if (!fIsSet(pflags, PQ_READONLY)) {
+						status = ctl_get(pq, RGN_WRITE);
 
-                    if (!status) {
-                        int      rflags = 0;    /* control-block unmodified */
-                        pqctl*   ctlp = pq->ctlp;
+						if (!status) {
+							int      rflags = 0;    // control-block unmodified
+							pqctl*   ctlp = pq->ctlp;
 
-                        if (WRITE_COUNT_MAGIC != ctlp->write_count_magic) {
-                            /*
-                             * This process is the first one of this version of
-                             * the LDM to open the product-queue for writing.
-                             * Initialize the "write count" mechanism.
-                             */
-                            ctlp->write_count_magic = WRITE_COUNT_MAGIC;
-                            ctlp->write_count = 0;
-                            rflags = RGN_MODIFIED;
-                        }
+							if (WRITE_COUNT_MAGIC != ctlp->write_count_magic) {
+								/*
+								 * This process is the first one of this version
+								 * of the LDM to open the product-queue for
+								 * writing. Initialize the "write count"
+								 * mechanism.
+								 */
+								ctlp->write_count_magic = WRITE_COUNT_MAGIC;
+								ctlp->write_count = 0;
+								rflags = RGN_MODIFIED;
+							}
 
-                        if (MAX_WRITE_COUNT > ctlp->write_count) {
-                            ctlp->write_count++;
-                            rflags = RGN_MODIFIED;
-                        }
-                        else {
-                            log_error_q("Too many writers (%u) to product-queue "
-                                "(%s)", ctlp->write_count, path);
+							if (MAX_WRITE_COUNT > ctlp->write_count) {
+								ctlp->write_count++;
+								rflags = RGN_MODIFIED;
+							}
+							else {
+								log_error("Too many writers (%u) to "
+										"product-queue (%s)", ctlp->write_count,
+										path);
 
-                            status = EACCES;    /* too many writers */
-                        }
+								status = EACCES;    /* too many writers */
+							}
 
-                        if (!status) {
-                            if (METRICS_MAGIC != ctlp->metrics_magic) {
-                                /*
-                                 * This process is the first one of this
-                                 * version of the LDM to open the product-queue
-                                 * for writing.  Initialize the additional
-                                 * metrics.
-                                 */
-                                ctlp->metrics_magic = METRICS_MAGIC;
-                                ctlp->mostRecent = TS_NONE;
-                                ctlp->minVirtResTime = TS_NONE;
-                                ctlp->isFull = 0;
-                                rflags = RGN_MODIFIED;
-                            }
-                            if (METRICS_MAGIC_2 != ctlp->metrics_magic_2) {
-                                /*
-                                 * This process is the first one of this
-                                 * version of the LDM to open the product-queue
-                                 * for writing.  Initialize the additional
-                                 * metrics.
-                                 */
-                                ctlp->metrics_magic_2 = METRICS_MAGIC_2;
-                                ctlp->mvrtSize = -1;
-                                ctlp->mvrtSlots = 0;
-                                rflags = RGN_MODIFIED;
-                            }
+							if (!status) {
+								if (METRICS_MAGIC != ctlp->metrics_magic) {
+									/*
+									 * This process is the first one of this
+									 * version of the LDM to open the
+									 * product-queue for writing.  Initialize
+									 * the additional metrics.
+									 */
+									ctlp->metrics_magic = METRICS_MAGIC;
+									ctlp->mostRecent = TS_NONE;
+									ctlp->minVirtResTime = TS_NONE;
+									ctlp->isFull = 0;
+									rflags = RGN_MODIFIED;
+								}
+								if (METRICS_MAGIC_2 != ctlp->metrics_magic_2) {
+									/*
+									 * This process is the first one of this
+									 * version of the LDM to open the
+									 * product-queue for writing.  Initialize
+									 * the additional metrics.
+									 */
+									ctlp->metrics_magic_2 = METRICS_MAGIC_2;
+									ctlp->mvrtSize = -1;
+									ctlp->mvrtSlots = 0;
+									rflags = RGN_MODIFIED;
+								}
 
-                            (void)strncpy(pq->pathname, path,
-                                    sizeof(pq->pathname));
-                            pq->pathname[sizeof(pq->pathname)-1] = 0;
-                        }
+								(void)strncpy(pq->pathname, path,
+										sizeof(pq->pathname));
+								pq->pathname[sizeof(pq->pathname)-1] = 0;
+							}
 
-                        (void)ctl_rel(pq, rflags);
-                    }                           /* ctl_get() success */
-                }                               /* open for writing */
+							const int stat = ctl_rel(pq, rflags);
+							if (stat) {
+								log_error("ctl_rel() failure");
+								if (status == 0)
+									status = stat;
+							}
+						}                           /* ctl_get() success */
+					}                               /* open for writing */
+                } // `ctl_rel()` success
             }                                   /* ctl_gopen() success */
 
             if (status) {
@@ -6099,8 +6139,12 @@ pq_close(pqueue *pq)
         }
 
         if (fIsSet(pq->pflags, PQ_READONLY)) {
-            if (NULL != pq->ctlp)
-                (void)ctl_rel(pq, 0);
+            if (NULL != pq->ctlp) {
+                status = ctl_rel(pq, 0);
+
+                if (status)
+                	log_error("ctl_rel() failure");
+            }
         }
         else {
             status = ctl_get(pq, RGN_WRITE);
@@ -6113,13 +6157,19 @@ pq_close(pqueue *pq)
                     rflags = RGN_MODIFIED;
                 }
                 else {
-                    log_error_q("Write-count of product-queue prematurely 0");
+                    log_error("Write-count of product-queue prematurely 0");
 
                     rflags = 0;                 /* unmodified */
                     status = EOVERFLOW;
                 }
 
-                (void)ctl_rel(pq, rflags);
+                const int stat = ctl_rel(pq, rflags);
+
+                if (stat) {
+                	log_error("ctl_rel() failure");
+                	if (status == 0)
+                		status = stat;
+                }
             }
         }                                       /* was opened for writing */
 
@@ -6249,10 +6299,9 @@ vetCreationTime(
             cp == NULL ?  strlen(origin) : (size_t)(cp - origin);
 
         if (log_is_enabled_info) {
-            log_add("Future product from \"%*s\". "
+            log_warning("Future product from \"%*s\". "
                     "Fix local or ingest clock. %s",
                     (int)len, origin, s_prod_info(NULL, 0, info, 0));
-            log_flush_warning();
         }
         else {
             FutureEntry         targetEntry;
@@ -6405,7 +6454,7 @@ unwind_lock:
  * @retval EINVAL        Invalid argument.
  * @retval PQ_DUP        Product already exists in the queue.
  * @retval PQ_BIG        Product is too large to insert in the queue.
- * @retval PQ_SYSTEM     System failure. log_add() called.
+ * @retval PQ_SYSTEM     System failure. log_error() called.
  */
 int
 pq_insert(pqueue *pq, const product *prod)
@@ -7178,9 +7227,8 @@ pq_getMetadataFromOffset(
         status = rgn_get(pq, offset, extent, 0, &vp);
 
         if (0 != status) {
-            log_add_syserr("Couldn't lock data-product's "
+            log_syserr("Couldn't lock data-product's "
                     "data-region in product-queue");
-            log_flush_error();
         }
         else {
             XDR       xdrs;
@@ -7246,7 +7294,7 @@ pq_findTimeEntryBySignature(
         status =  pq_getMetadataFromOffset(pq, signatureEntry->offset, info);
 
         if (PQ_NOTFOUND == status) {
-            log_error_q("data-product region "
+            log_error("data-product region "
                 "of signature-map entry doesn't exist");
             status = PQ_CORRUPT;
         }
@@ -7275,7 +7323,7 @@ pq_findTimeEntryBySignature(
             }
 
             if (NULL == timeEntry) {
-                log_error_q("The product-queue appears to be empty");
+                log_error("The product-queue appears to be empty");
                 status = PQ_CORRUPT;
             }
             else {
@@ -7436,8 +7484,7 @@ pq_setCursorFromSignature(
         status = ctl_get(pq, 0);
 
         if (ENOERR != status) {
-            log_add_syserr("Couldn't lock control-region of product-queue");
-            log_flush_error();
+            log_syserr("Couldn't lock control-region of product-queue");
         }
         else {
             tqelem* timeEntry;
@@ -7466,8 +7513,8 @@ pq_setCursorFromSignature(
  * @param[in] sig          Signature of data-product to process.
  * @param[in] func         Function to process data-product.
  * @param[in] optArg       Optional `func` argument.
- * @retval    PQ_SYSTEM    System error. `log_add()` called.
- * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_add()` called.
+ * @retval    PQ_SYSTEM    System error. `log_error()` called.
+ * @retval    PQ_CORRUPT   The product-queue is corrupt. `log_error()` called.
  * @retval    PQ_NOTFOUND  A data-product with the given signature was not found
  *                         in the product-queue.
  * @return                 Return-code of `func`. All the above error-codes are
@@ -7490,8 +7537,7 @@ pq_processProduct(
      * write-access by another process.
      */
     if (ctl_get(pq, 0)) {
-        log_add_syserr("Couldn't lock control-region of product-queue");
-        log_flush_error();
+        log_syserr("Couldn't lock control-region of product-queue");
         status = PQ_SYSTEM;
     }
     else {
@@ -7513,7 +7559,7 @@ pq_processProduct(
             const size_t         rlix = rl_find(rlp, offset);
 
             if (RL_NONE == rlix) {
-                log_add("Signature-entry has no corresponding region-entry");
+                log_error("Signature-entry has no corresponding region-entry");
                 status = PQ_CORRUPT;
             }
             else {
@@ -7526,7 +7572,7 @@ pq_processProduct(
                 const size_t        extent = Extent(rp);
 
                 if (rgn_get(pq, offset, extent, 0, &vp)) {
-                    log_add("Couldn't lock data-product's data-region");
+                    log_error("Couldn't lock data-product's data-region");
                     status = PQ_SYSTEM;
                 }
                 else {
@@ -7536,7 +7582,7 @@ pq_processProduct(
                      * because the data-product's data-region is locked,
                      */
                     if (ctl_rel(pq, 0)) {
-                        log_add("Couldn't unlock control-region");
+                        log_error("Couldn't unlock control-region");
                         status = PQ_SYSTEM;
                     }
                     else {
@@ -7562,7 +7608,7 @@ pq_processProduct(
                         (void)memset(&info, 0, sizeof(info));
 
                         if (!xdr_prod_info(&xdrs, &info)) {
-                            log_add("xdr_prod_info() failed");
+                            log_error("xdr_prod_info() failed");
                             status = PQ_SYSTEM;
                         }
                         else {
@@ -7709,11 +7755,10 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                             char ts[20];
 
                             (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                            log_add("Queue corrupt: tq: %s %s at %ld",
+                            log_error("Queue corrupt: tq: %s %s at %ld",
                                     ts,
                                     status ? "invalid region" : "no data",
                                     tqep->offset);
-                            log_flush_error();
                             /*
                              * We can't fix it (tq_delete(pq->tqp, tqep)) here
                              * since we don't have write permission
@@ -7784,7 +7829,7 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                                         XDR_DECODE) ;
 
                                 if (!xdr_prod_info(&xdrs, info)) {
-                                    log_error_q("xdr_prod_info() failed") ;
+                                    log_error("xdr_prod_info() failed") ;
                                     status = PQ_SYSTEM;
                                 }
                                 else {
@@ -7992,8 +8037,8 @@ pq_sequenceLock(
  * @param[in,out] app_par      Application-supplied parameters or `NULL`
  * @retval        0            Success. `func()` was called.
  * @retval        PQ_END       End of time-queue hit
- * @retval        PQ_INVAL     Invalid argument. log_add() called.
- * @retval        PQ_SYSTEM    System failure. log_add() called.
+ * @retval        PQ_INVAL     Invalid argument. log_error() called.
+ * @retval        PQ_SYSTEM    System failure. log_error() called.
  */
 int
 pq_next(
@@ -8007,7 +8052,7 @@ pq_next(
     int status;
 
     if (pq == NULL || clss == NULL || func==NULL) {
-        log_add("Invalid argument: pq=%p, clss=%p, func=%p", pq, clss, func);
+        log_error("Invalid argument: pq=%p, clss=%p, func=%p", pq, clss, func);
         status = PQ_INVAL;
     }
     else {
@@ -8020,7 +8065,7 @@ pq_next(
         // Read-lock control-header
         status = ctl_get(pq, 0);
         if (status) {
-            log_add_errno(status, "Couldn't get control-header");
+            log_errno(status, "Couldn't get control-header");
             status = PQ_SYSTEM;
         }
         else {
@@ -8050,7 +8095,7 @@ pq_next(
                         || Extent(rp) > pq_getDataSize(pq)) {
                     char ts[20];
                     (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                    log_error_q("Queue corrupt: tq: %s %s at %ld",
+                    log_error("Queue corrupt: tq: %s %s at %ld",
                             ts,
                             status ? "invalid region" : "no data",
                             tqep->offset);
@@ -8073,7 +8118,7 @@ pq_next(
                     status = rgn_get(pq, rp->offset, prod_par.size, 0,
                             &prod_par.encoded);
                     if (status) {
-                        log_add_errno(status, "Couldn't get product region");
+                        log_errno(status, "Couldn't get product region");
                         status = PQ_SYSTEM;
                     }
                     else {
@@ -8106,7 +8151,7 @@ pq_next(
                         xdrmem_create(&xdrs, prod_par.encoded,
                                 (u_int)prod_par.size, XDR_DECODE) ;
                         if (!xdr_prod_info(&xdrs, &prod_par.info)) {
-                            log_error_q("xdr_prod_info() failed") ;
+                            log_error("xdr_prod_info() failed") ;
                             status = PQ_SYSTEM;
                         }
                         else {
@@ -8176,9 +8221,9 @@ pq_next(
  * be deleted to make room for another product.
  *
  * @retval 0            Success.
- * @retval PQ_CORRUPT   Product-queue is corrupt. `log_add()` called.
- * @retval PQ_INVAL     Product-queue is closed. `log_add()` called.
- * @retval PQ_NOTFOUND  `offset` doesn't refer to a locked product. `log_add()`
+ * @retval PQ_CORRUPT   Product-queue is corrupt. `log_error()` called.
+ * @retval PQ_INVAL     Product-queue is closed. `log_error()` called.
+ * @retval PQ_NOTFOUND  `offset` doesn't refer to a locked product. `log_error()`
  *                      called.
  */
 int
@@ -8194,7 +8239,7 @@ pq_release(
     pq_unlockIf(pq);
 
     if (status)
-        log_add_errno(status, "Couldn't release offset %ld", offset);
+        log_errno(status, "Couldn't release offset %ld", offset);
 
     return status == EBADF
             ? PQ_INVAL
@@ -8283,7 +8328,7 @@ pq_seqdel(
             prod_info b_i;
             char b_origin[HOSTNAMESIZE + 1];
             char b_ident[KEYSIZE + 1];
-        } buf; /* static ??? */
+        } buf;
 
         /* all this to avoid malloc in the xdr calls */
         info = &buf.b_i;
@@ -8349,7 +8394,7 @@ pq_seqdel(
         xdrmem_create(&xdrs, vp, (u_int)extent, XDR_DECODE) ;
 
         if(!xdr_prod_info(&xdrs, info)) {
-            log_error_q("xdr_prod_info() failed") ;
+            log_error("xdr_prod_info() failed") ;
             status = EIO;
             goto unwind_rgn;
         }
@@ -8383,7 +8428,7 @@ pq_seqdel(
             if(found == 0) {
                 char ts[20];
                 (void) sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                log_error_q("Queue corrupt: pq_seqdel: %s no signature at %ld",
+                log_error("Queue corrupt: pq_seqdel: %s no signature at %ld",
                         ts, tqep->offset);
             }
         }
@@ -8427,7 +8472,7 @@ pq_deleteBySignature(
     pq_lockIf(pq);
     int status = ctl_get(pq, RGN_WRITE);
     if (status) {
-        log_error_q("Couldn't lock the control-header of product-queue %s",
+        log_error("Couldn't lock the control-header of product-queue %s",
                 pq->pathname);
         status = PQ_SYSTEM;
     }
@@ -8441,7 +8486,7 @@ pq_deleteBySignature(
             size_t rlix = rl_find(pq->rlp, sxep->offset);
             if (rlix == RL_NONE) {
                 (void)sprint_signaturet(buf, sizeof(buf), sig);
-                log_error_q("Data-product with signature %s doesn't have a "
+                log_error("Data-product with signature %s doesn't have a "
                         "corresponding region-map entry in product-queue %s",
                         buf, pq->pathname);
                 status = PQ_CORRUPT;
@@ -8451,7 +8496,7 @@ pq_deleteBySignature(
                 status = pq_findTimeEntryBySignature(pq, sig, &timeEntry);
                 if (status) {
                     (void)sprint_signaturet(buf, sizeof(buf), sig);
-                    log_error_q("Data-product with signature %s doesn't have a "
+                    log_error("Data-product with signature %s doesn't have a "
                             "corresponding time-map entry in product-queue %s",
                             buf, pq->pathname);
                     status = PQ_CORRUPT;
@@ -8464,7 +8509,7 @@ pq_deleteBySignature(
                     }
                     else if (status) {
                         (void)sprint_signaturet(buf, sizeof(buf), sig);
-                        log_error_q("Couldn't remove map entries for "
+                        log_error("Couldn't remove map entries for "
                                 "data-product with signature %s from "
                                 "product-queue %s",
                                 buf, pq->pathname);
@@ -8541,7 +8586,7 @@ pq_last(pqueue* const             pq,
         }
 
         if (status != PQUEUE_END) {
-            log_error_q("seq:%s (errno = %d)", strerror(status), status);
+            log_error("seq:%s (errno = %d)", strerror(status), status);
         }
         else {
             status = ENOERR;
@@ -8808,13 +8853,13 @@ pqe_new(pqueue *pq,
         sxelem *sxep;
 
         if(infop->sz == 0) {
-                log_error_q("zero product size");
+                log_error("zero product size");
                 status = EINVAL;
                 goto unwind_lock;
         }
 
         if (infop->sz > pq_getDataSize(pq)) {
-                log_error_q("Product too big: product=%u bytes; queue=%lu bytes",
+                log_error("Product too big: product=%u bytes; queue=%lu bytes",
                     infop->sz, (unsigned long)pq_getDataSize(pq));
                 status = PQ_BIG;
                 goto unwind_lock;
@@ -8887,13 +8932,13 @@ unwind_lock:
  *                        the data has been written or `pqe_discard()` to abort
  *                        the writing and release the region.
  * @retval     EINVAL     `pq == NULL || ptrp == NULL || indexp == NULL`.
- *                        `log_add()` called.
-   @retval     EACCES     Product-queue is read-only. `log_add()` called.
+ *                        `log_error()` called.
+   @retval     EACCES     Product-queue is read-only. `log_error()` called.
  * @retval     PQ_BIG     Data-product is too large for product-queue.
- *                        `log_add()` called.
+ *                        `log_error()` called.
  * @retval     PQ_DUP     If a data-product with the same signature already
  *                        exists in the product-queue.
- * @return                `<errno.h>` error code. `log_add()` called.
+ * @return                `<errno.h>` error code. `log_error()` called.
  * @see `pqe_insert()`
  */
 int
@@ -8910,20 +8955,20 @@ pqe_newDirect(
      * Vet arguments.
      */
     if (pq == NULL || ptrp == NULL || indexp == NULL || signature == NULL) {
-        log_add("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
+        log_error("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
         status = EINVAL;
     }
     else {
         pq_lockIf(pq);
 
         if (size > pq_getDataSize(pq)) {
-            log_add("Product too big: product=%lu bytes; queue=%lu bytes",
+            log_error("Product too big: product=%lu bytes; queue=%lu bytes",
                     (unsigned long)size, (unsigned long)pq_getDataSize(pq));
             status = PQ_BIG;
         }
         else {
             if (fIsSet(pq->pflags, PQ_READONLY)) {
-                log_add("Product-queue is read-only");
+                log_error("Product-queue is read-only");
                 status = EACCES;
             }
             else {
@@ -8931,7 +8976,7 @@ pqe_newDirect(
                  * Write-lock the product-queue control-section.
                  */
                 if ((status = ctl_get(pq, RGN_WRITE)) != 0) {
-                    log_add("ctl_get() failure");
+                    log_error("ctl_get() failure");
                 }
                 else {
                     sxelem* sxep;
@@ -8942,7 +8987,7 @@ pqe_newDirect(
                     status = rpqe_new(pq, size, signature, ptrp, &sxep);
                     if (status) {
                         if (status != PQ_DUP)
-                            log_add("rpqe_new() failure: {size: %zu}", size);
+                            log_error("rpqe_new() failure: {size: %zu}", size);
                     }
                     else {
                         /*
@@ -8975,7 +9020,7 @@ pqe_newDirect(
  * @param[in] pqe_index  Pointer to the region-index set by `pqe_new()` or
  *                       `pqe_newDirect()`.  Shall not be NULL.
  * @retval 0             Success.
- * @return               <errno.h> error code. `log_add()` called.
+ * @return               <errno.h> error code. `log_error()` called.
  */
 int
 pqe_discard(
@@ -8988,19 +9033,31 @@ pqe_discard(
 
         status = (pq->mtof)(pq, offset, 0);
         if(status) {
-        	log_add("Couldn't unlock region with offset %ld", (long)offset);
+        	log_error("Couldn't unlock reserved region with offset %ld",
+        			(long)offset);
         }
         else {
             /*
              * Write lock pq->xctl.
              */
             status = ctl_get(pq, RGN_WRITE);
-            if(status == ENOERR) {
-                status = rpqe_free(pq, offset, index->signature);
-                (void)ctl_rel(pq, RGN_MODIFIED);
-                pq->pqe_count--;
+
+            if (status) {
+            	log_error("Couldn't get control block");
             }
-        }
+            else {
+                status = rpqe_free(pq, offset, index->signature);
+
+                if (status) {
+                	log_error("Couldn't free reserved region");
+                }
+                else {
+					pq->pqe_count--;
+                }
+
+				(void)ctl_rel(pq, RGN_MODIFIED);
+            } // Got control block
+        } // Reserved region saved and unlocked
     pq_unlockIf(pq);
 
     return status;
@@ -9024,7 +9081,7 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
                 char *xp;
                 if(riul_r_find(pq->riulp, offset, &rp) == 0)
                 {
-                        log_error_q("Couldn't riul_r_find %ld", (long)offset);
+                        log_error("Couldn't riul_r_find %ld", (long)offset);
                         status = EINVAL;
                         goto unwind_lock;
                 }
@@ -9062,7 +9119,7 @@ pqe_xinsert(pqueue *pq, pqe_index index, const signaturet realsignature)
 
           if(sx_find_delete(pq->sxp, index.signature) == 0)
             {
-              log_error_q("old signature %s: Not Found",
+              log_error("old signature %s: Not Found",
                      s_signaturet(NULL, 0, index.signature));
             }
           sxep = sx_add(pq->sxp, realsignature, offset);
@@ -9103,14 +9160,14 @@ unwind_lock:
  * @retval    PQ_BIG       According to its metadata, the data-product is larger
  *                         than the space allocated for it by `pqe_new()` or
  *                         `pqe_newDirect()`. `pqe_discard()` called.
- *                         `log_flush_error()` called.
+ *                         `log_error()` called.
  * @retval    PQ_CORRUPT   The metadata of the data-product referenced by
  *                         `index` couldn't be deserialized. `pqe_discard()`
- *                         called. `log_flush_error()` called.
+ *                         called. `log_error()` called.
  * @retval    PQ_NOTFOUND  The data-product referenced by `index` wasn't found.
- *                         `log_flush_error()` called.
+ *                         `log_error()` called.
  * @retval    PQ_SYSTEM    System failure. `pq_discard()` called.
- *                         `log_flush_error()` called.
+ *                         `log_error()` called.
  */
 int
 pqe_insert(
@@ -9124,7 +9181,7 @@ pqe_insert(
         riu* rp;
 
         if (riul_r_find(pq->riulp, index->offset, &rp) == 0) {
-            log_error_q("riul_r_find() failed");
+            log_error("riul_r_find() failed");
             status = PQ_NOTFOUND;
         }
         else {
@@ -9133,29 +9190,29 @@ pqe_insert(
             XDR        xdrs;
             xdrmem_create(&xdrs, rp->vp, rp->extent, XDR_DECODE);
             if (!xdr_prod_info(&xdrs, info)) {
-                log_error_q("xdr_prod_info() failed; "
+                log_error("xdr_prod_info() failed; "
                         "product-queue might now be corrupt");
                 status = PQ_CORRUPT;
             }
             else if (xlen_prod_i(info) > rp->extent) {
-                log_error_q("Product larger than allocated space; "
+                log_error("Product larger than allocated space; "
                         "product-queue now likely corrupted: "
                         "info->sz=%lu, rp->extent=%lu",
                         (unsigned long)info->sz, (unsigned long)rp->extent);
                 status = PQ_BIG;
             }
             else if (pq->mtof(pq, index->offset, RGN_MODIFIED)) {
-                log_error_q("pq->mtof() failed");
+                log_error("pq->mtof() failed");
                 status = PQ_SYSTEM;
             }
             else if (ctl_get(pq, RGN_WRITE)) {
-                log_error_q("ctl_get() failed");
+                log_error("ctl_get() failed");
                 status = PQ_SYSTEM;
             }
             else {
                 log_assert(pq->tqp != NULL && tq_HasSpace(pq->tqp));
                 if (tq_add(pq->tqp, index->offset)) {
-                    log_error_q("tq_add() failed");
+                    log_error("tq_add() failed");
                     status = PQ_SYSTEM;
                 }
                 else {

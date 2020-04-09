@@ -71,8 +71,15 @@
  * A queue of log messages.
  */
 typedef struct msg_queue {
+    /**
+     * First message of the current list
+     */
     Message*    first;
-    Message*    last;           /* NULL => empty queue */
+    /**
+     * Last message of the current list. Points to or before the last element of
+     * the list. NULL => no messages (but not necessarily no list).
+     */
+    Message*    last;
 } msg_queue_t;
 
 /// Is the logging module initialized?
@@ -297,6 +304,7 @@ static void queue_free(void* const arg)
     }
 
     queue->first = NULL;
+    queue->last = NULL;
 	free(queue);
 }
 

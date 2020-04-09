@@ -60,10 +60,10 @@ typedef struct {
     /*
      * Keep consonant with `fileSizeFromNumSigs()` and `numSigsFromFileSize()`
      */
-    size_t         numSigs;   ///< Number of signatures
-    size_t         oldSig;    ///< Offset of oldest signature
+    size_t        numSigs;   ///< Number of signatures
+    size_t        oldSig;    ///< Offset of oldest signature
     FmtpProdIndex oldIProd;  ///< Product-index of oldest signature
-    signaturet     sigs[1];   ///< Data-products signatures
+    signaturet    sigs[1];   ///< Data-product signatures
 } Mmo;
 static Mmo*         mmo;
 /**
@@ -895,7 +895,7 @@ pim_close(void)
  * is called.
  *
  * @param[in] dirname    Pathname of the parent directory or NULL, in which case
- *                       the current workingi directory is used.
+ *                       the current working directory is used.
  * @param[in] feedtype   The feedtype.
  * @retval 0             Success. The associated file doesn't exist or has been
  *                       removed.

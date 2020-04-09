@@ -125,15 +125,15 @@ mrm_clearAllMissedFiles(
  * requested-but-not-received queue is tried first; then the
  * missed-but-not-requested queue. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The index of the missed product.
- * @retval     true    Such an index exists. `*iProd` is set.
- * @retval     false   No such index (the queues are empty).
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The index of the missed product.
+ * @retval    true    Such an index exists. `*iProd` is set.
+ * @retval    false   No such index (the queues are empty).
  */
 bool
 mrm_getAnyMissedFileNoWait(
     McastReceiverMemory* const restrict mrm,
-    FmtpProdIndex* const restrict       iProd);
+    FmtpProdIndex* const restrict      iProd);
 
 /**
  * Adds an index of a product that was missed by the multicast receiver but
@@ -148,7 +148,7 @@ mrm_getAnyMissedFileNoWait(
 bool
 mrm_addMissedFile(
     McastReceiverMemory* const restrict mrm,
-    const FmtpProdIndex                 iProd);
+    const FmtpProdIndex                iProd);
 
 /**
  * Adds an index of a product that was missed by the multicast receiver and
@@ -163,17 +163,17 @@ mrm_addMissedFile(
 bool
 mrm_addRequestedFile(
     McastReceiverMemory* const restrict mrm,
-    const FmtpProdIndex                 iProd);
+    const FmtpProdIndex                iProd);
 
 /**
  * Returns (but doesn't remove) the next product-index from the
  * missed-but-not-requested queue of a multicast receiver memory. Blocks until
  * such a file is available. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The product-index.
- * @retval     true    Success. `*iProd` is set.
- * @retval     false   The queue has been shutdown.
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The product-index.
+ * @retval    true    Success. `*iProd` is set.
+ * @retval    false   The queue has been shutdown.
  */
 bool
 mrm_peekMissedFileWait(
@@ -184,10 +184,10 @@ mrm_peekMissedFileWait(
  * Returns (but doesn't remove) the next product-index from the
  * missed-but-not-requested queue of a multicast receiver memory. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The product-index.
- * @retval     true    The index exists. `*iProd` is set.
- * @retval     false   No such index (the queue is empty).
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 mrm_peekMissedFileNoWait(
@@ -198,10 +198,10 @@ mrm_peekMissedFileNoWait(
  * Removes and returns the next product-index from the
  * missed-but-not-requested queue of a multicast receiver memory. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The product-index.
- * @retval     true    The index exists. `*iProd` is set.
- * @retval     false   No such index (the queue is empty).
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 mrm_removeMissedFileNoWait(
@@ -213,10 +213,10 @@ mrm_removeMissedFileNoWait(
  * requested-but-not-received queue of a multicast receiver memory. Doesn't
  * block. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The product-index.
- * @retval     true    Success. `*iProd` is set.
- * @retval     false   No such identifier (the queue is empty).
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The product-index.
+ * @retval    true    Success. `*iProd` is set.
+ * @retval    false   No such identifier (the queue is empty).
  */
 bool
 mrm_peekRequestedFileNoWait(
@@ -227,15 +227,15 @@ mrm_peekRequestedFileNoWait(
  * Removes and returns the next product-index from the
  * requested-but-not-received queue of a multicast receiver memory. Thread-safe.
  *
- * @param[in]  mrm     The multicast receiver memory.
- * @param[out] iProd   The product-index.
- * @retval     true    The index exists. `*iProd` is set.
- * @retval     false   No such index (the queue is empty).
+ * @param[in] mrm     The multicast receiver memory.
+ * @param[in] iProd   The product-index.
+ * @retval    true    The index exists. `*iProd` is set.
+ * @retval    false   No such index (the queue is empty).
  */
 bool
 mrm_removeRequestedFileNoWait(
     McastReceiverMemory* const restrict mrm,
-    FmtpProdIndex* const restrict       iProd);
+    FmtpProdIndex* const restrict      iProd);
 
 /**
  * Shuts down the queue of missed-but-not-requested files in a multicast
