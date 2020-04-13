@@ -1,4 +1,4 @@
-6.13.12.42	2020-03-10T13:08:03-0600
+6.13.12.43
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -191,6 +191,9 @@
               calling fork()
             * Stop multicast LDM sender, mldm_sender(1), during multipoint VLAN
               reconfiguration
+        Up7.c:
+            Simplified and improved robustness by eliminating second server-side
+            transport.
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
