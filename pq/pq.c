@@ -6742,17 +6742,18 @@ int pq_clearMinVirtResTimeMetrics(
  * queue was created is nalloc = (nprods + nfree + nempty).
  */
 int
-pq_stats(pqueue *pq,
-     size_t* const      nprodsp,
-     size_t* const      nfreep,
-     size_t* const      nemptyp,
-     size_t* const      nbytesp,
-     size_t* const      maxprodsp,
-     size_t* const      maxfreep,
-     size_t* const      minemptyp,
-     size_t* const      maxbytesp,
-     double* const      age_oldestp,
-     size_t* const      maxextentp)
+pq_stats(
+		pqueue* const pq,
+        size_t* const nprodsp,
+        size_t* const nfreep,
+        size_t* const nemptyp,
+        size_t* const nbytesp,
+        size_t* const maxprodsp,
+        size_t* const maxfreep,
+        size_t* const minemptyp,
+        size_t* const maxbytesp,
+        double* const age_oldestp,
+        size_t* const maxextentp)
 {
     pq_lockIf(pq);
         /* Read lock pq->ctl. */
