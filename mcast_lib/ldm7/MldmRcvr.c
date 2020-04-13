@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 University Corporation for Atmospheric Research. All rights
+ * Copyright 2020 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -11,6 +11,8 @@
  */
 
 #include "config.h"
+
+#include "MldmRcvr.h"
 
 #include "down7.h"
 #include "fmtp.h"
@@ -30,14 +32,13 @@
 #include <stdint.h>
 #include <string.h>
 #include <pthread.h>
-#include "MldmRcvr.h"
 
 /**
  * The multicast LDM receiver data-structure:
  */
 struct mlr {
-    pqueue*               pq;         // Product-queue to use */
-    FmtpReceiver*         receiver;   // FMTP C Receiver
+    pqueue*               pq;       ///< Product-queue to use */
+    FmtpReceiver*         receiver; ///< FMTP C Receiver
     volatile sig_atomic_t done;
 };
 
