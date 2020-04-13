@@ -62,7 +62,7 @@ typedef struct {
 typedef struct {
     pthread_t             thread;
     MyUp7*                myUp7;
-    int                   sock;
+    int                   srvrSock;
 } Sender;
 
 void sigHandler(
@@ -161,7 +161,7 @@ createEmptyProductQueue(const char* const pathname)
 {
     pqueue* pq;
     int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_DATA_CAPACITY,
-            PQ_PROD_CAPACITY, &pq); // PQ_DEFAULT => clobber existing
+            NUM_SLOTS, &pq); // PQ_DEFAULT => clobber existing
 
     if (status) {
         log_add_errno(status, "pq_create(\"%s\") failure", pathname);
@@ -181,28 +181,32 @@ createEmptyProductQueue(const char* const pathname)
 static void
 sndr_init(Sender* const sender)
 {
-    int sck = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    CU_ASSERT_NOT_EQUAL_FATAL(sck, -1);
+    int srvrSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    CU_ASSERT_NOT_EQUAL_FATAL(srvrSock, -1);
 
     int                on = 1;
     struct sockaddr_in addr = {};
 
-    (void)setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
+    (void)setsockopt(srvrSock, SOL_SOCKET, SO_REUSEADDR, (char*)&on,
+    		sizeof(on));
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(UP7_HOST);
     addr.sin_port = htons(UP7_PORT);
 
-    int status = bind(sck, (struct sockaddr*)&addr, sizeof(addr));
+    int status = bind(srvrSock, (struct sockaddr*)&addr, sizeof(addr));
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    status = listen(sck, 1);
+    status = listen(srvrSock, 1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    sender->sock = sck;
+    sender->srvrSock = srvrSock;
     sender->myUp7 = NULL;
 }
 
+/**
+ * Kills the multicast LDM sender process if it exists.
+ */
 static void
 killMcastSndr(void)
 {
@@ -210,55 +214,84 @@ killMcastSndr(void)
 
     pid_t pid = umm_getSndrPid();
 
-    if (pid) {
-        log_notice("Sending SIGTERM to multicast LDM sender process %ld",
-        		(long)pid);
-        int status = kill(pid, SIGTERM);
+    if (pid != 0) {
+		log_info("Sending SIGTERM to multicast LDM sender process %ld",
+				(long)pid);
+		int status = kill(pid, SIGTERM);
 		CU_ASSERT_EQUAL(status, 0);
 
-        /* Reap the terminated multicast sender. */
-        {
-            log_debug("Reaping multicast sender child process");
-            const pid_t wpid = waitpid(pid, &status, 0);
+		/* Reap the terminated multicast sender. */
+		{
+			log_debug("Reaping multicast sender child process");
+			const pid_t wpid = waitpid(pid, &status, 0);
 
 			CU_ASSERT_EQUAL(wpid, pid);
 			CU_ASSERT_TRUE(wpid > 0);
 			CU_ASSERT_TRUE(WIFEXITED(status));
 			CU_ASSERT_EQUAL(WEXITSTATUS(status), 0);
 
-            status = umm_terminated(wpid);
+			status = umm_terminated(wpid);
 			CU_ASSERT_EQUAL(status, 0);
-        }
-    }
+		}
+	}
 
     log_debug("Returning");
 }
 
 /**
- * Executes a sender.
+ * Executes an upstream LDM7 server. Called by `pthread_create()`.
  *
- * @param[in]  arg         Pointer to sender.
+ * @param[in]  arg         Pointer to sender's server-socket.
  * @retval     0           Success
  * @retval     ECONNRESET  Connection reset by client
  * @retval     ETIMEDOUT   Connection timed-out
  */
 static void*
-sndr_run(void* const restrict arg)
+up7Srvr_run(void* const arg)
 {
-    Sender* const   sender = (Sender*)arg;
-    int             status = 0; // Success
-    const int       servSock = sender->sock;
-	struct sockaddr addr;
-	socklen_t       addrlen = sizeof(addr);
+	log_info("Upstream LDM7 server started");
+
+    int                     status = 0; // Success
+    const int               srvrSock = *(int*)arg;
+	struct sockaddr_storage addr;
+	socklen_t               addrlen = sizeof(addr);
 
 	for (;;) {
-		int sock = accept(servSock, &addr, &addrlen);
+        struct pollfd pfd = {.fd=srvrSock, .events=POLLRDNORM};
+
+        log_debug("Calling poll()");
+        // (3rd (timeout) argument == -1) => indefinite wait
+		CU_ASSERT_EQUAL(poll(&pfd, 1, -1), 1);
+
+		/*
+		 * NB: Some poll(2) implementations return `POLLRDNORM` rather than
+		 * `POLLERR` and rely on the failure of the subsequent I/O operation.
+		 */
+		if (pfd.revents & POLLERR) {
+			log_error("Error on socket %d", srvrSock);
+			break;
+		}
+		if (pfd.revents & POLLHUP) {
+			log_error("Hangup on socket %d", srvrSock);
+			break;
+		}
+		CU_ASSERT_TRUE(pfd.revents == POLLRDNORM);
+
+        log_debug("Calling accept()");
+		int sock = accept(srvrSock, (struct sockaddr*)&addr, &addrlen);
 
 		if (sock == -1) {
-			CU_ASSERT_EQUAL(errno, EINTR);
+			log_notice("accept() failure");
+			CU_ASSERT_TRUE(errno == EINTR || errno == EIO);
 		}
 		else {
-			CU_ASSERT_EQUAL_FATAL(addr.sa_family, AF_INET);
+			CU_ASSERT_EQUAL_FATAL(addr.ss_family, AF_INET);
+
+			char* rmtId = sockAddrIn_format((struct sockaddr_in*)&addr);
+			CU_ASSERT_PTR_NOT_NULL(rmtId);
+			log_info("Accept()ed connection from %s on socket %d", rmtId,
+					srvrSock);
+			free(rmtId);
 
 			/*
 			 * 0 => use default read/write buffer sizes.
@@ -286,8 +319,8 @@ sndr_run(void* const restrict arg)
 			}
 			else {
 				if (status == ETIMEDOUT)
-					log_add("Connection from client LDM silent for %u "
-							"seconds", TIMEOUT);
+					log_add("Connection from client LDM silent for %u seconds",
+							TIMEOUT);
 
 				svc_destroy(xprt);
 				xprt = NULL;
@@ -316,7 +349,7 @@ sndr_getAddr(
     struct sockaddr_in addr;
     socklen_t          len = sizeof(addr);
 
-    (void)getsockname(sender->sock, (struct sockaddr*)&addr, &len);
+    (void)getsockname(sender->srvrSock, (struct sockaddr*)&addr, &len);
 
     return inet_ntoa(addr.sin_addr);
 }
@@ -334,13 +367,13 @@ sndr_getPort(
     struct sockaddr_in addr;
     socklen_t          len = sizeof(addr);
 
-    (void)getsockname(sender->sock, (struct sockaddr*)&addr, &len);
+    (void)getsockname(sender->srvrSock, (struct sockaddr*)&addr, &len);
 
     return ntohs(addr.sin_port);
 }
 
 static void
-sndr_insertProducts(void)
+sndr_fillPq(void)
 {
     int             status;
     product         prod;
@@ -375,13 +408,14 @@ sndr_insertProducts(void)
         CU_ASSERT_PTR_NOT_NULL(data);
         prod.data = data;
 
-        status = pq_insert(pq, &prod);
-        CU_ASSERT_EQUAL_FATAL(status, 0);
-        char buf[LDM_INFO_MAX];
-        log_info("Inserted: prodInfo=\"%s\"",
-                s_prod_info(buf, sizeof(buf), info, 1));
+		char buf[LDM_INFO_MAX];
+		log_info("Inserting product {index: %d, info: \"%s\"}", i,
+				s_prod_info(buf, sizeof(buf), info, log_is_enabled_debug));
 
-        usleep(INTER_PRODUCT_INTERVAL);
+		status = pq_insert(pq, &prod);
+        CU_ASSERT_EQUAL_FATAL(status, 0);
+
+        usleep(INTER_PRODUCT_GAP);
     }
 
     free(data);
@@ -436,7 +470,7 @@ sndr_start(
         CU_FAIL_FATAL("");
     }
 
-    char* upAddr = ipv4Sock_getLocalString(sender->sock);
+    char* upAddr = ipv4Sock_getLocalString(sender->srvrSock);
     char* mcastInfoStr = smi_toString(mcastInfo);
     char* vcEndPointStr = vcEndPoint_format(localVcEnd);
     log_notice("LDM7 sender starting up: pq=%s, upAddr=%s, mcastInfo=%s, "
@@ -447,8 +481,9 @@ sndr_start(
     free(upAddr);
 
     // Starts the sender on a new thread
-    status = pthread_create(&sender->thread, NULL, sndr_run, sender);
-    CU_ASSERT_EQUAL_FATAL(status, 0);
+    log_debug("Starting upstream LDM server on separate thread");
+    CU_ASSERT_EQUAL_FATAL(pthread_create(&sender->thread, NULL, up7Srvr_run,
+			&sender->srvrSock), 0);
 
     smi_free(mcastInfo);
 }
@@ -463,17 +498,29 @@ sndr_stop(Sender* const sender)
 {
     log_debug("Entered");
 
-    (void)pthread_cancel(sender->thread);
-    int status = pthread_join(sender->thread, NULL);
-    CU_ASSERT_EQUAL(status, 0);
+#if 0
+    log_info("Canceling sender thread");
+    int status = pthread_cancel(sender->thread);
+    // Thread might've already terminated
+    CU_ASSERT_TRUE(status == 0 || status == ESRCH);
+#else
+    log_debug("Shutting-down sender's server-socket");
+    CU_ASSERT_EQUAL(shutdown(sender->srvrSock, SHUT_RDWR), 0);
+#endif
 
+    log_debug("Joining sender thread");
+    CU_ASSERT_EQUAL(pthread_join(sender->thread, NULL), 0);
+
+    log_debug("Destroying Up7 module");
     up7_destroy();
-    CU_ASSERT_EQUAL_FATAL(close(sender->sock), 0);
+    CU_ASSERT_EQUAL(close(sender->srvrSock), 0);
 
+    log_debug("Closing product-queue");
     CU_ASSERT_EQUAL(pq_close(pq), 0);
     pq = NULL;
     CU_ASSERT_EQUAL(unlink(UP7_PQ_PATHNAME), 0);
 
+    log_debug("Deleting product-queue");
     unlink(UP7_PQ_PATHNAME);
 
     log_debug("Returning");
@@ -502,7 +549,9 @@ rcvr_exec(void)
 
 	if (pid == 0) {
 		// Child process
-		execlp("./Down7_test", "Down7_test", NULL);
+		log_is_enabled_info
+			? execlp("./Down7_test", "Down7_test", "-v", NULL)
+			: execlp("./Down7_test", "Down7_test", NULL);
 		CU_FAIL("execlp() failure");
 		exit(1);
 	}
@@ -515,13 +564,13 @@ rcvr_exec(void)
 /**
  * Stops the receiver.
  */
-static void
+static int
 rcvr_term(const pid_t rcvrPid)
 {
-    log_notice("Sending SIGTERM to receiver process %ld", (long)rcvrPid);
+    log_debug("Sending SIGTERM to receiver process %ld", (long)rcvrPid);
     CU_ASSERT_EQUAL(kill(rcvrPid, SIGTERM), 0);
-    int stat;
-    pid_t pid = waitpid(rcvrPid, &stat, 0);
+    int status;
+    pid_t pid = waitpid(rcvrPid, &status, 0);
     if (pid == (pid_t)-1) {
  	   log_syserr("waitpid(%ld) returned -1", (long)rcvrPid);
     }
@@ -529,6 +578,8 @@ rcvr_term(const pid_t rcvrPid)
  	   log_debug("waitpid(%ld) returned %ld", (long)rcvrPid, (long)pid);
     }
     CU_ASSERT_EQUAL(pid, rcvrPid);
+	CU_ASSERT_TRUE(WIFEXITED(status));
+	return WEXITSTATUS(status);
 }
 
 static void
@@ -566,7 +617,7 @@ test_up7Down7(
     blockSigCont(&oldSigSet);
     */
 
-    umm_setRetxTimeout(MEAN_RESIDENCE_TIME/2);
+    umm_setRetxTimeout(5); // SWAG
 
     status = lcf_init(LDM_PORT, NULL);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -582,16 +633,17 @@ test_up7Down7(
     // Exec's a receiver in a child process (one product-queue per process)
     pid_t rcvrPid = rcvr_exec();
 
+    CU_ASSERT_EQUAL(usleep(50), 0);
+    sndr_fillPq();
     CU_ASSERT_EQUAL(sleep(1), 0);
-    sndr_insertProducts();
-    (void)sleep(MEAN_RESIDENCE_TIME);
 
-    log_debug("Stopping receiver");
-    rcvr_term(rcvrPid);
+    log_notice("Stopping receiver");
+    CU_ASSERT_EQUAL(rcvr_term(rcvrPid), 0); // Bad exit code if not all received
 
-    log_debug("Stopping sender");
+    log_notice("Stopping sender");
     sndr_stop(&sender);
 
+    killMcastSndr();
     lcf_destroy(true);
 
     status = pthread_sigmask(SIG_SETMASK, &prevSigMask, NULL);
@@ -608,7 +660,7 @@ int main(
         log_syserr("Couldn't initialize logging module");
         exit(1);
     }
-    //log_set_level(LOG_LEVEL_DEBUG);
+    log_set_level(LOG_LEVEL_NOTICE);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {

@@ -298,7 +298,7 @@ up7Proxy_subscribe(
         struct timeval timeout = {};
         timeout.tv_sec = 600;
 
-        log_notice("Setting LDM7 subscription-timeout to %ld s",
+        log_debug("Setting LDM7 subscription-timeout to %ld s",
                 (long)timeout.tv_sec);
         (void)clnt_control(clnt, CLSET_TIMEOUT, &timeout); // Can't fail
 
@@ -312,7 +312,7 @@ up7Proxy_subscribe(
         SubscriptionReply* reply = subscribe_7(&request, clnt);
 
         timeout.tv_sec = 60; // Keep consonant with TIMEOUT in `fix_clnt.pl`
-        log_notice("Resetting LDM7 RPC-timeout to %ld s", (long)timeout.tv_sec);
+        log_debug("Resetting LDM7 RPC-timeout to %ld s", (long)timeout.tv_sec);
         (void)clnt_control(clnt, CLSET_TIMEOUT, &timeout);
 
         if (reply == NULL) {
@@ -2588,7 +2588,7 @@ down7_isInit()
 void
 down7_halt()
 {
-	log_notice("down7.done=%d", (int)down7.done);
+	log_debug("down7.done=%d", (int)down7.done);
 	down7.done = 1;
 
 	if (down7.state != TASK_UNINITIALIZED) {
@@ -2631,7 +2631,7 @@ down7_requestProduct(const FmtpProdIndex iProd)
 
 /**
  * Increments the number of data-products successfully inserted into the
- * product-queue by the downstream LDM7. Called by the multicast LDM receiver.
+ * product-queue by the downstream LDM7. Called by the one-time downstream LDM7
  */
 void
 down7_incNumProds(void)
@@ -2643,7 +2643,8 @@ down7_incNumProds(void)
 
 /**
  * Returns the number of data-products successfully inserted into the
- * product-queue by a downstream LDM7.
+ * product-queue by a downstream LDM7 and resets the counter to zero. Used for
+ * testing.
  *
  * @return  Number of products
  */
@@ -2652,6 +2653,7 @@ down7_getNumProds(void)
 {
     (void)mutex_lock(&down7.mutex);
         uint64_t num = down7.numProds;
+        down7.numProds = 0;
     (void)mutex_unlock(&down7.mutex);
 
     return num;

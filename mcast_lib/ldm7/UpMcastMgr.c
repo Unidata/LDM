@@ -213,7 +213,7 @@ mldm_exec(
     const char* defLogDest = log_get_default_destination();
     if (logDestArg == NULL || defLogDest == NULL) {
         log_add("Couldn't get logging destinations: {logDestArg: %p, "
-                "defLogDest: %p", logDestArg, defLogDest);
+                "defLogDest: %p}", logDestArg, defLogDest);
         status = LDM7_SYSTEM;
     }
     else if (strcmp(defLogDest, logDestArg)) {
@@ -309,7 +309,7 @@ mldm_exec(
             }
             else {
                 StrBuf* command = catenateArgs((const char**)args); // Safe cast
-                log_info("Executing multicast LDM sender: %s",
+                log_notice("Executing multicast LDM sender: %s",
                         sbString(command));
                 sbFree(command);
 

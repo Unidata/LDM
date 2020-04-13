@@ -109,9 +109,6 @@ subRep_toString(const SubscriptionReply* const reply)
 /// Module is initialized?
 static bool               initialized = FALSE;
 
-/// Separate, server-side RPC transport with downstream LDM7:
-static SVCXPRT*           svcXprt = NULL;
-
 /// Client-side RPC transport with downstream LDM-7:
 static CLIENT*            clnt = NULL;
 
@@ -243,32 +240,32 @@ ensureProductQueueOpen(void)
 
 /**
  * Creates the client-side RPC transport on the TCP connection of the
- * server-side RPC transport for asynchronously sending backlog and missed
+ * server-side RPC transport for asynchronously unicasting requested
  * data-products.
  *
  * @retval 0           Success
  * @retval LDM7_SYSTEM System error. `log_add()` called.
  */
 static Ldm7Status
-initClient()
+initClient(struct SVCXPRT* xprt)
 {
     log_debug("Entered");
 
-    log_assert(svcXprt);
-    log_assert(svcXprt->xp_raddr.sin_port != 0);
-    log_assert(svcXprt->xp_sock >= 0); // So client-error won't close socket
+    log_assert(xprt);
+    log_assert(xprt->xp_raddr.sin_port != 0);
+    log_assert(xprt->xp_sock >= 0); // So client-error won't close socket
 
     int status;
 
     // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
     // TODO: adjust sending buffer size
-    CLIENT* client = clnttcp_create(&svcXprt->xp_raddr, LDMPROG, SEVEN,
-            &svcXprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
+    CLIENT* client = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
+            &xprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
 
     if (client == NULL) {
         log_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
         log_add("Couldn't create client-side transport to downstream LDM-7 on "
-                "%s%s", hostbyaddr(&svcXprt->xp_raddr), clnt_spcreateerror(""));
+                "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
 
         status = LDM7_RPC;
     }
@@ -358,67 +355,6 @@ reduceFeed(
 }
 
 /**
- * Initializes the separate, server-side RPC transport for the asynchronous
- * backlog and backstop capabilities. A separate transport is created because
- * `svc_getreqsock()` and `svc_getreqset()` mustn't be nested because they
- * destroy the transport on error and the outer one will, consequently, cause a
- * segfault.
- *
- * @param[in] xprt         Initial, server-side RPC transport
- * @retval    0            Success
- * @retval    LDM7_SYSTEM  System failure. `log_add()` called.
- * @retval    LDM7_RPC     Failure in RPC component. `log_add()` called.
- */
-static int
-initXprt(const SVCXPRT* const xprt)
-{
-    log_debug("Entered");
-    log_assert(xprt);
-
-    int status;
-    int sock = dup(xprt->xp_sock);
-
-    if (sock == -1) {
-        log_add_syserr("dup() failure");
-        status = LDM7_SYSTEM;
-    }
-    else {
-        svcXprt = svcfd_create(sock, 0, 0);
-
-        if (svcXprt == NULL) {
-            log_add("svcfd_create() failure");
-            (void)close(sock);
-            status = LDM7_RPC;
-        }
-        else {
-            // svcfd_create() doesn't initialize remote address
-            svcXprt->xp_raddr = xprt->xp_raddr;
-            svcXprt->xp_addrlen = sizeof(xprt->xp_raddr);
-
-            // `ldmprog_7()` is already registered with RPC module
-
-            status = 0;
-        } // Separate, server-side RPC transport created
-    } // Socket duplicated
-
-    log_debug("Returning %d", status);
-    return status;
-}
-
-/**
- * Destroys the separate, server-side RPC transport if appropriate. Idempotent.
- */
-static void
-destroyXprt()
-{
-    if (svcXprt) {
-        // NB: svc_destroy() must only be called once per transport
-        svc_destroy(svcXprt);
-        svcXprt = NULL;
-    }
-}
-
-/**
  * Finishes initializing this module:
  *   - Opens the product-to-index map
  *   - Initializes a separate, client-side RPC transport for unicasting missed
@@ -427,6 +363,7 @@ destroyXprt()
  *   - Sets the reply to the RPC client
  *   - Sets `isInitialized` to true
  *
+ * @param[in]  xprt          Server-side transport
  * @param[in]  fmtpClntCidr  Address for FMTP client
  * @param[out] reply         RPC reply. Only modified on success.
  * @retval     0             Success. `*reply` is set.
@@ -436,13 +373,13 @@ destroyXprt()
  * @retval     LDM7_SYSTEM   System error. `log_add()` called.
  */
 static int
-init2(  const CidrAddr* const restrict    fmtpClntCidr,
+init2(  struct SVCXPRT*                   xprt,
+		const CidrAddr* const restrict    fmtpClntCidr,
         SubscriptionReply* const restrict reply)
 {
     // The cleanup() function in ldmd.c destroys this instance
 
     log_assert(!initialized);
-    log_assert(svcXprt);
     log_assert(mcastInfo);
     log_assert(remote_name());
     log_assert(fmtpClntCidr);
@@ -460,7 +397,7 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
             status = LDM7_PQ;
         }
         else {
-            status = initClient();
+            status = initClient(xprt);
 
             if (status) {
                 log_add("Couldn't create client-side RPC transport to "
@@ -468,7 +405,7 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
             }
             else {
                 // Failure is ignored to enable testing
-                if (addToUldb(&svcXprt->xp_raddr, mcastInfo->feed)) {
+                if (addToUldb(&xprt->xp_raddr, mcastInfo->feed)) {
                     log_add("Couldn't add LDM7 process for client %s, feed "
                             "%s to upstream LDM database", remote_name(),
                             s_feedtypet(mcastInfo->feed));
@@ -496,9 +433,8 @@ init2(  const CidrAddr* const restrict    fmtpClntCidr,
 
 /**
  * Initializes this module.
- *   - Creates separate, server-side and client-side RPC transports from the
- *     initial server-side transport for asynchronously sending requested
- *     data-products
+ *   - Creates a client-side RPC transport from the server-side transport for
+ *     asynchronously unicasting requested data-products
  *   - Starts the multicast sender if necessary
  *   - Gets a CIDR address for the FMTP client if appropriate
  *   - Opens the product-to-index map
@@ -566,14 +502,7 @@ init(   struct SVCXPRT* const restrict    xprt,
                 status = LDM7_SYSTEM;
             }
             else {
-                status = initXprt(xprt); // Initializes `svcXprt`
-
-                if (status == 0) {
-                    status = init2(&fmtpClntCidr, reply);
-
-                    if (status)
-                        destroyXprt(); // Destroys `svcXprt`
-                } // Separate, server-side RPC transport initialized
+				status = init2(xprt, &fmtpClntCidr, reply);
 
                 if (status) {
                     mi_free(mcastInfo);
@@ -614,9 +543,6 @@ destroy(void)
             subReply = NULL;
         }
 
-        // NB: svc_destroy() must only be called once per transport
-        destroyXprt(); // Ensures destruction if appropriate
-
         isDone = false;
         initialized = false;
     }
@@ -628,21 +554,21 @@ destroy(void)
  * Runs the upstream LDM server. The server-side RPC transport is always
  * destroyed on return.
  *
+ * @param[in] xprt           Server-side transport
  * @retval    ECONNRESET     The connection to the client LDM was lost.
- *                           `svc_destroy(svcXprt)` called. `log_add()` called.
  * @retval    EBADF          The socket isn't open. `log_add()` called.
  * @retval    EPIPE          Testing the connection failed. `log_add()` called.
  */
 static int
-runSvc(void)
+runSvc(struct SVCXPRT* xprt)
 {
     log_debug("Entered");
 
-    log_assert(svcXprt);
+    log_assert(xprt);
     log_assert(remote_name());
 
     int            status;
-    const int      sock = svcXprt->xp_sock;
+    const int      sock = xprt->xp_sock;
     const unsigned TIMEOUT = 2*interval; // 60 seconds
 
     do {
@@ -651,12 +577,12 @@ runSvc(void)
         if (status == ECONNRESET) { // Connection to client lost
             /*
              * one_svc_run() called svc_getreqsock(), which called
-             * svc_destroy(svcXprt), which must only be called once per
+             * svc_destroy(xprt), which must only be called once per
              * transport
              */
             log_add("Connection with client LDM, %s, has been lost",
                     remote_name());
-            svcXprt = NULL; // Let others know
+            xprt = NULL; // Let others know
         }
         else if (status == ETIMEDOUT) {
             log_debug("Client LDM, %s, has been silent for %u seconds",
@@ -681,9 +607,9 @@ runSvc(void)
         }
     } while (status == 0);
 
-    if (svcXprt) {
-        svc_destroy(svcXprt);
-        svcXprt = NULL;
+    if (xprt) {
+        svc_destroy(xprt);
+        xprt = NULL;
     }
 
     log_debug("Returning");
@@ -692,16 +618,14 @@ runSvc(void)
 }
 
 /**
- * Indicates if the caller should send a reply to the downstream LDM7. Will
- * start a separate, asynchronous upstream LDM7 server if appropriate and not
- * return until that server terminates.
+ * Possibly subscribes the remote, downstream LDM7 to a feed.
  *
- *
- * @param[in] xprt     Initial, server-side RPC transport
+ * @param[in] xprt     Server-side RPC transport
  * @param[in] request  Subscription request
- * @param[in] result   Reply to be sent if appropriate
- * @retval    NULL     Do not reply to the client
- * @return             Response to be sent to the client
+ * @param[in] result   Subscription response
+ * @retval    NULL     Do not reply to the client. `svcerr_systemerr(xprt)`
+ *                     called.
+ * @return             `result`
  */
 static SubscriptionReply*
 subscribe(
@@ -722,24 +646,7 @@ subscribe(
         svcerr_systemerr(xprt);
     }
     else {
-        if (result->status == LDM7_OK) {
-            if (!svc_sendreply(xprt, (xdrproc_t)xdr_SubscriptionReply,
-                    (char*)result)) {
-                log_error("Couldn't send subscription reply to client");
-                svcerr_systemerr(xprt);
-            }
-            else {
-                runSvc();
-                log_flush_error();
-                svc_destroy(xprt);
-                exit(1);
-            }
-        }
-        else {
-            reply = result; // Do respond to client
-        }
-
-        destroy();
+		reply = result; // Do respond to client
     } // Module is initialized
 
     log_debug("Returning %p", reply);
