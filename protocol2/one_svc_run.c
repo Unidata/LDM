@@ -84,7 +84,8 @@ one_svc_run(
         if (selectStatus > 0) {
             /*
              * The socket is ready for reading. The following statement calls
-             * `ldmprog_5()`, `ldmprog_6()`, or `ldmprog_7()`.
+             * `ldmprog_5()`, `ldmprog_6()`, or `ldmprog_7()`. Calls
+             * SVC_DESTROY() if the connection dies.
              */
             svc_getreqsock(sock);
             (void)exitIfDone(0);
