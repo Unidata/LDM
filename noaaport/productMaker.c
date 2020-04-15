@@ -1194,16 +1194,16 @@ int    nnnxxx_offset;
                         heapcount += datalen;
                     }
                 }
-                log_notice_q("records_per_block %d blocks_per_record %d nx %d ny %d",
+                log_info("records_per_block %d blocks_per_record %d nx %d ny %d",
                         pdh->records_per_block, pdh->blocks_per_record, pdb->nx,
                         pdb->ny);
-                log_notice_q("source %d sector %d channel %d", pdb->source,
+                log_info("source %d sector %d channel %d", pdb->source,
                         pdb->sector, pdb->channel);
-                log_notice_q("nrec %d recsize %d date %02d%02d%02d %02d%02d "
+                log_info("nrec %d recsize %d date %02d%02d%02d %02d%02d "
                         "%02d.%02d", pdb->nrec, pdb->recsize, pdb->year, pdb->month,
                         pdb->day, pdb->hour, pdb->minute, pdb->second,
                         pdb->sechunds);
-                log_notice_q("pshname %s", psh->pname);
+                log_info("pshname %s", psh->pname);
             }
             deflen = 0;
 #ifdef RETRANS_SUPPORT
