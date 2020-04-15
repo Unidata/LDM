@@ -967,7 +967,7 @@ int log_fini_located(const log_loc_t* const loc)
     int status = 0;
 
     if (isInitialized) {
-		logl_log(loc, LOG_LEVEL_INFO, "Terminating logging");
+		logl_log(loc, LOG_LEVEL_DEBUG, "Terminating logging");
 
 		if (logi_fini())
 			status = -1;
