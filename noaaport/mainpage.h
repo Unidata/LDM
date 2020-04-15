@@ -27,8 +27,9 @@
  * Operating systems based on Redhat Linux (e.g., RHEL, Fedora, CentOS) must
  * have two kernel parameters modified from their default values. The parameter
  * \c net.ipv4.ipfrag_max_dist controls the process by which UDP fragments are
- * reassembled into a UDP packet. Because NOAAPORT UDP packets are not
- * fragmented, this re-assembly process should be disabled by setting this
+ * reassembled into a UDP packet. Because the DVB-S2 receiver guarantees
+ * sequential delivery of fragmented NOAAPORT UDP packets,
+ * this re-assembly process should be disabled by setting the
  * parameter to \c 0 in order to prevent spurious gaps from occurring in the UDP
  * packet stream.
  * Also, the value of parameter \c net.ipv4.conf.default.rp_filter should be
