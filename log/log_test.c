@@ -230,7 +230,7 @@ static void test_log_levels(void)
     int status;
     log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
             LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
-    int         nlines[] = {1, 2, 3, 5, 6}; // NB: "INFO Terminating logging"
+    int         nlines[] = {1, 2, 3, 4, 6}; // NB: "DEBUG Terminating logging"
     for (int i = 0; i < sizeof(logLevels)/sizeof(log_level_t); ++i) {
         status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
