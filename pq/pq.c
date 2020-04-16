@@ -5181,7 +5181,7 @@ ctl_rel(pqueue *const pq, const int rflags)
         if(pq->ctlp != NULL)
         {
                 const int stat = (pq->mtof)(pq, 0, rflags);
-                if(status) {
+                if(stat) {
                         log_error("mtof() failure on control block");
                         if (status == 0)
 								status = stat;
