@@ -2322,6 +2322,8 @@ down7_init(
             status = LDM7_SYSTEM;
         }
         else {
+        	mutex_lock(&down7.mutex); // To silence Coverity Scan
+
 			/*
 			 * The product-queue must be thread-safe because this module
 			 * accesses it on these threads:
@@ -2397,6 +2399,7 @@ down7_init(
 				} // `down7.servAddr` initialized
 			} // Product-queue is thread-safe
 
+			mutex_unlock(&down7.mutex);
             if (status)
                 mutex_destroy(&down7.mutex);
         } // Downstream LDM7 mutex initialized
