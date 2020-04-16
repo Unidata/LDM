@@ -1,4 +1,4 @@
-6.13.12.43	2020-04-16T14:32:39-0600
+6.13.12.43	2020-04-16T15:53:28-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -8,6 +8,7 @@
           negative
         * Improved error-message in pqe_newDirect()
         * Added error-message to pqe_discard()
+        * Corrected return status of ctl_rel() on mtof() failure
 
     pqact(1):
         * Added one-day timeout for inactive entries that, nevertheless, had
@@ -145,6 +146,8 @@
                 * missedProd(): Added error-message
             * Included RECEIVE entry in computation of count of number of
               upstream suppliers of a given feed
+            * Added mutex loccking/unlocking in down7_init() to silence Coverity
+              Scan
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
