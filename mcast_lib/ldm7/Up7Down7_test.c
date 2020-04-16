@@ -278,7 +278,7 @@ up7Srvr_run(void* const arg)
 		CU_ASSERT_TRUE(pfd.revents == POLLRDNORM);
 
         log_debug("Calling accept()");
-		int sock = accept(srvrSock, (struct sockaddr*)&addr, &addrlen);
+		const int sock = accept(srvrSock, (struct sockaddr*)&addr, &addrlen);
 
 		if (sock == -1) {
 			log_notice("accept() failure");
@@ -630,7 +630,7 @@ test_up7Down7(
     sndr_start(&sender, ANY); // Blocks until sender's server is listening
     log_flush_error();
 
-    // Exec's a receiver in a child process (one product-queue per process)
+    // Exec's a receiver in a child process (because one product-queue per process)
     pid_t rcvrPid = rcvr_exec();
 
     CU_ASSERT_EQUAL(usleep(50), 0);
