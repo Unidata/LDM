@@ -1,4 +1,4 @@
-6.13.12.43	2020-04-16T15:53:28-0600
+6.13.12.44	2020-04-20T13:31:07-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -88,7 +88,7 @@
           restarted if they crash. Added examples to NOAAPort documentation.
         * Updated main page of Doxygen-based documentation. In particular,
           corrected discussion of UDP packet reassembly and setting of system
-          parameter net.ipv4.ipfrag_max_dist.
+          parameter net.ipv4.ipfrag_max_dist to zero.
         * Added new parameters to the NCEP GEMPAK tables:
             * 000 001 228 010 Flat Ice Accumulation (FRAM)     kg m**-2
                   FICEAC           0  -9999.00
@@ -114,6 +114,14 @@
     Miscellaneous:
         * Removed lint found by Coverity Scan
         * Created ldm_formatCmd() to format a command-line from a command vector
+        * Improved logic in ghostname() for determining the fully-qualified
+          name of the local host, which is used by rtstats(1). The LDM registry
+          is still checked first, then gethostname(), and then the default value
+          set by the configure script. If, after all this, the name still isn't
+          fully qualified, then a system call will be made in an attempt to make
+          it fully qualified. This means that the "hostname" parameter in the
+          LDM registry needn't be set unless ghostname() doesn't return a
+          fully-qualified hostname or a different name is desired.
 
     Multicast:
         Product-Queue (pq.c):
