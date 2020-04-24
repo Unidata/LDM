@@ -125,7 +125,7 @@ static in_addr_t          fmtpClntAddr = INADDR_ANY;
 static bool               pimIsOpen = false;
 
 /// Reply to subscription request:
-static SubscriptionReply* subReply = NULL;
+static SubscriptionReply* replyPtr = NULL;
 
 /// This module is done?
 static bool               isDone = false;
@@ -357,8 +357,8 @@ reduceFeed(
 /**
  * Finishes initializing this module:
  *   - Opens the product-to-index map
- *   - Initializes a separate, client-side RPC transport for unicasting missed
- *     data-products to the downstream LDM7
+ *   - Initializes a separate, client-side RPC transport for asynchronously
+ *     unicasting missed data-products to the downstream LDM7
  *   - Sets the file-scoped variables `feedtype` and `fmtpClntAddr`
  *   - Sets the reply to the RPC client
  *   - Sets `isInitialized` to true
@@ -405,12 +405,10 @@ init2(  struct SVCXPRT*                   xprt,
             }
             else {
                 // Failure is ignored to enable testing
-                if (addToUldb(&xprt->xp_raddr, mcastInfo->feed)) {
-                    log_add("Couldn't add LDM7 process for client %s, feed "
+                if (addToUldb(&xprt->xp_raddr, mcastInfo->feed))
+                    log_warning("Couldn't add LDM7 process for client %s, feed "
                             "%s to upstream LDM database", remote_name(),
                             s_feedtypet(mcastInfo->feed));
-                    log_flush_warning();
-                }
 
                 reply->SubscriptionReply_u.info.mcastInfo = *mcastInfo;
                 reply->SubscriptionReply_u.info.fmtpAddr = *fmtpClntCidr;
@@ -538,9 +536,9 @@ destroy(void)
         (void)umm_unsubscribe(feedtype, fmtpClntAddr);
         log_clear();
 
-        if (subReply) {
-            xdr_free(xdr_SubscriptionReply, subReply);
-            subReply = NULL;
+        if (replyPtr) {
+            xdr_free(xdr_SubscriptionReply, replyPtr);
+            replyPtr = NULL;
         }
 
         isDone = false;
@@ -620,37 +618,33 @@ runSvc(struct SVCXPRT* xprt)
 /**
  * Possibly subscribes the remote, downstream LDM7 to a feed.
  *
- * @param[in] xprt     Server-side RPC transport
- * @param[in] request  Subscription request
- * @param[in] result   Subscription response
- * @retval    NULL     Do not reply to the client. `svcerr_systemerr(xprt)`
- *                     called.
- * @return             `result`
+ * @param[in] xprt         Server-side RPC transport
+ * @param[in] request      Subscription request
+ * @param[in] reply        Subscription reply
+ * @retval    0            Success. `*reply` is set.
+ * @retval    LDM7_LOGIC   Logic error. `log_add()` called.
+ * @retval    LDM7_PQ      Couldn't open product-queue. `log_add()` called.
+ * @retval    LDM7_RPC     Couldn't create client-side RPC handle. `log_add()`
+ *                         called.
+ * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
-static SubscriptionReply*
+static Ldm7Status
 subscribe(
         SVCXPRT* const restrict           xprt,
         McastSubReq* const restrict       request,
-        SubscriptionReply* const restrict result)
+        SubscriptionReply* const restrict reply)
 {
     log_debug("Entered");
     log_assert(xprt);
     log_assert(request);
-    log_assert(result);
+    log_assert(reply);
 
-    SubscriptionReply* reply = NULL;
+	int status = init(xprt, request->feed, &request->vcEnd, reply);
 
-    if (init(xprt, request->feed, &request->vcEnd, result)) {
+    if (status)
         log_add("Couldn't initialize the upstream LDM7 module");
-        log_flush_error();
-        svcerr_systemerr(xprt);
-    }
-    else {
-		reply = result; // Do respond to client
-    } // Module is initialized
 
-    log_debug("Returning %p", reply);
-    return reply;
+    return status;
 }
 
 /**
@@ -1030,25 +1024,30 @@ subscribe_7_svc(
     log_notice("Incoming subscription request from %s:%u for feed %s",
             remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
 
-    if (subReply) {
-        xdr_free(xdr_SubscriptionReply, subReply); // Free any previous use
-        subReply = NULL;
+    if (replyPtr) {
+        xdr_free(xdr_SubscriptionReply, replyPtr); // Free previous use
+        replyPtr = NULL;
     }
 
-    static SubscriptionReply result;
+    static SubscriptionReply reply;
+    int                      status = subscribe(xprt, request, &reply);
 
-    subReply = subscribe(xprt, request, &result);
-
-    if (subReply) {
-        char* const subRepStr = subRep_toString(subReply);
-        log_debug("Returning %s", subRepStr);
-        free(subRepStr);
-    }
-    else if (log_is_enabled_debug) {
+    if (status) {
+        log_flush_error();
+        svcerr_systemerr(xprt); // Tell the client
+        replyPtr = NULL;
         log_debug("Returning NULL");
     }
+    else {
+    	if (log_is_enabled_debug) {
+			char* const subRepStr = subRep_toString(replyPtr);
+			log_debug("Returning %s", subRepStr);
+			free(subRepStr);
+		}
+    	replyPtr = &reply;
+    }
 
-    return subReply;
+    return replyPtr;
 }
 
 /**
