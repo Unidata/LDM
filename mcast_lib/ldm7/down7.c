@@ -2360,12 +2360,10 @@ down7_init(
 								inAddrAny = inetId_newFromStr("0.0.0.0");
 
 								if (inAddrAny == NULL) {
-									log_add("inetId_newFromStr() "
-											"failure");
+									log_add("inetId_newFromStr() failure");
 									status = LDM7_SYSTEM;
 								}
-								else if (sem_init(&down7.intrSem, 0, 0) ==
-										-1) {
+								else if (sem_init(&down7.intrSem, 0, 0) == -1) {
 									log_add_syserr("Couldn't initialize "
 											"semaphore");
 									inetId_free(inAddrAny);
