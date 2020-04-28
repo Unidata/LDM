@@ -1038,12 +1038,12 @@ subscribe_7_svc(
         log_debug("Returning NULL");
     }
     else {
+    	replyPtr = &reply;
     	if (log_is_enabled_debug) {
 			char* const subRepStr = subRep_toString(replyPtr);
 			log_debug("Returning %s", subRepStr);
 			free(subRepStr);
 		}
-    	replyPtr = &reply;
     }
 
     return replyPtr;
