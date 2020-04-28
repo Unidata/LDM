@@ -706,8 +706,7 @@ deliverProduct(
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */
 static Ldm7Status
-sendProduct(
-        FmtpProdIndex iProd)
+sendProduct(FmtpProdIndex iProd)
 {
     signaturet sig;
     int        status = pim_get(iProd, &sig);
@@ -1091,6 +1090,7 @@ request_product_7_svc(
 
     if (!initialized) {
         log_warning("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
+        svcerr_systemerr(rqstp->rq_xprt); // Tell the client
         isDone = true;
     }
     else {
