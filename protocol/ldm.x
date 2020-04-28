@@ -739,7 +739,7 @@ program LDMPROG {
 %void  ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
 %const char* ldm7_errmsg(int status);
 #endif
-%int   one_svc_run(const int xp_sock, const unsigned inactive_timeo);
+%int   one_svc_run(const int xp_sock, const int inactive_timeo);
 %void* nullproc_6(void *argp, CLIENT *clnt);
 %enum  clnt_stat clnt_stat(CLIENT *clnt);
 #if WANT_MULTICAST

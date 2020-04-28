@@ -31,8 +31,8 @@ ErrorObj*
 req6_new(
     const char* const                   upName,
     const unsigned                      port,
-    const prod_class_t* const             request,
-    const unsigned                      inactiveTimeout,
+    const prod_class_t* const           request,
+    const int                           inactiveTimeout,
     const char* const                   pqPathname,
     pqueue* const                       pq,
     const int                           isPrimary);

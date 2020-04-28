@@ -567,7 +567,7 @@ runSvc(struct SVCXPRT* xprt)
 
     int            status;
     const int      sock = xprt->xp_sock;
-    const unsigned TIMEOUT = 2*interval; // 60 seconds
+    const int      TIMEOUT = 2*interval; // 60 seconds
 
     do {
         status = one_svc_run(sock, TIMEOUT); // Exits if `done` set

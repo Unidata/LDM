@@ -69,7 +69,7 @@ static int      dataSocket = -1;
 static ErrorObj*
 run_service(
     int                    socket,
-    unsigned               inactiveTimeout,
+    int                    inactiveTimeout,
     const char            *const upName,
     struct sockaddr_in    *const upAddr,
     const unsigned int     upId,
@@ -470,7 +470,7 @@ req6_new(
     const char* const                   upName,
     const unsigned                      port,
     const prod_class_t* const           request,
-    const unsigned                      inactiveTimeout,
+    const int                           inactiveTimeout,
     const char* const                   pqPathname,
     pqueue* const                       pq,
     const int                           isPrimary)

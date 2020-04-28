@@ -38,7 +38,7 @@
  *
  * @param sock              The connected socket.
  * @param timeout           The maximum amount of time to wait with no activity
- *                          on the socket in seconds.
+ *                          on the socket in seconds. -1 => indefinite wait.
  *
  * @retval 0                Success.  as_shouldSwitch() is true. Only happens
  *                          for downstream LDM-s.
@@ -53,16 +53,13 @@
  */ 
 int
 one_svc_run(
-    const int       sock,
-    const unsigned  timeout) 
+    const int sock,
+    const int timeout)
 {
-    timestampt      canonicalTimeout;
-    timestampt      selectTimeout;
-    fd_set          fds;
-
-    canonicalTimeout.tv_sec = timeout;
-    canonicalTimeout.tv_usec = 0;
-    selectTimeout = canonicalTimeout;
+    const timestampt canonicalTimeout = {.tv_sec=timeout, .tv_usec=0};
+    timestampt       selectTimeout = canonicalTimeout;
+    timestampt*      timeoutPtr = timeout < 0 ? NULL : &selectTimeout;
+    fd_set           fds;
 
     FD_ZERO(&fds);
     FD_SET(sock, &fds);
@@ -74,7 +71,7 @@ one_svc_run(
 
         (void)set_timestamp(&before);
 
-        selectStatus = select(sock+1, &readFds, 0, 0, &selectTimeout);
+        selectStatus = select(sock+1, &readFds, 0, 0, timeoutPtr);
 
         (void)exitIfDone(0); /* handles SIGTERM reception */
 
@@ -110,7 +107,7 @@ one_svc_run(
                 return errno;
             }
 
-            {
+            if (timeoutPtr) {
                 timestampt      after;
                 timestampt      diff;
 

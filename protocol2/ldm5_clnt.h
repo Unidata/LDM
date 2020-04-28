@@ -59,7 +59,7 @@ blkdata5(h_clnt *hcp, const datapkt *pktp,
  * other guy going away mapped to ECONNRESET.
  */ 
 int
-one_svc_run(const int xp_sock, const unsigned inactive_timeo);
+one_svc_run(const int xp_sock, const int inactive_timeo);
 
 /*
  * Send a FEEDME or NOTIFYME request (proc)
