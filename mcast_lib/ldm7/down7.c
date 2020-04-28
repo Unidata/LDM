@@ -295,8 +295,7 @@ up7Proxy_subscribe(
          *
          * NB: The RPC-timeout is set by the first `clnt_call()`
          */
-        struct timeval timeout = {};
-        timeout.tv_sec = 600;
+        struct timeval timeout = {.tv_sec=600, .tv_usec=0};
 
         log_debug("Setting LDM7 subscription-timeout to %ld s",
                 (long)timeout.tv_sec);
