@@ -12,10 +12,9 @@
 #include "config.h"
 
 #include <errno.h>
-#include <rpc/rpc.h>   /* svc_fdset */
+#include <poll.h>
 #include <signal.h>    /* sig_atomic_t */
 #include <string.h>
-#include <sys/time.h>  /* fd_set */
 
 #include "log.h"
 
@@ -37,9 +36,8 @@
  * This function uses the "log" module to accumulate messages.
  *
  * @param sock              The connected socket.
- * @param timeout           The maximum amount of time to wait with no activity
- *                          on the socket in seconds. -1 => indefinite wait.
- *
+ * @param timeout           The maximum amount of seconds to wait with no
+ *                          activity on the socket. -1 => indefinite wait.
  * @retval 0                Success.  as_shouldSwitch() is true. Only happens
  *                          for downstream LDM-s.
  * @retval EBADF            The socket isn't open. `log_add()` called.
@@ -56,71 +54,54 @@ one_svc_run(
     const int sock,
     const int timeout)
 {
-    const timestampt canonicalTimeout = {.tv_sec=timeout, .tv_usec=0};
-    timestampt       selectTimeout = canonicalTimeout;
-    timestampt*      timeoutPtr = timeout < 0 ? NULL : &selectTimeout;
-    fd_set           fds;
+	const int     timeo = timeout < 0 ? -1 : 1000*timeout; // -1 => indefinite
+	struct pollfd pfd = {.fd=sock, .events=POLLRDNORM};
 
-    FD_ZERO(&fds);
-    FD_SET(sock, &fds);
-
-    for (;;) {
-        fd_set          readFds = fds;
-        timestampt      before;
-        int             selectStatus;
-
-        (void)set_timestamp(&before);
-
-        selectStatus = select(sock+1, &readFds, 0, 0, timeoutPtr);
-
+	for (;;) {
+		int status = poll(&pfd, 1, timeo);
         (void)exitIfDone(0); /* handles SIGTERM reception */
 
-        if (selectStatus == 0)
-            return ETIMEDOUT;
+		if (status < 0) {
+			if (errno == EINTR) {
+				log_debug("poll() was interrupted");
+				/*
+				 * Might not be meaningful. For example, the GNUlib
+				 * seteuid() function generates a non-standard signal in
+				 * order to synchronize UID changes amongst threads.
+				 */
+				continue;
+			}
+			log_add_syserr("poll() failure on socket %d", sock);
+			return errno;
+		}
 
-        if (selectStatus > 0) {
-            /*
-             * The socket is ready for reading. The following statement calls
-             * `ldmprog_5()`, `ldmprog_6()`, or `ldmprog_7()`. Calls
-             * SVC_DESTROY() if the connection dies.
-             */
-            svc_getreqsock(sock);
-            (void)exitIfDone(0);
+		if (0 == status) {
+			log_debug("Timeout");
+			return ETIMEDOUT;
+		}
 
-            if (!FD_ISSET(sock, &svc_fdset)) {
-                /*
-                 * The RPC layer closed the socket and destroyed the associated
-                 * SVCXPRT structure.
-                 */
-                 log_add("RPC layer closed connection");
-                 return ECONNRESET;
-            }
+		/*
+		 * The socket is ready for reading. The following statement calls
+		 * svc_destroy() on error; otherwise, it calls `ldmprog_5()`,
+		 * `ldmprog_6()`, or `ldmprog_7()`.
+		 */
+		svc_getreqsock(sock);
+        (void)exitIfDone(0); /* handles SIGTERM reception */
 
-            if (as_shouldSwitch()) /* always false for upstream LDM-s */
-                return 0;
+		if (!FD_ISSET(sock, &svc_fdset)) {
+			/*
+			 * The RPC layer closed the socket and destroyed the associated
+			 * SVCXPRT structure.
+			 */
+			 log_add("RPC layer closed connection on socket %d", sock);
+			 return ECONNRESET;
+		}
 
-            selectTimeout = canonicalTimeout; /* reset select(2) timeout */
-        } /* socket is read-ready */
-        else {
-            if (errno != EINTR) {
-                log_add_syserr("select() error on socket %d", sock);
-                return errno;
-            }
+		if (as_shouldSwitch()) /* always false for upstream LDM-s */
+			return 0;
 
-            if (timeoutPtr) {
-                timestampt      after;
-                timestampt      diff;
+		log_debug("RPC message processed");
+	} // poll(2) loop
 
-                (void)set_timestamp(&after);
-
-                /*
-                 * Adjust select(2) timeout.
-                 */
-                diff = diff_timestamp(&after, &before);
-                selectTimeout = diff_timestamp(&canonicalTimeout, &diff);
-            }
-        } /* select() returned -1 */
-    } /* indefinite loop */
-
-    return 0; // Eclipse wants to see a return
+	return 0; // To silence Eclipse
 }
