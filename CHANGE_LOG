@@ -1,4 +1,4 @@
-6.13.12.44	2020-04-20T13:31:07-0600
+6.13.12.45	2020-04-28T14:05:18-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -207,8 +207,12 @@
             * Stop multicast LDM sender, mldm_sender(1), during multipoint VLAN
               reconfiguration
         Up7.c:
-            Simplified and improved robustness by eliminating second server-side
-            transport.
+            * Simplified and improved robustness by eliminating second
+              server-side transport.
+            * Cleaned-up subscription-request logic. Ensured that an error
+              message is logged if anything goes wrong.
+            * request_product_7_svc(): added call to svcerr_systemerr() if
+              there's no current subscription
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
@@ -225,6 +229,8 @@
         * Removed Authorizer_test from "make check" because GTest segfaults at
           exit.
         * Created pthread_atfork_test.c
+        * one_svc_run(): converted timeout argument from unsigned to int to
+          support indefinite timeout
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
