@@ -15,7 +15,8 @@ cd `dirname $0`
 deploy -M /usr/ccs/bin/make -n burns
 
 # Non-operational backend cluster node
-deploy uni14
+# Tom's using uni14 for fanout testing
+deploy uni15
 
 # Lead
 #deploy lead
