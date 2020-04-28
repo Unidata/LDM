@@ -1,4 +1,4 @@
-6.13.12.45	2020-04-28T14:05:18-0600
+6.13.12.46
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -71,8 +71,9 @@
           multicast reception is enabled -- which isn't by default.
 
     Upstream LDM:
-        Don't terminate previously-executing upstream LDM with a different
-        protocol version number.
+        * Don't terminate previously-executing upstream LDM with a different
+          protocol version number.
+        * one_svc_run(): Replaced use of select() with poll()
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
