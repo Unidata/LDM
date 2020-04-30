@@ -539,7 +539,7 @@ runSvc( SVCXPRT* const restrict    xprt,
     log_assert(hostId);
 
     int            status;
-    const unsigned TIMEOUT = 2*interval;
+    const unsigned TIMEOUT = 4*interval;
     const int      sock = xprt->xp_sock;
 
     status = one_svc_run(sock, TIMEOUT); // Exits if `done` set
