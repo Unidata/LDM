@@ -327,7 +327,7 @@ mi_format(
  ******************************************************************************/
 
 struct sepMcastInfo {
-    feedtypet feed;
+    feedtypet     feed;
     InetSockAddr* mcastGrp;
     InetSockAddr* fmtpSrvr;
 };
