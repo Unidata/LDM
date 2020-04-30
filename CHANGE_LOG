@@ -1,4 +1,4 @@
-6.13.12.46	2020-04-28T16:37:52-0600
+6.13.12.47	2020-04-30T14:04:22-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -74,6 +74,7 @@
         * Don't terminate previously-executing upstream LDM with a different
           protocol version number.
         * one_svc_run(): Replaced use of select() with poll()
+        * Increase service timeout from 60 s to 120 s
 
     ldmadmin(1):
         * plotmetrics: Corrected sense of local/remote port connections. They
@@ -157,6 +158,8 @@
               upstream suppliers of a given feed
             * Added mutex loccking/unlocking in down7_init() to silence Coverity
               Scan
+            * Moved test_connection_7_svc to Up7
+            * Added periodic heartbeat to upstream LDM7
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
@@ -214,6 +217,7 @@
               message is logged if anything goes wrong.
             * request_product_7_svc(): added call to svcerr_systemerr() if
               there's no current subscription
+            * Added test_connection_7_svc() from Down7
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
