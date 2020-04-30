@@ -66,6 +66,13 @@
 #endif
 
 /******************************************************************************
+ * Forward declaration
+ ******************************************************************************/
+
+static void
+downlet_taskCompleted(const Ldm7Status status);
+
+/******************************************************************************
  * Signals:
  ******************************************************************************/
 
@@ -139,9 +146,11 @@ unblockSigs(
  * downstream LDM7.
  */
 typedef struct {
-    char*                 remoteId; ///< Socket address of upstream LDM7
-    CLIENT*               clnt;     ///< Client-side RPC handle
-    pthread_mutex_t       mutex;    ///< Because accessed by multiple threads
+    char*           remoteId;    ///< Socket address of upstream LDM7
+    CLIENT*         clnt;        ///< Client-side RPC handle
+    pthread_mutex_t mutex;       ///< Because accessed by multiple threads
+    pthread_t       thread;      ///< Heartbeat thread
+    time_t          lastRequest; ///< Last time upstream service was accessed
 } Up7Proxy;
 static Up7Proxy up7Proxy;
 
@@ -167,6 +176,56 @@ up7Proxy_unlock()
     log_debug("Entered");
     int status = pthread_mutex_unlock(&up7Proxy.mutex);
     log_assert(status == 0);
+}
+
+/**
+ * Periodically sends a heartbeat to the upstream LDM7. Because there will be no
+ * communication with the upstream LDM7 if the multicast reception is perfect,
+ * this lets the upstream LDM7 know that the connection is good and its client
+ * is still alive.
+ *
+ * @param[in] arg      Ignored
+ * @cancellationpoint  Yes
+ */
+static void*
+up7Proxy_heartbeat(void* arg)
+{
+	int cancelState;
+	(void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+
+	for (;;) {
+		up7Proxy_lock();
+
+		const time_t now = time(NULL);
+		const time_t when = up7Proxy.lastRequest + interval;
+
+		if (now < when) {
+			unsigned unslept = when - now;
+			up7Proxy_unlock();
+			(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+				while ((unslept = sleep(unslept)));
+			(void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+		}
+		else {
+			(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+				(void)test_connection_7(NULL, up7Proxy.clnt);
+			(void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+
+			// RPC_TIMEDOUT because function uses asynchronous RPC
+			if (clnt_stat(up7Proxy.clnt) != RPC_TIMEDOUT) {
+				downlet_taskCompleted(LDM7_RPC);
+				log_add("Couldn't send heartbeat to upstream LDM7");
+				log_flush_error();
+				up7Proxy_unlock();
+				break;
+			}
+
+			up7Proxy.lastRequest = now;
+			up7Proxy_unlock();
+		}
+	}
+
+	return NULL;
 }
 
 /**
@@ -211,14 +270,33 @@ up7Proxy_init(const int           socket,
                 // `log_assert(status == 0)`
 
                 int sock = socket;
-                up7Proxy.clnt = clnttcp_create(sockAddr, LDMPROG, SEVEN, &sock, 0,
-                        0);
+                up7Proxy.clnt = clnttcp_create(sockAddr, LDMPROG, SEVEN, &sock,
+                		0, 0);
 
                 if (up7Proxy.clnt == NULL) {
                     log_add_syserr("Couldn't create RPC client for %s: %s",
                             up7Proxy.remoteId);
                     status = LDM7_RPC;
+                }
+                else {
+					status = pthread_create(&up7Proxy.thread, NULL,
+							up7Proxy_heartbeat, NULL);
+
+					if (status) {
+						log_add_errno(status, "Couldn't create heartbeat "
+								"thread");
+						status = LDM7_SYSTEM;
+						clnt_destroy(up7Proxy.clnt);
+						up7Proxy.clnt = NULL;
+					}
+					else {
+						up7Proxy.lastRequest = 0;
+					}
+                } // `up7Proxy.clnt` initialized
+
+                if (status) {
                     free(up7Proxy.remoteId);
+                    up7Proxy.remoteId = NULL;
                 }
             } // `up7Proxy.remoteId` allocated
 
@@ -237,20 +315,29 @@ static void
 up7Proxy_destroy(void)
 {
     up7Proxy_lock();
-        /*
+    	int status = pthread_cancel(up7Proxy.thread);
+    	if (status)
+    		log_errno(status, "Couldn't cancel heartbeat thread");
+    	status = pthread_join(up7Proxy.thread, NULL);
+    	if (status)
+    		log_errno(status, "Couldn't join heartbeat thread");
+
+    	/*
          * Destroys *and* frees `up7Proxy.clnt`. Won't close externally-created
          * socket.
          */
         clnt_destroy(up7Proxy.clnt);
         up7Proxy.clnt = NULL;
+
         free(up7Proxy.remoteId);
+        up7Proxy.remoteId = NULL;
     up7Proxy_unlock();
 
     (void)pthread_mutex_destroy(&up7Proxy.mutex);
 }
 
 /**
- * Subscribes to an upstream LDM7 server. This is a potentially length
+ * Subscribes to an upstream LDM7 server. This is a potentially lengthy
  * operation.
  *
  * @param[in]  feed           Feed specification.
@@ -309,6 +396,7 @@ up7Proxy_subscribe(
          * have this problem. -- Steve Emmerson 2018-03-26
          */
         SubscriptionReply* reply = subscribe_7(&request, clnt);
+        up7Proxy.lastRequest = time(NULL);
 
         timeout.tv_sec = 60; // Keep consonant with TIMEOUT in `fix_clnt.pl`
         log_debug("Resetting LDM7 RPC-timeout to %ld s", (long)timeout.tv_sec);
@@ -381,6 +469,8 @@ up7Proxy_requestBacklog(
 
         // asynchronous => no reply
         (void)request_backlog_7((BacklogSpec*)spec, clnt); // Safe cast
+        up7Proxy.lastRequest = time(NULL);
+
         if (clnt_stat(clnt) == RPC_TIMEDOUT) {
             /*
              * The status will always be RPC_TIMEDOUT unless an error occurs
@@ -417,6 +507,7 @@ up7Proxy_reqProd(const FmtpProdIndex iProd)
         // Asynchronous send => no reply
         McastProdIndex index = iProd;
         (void)request_product_7(&index, clnt);
+        up7Proxy.lastRequest = time(NULL);
 
         if (clnt_stat(clnt) == RPC_TIMEDOUT) {
             /*
@@ -480,13 +571,6 @@ typedef enum {
     TASK_STARTED,           ///< Task has started
     TASK_STOPPED            ///< Task has completed
 } TaskState;
-
-/******************************************************************************
- * Forward declaration
- ******************************************************************************/
-
-static void
-downlet_taskCompleted(const Ldm7Status status);
 
 /******************************************************************************
  * Requester of data-products missed by the FMTP Layer:
@@ -1918,7 +2002,6 @@ downlet_destroyClient()
 
     up7Proxy_destroy(); // Won't close externally-created socket
     (void)close(downlet.sock);
-
     downlet.sock = -1;
 
     smi_free(downlet.mcastInfo);
@@ -2809,21 +2892,4 @@ end_backlog_7_svc(
     log_debug("Returning");
 
     return NULL; // causes RPC dispatcher to not reply
-}
-
-/**
- * Does nothing. Does not reply.
- *
- * @param[in] rqstp   Pointer to the RPC service-request.
- * @retval    NULL    Always.
- */
-void*
-test_connection_7_svc(
-    void* const           no_op,
-    struct svc_req* const rqstp)
-{
-    log_debug("Entered");
-    log_debug("Returning");
-
-    return NULL;                // don't reply
 }
