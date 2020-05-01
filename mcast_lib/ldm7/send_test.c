@@ -120,8 +120,10 @@ static bool sock_remoteString(
         perror("getpeername()");
     }
     else {
-        success = sockAddrIn_format((struct sockaddr_in*)&sockAddr, buf, len)
-                != NULL;
+		const struct sockaddr_in* const inAddr = (struct sockaddr_in*)&sockAddr;
+
+    	success = snprintf(buf, len, "%s:%d",
+    			inet_ntoa(inAddr->sin_addr), ntohs(inAddr->sin_port)) < len;
     }
     return success;
 }

@@ -275,9 +275,13 @@ configure_socket(
     bool success;
     char groupSockAddrStr[80];
 
-    if (debug)
-        (void)sockAddrIn_format(groupSockAddr, groupSockAddrStr,
-                sizeof(groupSockAddrStr));
+    if (debug) {
+		const struct sockaddr_in* const inAddr =
+				(struct sockaddr_in*)&groupSockAddr;
+
+    	snprintf(groupSockAddrStr, sizeof(groupSockAddrStr), "%s:%d",
+    			inet_ntoa(inAddr->sin_addr), ntohs(inAddr->sin_port));
+    }
 
     /*
      * Bind the local endpoint of the socket to the address and port number of
@@ -363,9 +367,13 @@ print_packets(
             perror("getsockname()");
             return false;
         }
-        char buf[80];
-        if (!sockAddrIn_format(&sockAddrIn, buf, sizeof(buf)))
-            return false;
+        char         buf[80];
+		const struct sockaddr_in* const inAddr =
+				(struct sockaddr_in*)&sockAddrIn;
+    	if (snprintf(buf, sizeof(buf), "%s:%d",
+    			inet_ntoa(inAddr->sin_addr), ntohs(inAddr->sin_port))
+    			>= sizeof(buf))
+			return false;
         (void)fprintf(stderr, "Receiving from socket bound to %s\n", buf);
     }
 
