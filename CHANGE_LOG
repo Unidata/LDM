@@ -1,4 +1,4 @@
-6.13.12.47	2020-04-30T14:04:22-0600
+6.13.12.48	2020-05-01T08:37:00-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -236,6 +236,7 @@
         * Created pthread_atfork_test.c
         * one_svc_run(): converted timeout argument from unsigned to int to
           support indefinite timeout
+        * Down7::up7Proxy_heartbeat(): Fixed setting of `lastRequest`
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
