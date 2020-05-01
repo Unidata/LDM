@@ -196,11 +196,11 @@ up7Proxy_heartbeat(void* arg)
 	for (;;) {
 		up7Proxy_lock();
 
-		const time_t now = time(NULL);
-		const time_t when = up7Proxy.lastRequest + interval;
+		const time_t start = time(NULL);
+		const time_t stop = up7Proxy.lastRequest + interval;
 
-		if (now < when) {
-			unsigned unslept = when - now;
+		if (start < stop) {
+			unsigned unslept = stop - start;
 			up7Proxy_unlock();
 			(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
 				while ((unslept = sleep(unslept)));
@@ -210,6 +210,7 @@ up7Proxy_heartbeat(void* arg)
 			(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
 				(void)test_connection_7(NULL, up7Proxy.clnt);
 			(void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
+			up7Proxy.lastRequest = time(NULL);
 
 			// RPC_TIMEDOUT because function uses asynchronous RPC
 			if (clnt_stat(up7Proxy.clnt) != RPC_TIMEDOUT) {
@@ -220,7 +221,6 @@ up7Proxy_heartbeat(void* arg)
 				break;
 			}
 
-			up7Proxy.lastRequest = now;
 			up7Proxy_unlock();
 		}
 	}
