@@ -378,7 +378,7 @@ print_packets(
     }
 
     // Enter a receive-then-print loop
-    for (;;) {
+    for (unsigned i = 0;; ++i) {
         struct sockaddr_in addr;
         socklen_t          addrlen = sizeof(addr);
         char               msgbuf[256];
@@ -390,7 +390,7 @@ print_packets(
             return false;
         }
 
-        (void)printf("%.*s\n", nbytes, msgbuf);
+        (void)printf("%u: %.*s\n", i, nbytes, msgbuf);
     }
 
     return true;
