@@ -98,7 +98,7 @@ usage(const char* const progname)
 {
     (void)fprintf(stderr,
 "Usage:\n"
-"    %s [-i <iface>] [-t <ttl>] [-v]\n"
+"    %s [-i <iface>] [-g <grpAddr>] [-t <ttl>] [-v]\n"
 "where:\n"
 "    -i <iface>   IPv4 address of interface to use. Default is system default.\n"
 "    -g <grpAddr> Multicast group IP address. Default is %s.\n"
@@ -201,13 +201,13 @@ main(int argc, char *argv[])
     }
 
     // Enter a sending loop
-    char msg[] = "Hello, World!";
-    for (int i = 0; ; ++i) {
-        (void)snprintf(msg, sizeof(msg), "%d", i);
+    char msg[80] = {};
+    for (unsigned i = 0; ; ++i) {
+        (void)snprintf(msg, sizeof(msg), "%u", i);
 #if 1
-        if (send(sd, msg, sizeof(msg), 0) < 0)
+        if (send(sd, msg, strlen(msg), 0) < 0)
 #else
-        if (sendto(sd, msg, sizeof(msg), 0, (struct sockaddr*)&addr,
+        if (sendto(sd, msg, strlen(msg), 0, (struct sockaddr*)&addr,
                 sizeof(addr)) < 0)
 #endif
         {

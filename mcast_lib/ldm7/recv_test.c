@@ -112,7 +112,7 @@ usage(const char* const progname)
 {
     (void)fprintf(stderr,
 "Usage:\n"
-"    %s [-i <iface>] [-s <srcAddr>] [-v]\n"
+"    %s [-i <iface>] [-g <grpAddr>] [-s <srcAddr>] [-v]\n"
 "where:\n"
 "    -i <iface>   IPv4 address of interface to use. Default depends on <srcAddr>.\n"
 "    -g <grpAddr> Multicast group IP address. Default is %s.\n"
@@ -378,10 +378,10 @@ print_packets(
     }
 
     // Enter a receive-then-print loop
-    for (unsigned i = 0;; ++i) {
+    for (;;) {
         struct sockaddr_in addr;
         socklen_t          addrlen = sizeof(addr);
-        char               msgbuf[256];
+        char               msgbuf[1462]; // Maximum UDP over ethernet payload
         int                nbytes = recvfrom(sock, msgbuf, sizeof(msgbuf), 0,
                 (struct sockaddr*)&addr, &addrlen);
 
@@ -390,7 +390,7 @@ print_packets(
             return false;
         }
 
-        (void)printf("%u: %.*s\n", i, nbytes, msgbuf);
+        (void)printf("%.*s\n", nbytes, msgbuf);
     }
 
     return true;
