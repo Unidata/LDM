@@ -32,18 +32,28 @@ get_context(
         unsigned char* const restrict   ttl,
         bool* const restrict            verbose)
 {
-    in_addr_t tmpIface = htonl(INADDR_ANY); // use default multicast interface
-    unsigned  tmpTtl = 1;                   // not forwarded by any router
-    bool      verb = false;                 // Not verbose
-    int       ch;
-    int       status = 0;
+    in_addr_t       tmpIface = htonl(INADDR_ANY); // use default multicast interface
+    unsigned        tmpTtl = 1;                   // not forwarded by any router
+    bool            verb = false;                 // Not verbose
+    int             ch;
+    int             status = 0;
+    struct in_addr  grpAddr = {};
 
-    while (0 == status && (ch = getopt(argc, argv, "i:t:v")) != -1) {
+    grpAddr.s_addr = inet_addr(HELLO_GROUP);
+
+    while (0 == status && (ch = getopt(argc, argv, "i:g:t:v")) != -1) {
         switch (ch) {
         case 'i': {
             tmpIface = inet_addr(optarg);
             if ((in_addr_t)-1 == tmpIface) {
                 (void)fprintf(stderr, "Couldn't decode interface IP address\n");
+                status = -1;
+            }
+            break;
+        }
+        case 'g': {
+            if (inet_pton(AF_INET, optarg, &grpAddr.s_addr) != 1) {
+                perror("inet_pton() couldn't parse multicast group IP address");
                 status = -1;
             }
             break;
@@ -73,7 +83,7 @@ get_context(
     }
 
     if (0 == status) {
-        groupAddr->s_addr = inet_addr(HELLO_GROUP);
+        *groupAddr = grpAddr;
         *groupPort = HELLO_PORT;
         ifaceAddr->s_addr = tmpIface;
         *ttl = tmpTtl;
@@ -90,10 +100,11 @@ usage(const char* const progname)
 "Usage:\n"
 "    %s [-i <iface>] [-t <ttl>] [-v]\n"
 "where:\n"
-"    -i <iface>  IPv4 address of interface to use. Default is system default.\n"
-"    -t <ttl>    Time-to-live for outgoing packets. Default is 1.\n"
-"    -v          Verbose output\n",
-    progname);
+"    -i <iface>   IPv4 address of interface to use. Default is system default.\n"
+"    -g <grpAddr> Multicast group IP address. Default is %s.\n"
+"    -t <ttl>     Time-to-live for outgoing packets. Default is 1.\n"
+"    -v           Verbose output\n",
+    progname, HELLO_GROUP);
 }
 
 static bool sock_remoteString(

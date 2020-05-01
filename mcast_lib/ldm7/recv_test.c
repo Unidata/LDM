@@ -65,11 +65,18 @@ get_context(
     grpAddr.sin_addr.s_addr = inet_addr(HELLO_GROUP);
     grpAddr.sin_port = htons(HELLO_PORT);
 
-    while (success && (ch = getopt(argc, argv, "i:s:v")) != -1) {
+    while (success && (ch = getopt(argc, argv, "i:g:s:v")) != -1) {
         switch (ch) {
         case 'i': {
             if (inet_pton(AF_INET, optarg, &ifAddr.s_addr) != 1) {
                 perror("inet_pton() couldn't parse interface IP address");
+                success = false;
+            }
+            break;
+        }
+        case 'g': {
+            if (inet_pton(AF_INET, optarg, &grpAddr.sin_addr.s_addr) != 1) {
+                perror("inet_pton() couldn't parse multicast group IP address");
                 success = false;
             }
             break;
@@ -107,10 +114,11 @@ usage(const char* const progname)
 "Usage:\n"
 "    %s [-i <iface>] [-s <srcAddr>] [-v]\n"
 "where:\n"
-"    -i <iface>  IPv4 address of interface to use. Default depends on <srcAddr>.\n"
-"    -s <ttl>    IPv4 address of source. Default is any-source multicast.\n"
-"    -v          Verbose output\n",
-    progname);
+"    -i <iface>   IPv4 address of interface to use. Default depends on <srcAddr>.\n"
+"    -g <grpAddr> Multicast group IP address. Default is %s.\n"
+"    -s <srcAddr> IPv4 address of source. Default is any-source multicast.\n"
+"    -v           Verbose output\n",
+    progname, HELLO_GROUP);
 }
 
 static bool
@@ -240,6 +248,11 @@ join_any_multicast(
     return success;
 }
 
+bool isSourceSpecific(const struct in_addr* const addr)
+{
+	return (ntohl(addr->s_addr) >> 24) == 232;
+}
+
 /**
  * Configures a socket for receiving multicast packets.
  *
@@ -290,11 +303,11 @@ configure_socket(
                     groupSockAddrStr);
 
         // Have the socket join the multicast group on a network interface.
-        success = (sourceAddr->s_addr == INADDR_ANY)
-                ? join_any_multicast(sock, &groupSockAddr->sin_addr, ifaceAddr,
-                        debug)
-                : join_source_multicast(sock, &groupSockAddr->sin_addr,
-                        ifaceAddr, sourceAddr, debug);
+        success = isSourceSpecific(&groupSockAddr->sin_addr)
+                ? join_source_multicast(sock, &groupSockAddr->sin_addr,
+                        ifaceAddr, sourceAddr, debug)
+                : join_any_multicast(sock, &groupSockAddr->sin_addr, ifaceAddr,
+                        debug);
     }
 
     return success;
