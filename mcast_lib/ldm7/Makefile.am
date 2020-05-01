@@ -12,7 +12,8 @@ EXTRA_DIST              = down7.hin \
 			  prod_index_queue.hin \
 			  sock_funcs.c sock_funcs.hin \
 			  up7.hin \
-                          send_test.c send_recv_test.c send_recv_test.h
+                          send_test.c recv_test.c send_recv_test.c \
+                          send_recv_test.h
 send_test_SOURCES	= send_test.c send_recv_test.c send_recv_test.h
 recv_test_SOURCES	= recv_test.c send_recv_test.c send_recv_test.h
 BUILT_SOURCES           = down7.h \
