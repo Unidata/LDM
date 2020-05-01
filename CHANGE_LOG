@@ -1,4 +1,4 @@
-6.13.12.49	2020-05-01T14:52:14-0600
+6.13.12.50	2020-05-01T15:07:52-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -237,8 +237,10 @@
         * one_svc_run(): converted timeout argument from unsigned to int to
           support indefinite timeout
         * Down7::up7Proxy_heartbeat(): Fixed setting of `lastRequest`
-        * send_test(1) & recv_test(1): Added "-g <grpAddr>" option and made
-          independent of LDM library.
+        * send_test(1) & recv_test(1):
+            * Added "-g <grpAddr>" option
+            * Made independent of LDM library
+            * Changed HELLO_GROUP to 234.128.117.1 (unicast prefix based)
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
