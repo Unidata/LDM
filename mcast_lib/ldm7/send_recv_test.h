@@ -27,7 +27,7 @@
  * Unicast-based multicast address based on UCAR subnet.
  */
 #define HELLO_GROUP "234.128.117.1"
-#else
+#elif 0
 /*
  * Source-specific multicast (SSM) address. According to RFC4607:
  *   - Source-specific multicast address in the range 232.0.0/24 are reserved
@@ -36,6 +36,8 @@
  *     applications is strictly locally determined by the sending host."
  */
 #define HELLO_GROUP "232.128.117.1"
+#else
+#define HELLO_GROUP "234.128.117.1" // Unicast prefix based
 #endif
 
 
