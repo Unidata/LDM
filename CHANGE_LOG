@@ -1,4 +1,4 @@
-6.13.12.52	2020-05-01T15:36:46-0600
+6.13.12.53	2020-05-01T15:47:23-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -242,6 +242,7 @@
             * Made independent of LDM library
             * Changed HELLO_GROUP to 234.128.117.1 (unicast prefix based)
             * Added to distribution (but neither built nor installed)
+            * Added packet index to output of recv_test(1)
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
