@@ -21,6 +21,7 @@
 #include "priv.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -78,7 +79,7 @@ getline(char** const restrict  lineptr,
         log_add("Invalid argument: lineptr=%p, size=%p", lineptr, size);
     }
     else {
-        static const int SIZE = _POSIX_MAX_CANON + 1;
+        static const int SIZE = PIPE_BUF;
         char*            line = log_realloc(*lineptr, SIZE, "getline() buffer");
 
         if (line) {
@@ -130,14 +131,92 @@ childCmd_log(void* const arg)
 }
 
 /**
+ * Ensures that a file descriptor isn't one of the standard ones (i.e., 0, 1,
+ * or 2). Modifies the descriptor if necessary.
+ *
+ * @param[in,out] fd  File descriptor. If a standard one, then it will be
+ *                    duplicated, the original descriptor closed, and then set
+ *                    to the duplicated value.
+ * @retval 0          Success. `*fd` is guaranteed to be greater than 2.
+ * @retval EMFILE     {OPEN_MAX} file descriptors are currently open in the
+ *                    calling process, or no file descriptors greater than  2
+ *                    are available
+ */
+static int
+vetFd(int* fd)
+{
+	int              status;
+	static const int MIN_FD = 3;
+
+	if (*fd >= MIN_FD) {
+		status = 0;
+	}
+	else {
+		int status = fcntl(*fd, F_DUPFD, MIN_FD);
+
+		if (status == -1) {
+			log_add_syserr("fcntl() failure");
+			status = errno;
+		}
+		else {
+			close(*fd);
+			*fd = status;
+			status = 0;
+		}
+	}
+
+	return status;
+}
+
+/**
+ * Returns a pipe with non-standard file descriptors (i.e., both file
+ * descriptors of the pipe will be greater than 2).
+ *
+ * @param[out] fds     Vector for pipe's file descriptors
+ * @retval     0       Success. `fds[0]` is read-end of pipe and `fds[1]` is
+ *                     write-end. Both are greater than 2.
+ * @retval     EMFILE  More than {OPEN_MAX} minus two file descriptors are
+ *                     already in use by this process
+ * @retval     EMFILE  {OPEN_MAX} file descriptors are currently open in the
+ *                     calling process, or no file descriptors greater than or
+ *                     equal to 3 are available
+ * @retval     ENFILE  The number of simultaneously open files in the system
+ *                     would exceed a system-imposed limit
+ */
+static int
+getNonStdPipe(int fds[2])
+{
+	int status = pipe(fds);
+
+	if (status) {
+		log_add_syserr("pipe() failure");
+		status = errno;
+	}
+	else {
+		if ((status = vetFd(fds)) == 0)
+			status = vetFd(fds+1);
+
+		if (status) {
+			close(fds[0]); fds[0] = -1;
+			close(fds[1]); fds[1] = -1;
+		}
+	}
+
+	return status;
+}
+
+/**
  * Returns a new child command structure.
  *
  * @return       New child process
  * @retval NULL  Failure. `log_add()` called. `errno` is set:
- *               - EMFILE  {STREAM_MAX} streams are currently open in the
- *                         calling process.
- *               - EMFILE  {FOPEN_MAX} streams are currently open in the
- *                         calling process.
+ *               - EMFILE  More than {OPEN_MAX} minus two file descriptors are
+ *                 already in use by this process
+ *               - EMFILE  {OPEN_MAX} file descriptors are currently open in the
+ *                 calling process, or no file descriptors greater than or equal
+ *                 to 3 are available
+ *               - ENFILE  The number of simultaneously open files in the system
+ *                 would exceed a system-imposed limit
  *               - ENOMEM  Insufficient space to allocate a buffer
  */
 static ChildCmd*
@@ -146,27 +225,24 @@ childCmd_new(void)
     ChildCmd* cmd = log_malloc(sizeof(ChildCmd), "child command");
 
     if (cmd) {
-        int status = pipe(cmd->stdInPipe);
+        int status = getNonStdPipe(cmd->stdInPipe);
 
         if (status) {
-            log_add_syserr("pipe() failure");
-            status = errno;
+            log_add_syserr("Couldn't create standard input pipe");
         }
         else {
-            status = pipe(cmd->stdOutPipe);
+            status = getNonStdPipe(cmd->stdOutPipe);
 
             if (status) {
-                log_add_syserr("pipe() failure");
-                status = errno;
+                log_add_syserr("Couldn't create standard output pipe");
             }
             else {
-                status = pipe(cmd->stdErrPipe);
+                status = getNonStdPipe(cmd->stdErrPipe);
 
                 if (status) {
-                    log_add_syserr("pipe() failure");
-                    status = errno;
-                    (void)close(cmd->stdOutPipe[0]);
-                    (void)close(cmd->stdOutPipe[1]);
+                    log_add_syserr("Couldn't create standard error pipe");
+                    (void)close(cmd->stdOutPipe[0]); cmd->stdOutPipe[0] = -1;
+                    (void)close(cmd->stdOutPipe[1]); cmd->stdOutPipe[1] = -1;
                 }
                 else {
                     (void)memset(&cmd->stdErrThread, 0,
@@ -181,8 +257,8 @@ childCmd_new(void)
             } // `cmd->stdOutPipe` open
 
             if (status) {
-                (void)close(cmd->stdInPipe[0]);
-                (void)close(cmd->stdInPipe[1]);
+                (void)close(cmd->stdInPipe[0]); cmd->stdInPipe[0] = -1;
+                (void)close(cmd->stdInPipe[1]); cmd->stdInPipe[1] = -1;
             }
         } // `cmd->stdInPipe` open
 
@@ -247,18 +323,24 @@ static void
 childCmd_free(ChildCmd* const cmd)
 {
     if (cmd) {
-        if (cmd->stdErrPipe[0] >= 0)
-            (void)close(cmd->stdErrPipe[0]);
-        if (cmd->stdErrPipe[1] >= 0)
-            (void)close(cmd->stdErrPipe[1]);
-        if (cmd->stdOutPipe[0] >= 0)
-            (void)close(cmd->stdOutPipe[0]);
-        if (cmd->stdOutPipe[1] >= 0)
-            (void)close(cmd->stdOutPipe[1]);
-        if (cmd->stdInPipe[0] >= 0)
-            (void)close(cmd->stdInPipe[0]);
-        if (cmd->stdInPipe[1] >= 0)
-            (void)close(cmd->stdInPipe[1]);
+        if (cmd->stdErrPipe[0] >= 0) {
+            (void)close(cmd->stdErrPipe[0]); cmd->stdErrPipe[0] = -1;
+        }
+        if (cmd->stdErrPipe[1] >= 0) {
+            (void)close(cmd->stdErrPipe[1]); cmd->stdErrPipe[1] = -1;
+        }
+        if (cmd->stdOutPipe[0] >= 0) {
+            (void)close(cmd->stdOutPipe[0]); cmd->stdOutPipe[0] = -1;
+        }
+        if (cmd->stdOutPipe[1] >= 0) {
+            (void)close(cmd->stdOutPipe[1]); cmd->stdOutPipe[1] = -1;
+        }
+        if (cmd->stdInPipe[0] >= 0) {
+            (void)close(cmd->stdInPipe[0]); cmd->stdInPipe[0] = -1;
+        }
+        if (cmd->stdInPipe[1] >= 0) {
+            (void)close(cmd->stdInPipe[1]); cmd->stdInPipe[1] = -1;
+        }
         cmd->magic = NULL;
         free(cmd->cmdStr);
         free(cmd);
@@ -316,13 +398,25 @@ execute(
 		status = errno;
 	}
 	else if (pid == 0) {
-		/* Child process */
+		// Child process
+
+		// The following file descriptors are unneeded
+		(void)close(cmd->stdInPipe[1]);
+		(void)close(cmd->stdOutPipe[0]);
+		(void)close(cmd->stdErrPipe[0]);
+
+		/*
+		 * All file-descriptors in the pipes are guaranteed to be greater than
+		 * 2.
+		 */
 		(void)dup2(cmd->stdInPipe[0], STDIN_FILENO);
+		(void)close(cmd->stdInPipe[0]); // No longer needed
+
 		(void)dup2(cmd->stdOutPipe[1], STDOUT_FILENO);
+		(void)close(cmd->stdOutPipe[1]); // No longer needed
+
 		(void)dup2(cmd->stdErrPipe[1], STDERR_FILENO);
-		(void)close(cmd->stdInPipe[1]);  // Write end of stdin pipe unneeded
-		(void)close(cmd->stdOutPipe[0]); // Read end of stdout pipe unneeded
-		(void)close(cmd->stdErrPipe[0]); // Read end of stderr pipe unneeded
+		(void)close(cmd->stdErrPipe[1]); // No longer needed
 
 		uid_t euid;
 
@@ -358,7 +452,7 @@ execute(
 		} // Executing as root
 	}
 	else {
-		/* Parent process */
+		// Parent process
 		(void)close(cmd->stdInPipe[0]);  // Read end of stdin pipe unneeded
 		(void)close(cmd->stdOutPipe[1]); // Write end of stdout pipe unneeded
 		(void)close(cmd->stdErrPipe[1]); // Write end of stderr pipe unneeded
