@@ -1678,6 +1678,7 @@ sub checkTime
 		my $i = int(rand(scalar(@hosts)));
 		my $timeServer = $hosts[$i];
 		@hosts = (@hosts[0 .. ($i-1)], @hosts[($i+1) .. $#hosts]);
+		# ALTERNATIVE?: chronyd -Q 'pool pool.ntp.org iburst'
 		if (!open(NTPDATE,
 		    "$ntpdate -q -t $ntpdate_timeout $timeServer 2>&1 |")) {
 		    errmsg("\n".
