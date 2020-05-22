@@ -1,4 +1,4 @@
-6.13.12.54	2020-05-01T16:04:56-0600
+6.13.12.55	2020-05-22T16:15:13-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -218,6 +218,10 @@
             * request_product_7_svc(): added call to svcerr_systemerr() if
               there's no current subscription
             * Added test_connection_7_svc() from Down7
+        ChldCmd.c:
+            * Ensured that all pipe(2) file descriptors in the child process are
+              greater than 2 to avoid conflicts when duplicating them to the
+              standard file descriptors (i.e., 0, 1, and 2).
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
