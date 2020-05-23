@@ -152,15 +152,15 @@ vetFd(int* fd)
 		status = 0;
 	}
 	else {
-		int status = fcntl(*fd, F_DUPFD, MIN_FD);
+		const int newFd = fcntl(*fd, F_DUPFD, MIN_FD);
 
-		if (status == -1) {
+		if (newFd == -1) {
 			log_add_syserr("fcntl() failure");
 			status = errno;
 		}
 		else {
 			close(*fd);
-			*fd = status;
+			*fd = newFd;
 			status = 0;
 		}
 	}
