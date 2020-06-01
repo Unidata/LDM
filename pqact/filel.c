@@ -423,7 +423,7 @@ fl_removeAndFree(
     // log_assert(thefl->size >= 1);
 
     if (entry != NULL) {
-        int logLevel = (DR_ERROR == dr) ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
+        int logLevel = (DR_ERROR == dr) ? LOG_LEVEL_ERROR : LOG_LEVEL_DEBUG;
 
         if (PIPE == entry->type) {
             log_log_q(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
