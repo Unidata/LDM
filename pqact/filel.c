@@ -1842,7 +1842,7 @@ static int pipe_open(
                         endpriv();
                         log_info_q("Executing decoder \"%s\"", av[0]);
                         (void)execvp(av[0], &av[0]);
-                        log_syserr("Couldn't execute decoder \"%s\";"
+                        log_syserr("Couldn't execute decoder \"%s\"; "
                                 "PATH=%s", av[0], getenv("PATH"));
                     }
 
