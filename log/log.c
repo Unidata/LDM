@@ -630,6 +630,9 @@ const char* logl_basename(const char* const pathname)
     return cp ? cp + 1 : pathname;
 }
 
+/**
+ * @asyncsignalsafety       Unsafe
+ */
 int logl_vlog(
         const log_loc_t* const  loc,
         const log_level_t       level,
@@ -838,6 +841,9 @@ int logl_vlog_q(
     return logl_flush(level);
 }
 
+/**
+ * @asyncsignalsafety       Unsafe
+ */
 int logl_log(
         const log_loc_t* const restrict loc,
         const log_level_t               level,

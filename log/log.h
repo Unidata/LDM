@@ -112,10 +112,11 @@ void log_avoid_stderr(void);
 
 /**
  * Refreshes the logging module. If logging is to the system logging daemon,
- * then it will continue to be. If logging is to a file, then the file is closed
- * and re-opened; thus enabling log file rotation. If logging is to the standard
- * error stream, then it will continue to be if log_avoid_stderr() hasn't been
- * called; otherwise, logging will be to the provider default.
+ * then it will continue to be. If logging is to a file, then the file will be
+ * closed and re-opened *when the next message is logged*; thus enabling log
+ * file rotation. If logging is to the standard error stream, then it will
+ * continue to be if log_avoid_stderr() hasn't been called; otherwise, logging
+ * will be to the provider default.
  *
  * @threadsafety       Safe
  * @asyncsignalsafety  Safe
@@ -359,6 +360,7 @@ bool log_is_level_enabled(
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_debug(...) do {\
     if (LOG_LEVEL_DEBUG >= log_level) {\
@@ -372,6 +374,7 @@ bool log_is_level_enabled(
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_info(...) do {\
     if (LOG_LEVEL_INFO >= log_level) {\
@@ -383,8 +386,9 @@ bool log_is_level_enabled(
 /**
  * Logs a single message at the NOTICE level, bypassing the message-queue.
  *
- * @param[in] ...  Optional arguments of the message -- starting with the format
- *                 of the message.
+ * @param[in] ...      Optional arguments of the message -- starting with the
+ *                     format of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_notice(...) do {\
     if (LOG_LEVEL_NOTICE >= log_level) {\
@@ -398,6 +402,7 @@ bool log_is_level_enabled(
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_warning(...) do {\
     if (LOG_LEVEL_WARNING >= log_level) {\
@@ -411,6 +416,7 @@ bool log_is_level_enabled(
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_error(...) do {\
     if (LOG_LEVEL_ERROR >= log_level) {\
@@ -425,6 +431,7 @@ bool log_is_level_enabled(
  *
  * @param[in] errnum  `errno` error-number
  * @param[in] ...     Optional arguments of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_errno(errnum, ...) do {\
     LOG_LOC_DECL(loc);\
@@ -436,6 +443,7 @@ bool log_is_level_enabled(
  * message queue.
  *
  * @param[in] ...  Optional arguments of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_syserr(...) log_errno(errno, __VA_ARGS__)
 
@@ -444,6 +452,7 @@ bool log_is_level_enabled(
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_add(...) do { \
     LOG_LOC_DECL(loc); \
@@ -455,6 +464,7 @@ bool log_is_level_enabled(
  *
  * @param[in] fmt  The format of the message.
  * @param[in] args The arguments of the format.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_vadd(fmt, args) do { \
     LOG_LOC_DECL(loc); \
@@ -468,6 +478,7 @@ bool log_is_level_enabled(
  * @param[in] n    The system error number (e.g., `errno`).
  * @param[in] ...  Optional arguments of the message -- starting with the format
  *                 of the message.
+ * @asyncsignalsafety  Unsafe
  */
 #define log_add_errno(n, ...) do {\
     LOG_LOC_DECL(loc); \

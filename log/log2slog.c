@@ -146,7 +146,8 @@ static dest_t          dest;
 /**
  * Returns the pathname of the LDM log file.
  *
- * @return The pathname of the LDM log file
+ * @return             The pathname of the LDM log file
+ * @asyncsignalsafety  Unsafe
  */
 static const char* get_ldm_logfile_pathname(void)
 {
@@ -165,7 +166,7 @@ static const char* get_ldm_logfile_pathname(void)
         else {
             (void)strncpy(pathname, value, sizeof(pathname));
             pathname[sizeof(pathname)-1] = 0;
-            free(value);
+            free(value); // Async-signal-unsafe
         }
     }
     return pathname;
@@ -771,6 +772,12 @@ int logi_flush(void)
     return dest.flush(&dest);
 }
 
+/**
+ * Returns the default logging destination when a daemon
+ *
+ * @return             Default logging destination when a daemon
+ * @asyncsignalsafety  Unsafe
+ */
 const char* logi_get_default_daemon_destination(void)
 {
     return get_ldm_logfile_pathname();
