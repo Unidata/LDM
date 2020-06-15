@@ -300,7 +300,7 @@ static void signal_handler(
     case SIGHUP:
         return;
     case SIGUSR1:
-        log_refresh();
+        log_refresh(); // Will close/open on next log message; not before
         return;
     case SIGUSR2:
         log_roll_level();
