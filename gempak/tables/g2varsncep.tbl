@@ -148,6 +148,7 @@
 000 002 003 002 V-Component of Wind              m s**-1              VGRD             0  -9999.00
 000 002 008 000 Vertical Velocity (Pressure)     Pa s**-1             VVEL             0  -9999.00
 000 002 008 002 Vertical Velocity (Pressure)     Pa s**-1             VVEL             0  -9999.00
+000 002 009 000 Vertical Velocity (Geometric)    m s**-1              DZDT             0  -9999.00
 000 002 009 008 Vertical Velocity (Geometric)    m s**-1              DZDT             0  -9999.00
 000 002 010 000 Absolute Vorticity               s**-1                ABSV             0  -9999.00
 000 002 015 000 Vertical U-Component Shear       s**-1                VUCSH            0  -9999.00
