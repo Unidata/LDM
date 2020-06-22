@@ -1,4 +1,4 @@
-6.13.12.56	2020-05-23T10:22:28-0600
+6.13.12.57	2020-06-22T14:16:21-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -31,6 +31,8 @@
           "-overwrite" and "-metadata" are specified. Before, the file would be
           truncated to the size of the data-product even though it now has a
           metadata header. Thanks to Bryan for spotting and analyzing this.
+        * Demoted "Deleting ... entry" to DEBUG if it's not due to an error in
+          order to save log file space
 
     Logging:
         * Library:
@@ -46,6 +48,8 @@
             * Added "Terminating logging" message at DEBUG priority
         * refresh_logging(1): replaced "command kill" with "/bin/kill" to ensure
           correct behavior
+        * Documented internally how log_refresh() will cause the log file to be
+          closed/opened *on the next log message* and not before
 
     Top-level LDM server, ldmd(1):
         * Eliminated superfluous error messages at process termination about the
@@ -102,6 +106,8 @@
                   TPWSPD           0  -9999.00
             * 000 001 234 008 Precipitation Duration           hr
                   PCPDUR           0  -9999.00
+            * 000 002 009 000 Vertical Velocity (Geometric)    m s**-1
+                  DZDT             0  -9999.00
         * updateGempakTables(1): changed the "make install..." to
           "mv -f *.tbl..." to make it independent of the build mechanism.
         * Changed logging-level of messages for first fragment of GOES
@@ -246,6 +252,7 @@
             * Made independent of LDM library
             * Changed HELLO_GROUP to 234.128.117.1 (unicast prefix based)
             * Added to distribution (but neither built nor installed)
+        * deployAll(1): Enabled California and Maryland
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
