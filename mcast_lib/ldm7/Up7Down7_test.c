@@ -121,9 +121,8 @@ setup(void)
 static int
 teardown(void)
 {
-    unlink(UP7_PQ_PATHNAME);
-
-    reg_close();
+	ud7_free();
+	unlink(UP7_PQ_PATHNAME);
 
     return 0;
 }
