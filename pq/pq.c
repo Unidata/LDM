@@ -7691,10 +7691,12 @@ pq_processProduct(
  * @return                Return-value of `ifMatch()`
  */
 static int
-pq_sequenceHelper(pqueue *pq, pq_match mt,
+pq_sequenceHelper(
+		pqueue* restrict             pq,
+		pq_match                     mt,
         const prod_class_t* restrict clss,
         pq_seqfunc*                  ifMatch,
-        void* restrict               otherargs,
+        void*                        otherargs,
         off_t* const restrict        off)
 {
     int status;
@@ -7775,7 +7777,11 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                                 status = PQ_SYSTEM;
                             }
                             else {
-                                log_assert(vp != NULL);
+								pq->locked_count++;
+								log_debug("locked_count: %ld",
+										pq->locked_count);
+
+								log_assert(vp != NULL);
 
                                 size_t extent = Extent(rp);
                                 off_t  offset = rp->offset;
@@ -7873,16 +7879,15 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                                         }
 
                                         if (off) {
-                                            *off = offset;
-                                            pq->locked_count++;
-                                            log_debug("locked_count: %ld",
-                                                    pq->locked_count);
+                                        	// In case `otherargs == off`
+											*off = offset;
                                         }
 
                                         status = ifMatch(info, datap, vp,
                                                 extent, otherargs);
 
                                         if (status) {
+                                        	// Problem with `ifMatch()`
                                             /*
                                              * Back up, presumes clock tick >
                                              * usec (not always true)
@@ -7901,8 +7906,10 @@ pq_sequenceHelper(pqueue *pq, pq_match mt,
                                 xdr_destroy(&xdrs);
 
                                 // Release the data segment if appropriate
-                                if (off == NULL || status || !matched)
+                                if (off == NULL || status || !matched) {
                                     (void)rgn_rel(pq, offset, 0);
+									pq->locked_count--;
+								}
                             } // Region locked
                         } // Region found
                     } // `clss != NULL && ifMatch != NULL`
@@ -7999,10 +8006,13 @@ pq_sequence(
  *                        NULL, then upon return the product is unlocked and may
  *                        be deleted by another process to make room for a new
  *                        product. If non-NULL, then this variable is set before
- *                        `ifMatch()` is called and, upon return, the product is
- *                        locked against deletion by another process and the
- *                        caller should call `pq_release(*off)` when the product
- *                        may be deleted to make room for a new product.
+ *                        `ifMatch()` is called and the product's state upon
+ *                        return from this function depends on that function's
+ *                        return-value:
+ *                          - 0     The product is locked against deletion and
+ *                                  the caller should call `pq_release()` when
+ *                                  the product may be deleted
+ *                          - else  The product is unlocked and may be deleted
  * @retval     PQ_CORRUPT Product-queue is corrupt (NB: <0)
  * @retval     PQ_END     No next product (NB: <0)
  * @retval     PQ_INVAL   Invalid argument (NB: <0)
