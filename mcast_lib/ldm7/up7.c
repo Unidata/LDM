@@ -106,8 +106,8 @@ subRep_toString(const SubscriptionReply* const reply)
  * Upstream LDM7:
  ******************************************************************************/
 
-/// Module is initialized?
-static bool               initialized = FALSE;
+/// `umm_subscribed()` called?
+static bool               subscribed = FALSE;
 
 /// Client-side RPC transport with downstream LDM-7:
 static CLIENT*            clnt = NULL;
@@ -126,9 +126,6 @@ static bool               pimIsOpen = false;
 
 /// Reply to subscription request:
 static SubscriptionReply* replyPtr = NULL;
-
-/// This module is done?
-static bool               isDone = false;
 
 /**
  * Opens the product-index map associated with a feedtype.
@@ -251,6 +248,7 @@ initClient(struct SVCXPRT* xprt)
 {
     log_debug("Entered");
 
+    log_assert(clnt == NULL);
     log_assert(xprt);
     log_assert(xprt->xp_raddr.sin_port != 0);
     log_assert(xprt->xp_sock >= 0); // So client-error won't close socket
@@ -259,10 +257,10 @@ initClient(struct SVCXPRT* xprt)
 
     // `xprt->xp_sock >= 0` => socket won't be closed by client-side error
     // TODO: adjust sending buffer size
-    CLIENT* client = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
+    clnt = clnttcp_create(&xprt->xp_raddr, LDMPROG, SEVEN,
             &xprt->xp_sock, MAX_RPC_BUF_NEEDED, 0);
 
-    if (client == NULL) {
+    if (clnt == NULL) {
         log_assert(rpc_createerr.cf_stat != RPC_TIMEDOUT);
         log_add("Couldn't create client-side transport to downstream LDM-7 on "
                 "%s%s", hostbyaddr(&xprt->xp_raddr), clnt_spcreateerror(""));
@@ -270,7 +268,6 @@ initClient(struct SVCXPRT* xprt)
         status = LDM7_RPC;
     }
     else {
-        clnt = client;
         status = 0;
     } // Client-side transport created
 
@@ -379,7 +376,6 @@ init2(  struct SVCXPRT*                   xprt,
 {
     // The cleanup() function in ldmd.c destroys this instance
 
-    log_assert(!initialized);
     log_assert(mcastInfo);
     log_assert(remote_name());
     log_assert(fmtpClntCidr);
@@ -415,7 +411,6 @@ init2(  struct SVCXPRT*                   xprt,
                 reply->status = LDM7_OK;
                 feedtype = mcastInfo->feed;
                 fmtpClntAddr = cidrAddr_getAddr(fmtpClntCidr);
-                initialized = true;
             } // Client-side transport created
 
             if (status)
@@ -460,7 +455,7 @@ init(   struct SVCXPRT* const restrict    xprt,
         const VcEndPoint* const restrict  rmtVcEnd,
         SubscriptionReply* const restrict reply)
 {
-    log_assert(!initialized);
+    log_assert(!subscribed);
     log_assert(xprt);
     log_assert(rmtVcEnd);
     log_assert(reply);
@@ -493,7 +488,9 @@ init(   struct SVCXPRT* const restrict    xprt,
                     s_feedtypet(reducedFeed));
         }
         else {
-            if (mi_new(&mcastInfo, reducedFeed,
+        	subscribed = true;
+
+        	if (mi_new(&mcastInfo, reducedFeed,
                     isa_toString(smi_getMcastGrp(smi)),
                     isa_toString(smi_getFmtpSrvr(smi)))) {
                 log_add("Couldn't set multicast information");
@@ -508,9 +505,11 @@ init(   struct SVCXPRT* const restrict    xprt,
                 }
             } // Multicast information initialized
 
-            if (status)
+            if (status) {
                 (void)umm_unsubscribe(reducedFeed,
                         cidrAddr_getAddr(&fmtpClntCidr));
+                subscribed = false;
+            }
         } // `umm_subscribe()` successful
     } // Client is allowed to receive something
 
@@ -525,25 +524,21 @@ destroy(void)
 {
     log_debug("Entered");
 
-    if (initialized) {
-        destroyClient(); // Closes socket
-        closePq();
-        closeProdIndexMap();
+	destroyClient();     // Closes socket. Idempotent
+	closePq();           // Idempotent
+	closeProdIndexMap(); // Idempotent
 
-        mi_free(mcastInfo);
-        mcastInfo = NULL;
+	mi_free(mcastInfo);  // Does nothing if `mcastInfo == NULL`
+	mcastInfo = NULL;
 
-        (void)umm_unsubscribe(feedtype, fmtpClntAddr);
-        log_clear();
+	if (subscribed) {
+		(void)umm_unsubscribe(feedtype, fmtpClntAddr);
+		subscribed = false;
+	}
 
-        if (replyPtr) {
-            xdr_free(xdr_SubscriptionReply, replyPtr);
-            replyPtr = NULL;
-        }
+	log_clear();
 
-        isDone = false;
-        initialized = false;
-    }
+	replyPtr = NULL;
 
     log_debug("Returning");
 }
@@ -604,6 +599,8 @@ runSvc(struct SVCXPRT* xprt)
             log_add("Error running upstream LDM7 server");
         }
     } while (status == 0);
+
+    destroyClient();
 
     if (xprt) {
         svc_destroy(xprt);
@@ -1023,18 +1020,13 @@ subscribe_7_svc(
     log_notice("Incoming subscription request from %s:%u for feed %s",
             remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
 
-    if (replyPtr) {
-        xdr_free(xdr_SubscriptionReply, replyPtr); // Free previous use
-        replyPtr = NULL;
-    }
-
     static SubscriptionReply reply;
     int                      status = subscribe(xprt, request, &reply);
 
     if (status) {
+		replyPtr = NULL;
         log_flush_error();
         svcerr_systemerr(xprt); // Tell the client
-        replyPtr = NULL;
         log_debug("Returning NULL");
     }
     else {
@@ -1087,7 +1079,7 @@ up7_destroy(void)
 pid_t
 up7_mldmSndrPid(void)
 {
-    return initialized ? umm_getSndrPid() : 0;
+    return subscribed ? umm_getSndrPid() : 0;
 }
 
 /**
@@ -1100,21 +1092,19 @@ up7_mldmSndrPid(void)
  */
 void*
 request_product_7_svc(
-    FmtpProdIndex* const iProd,
+    FmtpProdIndex* const  iProd,
     struct svc_req* const rqstp)
 {
     log_debug("Entered: iProd=%lu", (unsigned long)*iProd);
 
-    if (!initialized) {
-        log_warning("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
+    if (clnt == NULL) {
+        log_warning("Client %s isn't subscribed", rpc_getClientId(rqstp));
         svcerr_systemerr(rqstp->rq_xprt); // Tell the client
-        isDone = true;
     }
     else {
         if (!findAndSendProduct(*iProd)) {
             log_flush_error();
             destroyClient();
-            isDone = true;
         }
     }
 
@@ -1140,13 +1130,11 @@ request_backlog_7_svc(
     log_debug("Entered");
 
     if (clnt == NULL) {
-        log_warning("Client %s hasn't subscribed yet", rpc_getClientId(rqstp));
-        isDone = true;
+        log_warning("Client %s isn't subscribed", rpc_getClientId(rqstp));
     }
     else if (!sendBacklog(backlog)) {
         log_flush_error();
         destroyClient();
-        isDone = true;
     }
 
     log_debug("Returning");
