@@ -60,10 +60,10 @@ typedef struct {
     /*
      * Keep consonant with `fileSizeFromNumSigs()` and `numSigsFromFileSize()`
      */
-    size_t        numSigs;   ///< Number of signatures
-    size_t        oldSig;    ///< Offset of oldest signature
-    FmtpProdIndex oldIProd;  ///< Product-index of oldest signature
-    signaturet    sigs[1];   ///< Data-product signatures
+    size_t        numSigs;  ///< Number of signatures
+    size_t        oldSig;   ///< Offset of oldest signature
+    FmtpProdIndex oldIProd; ///< Product-index of oldest signature
+    signaturet    sigs[1];  ///< Data-product signatures
 } Mmo;
 static Mmo*         mmo;
 /**
@@ -938,7 +938,7 @@ pim_delete(
  */
 Ldm7Status
 pim_put(
-        const FmtpProdIndex    iProd,
+        const FmtpProdIndex     iProd,
         const signaturet* const sig)
 {
     int status = ensureProperState(true);
@@ -986,7 +986,7 @@ pim_put(
 Ldm7Status
 pim_get(
         const FmtpProdIndex iProd,
-        signaturet* const    sig)
+        signaturet* const   sig)
 {
     int status = ensureProperState(true);
 
@@ -1035,10 +1035,7 @@ pim_getNextProdIndex(
 
         if (0 == status) {
             *iProd = mmo->oldIProd + mmo->numSigs;
-
-            int stat = unlockMap();
-            if (stat)
-                status = stat;
+			status = unlockMap();
         } // map is locked
     }
 
