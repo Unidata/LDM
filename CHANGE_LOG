@@ -1,4 +1,4 @@
-6.13.12.57	2020-06-22T14:16:21-0600
+6.13.12.58
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -141,6 +141,7 @@
                     * The product doesn't match the class specification
                     * An error occurs, either in the product-queue or the
                       caller's function
+            * Added missing decrease of lock count
         OESS scripts:
             * Modified to handle different virtual circuits that, nevertheles,
               have the same switch name, port name, or VLAN tag
@@ -224,6 +225,8 @@
             * request_product_7_svc(): added call to svcerr_systemerr() if
               there's no current subscription
             * Added test_connection_7_svc() from Down7
+            * Improved handling of client destruction when subscribing LDM7
+              disconnects
         ChildCmd.c:
             * Ensured that all pipe(2) file descriptors in the child process are
               greater than 2 to avoid conflicts when duplicating them to the
@@ -233,7 +236,9 @@
         * Removed publishing rules from makefiles in favor of using "publish.sh"
         * send_recv_test.h: Improved commentary on multicast addresses
         * Added LDM_BIN_DIR to configure.ac
-        * push(1): Replaced "commit -a" with list of modified files
+        * push(1):
+            * Replaced "commit -a" with list of modified files
+            * Added "--tags" to "git push" to push all tags
         * Instrumented OffsetMap
         * Only deploy to NWSC node6
         * ldm7PreInstall: Added perl and corrected g++ package-name (gcc-g++)
