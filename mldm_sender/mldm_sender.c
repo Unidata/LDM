@@ -596,7 +596,7 @@ mls_destroy(void)
  *                         data-product.
  * @retval    0            Success.
  * @retval    LDM7_MCAST   Multicast layer error. `log_add()` called.
- * @retval    LDM7_NORCVR  Product not set because FMTP module has no receivers
+ * @retval    LDM7_NORCVR  Product not sent because FMTP module has no receivers
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static int
@@ -747,40 +747,47 @@ mls_startMulticasting(void)
             status = pq_sequenceLock(pq, TV_GT, prodClass, mls_mcastProd,
                     &offset, &offset);
 
-            if (PQUEUE_END == status) {
-                // No matching data-product. Not a problem.
-                status = 0;
+            switch (status) {
+				case 0:
+					// Product sent and locked in queue
+					break;
+				case LDM7_NORCVR:
+					// No multicast receivers. No problem.
+					status = 0;
+					break;
+				case PQUEUE_END: {
+					// No matching data-product. Not a problem.
+					status = 0;
 
-                /*
-                 * The following ensures that a termination signal isn't
-                 * delivered between the time that `done` is checked and the
-                 * thread is suspended.
-                 */
-                blockTermSigs();
+					/*
+					 * The following ensures that a termination signal isn't
+					 * delivered between the time that `done` is checked and the
+					 * thread is suspended.
+					 */
+					blockTermSigs();
 
-                if (!done) {
-                    /*
-                     * Block until a signal handler is called or the timeout
-                     * occurs. NB: `pq_suspendAndUnblock()` unblocks SIGCONT and
-                     * SIGALRM.
-                     */
-                    (void)pq_suspendAndUnblock(30, termSigs, NELT(termSigs));
-                }
+					if (!done) {
+						/*
+						 * Block until a signal handler is called or the timeout
+						 * occurs. NB: `pq_suspendAndUnblock()` unblocks SIGCONT
+						 * and SIGALRM.
+						 */
+						(void)pq_suspendAndUnblock(30, termSigs, NELT(termSigs));
+					}
 
-                unblockTermSigs();
-            }
-            else if (status < 0) {
-                log_add("Error in product-queue");
-                status = LDM7_PQ;
-            }
-            else if (status) {
-                if (status == LDM7_NORCVR) {
-                    status = 0; // Continue
-                }
-                else {
-                    log_add("Couldn't process product");
-                }
-            }
+					unblockTermSigs();
+					break;
+				}
+				default: {
+					if (status > 0) {
+						log_add("Couldn't process product");
+					}
+					else {
+						log_add("Error in product-queue");
+						status = LDM7_PQ;
+					}
+				}
+            } // Switch statement
         } // While loop
 
         free_prod_class(prodClass);
