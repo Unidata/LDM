@@ -2785,19 +2785,21 @@ deliver_missed_product_7_svc(
         char  buf[LDM_INFO_MAX];
         char* rmtStr = sockAddrIn_format(svc_getcaller(rqstp->rq_xprt));
 
-        log_add("Unexpected product received from %s: %s", rmtStr,
+        log_add("Unexpected product %lu received from %s: %s",
+        		(unsigned long)missedProd->iProd, rmtStr,
                 s_prod_info(buf, sizeof(buf), info, log_is_enabled_debug));
         free(rmtStr);
     }
     else {
-        // The queue can't be empty
+        // Missed product is at head of requested-queue
         (void)mrm_removeRequestedFileNoWait(down7.mrm, &iProd);
 
         if (downlet_recvProd(&missedProd->prod, false) != 0) {
             char  buf[LDM_INFO_MAX];
             char* rmtStr = sockAddrIn_format(svc_getcaller(rqstp->rq_xprt));
 
-            log_add("Couldn't insert missed product from %s: %s", rmtStr,
+            log_add("Couldn't insert missed product %lu from %s: %s",
+            		(unsigned long)missedProd->iProd, rmtStr,
                     s_prod_info(buf, sizeof(buf), info, log_is_enabled_debug));
             free(rmtStr);
 
@@ -2812,28 +2814,28 @@ deliver_missed_product_7_svc(
  * Asynchronously accepts notification from the upstream LDM7 that a requested
  * data-product doesn't exist. Called by the RPC dispatch routine `ldmprog_7()`.
  *
- * @param[in] iProd   Index of the data-product.
- * @param[in] rqstp   Pointer to the RPC service-request.
+ * @param[in] missingProd  Index of product
+ * @param[in] rqstp        Pointer to the RPC service-request.
  */
 void*
 no_such_product_7_svc(
-    FmtpProdIndex* const restrict  missingIprod,
+    FmtpProdIndex* const restrict  missingProd,
     struct svc_req* const restrict rqstp)
 {
     log_debug("Entered");
 
-    FmtpProdIndex  iProd;
+    FmtpProdIndex  expectedProd;
 
-    if (!mrm_peekRequestedFileNoWait(down7.mrm, &iProd) ||
-        iProd != *missingIprod) {
-        log_add("Product %lu is unexpected", (unsigned long)*missingIprod);
+    if (!mrm_peekRequestedFileNoWait(down7.mrm, &expectedProd) ||
+			expectedProd != *missingProd) {
+        log_add("Product %lu wasn't requested", (unsigned long)*missingProd);
     }
     else {
-        // The queue can't be empty
-        (void)mrm_removeRequestedFileNoWait(down7.mrm, &iProd);
+        // Missing product is at head of requested-queue
+        (void)mrm_removeRequestedFileNoWait(down7.mrm, &expectedProd);
 
         log_warning("Requested product %lu doesn't exist",
-                (unsigned long)*missingIprod);
+                (unsigned long)*missingProd);
     }
 
     log_debug("Returning");
