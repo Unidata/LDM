@@ -92,9 +92,9 @@ struct prod_index_queue {
 
 static inline void
 lock(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    int status = pthread_mutex_lock(&fiq->mutex);
+    int status = pthread_mutex_lock(&piq->mutex);
 
     if (status)
         log_add_syserr("Couldn't lock mutex");
@@ -102,9 +102,9 @@ lock(
 
 static inline void
 unlock(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    int status = pthread_mutex_unlock(&fiq->mutex);
+    int status = pthread_mutex_unlock(&piq->mutex);
 
     if (status)
         log_add_syserr("Couldn't unlock mutex");
@@ -114,8 +114,8 @@ unlock(
  * Adds an entry to the tail of the queue. Does nothing if the queue has been
  * canceled. The queue must be locked.
  *
- * @pre                      `lock(fiq)` has been called
- * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @pre                      `lock(piq)` has been called
+ * @param[in,out] piq        Pointer to the queue. Not checked.
  * @param[in]     tail       Pointer to the entry to be added. Not checked.
  *                           Must have NULL "previous" and "next" pointers.
  * @retval        0          Success.
@@ -123,28 +123,28 @@ unlock(
  */
 static int
 addTail(
-    ProdIndexQueue* const fiq,
-    Entry* const       tail)
+    ProdIndexQueue* const piq,
+    Entry* const          tail)
 {
     int status;
 
-    if (fiq->isCancelled) {
+    if (piq->isCancelled) {
         log_add("The queue has been shutdown");
         status = ECANCELED;
     }
     else {
-        if (fiq->count == 0) {
-            fiq->head = fiq->tail = tail;
+        if (piq->count == 0) {
+            piq->head = piq->tail = tail;
         }
         else {
-            tail->prev = fiq->tail;
-            fiq->tail->next = tail;
-            fiq->tail = tail;
+            tail->prev = piq->tail;
+            piq->tail->next = tail;
+            piq->tail = tail;
         }
-        fiq->count++;
+        piq->count++;
         status = 0;
 
-        (void)pthread_cond_signal(&fiq->cond);
+        (void)pthread_cond_signal(&piq->cond);
     }
 
     return status;
@@ -155,26 +155,26 @@ addTail(
  * the queue is canceled. The queue must be locked.
  *
  * @pre                      The queue is locked.
- * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @param[in,out] piq        Pointer to the queue. Not checked.
  * @param[out]    entry      Pointer to the pointer to the head entry.
  * @retval        0          Success.
  * @retval        ECANCELED  The queue has been canceled.
  */
 static int
 getHead(
-    ProdIndexQueue* const restrict fiq,
+    ProdIndexQueue* const restrict piq,
     Entry** const restrict         entry)
 {
     int    status;
 
-    while (fiq->head == NULL && !fiq->isCancelled)
-        pthread_cond_wait(&fiq->cond, &fiq->mutex); // cancellation point
+    while (piq->head == NULL && !piq->isCancelled)
+        pthread_cond_wait(&piq->cond, &piq->mutex); // cancellation point
 
-    if (fiq->isCancelled) {
+    if (piq->isCancelled) {
         status = ECANCELED;
     }
     else {
-        *entry = fiq->head;
+        *entry = piq->head;
         status = 0;
     }
 
@@ -185,25 +185,25 @@ getHead(
  * Removes the entry at the head of the queue. If the queue is empty, then no
  * action is performed. The queue must be locked.
  *
- * @param[in,out] fiq        Pointer to the queue. Not checked.
+ * @param[in,out] piq        Pointer to the queue. Not checked.
  * @retval        NULL       The queue is empty.
  * @return                   Pointer to what was the head entry.
  */
 static Entry*
 removeHead(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    if (fiq->count == 0)
+    if (piq->count == 0)
         return NULL;
 
-    Entry* entry = fiq->head;
+    Entry* entry = piq->head;
 
-    fiq->head = entry->next;
-    if (fiq->head)
-        fiq->head->prev = NULL;
-    if (fiq->tail == entry)
-        fiq->tail = NULL;
-    fiq->count--;
+    piq->head = entry->next;
+    if (piq->head)
+        piq->head->prev = NULL;
+    if (piq->tail == entry)
+        piq->tail = NULL;
+    piq->count--;
 
     return entry;
 }
@@ -245,22 +245,22 @@ piq_initMutex(
 /**
  * Initializes the locking mechanism of a product-index queue.
  *
- * @param[in] fiq    The product-index queue.
+ * @param[in] piq    The product-index queue.
  * @retval    true   Success.
  * @retval    false  Failure. `log_add()` called.
  */
 static bool
 piq_initLock(
-        ProdIndexQueue* const fiq)
+        ProdIndexQueue* const piq)
 {
-    if (piq_initMutex(&fiq->mutex)) {
-        int status = pthread_cond_init(&fiq->cond, NULL);
+    if (piq_initMutex(&piq->mutex)) {
+        int status = pthread_cond_init(&piq->cond, NULL);
 
         if (0 == status)
             return true;
 
         log_errno(status, "Couldn't initialize condition-variable");
-        (void)pthread_mutex_destroy(&fiq->mutex);
+        (void)pthread_mutex_destroy(&piq->mutex);
     }
 
     return false;
@@ -275,52 +275,52 @@ piq_initLock(
  *
  * @retval NULL  Failure. \c log_add() called.
  * @return       Pointer to a new product-index queue. The client should call
- *               \c fiq_free() when it is no longer needed.
+ *               \c piq_free() when it is no longer needed.
  */
 ProdIndexQueue*
 piq_new(void)
 {
-    ProdIndexQueue* fiq = log_malloc(sizeof(ProdIndexQueue),
+    ProdIndexQueue* piq = log_malloc(sizeof(ProdIndexQueue),
             "missed-product product-index queue");
 
-    if (fiq) {
-        if (piq_initLock(fiq)) {
-            fiq->head = fiq->tail = NULL;
-            fiq->count = 0;
-            fiq->isCancelled = 0;
+    if (piq) {
+        if (piq_initLock(piq)) {
+            piq->head = piq->tail = NULL;
+            piq->count = 0;
+            piq->isCancelled = 0;
         }
         else {
-            free(fiq);
-            fiq = NULL;
+            free(piq);
+            piq = NULL;
         }
-    } /* "fiq" allocated */
+    } /* "piq" allocated */
 
-    return fiq;
+    return piq;
 }
 
 /**
  * Clears a product-index queue of all entries.
  *
- * @param[in] fiq  The product-index queue to be cleared.
+ * @param[in] piq  The product-index queue to be cleared.
  * @return         The number of entries removed.
  */
 size_t
 piq_clear(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    lock(fiq);
+    lock(piq);
 
-    size_t count = fiq->count;
+    size_t count = piq->count;
 
-    for (Entry *next, *entry = fiq->head; entry; entry = next) {
+    for (Entry *next, *entry = piq->head; entry; entry = next) {
         next = entry->next;
         entry_free(entry);
     }
 
-    fiq->head = fiq->tail = NULL;
-    fiq->count = 0;
+    piq->head = piq->tail = NULL;
+    piq->count = 0;
 
-    unlock(fiq);
+    unlock(piq);
 
     return count;
 }
@@ -329,24 +329,24 @@ piq_clear(
  * Frees a product-index queue. Accessing the queue after calling this
  * function results in undefined behavior.
  *
- * @param[in] fiq  Pointer to the product-index queue to be freed or NULL.
+ * @param[in] piq  Pointer to the product-index queue to be freed or NULL.
  */
 void
 piq_free(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    if (fiq) {
-        piq_clear(fiq);
-        (void)pthread_cond_destroy(&fiq->cond);
-        (void)pthread_mutex_destroy(&fiq->mutex);
-        free(fiq);
+    if (piq) {
+        piq_clear(piq);
+        (void)pthread_cond_destroy(&piq->cond);
+        (void)pthread_mutex_destroy(&piq->mutex);
+        free(piq);
     }
 }
 
 /**
  * Adds a product-index to a queue.
  *
- * @param[in,out] fiq        Pointer to the product-index queue to which to
+ * @param[in,out] piq        Pointer to the product-index queue to which to
  *                           add a product-index.
  * @param[in]     iProd      Index of the data-product.
  * @retval        0          Success.
@@ -355,8 +355,8 @@ piq_free(
  */
 int
 piq_add(
-    ProdIndexQueue* const fiq,
-    const FmtpProdIndex  iProd)
+    ProdIndexQueue* const piq,
+    const FmtpProdIndex   iProd)
 {
     Entry* entry = entry_new(iProd);
     int    status;
@@ -365,9 +365,9 @@ piq_add(
         status = ENOMEM;
     }
     else {
-        lock(fiq);
-        status = addTail(fiq, entry);
-        unlock(fiq);
+        lock(piq);
+        status = addTail(piq, entry);
+        unlock(piq);
         if (status)
             entry_free(entry);
     }
@@ -380,7 +380,7 @@ piq_add(
  * product-index queue. Blocks until such an entry is available or
  * the queue is canceled.
  *
- * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[in,out] piq        Pointer to the product-index queue.
  * @param[out]    iProd      Pointer to the product-index to be set to
  *                           that of the head of the queue.
  * @retval        0          Success. \c *iProd is set.
@@ -388,18 +388,18 @@ piq_add(
  */
 int
 piq_peekWait(
-    ProdIndexQueue* const fiq,
-    FmtpProdIndex* const iProd)
+    ProdIndexQueue* const piq,
+    FmtpProdIndex* const  iProd)
 {
     int    status;
     Entry* entry;
 
-    lock(fiq);
+    lock(piq);
 
-    if ((status = getHead(fiq, &entry)) == 0)
+    if ((status = getHead(piq, &entry)) == 0)
         *iProd = entry_getProductIndex(entry);
 
-    unlock(fiq);
+    unlock(piq);
 
     return status;
 }
@@ -408,7 +408,7 @@ piq_peekWait(
  * Immediately removes and returns the product-index at the head of a
  * product-index queue. Doesn't block.
  *
- * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[in,out] piq        Pointer to the product-index queue.
  * @param[out]    iprod      Pointer to the product-index to be set to
  *                           that of the head of the queue.
  * @retval        0          Success. \c *iProd is set.
@@ -416,12 +416,12 @@ piq_peekWait(
  */
 int
 piq_removeNoWait(
-    ProdIndexQueue* const fiq,
-    FmtpProdIndex* const iProd)
+    ProdIndexQueue* const piq,
+    FmtpProdIndex* const  iProd)
 {
-    lock(fiq);
+    lock(piq);
 
-    Entry* entry = removeHead(fiq);
+    Entry* entry = removeHead(piq);
     int    status;
 
     if (entry == NULL) {
@@ -433,7 +433,7 @@ piq_removeNoWait(
         status = 0;
     }
 
-    unlock(fiq);
+    unlock(piq);
 
     return status;
 }
@@ -442,7 +442,7 @@ piq_removeNoWait(
  * Immediately returns (but does not remove) the product-index at the head of
  * the product-index queue.
  *
- * @param[in,out] fiq        Pointer to the product-index queue.
+ * @param[in,out] piq        Pointer to the product-index queue.
  * @param[out]    iProd      Pointer to the product-index to be set to
  *                           that of the head of the queue.
  * @retval        0          Success. \c *iProd is set.
@@ -450,12 +450,12 @@ piq_removeNoWait(
  */
 int
 piq_peekNoWait(
-    ProdIndexQueue* const    fiq,
-    FmtpProdIndex* const iProd)
+    ProdIndexQueue* const piq,
+    FmtpProdIndex* const  iProd)
 {
-    lock(fiq);
+    lock(piq);
 
-    Entry* entry = fiq->head;
+    Entry* entry = piq->head;
     int    status;
 
     if (entry == NULL) {
@@ -466,7 +466,7 @@ piq_peekNoWait(
         status = 0;
     }
 
-    unlock(fiq);
+    unlock(piq);
 
     return status;
 }
@@ -474,18 +474,18 @@ piq_peekNoWait(
 /**
  * Returns the number of entries currently in a product-index queue.
  *
- * @param[in] fiq  The product-index queue.
+ * @param[in] piq  The product-index queue.
  * @return         The number of identifiers in the queue.
  */
 size_t
 piq_count(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
     size_t count;
 
-    lock(fiq);
-    count = fiq->count;
-    unlock(fiq);
+    lock(piq);
+    count = piq->count;
+    unlock(piq);
 
     return count;
 }
@@ -493,21 +493,21 @@ piq_count(
 /**
  * Cancels the operation of a FMTP product-index queue. Idempotent.
  *
- * @param[in] fiq     Pointer to the queue to be canceled.
+ * @param[in] piq     Pointer to the queue to be canceled.
  * @retval    0       Success.
- * @retval    EINVAL  `fiq == NULL`
+ * @retval    EINVAL  `piq == NULL`
  */
 int
 piq_cancel(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
-    if (!fiq)
+    if (!piq)
         return EINVAL;
 
-    lock(fiq);
-        fiq->isCancelled = 1;
-        (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
-    unlock(fiq);
+    lock(piq);
+        piq->isCancelled = 1;
+        (void)pthread_cond_signal(&piq->cond); // not a cancellation point
+    unlock(piq);
 
     return 0;
 }
@@ -516,20 +516,20 @@ piq_cancel(
  * Restarts the operation of an FMTP product-index queue on which `piq_cancel()`
  * has been called. Idempotent.
  *
- * @param[in] fiq     Queue to be restarted
+ * @param[in] piq     Queue to be restarted
  * @retval    0       Success
- * @retval    EINVAL  `fiq == NULL`
+ * @retval    EINVAL  `piq == NULL`
  */
 int
-piq_restart(ProdIndexQueue* const fiq)
+piq_restart(ProdIndexQueue* const piq)
 {
-    if (!fiq)
+    if (!piq)
         return EINVAL;
 
-    lock(fiq);
-        fiq->isCancelled = 0;
-        (void)pthread_cond_signal(&fiq->cond); // not a cancellation point
-    unlock(fiq);
+    lock(piq);
+        piq->isCancelled = 0;
+        (void)pthread_cond_signal(&piq->cond); // not a cancellation point
+    unlock(piq);
 
     return 0;
 }
@@ -537,19 +537,19 @@ piq_restart(ProdIndexQueue* const fiq)
 /**
  * Indicates if a product-index queue has been canceled.
  *
- * @param[in] fiq    Pointer to the product-index queue.
+ * @param[in] piq    Pointer to the product-index queue.
  * @retval    false  The queue has not been canceled.
  * @retval    true   The queue has been canceled.
  */
 bool
 piq_isCanceled(
-    ProdIndexQueue* const fiq)
+    ProdIndexQueue* const piq)
 {
     bool isCanceled;
 
-    lock(fiq);
-        isCanceled = fiq->isCancelled;
-    unlock(fiq);
+    lock(piq);
+        isCanceled = piq->isCancelled;
+    unlock(piq);
 
     return isCanceled;
 }
