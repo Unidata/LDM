@@ -221,7 +221,7 @@ mrm_removeMissedFileNoWait(
 bool
 mrm_peekRequestedFileNoWait(
     McastReceiverMemory* const restrict mrm,
-    FmtpProdIndex* const restrict      iProd);
+    FmtpProdIndex* const restrict       iProd);
 
 /**
  * Removes and returns the next product-index from the

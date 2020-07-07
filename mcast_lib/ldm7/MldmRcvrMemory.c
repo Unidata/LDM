@@ -683,7 +683,7 @@ openTempMemoryFile(
  *
  * @param[in] document  The YAML document.
  * @param[in] seq       The identifier of the YAML sequence-node.
- * @param[in] fiq       The product-index queue.
+ * @param[in] piq       The product-index queue.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */
@@ -691,11 +691,11 @@ static bool
 appendFileIds(
     yaml_document_t* const restrict document,
     const int                       seq,
-    ProdIndexQueue* const restrict     fiq)
+    ProdIndexQueue* const restrict  piq)
 {
     FmtpProdIndex iProd;
 
-    while (piq_removeNoWait(fiq, &iProd) == 0) {
+    while (piq_removeNoWait(piq, &iProd) == 0) {
         char          buf[sizeof(iProd)*4+1]; // overly capacious
 
         (void)snprintf(buf, sizeof(buf), "%lu", (unsigned long)iProd);
@@ -1393,7 +1393,7 @@ mrm_removeMissedFileNoWait(
 bool
 mrm_peekRequestedFileNoWait(
     McastReceiverMemory* const restrict mrm,
-    FmtpProdIndex* const restrict      iProd)
+    FmtpProdIndex* const restrict       iProd)
 {
     vetMrm(mrm);
     return piq_peekNoWait(mrm->requestedQ, iProd) == 0;
