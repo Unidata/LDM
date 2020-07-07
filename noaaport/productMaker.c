@@ -545,7 +545,7 @@ int    nnnxxx_offset;
 
             /* Timing block */
             if (sbn->command == SBN_CMD_TIME) {
-                log_debug("Timing block recieved %ld %ld\0", psh->olen,
+                log_debug("Timing block received %ld %ld\0", psh->olen,
                         pdh->len);
                 /*
                  * Don't step on our psh of a product struct of prod in
