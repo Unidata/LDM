@@ -1193,7 +1193,8 @@ mcastRecvSock_init(
                 ntohs(mcastSockAddr->sin_port));
     }
     else {
-        status = mcastRecvSock_joinGroup(sock, &mcastSockAddr->sin_addr, ifaceAddr);
+        status = mcastRecvSock_joinGroup(sock, &mcastSockAddr->sin_addr,
+        		ifaceAddr);
         if (status) {
             log_add("Couldn't join multicast group %s:%u on interface %s",
                     inet_ntoa(mcastSockAddr->sin_addr),
