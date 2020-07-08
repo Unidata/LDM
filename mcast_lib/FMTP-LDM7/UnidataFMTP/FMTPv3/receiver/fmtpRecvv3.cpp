@@ -533,8 +533,13 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
         }
     }
     else {
+#ifdef LDM_LOGGING
+    	log_info("Received duplicate BOP for product %lu",
+    			static_cast<unsigned long>(header.prodindex));
+#else
         std::cout << "fmtpRecvv3::BOPHandler(): duplicate BOP for product #"
             << header.prodindex << "received." << std::endl;
+#endif
     }
 
     #ifdef MODBASE
@@ -693,7 +698,7 @@ void fmtpRecvv3::EOPHandler(const FmtpHeader& header)
         //sendRetxEnd(header.prodindex);
         msgQueue.push(INLReqMsg{RETX_EOP, header.prodindex, 0, 0});
         bool     inTracker;
-        uint32_t numRetrans;
+        uint32_t numRetrans = -1; // Invalid number
         {
             std::lock_guard<std::mutex> lock(trackermtx);
             inTracker = trackermap.count(header.prodindex);
@@ -1274,7 +1279,7 @@ void fmtpRecvv3::retxHandler()
                 //sendRetxEnd(header.prodindex);
                 msgQueue.push(INLReqMsg{RETX_EOP, header.prodindex, 0, 0});
                 bool     inTracker;
-                uint32_t numRetrans;
+                uint32_t numRetrans = -1; // Invalid number
                 {
                     std::lock_guard<std::mutex> lock(trackermtx);
                     inTracker = trackermap.count(header.prodindex);
