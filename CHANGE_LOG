@@ -1,4 +1,4 @@
-6.13.12.58	2020-07-07T15:35:58-0600
+6.13.12.59	2020-07-08T13:25:02-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -176,6 +176,8 @@
                 * Release products held by socket that just disconnected
                 * Eliminated deadlock
                 * Added rcvrCount()
+                * Added log_info() for duplicate BOP
+                * Initialized numRetrans to -1
             * TcpRecv: Explicitly enabled SO_KEEPALIVE
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
             * Modified logMsg(std::string) to always log at NOTE level
