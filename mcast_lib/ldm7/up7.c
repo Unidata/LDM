@@ -660,9 +660,9 @@ static int
 deliverProduct(
         const prod_info* const restrict info,
         const void* const restrict      data,
-	void* const restrict            xprod,
-	const size_t                    len,
-	void* const restrict            optArg)
+	void* const restrict                xprod,
+	const size_t                        len,
+	void* const restrict                optArg)
 {
     int           status;
     MissedProduct missedProd;
@@ -684,7 +684,8 @@ deliverProduct(
         status = LDM7_SYSTEM;
     }
     else {
-        log_info("Missed product sent: %s",
+        log_info("Missed product sent: index=%lu, info=\"%s\"",
+        		(unsigned long)missedProd.iProd,
                 s_prod_info(NULL, 0, &missedProd.prod.info,
                 log_is_enabled_debug));
         status = 0;
