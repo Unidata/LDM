@@ -644,8 +644,8 @@ mls_mcastProd(
                         (void*)info->signature, sizeof(signaturet), &iProd);
 
                 if (status) {
-                    log_add("Couldn't multicast product {index: %lu, info: "
-                            "\"%s\"}", (unsigned long)iProd,
+                    log_add("Couldn't multicast product: index=%lu, "
+                    		"info=\"%s\"", (unsigned long)iProd,
                             s_prod_info(buf, sizeof(buf), info,
                                     log_is_enabled_debug));
 
@@ -657,7 +657,7 @@ mls_mcastProd(
                     status = LDM7_MCAST;
                 }
                 else {
-                    log_info("Sent: prodIndex=%lu, prodInfo=\"%s\"",
+                    log_info("Multicasted: prodIndex=%lu, prodInfo=\"%s\"",
                             (unsigned long)iProd,
                             s_prod_info(buf, sizeof(buf), info,
                                     log_is_enabled_debug));
