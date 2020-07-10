@@ -29,5 +29,5 @@ deploy -m -r centos -s -u ldm7 md
 #deploy -m                      nj
 #deploy -m           -s         ut
 deploy -m -r ldm7   -s -u ldm7 va
-#deploy -m           -s         wa
+deploy -m           -s         wa
 deploy -m           -s         wi
