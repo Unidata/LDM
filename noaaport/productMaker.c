@@ -330,7 +330,7 @@ int    nnnxxx_offset;
         datastore*          pfrag;
         int                 nscan;
         int                 deflen;
-        static const char*  FOS_TRAILER = "\015\015\012\003";
+        static const char*  FOS_TRAILER = "\015\015\012\003"; // CR CR LF ETX
         int                 cnt;
         sbn_struct          saved_sbn_struct;
         pdh_struct          saved_pdh_struct;
@@ -867,8 +867,10 @@ int    nnnxxx_offset;
                 heapsize = prodalloc(psh->frags, 4000 + 15, &memheap);
 
                 /*
-                 * We will only compute md5 checksum on the data, 11 FOS
-                 * characters at start
+                 * The 11 characters in the FOS header:
+                 *     SOH CR CR LF <iii> SPACE CR CR LF
+                 * where <iii>  is the 3-digit sequence number, are *not* used
+                 * in the computation of the MD5 signature. -- SRE 2020-07-09
                  */
                 sprintf(memheap, "\001\015\015\012%03d\040\015\015\012",
                     ((int) pdh->seqno) % 1000);
@@ -1451,6 +1453,12 @@ int    nnnxxx_offset;
                 }
 
                 if (cnt > 0) {
+                	/*
+                	 * The FOS trailer is used in the computation of the MD5
+                	 * signature. It probably shouldn't be -- especially because
+                	 * the FOS header isn't used. Too late to change it now.
+                	 * -- SRE 2020-07-09
+                	 */
                     memcpy(memheap + heapcount, FOS_TRAILER + 4 - cnt, cnt);
                     MD5Update(md5ctxp, (unsigned char*)(memheap + heapcount),
                             cnt);
