@@ -1,4 +1,4 @@
-6.13.12.60	2020-07-10T13:57:42-0600
+6.13.12.61	2020-07-29T14:28:21-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -183,10 +183,11 @@
             * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
             * Modified logMsg(std::string) to always log at NOTE level
             * fmtpRecvv3:
-                Moved direct sending of product-EOP to sender on unicast
-                reception thread to adding message to retransmission queue on
-                that thread to obviate deadlock between that thread and sender's
-                retransmission thread.
+                * Moved direct sending of product-EOP to sender on unicast
+                  reception thread to adding message to retransmission queue on
+                  that thread to obviate deadlock between that thread and
+                  sender's retransmission thread.
+                * Corrected computation of missed packets
         vlanUtil(1):
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
