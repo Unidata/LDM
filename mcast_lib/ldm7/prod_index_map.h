@@ -33,7 +33,7 @@
  *                         file is unspecified.
  */
 Ldm7Status
-pim_openForWriting(
+pim_writeOpen(
         const char* const dirname,
         const feedtypet   feedtype,
         const size_t      maxSigs);
@@ -54,7 +54,7 @@ pim_openForWriting(
  *                         file is unspecified.
  */
 Ldm7Status
-pim_openForReading(
+pim_readOpen(
         const char* const dirname,
         const feedtypet   feedtype);
 

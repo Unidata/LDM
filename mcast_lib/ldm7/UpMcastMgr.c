@@ -221,10 +221,12 @@ mldm_exec(
         args[i++] = (char*)logDestArg; // Safe cast
     } // Non-default logging destination
 
-    if (log_is_enabled_info)
-        args[i++] = "-v";
-    if (log_is_enabled_debug)
+    if (log_is_enabled_debug) {
         args[i++] = "-x";
+    }
+    else if (log_is_enabled_info) {
+        args[i++] = "-v";
+    }
 
     char feedtypeBuf[256];
     if (smi_getFeed(info) != EXP) {

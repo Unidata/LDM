@@ -128,11 +128,15 @@ static bool               pimIsOpen = false;
 static SubscriptionReply* replyPtr = NULL;
 
 /**
- * Opens the product-index map associated with a feedtype.
+ * Opens for reading the product-index map associated with a feedtype. Creates
+ * the map if it doesn't exist in order to see changes by mldm_sender(1), which
+ * is executed asynchronously.
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
  * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
+ *                         called.
+ * @retval    LDM7_INVAL   Number of slots in product-queue is zero. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                         associated file is unspecified.
@@ -146,10 +150,17 @@ openProdIndexMap(
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
     pathname[sizeof(pathname)-1] = 0;
 
-    int status = pim_openForReading(dirname(pathname), feed);
+    int status = pim_writeOpen(dirname(pathname), feed, pq_getSlotCount(pq));
+    if (status) {
+    	log_add("Couldn't ensure existence of product-index map");
+    }
+    else {
+    	pim_close();
 
-    if (status == 0)
-        pimIsOpen = true;
+    	status = pim_readOpen(dirname(pathname), feed);
+		if (status == 0)
+			pimIsOpen = true;
+    }
 
     return status;
 }
@@ -700,6 +711,8 @@ deliverProduct(
  *
  * @param[in]  iProd        Product-index.
  * @retval     0            Success.
+ * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ *                          called.
  * @retval     LDM7_NOENT   No corresponding data-product. `log_add()` called.
  * @retval     LDM7_SYSTEM  System failure. `log_add()` called.
  */

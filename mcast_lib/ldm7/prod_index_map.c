@@ -105,12 +105,11 @@ static volatile bool forWriting;
  *
  * @param[in] shouldBeOpen  Whether or not the product-index map should be open.
  * @retval    0             The product-index map is in the correct state.
- * @retval    LDM7_INVAL    The product-index map is in the incorrect state.
+ * @retval    LDM7_LOGIC    The product-index map is in the incorrect state.
  *                          `log_add()` called.
  */
 static int
-ensureProperState(
-        const bool shouldBeOpen)
+ensureProperState(const bool shouldBeOpen)
 {
     int status;
 
@@ -118,8 +117,8 @@ ensureProperState(
         status = 0;
     }
     else {
-        log_add("Product-index map is %s open", isOpen ? "already" : "not");
-        status = LDM7_INVAL;
+        log_add("Product-index map is %s", isOpen ? "open" : "not open");
+        status = LDM7_LOGIC;
     }
 
     return status;
@@ -214,8 +213,7 @@ pim_getPathname(
  * @retval LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-lockMap(
-        const bool exclusive)
+lockMap(const bool exclusive)
 {
     lock.l_type = exclusive ? F_WRLCK : F_RDLCK;
 
@@ -388,8 +386,7 @@ unmapMap(void)
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-truncateMap(
-        const size_t size)
+truncateMap(const size_t size)
 {
     if (ftruncate(fd, size)) {
         log_add_syserr("Couldn't set size of %s (\"%s\") to %lu bytes",
@@ -411,8 +408,7 @@ truncateMap(
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-consolidateMap(
-        const size_t max)
+consolidateMap(const size_t max)
 {
     /*
      * In general, the signatures in the circular buffer will be in two
@@ -571,8 +567,7 @@ contractMapAndMap(
  *                          file is unspecified.
  */
 static Ldm7Status
-vetMapSizeAndMap(
-        const size_t  maxNumSigs)
+vetMapSizeAndMap(const size_t maxNumSigs)
 {
     const size_t newSize = fileSizeFromNumSigs(maxNumSigs);
     int          status = (newSize > fileSize)
@@ -608,8 +603,7 @@ clearMap(void)
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-initNewMapAndMap(
-        const size_t max)
+initNewMapAndMap(const size_t max)
 {
     const size_t size = fileSizeFromNumSigs(max);
     int          status = truncateMap(size);
@@ -776,7 +770,7 @@ clearMapIfUnexpected(
  * @param[in] maxNumSigs   Maximum number of data-product signatures. Must be
  *                         positive.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
  *                         called.
  * @retval    LDM7_INVAL   Maximum number of signatures isn't positive.
  *                         `log_add()` called. The file wasn't opened or
@@ -785,7 +779,7 @@ clearMapIfUnexpected(
  *                         file is unspecified.
  */
 Ldm7Status
-pim_openForWriting(
+pim_writeOpen(
         const char* const dirname,
         const feedtypet   feedtype,
         const size_t      maxNumSigs)
@@ -812,6 +806,9 @@ pim_openForWriting(
                 }
                 else {
                     isOpen = true;
+					log_debug("File open: maxSigs=%zu, numSigs=%zu, "
+							"oldSigOffset=%zu, oldProdIndex=%zu", maxSigs,
+							mmo->numSigs, mmo->oldSig, (size_t)mmo->oldIProd);
                 }
             } // `fd` open
         } // `maxSigs > 0`
@@ -830,13 +827,13 @@ pim_openForWriting(
  *                         may free.
  * @param[in] feedtype     Feedtype of the map.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is already open. `log_add()`
+ * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                         file is unspecified.
  */
 Ldm7Status
-pim_openForReading(
+pim_readOpen(
         const char* const dirname,
         const feedtypet   feedtype)
 {
@@ -852,6 +849,9 @@ pim_openForReading(
             }
             else {
                 isOpen = true;
+                log_debug("File open: maxSigs=%zu, numSigs=%zu, "
+                		"oldSigOffset=%zu, oldProdIndex=%zu", maxSigs,
+						mmo->numSigs, mmo->oldSig, (size_t)mmo->oldIProd);
             }
         } // `fd` open
     }
@@ -863,7 +863,7 @@ pim_openForReading(
  * Closes the product-index map.
  *
  * @retval 0            Success.
- * @retval LDM7_INVAL   The product-index map is not open. `log_add()` called.
+ * @retval LDM7_LOGIC   The product-index map is not open. `log_add()` called.
  * @retval LDM7_SYSTEM  SYSTEM error. `log_add()` called. The state of the map
  *                      is unspecified.
  */
@@ -932,7 +932,7 @@ pim_delete(
  * @param[in] iProd        Product-index.
  * @param[in] sig          Data-product signature.
  * @retval    0            Success.
- * @retval    LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval    LDM7_LOGIC   The product-index map is not open. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called.
  */
@@ -978,20 +978,19 @@ pim_put(
  * @param[in]  iProd        Product index.
  * @param[out] sig          Data-product signature mapped-to by `iProd`.
  * @return     0            Success.
- * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval     LDM7_LOGIC   The product-index map is not open. `log_add()`
  *                          called.
  * @retval     LDM7_NOENT   Product-index is unknown.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 Ldm7Status
-pim_get(
-        const FmtpProdIndex iProd,
+pim_get(const FmtpProdIndex iProd,
         signaturet* const   sig)
 {
     int status = ensureProperState(true);
 
     if (status == 0) {
-        status = lockMap(0); // shared lock
+        status = lockMap(false); // shared lock
 
         if (0 == status) {
             const FmtpProdIndex delta = iProd - mmo->oldIProd;
@@ -1020,7 +1019,7 @@ pim_get(
  *
  * @param[out] iProd        Next product-index.
  * @retval     0            Success. `*iProd` is set.
- * @retval     LDM7_INVAL   The product-index map is not open. `log_add()`
+ * @retval     LDM7_LOGIC   The product-index map is not open. `log_add()`
  *                          called.
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */

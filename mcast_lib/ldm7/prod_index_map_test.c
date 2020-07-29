@@ -54,7 +54,7 @@ static void test_openForWriting_0(
         void)
 {
     deleteMap();
-    int status = pim_openForWriting(NULL, FEEDTYPE, 0);
+    int status = pim_writeOpen(NULL, FEEDTYPE, 0);
     log_clear();
     CU_ASSERT_EQUAL_FATAL(status, LDM7_INVAL);
 }
@@ -65,7 +65,7 @@ static void test_openForWriting_3(
     int status;
 
     deleteMap();
-    status = pim_openForWriting(NULL, FEEDTYPE, 3);
+    status = pim_writeOpen(NULL, FEEDTYPE, 3);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -76,14 +76,14 @@ static void test_openForWriting_3(
 static void openForWriting(
         unsigned maxSigs)
 {
-    int status = pim_openForWriting(NULL, FEEDTYPE, maxSigs);
+    int status = pim_writeOpen(NULL, FEEDTYPE, maxSigs);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }
 
 static void openForReading(void)
 {
-    int status = pim_openForReading(NULL, FEEDTYPE);
+    int status = pim_readOpen(NULL, FEEDTYPE);
     log_flush_error();
     CU_ASSERT_EQUAL_FATAL(status, 0);
 }

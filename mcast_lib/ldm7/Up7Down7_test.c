@@ -106,7 +106,7 @@ setup(void)
 {
 	/*
      * The path-prefix of the product-queue is also used to construct the
-     * pathname of the product- index map (*.pim).
+     * pathname of the product-index map (*.pim).
      */
     setQueuePath(UP7_PQ_PATHNAME);
 
@@ -335,42 +335,6 @@ up7Srvr_run(void* const arg)
     return NULL;
 }
 
-/**
- * Returns the formatted address of a sender.
- *
- * @param[in] sender  The sender.
- * @return            Formatted address of the sender.
- */
-static const char*
-sndr_getAddr(
-        Sender* const sender)
-{
-    struct sockaddr_in addr;
-    socklen_t          len = sizeof(addr);
-
-    (void)getsockname(sender->srvrSock, (struct sockaddr*)&addr, &len);
-
-    return inet_ntoa(addr.sin_addr);
-}
-
-/**
- * Returns port number of a sender in host byte-order.
- *
- * @param[in] sender  The sender.
- * @return            Port number of the sender in host byte-order.
- */
-static unsigned short
-sndr_getPort(
-        Sender* const sender)
-{
-    struct sockaddr_in addr;
-    socklen_t          len = sizeof(addr);
-
-    (void)getsockname(sender->srvrSock, (struct sockaddr*)&addr, &len);
-
-    return ntohs(addr.sin_port);
-}
-
 static void
 sndr_fillPq(void)
 {
@@ -525,16 +489,6 @@ sndr_stop(Sender* const sender)
     log_debug("Returning");
 }
 
-static void
-thread_blockSigTerm()
-{
-    sigset_t mask;
-
-    (void)sigemptyset(&mask);
-    (void)sigaddset(&mask, SIGTERM);
-    (void)pthread_sigmask(SIG_BLOCK, &mask, NULL);
-}
-
 /**
  * Exec's a receiver. Doesn't block. A child process is used because the
  * product-queue supports only one instance per process and the
@@ -547,10 +501,17 @@ rcvr_exec(void)
 	CU_ASSERT_NOT_EQUAL(pid, -1);
 
 	if (pid == 0) {
+		log_debug("Executing Down7_test");
 		// Child process
-		log_is_enabled_info
-			? execlp("./Down7_test", "Down7_test", "-v", NULL)
-			: execlp("./Down7_test", "Down7_test", NULL);
+		if (log_is_enabled_debug) {
+			execlp("./Down7_test", "Down7_test", "-x", NULL);
+		}
+		else if (log_is_enabled_info) {
+			execlp("./Down7_test", "Down7_test", "-v", NULL);
+		}
+		else {
+			execlp("./Down7_test", "Down7_test", NULL);
+		}
 		CU_FAIL("execlp() failure");
 		exit(1);
 	}
@@ -632,7 +593,7 @@ test_up7Down7(
     // Exec's a receiver in a child process (because one product-queue per process)
     pid_t rcvrPid = rcvr_exec();
 
-    CU_ASSERT_EQUAL(usleep(50), 0);
+    CU_ASSERT_EQUAL(sleep(1), 0);
     sndr_fillPq();
     CU_ASSERT_EQUAL(sleep(1), 0);
 
@@ -686,6 +647,7 @@ int main(
             }
         }
     }
+	//log_set_level(LOG_LEVEL_DEBUG);
 
     if (CUE_SUCCESS == CU_initialize_registry()) {
         CU_Suite* testSuite = CU_add_suite(__FILE__, setup, teardown);

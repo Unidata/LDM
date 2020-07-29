@@ -446,7 +446,7 @@ mls_openProdIndexMap(
     (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
     pathname[sizeof(pathname)-1] = 0;
 
-    return pim_openForWriting(dirname(pathname), feed, maxSigs);
+    return pim_writeOpen(dirname(pathname), feed, maxSigs);
 }
 
 /**
