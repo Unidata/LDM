@@ -1,4 +1,4 @@
-6.13.12.61	2020-07-29T14:28:21-0600
+6.13.12.62	2020-07-29T15:19:00-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -263,6 +263,7 @@
             * Changed HELLO_GROUP to 234.128.117.1 (unicast prefix based)
             * Added to distribution (but neither built nor installed)
         * deployAll(1): Enabled California and Maryland
+        * Disabled "make installcheck" in "mcast_lib/ldm7" on Travis CI
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
