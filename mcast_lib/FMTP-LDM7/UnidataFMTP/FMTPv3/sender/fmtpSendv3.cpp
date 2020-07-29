@@ -69,7 +69,7 @@ static void freeLogging(void* arg)
  */
 inline static void logMsg(const std::string& msg)
 {
-#ifdef LDM_LOGGING
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
     log_notice(msg.c_str());
 #else
     //std::cerr << msg << std::endl;
@@ -801,8 +801,8 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
 {
     FmtpHeader recvheader;
 
-#ifdef LDM_LOGGING
-    log_debug("Entered");
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+    log_debug("Entered. WTF");
 #endif
 
     while(1) {
@@ -824,6 +824,13 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
             throw std::runtime_error("fmtpSendv3::RunRetxThread() parseHeader"
                                      "error: incomplete header");
         }
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+		log_debug("Received header: flags=%#x, prodindex=%s, seqnum=%s, "
+				"payloadlen=%s", recvheader.flags,
+				std::to_string(recvheader.prodindex).data(),
+				std::to_string(recvheader.seqnum).data(),
+				std::to_string(recvheader.payloadlen).data());
+#endif
 
         /* Acquires the product metadata as in exclusive use */
         RetxMetadata* retxMeta = sendMeta->getMetadata(recvheader.prodindex);
@@ -1030,7 +1037,7 @@ void fmtpSendv3::retransBOP(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
 
-#ifdef LDM_LOGGING
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
     log_debug("Sent BOP {header={prodindex=%lu, payloadlen=%u}, "
             "bop={prodsize=%lu, metasize=%u}}",
             (unsigned long)ntohl(sendheader.prodindex),
@@ -1409,12 +1416,12 @@ void fmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  *
  * Called by `::pthread_create()`.
  *
- * @param[in,out] ptr   Pointer to containing `fmtpSendv3` instance
+ * @param[in,out] ptr   Pointer to associated `StartRetxThreadInfo`
  * @retval        NULL  Always
  */
 void* fmtpSendv3::StartRetxThread(void* ptr)
 {
-#ifdef LDM_LOGGING
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
     pthread_cleanup_push(freeLogging, nullptr);
     log_debug("Entered");
 #endif

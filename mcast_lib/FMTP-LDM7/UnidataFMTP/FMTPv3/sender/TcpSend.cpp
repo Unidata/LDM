@@ -329,7 +329,7 @@ void TcpSend::Init()
         servAddr.sin_addr.s_addr = inAddr;
         /* If tcpPort = 0, OS will automatically choose an available port number. */
         servAddr.sin_port = htons(tcpPort);
-#ifdef LDM_LOGGING
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
         log_debug("Binding TCP socket %d to %s:%u", sockfd, tcpAddr.c_str(),
                 tcpPort);
 #endif
@@ -424,7 +424,7 @@ void TcpSend::rmSockInList(int sockfd)
  *
  * @param[in] retxsockfd    retransmission socket file descriptor.
  * @param[in] *sendheader   pointer of a FmtpHeader structure, whose fields
- *                          are to hold the ready-to-send information.
+ *                          hold the information in network byte-order.
  * @param[in] *payload      pointer to the ready-to-send memory buffer which
  *                          holds the packet payload.
  * @param[in] paylen        size to be sent (size of the payload)
@@ -433,6 +433,13 @@ void TcpSend::rmSockInList(int sockfd)
 int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
                       size_t paylen)
 {
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s", ntohs(sendheader->flags),
+			std::to_string(ntohl(sendheader->prodindex)).data(),
+			std::to_string(ntohl(sendheader->seqnum)).data(),
+			std::to_string(ntohs(sendheader->payloadlen)).data());
+#endif
     sendall(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendall(retxsockfd, payload, paylen);
 
@@ -448,7 +455,7 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
  *
  * @param[in] retxsockfd    retransmission socket file descriptor.
  * @param[in] *sendheader   pointer of a FmtpHeader structure, whose fields
- *                          are to hold the ready-to-send information.
+ *                          hold the information in network byte-order.
  * @param[in] *payload      pointer to the ready-to-send memory buffer which
  *                          holds the packet payload.
  * @param[in] paylen        size to be sent (size of the payload)
@@ -457,6 +464,13 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
 int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                   size_t paylen)
 {
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s", ntohs(sendheader->flags),
+			std::to_string(ntohl(sendheader->prodindex)).data(),
+			std::to_string(ntohl(sendheader->seqnum)).data(),
+			std::to_string(ntohs(sendheader->payloadlen)).data());
+#endif
     sendallstatic(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendallstatic(retxsockfd, payload, paylen);
 
@@ -478,13 +492,14 @@ void TcpSend::updatePathMTU(int sockfd)
 #ifdef IP_MTU
     socklen_t mtulen = sizeof(mtu);
     /*
-     * Coverity Scan #1: Fix #7: getsockopt has a return value of 0 if successful, -1 if unsuccessful. 
-     * The fix simply handles the return value and throws a runtime error should the return value be -1
+     * Coverity Scan #1: Fix #7: getsockopt has a return value of 0 if
+     * successful, -1 if unsuccessful. The fix simply handles the return value
+     * and throws a runtime error should the return value be -1
      */
     if (getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen)){
-	throw std::system_error(errno, std::system_category(),
-	        "fmtpRecvv3::updatePathMTU() getsockopt failed with return "
-	        "value -1 in an attempt to obtain MTU.");
+		throw std::system_error(errno, std::system_category(),
+				"fmtpRecvv3::updatePathMTU() getsockopt failed with return "
+				"value -1 in an attempt to obtain MTU.");
     }
     if (mtu <= 0) {
         throw std::system_error(errno, std::system_category(),

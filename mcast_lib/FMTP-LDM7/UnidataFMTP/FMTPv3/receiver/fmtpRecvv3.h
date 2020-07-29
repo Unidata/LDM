@@ -209,6 +209,15 @@ private:
      * @throw     std::runtime_error  if the packet is invalid.
      */
     void mcastBOPHandler(const FmtpHeader& header);
+	/**
+	 * Handles a multicast data-packet.
+	 *
+	 * @param[in] header           Peeked-at FMTP header
+	 * @throw std::runtime_error   `seqnum + payloadlen` is out of bounds
+	 * @throw std::runtime_error   Packet is invalid
+	 * @throw std::runtime_error   Error occurred while reading the socket
+	 */
+	void mcastDataHandler(const FmtpHeader& header);
     void mcastHandler();
     void mcastEOPHandler(const FmtpHeader& header);
     /**
@@ -339,7 +348,10 @@ private:
     int                     mcastSock;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
-    std::atomic<uint32_t>   prodidx_mcast;
+    std::atomic<uint32_t>   prevMcastProdIndex;
+    bool                    prevMcastProdIndexSet;
+    std::atomic<uint32_t>   prevMcastSeqNum;
+    bool                    prevMcastSeqNumSet;
     /* callback function of the receiving application */
     RecvProxy*              notifier;
     TcpRecv*                tcprecv;
@@ -382,8 +394,6 @@ private:
     std::mutex              notifyprodmtx;
     uint32_t                notifyprodidx;
     std::condition_variable notify_cv;
-    // Has `mcastHandler()` been called?
-    bool                    mcastHndlrStarted;
 
     /* member variables for measurement use only */
     Measure*                measure;
