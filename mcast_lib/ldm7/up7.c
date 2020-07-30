@@ -60,11 +60,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#ifndef _XOPEN_PATH_MAX
-/* For some reason, the following isn't defined by gcc(1) 4.8.3 on Fedora 19 */
-#   define _XOPEN_PATH_MAX 1024 // value mandated by XPG6; includes NUL
-#endif
-
 /******************************************************************************
  * Subscription Reply:
  ******************************************************************************/
@@ -136,31 +131,44 @@ static SubscriptionReply* replyPtr = NULL;
  * @retval    0            Success.
  * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
  *                         called.
+ * @retval    LDM7_LOGIC   The product-queue couldn't be opened. `log_add()`
+ *                         called.
  * @retval    LDM7_INVAL   Number of slots in product-queue is zero. `log_add()`
  *                         called.
  * @retval    LDM7_SYSTEM  System error. `log_add()` called. The state of the
  *                         associated file is unspecified.
  */
 static int
-openProdIndexMap(
-        const feedtypet   feed)
+openProdIndexMap(const feedtypet feed)
 {
-    char pathname[_XOPEN_PATH_MAX];
+	char pqPath[PATH_MAX];
+	strncpy(pqPath, getQueuePath(), sizeof(pqPath))[sizeof(pqPath)-1] = 0;
 
-    (void)strncpy(pathname, getQueuePath(), sizeof(pathname));
-    pathname[sizeof(pathname)-1] = 0;
+	/*
+	 * The maximum number of entries in the product-index map should equal the
+	 * maximum number of products in the product-queue.
+	 */
+	pqueue* pq;
+	int     status = pq_open(pqPath, PQ_READONLY|PQ_PRIVATE, &pq);
+	if (status) {
+		log_add_errno(status, "Couldn't open product-queue \"%s\"", pqPath);
+		status = LDM7_LOGIC;
+	}
+	else {
+		status = pim_writeOpen(dirname(pqPath), feed, pq_getSlotCount(pq));
+		if (status) {
+			log_add("Couldn't ensure existence of product-index map");
+		}
+		else {
+			pim_close();
 
-    int status = pim_writeOpen(dirname(pathname), feed, pq_getSlotCount(pq));
-    if (status) {
-    	log_add("Couldn't ensure existence of product-index map");
-    }
-    else {
-    	pim_close();
+			status = pim_readOpen(dirname(pqPath), feed);
+			if (status == 0)
+				pimIsOpen = true;
+		} // Product-index map exists
 
-    	status = pim_readOpen(dirname(pathname), feed);
-		if (status == 0)
-			pimIsOpen = true;
-    }
+		pq_close(pq);
+	} // Product-queue is open
 
     return status;
 }
