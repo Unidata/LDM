@@ -1,4 +1,4 @@
-6.13.12.62	2020-07-29T15:19:00-0600
+6.13.12.63	2020-07-30T09:48:52-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -232,6 +232,8 @@
             * Improved handling of client destruction when subscribing LDM7
               disconnects
             * Added product-index to "Sending missed product" log message
+            * Squashed SIGSEGV when getting number of product-queue slots for
+              product-index map by always opening product-queue
         ChildCmd.c:
             * Ensured that all pipe(2) file descriptors in the child process are
               greater than 2 to avoid conflicts when duplicating them to the
