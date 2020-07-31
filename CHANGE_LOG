@@ -1,4 +1,4 @@
-6.13.12.63	2020-07-30T09:48:52-0600
+6.13.12.64	2020-07-31T13:24:58-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -234,6 +234,7 @@
             * Added product-index to "Sending missed product" log message
             * Squashed SIGSEGV when getting number of product-queue slots for
               product-index map by always opening product-queue
+            * Corrected bug in determining PIM-file parent directory
         ChildCmd.c:
             * Ensured that all pipe(2) file descriptors in the child process are
               greater than 2 to avoid conflicts when duplicating them to the
