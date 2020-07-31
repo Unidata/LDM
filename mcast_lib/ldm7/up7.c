@@ -141,28 +141,32 @@ static SubscriptionReply* replyPtr = NULL;
 static int
 openProdIndexMap(const feedtypet feed)
 {
-	char pqPath[PATH_MAX];
-	strncpy(pqPath, getQueuePath(), sizeof(pqPath))[sizeof(pqPath)-1] = 0;
+	char pathname[PATH_MAX];
+	strncpy(pathname, getQueuePath(), sizeof(pathname))[sizeof(pathname)-1] = 0;
 
 	/*
 	 * The maximum number of entries in the product-index map should equal the
 	 * maximum number of products in the product-queue.
 	 */
 	pqueue* pq;
-	int     status = pq_open(pqPath, PQ_READONLY|PQ_PRIVATE, &pq);
+	int     status = pq_open(pathname, PQ_READONLY|PQ_PRIVATE, &pq);
 	if (status) {
-		log_add_errno(status, "Couldn't open product-queue \"%s\"", pqPath);
+		log_add_errno(status, "Couldn't open product-queue \"%s\"", pathname);
 		status = LDM7_LOGIC;
 	}
 	else {
-		status = pim_writeOpen(dirname(pqPath), feed, pq_getSlotCount(pq));
+		char pimDir[PATH_MAX];
+		strncpy(pimDir, dirname(pathname), sizeof(pimDir));
+		// NB: Don't depend on `pathname` from here on
+
+		status = pim_writeOpen(pimDir, feed, pq_getSlotCount(pq));
 		if (status) {
 			log_add("Couldn't ensure existence of product-index map");
 		}
 		else {
 			pim_close();
 
-			status = pim_readOpen(dirname(pqPath), feed);
+			status = pim_readOpen(pimDir, feed);
 			if (status == 0)
 				pimIsOpen = true;
 		} // Product-index map exists
