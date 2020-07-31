@@ -46,7 +46,7 @@ static const char*  MMO_DESC = "product-index map";
 /**
  * Pathname of the file containing the memory-mapped object:
  */
-static char         pathname[_XOPEN_PATH_MAX];
+static char         pathname[PATH_MAX];
 /**
  * File descriptor for file containing the memory-mapped object:
  */
@@ -652,8 +652,7 @@ initMapAndMap(
  * @return    LDM7_SYSTEM  System error. `log_add()` called.
  */
 static Ldm7Status
-openMap(
-        const char* const restrict dirname,
+openMap(const char* const restrict dirname,
         const feedtypet            feedtype)
 {
     int  status = pim_getPathname(pathname, sizeof(pathname), dirname,
@@ -664,7 +663,7 @@ openMap(
     else {
         fd = open(pathname, forWriting ? O_RDWR|O_CREAT : O_RDONLY, 0666);
         if (-1 == fd) {
-            log_add_syserr("Couldn't open file %s (\"%s\")", MMO_DESC, pathname);
+            log_add_syserr("Couldn't open %s (\"%s\")", MMO_DESC, pathname);
             status = LDM7_SYSTEM;
         }
         else {
