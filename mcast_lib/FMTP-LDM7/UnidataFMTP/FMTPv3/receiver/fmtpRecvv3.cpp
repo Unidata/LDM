@@ -120,33 +120,44 @@ fmtpRecvv3::fmtpRecvv3(
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
     mcastPort(mcastPort),
-    mcastgroup(),
-    prevMcastProdIndex(),
-    prevMcastProdIndexSet(false),
-	prevMcastSeqNum(),
-	prevMcastSeqNumSet(),
     ifAddr(ifAddr),
-    tcprecv(new TcpRecv(tcpAddr, tcpPort, inet_addr(ifAddr.c_str()))),
-    notifier(notifier),
     mcastSock(0),
     retxSock(0),
+    mcastgroup(),
+    mcastProdIndex(),
+	prevMcastSeqNum(),
+	prevMcastSeqNumSet(false),
+    notifier(notifier),
+    tcprecv(new TcpRecv(tcpAddr, tcpPort, inet_addr(ifAddr.c_str()))),
+    trackermap(),
+    trackermtx(),
+    antiracemtx(),
+    EOPmap(),
+    EOPmapmtx(),
     pSegMNG(new ProdSegMNG()),
 	msgQueue(),
+    misBOPset(),
     BOPSetMtx(),
-    exitMutex(),
-    exitCond(),
-    stopRequested(false),
-    except(),
     retx_rq(),
     retx_t(),
     mcast_t(),
     timer_t(),
-    //linkspeed(0),
-    /* Coverity Scan #1: Issue #2. Initialize notifyprodidx to 0 for product index */
-    notifyprodidx(0),
+    timerParamQ(),
+    timerQfilled(),
+    timerQmtx(),
+    timerWake(),
+    timerWakemtx(),
+    exitMutex(),
+    exitCond(),
+    stopRequested(false),
+    except(),
+    linkmtx(),
     linkspeed(20000000),
     retxHandlerCanceled(ATOMIC_FLAG_INIT),
     mcastHandlerCanceled(ATOMIC_FLAG_INIT),
+    notifyprodmtx(),
+    notifyprodidx(0),
+    notify_cv(),
     measure(new Measure())
 {
 }
@@ -875,33 +886,37 @@ void fmtpRecvv3::joinGroup(
  */
 void fmtpRecvv3::mcastDataHandler(const FmtpHeader& header)
 {
-	if (prevMcastProdIndexSet) {
-		if (header.prodindex != prevMcastProdIndex)
+	bool outOfOrder = false;
+
+	{
+		std::lock_guard<std::mutex> guard(antiracemtx);
+
+		if (header.prodindex != mcastProdIndex)
 			prevMcastSeqNumSet = false;
 
 		/*
 		 * The following isn't an "else" of the above because that wouldn't
 		 * handle receiving a data-segment after receiving its BOP because
-		 * `header.prodindex` would equal `prevMcastProdIndex`. The
+		 * `header.prodindex` would equal `mcastProdIndex`. The
 		 * solution is to unconditionally check `prevMcastSegNumSet`.
 		 */
-		if (prevMcastSeqNumSet) {
-			if (header.seqnum <= prevMcastSeqNum) {
+		outOfOrder = prevMcastSeqNumSet && header.seqnum <= prevMcastSeqNum;
+	}
+
+	if (outOfOrder) {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
-				log_error("Out-of-order sequence number");
+		log_error("Out-of-order sequence number");
 #endif
-				throw std::runtime_error("Out-of-order sequence number: current=" +
-						std::to_string(header.seqnum) + ", previous=" +
-						std::to_string(prevMcastSeqNum));
-			}
-		}
+		throw std::runtime_error("Out-of-order sequence number: current=" +
+				std::to_string(header.seqnum) + ", previous=" +
+				std::to_string(prevMcastSeqNum));
 	}
 
 	#ifdef MEASURE
 		measure->setMcastClock(header.prodindex);
 	#endif
 
-	recvMemData(header);
+	recvMcastData(header);
 
 	prevMcastSeqNum = header.seqnum;
 	prevMcastSeqNumSet = true;
@@ -921,7 +936,9 @@ void fmtpRecvv3::mcastDataHandler(const FmtpHeader& header)
  */
 void fmtpRecvv3::mcastHandler()
 {
-    while(1)
+	bool prodIndexSet = false;
+
+	while(1)
     {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
     	log_debug("Reading socket");
@@ -956,6 +973,12 @@ void fmtpRecvv3::mcastHandler()
         }
 
         decodeHeader(header);
+
+        if (!prodIndexSet) {
+			mcastProdIndex = header.prodindex;
+			prodIndexSet = true;
+        }
+
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
 		log_debug("Received header: flags=%#x, prodindex=%s, seqnum=%s, "
 				"payloadlen=%s", header.flags,
@@ -973,9 +996,6 @@ void fmtpRecvv3::mcastHandler()
         else if (header.flags == FMTP_EOP) {
             mcastEOPHandler(header);
         }
-
-		prevMcastProdIndex = header.prodindex;
-		prevMcastProdIndexSet = true;
 
         (void)pthread_setcancelstate(cancelState, &cancelState);
     } // Indefinite loop
@@ -1035,23 +1055,23 @@ void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
 		EOPHandler(header);
 	}
 	else {
-		(void)requestMissingBopsInclusive(header.prodindex);
+		requestMissingBopsInclusive(header.prodindex);
 #if 0
 		/**
-		 * prevMcastProdIndex is only updated if no corresponding BOP is found.
+		 * mcastProdIndex is only updated if no corresponding BOP is found.
 		 * Because if we assume packets arriving in sequence, then the index
 		 * would not change upon EOP arrival. On the other hand, if there do
-		 * exist out-of-sequence packets, updating the prevMcastProdIndex could
+		 * exist out-of-sequence packets, updating the mcastProdIndex could
 		 * decrease the value. When following packets arrive, the receiver
 		 * may think a BOP is missed. But if no BOP is found, this EOP is the
-		 * first packet received with the index, the prevMcastProdIndex has to be
+		 * first packet received with the index, the mcastProdIndex has to be
 		 * updated to avoid duplicate BOP request since retxBOPHandler does
-		 * not update prevMcastProdIndex. Whether to update lastprodidx after
+		 * not update mcastProdIndex. Whether to update lastprodidx after
 		 * requestMissingBops() returns depends on the return value. A return
 		 * value of 2 suggests discarding the out-of-sequence packet.
 		 */
 		if (state == 1) {
-			prevMcastProdIndex = header.prodindex;
+			mcastProdIndex = header.prodindex;
 		}
 #endif
 	}
@@ -1191,7 +1211,7 @@ void fmtpRecvv3::retxHandler()
 
             uint32_t prodsize    = 0;
             uint32_t seqnum      = 0;
-            uint32_t lastprodidx = 0xFFFFFFFF;
+            uint32_t mcastProd;
             {
                 std::lock_guard<std::mutex> lock(antiracemtx);
                 {
@@ -1202,11 +1222,11 @@ void fmtpRecvv3::retxHandler()
                         seqnum               = tracker.seqnum;
 
                         /*
-                         * Assumes `prevMcastProdIndex` is set because a
+                         * Assumes `mcastProdIndex` is set because a
                          * request must have been made, which means a
                          * multicast packet must have been received.
                          */
-                        lastprodidx = prevMcastProdIndex;
+                        mcastProd = mcastProdIndex;
                     }
                 }
                 if (prodsize > 0) {
@@ -1224,7 +1244,7 @@ void fmtpRecvv3::retxHandler()
                          * concurrency or a gap before next product arrives.
                          * Only requesting EOP is the most economic choice.
                          */
-                        if (lastprodidx != header.prodindex) {
+                        if (mcastProd != header.prodindex) {
                             requestAnyMissingData(header.prodindex, prodsize);
                         }
                         pushMissingEopReq(header.prodindex);
@@ -1534,8 +1554,8 @@ void fmtpRecvv3::retxEOPHandler(const FmtpHeader& header)
          * a forced EOP to avoid the silent loss of the last file
          * in a file-stream. A straight forward way to handle this
          * case is to call notify_of_missed_prod() and then increment
-         * prevMcastProdIndex so next time a new file comes in, this file
-         * will not be requested again. However, prevMcastProdIndex can
+         * mcastProdIndex so next time a new file comes in, this file
+         * will not be requested again. However, mcastProdIndex can
          * only be accessed by multicast thread, updating it here
          * could mess up the sequence of files on multicast.
          * Also, what is the end of a file-stream. If a file arrives
@@ -1716,18 +1736,17 @@ void fmtpRecvv3::requestMissingBops(const uint32_t openleft,
  *
  * @param[in] prodindex           Index of the data-product of the last packet
  *                                to be received.
- * @return                        1 means everything is okay. 2 means
- *                                out-of-sequence packet is received.
  * @throws    std::runtime_error  Product-index gap is impossibly large
  */
-int fmtpRecvv3::requestMissingBopsExclusive(const uint32_t prodindex)
+void fmtpRecvv3::requestMissingBopsExclusive(const uint32_t prodindex)
 {
-    /* fetches the previous product index */
-    const uint32_t lastprodidx = prevMcastProdIndex;
+    /* fetches the current multicast product index */
+    const uint32_t mcastIndex = mcastProdIndex;
 
-    requestMissingBops(lastprodidx, prodindex);
+	if (mcastIndex != prodindex)
+		mcastProdIndex = prodindex;
 
-    return 1;
+    requestMissingBops(mcastIndex, prodindex);
 }
 
 
@@ -1738,18 +1757,17 @@ int fmtpRecvv3::requestMissingBopsExclusive(const uint32_t prodindex)
  *
  * @param[in] prodindex           Index of the data-product of the last packet
  *                                to be received.
- * @return                        1 means everything is okay. 2 means
- *                                out-of-sequence packet is received.
  * @throws    std::runtime_error  Product-index gap is impossibly large
  */
-int fmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
+void fmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
 {
-    /* fetches the previous product index */
-    const uint32_t lastprodidx = prevMcastProdIndex;
+    /* fetches the current multicast product index */
+    const uint32_t mcastIndex = mcastProdIndex;
 
-    requestMissingBops(lastprodidx, prodindex+1);
+	if (mcastIndex != prodindex)
+		mcastProdIndex = prodindex;
 
-    return 1;
+    requestMissingBops(mcastProdIndex, prodindex+1);
 }
 
 
@@ -1763,7 +1781,7 @@ int fmtpRecvv3::requestMissingBopsInclusive(const uint32_t prodindex)
  * @throw std::runtime_error  if the packet is invalid.
  * @throw std::runtime_error  if an error occurs while reading the socket.
  */
-void fmtpRecvv3::recvMemData(const FmtpHeader& header)
+void fmtpRecvv3::recvMcastData(const FmtpHeader& header)
 {
     //int state = 0;
     uint32_t prodsize = 0;
@@ -1829,13 +1847,13 @@ void fmtpRecvv3::recvMemData(const FmtpHeader& header)
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
 		log_debug("Requesting missing BOPs");
 #endif
-        (void)requestMissingBopsInclusive(header.prodindex);
+        requestMissingBopsInclusive(header.prodindex);
     }
 
 #if 0
     /* records the most recent product index */
     if (state == 1) {
-        prevMcastProdIndex = header.prodindex;
+        mcastProdIndex = header.prodindex;
     }
 #endif
 }

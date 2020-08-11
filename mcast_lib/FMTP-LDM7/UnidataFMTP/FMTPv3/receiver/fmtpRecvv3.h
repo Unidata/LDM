@@ -288,20 +288,16 @@ private:
      *
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
      *                       missed.
-     * @return               1 means everything is okay. 2 means out-of-sequence
-     *                       packet is received.
      */
-    int requestMissingBopsExclusive(const uint32_t prodindex);
+    void requestMissingBopsExclusive(const uint32_t prodindex);
     /**
      * Requests BOP packets for data-products that come after the current
      * data-product up to and including a given data-product.
      *
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
      *                       missed.
-     * @return               1 means everything is okay. 2 means out-of-sequence
-     *                       packet is received.
      */
-    int requestMissingBopsInclusive(const uint32_t prodindex);
+    void requestMissingBopsInclusive(const uint32_t prodindex);
     /**
      * Handles a multicast FMTP data-packet given the associated peeked-at and
      * decoded FMTP header. Directly store and check for missing blocks.
@@ -311,7 +307,7 @@ private:
      * @throw std::system_error   if an error occurs while reading the socket.
      * @throw std::runtime_error  if the packet is invalid.
      */
-    void recvMemData(const FmtpHeader& header);
+    void recvMcastData(const FmtpHeader& header);
     /**
      * request EOP retx if EOP is not received yet and return true if
      * the request is sent out. Otherwise, return false.
@@ -348,8 +344,7 @@ private:
     int                     mcastSock;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
-    std::atomic<uint32_t>   prevMcastProdIndex;
-    bool                    prevMcastProdIndexSet;
+    std::atomic<uint32_t>   mcastProdIndex;
     std::atomic<uint32_t>   prevMcastSeqNum;
     bool                    prevMcastSeqNumSet;
     /* callback function of the receiving application */
