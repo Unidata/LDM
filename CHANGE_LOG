@@ -1,4 +1,4 @@
-6.13.12.65	2020-08-11T12:33:36-0600
+6.13.12.65	2020-08-11T12:35:46-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
