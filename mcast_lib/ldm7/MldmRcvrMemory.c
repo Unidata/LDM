@@ -179,7 +179,7 @@ yamlParserColumn(
  *
  * @param[in] document  The document.
  * @param[in] start     The first mapping pair.
- * @param[in] end       The last mapping pair.
+ * @param[in] stop      One beyond the end of the mapping.
  * @param[in] keyStr    The key whose value-node is to be returned.
  * @retval    NULL      The value-node doesn't exist.
  * @return              The value-node associated with the given key.
@@ -188,15 +188,15 @@ static yaml_node_t*
 getValueNode(
     yaml_document_t* const restrict    document,
     yaml_node_pair_t* const            start,
-    yaml_node_pair_t* const            end,
+    yaml_node_pair_t* const            stop,
     const char* const restrict         keyStr)
 {
     /*
      * ASSUMPTIONS:
      *   1) `start` is NULL for an empty mapping;
-     *   2) `end` points to the last, valid entry.
+     *   2) `stop` points to one beyond the last, valid key/value pair.
      */
-    for (yaml_node_pair_t* pair = start; pair && pair <= end; pair++) {
+    for (yaml_node_pair_t* pair = start; pair && pair != stop; pair++) {
         yaml_node_t* const keyNode = yaml_document_get_node(document,
                 pair->key);
 
@@ -237,7 +237,7 @@ unlock(
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
  * @param[in] start     The first node-pair of the mapping.
- * @param[in] end       The last node-pair of the mapping.
+ * @param[in] stop      One beyond the last node-pair of the mapping.
  * @retval    true      Success or the parameter doesn't exist.
  * @retval    false     Error. `log_add()` called.
  */
@@ -246,9 +246,9 @@ initLastMcastProd(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document,
     yaml_node_pair_t* const restrict    start,
-    yaml_node_pair_t* const restrict    end)
+    yaml_node_pair_t* const restrict    stop)
 {
-    yaml_node_t* const valueNode = getValueNode(document, start, end,
+    yaml_node_t* const valueNode = getValueNode(document, start, stop,
             LAST_MCAST_PROD_KEY);
 
     if (valueNode == NULL)
@@ -280,18 +280,18 @@ initLastMcastProd(
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
  * @param[in] start     The first item of the sequence.
- * @param[in] end       The last item of the sequence.
+ * @param[in] stop      One beyond the last item of the sequence.
  * @retval    true      Success.
  * @retval    false     Error. `log_add()` called.
  */
 static bool
-initMissedFilesFromSequence(
+initMissedFromSeq(
     McastReceiverMemory* const restrict    mrm,
     yaml_document_t* const restrict        document,
     const yaml_node_item_t* const restrict start,
-    const yaml_node_item_t* const restrict end)
+    const yaml_node_item_t* const restrict stop)
 {
-    for (const yaml_node_item_t* item = start; item && item <= end; item++) {
+    for (const yaml_node_item_t* item = start; item && item != stop; item++) {
         yaml_node_t* itemNode = yaml_document_get_node(document, *item);
 
         if (itemNode == NULL) {
@@ -325,7 +325,7 @@ initMissedFilesFromSequence(
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
  * @param[in] start     The first node-pair of the mapping.
- * @param[in] end       The last node-pair of the mapping.
+ * @param[in] stop      One beyond the end of the mapping.
  * @retval    true      Success or the information doesn't exist.
  * @retval    false     Error. `log_add()` called.
  */
@@ -334,9 +334,9 @@ initMissedFiles(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document,
     yaml_node_pair_t* const restrict    start,
-    yaml_node_pair_t* const restrict    end)
+    yaml_node_pair_t* const restrict    stop)
 {
-    yaml_node_t* const valueNode = getValueNode(document, start, end,
+    yaml_node_t* const valueNode = getValueNode(document, start, stop,
             MISSED_MCAST_FILES_KEY);
 
     if (valueNode == NULL)
@@ -348,9 +348,9 @@ initMissedFiles(
         return false;
     }
 
-    return initMissedFilesFromSequence(mrm, document,
+    return initMissedFromSeq(mrm, document,
             valueNode->data.sequence.items.start,
-            valueNode->data.sequence.items.end);
+            valueNode->data.sequence.items.top);
 }
 
 /**
@@ -375,10 +375,10 @@ initFromNode(
     }
 
     yaml_node_pair_t* const start = node->data.mapping.pairs.start;
-    yaml_node_pair_t* const end = node->data.mapping.pairs.end;
+    yaml_node_pair_t* const stop = node->data.mapping.pairs.top;
 
-    return initLastMcastProd(mrm, document, start, end) &&
-            initMissedFiles(mrm, document, start, end);
+    return initLastMcastProd(mrm, document, start, stop) &&
+            initMissedFiles(mrm, document, start, stop);
 }
 
 /**
@@ -391,7 +391,7 @@ initFromNode(
  * @retval    false     Failure. `log_add()` called.
  */
 static bool
-initFromDocument(
+initFromDoc(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document)
 {
@@ -415,7 +415,7 @@ initFromDocument(
  * @retval    false   Error. `log_add()` called.
  */
 static bool
-initFromStream(
+initFromStrm(
     McastReceiverMemory* const restrict mrm,
     yaml_parser_t* const restrict       parser)
 {
@@ -430,7 +430,7 @@ initFromStream(
         return false;
     }
 
-    bool success = initFromDocument(mrm, &document);
+    bool success = initFromDoc(mrm, &document);
 
     yaml_document_delete(&document);
 
@@ -448,7 +448,7 @@ initFromStream(
  * @retval    2     Parse error. `log_add()` called.
  */
 static int
-initFromYamlFile(
+initFromYaml(
     McastReceiverMemory* const restrict mrm,
     FILE* const restrict                file)
 {
@@ -462,7 +462,7 @@ initFromYamlFile(
     else {
         yaml_parser_set_input_file(&parser, file);
 
-        if (!initFromStream(mrm, &parser)) {
+        if (!initFromStrm(mrm, &parser)) {
             log_add("Error parsing memory-file. Delete or correct it.");
             status = 2;
         }
@@ -505,7 +505,7 @@ initFromFile(
         }
     }
     else {
-        status = initFromYamlFile(mrm, file);
+        status = initFromYaml(mrm, file);
 
         if (status)
             log_add("Couldn't initialize multicast-memory from file \"%s\"",
