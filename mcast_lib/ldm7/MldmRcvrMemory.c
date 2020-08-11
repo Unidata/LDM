@@ -94,8 +94,7 @@ static const char* const MISSED_MCAST_FILES_KEY = "Missed Multicast File Identif
  *
  */
 static void
-vetMrm(
-        const McastReceiverMemory* const mrm)
+vetMrm(const McastReceiverMemory* const mrm)
 {
     log_assert(mrm != NULL && mrm->magic == &MAGIC);
 }
@@ -232,45 +231,43 @@ unlock(
 
 /**
  * Initializes the last, multicast data-product signature in a multicast
- * receiver memory from a YAML mapping-node. This function is reentrant.
+ * receiver memory from a YAML scalar-node. This function is reentrant.
  *
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
- * @param[in] start     The first node-pair of the mapping.
- * @param[in] stop      One beyond the last node-pair of the mapping.
- * @retval    true      Success or the parameter doesn't exist.
+ * @param[in] node      The YAML scalar-node containing the signature of the
+ *                      last data-product to be received.
+ * @retval    true      Success.
  * @retval    false     Error. `log_add()` called.
  */
 static bool
 initLastMcastProd(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document,
-    yaml_node_pair_t* const restrict    start,
-    yaml_node_pair_t* const restrict    stop)
+	yaml_node_t* const restrict         node)
 {
-    yaml_node_t* const valueNode = getValueNode(document, start, stop,
-            LAST_MCAST_PROD_KEY);
+	bool success = false;
 
-    if (valueNode == NULL)
-        return true;
+    if (node == NULL) {
+    	log_add("Empty node");
+    }
+    else if (node->type != YAML_SCALAR_NODE) {
+		log_add("Not a scalar-node");
+    }
+    else {
+		const char* sigStr = (const char*)node->data.scalar.value;
 
-    if (valueNode->type != YAML_SCALAR_NODE) {
-        log_add("Unexpected node-type for value associated with key \"%s\"",
-                LAST_MCAST_PROD_KEY);
-        return false;
+		if (sigParse(sigStr, &mrm->lastMcastProd) == -1) {
+			log_add("Unable to parse last multicast data-product signature "
+					"\"%s\"", sigStr);
+		}
+		else {
+			mrm->sigSet = true;
+			success = true;
+		}
     }
 
-    const char* sigStr = (const char*)valueNode->data.scalar.value;
-
-    if (sigParse(sigStr, &mrm->lastMcastProd) == -1) {
-        log_add("Unable to parse last multicast data-product signature \"%s\"",
-                sigStr);
-        return false;
-    }
-
-    mrm->sigSet = true;
-
-    return true;
+    return success;
 }
 
 /**
@@ -324,42 +321,41 @@ initMissedFromSeq(
  *
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
- * @param[in] start     The first node-pair of the mapping.
- * @param[in] stop      One beyond the end of the mapping.
- * @retval    true      Success or the information doesn't exist.
+ * @param[in] node      The YAML sequence-node containing the indexes of missed
+ *                      data-products.
+ * @retval    true      Success.
  * @retval    false     Error. `log_add()` called.
  */
 static bool
 initMissedFiles(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document,
-    yaml_node_pair_t* const restrict    start,
-    yaml_node_pair_t* const restrict    stop)
+	yaml_node_t* const restrict         node)
 {
-    yaml_node_t* const valueNode = getValueNode(document, start, stop,
-            MISSED_MCAST_FILES_KEY);
+	bool success = false;
 
-    if (valueNode == NULL)
-        return true;
-
-    if (valueNode->type != YAML_SEQUENCE_NODE) {
-        log_add("Unexpected node-type for value associated with key \"%s\"",
-                MISSED_MCAST_FILES_KEY);
-        return false;
+    if (node == NULL) {
+    	log_add("Empty node");
     }
+    else if (node->type != YAML_SEQUENCE_NODE) {
+		log_add("Not a sequence-node");
+    }
+    else {
+		success = initMissedFromSeq(mrm, document,
+				node->data.sequence.items.start,
+				node->data.sequence.items.top);
+	}
 
-    return initMissedFromSeq(mrm, document,
-            valueNode->data.sequence.items.start,
-            valueNode->data.sequence.items.top);
+    return success;
 }
 
 /**
- * Initializes a multicast receiver memory from a YAML node. This function is
- * reentrant.
+ * Initializes a multicast receiver memory from a YAML mapping-node. This
+ * function is reentrant.
  *
  * @param[in] mrm       The multicast receiver memory to initialize.
  * @param[in] document  The YAML document to use.
- * @param[in] node      The YAML node to use.
+ * @param[in] node      The YAML mapping-node to use.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */
@@ -369,16 +365,49 @@ initFromNode(
     yaml_document_t* const restrict     document,
     yaml_node_t* const restrict         node)
 {
-    if (node->type != YAML_MAPPING_NODE) {
-        log_add("Unexpected YAML node: %d", node->type);
-        return false;
+	bool success;
+
+	if (node == NULL) {
+		log_add("Empty node");
+		success = false;
+	}
+	else if (node->type != YAML_MAPPING_NODE) {
+        log_add("Not a mapping-node");
+		success = false;
     }
+	else {
+		success = true;
 
-    yaml_node_pair_t* const start = node->data.mapping.pairs.start;
-    yaml_node_pair_t* const stop = node->data.mapping.pairs.top;
+		for (yaml_node_pair_t* pair = node->data.mapping.pairs.start;
+				success && pair != node->data.mapping.pairs.top; ++pair) {
+			yaml_node_t* keyNode = yaml_document_get_node(document, pair->key);
 
-    return initLastMcastProd(mrm, document, start, stop) &&
-            initMissedFiles(mrm, document, start, stop);
+			if (keyNode == NULL) {
+				log_add("No key node");
+				success = false;
+			}
+			else if (keyNode->type == YAML_SCALAR_NODE) {
+				if (strcmp((const char*)keyNode->data.scalar.value,
+						LAST_MCAST_PROD_KEY) == 0) {
+					success = initLastMcastProd(mrm, document,
+							yaml_document_get_node(document, pair->value));
+					if (!success)
+						log_add("Couldn't initialize signature of last "
+								"received multicast product");
+				}
+				else if (strcmp((const char*)keyNode->data.scalar.value,
+						MISSED_MCAST_FILES_KEY ) == 0) {
+					success = initMissedFiles(mrm, document,
+							yaml_document_get_node(document, pair->value));
+					if (!success)
+						log_add("Couldn't initialize list of missed "
+								"data-products");
+				}
+			}
+		}
+	}
+
+	return success;
 }
 
 /**
@@ -395,14 +424,21 @@ initFromDoc(
     McastReceiverMemory* const restrict mrm,
     yaml_document_t* const restrict     document)
 {
+	bool success;
     yaml_node_t* rootNode = yaml_document_get_root_node(document);
 
     if (rootNode == NULL) {
         log_add("YAML document is empty");
-        return false;
+        success = false;
+    }
+    else {
+		success = initFromNode(mrm, document, rootNode);
+		if (!success)
+			log_add("Couldn't initialize multicast receiver memory from "
+					"YAML document");
     }
 
-    return initFromNode(mrm, document, rootNode);
+    return success;
 }
 
 /**
@@ -419,6 +455,7 @@ initFromStrm(
     McastReceiverMemory* const restrict mrm,
     yaml_parser_t* const restrict       parser)
 {
+	bool            success;
     yaml_document_t document;
 
     (void)memset(&document, 0, sizeof(document));
@@ -427,12 +464,12 @@ initFromStrm(
         log_add("YAML parser failure at line=%lu, column=%lu: %s:",
                 yamlParserLine(parser), yamlParserColumn(parser),
                 yamlParserErrMsg(parser));
-        return false;
+        success = false;
     }
-
-    bool success = initFromDoc(mrm, &document);
-
-    yaml_document_delete(&document);
+    else {
+		success = initFromDoc(mrm, &document);
+		yaml_document_delete(&document);
+    } // YAML document created
 
     return success;
 }
@@ -441,80 +478,73 @@ initFromStrm(
  * Initializes a multicast receiver memory from a YAML file. This function is
  * reentrant.
  *
- * @param[in] mrm   The multicast receiver memory to initialize.
- * @param[in] file  The YAML file to parse.
- * @retval    0     Success.
- * @retval    1     System error. `log_add()` called.
- * @retval    2     Parse error. `log_add()` called.
+ * @param[in] mrm    The multicast receiver memory to initialize.
+ * @param[in] file   The YAML file to parse.
+ * @retval    true   Success.
+ * @retval    false  Failure. `log_add()` called.
  */
-static int
+static bool
 initFromYaml(
     McastReceiverMemory* const restrict mrm,
     FILE* const restrict                file)
 {
-    int           status;
+    bool          success;
     yaml_parser_t parser;
 
     if (!yaml_parser_initialize(&parser)) {
         log_add_syserr("Couldn't initialize YAML parser");
-        status = 1;
+        success = false;
     }
     else {
         yaml_parser_set_input_file(&parser, file);
 
-        if (!initFromStrm(mrm, &parser)) {
-            log_add("Error parsing memory-file. Delete or correct it.");
-            status = 2;
-        }
-        else {
-            status = 0;
-        }
+        success = initFromStrm(mrm, &parser);
+        if (!success)
+            log_add("Error parsing YAML file");
 
         yaml_parser_delete(&parser);
-    }
+    } // YAML parser created
 
-    return status;
+    return success;
 }
 
 /**
- * Initializes a multicast receiver memory from a memory-file. This function is
- * reentrant.
+ * Initializes a multicast receiver memory from a memory-file if it exists.
+ * Must be called only *after* most of the fields in the the multicast receiver
+ * memory structure has been initialized. This function is reentrant.
  *
- * @param[in] mrm           The multicast receiver memory to initialize.
- * @param[in] path          The pathname of the memory-file
- * @retval    0             Success.
- * @retval    1             System error. `log_add()` called.
- * @retval    2             Memory-file doesn't exist.
+ * @param[in] mrm    The multicast receiver memory to initialize from a
+ *                   file.
+ * @retval    true   Success: File doesn't exist or memory initialized from it.
+ * @retval    false  Failure. `log_add()` called.
  */
-static int
-initFromFile(
-    McastReceiverMemory* const restrict mrm,
-    char* const restrict                path)
+static bool
+tryInitFromFile(McastReceiverMemory* const mrm)
 {
-    int   status;
-    FILE* file = fopen(path, "r");
-
+	bool  success;
+    FILE* file = fopen(mrm->path, "r");
 
     if (file == NULL) {
         if (errno == ENOENT) {
-            status = 2;
+            success = true;
         }
         else {
-            log_add_syserr("Couldn't open memory-file \"%s\"", path);
-            status = 1;
+            log_add_syserr("Couldn't open multicast receiver's memory-file "
+            		"\"%s\"", mrm->path);
+            success = false;
         }
     }
     else {
-        status = initFromYaml(mrm, file);
+        success = initFromYaml(mrm, file);
 
-        if (status)
-            log_add("Couldn't initialize multicast-memory from file \"%s\"",
-                    path);
+        if (!success)
+            log_add("Couldn't initialize multicast receiver's memory from file "
+            		"\"%s\". Delete or correct it.", mrm->path);
 
-        (void)fclose(file); // don't care because open for reading only
+        (void)fclose(file); // Don't care because open for reading only
     } // `file` open
 
-    return status;
+    return success;
 }
 
 /**
@@ -552,110 +582,85 @@ initMutex(
 }
 
 /**
- * Initializes a multicast receiver memory from scratch.
- *
- * @param[in] mrm    The multicast receiver memory to initialize.
- * @param[in] path   The path of the canonical memory-file. Freed by
- *                   `mrm_close()`.
- * @retval    true   Success.
- * @retval    false  Failure. `log_add()` called.
- * @see `mrm_close()`
- */
-static bool
-initFromScratch(
-    McastReceiverMemory* const restrict mrm,
-    char* const restrict                path)
-{
-    bool        success = false;
-    char* const tmpPath = makeTempPath(path);
-
-    if (tmpPath != NULL) {
-        if ((mrm->missedQ = piq_new()) == NULL) {
-            log_add("Couldn't create queue of missed data-products");
-        }
-        else {
-            if ((mrm->requestedQ = piq_new()) == NULL) {
-                log_add("Couldn't create queue of requested data-products");
-            }
-            else {
-                if (initMutex(mrm)) {
-                    mrm->path = path;
-                    mrm->tmpPath = tmpPath;
-                    mrm->sigSet = false;
-                    mrm->modified = false;
-                    success = true;
-                }
-                else {
-                    piq_free(mrm->requestedQ);
-                }
-            } // `mrm->requestedQ` allocated
-
-            if (!success)
-                piq_free(mrm->missedQ);
-        } // `mrm->missedQ` allocated
-
-        if (!success)
-            free(tmpPath);
-    } // `tmpPath` allocated
-
-    return success;
-}
-
-/**
- * Initializes a multicast receiver memory from a pre-existing memory-file or
- * from scratch if the memory-file doesn't exist. This function is reentrant.
- *
- * @param[in] mrm       The multicast receiver memory to initialize.
- * @param[in] path      The path of the canonical memory-file. Freed by
- *                      `mrm_close()`.
- * @retval    true      Success.
- * @retval    false     Failure. `log_add()` called.
- */
-static bool
-initFromScratchOrFile(
-    McastReceiverMemory* const restrict mrm,
-    char* const restrict                path)
-{
-    if (!initFromScratch(mrm, path))
-        return false;
-
-    int status = initFromFile(mrm, path);
-
-    return (status == 0) || (status == 2); // success or file doesn't exist
-}
-
-/**
  * Initializes a multicast receiver memory. This function is reentrant.
  *
- * @param[in] mrm       The muticast receiver memory to initialize.
- * @param[in] ldmSrvr   Address of the LDM7 server.
- * @param[in] feed      Feedtype of the multicast group.
+ * @param[in] mrm       The multicast receiver memory to initialize.
+ * @param[in] path      Pathname of multicast receiver memory-file. Caller must
+ *                      not free.
  * @retval    true      Success.
  * @retval    false     Failure. `log_add()` called.
  */
 static bool
 init(
     McastReceiverMemory* const restrict mrm,
-    InetSockAddr* const restrict        ldmSrvr,
-    const feedtypet                     feed)
+	char* const restrict                path)
 {
     bool        success;
-    char* const path = getSessionPath(ldmSrvr, feed);
+	ProdIndexQueue* missedQ = piq_new();
 
-    if (path == NULL) {
-        success = false;
-    }
-    else {
-        success = initFromScratchOrFile(mrm, path);
-        if (!success) {
-            free(path);
-        }
-        else {
-            mrm->magic = &MAGIC;
-        }
-    } // `path` allocated
+	if (missedQ == NULL) {
+		log_add("Couldn't create queue of missed data-products");
+		success = false;
+	}
+	else {
+		ProdIndexQueue* requestedQ = piq_new();
+
+		if (requestedQ == NULL) {
+			log_add("Couldn't create queue of requested data-products");
+			success = false;
+		}
+		else {
+			success = initMutex(mrm);
+
+			if (success) {
+				char* const tmpPath = makeTempPath(path);
+
+				if (tmpPath) {
+					mrm->path = path;
+					mrm->missedQ = missedQ;
+					mrm->requestedQ = requestedQ;
+					mrm->tmpPath = tmpPath;
+					mrm->sigSet = false;
+					mrm->modified = false;
+					mrm->magic = &MAGIC;
+
+					success = tryInitFromFile(mrm);
+
+					if (!success)
+						free(tmpPath);
+				} // `tmpPath` allocated
+
+				if (!success)
+					(void)pthread_mutex_destroy(&mrm->mutex);
+			} // Mutex initialized
+
+			if (!success)
+				piq_free(mrm->requestedQ);
+		} // Requested queue created
+
+		if (!success)
+			piq_free(mrm->missedQ);
+	} // Missed queue created
 
     return success;
+}
+
+/**
+ * Destroys a multicast receiver memory.
+ *
+ * @param[in] mrm    The multicast receiver memory.
+ */
+
+static void
+destroy(McastReceiverMemory* const mrm)
+{
+    mrm->magic = NULL;
+
+    (void)pthread_mutex_destroy(&mrm->mutex);
+    piq_free(mrm->requestedQ);
+    piq_free(mrm->missedQ);
+    free(mrm->path);
+    free(mrm->tmpPath);
 }
 
 /**
@@ -1152,11 +1157,24 @@ mrm_open(
             "multicast receiver memory");
 
     if (mrm) {
-        if (!init(mrm, ldmSrvr, feed)) {
-            free(mrm);
-            mrm = NULL;
-        }
-    }
+    	bool        success;
+		char* const path = getSessionPath(ldmSrvr, feed);
+
+		if (path == NULL) {
+			success = false;
+		}
+		else {
+			success = init(mrm, path);
+
+            if (!success)
+            	free(path);
+		} // `path` allocated
+
+		if (!success) {
+			free(mrm);
+			mrm = NULL;
+		}
+    } // `mrm` allocated
 
     return mrm;
 }
@@ -1183,13 +1201,7 @@ mrm_close(
     if (mrm->modified && !dump(mrm))
         return false;
 
-    mrm->magic = NULL;
-
-    (void)pthread_mutex_destroy(&mrm->mutex);
-    piq_free(mrm->requestedQ);
-    piq_free(mrm->missedQ);
-    free(mrm->path);
-    free(mrm->tmpPath);
+    destroy(mrm);
     free(mrm);
 
     return true;
@@ -1206,18 +1218,17 @@ mrm_close(
  * @retval    false  Failure. `log_add()` called. The multicast receiver
  *                   memory is unmodified. Thread-safe.
  */
-bool
+void
 mrm_setLastMcastProd(
     McastReceiverMemory* const restrict mrm,
     const signaturet                    sig)
 {
     vetMrm(mrm);
     lock(mrm);
-    (void)memcpy(&mrm->lastMcastProd, sig, sizeof(signaturet));
-    mrm->sigSet = true;
-    mrm->modified = true;
+		(void)memcpy(&mrm->lastMcastProd, sig, sizeof(signaturet));
+		mrm->sigSet = true;
+		mrm->modified = true;
     unlock(mrm);
-    return true;
 }
 
 /**
@@ -1268,10 +1279,10 @@ mrm_clearAllMissedFiles(
  * requested-but-not-received queue is tried first; then the
  * missed-but-not-requested queue. Thread-safe.
  *
- * @param[in] mrm     The multicast receiver memory.
- * @param[in] iProd   The index of the missed product.
- * @retval    true    Such an index exists. `*iProd` is set.
- * @retval    false   No such index (the queues are empty).
+ * @param[in]  mrm     The multicast receiver memory.
+ * @param[out] iProd   The index of the missed product.
+ * @retval     true    Such an index exists. `*iProd` is set.
+ * @retval     false   No such index (the queues are empty).
  */
 bool
 mrm_getAnyMissedFileNoWait(

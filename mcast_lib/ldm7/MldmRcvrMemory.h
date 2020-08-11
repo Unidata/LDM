@@ -89,7 +89,7 @@ mrm_close(
  * @retval    false  Failure. `log_add()` called. The multicast receiver
  *                   memory is unmodified. Thread-safe.
  */
-bool
+void
 mrm_setLastMcastProd(
     McastReceiverMemory* const restrict mrm,
     const signaturet                    sig);
@@ -125,10 +125,10 @@ mrm_clearAllMissedFiles(
  * requested-but-not-received queue is tried first; then the
  * missed-but-not-requested queue. Thread-safe.
  *
- * @param[in] mrm     The multicast receiver memory.
- * @param[in] iProd   The index of the missed product.
- * @retval    true    Such an index exists. `*iProd` is set.
- * @retval    false   No such index (the queues are empty).
+ * @param[in]  mrm     The multicast receiver memory.
+ * @param[out] iProd   The index of the missed product.
+ * @retval     true    Such an index exists. `*iProd` is set.
+ * @retval     false   No such index (the queues are empty).
  */
 bool
 mrm_getAnyMissedFileNoWait(
