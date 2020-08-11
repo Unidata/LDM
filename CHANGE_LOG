@@ -1,4 +1,4 @@
-6.13.12.64	2020-07-31T13:24:58-0600
+6.13.12.65	2020-08-11T12:13:16-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -168,6 +168,9 @@
             * Moved test_connection_7_svc to Up7
             * Added periodic heartbeat to upstream LDM7
             * Improved some log messages
+            * MldmRcvrMemory.c: Replaced searching of YAML mapping with
+              streaming
+            * Down7.c: Improved commentary 
         FMTP:
             * fmtpSendv3:
                 * Improved debug logging
@@ -187,7 +190,7 @@
                   reception thread to adding message to retransmission queue on
                   that thread to obviate deadlock between that thread and
                   sender's retransmission thread.
-                * Corrected computation of missed packets
+                * Improved handling of missed multicast packets
         vlanUtil(1):
             * Replaced use of gawk(1)-only bit operations with shell's for
               portability
