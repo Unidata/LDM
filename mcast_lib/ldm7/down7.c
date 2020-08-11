@@ -2329,8 +2329,14 @@ downlet_missedProduct(const FmtpProdIndex iProd)
 void
 downlet_lastReceived(const prod_info* const last)
 {
-    // Calls mrm_getLastMcastProd()
+    // Might start the backlogger, which would call mrm_getLastMcastProd()
     int status = mcastRcvr_lastReceived(last->signature, down7.mrm);
+
+    /*
+	 * Because the backlogger might have just been started, the following *must*
+	 * be after the above
+	 */
+	mrm_setLastMcastProd(down7.mrm, last->signature);
 
     if (status) {
         mutex_lock(&downlet.mutex);
@@ -2339,13 +2345,6 @@ downlet_lastReceived(const prod_info* const last)
 
         (void)downlet_stopTasks();
         log_flush_error();
-    }
-    else {
-        /*
-         * Because mcastRcvr_lastReceived() calls mrm_getLastMcastProd(), the
-         * following *must* be after mcastRcvr_lastReceived()
-         */
-        mrm_setLastMcastProd(down7.mrm, last->signature);
     }
 }
 
