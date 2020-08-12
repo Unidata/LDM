@@ -1,4 +1,4 @@
-6.13.12.65	2020-08-11T12:35:46-0600
+6.13.12.66	2020-08-12T13:43:35-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -270,6 +270,8 @@
             * Added to distribution (but neither built nor installed)
         * deployAll(1): Enabled California and Maryland
         * Disabled "make installcheck" in "mcast_lib/ldm7" on Travis CI
+        * ./push: Corrected by adding "origin" and "master" argument to "git
+          push"
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
