@@ -48,7 +48,7 @@ static unsigned       seq_start = 0;
 static const long     ONE_MILLION = 1000000;
 static unsigned long  max_prod_size = 200000;
 static unsigned long  num_prods = 50000;
-static unsigned long  inter_prod_gap = 5000000; // 5 ms
+static unsigned long  inter_prod_gap = 50000000; // 50 ms
 static unsigned short seed[3];
 
 static bool pti_decodeCommandLine(
@@ -507,7 +507,7 @@ static bool pti_generate_products(void)
     info->ident = ident;
     (void)memset(info->signature, 0, sizeof(info->signature));
 
-    for (unsigned i = seq_start; i < seq_start + num_prods; i++) {
+    for (unsigned i = seq_start; i != seq_start + num_prods; i++) {
         if (i != seq_start) {
             struct timespec duration;
             duration.tv_sec = 0;
