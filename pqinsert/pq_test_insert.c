@@ -48,7 +48,7 @@ static unsigned       seq_start = 0;
 static const long     ONE_MILLION = 1000000;
 static unsigned long  max_prod_size = 200000;
 static unsigned long  num_prods = 50000;
-static unsigned long  inter_prod_gap = 50000000; // 50 ms
+static unsigned long  inter_prod_gap = 100000000; // 0.1 s
 static unsigned short seed[3];
 
 static bool pti_decodeCommandLine(
@@ -507,15 +507,7 @@ static bool pti_generate_products(void)
     info->ident = ident;
     (void)memset(info->signature, 0, sizeof(info->signature));
 
-    for (unsigned i = seq_start; i != seq_start + num_prods; i++) {
-        if (i != seq_start) {
-            struct timespec duration;
-            duration.tv_sec = 0;
-            duration.tv_nsec = inter_prod_gap;
-            int status = nanosleep(&duration, NULL);
-            log_assert(status == 0 || errno == EINTR);
-        }
-
+    for (unsigned i = seq_start; i != seq_start + num_prods; ++i) {
         const unsigned long size = max_prod_size*drand48() + 0.5;
         const ssize_t       nbytes = snprintf(ident, sizeof(ident), "%u", i);
         log_assert(nbytes >= 0 && nbytes < sizeof(ident));
@@ -534,6 +526,14 @@ static bool pti_generate_products(void)
         }
         log_info_q("Inserted: prodInfo=\"%s\"",
                 s_prod_info(buf, sizeof(buf), info, 1));
+
+        if (inter_prod_gap) {
+            struct timespec duration;
+            duration.tv_sec = 0;
+            duration.tv_nsec = inter_prod_gap;
+            int status = nanosleep(&duration, NULL);
+            log_assert(status == 0 || errno == EINTR);
+        }
     }
 
     return status == 0;
