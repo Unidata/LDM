@@ -169,13 +169,16 @@ static pid_t reap(
             if (umm_remove(wpid) == LDM7_NOENT) // Multicast LDM senders
                 log_clear();
 #endif
-            int         exitStatus = WEXITSTATUS(status);
-            log_level_t level = exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-            log_log_q(level,
-                    nbytes <= 0
-                        ? "child %ld exited with status %d"
-                        : "child %ld exited with status %d: %*s",
+            int exitStatus = WEXITSTATUS(status);
+			if (nbytes <= 0) {
+				log_add("Child %ld exited with status %d",
+						(long)wpid, exitStatus);
+			}
+			else {
+			    log_add("Child %ld exited with status %d: %*s",
                     (long)wpid, exitStatus, nbytes, command);
+			}
+			log_flush(exitStatus ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO);
         }
 #endif /*WIFEXITED*/
     }
