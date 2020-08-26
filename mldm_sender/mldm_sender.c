@@ -611,7 +611,7 @@ mls_mcastProd(
     off_t offset = *(off_t*)arg;
 
     if (fmtpSender_rcvrCount(fmtpSender) == 0) {
-        log_info("Product not multicast because no receivers");
+        log_debug("Product not multicast because no receivers");
         status = LDM7_NORCVR;
     }
     else {
