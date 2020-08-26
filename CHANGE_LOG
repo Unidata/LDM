@@ -1,3 +1,21 @@
+6.13.12.67	2020-08-26T13:31:31-0600
+    Top-level ldmd(1):
+        * Replaced log_log_q() with loc_add() & log_flush() in
+          "Child ... exited with status ..." messages.
+
+    pqact(1):
+        * Replaced log_error_q() with log_add() & log_flush().
+        * Improved comment.
+
+    pq_test_insert(1):
+        * Increased inter-product gap to 0.1 s
+        * Moved sleep from beginning to end of insertion-loop
+
+    Multicast:
+        mldm_sender(1):
+            * Demoted "Product not multicast because not receivers from INFO to
+              DEBUG
+
 6.13.12.66	2020-08-12T13:43:35-0600
     Installation:
         Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
