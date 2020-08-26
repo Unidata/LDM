@@ -113,8 +113,8 @@ cleanup(void)
 
     if (done) {
         /*
-         * We are not in the interrupt context, so these can be performed
-         * safely.
+         * This function wasn't called by a signal handler, so these can be
+         * performed safely.
          */
         fl_closeAll();
 
@@ -677,8 +677,9 @@ main(int ac, char *av[])
                     fl_closeLru(FL_NOTRANSIENT);
                 }
                 else {
-                    log_error_q("pq_next() failure: %s (errno = %d)",
+                    log_add("pq_next() failure: %s (errno = %d)",
                         strerror(status), status);
+                    log_flush_error();
                     exit(EXIT_FAILURE);
                     /*NOTREACHED*/
                 }
