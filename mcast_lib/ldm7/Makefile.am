@@ -12,10 +12,9 @@ EXTRA_DIST              = down7.hin \
 			  prod_index_queue.hin \
 			  sock_funcs.c sock_funcs.hin \
 			  up7.hin \
-                          send_test.c recv_test.c send_recv_test.c \
-                          send_recv_test.h
-send_test_SOURCES	= send_test.c send_recv_test.c send_recv_test.h
-recv_test_SOURCES	= recv_test.c send_recv_test.c send_recv_test.h
+			  send_test.c recv_test.c send_recv_test.c \
+			  send_recv_test.h \
+			  crypt_test
 BUILT_SOURCES           = down7.h \
 			  MldmRcvr.h \
 			  MldmRcvrMemory.h \
@@ -79,6 +78,23 @@ up7.h:			up7.hin up7.c
 
 check_PROGRAMS		=
 TESTS			=
+
+crypt_test: crypt_test_pub crypt_test_sub
+
+crypt_test_pub_SOURCES	= crypt_test_pub.c
+crypt_test_pub_CPPFLAGS = -I/usr/include/openssl11
+crypt_test_pub_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
+
+crypt_test_sub_SOURCES	= crypt_test_sub.c
+crypt_test_sub_CPPFLAGS = -I/usr/include/openssl11
+crypt_test_sub_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
+
+check_PROGRAMS		+= crypt_test_pub crypt_test_sub
+#TESTS			+= crypt_test
+
+send_test_SOURCES	= send_test.c send_recv_test.c send_recv_test.h
+recv_test_SOURCES	= recv_test.c send_recv_test.c send_recv_test.h
+check_PROGRAMS		+= send_test recv_test
 
 server_test_SOURCES	= server_test.c
 server_test_LDADD	= -lpthread

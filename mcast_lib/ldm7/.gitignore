@@ -9,3 +9,5 @@ Executor_test
 Future_test
 /a.out
 MldmRcvrMemory.h
+/crypt_test_pub
+/crypt_test_sub
