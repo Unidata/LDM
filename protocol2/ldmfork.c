@@ -132,9 +132,14 @@ int ensure_close_on_exec(
  * necessary before and after the fork to ensure correct behavior.  Terminates
  * the child process if the fork() was successful but an error occurs.
  *
- * @retval -1  Failure. "log_add()" called.
+ * @retval -1  Failure. "log_add()" called. `errno` will be one of
+ *               - EAGAIN  The system lacked the necessary resources to create
+ *                         another process, or the system-imposed limit on the
+ *                         total number of processes under execution system-wide
+ *                         or by a single user {CHILD_MAX} would be exceeded.
+ *               - ENOMEM  Insufficient storage space is available.
  * @retval  0  Success. The calling process is the child.
- * @return              PID of child process. The calling process is the parent.
+ * @return     PID of child process. The calling process is the parent.
  */
 pid_t ldmfork(void)
 {
