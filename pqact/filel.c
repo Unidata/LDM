@@ -537,8 +537,8 @@ fl_getEntry(
     else {
         log_assert(maxEntries > 0);
 
-        if (thefl->size >= maxEntries)
-            fl_closeLru(0);
+        while (thefl->size >= maxEntries)
+            fl_closeLru(0); // 0 => unconditional removal
 
         entry = entry_new(type, argc, argv);
         if (NULL != entry) {
@@ -1000,18 +1000,13 @@ static int unio_open(
     path = av[ac - 1];
     entry->handle.fd = -1;
 
-    writeFd = mkdirs_open(path, flags, 0666);
+    while ((writeFd = mkdirs_open(path, flags, 0666)) == -1 &&
+			(errno == EMFILE || errno == ENFILE) && thefl->size > 0)
+		fl_closeLru(0); // 0 => unconditional removal
 
     if (-1 == writeFd) {
-        if (errno == EMFILE || errno == ENFILE) {
-            /*
-             * Too many open files.
-             */
-            fl_closeLru(0);
-            fl_closeLru(0);
-        }
-
-        log_add_syserr("Couldn't open file \"%s\"", path);
+    	log_clear();
+        log_syserr("Couldn't open file \"%s\"", path);
     }
     else {
         /*
@@ -1453,19 +1448,13 @@ static int stdio_open(
 
     path = av[ac - 1];
 
-    fd = mkdirs_open(path, flags, 0666);
+    while ((fd = mkdirs_open(path, flags, 0666)) == -1 &&
+			(errno == EMFILE || errno == ENFILE) && thefl->size > 0)
+		fl_closeLru(0); // 0 => unconditional removal
 
     if (-1 == fd) {
-        if (errno == EMFILE || errno == ENFILE) {
-            /*
-             * Too many open files.
-             */
-            fl_closeLru(0);
-            fl_closeLru(0);
-        }
-
-        log_add_syserr("mkdirs_open: %s", path);
-        log_flush_error();
+    	log_clear();
+        log_syserr("mkdirs_open: %s", path);
     }
     else {
         /*
@@ -1772,15 +1761,13 @@ static int pipe_open(
      * Create a pipe into which the parent pqact(1) process will write one or
      * more data-products and from which the child decoder process will read.
      */
-    if (-1 == pipe(pfd)) {
-        if (errno == EMFILE || errno == ENFILE) {
-            /*
-             * Too many open files.
-             */
-            fl_closeLru(0);
-            fl_closeLru(0);
-        }
+    int status;
+    while ((status = pipe(pfd)) == -1 && (errno == EMFILE || errno == ENFILE) &&
+    		thefl->size > 0)
+		fl_closeLru(0); // 0 => unconditional removal
 
+    if (status == -1) {
+    	log_clear();
         log_syserr("Couldn't create pipe");
     }
     else {
@@ -1789,15 +1776,21 @@ static int pipe_open(
          * of an exec(2) family function because no child processes should
          * inherit it.
          */
-        int status = ensureCloseOnExec(pfd[1]);
+        status = ensureCloseOnExec(pfd[1]);
         if (status) {
             log_error_q("Couldn't set write-end of pipe to close on exec()");
         }
         else {
-            pid_t pid = ldmfork();
+            pid_t pid;
+
+            while ((pid = ldmfork()) == -1 && errno == EAGAIN &&
+            		thefl->size > 0) {
+				fl_closeLru(0); // Too many child processes
+				log_clear();
+            }
 
             if (-1 == pid) {
-                log_error_q("Couldn't fork PIPE process");
+                log_syserr("Couldn't fork(2) PIPE process");
             }
             else {
                 if (0 == pid) {
@@ -2491,13 +2484,12 @@ static int ldmdb_open(
      * on exec(), but that doesn't appear to be possible.
      */
 
-    db = gdbm_open(path, dblocksize, read_write, 0664, ldmdb_fatal);
+    while ((db = gdbm_open(path, dblocksize, read_write, 0664, ldmdb_fatal)) ==
+    		NULL && (errno == EMFILE || errno == ENFILE) && thefl->size > 0)
+		fl_closeLru(0); // 0 => unconditional removal
+
     if (db == NULL ) {
-        if (errno == EMFILE || errno == ENFILE) {
-            /* Too many open files */
-            fl_closeLru(0);
-            fl_closeLru(0);
-        }
+    	log_clear();
         log_syserr("gdbm_open: %s", path);
         return -1;
     }
