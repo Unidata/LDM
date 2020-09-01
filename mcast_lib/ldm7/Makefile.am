@@ -14,7 +14,7 @@ EXTRA_DIST              = down7.hin \
 			  up7.hin \
 			  send_test.c recv_test.c send_recv_test.c \
 			  send_recv_test.h \
-			  crypt_test
+			  hmac_test text
 BUILT_SOURCES           = down7.h \
 			  MldmRcvr.h \
 			  MldmRcvrMemory.h \
@@ -79,18 +79,18 @@ up7.h:			up7.hin up7.c
 check_PROGRAMS		=
 TESTS			=
 
-crypt_test: crypt_test_pub crypt_test_sub
+hmac_test: publisher subscriber text
 
-crypt_test_pub_SOURCES	= crypt_test_pub.c
-crypt_test_pub_CPPFLAGS = -I/usr/include/openssl11
-crypt_test_pub_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
+publisher_SOURCES	= publisher.c
+publisher_CPPFLAGS 	= -I/usr/include/openssl11
+publisher_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
 
-crypt_test_sub_SOURCES	= crypt_test_sub.c
-crypt_test_sub_CPPFLAGS = -I/usr/include/openssl11
-crypt_test_sub_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
+subscriber_SOURCES	= subscriber.c
+subscriber_CPPFLAGS 	= -I/usr/include/openssl11
+subscriber_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
 
-check_PROGRAMS		+= crypt_test_pub crypt_test_sub
-#TESTS			+= crypt_test
+check_PROGRAMS		+= publisher subscriber
+TESTS			+= hmac_test
 
 send_test_SOURCES	= send_test.c send_recv_test.c send_recv_test.h
 recv_test_SOURCES	= recv_test.c send_recv_test.c send_recv_test.h
