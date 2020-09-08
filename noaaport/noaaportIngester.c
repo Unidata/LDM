@@ -57,13 +57,13 @@ typedef struct {
     struct timeval    reportTime;
 } StatsStruct;
 
-static const int	        USAGE_ERROR = 1;
-static const int	        SYSTEM_FAILURE = 2;
-static const int	        SCHED_POLICY = SCHED_FIFO;
-static Fifo*		        fifo;
-static pthread_t                reporterThread = {0};
-int			        inflateFrame;
-int			        fillScanlines;
+static const int USAGE_ERROR = 1;
+static const int SYSTEM_FAILURE = 2;
+static const int SCHED_POLICY = SCHED_FIFO;
+static Fifo*     fifo;
+static pthread_t reporterThread = {0};
+int              inflateFrame;
+int			     fillScanlines;
 
 /**
  * Decodes the command-line.
@@ -514,6 +514,52 @@ getInputFd(
 }
 
 /**
+ * Try to create a thread with non-default scheduling. If that fails then create
+ * a default thread.
+ *
+ * This function exists solely to accommodate "security" software like RHEL's
+ * Insights Client, which, by default, will prevent this program from changing
+ * its scheduling -- even if the process is owned by root.
+ *
+ * @param[out] thread   Thread. Set only on success.
+ * @param[in]  name     Name of the thread
+ * @param[in]  attr     Thread attributes with non-default scheduling
+ * @param[in]  func     Thread start-function
+ * @param[in]  arg      Optional argument to start-function
+ * @retval     `true`   Success. `*thread` is set. `log_warning()` called if the
+ *                      thread couldn't be created with the desired scheduling.
+ * @retval     `false`  Failure. `log_add()` called.
+ */
+static bool
+createThread(
+		pthread_t*            thread,
+		const char*           name,
+		const pthread_attr_t* attr,
+		void*               (*func)(void*),
+		void*                 arg)
+{
+	int status = pthread_create(thread, attr, func, arg);
+	if (status) {
+		if (status == EPERM) {
+			status = pthread_create(thread, NULL, func, arg); // Default attributes
+			if (status) {
+				log_add_errno(status, "Couldn't create %s thread", name);
+			}
+			else {
+				log_add_errno(EPERM, "Couldn't create %s thread with desired "
+						"scheduling", name);
+				log_flush_warning();
+			}
+		}
+		else {
+			log_add_errno(status, "Couldn't create %s thread", name);
+		}
+	}
+
+	return status == 0;
+}
+
+/**
  * Creates a product-maker and starts it on a new thread.
  *
  * @param[in]  attr            Pointer to thread-creation attributes
@@ -540,16 +586,14 @@ static int spawnProductMaker(
         log_add("Couldn't create new LDM product-maker");
     }
     else {
-        status = pthread_create(thread, attr, pmStart, pm);
-
-        if (status) {
-            log_errno(status, "Couldn't start product-maker thread");
-            status = SYSTEM_FAILURE;
-        }
-        else {
+        if (!createThread(thread, "product-maker", attr, pmStart, pm)) {
+			pmFree(pm);
+			status = SYSTEM_FAILURE;
+		}
+		else {
             *productMaker = pm;
-        }
-    }
+		}
+    } // `pm` allocated
 
     return status;
 }
@@ -874,7 +918,7 @@ initThreadAttr(
             log_warning_q("Can't adjust thread scheduling due to lack of support from "
                     "the environment");
         #else
-            struct sched_param  param;
+            struct sched_param  param = {}; // 2020-09-03
 
             param.sched_priority = priority;
 
@@ -983,6 +1027,8 @@ startReader(
              * fragmentation? That seems inconsistent, however, with
              * dvbs_multicast(1) use of 10000 bytes in its call to recvfrom(2).
              * 2015-01-3.
+             *
+             * 2020-09-05: NOAAPort frames are 4000 bytes => IP reassembly.
              */
             Reader* rdr = readerNew(fifo,
                     isMcastInput ? 65507 : sysconf(_SC_PAGESIZE));
@@ -992,18 +1038,14 @@ startReader(
                 status = SYSTEM_FAILURE;
             }
             else {
-                status = pthread_create(thread, &attr, readerStart, rdr);
-
-                if (status) {
-                    log_add_errno(status,
-                            "Couldn't create input-reader thread");
+                if (!createThread(thread, "input-reader", &attr, readerStart,
+                		rdr)) {
                     readerFree(rdr);
-                    status = SYSTEM_FAILURE;
-                }
-                else {
+                	status = SYSTEM_FAILURE;
+				}
+				else {
                     *reader = rdr;
-                    status = 0;
-                } // Reader thread created
+				}
             } // `rdr` is set
         blockTermSignals();
 
