@@ -121,8 +121,7 @@ cleanup(void)
         if (pq)
             (void)pq_close(pq);
 
-        if (tvCmp(palt_last_insertion, TS_ZERO, <) ||
-				tvCmp(palt_last_insertion, TS_ENDT, >)) {
+        if (tvIsNone(palt_last_insertion)) {
             log_notice("No product was processed");
         }
         else {
