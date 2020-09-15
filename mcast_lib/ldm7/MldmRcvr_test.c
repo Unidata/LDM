@@ -119,7 +119,7 @@ test_mdl_createAndExecute()
     Mlr*                 mdl;
 
 
-    fmtpReceiver_execute_ExpectAndReturn(NULL, 0, NULL);
+    fmtpReceiver_run_ExpectAndReturn(NULL, 0, NULL);
     status = mlr_start(mdl);
     log_flush_info();
     OP_ASSERT_EQUAL_INT(LDM7_SHUTDOWN, status);

@@ -453,7 +453,7 @@ mlr_run(Mlr* const mlr)
         status = LDM7_INVAL;
     }
     else {
-        status = fmtpReceiver_execute(mlr->receiver);
+        status = fmtpReceiver_run(mlr->receiver);
 
         if (mlr->done || status == 0) {
             status = LDM7_SHUTDOWN;
