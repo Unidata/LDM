@@ -1,3 +1,40 @@
+6.13.12.68	2020-09-15T10:07:13-0600
+    pqact(1):
+        * filel.c:
+            * Made the removal of the least-recently-used action (and the
+              comcomittant closure of its open file descriptor) repeat until the
+              current action can succeed or a failure occurs
+            * Added use of the above if a child process can't be fork(2)ed for a
+              decoder
+            * Reduced the amount of time that an unused action can have an open
+              file descriptor from 24 hours to 6 hours
+        * Simplified decision on whether or not to write a new state-file by
+          using tsIsNone() on the insertion-time of the last, successfully-
+          processed product
+
+    NOAAPortIngester(1):
+        * Modified thread-creation to prevent the program from immediately
+          terminating if the RHEL Insights Client security package is running.
+          That package will, by default, prevent the creation of a thread with
+          non-default scheduling -- even if the process is owned by root. The
+          program will now try to create threads with high-priority, real-time 
+          scheduling but will create default threads and log a warning if it
+          can't. The default threads will increase the risk of missing
+          NOAAPort packets.
+
+    Misc:
+        * ldmfork(3): Documented `errno` values
+
+    Developer:
+        * DeployAll(1): Added ldm7@idc-uva.dynes.virginia.edu
+
+    Multicast:
+        * Replaced HMAC test with latest code from Hongying
+        * UdpRecv: created
+        * fmtpRecvv3:
+            * Adapted to use UdpRecv
+            * Modified to only consider valid FMTP messages
+
 6.13.12.67	2020-08-26T13:31:31-0600
     Top-level ldmd(1):
         * Replaced log_log_q() with loc_add() & log_flush() in
