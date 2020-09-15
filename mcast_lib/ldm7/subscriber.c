@@ -35,20 +35,17 @@ static size_t readMsg(
 
 
 
-int main(int argc, char **argv) {
-
-
+int main(int argc, char **argv)
+{
 	/* Argument reminder */
 	if (argc < 2) {
 		printf("Usage: %s [FILE]\n", argv[0]);
 		return 1;
 	}
 
-
 	/* Create and set up the socket */
 	int sock = 0;    
 	sock = create_socket(50000);
-
     
 	/* Create public-private key pair */
 
@@ -96,11 +93,13 @@ int main(int argc, char **argv) {
 	/* https://www.openssl.org/docs/man1.1.0/man3/BIO_pending.html                                */
 	/* return the number of pending characters in the BIOs read and write buffers.                */
 	/**********************************************************************************************/
-	size_t pub_len = BIO_pending(pub);
-	char *pub_key = (char *)malloc(pub_len + 1);
-	BIO_read(pub, pub_key, pub_len);
+	size_t pub_len = BIO_pending(pub); // Doesn't include a terminating 0
+	char *pub_key = (char *)malloc(pub_len);
+	pub_key[pub_len] = 1;
+	BIO_read(pub, pub_key, pub_len); // Doesn't 0-terminate
+	printf("pub_len=%zu, pub_key[pub_len]=0x%x\n", pub_len, pub_key[pub_len]);
 
-	printf("%s\n", pub_key);
+	printf("%.*s\n", (int)pub_len, pub_key);
 
 
 	/* Clean up */
@@ -129,7 +128,7 @@ int main(int argc, char **argv) {
 	uint8_t decrypt[1500];
 
 	/**********************************************************************************************/
-	/* iint RSA_private_decrypt(int flen, const unsigned char *from,                              */
+	/* int RSA_private_decrypt(int flen, const unsigned char *from,                              */
     /* 			unsigned char *to, RSA *rsa, int padding);                                        */
 	/* https://www.openssl.org/docs/man1.0.2/man3/RSA_private_decrypt.html                        */
 	/* RSA_private_decrypt() decrypts the flen bytes at from using the private key rsa and        */
@@ -140,7 +139,7 @@ int main(int argc, char **argv) {
 	/* returns the size of the recovered plaintext.                                               */
 	/**********************************************************************************************/
 
-	ret = RSA_private_decrypt(RSA_size(rsa), buff, decrypt, rsa, padding);
+	ret = RSA_private_decrypt(encryptLen, buff, decrypt, rsa, padding);
 	if(ret == -1) {
 		printf("ERROR decrypting\n");
 		fprintf(stderr, "%s\n", ERR_error_string(ERR_get_error(), NULL));
