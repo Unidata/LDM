@@ -511,8 +511,6 @@ init(   struct SVCXPRT* const restrict    xprt,
                     s_feedtypet(reducedFeed));
         }
         else {
-        	subscribed = true;
-
         	if (mi_new(&mcastInfo, reducedFeed,
                     isa_toString(smi_getMcastGrp(smi)),
                     isa_toString(smi_getFmtpSrvr(smi)))) {
@@ -528,11 +526,9 @@ init(   struct SVCXPRT* const restrict    xprt,
                 }
             } // Multicast information initialized
 
-            if (status) {
+            if (status)
                 (void)umm_unsubscribe(reducedFeed,
                         cidrAddr_getAddr(&fmtpClntCidr));
-                subscribed = false;
-            }
         } // `umm_subscribe()` successful
     } // Client is allowed to receive something
 
@@ -1046,22 +1042,31 @@ subscribe_7_svc(
     log_notice("Incoming subscription request from %s:%u for feed %s",
             remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
 
-    static SubscriptionReply reply;
-    int                      status = subscribe(xprt, request, &reply);
-
-    if (status) {
-		replyPtr = NULL;
-        log_flush_error();
+    if (subscribed) {
+    	log_error("%s is already subscribed", remote_name());
+		replyPtr = NULL; // Don't reply
         svcerr_systemerr(xprt); // Tell the client
         log_debug("Returning NULL");
     }
     else {
-    	replyPtr = &reply;
-    	if (log_is_enabled_debug) {
-			char* const subRepStr = subRep_toString(replyPtr);
-			log_debug("Returning %s", subRepStr);
-			free(subRepStr);
-		}
+        static SubscriptionReply reply;
+        int                      status = subscribe(xprt, request, &reply);
+
+        if (status) {
+            replyPtr = NULL; // Don't reply
+            log_flush_error();
+            svcerr_systemerr(xprt); // Tell the client
+            log_debug("Returning NULL");
+        }
+        else {
+            replyPtr = &reply;
+            if (log_is_enabled_debug) {
+                char* const subRepStr = subRep_toString(replyPtr);
+                log_debug("Returning %s", subRepStr);
+                free(subRepStr);
+            }
+            subscribed = true;
+        }
     }
 
     return replyPtr;
