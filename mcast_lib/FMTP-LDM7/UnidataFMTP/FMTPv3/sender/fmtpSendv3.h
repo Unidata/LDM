@@ -39,7 +39,9 @@
 #include <list>
 #include <map>
 #include <set>
+#include <utility>
 
+#include "../hmac.h"
 #include "ProdIndexDelayQueue.h"
 #include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
@@ -98,9 +100,10 @@ class fmtpSendv3
         int          iovIndex;                 /// Current `iovec` element
 
         void  reset();
-        void  nextBufSeg();
+        void  nextBufSeg(); ///< Finalizes current segment and starts new one
         void  vetSeg();
-        void  add(const void* value, unsigned nbytes);
+        void  add(const void* value,
+        		  unsigned nbytes);
 
     protected:
         void add(const uint16_t value);
@@ -111,7 +114,16 @@ class fmtpSendv3
 
         UdpSerializer(UdpSend* udpSend);
 
-        void encode(const void* bytes, unsigned nbytes);
+        void encode(const void* bytes,
+        		    unsigned    nbytes);
+
+        /**
+         * Returns the current I/O vector for the output.
+         *
+         * @return Current I/O vector. First element is the start of the
+         *         vector and second element is the vector's size
+         */
+        std::pair<const struct iovec*, unsigned> getIoVec() const noexcept;
 
         void flush();
     };
@@ -331,15 +343,14 @@ private:
     SilenceSuppressor*  suppressor;
     /* sender maximum retransmission timeout */
     double              tsnd;
+    /// Serializes objects for multicasting
+    UdpSerializer       udpSerializer;
 
     /* member variables for measurement use only */
     bool                txdone;
     std::chrono::high_resolution_clock::time_point start_t;
     std::chrono::high_resolution_clock::time_point end_t;
     /* member variables for measurement use ends */
-
-    /// Serializes objects for multicasting
-    UdpSerializer       udpSerializer;
 };
 
 

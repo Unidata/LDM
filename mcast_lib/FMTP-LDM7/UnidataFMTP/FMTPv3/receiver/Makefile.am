@@ -10,7 +10,8 @@ EXTRA_DIST		= Makefile_recv
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= TcpRecv.cpp TcpRecv.h fmtpRecvv3.cpp fmtpRecvv3.h \
 			  RecvProxy.h ProdSegMNG.cpp ProdSegMNG.h Measure.cpp \
-			  Measure.h
+			  Measure.h \
+			  UdpRecv.cpp UdpRecv.h
 lib_la_CPPFLAGS		= -DLDM_LOGGING -I$(srcdir)/.. \
 			  -I$(top_srcdir)/../../../log \
 			  -I$(top_srcdir)/../../..

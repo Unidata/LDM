@@ -172,7 +172,7 @@ void fmtpSendv3::UdpSerializer::encode(
         unsigned    nbytes)
 {
     if (nbytes) {
-        nextBufSeg();
+        nextBufSeg(); // Finalizes current segment
         vetSeg();
 
         iovec[iovIndex].iov_base = const_cast<void*>(bytes);
@@ -180,6 +180,12 @@ void fmtpSendv3::UdpSerializer::encode(
 
         ++iovIndex;
     }
+}
+
+std::pair<const struct iovec*, unsigned> fmtpSendv3::UdpSerializer::getIoVec()
+		const noexcept
+{
+	return std::pair<const struct iovec*, unsigned>(iovec, iovIndex);
 }
 
 void fmtpSendv3::UdpSerializer::flush()
@@ -219,22 +225,31 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
+    prodIndex(initProdIndex),
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     notifier(notifier),
-    prodIndex(initProdIndex),
+    timerDelayQ{},
+    coor_t(),
+    timer_t(),
+    retxThreadList{},
+    linkmtx{},
     linkspeed(0),
     exitMutex(),
     except(),
-    coor_t(),
-    timer_t(),
-    tsnd(tsnd),
-    txdone(false),
-    /* Coverity Scan #1: Fix #1: Initialize notifyprodidx, suppressor to 0 as product index*/
+    rateshaper{},
+    notifyprodmtx{},
+    notifycvmtx{},
     notifyprodidx(0),
+    notify_cv{},
+    memrelease_cv{},
     suppressor(0),
-    udpSerializer{udpsend}
+    tsnd(tsnd),
+    udpSerializer{udpsend},
+    txdone(false),
+    start_t{},
+    end_t{}
 {
 }
 
@@ -371,12 +386,12 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         if (metadata) {
             if (AVAIL_BOP_LEN < metaSize)
                 throw std::runtime_error(
-                        "fmtpSendv3::SendBOPMessage(): metaSize too large");
+                        "fmtpSendv3::SendProduct(): metaSize too large");
         }
         else {
             if (metaSize)
                 throw std::runtime_error(
-                        "fmtpSendv3::SendBOPMessage(): Non-zero metaSize");
+                        "fmtpSendv3::SendProduct(): Non-zero metaSize");
         }
 
         /* Add a retransmission metadata entry */
@@ -1014,8 +1029,8 @@ void fmtpSendv3::retransBOP(
     /* Set the FMTP packet header. */
     sendheader.prodindex  = htonl(recvheader->prodindex);
     sendheader.seqnum     = 0;
-    sendheader.payloadlen = htons(retxMeta->metaSize +
-                                  (FMTP_DATA_LEN - AVAIL_BOP_LEN));
+    const auto payloadlen = retxMeta->metaSize + (FMTP_DATA_LEN - AVAIL_BOP_LEN);
+    sendheader.payloadlen = htons(payloadlen);
     sendheader.flags      = htons(FMTP_RETX_BOP);
 
     /* Set the FMTP BOP message. */
@@ -1029,9 +1044,18 @@ void fmtpSendv3::retransBOP(
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
+#ifdef HMAC
+    struct iovec iov[2];
+	iov[0].iov_base = &sendheader;
+	iov[0].iov_len=sizeof(sendheader);
+	iov[1].iov_base = &bopMsg;
+	iov[1].iov_len=sizeof(payloadlen);
+	auto mac = hMacer.getHmac(iov, 2);
+#endif
+
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is correct */
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
-                               ntohs(sendheader.payloadlen));
+                               payloadlen);
     if (retval < 0) {
         throw std::runtime_error(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
@@ -1109,12 +1133,13 @@ void fmtpSendv3::retransEOP(
  * a valid value. These two parameters will be checked by the calling function
  * before being passed in.
  *
- * @param[in] prodSize       The size of the product.
- * @param[in] metadata       Application-specific metadata to be sent before the
- *                           data. May be 0, in which case no metadata is sent.
- * @param[in] metaSize       Size of the metadata in bytes. May be 0, in which
- *                           case no metadata is sent.
- * @param[in] startTime      Time product given to FMTP for transmission
+ * @param[in] prodSize        The size of the product.
+ * @param[in] metadata        Application-specific metadata to be sent before
+ *                            the data. May be `nullptr`, in which case no
+ *                            metadata is sent.
+ * @param[in] metaSize        Size of the metadata in bytes. May be 0, in which
+ *                            case no metadata is sent.
+ * @param[in] startTime       Time product given to FMTP for transmission
  * @throw std::runtime_error  if the UdpSend::SendTo() fails.
  */
 void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
@@ -1122,19 +1147,24 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const struct timespec& startTime)
 {
 #if 1
-    udpSerializer.encode(prodIndex);
-    udpSerializer.encode(static_cast<uint32_t>(0));
-    udpSerializer.encode(static_cast<uint16_t>(
+	// FMTP header:
+    udpSerializer.encode(prodIndex);                       // FmtpHeader.prodindex
+    udpSerializer.encode(static_cast<uint32_t>(0));        // FmtpHeader.seqnum
+    udpSerializer.encode(static_cast<uint16_t>(            // FmtpHeader.payloadlen
             metaSize + static_cast<uint16_t>(FMTP_DATA_LEN - AVAIL_BOP_LEN)));
-    udpSerializer.encode(static_cast<uint16_t>(FMTP_BOP));
+    udpSerializer.encode(static_cast<uint16_t>(FMTP_BOP)); // FmtpHeader.flags
 
+    // BOPMsg:
     udpSerializer.encode(static_cast<uint64_t>(startTime.tv_sec));
     udpSerializer.encode(static_cast<uint32_t>(startTime.tv_nsec));
-
     udpSerializer.encode(prodSize);
-
     udpSerializer.encode(metaSize);
     udpSerializer.encode(metadata, metaSize);
+
+#ifdef HMAC
+    auto iov = udpSerializer.getIoVec();
+    auto mac = hMacer.getHmac(iov.first, iov.second);
+#endif
 
     udpSerializer.flush();
 #else

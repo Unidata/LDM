@@ -1,0 +1,115 @@
+/**
+ * Session key cryptography.
+ *
+ *        File: SessKeyCrypt.h
+ *  Created on: Sep 2, 2020
+ *      Author: Steven R. Emmerson
+ */
+
+#ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_SESSKEYCRYPT_H_
+#define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_SESSKEYCRYPT_H_
+
+#include <cstdint>
+#include <string>
+
+#include <openssl/rsa.h>
+
+class SessKeyCrypt
+{
+protected:
+	RSA*              rsa;
+	static const int  padding = RSA_PKCS1_OAEP_PADDING;
+
+	static void initRandom(const int numBytes);
+
+public:
+	/**
+	 * Default constructs.
+	 */
+	SessKeyCrypt();
+
+	SessKeyCrypt(SessKeyCrypt& crypt) =delete;
+
+	SessKeyCrypt(SessKeyCrypt&& crypt) =delete;
+
+	/**
+	 * Destroys.
+	 */
+	~SessKeyCrypt();
+
+	SessKeyCrypt& operator=(const SessKeyCrypt& crypt) =delete;
+
+	SessKeyCrypt& operator=(const SessKeyCrypt&& crypt) =delete;
+};
+
+/**
+ * Decrypts a publisher's session key using a subscriber's private key
+ */
+class Decryptor final : public SessKeyCrypt
+{
+	std::string pubKey;
+
+public:
+	/**
+	 * Default constructs. A public/private key-pair is chosen at random.
+	 *
+	 * @throw std::runtime_error  OpenSSL failure
+	 */
+	Decryptor();
+
+	/**
+	 * Destroys.
+	 */
+	~Decryptor() =default;
+
+	/**
+	 * Returns the public key.
+	 *
+	 * @return  The public key
+	 */
+	const std::string& getPubKey() const noexcept;
+
+	/**
+	 * Decrypts a publisher's encrypted session key using the subscriber's
+	 * private key.
+	 *
+	 * @param[in] cipherText      Encrypted session key
+	 * @return                    Session key
+	 * @throw std::runtime_error  OpenSSL failure
+	 */
+	std::string decrypt(const std::string& cipherText) const;
+};
+
+/**
+ * Encrypts a publisher's session key using a subscriber's public key
+ */
+class Encryptor final : public SessKeyCrypt
+{
+public:
+	/**
+	 * Constructs.
+	 *
+	 * @param[in] pubKey          Subscriber's X.509 public-key certificate in
+	 *                            PEM format
+	 * @param[in] keyLen          Length of public key in bytes or -1 to
+	 *                            indicate the certificate is NUL-terminated
+	 * @throw std::runtime_error  OpenSSL failure
+	 */
+	Encryptor(
+			const char* pubKey,
+			const int   keyLen = -1);
+
+	/**
+	 * Encrypts a publisher's session key using the subscriber's public key.
+	 *
+	 * @param[in] sessKey         Session key to be encrypted
+	 * @param[in] keyLen          Length of the session key in bytes
+	 * @return                    Corresponding encrypted session key
+	 * @throw std::runtime_error  OpenSSL failure
+	 */
+	std::string encrypt(
+			const char* sessKey,
+			const int   keyLen) const;
+};
+
+#endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_SESSKEYCRYPT_H_ */

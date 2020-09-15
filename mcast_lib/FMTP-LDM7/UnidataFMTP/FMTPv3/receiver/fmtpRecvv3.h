@@ -50,6 +50,7 @@
 #include "ProdSegMNG.h"
 #include "RecvProxy.h"
 #include "TcpRecv.h"
+#include "UdpRecv.h"
 #include "fmtpBase.h"
 
 
@@ -160,12 +161,14 @@ private:
     /**
      * Parse BOP message and call notifier to notify receiving application.
      *
-     * @param[in] header           Header associated with the packet.
-     * @param[in] FmtpPacketData  Pointer to payload of FMTP packet.
-     * @throw std::runtime_error   if the payload is too small.
+     * @param[in] header          Header associated with the packet.
+     * @param[in] payload         Pointer to payload of FMTP packet.
+     * @retval    `true`          FMTP message is valid
+     * @retval    `false`         FMTP message is not valid
+     * @throw std::runtime_error  if the payload is too small.
      */
-    void BOPHandler(const FmtpHeader& header,
-                    const char* const  FmtpPacketData);
+    bool BOPHandler(const FmtpHeader& header,
+                    const char* const payload);
     void checkPayloadLen(const FmtpHeader& header, const size_t nbytes);
     void clearEOPStatus(const uint32_t prodindex);
     /**
@@ -259,11 +262,16 @@ private:
      *
      * @pre                       The socket contains a FMTP data-packet.
      * @param[in] header          The associated, peeked-at and decoded header.
+     * @param[in] prodptr         Destination for data
+     * @param[in] prodsize        Size of data in bytes
+     * @retval    `true`          FMTP message is valid and data was saved
+     * @retval    `false`         Failure message is not valid
      * @throw std::system_error   if an error occurs while reading the multicast
      *                            socket.
-     * @throw std::runtime_error  if the packet is invalid.
      */
-    void readMcastData(const FmtpHeader& header);
+    bool readMcastData(const FmtpHeader& header,
+    		           void* const       prodptr,
+					   const uint32_t    prodsize);
     /**
      * Requests data-packets that lie between the last previously-received
      * data-packet of the current data-product and its most recently-received
@@ -304,10 +312,12 @@ private:
      *
      * @pre                       The socket contains a FMTP data-packet.
      * @param[in] header          The associated, peeked-at and decoded header.
+     * @retval    `true`          FMTP message is valid
+     * @retval    `false`         FMTP message is not valid
      * @throw std::system_error   if an error occurs while reading the socket.
      * @throw std::runtime_error  if the packet is invalid.
      */
-    void recvMcastData(const FmtpHeader& header);
+    bool recvMcastData(const FmtpHeader& header);
     /**
      * request EOP retx if EOP is not received yet and return true if
      * the request is sent out. Otherwise, return false.
@@ -341,7 +351,6 @@ private:
     unsigned short          mcastPort;
     /* IP address of the default interface */
     std::string             ifAddr;
-    int                     mcastSock;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
     std::atomic<uint32_t>   mcastProdIndex;
@@ -389,6 +398,7 @@ private:
     std::mutex              notifyprodmtx;
     uint32_t                notifyprodidx;
     std::condition_variable notify_cv;
+    UdpRecv                 udpRecv;
 
     /* member variables for measurement use only */
     Measure*                measure;

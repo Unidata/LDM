@@ -64,6 +64,13 @@ public:
     }
 #endif
 
+    /**
+     * Encodes an array of bytes. The array must exist until `flush()` is
+     * called.
+     *
+     * @param[in] bytes   Array of bytes to be encoded
+     * @param[in] nbytes  Number of bytes in the array
+     */
     virtual void encode(const void* bytes, unsigned nbytes) =0;
 
     virtual void flush() =0;
