@@ -28,8 +28,8 @@ static size_t readMsg(
 
 
 
-int main(int argc, char **argv) {
-
+int main(int argc, char **argv)
+{
 	/* Argument reminder */
 	if (argc < 2) {
 		printf("Usage: %s [FILE]\n", argv[0]);
