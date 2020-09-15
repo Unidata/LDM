@@ -222,7 +222,7 @@ fmtpReceiver_free(
  * @retval        -1            Other failure. \c log_add() called.
  */
 int
-fmtpReceiver_execute(
+fmtpReceiver_run(
     const FmtpReceiver* const receiver)
 {
     int status;

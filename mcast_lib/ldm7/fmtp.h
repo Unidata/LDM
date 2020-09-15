@@ -41,7 +41,7 @@ int fmtpReceiver_new(
 void fmtpReceiver_free(
     FmtpReceiver*              receiver);
 
-int fmtpReceiver_execute(
+int fmtpReceiver_run(
     const FmtpReceiver*        receiver);
 
 /**
