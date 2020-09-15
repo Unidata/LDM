@@ -64,7 +64,8 @@ CLEANFILES		= *.yaml *_stub* *.map *.log *.pq *.conf *.pim *.vg *.supp \
 			  *_test *.i
 DISTCLEANFILES          = $(BUILT_SOURCES)
 
-LDADD			=  $(top_builddir)/lib/libldm.la
+LDADD			=  $(top_builddir)/lib/libldm.la \
+			   -L/usr/lib64/openssl11 -lssl -lcrypto
 
 .hin.h:
 	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
@@ -250,8 +251,8 @@ check_PROGRAMS			+= Up7Down7_test
 #TESTS				+= Up7Down7_test
 
 # Conditional because Travis can't handle it
-installcheck-local: $(bindir)/mldm_sender Down7_test Up7Down7_test
-	pwd | grep travis >/dev/null || ./Up7Down7_test >&Up7Down7_test.log
+#installcheck-local: $(bindir)/mldm_sender Down7_test Up7Down7_test
+#	pwd | grep travis >/dev/null || ./Up7Down7_test >&Up7Down7_test.log
 
 SUFFIXES:	.i .c
 
