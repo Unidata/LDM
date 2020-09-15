@@ -35,6 +35,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
@@ -248,7 +249,7 @@ killMcastSndr(void)
 static void*
 up7Srvr_run(void* const arg)
 {
-	log_info("Upstream LDM7 server started");
+	log_notice("Upstream LDM7 server started");
 
     int                     status = 0; // Success
     const int               srvrSock = *(int*)arg;
@@ -288,7 +289,7 @@ up7Srvr_run(void* const arg)
 
 			char* rmtId = sockAddrIn_format((struct sockaddr_in*)&addr);
 			CU_ASSERT_PTR_NOT_NULL(rmtId);
-			log_info("Accept()ed connection from %s on socket %d", rmtId,
+			log_notice("Accept()ed connection from %s on socket %d", rmtId,
 					srvrSock);
 			free(rmtId);
 
@@ -299,11 +300,10 @@ up7Srvr_run(void* const arg)
 			SVCXPRT* xprt = svcfd_create(sock, 0, 0);
 			CU_ASSERT_PTR_NOT_NULL_FATAL(xprt);
 			xprt->xp_raddr = *(struct sockaddr_in*)&addr;
-			xprt->xp_addrlen = addrlen;
+			xprt->xp_addrlen = sizeof(struct sockaddr_in);
 
 			// Last argument == 0 => don't register with portmapper
-			CU_ASSERT_TRUE_FATAL(svc_register(xprt, LDMPROG, 7, ldmprog_7,
-					0));
+			CU_ASSERT_TRUE_FATAL(svc_register(xprt, LDMPROG, 7, ldmprog_7, 0));
 
 			const unsigned TIMEOUT = 2*interval;
 
@@ -325,6 +325,7 @@ up7Srvr_run(void* const arg)
 				xprt = NULL;
 			}
 
+			up7_destroy();
 			svc_unregister(LDMPROG, 7);
 		} // Connection accepted
 	} // Indefinite loop
@@ -474,8 +475,6 @@ sndr_stop(Sender* const sender)
     log_debug("Joining sender thread");
     CU_ASSERT_EQUAL(pthread_join(sender->thread, NULL), 0);
 
-    log_debug("Destroying Up7 module");
-    up7_destroy();
     CU_ASSERT_EQUAL(close(sender->srvrSock), 0);
 
     log_debug("Closing product-queue");
@@ -501,17 +500,23 @@ rcvr_exec(void)
 	CU_ASSERT_NOT_EQUAL(pid, -1);
 
 	if (pid == 0) {
-		log_debug("Executing Down7_test");
 		// Child process
+		log_debug("Executing Down7_test");
+
+		char* argv[5];
+		int   argc = 0;
+		argv[argc++] = "Down7_test";
 		if (log_is_enabled_debug) {
-			execlp("./Down7_test", "Down7_test", "-x", NULL);
+			argv[argc++] = "-x";
 		}
 		else if (log_is_enabled_info) {
-			execlp("./Down7_test", "Down7_test", "-v", NULL);
+			argv[argc++] = "-v";
 		}
-		else {
-			execlp("./Down7_test", "Down7_test", NULL);
-		}
+        argv[argc++] = "-l";
+        argv[argc++] = strdup(log_get_destination());
+        argv[argc++] = NULL;
+
+        execvp("./Down7_test", argv);
 		CU_FAIL("execlp() failure");
 		exit(1);
 	}
