@@ -31,6 +31,7 @@
 #endif 
 
 #if WANT_MULTICAST
+    #include "up7.h"
     #include "down7.h"
 #endif
 #include "ldm.h"
@@ -610,14 +611,8 @@ runChildLdm(
                 status = 0;
             }
             else {
-                if (remote->printname == remote->astr) {
-                    log_add("Denying connection from [%s] because not allowed",
-                            remote->astr);
-                }
-                else {
-                    log_add("Denying connection from \"%s\" because not allowed",
-                            remote_name());
-                }
+                log_add("Denying connection from \"%s\" because not allowed",
+                        remote_name());
 
                 /*
                  * Try to tell the other guy.
