@@ -46,7 +46,6 @@
  * struct of Fmtp header
  */
 typedef struct FmtpPacketHeader {
-    //uint8_t    mac[Hmac::SIZE]; ///< Message authentication code
     uint32_t   prodindex;       ///< identify both file and memdata by prodindex
     uint32_t   seqnum;          ///< Byte-offset of payload in file
     uint16_t   payloadlen;      ///< Length of payload
