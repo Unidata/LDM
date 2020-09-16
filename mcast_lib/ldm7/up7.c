@@ -100,6 +100,7 @@ subRep_toString(const SubscriptionReply* const reply)
 /******************************************************************************
  * Upstream LDM7:
  ******************************************************************************/
+static pqueue*            prodQ = NULL;
 
 /// `umm_subscribed()` called?
 static bool               subscribed = FALSE;
@@ -129,9 +130,8 @@ static SubscriptionReply* replyPtr = NULL;
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
+ * @retval    LDM7_LOGIC   `up7_init()` hasn't been called. `log_add()` called.
  * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
- *                         called.
- * @retval    LDM7_LOGIC   The product-queue couldn't be opened. `log_add()`
  *                         called.
  * @retval    LDM7_INVAL   Number of slots in product-queue is zero. `log_add()`
  *                         called.
@@ -141,25 +141,25 @@ static SubscriptionReply* replyPtr = NULL;
 static int
 openProdIndexMap(const feedtypet feed)
 {
-	char pathname[PATH_MAX];
-	strncpy(pathname, getQueuePath(), sizeof(pathname))[sizeof(pathname)-1] = 0;
+	int status;
 
 	/*
 	 * The maximum number of entries in the product-index map should equal the
 	 * maximum number of products in the product-queue.
 	 */
-	pqueue* pq;
-	int     status = pq_open(pathname, PQ_READONLY|PQ_PRIVATE, &pq);
-	if (status) {
-		log_add_errno(status, "Couldn't open product-queue \"%s\"", pathname);
+	if (prodQ == NULL) {
+		log_add("Module isn't initialized");
 		status = LDM7_LOGIC;
 	}
 	else {
+        char pathname[PATH_MAX];
+        strncpy(pathname, pq_getPathname(prodQ), sizeof(pathname))[sizeof(pathname)-1] = 0;
+
 		char pimDir[PATH_MAX];
 		strncpy(pimDir, dirname(pathname), sizeof(pimDir));
-		// NB: Don't depend on `pathname` from here on
+		// NB: Don't depend on `pathname` from here on because of `dirname()`
 
-		status = pim_writeOpen(pimDir, feed, pq_getSlotCount(pq));
+		status = pim_writeOpen(pimDir, feed, pq_getSlotCount(prodQ));
 		if (status) {
 			log_add("Couldn't ensure existence of product-index map");
 		}
@@ -170,8 +170,6 @@ openProdIndexMap(const feedtypet feed)
 			if (status == 0)
 				pimIsOpen = true;
 		} // Product-index map exists
-
-		pq_close(pq);
 	} // Product-queue is open
 
     return status;
@@ -199,63 +197,6 @@ closeProdIndexMap()
             pimIsOpen = false;
         }
     }
-}
-
-/**
- * Ensures that the global product-queue is closed at process termination.
- * Referenced by `atexit()`.
- */
-static void
-closePq(void)
-{
-    if (pq) {
-        if (pq_close(pq)) {
-            log_error("Couldn't close global product-queue");
-        }
-        pq = NULL;
-    }
-}
-
-/**
- * Ensures that the product-queue is open for reading.
- *
- * @retval false  Failure.   `log_add()` called.
- * @retval true   Success.
- */
-static bool
-ensureProductQueueOpen(void)
-{
-    bool success;
-
-    if (pq) {
-        success = true;
-    }
-    else {
-        const char* const pqPath = getQueuePath();
-        int               status = pq_open(pqPath, PQ_READONLY, &pq);
-
-        if (status) {
-            if (PQ_CORRUPT == status) {
-                log_add("The product-queue \"%s\" is corrupt", pqPath);
-            }
-            else {
-                log_add("Couldn't open product-queue \"%s\": %s", pqPath);
-            }
-            success = false;
-        }
-        else {
-            if (atexit(closePq)) {
-                log_add_syserr("Couldn't register product-queue closing "
-                        "function");
-                success = false;
-            }
-            else {
-                success = true;
-            }
-        }
-    }
-
-    return success;
 }
 
 /**
@@ -393,7 +334,7 @@ reduceFeed(
  * @retval     LDM7_SYSTEM   System error. `log_add()` called.
  */
 static int
-init2(  struct SVCXPRT*                   xprt,
+subscribe2(  struct SVCXPRT*                   xprt,
 		const CidrAddr* const restrict    fmtpClntCidr,
         SubscriptionReply* const restrict reply)
 {
@@ -404,45 +345,36 @@ init2(  struct SVCXPRT*                   xprt,
     log_assert(fmtpClntCidr);
     log_assert(reply);
 
-    int       status;
-    status = openProdIndexMap(mcastInfo->feed);
+    int status = openProdIndexMap(mcastInfo->feed);
 
     if (status) {
         log_add("Couldn't open product-to-index map for feed %s",
                 s_feedtypet(mcastInfo->feed));
     }
     else {
-        if (!ensureProductQueueOpen()) {
-            status = LDM7_PQ;
+        status = initClient(xprt);
+
+        if (status) {
+            log_add("Couldn't create client-side RPC transport to "
+                    "downstream host %s", remote_name());
         }
         else {
-            status = initClient(xprt);
+            // Failure is ignored to enable testing
+            if (addToUldb(&xprt->xp_raddr, mcastInfo->feed))
+                log_warning("Couldn't add LDM7 process for client %s, feed "
+                        "%s to upstream LDM database", remote_name(),
+                        s_feedtypet(mcastInfo->feed));
 
-            if (status) {
-                log_add("Couldn't create client-side RPC transport to "
-                        "downstream host %s", remote_name());
-            }
-            else {
-                // Failure is ignored to enable testing
-                if (addToUldb(&xprt->xp_raddr, mcastInfo->feed))
-                    log_warning("Couldn't add LDM7 process for client %s, feed "
-                            "%s to upstream LDM database", remote_name(),
-                            s_feedtypet(mcastInfo->feed));
-
-                reply->SubscriptionReply_u.info.mcastInfo = *mcastInfo;
-                reply->SubscriptionReply_u.info.fmtpAddr = *fmtpClntCidr;
-                reply->status = LDM7_OK;
-                feedtype = mcastInfo->feed;
-                fmtpClntAddr = cidrAddr_getAddr(fmtpClntCidr);
-            } // Client-side transport created
-
-            if (status)
-                closePq();
-        } // Product-queue opened
+            reply->SubscriptionReply_u.info.mcastInfo = *mcastInfo;
+            reply->SubscriptionReply_u.info.fmtpAddr = *fmtpClntCidr;
+            reply->status = LDM7_OK;
+            feedtype = mcastInfo->feed;
+            fmtpClntAddr = cidrAddr_getAddr(fmtpClntCidr);
+        } // Client-side transport created
 
         if (status)
             closeProdIndexMap();
-    } // Product-index map is opened
+    } // Product-index map is open
 
     return status;
 }
@@ -473,10 +405,10 @@ init2(  struct SVCXPRT*                   xprt,
  * @retval     LDM7_SYSTEM  System error. `log_add()` called.
  */
 static int
-init(   struct SVCXPRT* const restrict    xprt,
-        const feedtypet                   desiredFeed,
-        const VcEndPoint* const restrict  rmtVcEnd,
-        SubscriptionReply* const restrict reply)
+subscribe(struct SVCXPRT* const restrict    xprt,
+          const feedtypet                   desiredFeed,
+          const VcEndPoint* const restrict  rmtVcEnd,
+          SubscriptionReply* const restrict reply)
 {
     log_assert(!subscribed);
     log_assert(xprt);
@@ -518,7 +450,7 @@ init(   struct SVCXPRT* const restrict    xprt,
                 status = LDM7_SYSTEM;
             }
             else {
-				status = init2(xprt, &fmtpClntCidr, reply);
+				status = subscribe2(xprt, &fmtpClntCidr, reply);
 
                 if (status) {
                     mi_free(mcastInfo);
@@ -533,33 +465,6 @@ init(   struct SVCXPRT* const restrict    xprt,
     } // Client is allowed to receive something
 
     return status;
-}
-
-/**
- * Destroys this module. Idempotent.
- */
-static void
-destroy(void)
-{
-    log_debug("Entered");
-
-	destroyClient();     // Closes socket. Idempotent
-	closePq();           // Idempotent
-	closeProdIndexMap(); // Idempotent
-
-	mi_free(mcastInfo);  // Does nothing if `mcastInfo == NULL`
-	mcastInfo = NULL;
-
-	if (subscribed) {
-		(void)umm_unsubscribe(feedtype, fmtpClntAddr);
-		subscribed = false;
-	}
-
-	log_clear();
-
-	replyPtr = NULL;
-
-    log_debug("Returning");
 }
 
 /**
@@ -627,38 +532,6 @@ runSvc(struct SVCXPRT* xprt)
     }
 
     log_debug("Returning");
-
-    return status;
-}
-
-/**
- * Possibly subscribes the remote, downstream LDM7 to a feed.
- *
- * @param[in] xprt         Server-side RPC transport
- * @param[in] request      Subscription request
- * @param[in] reply        Subscription reply
- * @retval    0            Success. `*reply` is set.
- * @retval    LDM7_LOGIC   Logic error. `log_add()` called.
- * @retval    LDM7_PQ      Couldn't open product-queue. `log_add()` called.
- * @retval    LDM7_RPC     Couldn't create client-side RPC handle. `log_add()`
- *                         called.
- * @retval    LDM7_SYSTEM  System error. `log_add()` called.
- */
-static Ldm7Status
-subscribe(
-        SVCXPRT* const restrict           xprt,
-        McastSubReq* const restrict       request,
-        SubscriptionReply* const restrict reply)
-{
-    log_debug("Entered");
-    log_assert(xprt);
-    log_assert(request);
-    log_assert(reply);
-
-	int status = init(xprt, request->feed, &request->vcEnd, reply);
-
-    if (status)
-        log_add("Couldn't initialize the upstream LDM7 module");
 
     return status;
 }
@@ -735,7 +608,7 @@ sendProduct(FmtpProdIndex iProd)
                 (unsigned long)iProd);
     }
     else if (0 == status) {
-        status = pq_processProduct(pq, sig, deliverProduct, &iProd);
+        status = pq_processProduct(prodQ, sig, deliverProduct, &iProd);
 
         if (PQ_NOTFOUND == status) {
             char buf[sizeof(signaturet)*2+1];
@@ -805,7 +678,7 @@ setCursorFromSignature(
 
     int status;
 
-    switch ((status = pq_setCursorFromSignature(pq, after))) {
+    switch ((status = pq_setCursorFromSignature(prodQ, after))) {
     case 0:
         log_debug("Returning 0");
         return 0;
@@ -816,7 +689,7 @@ setCursorFromSignature(
         return LDM7_NOENT;
     default:
         log_add("Couldn't set product-queue cursor from signature %s: %s",
-                s_signaturet(NULL, 0, after), pq_strerror(pq, status));
+                s_signaturet(NULL, 0, after), pq_strerror(prodQ, status));
         log_debug("Returning LDM7_SYSTEM");
         return LDM7_SYSTEM;
     }
@@ -839,7 +712,7 @@ setCursorFromTimeOffset(
 
     ts.tv_sec = (offset < ts.tv_sec) ? (ts.tv_sec - offset) : 0;
 
-    pq_cset(pq, &ts);
+    pq_cset(prodQ, &ts);
 }
 
 /**
@@ -962,7 +835,7 @@ sendUpToSignature(
 
     int  status;
     for (;;) {
-        status = pq_sequence(pq, TV_GT, prodClass, sendIfNotSignature,
+        status = pq_sequence(prodQ, TV_GT, prodClass, sendIfNotSignature,
                 (signaturet*)before);                   // cast away `const`
         if (status == EEXIST) {
             status = 0;
@@ -1015,6 +888,39 @@ sendBacklog(
  * Public API:
  ******************************************************************************/
 
+void
+up7_init(pqueue* const prodQueue)
+{
+    log_debug("Entered");
+    log_assert(prodQueue);
+
+    prodQ = prodQueue;
+}
+
+void
+up7_destroy(void)
+{
+    log_debug("Entered");
+
+	destroyClient();     // Closes socket. Idempotent
+	closeProdIndexMap(); // Idempotent
+
+	mi_free(mcastInfo);  // Does nothing if `mcastInfo == NULL`
+	mcastInfo = NULL;
+
+	if (subscribed) {
+		(void)umm_unsubscribe(feedtype, fmtpClntAddr);
+		subscribed = false;
+	}
+
+	log_clear();
+
+	replyPtr = NULL;
+	prodQ = NULL;
+
+    log_debug("Returning");
+}
+
 /**
  * Synchronously subscribes a downstream LDM-7 to a feed. Called by the RPC
  * dispatch function `ldmprog_7()`.
@@ -1050,7 +956,8 @@ subscribe_7_svc(
     }
     else {
         static SubscriptionReply reply;
-        int                      status = subscribe(xprt, request, &reply);
+        int                      status = subscribe(xprt, request->feed,
+        		&request->vcEnd, &reply);
 
         if (status) {
             replyPtr = NULL; // Don't reply
@@ -1087,17 +994,6 @@ test_connection_7_svc(
     log_debug("Returning");
 
     return NULL;                // don't reply
-}
-
-/**
- * Destroys this module. Idempotent.
- */
-void
-up7_destroy(void)
-{
-    log_debug("Entered");
-    destroy();
-    log_debug("Returning");
 }
 
 /**
