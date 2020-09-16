@@ -110,15 +110,24 @@ Hmac::Hmac(const std::string& key)
 
 Hmac::~Hmac()
 {
-	EVP_MD_CTX_free(mdCtx);
-	EVP_PKEY_free(pkey);
+	if (mdCtx)
+        EVP_MD_CTX_free(mdCtx);
+	if (pkey)
+        EVP_PKEY_free(pkey);
 }
 
 Hmac& Hmac::operator=(Hmac&& rhs)
 {
-	EVP_MD_CTX_free(mdCtx);
+	this->key = std::move(rhs.key);
+
 	EVP_PKEY_free(pkey);
-	init(rhs.key); // Won't throw because `rhs` passed creation
+	pkey = std::move(rhs.pkey);
+	rhs.pkey = nullptr;
+
+	EVP_MD_CTX_free(mdCtx);
+	mdCtx = std::move(rhs.mdCtx);
+	rhs.mdCtx = nullptr;
+
 	return *this;
 }
 

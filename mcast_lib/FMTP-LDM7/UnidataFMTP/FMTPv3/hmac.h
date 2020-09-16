@@ -47,8 +47,6 @@ public:
 
 	Hmac(const Hmac& hmac) =delete;
 
-	Hmac(const Hmac&& hmac) =delete;
-
 	/**
 	 * Destroys.
 	 */
