@@ -156,23 +156,6 @@ unblockSigCont(
 }
 #endif
 
-static int
-createEmptyProductQueue(const char* const pathname)
-{
-    pqueue* pq;
-    int     status = pq_create(pathname, 0666, PQ_DEFAULT, 0, PQ_DATA_CAPACITY,
-            NUM_SLOTS, &pq); // PQ_DEFAULT => clobber existing
-
-    if (status) {
-        log_add_errno(status, "pq_create(\"%s\") failure", pathname);
-    }
-    else {
-        CU_ASSERT_EQUAL_FATAL(pq_close(pq), 0);
-		pq = NULL;
-    }
-    return status;
-}
-
 /**
  * Initializes a sender. Upon return, listen() will have been called.
  *
@@ -325,7 +308,6 @@ up7Srvr_run(void* const arg)
 				xprt = NULL;
 			}
 
-			up7_destroy();
 			svc_unregister(LDMPROG, 7);
 		} // Connection accepted
 	} // Indefinite loop
@@ -406,12 +388,14 @@ sndr_start(
     /*
      * The product-queue must be thread-safe because it's accessed on
      * multiple threads:
-     * - The product-insertion thread
-     * - The backlog thread
-     * - The missed-product thread
+     *   - The product-insertion thread
+     *   - The backlog thread
+     *   - The missed-product thread
+     * The following also clobbers any existing queue and opens it for writing
      */
-    CU_ASSERT_EQUAL_FATAL(createEmptyProductQueue(UP7_PQ_PATHNAME), 0);
-    CU_ASSERT_EQUAL_FATAL(pq_open(UP7_PQ_PATHNAME, PQ_THREADSAFE, &pq), 0);
+    CU_ASSERT_EQUAL_FATAL(pq_create(UP7_PQ_PATHNAME, 0666, PQ_THREADSAFE, 0,
+    		PQ_DATA_CAPACITY, NUM_SLOTS, &pq), 0);
+    up7_init(pq);
 
     SepMcastInfo* mcastInfo =
             smi_newFromStr(feed, "224.0.0.1:5173", "127.0.0.1:0");
@@ -425,8 +409,6 @@ sndr_start(
         }
     }
 
-    // The upstream multicast manager takes responsibility for freeing
-    // `mcastInfo`
     const unsigned short subnetLen = 24;
     status = umm_addSndr(mcastInfo, 2, subnetLen, localVcEnd, UP7_PQ_PATHNAME);
     if (status) {
@@ -476,6 +458,9 @@ sndr_stop(Sender* const sender)
     CU_ASSERT_EQUAL(pthread_join(sender->thread, NULL), 0);
 
     CU_ASSERT_EQUAL(close(sender->srvrSock), 0);
+
+    log_debug("Destroying Up7 module");
+    up7_destroy();
 
     log_debug("Closing product-queue");
     CU_ASSERT_EQUAL(pq_close(pq), 0);
