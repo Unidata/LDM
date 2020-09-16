@@ -101,7 +101,7 @@ bool UdpRecv::discardPayload()
 		throw std::logic_error("UdpRecv::discard() Discarding unread FMTP "
                 "message");
 
-	char buf[header.payloadlen];
+	char buf[FMTP_HEADER_LEN + header.payloadlen];
 	auto nbytes = ::read(sd, buf, sizeof(buf));
 	if (nbytes == -1)
 		throw std::system_error(errno, std::system_category(),
@@ -173,7 +173,7 @@ bool UdpRecv::readPayload(char* payload)
 		throw std::system_error(errno, std::system_category(),
 				"UdpRecv::read() ::readv() failure");
 
-	const bool success = (nbytes == header.payloadlen);
+	const bool success = (nbytes == FMTP_HEADER_LEN + header.payloadlen);
 	if (!success) {
 		#ifdef LDM_LOGGING
 			log_warning("Payload is too short");
