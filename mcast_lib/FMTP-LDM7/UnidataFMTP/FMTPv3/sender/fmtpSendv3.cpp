@@ -69,7 +69,7 @@ static void freeLogging(void* arg)
  */
 inline static void logMsg(const std::string& msg)
 {
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
+#ifdef LDM_LOGGING
     log_notice(msg.c_str());
 #else
     //std::cerr << msg << std::endl;
@@ -464,7 +464,9 @@ void fmtpSendv3::SetSendRate(uint64_t speed)
  */
 void fmtpSendv3::Start()
 {
-    logMsg("fmtpSendv3::Start(): Entered");
+#ifdef LDM_LOGGING
+    log_debug("Entered");
+#endif
     /* start listening to incoming connections */
     tcpsend->Init();
     /* initialize UDP connection */
@@ -580,14 +582,19 @@ void* fmtpSendv3::coordinator(void* ptr)
 {
 #ifdef LDM_LOGGING
     pthread_cleanup_push(freeLogging, nullptr);
+    log_debug("Entered");
 #endif
-    logMsg("fmtpSendv3::coordinator(): Entered");
     fmtpSendv3* sendptr = static_cast<fmtpSendv3*>(ptr);
     try {
         while(1) {
             int newtcpsockfd = sendptr->tcpsend->acceptConn();
-            logMsg("fmtpSendv3::coordinator(): Accepted connection on socket " +
-                    std::to_string(newtcpsockfd));
+            #ifdef LDM_LOGGING
+                log_debug("Accepted connection on socket %s",
+                        std::to_string(newtcpsockfd).c_str());
+            #else
+                logMsg("fmtpSendv3::coordinator(): Accepted connection on "
+                		"socket " + std::to_string(newtcpsockfd));
+            #endif
             /**
              * Requests the application to verify a new receiver. Shuts down
              * the connection if failing. Otherwise fork a new thread for the
@@ -1404,7 +1411,12 @@ void fmtpSendv3::setTimerParameters(RetxMetadata* const senderProdMeta)
  */
 void fmtpSendv3::StartNewRetxThread(int newtcpsockfd)
 {
-    logMsg("fmtpSendv3::StartNewRetxThread(): Entered");
+    #ifdef LDM_LOGGING
+        log_debug("Entered");
+    #else
+        logMsg("fmtpSendv3::StartNewRetxThread(): Entered");
+    #endif
+
     pthread_t t;
 
     StartRetxThreadInfo* retxThreadInfo = new StartRetxThreadInfo();
