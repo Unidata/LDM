@@ -888,6 +888,12 @@ sendBacklog(
  * Public API:
  ******************************************************************************/
 
+/**
+ * Initializes this module. Must be called before any other function.
+ *
+ * @param[in] prodQueue  Product-queue to be used
+ * @see `up7_destroy()`
+ */
 void
 up7_init(pqueue* const prodQueue)
 {
@@ -897,6 +903,12 @@ up7_init(pqueue* const prodQueue)
     prodQ = prodQueue;
 }
 
+/**
+ * Destroys this module. Should be called when this module is no longer needed.
+ * This module may be re-initialized by re-calling `up7_init()`.
+ *
+ * @see `up7_init()`
+ */
 void
 up7_destroy(void)
 {
