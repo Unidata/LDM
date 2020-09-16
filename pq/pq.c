@@ -5856,8 +5856,10 @@ pq_free(pqueue *const pq)
  *                          PQ_NOLOCK     Disable locking (DANGER!)
  *                          PQ_NOMAP      Use `malloc/read/write/free` instead
  *                                        of `mmap()`
+ *                          PQ_READONLY   Only allow reading from the queue
  *                          PQ_PRIVATE    `mmap()` the file `MAP_PRIVATE`.
  *                                        Default is `MAP_SHARED`.
+ *                          PQ_THREADSAFE Ensure thread-safe access
  * @param[in]  align      Alignment parameter for file components or 0.
  * @param[in]  initialsz  Size, in bytes, of the data portion of the product-
  *                        queue.
@@ -6355,6 +6357,7 @@ vetCreationTime(
  * @param[in] prod         The data-product.
  * @retval    ENOERR       Success.
  * @retval    EACCES       Couldn't make room: no unlocked products left to delete
+ * @retval    EACCES       Queue is read-only
  * @retval    EINVAL       Invalid argument.
  * @retval    PQ_DUP       Product already exists in the queue.
  * @retval    PQ_BIG       Product is too large to insert in the queue.
