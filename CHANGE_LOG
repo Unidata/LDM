@@ -1,3 +1,21 @@
+6.13.12.69	2020-09-16T15:45:19-0600
+    ldmd(1):
+        * Combined hostname and dotted-quad "Denying connection from ..."
+          messages into one
+
+    Multicast:
+        * UdpRecv.c:
+            * Corrected UdpRecv::discardPayload() and UdpRecv::readPayload()
+        * up7.c:
+            * Replaced use of global product-queue with one given to up7_init()
+            * Made up7_init() and up7_destroy() public
+        * Up7Down7_test:
+            * Works
+
+    Developer:
+        deployAll(1):
+            * Changed deployment to uni15 to deployment to uni17
+
 6.13.12.68	2020-09-15T10:07:13-0600
     pqact(1):
         * filel.c:
@@ -6,8 +24,8 @@
               current action can succeed or a failure occurs
             * Added use of the above if a child process can't be fork(2)ed for a
               decoder
-            * Reduced the amount of time that an unused action can have an open
-              file descriptor from 24 hours to 6 hours
+            * filel.c: Reduced the amount of time that an unused action can have
+              an open file descriptor from 24 hours to 6 hours
         * Simplified decision on whether or not to write a new state-file by
           using tsIsNone() on the insertion-time of the last, successfully-
           processed product
