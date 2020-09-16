@@ -1991,20 +1991,16 @@ uldb_Status uldb_close(
 {
     int status;
 
-    uldb_ensureModuleInitialized();
-
-    status = db_verifyOpen(&database);
-
-    if (status) {
-        log_add("Database is not open");
-    }
-    else if (srwl_free(database.lock)) {
-        log_add("Couldn't free lock component");
-        status = ULDB_SYSTEM;
-    }
-    else {
-        database.lock = NULL;
-        database.validString = NULL;
+    if (moduleInitialized && db_isOpen(&database)) {
+        if (srwl_free(database.lock)) {
+            log_add("Couldn't free lock component");
+            status = ULDB_SYSTEM;
+        }
+        else {
+            database.lock = NULL;
+            database.validString = NULL;
+            status = ULDB_SUCCESS;
+        }
     }
 
     return status;
