@@ -451,7 +451,7 @@ fl_sync(const int block)
     fl_entry*                  entry;
     fl_entry*                  prev;
     const time_t               now = time(NULL);
-	static const unsigned long maxTime = 86400;
+	static const unsigned long maxTime = 6 * 3600;
 
     for (entry = thefl->tail; entry != NULL; entry = prev) {
         prev = entry->prev;
