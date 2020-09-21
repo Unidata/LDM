@@ -17,13 +17,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "nport.h"
 
 #include "inetutil.h"
 #include "ldm.h"
 #include "ldmProductQueue.h"
+#include "ldmprint.h"
 #include "log.h"
 #include "md5.h"
+#include "nport.h"
 #include "pq.h"
 
 /*
@@ -212,8 +213,12 @@ process_prod(
 
     status = lpqInsert(lpq, &prod);
     if (status == 0) {
-        log_notice_q("%s inserted [cat %d type %d ccb %d/%d seq %d size %d]",
-                 prod.info.ident, psh->pcat, psh->ptype, psh->ccbmode,
+    	char feed[132];
+    	(void)ft_format(prod.info.feedtype, feed, sizeof(feed));
+    	feed[sizeof(feed)-1] = 0;
+        log_notice("%s inserted %s [cat %d type %d ccb %d/%d seq %d size %d]",
+                 prod.info.ident, feed,
+				 psh->pcat, psh->ptype, psh->ccbmode,
                  psh->ccbsubmode, prod.info.seqno, prod.info.sz);
         return;
     }
