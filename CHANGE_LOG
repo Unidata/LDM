@@ -1,3 +1,8 @@
+6.13.12.73	2020-09-24T11:50:38-0600
+    Developer:
+        * mcast_lib/Makefile.am: Removed "hmac_test" target to eliminate
+          LDM7 checking
+
 6.13.12.72	2020-09-24T11:40:29-0600
     Developer:
         * .travis.yml: Added cat(1) of top-level Makefile to help diagnose 
