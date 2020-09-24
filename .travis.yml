@@ -41,3 +41,4 @@ script: make distcheck
 
 after_failure:
   - pwd
+  - cat Makefile
