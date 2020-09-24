@@ -13,8 +13,7 @@ EXTRA_DIST              = down7.hin \
 			  sock_funcs.c sock_funcs.hin \
 			  up7.hin \
 			  send_test.c recv_test.c send_recv_test.c \
-			  send_recv_test.h \
-			  hmac_test text
+			  send_recv_test.h
 BUILT_SOURCES           = down7.h \
 			  MldmRcvr.h \
 			  MldmRcvrMemory.h \
@@ -89,7 +88,6 @@ subscriber_CPPFLAGS 	= -I/usr/include/openssl11
 subscriber_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
 
 check_PROGRAMS		+= publisher subscriber
-TESTS			+= hmac_test
 
 send_test_SOURCES	= send_test.c send_recv_test.c send_recv_test.h
 recv_test_SOURCES	= recv_test.c send_recv_test.c send_recv_test.h
