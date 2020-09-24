@@ -69,8 +69,21 @@ public:
     int getMinPathMTU();
     unsigned short getPortNum();
     void Init(); /*!< start point that upper layer should call */
-    /** only parse the header part of a coming packet */
-    int parseHeader(int retxsockfd, FmtpHeader* recvheader);
+    /**
+     * Read an amount of bytes from the socket while the number of bytes equals the
+     * FMTP header size. Parse the buffer which stores the packet header and fill
+     * each field of FmtpHeader structure with corresponding information. If the
+     * read() system call fails, return immediately. Otherwise, return when this
+     * function finishes.
+     *
+     * @param[in] retxsockfd         retransmission socket file descriptor.
+     * @param[in] *recvheader        pointer of a FmtpHeader structure, whose fields
+     *                               are to hold the parsed out information.
+     * @retval    `true`             Success
+     * @retval    `false             Failure. EOF encountered.
+     * @throws    std::system_error  I/O failure
+     */
+    bool parseHeader(int retxsockfd, FmtpHeader* recvheader);
     /** read any data coming into this given socket */
     int readSock(int retxsockfd, char* pktBuf, int bufSize);
     void rmSockInList(int sockfd);

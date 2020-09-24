@@ -30,8 +30,9 @@
 
 #include "fmtpRecvv3.h"
 #ifdef LDM_LOGGING
-#include "log.h"
+    #include "log.h"
 #endif
+#include "SessKeyCrypt.h"
 
 #include <arpa/inet.h>
 #include <cassert>
@@ -165,6 +166,9 @@ fmtpRecvv3::fmtpRecvv3(
 fmtpRecvv3::~fmtpRecvv3()
 {
     Stop();
+    #ifdef LDM_LOGGING
+    	log_debug("Closing retransmission socket");
+    #endif
     (void)close(retxSock); // failure is irrelevant
     {
         std::lock_guard<std::mutex> lock(BOPSetMtx);
@@ -250,8 +254,8 @@ void fmtpRecvv3::Start()
         }
     }
 
-    udpRecv = UdpRecv(tcpAddr, mcastAddr, mcastPort, ifAddr,
-                        std::string("abcdefghijklmnopqrstuvwxyzXXXXXXabcdefghijklmnopqrstuvwxyzXXXXXX")),
+    const auto macKey = getMacKey();
+    udpRecv = UdpRecv(tcpAddr, mcastAddr, mcastPort, ifAddr, macKey),
 
     StartRetxProcedure();
     startTimerThread();
@@ -316,6 +320,28 @@ void fmtpRecvv3::Stop()
     (void)pthread_setcancelstate(prevState, &prevState);
 }
 
+std::string fmtpRecvv3::getMacKey()
+{
+    Decryptor crypt; // Public/private key nonce
+    auto pubKey = crypt.getPubKey();
+    #ifdef LDM_LOGGING
+		log_debug("Sending %s-byte public key",
+				std::to_string(pubKey.size()).c_str());
+    #endif
+    tcprecv->write(crypt.getPubKey());
+
+	std::string cipherKey;
+    #ifdef LDM_LOGGING
+		log_debug("Receiving encrypted MAC key");
+    #endif
+	tcprecv->read(cipherKey);
+
+    #ifdef LDM_LOGGING
+		log_debug("Decrypting %s-byte MAC key",
+				std::to_string(cipherKey.size()).c_str());
+    #endif
+	return crypt.decrypt(cipherKey);
+}
 
 /**
  * Add the unrequested BOP identified by the given prodindex into the list.
@@ -348,9 +374,9 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  */
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
 {
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
-    log_debug("Entered");
-#endif
+    #ifdef LDM_LOGGING
+        log_debug("Entered");
+    #endif
 
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
@@ -366,8 +392,11 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
+    #ifdef LDM_LOGGING
+        log_debug("Reading BOP message");
+    #endif
     char payload[header.payloadlen];
-    if (udpRecv.readPayload(payload) && BOPHandler(header, payload)) {
+    if (udpRecv.readPayload(header, payload) && BOPHandler(header, payload)) {
     	// The FMTP message is valid
 
     	prevMcastSeqNumSet = false; // Because new product
@@ -377,11 +406,11 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
          * between last logged prodindex and currently received prodindex.
          */
         requestMissingBopsExclusive(header.prodindex);
-
-        #if !defined(NDEBUG) && defined(LDM_LOGGING)
-            log_debug("Returning");
-        #endif
     }
+
+    #ifdef LDM_LOGGING
+        log_debug("Returning");
+    #endif
 }
 
 
@@ -430,6 +459,10 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
 bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                             const char* const payload)
 {
+    #ifdef LDM_LOGGING
+        log_debug("Entered");
+    #endif
+
 	bool     isValid = false;
     void*    prodptr = NULL;
     BOPMsg   BOPmsg;
@@ -584,6 +617,10 @@ bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
             #endif
         } // Metadata isn't too big
     } // Payload isn't too small
+
+    #ifdef LDM_LOGGING
+        log_debug("Returning %d", isValid);
+    #endif
 
     return isValid;
 }
@@ -892,7 +929,8 @@ void fmtpRecvv3::mcastHandler()
         #ifdef LDM_LOGGING
             log_debug("Reading socket");
         #endif
-        auto header = udpRecv.peekHeader(); // Temporarily enables cancellation
+        FmtpHeader header;
+        udpRecv.peekHeader(header); // Temporarily enables cancellation
 
         if (!prodIndexSet) {
             mcastProdIndex = header.prodindex;
@@ -932,7 +970,7 @@ void fmtpRecvv3::mcastHandler()
 void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
 {
     // Payload is irrelevant in EOP messages
-    if (udpRecv.discardPayload()) {
+    if (udpRecv.discardPayload(header)) {
         #ifdef MEASURE
             measure->setMcastClock(header.prodindex);
         #endif
@@ -1058,7 +1096,7 @@ void fmtpRecvv3::retxHandler()
         char* pholder;
 
         (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
-        size_t nbytes = tcprecv->recvData(pktHead, FMTP_HEADER_LEN, NULL, 0);
+        bool success = tcprecv->recvData(pktHead, FMTP_HEADER_LEN, NULL, 0);
         (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
         struct timespec now;
@@ -1072,7 +1110,7 @@ void fmtpRecvv3::retxHandler()
          * decodeHeader() itself does not do any header size check, because
          * nbytes should always equal FMTP_HEADER_LEN when successful.
          */
-        if (nbytes == 0) {
+        if (!success) {
             Stop();
 #if 1
             throw std::runtime_error("fmtpRecvv3::retxHandler() "
@@ -1102,10 +1140,10 @@ void fmtpRecvv3::retxHandler()
 
         if (header.flags == FMTP_RETX_BOP) {
             (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &ignoredState);
-            nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+            success = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
             (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ignoredState);
 
-            if (nbytes == 0) {
+            if (!success) {
                 //Stop();
                 throw std::runtime_error("fmtpRecvv3::retxHandler() "
                         "Error reading FMTP_RETX_BOP: "
@@ -1215,10 +1253,10 @@ void fmtpRecvv3::retxHandler()
                  * drop the payload since there is no location allocated
                  * in the product queue.
                  */
-                nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+                success = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
-                if (nbytes == 0) {
+                if (!success) {
                     throw std::runtime_error("fmtpRecvv3::retxHandler() "
                             "Error reading FMTP_RETX_DATA (prodsize <= 0): "
                             "EOF read from the retransmission TCP socket.");
@@ -1237,11 +1275,11 @@ void fmtpRecvv3::retxHandler()
             if (prodptr) {
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
-                nbytes = tcprecv->recvData(NULL, 0, (char*)prodptr +
+                success = tcprecv->recvData(NULL, 0, (char*)prodptr +
                                            header.seqnum, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
-                if (nbytes == 0) {
+                if (!success) {
                     throw std::runtime_error("fmtpRecvv3::retxHandler() "
                             "Error reading FMTP_RETX_DATA (with prodptr): "
                             "EOF read from the retransmission TCP socket.");
@@ -1251,10 +1289,10 @@ void fmtpRecvv3::retxHandler()
                 /** dump the payload since there is no product queue */
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,
                                              &ignoredState);
-                nbytes = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
+                success = tcprecv->recvData(NULL, 0, paytmp, header.payloadlen);
                 (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,
                                              &ignoredState);
-                if (nbytes == 0) {
+                if (!success) {
                     throw std::runtime_error("fmtpRecvv3::retxHandler() "
                             "Error reading FMTP_RETX_DATA (without prodptr): "
                             "EOF read from the retransmission TCP socket.");
@@ -1505,7 +1543,8 @@ bool fmtpRecvv3::readMcastData(const FmtpHeader& header,
             log_warning("Data segment is too large");
         #endif
     }
-    else if (udpRecv.readPayload(static_cast<char*>(prodptr)+header.seqnum)) {
+    else if (udpRecv.readPayload(header,
+    		static_cast<char*>(prodptr)+header.seqnum)) {
         #ifdef MODBASE
             uint32_t tmpidx = header.prodindex % MODBASE;
         #else
@@ -1575,8 +1614,8 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
         /* merged requests, multiple missing blocks in one request */
         // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
 
-        for (; seqnum < mostRecent; seqnum += FMTP_DATA_LEN) {
-            pushMissingDataReq(prodindex, seqnum, FMTP_DATA_LEN);
+        for (; seqnum < mostRecent; seqnum += MAX_FMTP_PAYLOAD) {
+            pushMissingDataReq(prodindex, seqnum, MAX_FMTP_PAYLOAD);
 
             #ifdef MODBASE
                 uint32_t tmpidx = prodindex % MODBASE;
@@ -1741,7 +1780,7 @@ bool fmtpRecvv3::recvMcastData(const FmtpHeader& header)
             log_debug("prodsize == 0");
         #endif
 
-        isValid = udpRecv.discardPayload();
+        isValid = udpRecv.discardPayload(header);
         if (isValid) {
             #if !defined(NDEBUG) && defined(LDM_LOGGING)
                 log_debug("Requesting missing BOPs");

@@ -36,9 +36,14 @@ void initRand(const int numBytes)
 
 	try {
 		unsigned char bytes[numBytes];
-		if (::read(fd, bytes, numBytes) != numBytes)
-			throw std::system_error(errno, std::generic_category(),
-					"read() failure");
+
+		for (size_t n = numBytes; n;) {
+            auto nread = ::read(fd, bytes, n);
+            if (nread == -1)
+                throw std::system_error(errno, std::generic_category(),
+                        "initRand(): read() failure");
+			n -= nread;
+        }
 
 		if (RAND_bytes(bytes, numBytes) == 0)
 			throw std::runtime_error("RAND_bytes() failure. "

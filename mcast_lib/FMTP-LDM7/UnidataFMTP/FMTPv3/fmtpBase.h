@@ -30,12 +30,11 @@
 #ifndef FMTP_FMTPV3_FMTPBASE_H_
 #define FMTP_FMTPV3_FMTPBASE_H_
 
-#include "hmac.h"
-
 #include <ctime>
 #include <stdint.h>
 #include <string.h>
 #include <strings.h>
+#include <unistd.h>
 
 //#define PRODNUM 207684
 #define PRODNUM 20
@@ -48,7 +47,7 @@
 typedef struct FmtpPacketHeader {
     uint32_t   prodindex;       ///< identify both file and memdata by prodindex
     uint32_t   seqnum;          ///< Byte-offset of payload in file
-    uint16_t   payloadlen;      ///< Length of payload
+    uint16_t   payloadlen;      ///< Length of payload in bytes
     uint16_t   flags;
 } FmtpHeader;
 
@@ -72,11 +71,12 @@ typedef uint32_t StartTime[3];
 
 /* non-constants, could change with MTU */
 const int MTU                 = MIN_MTU;
-const int MAX_FMTP_PACKET_LEN = (MTU - 20 - 20); /* exclude IP and TCP header */
+const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
+const int MAC_SIZE            = 32; ///<  Size of message authentication code
 // Maximum FmtpHeader.payloadlen:
-const int FMTP_DATA_LEN       = (MAX_FMTP_PACKET_LEN - FMTP_HEADER_LEN);
+const int MAX_FMTP_PAYLOAD    = (MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_SIZE);
 // Maximum BOPMsg.metadata length in bytes.
-const int AVAIL_BOP_LEN       = (FMTP_DATA_LEN
+const int MAX_BOP_METADATA       = (MAX_FMTP_PAYLOAD
 		- sizeof(StartTime)
         - sizeof(uint32_t)   // BOPMsg.prodsize
 		- sizeof(uint16_t)); // BOPMsg.metasize
@@ -89,7 +89,7 @@ typedef struct FmtpBOPMessage {
     StartTime startTime;    ///< Start of transmission of product
     uint32_t  prodsize;     /*!< support 4GB maximum */
     uint16_t  metasize;
-    char      metadata[AVAIL_BOP_LEN];
+    char      metadata[MAX_BOP_METADATA];
     /* Be aware this default constructor could implicitly create a new BOP */
     FmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
 } BOPMsg;

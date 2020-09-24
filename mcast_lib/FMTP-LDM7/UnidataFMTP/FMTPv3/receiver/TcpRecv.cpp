@@ -90,38 +90,16 @@ void TcpRecv::Init()
 }
 
 
-/**
- * Receives a header and a payload on the TCP connection. Blocks until a
- * complete packet is received, the end-of-file is encountered, or an error
- * occurs.
- *
- * @param[in] header   Header.
- * @param[in] headLen  Length of the header in bytes.
- * @param[in] payload  Payload.
- * @param[in] payLen   Length of the payload in bytes.
- * @retval    0        EOF encountered.
- * @return             Number of bytes read. Will be `headLen + payLen`.
- * @throws std::system_error  if an error is encountered reading from the
- *                            socket.
- */
-size_t TcpRecv::recvData(void* header, size_t headLen, char* payload,
+bool TcpRecv::recvData(void* header, size_t headLen, char* payload,
                          size_t payLen)
 {
-    size_t nread;
+    if (header && headLen && !recvall(header, headLen))
+        return false;
 
-    if (header && headLen) {
-        nread = recvall(header, headLen);
-        if (nread < headLen)
-            return 0; // EOF
-    }
+    if (payload && payLen && !recvall(payload, payLen))
+        return false;
 
-    if (payload && payLen) {
-        nread = recvall(payload, payLen);
-        if (nread < payLen)
-            return 0; // EOF
-    }
-
-    return (headLen + payLen);
+    return true;
 }
 
 

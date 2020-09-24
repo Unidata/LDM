@@ -72,19 +72,21 @@ public:
             unsigned short     tcpport);
 
     void Init();  /*!< the start point which upper layer should call */
+
     /**
      * Receives a header and a payload on the TCP connection. Blocks until the
      * packet is received or a severe error occurs. Re-establishes the TCP
      * connection if necessary.
      *
-     * @param[in] header   Header.
-     * @param[in] headLen  Length of the header in bytes.
-     * @param[in] payload  Payload.
-     * @param[in] payLen   Length of the payload in bytes.
-     * @retval    -1       O/S failure.
-     * @return             Number of bytes received.
+     * @param[in] header         Header.
+     * @param[in] headLen        Length of the header in bytes.
+     * @param[in] payload        Payload.
+     * @param[in] payLen         Length of the payload in bytes.
+     * @retval    `true`         Success
+     * @retval    `false`        EOF encountered
+     * @throw std::system_error  I/O error
      */
-    size_t recvData(void* header, size_t headLen, char* payload,
+    bool recvData(void* header, size_t headLen, char* payload,
                      size_t payLen);
     /**
      * Sends a header and a payload on the TCP connection. Blocks until the packet

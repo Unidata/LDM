@@ -119,12 +119,10 @@ std::string Decryptor::decrypt(const std::string& cipherText) const
 
 /******************************************************************************/
 
-Encryptor::Encryptor(
-		const char* pubKey,
-		const int   keyLen)
+Encryptor::Encryptor(const std::string& pubKey)
 	: SessKeyCrypt{}
 {
-	BIO* bio = BIO_new_mem_buf(pubKey, keyLen);
+	BIO* bio = BIO_new_mem_buf(pubKey.data(), pubKey.size());
 	if (bio == nullptr)
 		throw std::runtime_error("BIO_new_mem_buf() failure. "
 				"Code=" + std::to_string(ERR_get_error()));
@@ -143,13 +141,11 @@ Encryptor::Encryptor(
 	}
 }
 
-std::string Encryptor::encrypt(
-		const char* sessKey,
-		const int   keyLen) const
+std::string Encryptor::encrypt(const std::string& sessKey) const
 {
 	char       cipherText[RSA_size(rsa)];
-	const auto cipherLen = RSA_public_encrypt(keyLen,
-			reinterpret_cast<const unsigned char*>(sessKey),
+	const auto cipherLen = RSA_public_encrypt(sessKey.size(),
+			reinterpret_cast<const unsigned char*>(sessKey.data()),
 			reinterpret_cast<unsigned char*>(cipherText), rsa, padding);
 	if (cipherLen == -1)
 		throw std::runtime_error("(RSA_public_encrypt) failure. "

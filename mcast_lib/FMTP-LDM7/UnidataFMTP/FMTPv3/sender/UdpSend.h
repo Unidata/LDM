@@ -33,6 +33,8 @@
 #ifndef FMTP_SENDER_UDPSOCKET_H_
 #define FMTP_SENDER_UDPSOCKET_H_
 
+#include "fmtpBase.h"
+#include "HmacImpl.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -40,32 +42,43 @@
 #include <string>
 
 
-class UdpSend {
+class UdpSend
+{
 public:
     UdpSend(const std::string& recvaddr, const unsigned short recvport,
             const unsigned char ttl, const std::string& ifAddr);
+
     ~UdpSend();
 
-    void Init();  /*!< start point which caller should call */
     /**
-     * SendData() sends the packet content separated in two different physical
-     * locations, which is put together into a io vector structure, to the
-     * destination identified by a socket file descriptor.
-     */
-    ssize_t SendData(void* header, size_t headerLen, void* data,
-                     size_t dataLen);
-    /**
-     * SendTo() sends a piece of message to a destination identified by a
-     * socket file descriptor.
-     */
-    ssize_t SendTo(const void* buff, size_t len);
-    /**
-     * Gather send a FMTP packet.
      *
-     * @param[in] iovec  First I/O vector.
-     * @param[in] nvec   Number of I/O vectors.
+     * Initializes this instance. Creates a new UDP socket and sets the address
+     * and port from the construction parameters. Connects to the created
+     * socket.
      */
-    ssize_t SendTo(struct iovec* const iovec, const int nvec);
+    void Init();
+
+    /**
+     * Returns the key used to compute the message authentication code of FMTP
+     * messages.
+     *
+     * @return  Key used to compute the MAC of FMTP messages
+     */
+    const std::string& getMacKey() const noexcept;
+
+    /**
+     * Sends an FMTP message. The FMTP header is sent in network byte-order. The
+     * payload is sent as-is (i.e., it is not converted to network byte-order).
+     *
+     * @param[in] header         FMTP header in *host* byte-order
+     * @param[in] payload        FMTP message payload. Size, in bytes, is given
+     *                           by `header.payloadlen`. Ignored if size is
+     *                           zero.
+     * @throw std::logic_error   `header.payloadlen && payload == nullptr`
+     * @throw std::system_error  I/O failure
+     */
+    void send(const FmtpHeader& header,
+    		  const void*       payload = nullptr);
 
 private:
     int                   sock_fd;
@@ -74,6 +87,10 @@ private:
     const unsigned short  recvPort;
     const unsigned short  ttl;
     const std::string     ifAddr;
+    HmacImpl              hmacImpl;
+	FmtpHeader            netHead;       ///< Network byte-order FMTP header
+    struct iovec          iov[3];        ///< Output vector
+    char                  mac[MAC_SIZE]; ///< Message authentication code
 };
 
 

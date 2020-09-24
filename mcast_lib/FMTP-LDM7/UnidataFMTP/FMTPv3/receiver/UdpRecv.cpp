@@ -12,19 +12,50 @@
 #endif
 
 #include <arpa/inet.h>
+#include <cassert>
 #include <cerrno>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <system_error>
-#include <unistd.h>
+
+void UdpRecv::init()
+{
+    iov[0].iov_base = &netHeader;
+    iov[0].iov_len  = FMTP_HEADER_LEN;
+    iov[2].iov_base = mac;
+    iov[2].iov_len  = sizeof(mac);
+}
+
+bool UdpRecv::isValid(const FmtpHeader& header,
+		              const void*       payload)
+{
+	char compMac[MAC_SIZE];
+	hmacImpl.getMac(header, payload, compMac);
+
+	const bool valid = ::memcmp(mac, compMac, MAC_SIZE) == 0;
+    #ifdef LDM_LOGGING
+        if (!valid)
+            log_warning("Invalid FMTP message: flags=%#x, prodindex=%u, "
+            		"seqnum=%u, payloadlen=%u, msgMac=%s, compMap=%s",
+            		(unsigned)header.flags, (unsigned)header.prodindex,
+					(unsigned)header.seqnum, (unsigned)header.payloadlen,
+            		HmacImpl::to_string(mac).c_str(),
+            		HmacImpl::to_string(compMac).c_str());
+    #endif
+
+	return valid;
+}
 
 UdpRecv::UdpRecv()
 	: sd{-1}
-	, hmac()
-	, header{}
-	, haveHeader{false}
-{}
+	, hmacImpl()
+	, netHeader{}
+	, mac{}
+	, iov{}
+{
+	init();
+}
 
 UdpRecv::UdpRecv(const std::string& srcAddr,
 		         const std::string& mcastAddr,
@@ -32,16 +63,19 @@ UdpRecv::UdpRecv(const std::string& srcAddr,
 				 const std::string& ifAddr,
 				 const std::string& hmacKey)
 	: sd{::socket(AF_INET, SOCK_DGRAM, 0)}
-	, hmac(hmacKey)
-	, header{}
-	, haveHeader(false)
+	, hmacImpl(hmacKey)
+	, netHeader{}
+	, mac{}
+	, iov{}
 {
+    init();
+
     if (sd < 0)
         throw std::system_error(errno, std::system_category(),
                 "UdpRecv::UdpRecv() ::socket() failure");
 
     #ifdef LDM_LOGGING
-    	log_debug("Created socket %d", sd);
+    	log_debug("Created UDP socket %d", sd);
     #endif
 
     try {
@@ -78,7 +112,7 @@ UdpRecv::~UdpRecv()
 {
 	if (sd >= 0) {
         #ifdef LDM_LOGGING
-            log_debug("Closing socket %d", sd);
+            log_debug("Closing UDP socket %d", sd);
         #endif
         ::close(sd);
 	}
@@ -86,101 +120,88 @@ UdpRecv::~UdpRecv()
 
 UdpRecv& UdpRecv::operator=(UdpRecv&& rhs)
 {
-	this->sd = rhs.sd;
+	init(); // Otherwise `msgIov` wouldn't be correctly initialized
+
+	sd = std::move(rhs.sd);
 	rhs.sd = -1; // To prevent the socket from being closed
-	this->hmac = std::move(rhs.hmac);
-	this->header = std::move(rhs.header);
-	this->haveHeader = std::move(rhs.haveHeader);
+	hmacImpl = std::move(rhs.hmacImpl);
+	netHeader = std::move(rhs.netHeader);
 
 	return *this;
 }
 
-bool UdpRecv::discardPayload()
+void UdpRecv::peekHeader(FmtpHeader& header)
 {
-	if (!haveHeader)
-		throw std::logic_error("UdpRecv::discard() Discarding unread FMTP "
-                "message");
-
-	char buf[FMTP_HEADER_LEN + header.payloadlen];
-	auto nbytes = ::read(sd, buf, sizeof(buf));
-	if (nbytes == -1)
-		throw std::system_error(errno, std::system_category(),
-				"UdpRecv::discardPayload() Couldn't read payload");
-
-	haveHeader = false;
-
-	return nbytes == sizeof(buf);
-}
-
-const FmtpHeader& UdpRecv::peekHeader()
-{
-	if (haveHeader)
-		throw std::logic_error("UdpRecv::getHeader() Already read FMTP header");
-
 	for (;;) {
 		/*
-		 * To avoid extra copying operations, recv() is called with a MSG_PEEK
-		 * flag to prevent the packet from being removed from the input buffer.
-		 * The recv() call will block until a packet arrives.
+		 * `::recv()` is called with a MSG_PEEK flag to prevent the packet from
+		 * being removed from the input buffer. The call will block until a
+		 * packet arrives.
 		 */
 		int  cancelState;
 		(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-			const ssize_t nread = ::recv(sd, &header, FMTP_HEADER_LEN, MSG_PEEK);
+			const ssize_t nbytes = ::recv(sd, &netHeader, FMTP_HEADER_LEN, MSG_PEEK);
 		(void)pthread_setcancelstate(cancelState, &cancelState);
 
-		if (nread < 0)
+		if (nbytes == -1)
 			throw std::system_error(errno, std::system_category(),
                     "UdpRecv::read() ::recv() failure on socket " +
 					std::to_string(sd));
 
-		if (nread != FMTP_HEADER_LEN) {
+		if (nbytes != FMTP_HEADER_LEN) {
 			#ifdef LDM_LOGGING
-				log_warning("FMTP header is too short");
+				log_warning("Ignoring FMTP message with short header: "
+						"nbytes=%zd", nbytes);
 			#endif
-			continue;
+			char buf[1];
+			(void)::recv(sd, buf, sizeof(buf), 0); // Discards message
+			continue; // Skip invalid messages
 		}
 
-		header.prodindex  = ntohl(header.prodindex);
-		header.seqnum     = ntohl(header.seqnum);
-		header.payloadlen = ntohs(header.payloadlen);
-		header.flags      = ntohs(header.flags);
-		haveHeader         = true;
+		header.prodindex  = ntohl(netHeader.prodindex);
+		header.seqnum     = ntohl(netHeader.seqnum);
+		header.payloadlen = ntohs(netHeader.payloadlen);
+		header.flags      = ntohs(netHeader.flags);
 
 		break;
 	}
-
-	return header;
 }
 
-bool UdpRecv::readPayload(char* payload)
+bool UdpRecv::readPayload(const FmtpHeader& header,
+		                  char*             payload)
 {
-	if (!haveHeader)
-		throw std::logic_error("UdpRecv::getPayload() FMTP header wasn't read");
-
-	char         buf[FMTP_HEADER_LEN];
-	struct iovec iov[2];
-	iov[0].iov_base = buf;
-	iov[0].iov_len = FMTP_HEADER_LEN;
 	iov[1].iov_base = payload;
-	iov[1].iov_len = header.payloadlen;
+	iov[1].iov_len  = header.payloadlen;
 
+    #ifdef LDM_LOGGING
+		log_debug("Reading FMTP message");
+    #endif
 	int cancelState;
 	(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-		const auto nbytes = ::readv(sd, iov, 2);
+		const auto nbytes = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));
 	(void)pthread_setcancelstate(cancelState, &cancelState);
 
-	if (nbytes < 0)
+	if (nbytes == -1)
 		throw std::system_error(errno, std::system_category(),
 				"UdpRecv::read() ::readv() failure");
 
-	const bool success = (nbytes == FMTP_HEADER_LEN + header.payloadlen);
-	if (!success) {
-		#ifdef LDM_LOGGING
-			log_warning("Payload is too short");
-		#endif
+	bool valid = (nbytes == FMTP_HEADER_LEN + header.payloadlen +
+			sizeof(mac));
+	if (!valid) {
+        #ifdef LDM_LOGGING
+			log_warning("Small FMTP payload: expected=%zu, actual=%zd",
+					(size_t)header.payloadlen, nbytes);
+        #endif
+	}
+	else {
+		valid = isValid(header, payload);
 	}
 
-	haveHeader = false;
+	return valid;
+}
 
-	return success;
+bool UdpRecv::discardPayload(const FmtpHeader& header)
+{
+	char payload[MAX_FMTP_PAYLOAD];
+	return readPayload(header, payload);
 }

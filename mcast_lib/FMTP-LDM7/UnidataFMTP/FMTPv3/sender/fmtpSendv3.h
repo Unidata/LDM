@@ -41,7 +41,7 @@
 #include <set>
 #include <utility>
 
-#include "../hmac.h"
+#include "../HmacImpl.h"
 #include "ProdIndexDelayQueue.h"
 #include "../RateShaper/RateShaper.h"
 #include "RetxThreads.h"
@@ -51,7 +51,6 @@
 #include "TcpSend.h"
 #include "UdpSend.h"
 #include "fmtpBase.h"
-#include "Serializer.h"
 #include "SockToIndexMap.h"
 
 
@@ -89,45 +88,6 @@ struct StartTimerThreadInfo
  */
 class fmtpSendv3
 {
-    class UdpSerializer : public Serializer
-    {
-        UdpSend*     udpSend;                  /// UDP sender
-        char         buf[MAX_FMTP_PACKET_LEN]; /// Network byte-order buffer
-        char* const  end;                      /// One beyond `buf`
-        char*        start;                    /// Start of current segment
-        char*        next;                     /// Next position in current segment
-        struct iovec iovec[IOV_MAX+1];         /// Gather write vector
-        int          iovIndex;                 /// Current `iovec` element
-
-        void  reset();
-        void  nextBufSeg(); ///< Finalizes current segment and starts new one
-        void  vetSeg();
-        void  add(const void* value,
-        		  unsigned nbytes);
-
-    protected:
-        void add(const uint16_t value);
-        void add(const uint32_t value);
-
-    public:
-        using Serializer::encode;
-
-        UdpSerializer(UdpSend* udpSend);
-
-        void encode(const void* bytes,
-        		    unsigned    nbytes);
-
-        /**
-         * Returns the current I/O vector for the output.
-         *
-         * @return Current I/O vector. First element is the start of the
-         *         vector and second element is the vector's size
-         */
-        std::pair<const struct iovec*, unsigned> getIoVec() const noexcept;
-
-        void flush();
-    };
-
 public:
     explicit fmtpSendv3(
                  const char*           tcpAddr,
@@ -176,6 +136,18 @@ public:
 
 private:
     /**
+     * Sends the key for verifying the message authentication code of multicast
+     * FMTP messages. Reads the subscriber's public key from the TCP connection,
+     * encrypts the MAC key with it, and writes the encrypted MAC key to the
+     * TCP connection.
+     *
+     * @param[in] sd              Socket descriptor
+     * @throw std::system_error   I/O failure
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    void sendMacKey(const int sd);
+
+    /**
      * Adds and entry for a data-product to the retransmission set.
      *
      * @param[in] data       The data-product.
@@ -189,7 +161,7 @@ private:
     RetxMetadata* addRetxMetadata(void* const data, const uint32_t dataSize,
                                   void* const metadata, const uint16_t metaSize,
                                   const struct timespec* startTime);
-    static uint32_t blockIndex(uint32_t start) {return start/FMTP_DATA_LEN;}
+    static uint32_t blockIndex(uint32_t start) {return start/MAX_FMTP_PAYLOAD;}
     /** new coordinator thread */
     static void* coordinator(void* ptr);
     /**
@@ -315,6 +287,7 @@ private:
     typedef std::lock_guard<Mutex>  Guard;
     typedef std::unique_lock<Mutex> Lock;
 
+    HmacImpl            hmacImpl;
     uint32_t            prodIndex;
     /** underlying udp layer instance */
     UdpSend*            udpsend;
@@ -343,8 +316,6 @@ private:
     SilenceSuppressor*  suppressor;
     /* sender maximum retransmission timeout */
     double              tsnd;
-    /// Serializes objects for multicasting
-    UdpSerializer       udpSerializer;
 
     /* member variables for measurement use only */
     bool                txdone;

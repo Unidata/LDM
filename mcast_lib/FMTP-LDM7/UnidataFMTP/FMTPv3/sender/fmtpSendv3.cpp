@@ -30,9 +30,10 @@
 
 
 #include "fmtpSendv3.h"
+#include "SessKeyCrypt.h"
 #include "SockToIndexMap.h"
 #ifdef LDM_LOGGING
-#include "log.h"
+    #include "log.h"
 #endif
 
 
@@ -108,92 +109,6 @@ inline static void logMsg(const std::exception& ex)
     logMsg(ex, true);
 }
 
-inline void fmtpSendv3::UdpSerializer::reset()
-{
-    iovIndex = 0;
-    start = next = buf;
-}
-
-fmtpSendv3::UdpSerializer::UdpSerializer(UdpSend* const udpSend)
-    : udpSend{udpSend}
-    , buf{}
-    , end{buf + sizeof(buf)}
-    , start{buf}
-    , next{buf}
-    , iovec{}
-    , iovIndex{0}
-{}
-
-inline void fmtpSendv3::UdpSerializer::vetSeg()
-{
-    if (iovIndex >= IOV_MAX)
-        throw std::length_error("UdpSerializer::vetSeg() Too many segments");
-}
-
-void fmtpSendv3::UdpSerializer::add(
-        const void* bytes,
-        unsigned    nbytes)
-{
-    if (next + nbytes > end)
-        throw std::length_error("UdpSerializer::add() Addition would overflow "
-                "buffer");
-
-    ::memcpy(next, bytes, nbytes);
-
-    next += nbytes;
-}
-
-void fmtpSendv3::UdpSerializer::add(const uint16_t value)
-{
-    vetSeg();
-    add(&value, 2);
-}
-
-void fmtpSendv3::UdpSerializer::add(const uint32_t value)
-{
-    vetSeg();
-    add(&value, 4);
-}
-
-void fmtpSendv3::UdpSerializer::nextBufSeg()
-{
-    const ptrdiff_t nbytes = next - start;
-
-    if (nbytes) {
-        iovec[iovIndex].iov_base = start;
-        iovec[iovIndex].iov_len = nbytes;
-        ++iovIndex;
-        start = next;
-    }
-}
-
-void fmtpSendv3::UdpSerializer::encode(
-        const void* bytes,
-        unsigned    nbytes)
-{
-    if (nbytes) {
-        nextBufSeg(); // Finalizes current segment
-        vetSeg();
-
-        iovec[iovIndex].iov_base = const_cast<void*>(bytes);
-        iovec[iovIndex].iov_len = nbytes;
-
-        ++iovIndex;
-    }
-}
-
-std::pair<const struct iovec*, unsigned> fmtpSendv3::UdpSerializer::getIoVec()
-		const noexcept
-{
-	return std::pair<const struct iovec*, unsigned>(iovec, iovIndex);
-}
-
-void fmtpSendv3::UdpSerializer::flush()
-{
-    nextBufSeg();
-    udpSend->SendTo(iovec, iovIndex);
-    reset();
-}
 
 /**
  * Constructs a sender instance with prodIndex specified and initialized by
@@ -225,6 +140,7 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
+    hmacImpl{},
     prodIndex(initProdIndex),
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -246,7 +162,6 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     memrelease_cv{},
     suppressor(0),
     tsnd(tsnd),
-    udpSerializer{udpsend},
     txdone(false),
     start_t{},
     end_t{}
@@ -384,7 +299,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
             throw std::runtime_error(
                     "fmtpSendv3::sendProduct() dataSize out of range");
         if (metadata) {
-            if (AVAIL_BOP_LEN < metaSize)
+            if (MAX_BOP_METADATA < metaSize)
                 throw std::runtime_error(
                         "fmtpSendv3::SendProduct(): metaSize too large");
         }
@@ -464,9 +379,6 @@ void fmtpSendv3::SetSendRate(uint64_t speed)
  */
 void fmtpSendv3::Start()
 {
-#ifdef LDM_LOGGING
-    log_debug("Entered");
-#endif
     /* start listening to incoming connections */
     tcpsend->Init();
     /* initialize UDP connection */
@@ -505,6 +417,29 @@ void fmtpSendv3::Stop()
 
     (void)pthread_join(timer_t, NULL);
     (void)pthread_join(coor_t, NULL);
+}
+
+
+void fmtpSendv3::sendMacKey(const int sd)
+{
+    std::string pubKey;
+    #ifdef LDM_LOGGING
+		log_debug("Receiving public key");
+    #endif
+    tcpsend->read(sd, pubKey);
+
+    const auto macKey = udpsend->getMacKey();
+    #ifdef LDM_LOGGING
+		log_debug("Encrypting %s-byte MAC key",
+				std::to_string(macKey.size()).c_str());
+    #endif
+    const auto cipherKey = Encryptor(pubKey).encrypt(udpsend->getMacKey());
+
+    #ifdef LDM_LOGGING
+		log_debug("Sending %s-byte encrypted MAC key",
+				std::to_string(cipherKey.size()).c_str());
+    #endif
+    tcpsend->write(sd, cipherKey);
 }
 
 
@@ -582,14 +517,13 @@ void* fmtpSendv3::coordinator(void* ptr)
 {
 #ifdef LDM_LOGGING
     pthread_cleanup_push(freeLogging, nullptr);
-    log_debug("Entered");
 #endif
     fmtpSendv3* sendptr = static_cast<fmtpSendv3*>(ptr);
     try {
         while(1) {
             int newtcpsockfd = sendptr->tcpsend->acceptConn();
             #ifdef LDM_LOGGING
-                log_debug("Accepted connection on socket %s",
+                log_debug("Accepted TCP connection on socket %s",
                         std::to_string(newtcpsockfd).c_str());
             #else
                 logMsg("fmtpSendv3::coordinator(): Accepted connection on "
@@ -611,6 +545,8 @@ void* fmtpSendv3::coordinator(void* ptr)
             }
             /* If new receiver accepted, measure its path MTU and update */
             sendptr->tcpsend->updatePathMTU(newtcpsockfd);
+
+            sendptr->sendMacKey(newtcpsockfd);
 
             int cancelState;
             ::pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
@@ -823,15 +759,11 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
 {
     FmtpHeader recvheader;
 
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
-    log_debug("Entered. WTF");
-#endif
-
     while(1) {
         /* Receive the message from tcp connection and parse the header */
-        int parsestate;
+        bool success;
         try {
-            parsestate = tcpsend->parseHeader(retxsockfd, &recvheader);
+            success = tcpsend->parseHeader(retxsockfd, &recvheader);
         }
         catch (const std::runtime_error& e) {
             /**
@@ -841,12 +773,11 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
             std::throw_with_nested(std::runtime_error(
                     "fmtpSendv3::RunRetxThread(): Couldn't parse header"));
         }
-        if (parsestate == 0) {
+        if (!success) {
             /* encountered EOF, header incomplete */
-            throw std::runtime_error("fmtpSendv3::RunRetxThread() parseHeader"
-                                     "error: incomplete header");
+            throw std::runtime_error("fmtpSendv3::RunRetxThread() EOF");
         }
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
+#ifdef LDM_LOGGING
 		log_debug("Received header: flags=%#x, prodindex=%s, seqnum=%s, "
 				"payloadlen=%s", recvheader.flags,
 				std::to_string(recvheader.prodindex).data(),
@@ -960,8 +891,8 @@ void fmtpSendv3::retransmit(
         /**
          * aligns starting seqnum to the multiple-of-MTU boundary.
          */
-        start = (start/FMTP_DATA_LEN) * FMTP_DATA_LEN;
-        uint16_t payLen = FMTP_DATA_LEN;
+        start = (start/MAX_FMTP_PAYLOAD) * MAX_FMTP_PAYLOAD;
+        uint16_t payLen = MAX_FMTP_PAYLOAD;
 
         /**
          * Support sending multiple blocks.
@@ -972,7 +903,7 @@ void fmtpSendv3::retransmit(
                 /** only last block might be truncated */
                 payLen = nbytes;
             } else {
-                payLen = FMTP_DATA_LEN;
+                payLen = MAX_FMTP_PAYLOAD;
             }
 
             sendheader.seqnum     = htonl(start);
@@ -1036,7 +967,7 @@ void fmtpSendv3::retransBOP(
     /* Set the FMTP packet header. */
     sendheader.prodindex  = htonl(recvheader->prodindex);
     sendheader.seqnum     = 0;
-    const auto payloadlen = retxMeta->metaSize + (FMTP_DATA_LEN - AVAIL_BOP_LEN);
+    const auto payloadlen = retxMeta->metaSize + (MAX_FMTP_PAYLOAD - MAX_BOP_METADATA);
     sendheader.payloadlen = htons(payloadlen);
     sendheader.flags      = htons(FMTP_RETX_BOP);
 
@@ -1068,7 +999,7 @@ void fmtpSendv3::retransBOP(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
 
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
+#ifdef LDM_LOGGING
     log_debug("Sent BOP {header={prodindex=%lu, payloadlen=%u}, "
             "bop={prodsize=%lu, metasize=%u}}",
             (unsigned long)ntohl(sendheader.prodindex),
@@ -1140,40 +1071,47 @@ void fmtpSendv3::retransEOP(
  * a valid value. These two parameters will be checked by the calling function
  * before being passed in.
  *
- * @param[in] prodSize        The size of the product.
- * @param[in] metadata        Application-specific metadata to be sent before
- *                            the data. May be `nullptr`, in which case no
- *                            metadata is sent.
- * @param[in] metaSize        Size of the metadata in bytes. May be 0, in which
- *                            case no metadata is sent.
- * @param[in] startTime       Time product given to FMTP for transmission
- * @throw std::runtime_error  if the UdpSend::SendTo() fails.
+ * @param[in] prodSize          The size of the product.
+ * @param[in] metadata          Application-specific metadata to be sent before
+ *                              the data. May be `nullptr`, in which case no
+ *                              metadata is sent.
+ * @param[in] metaSize          Size of the metadata in bytes. May be 0, in
+ *                              which case no metadata is sent.
+ * @param[in] startTime         Time product given to FMTP for transmission
+ * @throw std::invalid_argument `metaSize > MAX_BOP_METADATA`
+ * @throw std::runtime_error    if the UdpSend::SendTo() fails.
  */
 void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
                                  const uint16_t metaSize,
                                  const struct timespec& startTime)
 {
-#if 1
-	// FMTP header:
-    udpSerializer.encode(prodIndex);                       // FmtpHeader.prodindex
-    udpSerializer.encode(static_cast<uint32_t>(0));        // FmtpHeader.seqnum
-    udpSerializer.encode(static_cast<uint16_t>(            // FmtpHeader.payloadlen
-            metaSize + static_cast<uint16_t>(FMTP_DATA_LEN - AVAIL_BOP_LEN)));
-    udpSerializer.encode(static_cast<uint16_t>(FMTP_BOP)); // FmtpHeader.flags
+	if (metadata && metaSize > MAX_BOP_METADATA)
+		throw std::invalid_argument("Metadata is too large: " +
+				std::to_string(metaSize) + " bytes");
 
-    // BOPMsg:
-    udpSerializer.encode(static_cast<uint64_t>(startTime.tv_sec));
-    udpSerializer.encode(static_cast<uint32_t>(startTime.tv_nsec));
-    udpSerializer.encode(prodSize);
-    udpSerializer.encode(metaSize);
-    udpSerializer.encode(metadata, metaSize);
+#if 1
+	// FMTP header in host byte-order (UdpSend converts):
+	FmtpHeader header;
+	header.prodindex  = prodIndex;
+	header.seqnum     = 0;
+	header.payloadlen = metaSize + MAX_FMTP_PAYLOAD - MAX_BOP_METADATA;
+	header.flags      = FMTP_BOP;
+
+    // BOPMsg in network byte-order (UdpSend doesn't convert payload):
+    BOPMsg bopMsg;
+    ::memcpy(bopMsg.metadata, metadata, metaSize);
+    bopMsg.metasize     = htons(metaSize);
+    bopMsg.prodsize     = htonl(prodSize);
+    bopMsg.startTime[0] = htonl(startTime.tv_sec >> 32);
+    bopMsg.startTime[1] = htonl(startTime.tv_sec & 0xFFFFFFFF);
+    bopMsg.startTime[2] = htonl(startTime.tv_nsec);
 
 #ifdef HMAC
     auto iov = udpSerializer.getIoVec();
     auto mac = hMacer.getHmac(iov.first, iov.second);
 #endif
 
-    udpSerializer.flush();
+    udpsend->send(header, &bopMsg);
 #else
     FmtpHeader    header;
     BOPMsg        bopMsg;
@@ -1182,8 +1120,8 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     /* Set the FMTP packet header. */
     header.prodindex  = htonl(prodIndex);
     header.seqnum     = 0;
-    header.payloadlen = htons(metaSize + (uint16_t)(FMTP_DATA_LEN -
-                                                    AVAIL_BOP_LEN));
+    header.payloadlen = htons(metaSize + (uint16_t)(MAX_FMTP_PAYLOAD -
+                                                    MAX_BOP_METADATA));
     header.flags      = htons(FMTP_BOP);
 
     ioVec[0].iov_base = &header;
@@ -1264,10 +1202,10 @@ void fmtpSendv3::sendEOPMessage()
 {
     FmtpHeader header;
 
-    header.prodindex  = htonl(prodIndex);
+    header.prodindex  = prodIndex;
     header.seqnum     = 0;
     header.payloadlen = 0;
-    header.flags      = htons(FMTP_EOP);
+    header.flags      = FMTP_EOP;
 
     #ifdef MODBASE
         uint32_t tmpidx = prodIndex % MODBASE;
@@ -1283,7 +1221,7 @@ void fmtpSendv3::sendEOPMessage()
         WriteToLog(debugmsg);
     #endif
 #else
-    udpsend->SendTo(&header, sizeof(header));
+    udpsend->send(header);
 
     #ifdef MEASURE
         std::string measuremsg = "Product #" + std::to_string(tmpidx);
@@ -1319,16 +1257,16 @@ void fmtpSendv3::sendData(void* data, uint32_t dataSize)
     FmtpHeader header;
     uint32_t datasize = dataSize;
     uint32_t seqNum = 0;
-    header.prodindex = htonl(prodIndex);
-    header.flags     = htons(FMTP_MEM_DATA);
+    header.prodindex = prodIndex;
+    header.flags     = FMTP_MEM_DATA;
 
     /* check if there is more data to send */
     while (datasize > 0) {
-        uint16_t payloadlen = datasize < FMTP_DATA_LEN ?
-                              datasize : FMTP_DATA_LEN;
+        uint16_t payloadlen = datasize < MAX_FMTP_PAYLOAD ?
+                              datasize : MAX_FMTP_PAYLOAD;
 
-        header.seqnum     = htonl(seqNum);
-        header.payloadlen = htons(payloadlen);
+        header.seqnum     = seqNum;
+        header.payloadlen = payloadlen;
 
         #ifdef TEST_DATA_MISS
             if (seqNum == DROPSEQ)
@@ -1348,11 +1286,7 @@ void fmtpSendv3::sendData(void* data, uint32_t dataSize)
         if (linkspeed) {
             rateshaper.CalcPeriod(sizeof(header) + payloadlen);
         }
-        if(udpsend->SendData(&header, sizeof(header), data,
-                             (size_t)payloadlen) < 0) {
-            throw std::runtime_error(
-                    "fmtpSendv3::sendProduct::SendData() error");
-        }
+        udpsend->send(header, data);
         if (linkspeed) {
             rateshaper.Sleep();
         }
@@ -1463,9 +1397,8 @@ void fmtpSendv3::StartNewRetxThread(int newtcpsockfd)
  */
 void* fmtpSendv3::StartRetxThread(void* ptr)
 {
-#if !defined(NDEBUG) && defined(LDM_LOGGING)
+#ifdef LDM_LOGGING
     pthread_cleanup_push(freeLogging, nullptr);
-    log_debug("Entered");
 #endif
 
     StartRetxThreadInfo* retxInfo = static_cast<StartRetxThreadInfo*>(ptr);

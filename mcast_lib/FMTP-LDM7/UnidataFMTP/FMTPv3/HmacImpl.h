@@ -6,18 +6,17 @@
  *      Author: Steven R. Emmerson
  */
 
-#ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMAC_H_
-#define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMAC_H_
+#ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_
+#define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_
 
-// Because `fmtpBase.h` includes this file and defines `FmtpHeader`
-typedef struct FmtpPacketHeader FmtpHeader;
+#include "fmtpBase.h"
 
 #include <openssl/evp.h>
 
 #include <string>
 #include <sys/uio.h>
 
-class Hmac
+class HmacImpl
 {
 	std::string key;   ///< HMAC key
 	EVP_PKEY*   pkey;  ///< OpenSSL HMAC key
@@ -26,14 +25,12 @@ class Hmac
 	void init(const std::string& key);
 
 public:
-	static const unsigned SIZE = 32; ///< HMAC size in bytes
-
 	/**
 	 * Default constructs. A new HMAC key will be pseudo-randomly chosen.
 	 *
      * @throw std::runtime_error  OpenSSL failure
 	 */
-	Hmac();
+	HmacImpl();
 
 	/**
 	 * Constructs from an HMAC key.
@@ -43,18 +40,18 @@ public:
      * @throw std::runtime_error     OpenSSL failure
      * @throw std::invalid_argument  `key.size() < 2*SIZE`
 	 */
-	Hmac(const std::string& key);
+	HmacImpl(const std::string& key);
 
-	Hmac(const Hmac& hmac) =delete;
+	HmacImpl(const HmacImpl& hmac) =delete;
 
 	/**
 	 * Destroys.
 	 */
-	~Hmac();
+	~HmacImpl();
 
-	Hmac& operator=(const Hmac& rhs) =delete;
+	HmacImpl& operator=(const HmacImpl& rhs) =delete;
 
-	Hmac& operator=(Hmac&& rhs);
+	HmacImpl& operator=(HmacImpl&& rhs);
 
 	/**
 	 * Returns the key for computing HMAC-s.
@@ -66,30 +63,25 @@ public:
 	}
 
 	/**
-	 * Returns the HMAC of the bytes designated by an I/O vector.
-	 *
-	 * @param[in] iov   I/O vector
-	 * @param[in] nvec  Number of elements in the I/O vector
-	 * @return          Corresponding HMAC
-	 */
-	std::string getHmac(
-			const struct iovec* iov,
-			unsigned            nvec);
-
-	/**
-	 * Returns the HMAC of an FMTP message. The MAC of the FMTP header is not
-	 * used in the computation.
+	 * Returns the message authentication code (MAC) of an FMTP message.
 	 *
 	 * @param[in]  header         FMTP header
 	 * @param[in]  payload        FMTP message payload. `header.payloadlen` is
-	 *                            the length in bytes. Ignored if zero length or
-	 *                            `nullptr`.
-	 * @return                    HMAC
+	 *                            the length in bytes. Ignored if zero length.
+	 * @param[out] mac            Computed MAC
+	 * @throw std::logic_error    `header.payloadlen > 0 && `payload == nullptr`
 	 * @throw std::runtime_error  OpenSSL failure
 	 */
-	std::string getHmac(
-			const FmtpHeader& header,
-			const void*       payload);
+	void getMac(const FmtpHeader& header,
+			    const void*       payload,
+				char              mac[MAC_SIZE]);
+
+	/**
+	 * Returns the string representation of a MAC.
+	 * @param[in] mac  MAC
+	 * @return         String representation
+	 */
+	static std::string to_string(const char mac[MAC_SIZE]);
 };
 
-#endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMAC_H_ */
+#endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_ */

@@ -31,8 +31,12 @@
 
 
 #include "UdpSend.h"
+#ifdef LDM_LOGGING
+    #include "log.h"
+#endif
 
 #include <errno.h>
+#include <netinet/in.h>
 #include <string>
 #include <string.h>
 #include <stdexcept>
@@ -56,25 +60,27 @@
 UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
                  const unsigned char ttl, const std::string& ifAddr)
     : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr),
-      sock_fd(-1), recv_addr()
+      sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{}
 {
+    iov[0].iov_base = &netHead;
+    iov[0].iov_len  = FMTP_HEADER_LEN;
+    iov[2].iov_base = mac;
+    iov[2].iov_len  = MAC_SIZE;
 }
 
 
 /**
- * Destruct elements within the udpsend entity which needs to be deleted.
+ * Destroys elements within the udpsend entity which need to be deleted.
  *
  * @param[in] none
  */
 UdpSend::~UdpSend()
-{
-}
+{}
 
 
 /**
  * Initializer. It creates a new UDP socket and sets the address and port from
- * the pre-set parameters. Also it connects to the created socket and if
- * necessary, sets the TTL field with a new value.
+ * the pre-set parameters. Also it connects to the created socket.
  *
  * @throws std::runtime_error  if socket creation fails.
  * @throws std::runtime_error  if connecting to socket fails.
@@ -129,121 +135,49 @@ void UdpSend::Init()
                 std::string("UdpSend::Init() Couldn't set UDP socket multicast "
                         "interface to \"") + ifAddr.c_str() + "\"");
     }
+
+    if (::connect(sock_fd, reinterpret_cast<struct sockaddr*>(&recv_addr),
+    		sizeof(recv_addr)))
+        throw std::system_error(errno, std::system_category(),
+        		"Couldn't connect() socket " +
+                std::to_string(sock_fd) + " to " + recvAddr + ":" +
+				std::to_string(recvPort));
+
 }
 
-
-/**
- * SendData() sends the packet content separated in two different physical
- * locations, which is put together into a io vector structure.
- *
- * @param[in] *header       a constant void type pointer that points to where
- *                          the content of the packet header lies.
- * @param[in] headerlen     length of that packet header.
- * @param[in] *data         a constant void type pointer that points to where
- *                          the piece of memory data to be sent lies.
- * @param[in] datalen       length of that piece of memory data.
- *
- * @throws    std::runtime_error  if an error occurs when calling sendmsg().
- * @throws    std::runtime_error  if bytes sent not equal to expectation.
- */
-ssize_t UdpSend::SendData(void* header, size_t headerLen, void* data,
-                          size_t dataLen)
+const std::string& UdpSend::getMacKey() const noexcept
 {
-    struct msghdr msg;
-    /** vector including the two memory locations */
-    struct iovec iov[2];
-    iov[0].iov_base = header;
-    iov[0].iov_len  = headerLen;
-    iov[1].iov_base = data;
-    iov[1].iov_len  = dataLen;
-
-    msg.msg_name       = &recv_addr;
-    msg.msg_namelen    = sizeof(recv_addr);
-    msg.msg_iov        = iov;
-    msg.msg_iovlen     = 2;
-    msg.msg_control    = NULL;
-    msg.msg_controllen = 0;
-    msg.msg_flags      = 0;
-
-    ssize_t ret = sendmsg(sock_fd, &msg, 0);
-    if (ret == -1) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendData() error occurred when calling sendmsg()");
-    }
-    else if (ret != (headerLen + dataLen)) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendData() bytes sent on wire not equal "
-                "to expectation.");
-    }
-    return ret;
+    return hmacImpl.getKey();
 }
 
-
-/**
- * Send a piece of memory data given by the buff pointer and len length.
- *
- * @param[in] *buff              a constant void type pointer that points to
- *                               where the piece of memory data to be sent lies.
- * @param[in] len                length of that piece of memory data.
- * @throws    std::runtime_error  if an error occurs when calling sendto().
- * @throws    std::runtime_error  if bytes sent not equal to expectation.
- */
-ssize_t UdpSend::SendTo(const void* buff, size_t len)
+void UdpSend::send(const FmtpHeader& header,
+                   const void*       payload)
 {
-    ssize_t nbytes = sendto(sock_fd, buff, len, 0,
-                            (struct sockaddr *)&recv_addr, sizeof(recv_addr));
+	if (header.payloadlen && payload == nullptr)
+		throw std::logic_error("Inconsistent header and payload");
 
-    if (nbytes == -1) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendTo() error occurred when calling sendto()");
-    }
-    else if (nbytes != len) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendTo() bytes sent on wire not equal "
-                "to expectation.");
-    }
+	hmacImpl.getMac(header, payload, mac);
 
-    return nbytes;
-}
+	netHead.flags      = htons(header.flags);
+	netHead.payloadlen = htons(header.payloadlen);
+	netHead.prodindex  = htonl(header.prodindex);
+	netHead.seqnum     = htonl(header.seqnum);
 
+    iov[1].iov_base = const_cast<void*>(payload);
+    iov[1].iov_len  = header.payloadlen;
 
-/**
- * Gather-send a FMTP packet.
- *
- * @param[in] iovec              First I/O vector.
- * @param[in] nvec               Number of I/O vectors.
- * @throws    std::runtime_error  if an error occurs writing to the the UDP
- *                               socket.
- */
-ssize_t UdpSend::SendTo(struct iovec* const iovec, const int nvec)
-{
-    struct msghdr msg;
+    #ifdef LDM_LOGGING
+        log_debug("Multicasting header: flags=%#x, prodindex=%s, seqnum=%s, "
+                "payloadlen=%s, mac=%s", header.flags,
+                std::to_string(header.prodindex).data(),
+                std::to_string(header.seqnum).data(),
+                std::to_string(header.payloadlen).data(),
+				HmacImpl::to_string(mac).c_str());
+    #endif
 
-    msg.msg_name       = &recv_addr;
-    msg.msg_namelen    = sizeof(recv_addr);
-    msg.msg_iov        = iovec;
-    msg.msg_iovlen     = nvec;
-    msg.msg_control    = NULL;
-    msg.msg_controllen = 0;
-    msg.msg_flags      = 0;
-
-    ssize_t nbytes = sendmsg(sock_fd, &msg, 0);
-
-    /* computes total expected bytes to be sent. */
-    size_t expbytes = 0;
-    for(int i = 0; i < nvec; ++i) {
-        expbytes += iovec[i].iov_len;
-    }
-
-    if (nbytes == -1) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendTo() error occurred when calling sendmsg()");
-    }
-    else if (nbytes != expbytes) {
-        throw std::system_error(errno, std::system_category(),
-                "UdpSend::SendTo() nbytes sent on wire not equal "
-                "to expbytes.");
-    }
-
-    return nbytes;
+    const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
+    if (nbytes != sizeof(netHead) + header.payloadlen + sizeof(mac))
+    	throw std::system_error(errno, std::system_category(),
+    			"UdpSend::send(): writev() failure: nbytes=" +
+				std::to_string(nbytes));
 }

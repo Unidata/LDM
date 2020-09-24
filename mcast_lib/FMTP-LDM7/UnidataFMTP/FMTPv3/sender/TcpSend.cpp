@@ -358,36 +358,24 @@ void TcpSend::Init()
 }
 
 
-/**
- * Read an amount of bytes from the socket while the number of bytes equals the
- * FMTP header size. Parse the buffer which stores the packet header and fill
- * each field of FmtpHeader structure with corresponding information. If the
- * read() system call fails, return immediately. Otherwise, return when this
- * function finishes.
- *
- * @param[in] retxsockfd         retransmission socket file descriptor.
- * @param[in] *recvheader        pointer of a FmtpHeader structure, whose fields
- *                               are to hold the parsed out information.
- * @return    retval             return the status value returned by read()
- * @throws    std::system_error  error reading from the socket.
- */
-int TcpSend::parseHeader(int retxsockfd, FmtpHeader* recvheader)
+bool TcpSend::parseHeader(int retxsockfd, FmtpHeader* recvheader)
 {
-    char recvbuf[FMTP_HEADER_LEN];
-    if (recvall(retxsockfd, recvbuf, FMTP_HEADER_LEN) < FMTP_HEADER_LEN)
-        return 0;
+    char       recvbuf[FMTP_HEADER_LEN];
+    const bool success = recvall(retxsockfd, recvbuf, FMTP_HEADER_LEN);
 
-    // TODO: re-write using sizeof()
-    memcpy(&recvheader->prodindex,  recvbuf,    4);
-    memcpy(&recvheader->seqnum,     recvbuf+4,  4);
-    memcpy(&recvheader->payloadlen, recvbuf+8,  2);
-    memcpy(&recvheader->flags,      recvbuf+10, 2);
-    recvheader->prodindex  = ntohl(recvheader->prodindex);
-    recvheader->seqnum     = ntohl(recvheader->seqnum);
-    recvheader->payloadlen = ntohs(recvheader->payloadlen);
-    recvheader->flags      = ntohs(recvheader->flags);
+    if (success) {
+        // TODO: re-write using sizeof()
+        memcpy(&recvheader->prodindex,  recvbuf,    4);
+        memcpy(&recvheader->seqnum,     recvbuf+4,  4);
+        memcpy(&recvheader->payloadlen, recvbuf+8,  2);
+        memcpy(&recvheader->flags,      recvbuf+10, 2);
+        recvheader->prodindex  = ntohl(recvheader->prodindex);
+        recvheader->seqnum     = ntohl(recvheader->seqnum);
+        recvheader->payloadlen = ntohs(recvheader->payloadlen);
+        recvheader->flags      = ntohs(recvheader->flags);
+    }
 
-    return FMTP_HEADER_LEN;
+    return success;
 }
 
 
@@ -401,7 +389,7 @@ int TcpSend::parseHeader(int retxsockfd, FmtpHeader* recvheader)
  */
 int TcpSend::readSock(int retxsockfd, char* pktBuf, int bufSize)
 {
-    return read(retxsockfd, pktBuf, bufSize);
+    return ::read(retxsockfd, pktBuf, bufSize);
 }
 
 

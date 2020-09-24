@@ -46,6 +46,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "HmacImpl.h"
 #include "Measure.h"
 #include "ProdSegMNG.h"
 #include "RecvProxy.h"
@@ -157,6 +158,20 @@ public:
     void Stop();
 
 private:
+    /**
+     * Uses the TCP connection with the FMTP sender to obtain the key to
+     * authenticate multicast FMTP messages. Sends a public key nonce to
+     * the publisher using the TCP connection, reads the encrypted MAC key from
+     * the connection, and decrypts the MAC key using the private key nonce.
+     *
+     * @return                    Key for computing the message authentication
+     *                            code of multicast FMTP messages
+     * @throw std::system_error   I/O failure
+     * @throw std::runtime_error  EOF
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    std::string getMacKey();
+
     bool addUnrqBOPinSet(uint32_t prodindex);
     /**
      * Parse BOP message and call notifier to notify receiving application.

@@ -29,6 +29,7 @@
 #ifndef FMTP_TCPBASE_H_
 #define FMTP_TCPBASE_H_
 
+#include <string>
 #include <sys/types.h>
 
 class TcpBase
@@ -39,30 +40,29 @@ protected:
 
     /**
      * Attempts to read a given number of bytes from a given streaming socket.
-     * Returns when that number is read or the end-of-file is encountered.
+     * Returns when that number is read, the end-of-file is encountered, or an
+     * I/O error occurs.
      *
-     * @param[in] sock     The streaming socket.
-     * @param[in] buf      Pointer to a buffer.
-     * @param[in] nbytes   Number of bytes to attempt to read.
-     * @return             Number of bytes read. If less than `nbytes` and
-     *                     `nbytes > 0`, then EOF was encountered.
-     * @throws std::system_error  if an error is encountered reading from the
-     *                            socket.
+     * @param[in] sock            The streaming socket.
+     * @param[in] buf             Pointer to a buffer.
+     * @param[in] nbytes          Number of bytes to read.
+     * @retval    `true`          Success. All bytes read.
+     * @retval    `false`         Failure. EOF encountered.
+     * @throws std::system_error  I/O failure
      */
-   size_t recvall(const int sock, void* const buf, const size_t len);
+    bool recvall(const int sock, void* const buf, const size_t len);
 
     /**
-     * Attempts to read a given number of bytes. Returns when that number is read
-     * or the end-of-file is encountered.
+     * Attempts to read a given number of bytes. Returns when that number is read,
+     * the end-of-file is encountered, or an error occurs.
      *
-     * @param[in] buf      Pointer to a buffer.
-     * @param[in] nbytes   Number of bytes to attempt to read.
-     * @return             Number of bytes read. If less than `nbytes` and
-     *                     `nbytes > 0`, then EOF was encountered.
-     * @throws std::system_error  if an error is encountered reading from the
-     *                            socket.
+     * @param[in] buf             Pointer to a buffer.
+     * @param[in] nbytes          Number of bytes to read.
+     * @retval    `true`          Success
+     * @retval    `false`         Failure. EOF encountered.
+     * @throws std::system_error  I/O error
      */
-   size_t recvall(void* const buf, const size_t len);
+    bool recvall(void* const buf, const size_t len);
 
     /**
      * Writes a given number of bytes to a given streaming socket. Returns when that
@@ -76,7 +76,7 @@ protected:
      */
     void sendall(const int sock, const void* const buf, size_t nbytes);
     /* the static member function version of sendall() */
-    static void sendallstatic(const int sock, void* const buf, size_t nbytes);
+    static void sendallstatic(const int sock, const void* const buf, size_t nbytes);
 
     /**
      * Writes a given number of bytes. Returns when that number is written or an
@@ -87,10 +87,47 @@ protected:
      * @throws std::system_error  if an error is encountered writing to the
      *                            socket.
      */
-    void sendall(void* const buf, const size_t nbytes);
+    void sendall(const void* const buf, const size_t nbytes);
 
     /// The TCP socket
     int sockfd;
+
+public:
+	/**
+     * Writes a string to a given socket.
+     *
+     * @param[in] sd             Socket descriptor
+     * @param[in] string         String to be written
+     * @throw std::system_error  I/O error
+     */
+	void write(const int          sd,
+	           const std::string& string);
+
+    /**
+     * Writes a string.
+     *
+     * @param[in] string         String to be written
+     * @throw std::system_error  I/O error
+     */
+	void write(const std::string& string);
+
+    /**
+     * Reads a string from a given socket.
+     *
+     * @param[in]  sd             Socket descriptor
+     * @param[out] string         String to be read
+     * @throw std::runtime_error  EOF
+     */
+	void read(const int    sd,
+	          std::string& string);
+
+    /**
+     * Reads a string.
+     *
+     * @param[out] string         String to be read
+     * @throw std::runtime_error  EOF
+     */
+	void read(std::string& string);
 };
 
 #endif /* FMTP_TCPBASE_H_ */

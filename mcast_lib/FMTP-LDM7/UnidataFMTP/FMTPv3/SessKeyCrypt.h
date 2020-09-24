@@ -91,25 +91,17 @@ public:
 	 *
 	 * @param[in] pubKey          Subscriber's X.509 public-key certificate in
 	 *                            PEM format
-	 * @param[in] keyLen          Length of public key in bytes or -1 to
-	 *                            indicate the certificate is NUL-terminated
 	 * @throw std::runtime_error  OpenSSL failure
 	 */
-	Encryptor(
-			const char* pubKey,
-			const int   keyLen = -1);
+	Encryptor(const std::string& pubKey);
 
 	/**
 	 * Encrypts a publisher's session key using the subscriber's public key.
 	 *
 	 * @param[in] sessKey         Session key to be encrypted
-	 * @param[in] keyLen          Length of the session key in bytes
-	 * @return                    Corresponding encrypted session key
 	 * @throw std::runtime_error  OpenSSL failure
 	 */
-	std::string encrypt(
-			const char* sessKey,
-			const int   keyLen) const;
+	std::string encrypt(const std::string& sessKey) const;
 };
 
 #endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_SESSKEYCRYPT_H_ */
