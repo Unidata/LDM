@@ -16,7 +16,9 @@ before_install:
   - sudo iptables -F
   - mkdir m4
   - autoreconf -fi
-  - ./configure --disable-root-actions --with-noaaport --with-multicast
+  # No multicast support because OpenSSL 1.1 isn't available
+  #- ./configure --disable-root-actions --with-noaaport --with-multicast
+  - ./configure --disable-root-actions --with-noaaport
 
 addons:
   apt:
