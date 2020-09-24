@@ -1989,7 +1989,7 @@ uldb_Status uldb_open(
 uldb_Status uldb_close(
         void)
 {
-    int status;
+    int status = ULDB_INIT;
 
     if (moduleInitialized && db_isOpen(&database)) {
         if (srwl_free(database.lock)) {
