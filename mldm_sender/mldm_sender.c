@@ -374,9 +374,9 @@ mls_decodeCommandLine(
  * @param[in] sig  Signal to be handled.
  */
 static void
-mls_handleSignal(
-        const int sig)
+mls_handleSignal(const int sig)
 {
+    log_debug("Caught signal %d", sig);
     switch (sig) {
         case SIGTERM:
             done = 1;
@@ -389,6 +389,8 @@ mls_handleSignal(
             break;
         case SIGUSR2:
             log_roll_level();
+            break;
+        default:
             break;
     }
     return;
@@ -1077,14 +1079,12 @@ main(   const int    argc,
                 }
             }
 
-            log_notice("Terminating");
-
             if (status)
                 smi_free(mcastInfo);
         } // `mcastInfo` allocated
 
-        log_fini();
-    }
+        log_notice("Terminating normally with status %d", status);
+    } // Logging initialized
 
     return status;
 }
