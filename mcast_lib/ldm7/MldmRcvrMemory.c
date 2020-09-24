@@ -635,11 +635,11 @@ init(
 			} // Mutex initialized
 
 			if (!success)
-				piq_free(mrm->requestedQ);
+				piq_free(requestedQ);
 		} // Requested queue created
 
 		if (!success)
-			piq_free(mrm->missedQ);
+			piq_free(missedQ);
 	} // Missed queue created
 
     return success;
