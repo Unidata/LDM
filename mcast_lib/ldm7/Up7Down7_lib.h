@@ -19,8 +19,10 @@
 #define REQUEST_RATE           0.1 // !RUN_REQUESTER => Ignored
 // Total number of products to insert
 #define NUM_PRODS              100
+//#define NUM_PRODS              1
 // Maximum size of a data-product in bytes
 #define MAX_PROD_SIZE          100000
+//#define MAX_PROD_SIZE          1000
 // Duration, in microseconds, before the next product is inserted (i.e., gap
 // duration)
 #define INTER_PRODUCT_GAP      10000 // 10 ms
