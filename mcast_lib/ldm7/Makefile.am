@@ -80,8 +80,6 @@ up7.h:			up7.hin up7.c
 check_PROGRAMS		=
 TESTS			=
 
-hmac_test: publisher subscriber text
-
 publisher_SOURCES	= publisher.c
 publisher_CPPFLAGS 	= -I/usr/include/openssl11
 publisher_LDADD  	= -L/usr/lib64/openssl11 -lssl -lcrypto
