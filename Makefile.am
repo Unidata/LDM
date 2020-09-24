@@ -148,10 +148,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 all:
 
-multicast-check:
-	cd mcast_lib && $(MAKE) check
-	cd mldm_sender && $(MAKE) check
-
 install-data-hook:	ensure-ldmhome-links ensure-var
 if INCLUDE_ROOT_ACTIONS
 	@echo
@@ -298,7 +294,6 @@ push-%:
     ensure-syslog-entry \
     ensure-var \
     install_setuids \
-    multicast-check \
     root-actions \
     rpm \
     rpmlint \
