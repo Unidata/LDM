@@ -1,3 +1,11 @@
+6.13.12.74	2020-09-24T13:12:21-0600
+    uldb.c:
+        * Removed lint found by Coverity Scan
+
+    Developer:
+        * Eliminated hmac_test from distribution
+        * Ignore MldmRcvr.h and MldmRcvrMemory.h because of *.hin
+
 6.13.12.73	2020-09-24T11:50:38-0600
     Developer:
         * mcast_lib/Makefile.am: Removed "hmac_test" target to eliminate
