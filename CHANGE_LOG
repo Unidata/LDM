@@ -1,3 +1,26 @@
+6.13.12.70	2020-09-24T10:12:56-0600
+    NOAAPort:
+        * process_prod.c: Added feed to notice-level log message about inserted
+          product
+        * Replaced ingest-verification files with ones containing new log
+          messages
+
+    Multicast:
+        FMTP:
+            * Got multicast message authentication working
+        mldm_sender(1):
+            * Added notice-level log message (with status) about terminating
+              normally
+        Up7Down7_test(1):
+            * Added (commented out) single, small product possibility for
+              debugging
+        MldmRcvrMemory.c:
+            * Removed lint found by Coverity Scan
+
+    Developer:
+        .travis.yml:
+            * Disabled multicast testing because OpenSSL 1.1 isn't available
+
 6.13.12.69	2020-09-16T15:45:19-0600
     ldmd(1):
         * Combined hostname and dotted-quad "Denying connection from ..."
