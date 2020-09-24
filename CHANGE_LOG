@@ -1,3 +1,8 @@
+6.13.12.71	2020-09-24T11:25:22-0600
+    Developer:
+        * Top Makefile.am: Removed superfluous "muticast-check" target to see if
+          that will stop Travis from checking LDM7
+
 6.13.12.70	2020-09-24T10:12:56-0600
     NOAAPort:
         * process_prod.c: Added feed to notice-level log message about inserted
