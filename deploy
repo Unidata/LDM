@@ -1,5 +1,4 @@
-# Deploys an LDM package to a remote system. Deletes previous versions on the
-# remote system.
+# Deploys an LDM package to a remote system.
 
 PATH=/bin:/usr/bin:/usr/local/bin
 
