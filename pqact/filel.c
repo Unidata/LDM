@@ -122,26 +122,18 @@ static const char* const TYPE_NAME[] = {
         "DBFILE" };
 
 /*
- * The reasons for deleting an entry in the list. Keep consonant with 
- * REASON_STRING.
+ * Entry deletion information.
  */
-typedef enum {
-    DR_TERMINATED = 0,  ///< Child terminated
-    DR_CLOSE,           ///< entry contained "-close" option
-    DR_LRU,             ///< Close least-recently-used entry
-    DR_ERROR,           ///< I/O error
-    DR_INACTIVE         ///< Inactive for too long
+typedef struct {
+	char*       string;   ///< String representation of reason
+	log_level_t logLevel; ///< Logging level
 } DeleteReason;
-
-/*
- * Printable versions of "DeleteReason". Keep consonant with that type.
- */
-static const char* const REASON_STRING[] = {
-        "terminated",
-        "closed",
-        "least-recently-used",
-        "failed",
-        "inactive"};
+static const DeleteReason DR_TERMINATED = {"terminated",            LOG_LEVEL_DEBUG};
+static const DeleteReason DR_SIGNALED =   {"abnormally-terminated", LOG_LEVEL_WARNING};
+static const DeleteReason DR_CLOSED =     {"closed",                LOG_LEVEL_DEBUG};
+static const DeleteReason DR_LRU =        {"least-recently-used",   LOG_LEVEL_DEBUG};
+static const DeleteReason DR_FAILED =     {"failed",                LOG_LEVEL_ERROR};
+static const DeleteReason DR_INACTIVE =   {"inactive",              LOG_LEVEL_DEBUG};
 
 union f_handle {
     int       fd;
@@ -222,6 +214,9 @@ static struct fl {
     fl_entry *head;
     fl_entry *tail;
 } thefl[] = {{ 0, NULL, NULL }};
+
+/// Maximum amount of time for an unused entry, in seconds
+static const unsigned long maxTime = 6 * 3600;
 
 #define TO_HEAD(entry) \
         if(thefl->head != entry) fl_makeHead(entry)
@@ -407,32 +402,28 @@ fl_find(
 }
 
 /**
- * Removes an entry in the open-file list and frees the entry's resources.
+ * Removes an entry in the open-file list and frees the entry's resources. Logs
+ * a single message at an appropriate logging level.
  *
  * NB: Dereferencing the entry after this call results in undefined behavior.
  *
+ * @pre             {If `entry != NULL`, then the entry is in the list.}
  * @param[in] entry Pointer to the entry to be deleted or NULL.
  * @param[in] dr    The reason for the deletion.
- * @pre             {If `entry != NULL`, then the entry is in the list.}
  */
 static void
 fl_removeAndFree(
-        fl_entry* const    entry,
-        const DeleteReason dr)
+        fl_entry* const           entry,
+        const DeleteReason* const dr)
 {
-    // log_assert(thefl->size >= 1);
-
     if (entry != NULL) {
-        int logLevel = (DR_ERROR == dr) ? LOG_LEVEL_ERROR : LOG_LEVEL_DEBUG;
+    	const int         logLevel = dr->logLevel;
+        const char*       fmt = (PIPE == entry->type)
+                ? "Deleting %s %s entry: cmd=\"%s\", pid=%lu"
+                : "Deleting %s %s entry: cmd=\"%s\"";
 
-        if (PIPE == entry->type) {
-            log_log_q(logLevel, "Deleting %s PIPE entry: pid=%lu, cmd=\"%s\"",
-                    REASON_STRING[dr], entry->private, entry->path);
-        }
-        else {
-            log_log_q(logLevel, "Deleting %s %s entry \"%s\"", REASON_STRING[dr],
-                    TYPE_NAME[entry->type], entry->path);
-        }
+        log_log(logLevel, fmt, dr->string,
+                TYPE_NAME[entry->type], entry->path, entry->private);
 
         fl_remove(entry);
         entry_free(entry);
@@ -451,21 +442,17 @@ fl_sync(const int block)
     fl_entry*                  entry;
     fl_entry*                  prev;
     const time_t               now = time(NULL);
-	static const unsigned long maxTime = 6 * 3600;
 
     for (entry = thefl->tail; entry != NULL; entry = prev) {
         prev = entry->prev;
         if (entry_isFlagSet(entry, FL_NEEDS_SYNC)) {
             if (entry->ops->sync(entry, block)) {
-                log_error_q("Couldn't sync entry");
-                fl_removeAndFree(entry, DR_ERROR); // public function so remove
+                fl_removeAndFree(entry, &DR_FAILED); // public function so remove
                 entry = NULL;
             }
         }
-        if (entry && (now - entry->inserted > maxTime)) {
-        	log_notice("Entry has been inactive for %lu seconds", maxTime);
-			fl_removeAndFree(entry, DR_INACTIVE);
-        }
+        if (entry && (now - entry->inserted > maxTime))
+			fl_removeAndFree(entry, &DR_INACTIVE);
     }
 }
 
@@ -489,7 +476,7 @@ fl_closeLru(
         if (entry_isFlagSet(entry, skipflags))
             continue;
         /* else */
-        fl_removeAndFree(entry, DR_LRU);
+        fl_removeAndFree(entry, &DR_LRU);
         return;
     }
 }
@@ -1400,7 +1387,7 @@ int unio_prodput(
         } /* data != NULL */
 
         if (status || entry_isFlagSet(entry, FL_CLOSE))
-            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+            fl_removeAndFree(entry, status ? &DR_FAILED : &DR_CLOSED);
     } /* entry != NULL */
 
     return status ? -1 : 0;
@@ -1637,7 +1624,7 @@ int stdio_prodput(
         } /* data != NULL */
 
         if (status || entry_isFlagSet(entry, FL_CLOSE))
-            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+            fl_removeAndFree(entry, status ? &DR_FAILED : &DR_CLOSED);
     } /* entry != NULL */
 
     return status ? -1 : 0;
@@ -2222,8 +2209,7 @@ int pipe_prodput(
                  * happened). Remove the entry, free its resources, and try
                  * again -- once.
                  */
-                log_error_q("Decoder terminated prematurely");
-                fl_removeAndFree(entry, DR_ERROR);
+                fl_removeAndFree(entry, &DR_FAILED);
                 entry = fl_getEntry(PIPE, argc, argv, &isNew);
                 if (entry == NULL ) {
                     log_add("Couldn't get entry for product \"%s\"",
@@ -2250,7 +2236,7 @@ int pipe_prodput(
         }       // `data` possibly allocated
 
         if (entry && (status || entry_isFlagSet(entry, FL_CLOSE)))
-            fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+            fl_removeAndFree(entry, status ? &DR_FAILED : &DR_CLOSED);
     }   // Got initial entry
 
     return status ? -1 : 0;
@@ -2363,7 +2349,7 @@ int spipe_prodput(
          * In case the decoder exited and we haven't yet reaped,
          * try again once.
          */
-        fl_removeAndFree(entry, DR_ERROR);
+        fl_removeAndFree(entry, &DR_FAILED);
         log_error_q("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
@@ -2376,7 +2362,7 @@ int spipe_prodput(
         status = flushIfAppropriate(entry);
 
     if (status || entry_isFlagSet(entry, FL_CLOSE))
-        fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+        fl_removeAndFree(entry, status ? &DR_FAILED : &DR_CLOSED);
 
     return status ? -1 : 0;
 }
@@ -2404,7 +2390,7 @@ int xpipe_prodput(
          * In case the decoder exited and we haven't yet reaped,
          * try again once.
          */
-        fl_removeAndFree(entry, DR_ERROR);
+        fl_removeAndFree(entry, &DR_FAILED);
         log_error_q("trying again");
         entry = fl_getEntry(PIPE, argc, argv, NULL);
         if (entry == NULL )
@@ -2416,7 +2402,7 @@ int xpipe_prodput(
         status = flushIfAppropriate(entry);
 
     if (status || entry_isFlagSet(entry, FL_CLOSE))
-        fl_removeAndFree(entry, status ? DR_ERROR : DR_CLOSE);
+        fl_removeAndFree(entry, status ? &DR_FAILED : &DR_CLOSED);
 
     return status ? -1 : 0;
 }
@@ -2827,7 +2813,7 @@ int ldmdb_prodput(
                 keystr);
     }
     if (closeflag || status == -1) {
-        fl_removeAndFree(entry, -1 == status ? DR_ERROR : DR_CLOSE);
+        fl_removeAndFree(entry, -1 == status ? &DR_FAILED : &DR_CLOSED);
     }
 
     return status ? -1 : 0;
@@ -3045,6 +3031,10 @@ pid_t reap(
             }
         }
 
+        // `entry != NULL` => `isExec == false`
+        // `isExec == true` => `entry == NULL`
+        // `isExec == false` => `entry != NULL || cmd == NULL`
+
         if (WIFSTOPPED(status)) {
             log_notice_q(cmd
                         ? "child %d stopped by signal %d (%s %s)"
@@ -3052,32 +3042,34 @@ pid_t reap(
                     wpid, WSTOPSIG(status), childType, cmd);
         }
         else if (WIFSIGNALED(status)) {
-            log_warning_q("Child %d terminated by signal %d", wpid,
+        	log_flush_warning();
+            log_warning("Child %d terminated by signal %d", wpid,
                     WTERMSIG(status));
 
             if (!isExec) {
-                fl_removeAndFree(entry, DR_TERMINATED); // NULL `entry` safe
+                fl_removeAndFree(entry, &DR_SIGNALED); // NULL `entry` safe
             }
             else {
-                log_info_q("Deleting terminated EXEC entry \"%s\"", cmd);
+                log_warning("Deleting terminated EXEC entry \"%s\"", cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
         else if (WIFEXITED(status)) {
-            const int          exitStatus = WEXITSTATUS(status);
-            const int          logLevel =
-                    exitStatus ? LOG_LEVEL_ERROR : LOG_LEVEL_INFO;
-            const DeleteReason dr = exitStatus ? DR_ERROR : DR_TERMINATED;
+            const int exitStatus = WEXITSTATUS(status);
+            const int logLevel = exitStatus ? LOG_LEVEL_WARNING : LOG_LEVEL_DEBUG;
 
-            log_log_q(logLevel, "Child %d exited with status %d", wpid,
-                    exitStatus);
+            log_flush(logLevel);
+            log_log(logLevel, "Child %d exited with status %d", wpid,
+            		exitStatus);
+
+            const DeleteReason* dr = exitStatus ? &DR_FAILED : &DR_TERMINATED;
 
             if (!isExec) {
                 fl_removeAndFree(entry, dr);    // NULL `entry` safe
             }
             else {
-                log_log_q(logLevel, "Deleting %s EXEC entry \"%s\"",
-                        REASON_STRING[dr], cmd);
+                log_log(logLevel, "Deleting %s EXEC entry \"%s\"",
+                        dr->string, cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
