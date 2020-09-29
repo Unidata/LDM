@@ -59,7 +59,7 @@ ssh -T $host bash --login <<EOF
 EOF
 
 # Ensure that the download directory has a link to the tarball
-echo Creating link to $host:$ftpdir in $downloaddir
+echo Creating symbolic link to $host:$ftpdir in $downloaddir
 trap "ssh $host rm -f $downloaddir/$tarball; `trap -p ERR`" ERR
 ssh -T $host bash --login <<EOF
     set -ex # Exit on error
