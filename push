@@ -41,14 +41,17 @@ if git branch | grep -w master >/dev/null; then
             delivery/release-vars.sh >delivery/release-vars.sh.tmp
     mv delivery/release-vars.sh.tmp delivery/release-vars.sh
 
+    # Set the tag
+    tag="v$versionId" 
+
     # Commit the changes.
-    git commit -m "v$versionId" CHANGE_LOG configure.ac delivery/release-vars.sh
+    git commit -m $tag CHANGE_LOG configure.ac delivery/release-vars.sh
 
     # Tag the current version.
-    git tag -f "v$versionId"
+    git tag -f $tag
 
-    # Push to the remote repository
-    git push --tags origin master
+    # Push to the remote repository by tag
+    git push $tag
 
     # Create a distribution
     make dist
