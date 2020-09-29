@@ -16,7 +16,7 @@ cd `dirname $0`
 
 # Non-operational backend cluster node
 # Tom's using uni14 for fanout testing
-#deploy uni15
+#deploy uni17
 
 # Lead
 #deploy lead
