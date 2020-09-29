@@ -356,6 +356,21 @@ bool log_is_level_enabled(
 #define log_is_enabled_debug    log_is_level_enabled(LOG_LEVEL_DEBUG)
 
 /**
+ * Logs a single message, bypassing the message-queue.
+ *
+ * @param[in] level  `log_level_t` logging level.
+ * @param[in] ...    Optional arguments of the message -- starting with the
+ *                   format of the message.
+ * @asyncsignalsafety  Unsafe
+ */
+#define log_log(level, ...) do {\
+    if ((level) >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log(&loc, (level), __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
  * Logs a single message at the DEBUG level, bypassing the message-queue.
  *
  * @param[in] ...  Optional arguments of the message -- starting with the format
@@ -552,7 +567,7 @@ bool log_is_level_enabled(
  * @param[in] ...    Optional arguments of the message -- starting with the
  *                   format of the message.
  */
-#define log_log_q(level, ...)  LOG_LOG(level,             __VA_ARGS__)
+#define log_log_q(level, ...)  LOG_LOG(level, __VA_ARGS__)
 
 /**
  * Logs the currently-accumulated log-messages of the current thread and resets
