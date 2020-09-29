@@ -1,3 +1,11 @@
+6.13.12.75	2020-09-29T13:01:21-0600
+    Logging:
+        * Created macro log_log(level, ...)
+
+    pqact(1):
+        * Improved log messages for when an action with an open file descriptor
+          is deleted from the list of such actions and its descriptor is closed
+
 6.13.12.74	2020-09-24T13:12:21-0600
     uldb.c:
         * Removed lint found by Coverity Scan
