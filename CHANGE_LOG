@@ -1,4 +1,4 @@
-6.13.12.76	2020-09-30T09:52:46-0600
+6.13.12	2020-09-30T10:25:12-0600
     Installation:
         * Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
@@ -313,7 +313,7 @@
             * Added LDM_BIN_DIR
         * push(1):
             * Replaced "commit -a" with list of modified files
-            * Modified "git push" to use latest tag only
+            * Replaced "git push" arguments with "--mirror"
         * Instrumented OffsetMap
         * Only deploy to NWSC node6
         * ldm7PreInstall:
@@ -323,7 +323,7 @@
         * pq.c:
             * Demoted pq_sequenceHelper() log message from NOTE to DEBUG
         * Added "delayQueue/" to Git.
-        * Corrected target "push-%" in to-level makefile
+        * Corrected target "push-%" in top-level makefile
         * Removed Authorizer_test from "make check" because GTest segfaults at
           exit.
         * pthread_atfork_test.c:
