@@ -3050,7 +3050,8 @@ pid_t reap(
                 fl_removeAndFree(entry, &DR_SIGNALED); // NULL `entry` safe
             }
             else {
-                log_warning("Deleting terminated EXEC entry \"%s\"", cmd);
+                log_warning("Deleting %s EXEC entry \"%s\"",
+                		DR_SIGNALED.adjective, cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
