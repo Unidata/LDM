@@ -83,7 +83,7 @@ pbuf_flush(
     size_t              len = (size_t)(buf->ptr - buf->base);
     int                 status = ENOERR;        /* success */
 
-    log_debug("fd %d %6d %s", buf->pfd, len, block ? "block" : "" );
+    //log_debug("fd %d %6d %s", buf->pfd, len, block ? "block" : "" );
 
     if (len == 0)
         return 0; /* nothing to do */
@@ -117,7 +117,7 @@ pbuf_flush(
     else {
         if (nwrote == len) {
             /* wrote the whole buffer */
-            log_debug("Wrote %d bytes", nwrote);
+            //log_debug("Wrote %d bytes", nwrote);
             buf->ptr = buf->base;
             len = 0;
         }

@@ -125,8 +125,8 @@ static const char* const TYPE_NAME[] = {
  * Entry deletion information.
  */
 typedef struct {
-	char*       string;   ///< String representation of reason
-	log_level_t logLevel; ///< Logging level
+	char*       adjective; ///< Describes reason for deletion
+	log_level_t logLevel;  ///< Logging level
 } DeleteReason;
 static const DeleteReason DR_TERMINATED = {"terminated",            LOG_LEVEL_DEBUG};
 static const DeleteReason DR_SIGNALED =   {"abnormally-terminated", LOG_LEVEL_WARNING};
@@ -422,7 +422,7 @@ fl_removeAndFree(
                 ? "Deleting %s %s entry: cmd=\"%s\", pid=%lu"
                 : "Deleting %s %s entry: cmd=\"%s\"";
 
-        log_log(logLevel, fmt, dr->string,
+        log_log(logLevel, fmt, dr->adjective,
                 TYPE_NAME[entry->type], entry->path, entry->private);
 
         fl_remove(entry);
@@ -1936,8 +1936,8 @@ static int pipe_put(
 {
     int status;
 
-    log_debug("%d",
-            entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
+    //log_debug("%d",
+            //entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
     TO_HEAD(entry);
 
     if (entry->handle.pbuf == NULL ) {
@@ -3069,7 +3069,7 @@ pid_t reap(
             }
             else {
                 log_log(logLevel, "Deleting %s EXEC entry \"%s\"",
-                        dr->string, cmd);
+                        dr->adjective, cmd);
                 (void)cm_remove(execMap, wpid);
             }
         }
