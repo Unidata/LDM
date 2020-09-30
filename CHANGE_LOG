@@ -1,222 +1,93 @@
-6.13.12.75	2020-09-29T13:01:21-0600
-    Logging:
-        * Created macro log_log(level, ...)
+6.13.12.76	2020-09-30T09:50:04-0600
+    Installation:
+        * Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
 
-    pqact(1):
-        * Improved log messages for when an action with an open file descriptor
-          is deleted from the list of such actions and its descriptor is closed
+    ldmadmin(1):
+        * plotmetrics:
+            * Corrected sense of local/remote port connections. They were
+              reversed all this time.
+        * Put $LDMHOME/util at head of PATH to support customization
+        * Changed URL for GEMPAK tables updates from "git@github..." to 
+          "https://..." because the former could require a key
 
-6.13.12.74	2020-09-24T13:12:21-0600
-    uldb.c:
-        * Removed lint found by Coverity Scan
-
-    Developer:
-        * Eliminated hmac_test from distribution
-        * Ignore MldmRcvr.h and MldmRcvrMemory.h because of *.hin
-
-6.13.12.73	2020-09-24T11:50:38-0600
-    Developer:
-        * mcast_lib/Makefile.am: Removed "hmac_test" target to eliminate
-          LDM7 checking
-
-6.13.12.72	2020-09-24T11:40:29-0600
-    Developer:
-        * .travis.yml: Added cat(1) of top-level Makefile to help diagnose 
-          checking of LDM7
-
-6.13.12.71	2020-09-24T11:25:22-0600
-    Developer:
-        * Top Makefile.am: Removed superfluous "muticast-check" target to see if
-          that will stop Travis from checking LDM7
-
-6.13.12.70	2020-09-24T10:12:56-0600
-    NOAAPort:
-        * process_prod.c: Added feed to notice-level log message about inserted
-          product
-        * Replaced ingest-verification files with ones containing new log
-          messages
-
-    Multicast:
-        FMTP:
-            * Got multicast message authentication working
-        mldm_sender(1):
-            * Added notice-level log message (with status) about terminating
-              normally
-        Up7Down7_test(1):
-            * Added (commented out) single, small product possibility for
-              debugging
-        MldmRcvrMemory.c:
-            * Removed lint found by Coverity Scan
-
-    Developer:
-        .travis.yml:
-            * Disabled multicast testing because OpenSSL 1.1 isn't available
-
-6.13.12.69	2020-09-16T15:45:19-0600
     ldmd(1):
-        * Combined hostname and dotted-quad "Denying connection from ..."
-          messages into one
+        * Top-Level Server:
+            * Eliminated superfluous error messages at process termination about
+              the upstream LDM database not existing if the "-n" (do nothing)
+              option is specified.
+            * Replaced log_log_q() with loc_add() & log_flush() in "Child ...
+              exited with status ..." messages.
+            * Combined hostname and dotted-quad "Denying connection from ..."
+              messages into one
+        * Upstream LDM:
+            * Don't terminate previously-executing upstream LDM with a different
+              protocol version number.
+            * one_svc_run(): Replaced use of select() with poll()
+            * Increase service timeout from 60 s to 120 s
+        * Downstream LDM-6:
+            * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
+            * Created vetProduct() and modified down6_hereis() and
+              down6_comingsoon() to use it.
+            * Changed logging level of "too-old" and "unrequested" products from
+              INFO to WARN in order to unconditionally reveal why products
+              aren't being inserted into the product-queue due to a slow
+              connection (because it's being throttled, for example). If this
+              happens to you, then you'll need to work with your network
+              administrator to allow LDM traffic to pass unhindered. NB: This
+              means a cold-started LDM might log some "too-old" warning
+              messages, initially.
+            * Log a warning that the (PRIMARY/ALTERNATE) transfer-mode won't
+              work correctly if there are more than two REQUESTs for the same
+              feed.
+            * Modified the algorithm for determining when to switch between
+              PRIMARY and ALTERNATE transfer-modes to consider whether or not
+              the same feed is being received via multicast. This will only have
+              an effect if multicast reception is enabled -- which isn't by
+              default.
 
-    Multicast:
-        * UdpRecv.c:
-            * Corrected UdpRecv::discardPayload() and UdpRecv::readPayload()
-        * up7.c:
-            * Replaced use of global product-queue with one given to up7_init()
-            * Made up7_init() and up7_destroy() public
-        * Up7Down7_test:
-            * Works
-
-    Developer:
-        deployAll(1):
-            * Changed deployment to uni15 to deployment to uni17
-
-6.13.12.68	2020-09-15T10:07:13-0600
     pqact(1):
+        * pqact.c:
+            * Simplified decision on whether or not to write a new state-file by
+              using tvIsNone() on the insertion-time of the last, successfully-
+              processed product
+            * Ensure valid time-of-last-insertion before writing state file at
+              exit
+            * Correct parsing/formatting of state file with negative seconds.
+            * Modified "Starting Up" message to log the command-line
+            * Changed log message at process termination from
+                  Behind by %g s
+              to either
+                  No product was processed
+              or
+                  Last product processed was inserted %g s ago
+              to better reflect the meaning
+            * Replaced log_error_q() with log_add() & log_flush().
         * filel.c:
+            * Added 6 hour timeout for inactive entries that, nevertheless, had
+              open file descriptors to eliminate the possibility of pqact(1)
+              holding open thousands of files that have been scoured and,
+              consequently, filling up the disk with invisible files. This also
+              improves the time it takes for the LDM to shut down.
+            * Corrected truncation of output file by the FILE action when both
+              "-overwrite" and "-metadata" are specified. Before, the file would
+              be truncated to the size of the data-product even though it now
+              has a metadata header. Thanks to Bryan for spotting and analyzing
+              this.
             * Made the removal of the least-recently-used action (and the
               comcomittant closure of its open file descriptor) repeat until the
               current action can succeed or a failure occurs
             * Added use of the above if a child process can't be fork(2)ed for a
               decoder
-            * filel.c: Reduced the amount of time that an unused action can have
-              an open file descriptor from 24 hours to 6 hours
-        * Simplified decision on whether or not to write a new state-file by
-          using tsIsNone() on the insertion-time of the last, successfully-
-          processed product
+            * Improved log messages for when an action with an open file
+              descriptor is deleted from the list of such actions and its
+              descriptor is closed
 
-    NOAAPortIngester(1):
-        * Modified thread-creation to prevent the program from immediately
-          terminating if the RHEL Insights Client security package is running.
-          That package will, by default, prevent the creation of a thread with
-          non-default scheduling -- even if the process is owned by root. The
-          program will now try to create threads with high-priority, real-time 
-          scheduling but will create default threads and log a warning if it
-          can't. The default threads will increase the risk of missing
-          NOAAPort packets.
-
-    Misc:
-        * ldmfork(3): Documented `errno` values
-
-    Developer:
-        * DeployAll(1): Added ldm7@idc-uva.dynes.virginia.edu
-
-    Multicast:
-        * Replaced HMAC test with latest code from Hongying
-        * UdpRecv: created
-        * fmtpRecvv3:
-            * Adapted to use UdpRecv
-            * Modified to only consider valid FMTP messages
-
-6.13.12.67	2020-08-26T13:31:31-0600
-    Top-level ldmd(1):
-        * Replaced log_log_q() with loc_add() & log_flush() in
-          "Child ... exited with status ..." messages.
-
-    pqact(1):
-        * Replaced log_error_q() with log_add() & log_flush().
-        * Improved comment.
-
-    pq_test_insert(1):
-        * Increased inter-product gap to 0.1 s
-        * Moved sleep from beginning to end of insertion-loop
-
-    Multicast:
-        mldm_sender(1):
-            * Demoted "Product not multicast because not receivers from INFO to
-              DEBUG
-
-6.13.12.66	2020-08-12T13:43:35-0600
-    Installation:
-        Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
-
-    Product-Queue (pq.c):
-        * Changed return values of pq_sequence() and pq_sequenceLock()
-        * Documented that pq_sequence() and pq_sequenceLock() error codes are
-          negative
-        * Improved error-message in pqe_newDirect()
-        * Added error-message to pqe_discard()
-        * Corrected return status of ctl_rel() on mtof() failure
-
-    pqact(1):
-        * Added one-day timeout for inactive entries that, nevertheless, had
-          open file descriptors to eliminate the possibility of pqact(1) holding
-          open thousands of files that have been scoured and, consequently,
-          filling up the disk with invisible files.
-        * Ensure valid time-of-last-insertion before writing state file at exit.
-          Probably doesn't make any difference.
-        * Correct parsing/formatting of state file with negative seconds. Again,
-          shouldn't make any difference.
-        * Modified "Starting Up" message to log the command-line
-        * Changed log message at process termination from
-              Behind by %g s
-          to either
-              No product was processed
-          or
-              Last product processed was inserted %g s ago
-          to better reflect the meaning
-        * Corrected truncation of output file by the FILE action when both
-          "-overwrite" and "-metadata" are specified. Before, the file would be
-          truncated to the size of the data-product even though it now has a
-          metadata header. Thanks to Bryan for spotting and analyzing this.
-        * Demoted "Deleting ... entry" to DEBUG if it's not due to an error in
-          order to save log file space
-
-    Logging:
-        * Library:
-            * Replaced minimum field-width in default log messages with
-              canonical column-start positions to reduce line lengths and
-              CPU usage
-            * Improved concurrency:
-                * Unlocked file and mutex if thread cancelled. Irrelevant
-                  for LDM6.
-                * Added automatic deletion of message queue when thread
-                  exits, so calling log_free() is no longer necessary.
-                * Added use of pthread_atfork(). Irrelevant for LDM6.
-            * Added "Terminating logging" message at DEBUG priority
-        * refresh_logging(1): replaced "command kill" with "/bin/kill" to ensure
-          correct behavior
-        * Documented internally how log_refresh() will cause the log file to be
-          closed/opened *on the next log message* and not before
-
-    Top-level LDM server, ldmd(1):
-        * Eliminated superfluous error messages at process termination about the
-          upstream LDM database not existing if the "-n" (do nothing) option is
-          specified.
-
-    Downstream LDM-6:
-        * Replaced use of IS_ALIVE with fixed timeout of 5 minutes
-        * Created vetProduct() and modified down6_hereis() and
-          down6_comingsoon() to use it.
-        * Changed logging level of "too-old" and "unrequested" products from
-          INFO to WARN in order to unconditionally reveal why products aren't
-          being inserted into the product-queue due to a slow connection
-          (because it's being throttled, for example). If this happens to you,
-          then you'll need to work with your network administrator to allow LDM
-          traffic to pass unhindered. NB: This means a cold-started LDM might
-          log some "too-old" warning messages, initially.
-        * Log a warning that the (PRIMARY/ALTERNATE) transfer-mode won't work
-          correctly if there are more than two REQUESTs for the same feed.
-        * Modified the algorithm for determining when to switch between PRIMARY
-          and ALTERNATE transfer-modes to consider whether or not the same feed
-          is being received via multicast. This will only have an effect if
-          multicast reception is enabled -- which isn't by default.
-
-    Upstream LDM:
-        * Don't terminate previously-executing upstream LDM with a different
-          protocol version number.
-        * one_svc_run(): Replaced use of select() with poll()
-        * Increase service timeout from 60 s to 120 s
-
-    ldmadmin(1):
-        * plotmetrics: Corrected sense of local/remote port connections. They
-          were reversed all this time.
-        * Put $LDMHOME/util at head of PATH to support customization
-        * Changed URL for GEMPAK tables updates from "git@github..." to 
-          "https://..." because the former required a key from Gilbert
+    uldb.c:
+        * Removed lint found by Coverity Scan
 
     NOAAPort:
-        * Changed pre-installation instruction to recommend disabling UDP packet
-          sequence checking.
+        * Changed pre-installation instructions to recommend disabling UDP
+          packet sequence checking.
         * Created keep_running(1) script to ensure that NOAAPort ingesters are
           restarted if they crash. Added examples to NOAAPort documentation.
         * Updated main page of Doxygen-based documentation. In particular,
@@ -235,31 +106,82 @@
                   PCPDUR           0  -9999.00
             * 000 002 009 000 Vertical Velocity (Geometric)    m s**-1
                   DZDT             0  -9999.00
-        * updateGempakTables(1): changed the "make install..." to
-          "mv -f *.tbl..." to make it independent of the build mechanism.
-        * Changed logging-level of messages for first fragment of GOES
-          imagery from NOTE to INFO.
+        * updateGempakTables(1):
+            * Changed the "make install..." to "mv -f *.tbl..." to make it
+              independent of the build mechanism.
+        * NOAAPortIngester(1):
+            * Changed logging-level of messages for first fragment of GOES
+              imagery from NOTE to INFO.
+            * Modified thread-creation to prevent the program from immediately
+              terminating if the RHEL Insights Client security package is
+              running. That package will, by default, prevent the creation of a
+              thread with non-default scheduling -- even if the process is owned
+              by root. The program will now try to create threads with
+              high-priority, real-time scheduling but will create default
+              threads and log a warning if it can't. The default threads will
+              increase the risk of missing NOAAPort packets.
+        * process_prod.c:
+            * Added feed to notice-level log message about inserted product
+        * Makefile.am:
+            * Replaced ingest-verification files with ones containing new log
+              messages
+
+    Logging:
+        * Library:
+            * Created macro log_log(level, ...)
+            * Replaced minimum field-width in default log messages with
+              canonical column-start positions to reduce line lengths and
+              CPU usage
+            * Improved concurrency:
+                * Unlocked file and mutex if thread cancelled. Irrelevant
+                  for LDM6.
+                * Added automatic deletion of message queue when thread
+                  exits, so calling log_free() is no longer necessary.
+                * Added use of pthread_atfork(). Irrelevant for LDM6.
+            * Added "Terminating logging" message at DEBUG priority
+        * refresh_logging(1):
+            * Replaced "command kill" with "/bin/kill" to ensure correct
+              behavior
+        * Documented internally how log_refresh() will cause the log file to be
+          closed/opened *on the next log message* and not before
+
+    Product-Queue (pq.c):
+        * Changed return values of pq_sequence() and pq_sequenceLock()
+        * Documented that pq_sequence() and pq_sequenceLock() error codes are
+          negative
+        * Improved error-message in pqe_newDirect()
+        * Added error-message to pqe_discard()
+        * Corrected return status of ctl_rel() on mtof() failure
 
     Documentation:
-        Troubleshooting webpage:
-            Removed the incorrect value of 4096 for the average product size
-            when computing the number of product-slots to create in a new
-            product-queue.
+        * Troubleshooting webpage:
+            * Removed the incorrect value of 4096 for the average product size
+              when computing the number of product-slots to create in a new
+              product-queue.
 
-    Miscellaneous:
+    Misc:
         * Removed lint found by Coverity Scan
-        * Created ldm_formatCmd() to format a command-line from a command vector
-        * Improved logic in ghostname() for determining the fully-qualified
-          name of the local host, which is used by rtstats(1). The LDM registry
-          is still checked first, then gethostname(), and then the default value
-          set by the configure script. If, after all this, the name still isn't
-          fully qualified, then a system call will be made in an attempt to make
-          it fully qualified. This means that the "hostname" parameter in the
-          LDM registry needn't be set unless ghostname() doesn't return a
-          fully-qualified hostname or a different name is desired.
+        * ldm_formatCmd()
+            * Created to format a command-line from a command vector
+        * ghostname():
+            * Improved logic in for determining the fully-qualified name of the
+              local host, which is used by rtstats(1). The LDM registry is still
+              checked first, then gethostname(), and then the default value set
+              by the configure script. If, after all this, the name still isn't
+              fully qualified, then a system call will be made in an attempt to
+              make it fully qualified. This means that the "hostname" parameter
+              in the LDM registry needn't be set unless ghostname() doesn't
+              return a fully-qualified hostname or a different name is desired.
+        * ldmfork(3):
+            * Documented `errno` values
+        * Improved internal commentary
 
     Multicast:
-        Product-Queue (pq.c):
+        * ChildCmd.c:
+            * Ensured that all pipe(2) file descriptors in the child process are
+              greater than 2 to avoid conflicts when duplicating them to the
+              standard file descriptors (i.e., 0, 1, and 2).
+        * Product-Queue (pq.c):
             * Disable thread-cancellation on entry and revert on return
             * pq_sequenceHelper():
                 * Print number of locked products
@@ -269,11 +191,35 @@
                     * An error occurs, either in the product-queue or the
                       caller's function
             * Added missing decrease of lock count
-        OESS scripts:
+        * OESS scripts:
             * Modified to handle different virtual circuits that, nevertheles,
               have the same switch name, port name, or VLAN tag
             * Corrected URL for OESS services
-        Down7:
+        * up7.c:
+            * Simplified and improved robustness by eliminating second
+              server-side transport.
+            * Cleaned-up subscription-request logic. Ensured that an error
+              message is logged if anything goes wrong.
+            * request_product_7_svc():
+                * Added call to svcerr_systemerr() if there's no current
+                  subscription
+            * Added test_connection_7_svc() from Down7
+            * Improved handling of client destruction when subscribing LDM7
+              disconnects
+            * Added product-index to "Sending missed product" log message
+            * Squashed SIGSEGV when getting number of product-queue slots for
+              product-index map by always opening product-queue
+            * Corrected bug in determining PIM-file parent directory
+            * Replaced use of global product-queue with one given to up7_init()
+            * Made up7_init() and up7_destroy() public
+            * UpMcastMgr.c:
+                * Added check of logging destination for mldm_sender(1)
+                  execution
+                * Assert that the logging module doesn't hold a mutex lock
+                  before calling fork()
+                * Stop multicast LDM sender, mldm_sender(1), during multipoint
+                  VLAN reconfiguration
+        * down7.c:
             * Increased sleep duration between subscription attempts from 30
               seconds to 120 seconds
             * Increased RPC subscription timeout to 10 minutes
@@ -282,12 +228,6 @@
             * Replaced reliance on getting the RPC timeout from the client
               handle to explicitly setting the subscription-timeout because the
               RPC timeout is unset until the first call to `clnt_call()`
-            * MldmRcvr.c:
-                * eop_func(): Improved INFO message
-                * missed_prod_func(): Added flushing of errors
-            * ProdNotifier.cpp:
-                * startProd(): Improved error-message
-                * missedProd(): Added error-message
             * Included RECEIVE entry in computation of count of number of
               upstream suppliers of a given feed
             * Added mutex loccking/unlocking in down7_init() to silence Coverity
@@ -295,10 +235,19 @@
             * Moved test_connection_7_svc to Up7
             * Added periodic heartbeat to upstream LDM7
             * Improved some log messages
-            * MldmRcvrMemory.c: Replaced searching of YAML mapping with
-              streaming
-            * Down7.c: Improved commentary 
-        FMTP:
+            * MldmRcvr.c:
+                * eop_func(): Improved INFO message
+                * missed_prod_func(): Added flushing of errors
+            * ProdNotifier.cpp:
+                * startProd(): Improved error-message
+                * missedProd(): Added error-message
+            * MldmRcvrMemory.c:
+                * Removed lint found by Coverity Scan
+                * Replaced searching of YAML mapping with streaming
+            * Improved commentary 
+        * FMTP:
+            * Got multicast message authentication working
+            * Modified logMsg(std::string) to always log at NOTE level
             * fmtpSendv3:
                 * Improved debug logging
                 * Added release of products held by a unicast socket that just
@@ -309,28 +258,24 @@
                 * Added rcvrCount()
                 * Added log_info() for duplicate BOP
                 * Initialized numRetrans to -1
-            * TcpRecv: Explicitly enabled SO_KEEPALIVE
-            * TcpSend: Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
-            * Modified logMsg(std::string) to always log at NOTE level
+                * TcpSend:
+                    * Explicitly enabled SO_REUSEADDR and SO_KEEPALIVE
             * fmtpRecvv3:
                 * Moved direct sending of product-EOP to sender on unicast
                   reception thread to adding message to retransmission queue on
                   that thread to obviate deadlock between that thread and
                   sender's retransmission thread.
                 * Improved handling of missed multicast packets
-        vlanUtil(1):
-            * Replaced use of gawk(1)-only bit operations with shell's for
-              portability
-            * Corrected setting of broadcast address string
-        setMcastRate(1):
-            * Created to set the multicast sending rate. Uses tc(1). Must be
-              executed by root.
-        OffsetMap:
-            * Added missing deletion of entry by om_get()
-            * Modified OffsetMap::get() to indicate no-entry instead of throwing
-              an exception
-        mldm_sender(1)
-            * Improved releasing of product:
+                * Adapted to use UdpRecv
+                * Modified to only consider valid FMTP messages
+                * OffsetMap:
+                    * Added missing deletion of entry by om_get()
+                    * Modified OffsetMap::get() to indicate no-entry instead of
+                      throwing an exception
+                * UdpRecv.c:
+                    * Created
+        * mldm_sender(1):
+            * Improved releasing of product in product-queue:
                 * Added product release on multicast failure
                 * Added debug message about releasing locked product
             * Added registry parameter "/fmtp-retx-timeout" for FMTP timout in
@@ -345,51 +290,49 @@
             * Eliminated double free()ing of `mcastInfo`
             * Continue if no receivers
             * Log more errors
-        UpMcastMgr.c:
-            * Added check of logging destination for mldm_sender(1) execution
-            * Assert that the logging module doesn't hold a mutex lock before
-              calling fork()
-            * Stop multicast LDM sender, mldm_sender(1), during multipoint VLAN
-              reconfiguration
-        Up7.c:
-            * Simplified and improved robustness by eliminating second
-              server-side transport.
-            * Cleaned-up subscription-request logic. Ensured that an error
-              message is logged if anything goes wrong.
-            * request_product_7_svc(): added call to svcerr_systemerr() if
-              there's no current subscription
-            * Added test_connection_7_svc() from Down7
-            * Improved handling of client destruction when subscribing LDM7
-              disconnects
-            * Added product-index to "Sending missed product" log message
-            * Squashed SIGSEGV when getting number of product-queue slots for
-              product-index map by always opening product-queue
-            * Corrected bug in determining PIM-file parent directory
-        ChildCmd.c:
-            * Ensured that all pipe(2) file descriptors in the child process are
-              greater than 2 to avoid conflicts when duplicating them to the
-              standard file descriptors (i.e., 0, 1, and 2).
+            * Demoted "Product not multicast because no receivers from INFO to
+              DEBUG
+            * Added notice-level log message (with status) about terminating
+              normally
+        * Up7Down7_test(1):
+            * Added (commented out) single, small product possibility for
+              debugging
+        * vlanUtil(1):
+            * Replaced use of gawk(1)-only bit operations with shell's for
+              portability
+            * Corrected setting of broadcast address string
+        * setMcastRate(1):
+            * Created to set the multicast sending rate. Uses tc(1). Must be
+              executed by root.
 
     Developer:
         * Removed publishing rules from makefiles in favor of using "publish.sh"
-        * send_recv_test.h: Improved commentary on multicast addresses
-        * Added LDM_BIN_DIR to configure.ac
+        * send_recv_test.h:
+            * Improved commentary on multicast addresses
+        * configure.ac(1):
+            * Added LDM_BIN_DIR
         * push(1):
             * Replaced "commit -a" with list of modified files
-            * Added "--tags" to "git push" to push all tags
+            * Modified "git push" to use latest tag only
         * Instrumented OffsetMap
         * Only deploy to NWSC node6
-        * ldm7PreInstall: Added perl and corrected g++ package-name (gcc-g++)
-        * OffsetMap.cpp: Demoted get() log message from NOTE to DEBUG
-        * pq.c: Demoted pq_sequenceHelper() log message from NOTE to DEBUG
+        * ldm7PreInstall:
+            * Added perl and corrected g++ package-name (gcc-g++)
+        * OffsetMap.cpp:
+            * Demoted get() log message from NOTE to DEBUG
+        * pq.c:
+            * Demoted pq_sequenceHelper() log message from NOTE to DEBUG
         * Added "delayQueue/" to Git.
         * Corrected target "push-%" in to-level makefile
         * Removed Authorizer_test from "make check" because GTest segfaults at
           exit.
-        * Created pthread_atfork_test.c
-        * one_svc_run(): converted timeout argument from unsigned to int to
-          support indefinite timeout
-        * Down7::up7Proxy_heartbeat(): Fixed setting of `lastRequest`
+        * pthread_atfork_test.c:
+            * Created
+        * one_svc_run():
+            * Converted timeout argument from unsigned to int to support
+              indefinite timeout
+        * Down7::up7Proxy_heartbeat():
+            * Fixed setting of `lastRequest`
         * send_test(1) & recv_test(1):
             * Added "-g <grpAddr>" option
             * Made independent of LDM library
@@ -397,8 +340,22 @@
             * Added to distribution (but neither built nor installed)
         * deployAll(1): Enabled California and Maryland
         * Disabled "make installcheck" in "mcast_lib/ldm7" on Travis CI
-        * ./push: Corrected by adding "origin" and "master" argument to "git
-          push"
+        * pq_test_insert(1):
+            * Increased inter-product gap to 0.1 s
+        * Moved sleep from beginning to end of insertion-loop
+        * deployAll(1):
+            * Added ldm7@idc-uva.dynes.virginia.edu
+            * Changed deployment to uni15 to deployment to uni17
+        * Top Makefile.am:
+            * Removed superfluous "muticast-check" target
+        * .travis.yml:
+            * Added cat(1) of top-level Makefile on error
+            * Disabled multicast testing because OpenSSL 1.1 isn't available
+        * ldm7/Makefile.am:
+            * Eliminated hmac_test from testing and distribution
+            * Ignore MldmRcvr.h and MldmRcvrMemory.h because of *.hin
+        * pbuf.c, filel.c:
+            * Commented-out excessive debug log messages
 
 6.13.11	2019-05-06T14:30:46-0600
     ldmd(8):
