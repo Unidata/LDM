@@ -50,8 +50,8 @@ if git branch | grep -w master >/dev/null; then
     # Tag the current version.
     git tag -f $tag
 
-    # Push to the remote repository by tag
-    git push $tag
+    # Push to the remote repository
+    git push --mirror
 
     # Create a distribution
     make dist
