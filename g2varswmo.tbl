@@ -10,6 +10,7 @@
 000 000 000 006 Temperature                      K                    TMPK             0  -9999.00
 000 000 000 008 Temperature                      K                    TMPK             0  -9999.00
 000 000 000 009 Temperature                      K                    TMPK             0  -9999.00
+000 000 000 010 Temperature                      K                    TMPK             0  -9999.00
 000 000 000 011 Temperature                      K                    TMPK             0  -9999.00
 000 000 000 019 Temperature Below Normal         %                    PTBN             0  -9999.00
 000 000 000 029 Temperature Near Normal          %                    PTNN             0  -9999.00
@@ -215,6 +216,7 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 000 002 000 000 Wind Direction                   Degree true          DRCT             0  -9999.00
+000 002 000 006 Wind Direction                   Degree true          DRCT             0  -9999.00
 000 002 001 000 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 001 002 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 001 005 Wind Speed                       m s**-1              SPED             0  -9999.00
@@ -261,6 +263,7 @@
 000 002 020 000 Boundary Layer Dissipation       W m**-2              BLDIS            0  -9999.00
 000 002 021 000 Maximum Wind Speed               m s**-1              MAXGUST          0  -9999.00
 000 002 022 000 Wind Speed (gust)                m s**-1              GUST             0  -9999.00
+000 002 022 002 Wind Speed (gust)                m s**-1              GUST             0  -9999.00
 000 002 022 006 Wind Speed (gust)                m s**-1              GUST             0  -9999.00
 000 002 023 000 U-Component of Wind (Gust)       m s**-1              UGUST            0  -9999.00
 000 002 024 000 V-Component of Wind (Gust)       m s**-1              VGUST            0  -9999.00
@@ -394,6 +397,7 @@
 000 006 011 000 Cloud Base                       m                    CDCB             0  -9999.00
 000 006 012 000 Cloud Top                        m                    CDCT             0  -9999.00
 000 006 013 000 Ceiling                          m                    CEIL             0  -9999.00
+000 006 013 005 Ceiling                          m                    CEIL             0  -9999.00
 000 006 014 000 Non-Convective Cloud Cover       %                    CDLYR            0  -9999.00
 000 006 015 000 Cloud Work Function              J kg**-1             CWORK            0  -9999.00
 000 006 016 000 Convective Cloud Efficiency      Proportion           CUEFI            0  -9999.00
@@ -846,6 +850,7 @@
 010 000 001 000 Wave Spectra (2)                 -                    WVSP2            0  -9999.00
 010 000 002 000 Wave Spectra (3)                 -                    WVSP3            0  -9999.00
 010 000 003 000 Sig Hgt Wind Waves and Swell     m                    HTSGW            0  -9999.00
+010 000 003 002 Sig Hgt Wind Waves and Swell     m                    HTSGW            0  -9999.00
 010 000 004 000 Direction of Wind Waves          deg true             WVDIR            0  -9999.00
 010 000 005 000 Significant Height of Wind Waves m                    WVHGT            0  -9999.00
 010 000 006 000 Mean Period of Wind Waves        s                    WVPER            0  -9999.00
