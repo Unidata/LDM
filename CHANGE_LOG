@@ -1,3 +1,17 @@
+6.13.13.1
+    NOAAPort:
+        * GEMPAK Tables: Added new WMO parameters:
+            000 000 000 010 Temperature
+            000 002 000 006 Wind Direction
+            000 002 022 002 Wind Speed (gust)
+            000 006 013 005 Ceiling
+            010 000 003 002 Sig Hgt Wind Waves and Swell
+        
+    Developer
+        * publish.sh
+            * Converted to functional form. Needs to be tested.
+        * Added targets "push-gempak-tables" & "pull-fmtp"
+
 6.13.12	2020-09-30T10:25:12-0600
     Installation:
         * Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
