@@ -273,12 +273,16 @@ pull-oess:
 	git commit -m "Pulled OESS-Client"
 
 pull-fmtp:
-	git fetch fmtp
-# The following command uses the wrong subdirectory
-#	git merge --strategy=subtree --squash fmtp/master
-	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
-		--squash fmtp/master
-	git commit -m "Pulled FMTP-LDM7"
+	git subtree pull --prefix=gempak/tables gempak-tables master
+#	git fetch fmtp
+## The following command uses the wrong subdirectory
+##	git merge --strategy=subtree --squash fmtp/master
+#	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
+#		--squash fmtp/master
+#	git commit -m "Pulled FMTP-LDM7"
+
+push-gempak-tables:
+	git subtree push --prefix=gempak/tables gempak-tables master
 
 push-%:
 	git checkout -b backport-% %/master
