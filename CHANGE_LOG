@@ -4,6 +4,7 @@
             000 000 000 010 Temperature
             000 002 000 006 Wind Direction
             000 002 022 002 Wind Speed (gust)
+            000 006 001 002 Total Cloud Cover
             000 006 013 005 Ceiling
             010 000 003 002 Sig Hgt Wind Waves and Swell
         
