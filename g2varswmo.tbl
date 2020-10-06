@@ -380,6 +380,7 @@
 000 006 000 000 Cloud Ice                        kg m**-2             CICE             0  -9999.00
 000 006 001 000 Total Cloud Cover                %                    CLD              0  -9999.00
 000 006 001 001 Total Cloud Cover                %                    CLD              0  -9999.00
+000 006 001 002 Total Cloud Cover                %                    CLD              0  -9999.00
 000 006 001 008 Total Cloud Cover                %                    CLD              0  -9999.00
 000 006 001 011 Total Cloud Cover                %                    CLD              0  -9999.00
 000 006 001 012 Total Cloud Cover                %                    CLD              0  -9999.00
