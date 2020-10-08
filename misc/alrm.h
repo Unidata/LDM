@@ -71,7 +71,12 @@ alrm_handler(int sig)
  */
 #define CLR_ALRM() \
 { \
-	(void) alarm(0) ; \
+	(void) alarm(0) ; /* Disable SIGALRM generation */ \
+	sigset_t sigset; \
+	sigemptyset(&sigset); \
+	sigaddset(&sigset, SIGALRM); \
+	static struct timespec noWait = {}; \
+	sigtimedwait(&sigset, NULL, noWait); /* Remove any pending SIGALRM */ \
 	if(sav_handler != SIG_ERR) \
 	{ \
 		(void) mysignal(SIGALRM, sav_handler) ; \
