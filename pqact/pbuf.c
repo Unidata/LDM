@@ -101,7 +101,7 @@ pbuf_flush(
     int tmpErrno = errno;                /* CLR_ALRM() can change "errno" */
 
     if (block && timeo != 0)
-        CLR_ALRM();
+        CLR_ALARM();
 
     if (nwrote == -1) {
         if ((tmpErrno == EAGAIN) && (!block)) {
