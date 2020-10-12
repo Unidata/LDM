@@ -580,7 +580,7 @@ get_addr(h_clnt *hcp, struct timeval timeo)
 
         error = ldm_clnt_addr(hcp->remote, &hcp->addr);
 
-        CLR_ALRM();
+        CLR_ALARM();
 
         if (error != NULL) {
                 (void)snprintf(hcp->errmsg, sizeof(hcp->errmsg), "ldm_clnt_addr(%s): %s",
@@ -845,7 +845,7 @@ get_clnt(h_clnt *hcp, struct timeval timeo)
                         wait, &sock);
         }
 
-        CLR_ALRM();
+        CLR_ALARM();
 
         if(clnt == NULL)
         {
@@ -947,7 +947,7 @@ hC_clnt_call(
                 xres, resp,
                 timeo);
 
-        CLR_ALRM();
+        CLR_ALARM();
 
         if (timeo.tv_sec == 0 && timeo.tv_usec == 0
                         && hcp->rpcerr.re_status == RPC_TIMEDOUT)
@@ -1344,7 +1344,7 @@ h_clnt_flush(
                 status = (hcp->rpcerr.re_status == RPC_SUCCESS) ? 1 : -1;
         }
 
-        CLR_ALRM();
+        CLR_ALARM();
 
         switch (hcp->rpcerr.re_status) {
         case RPC_SUCCESS :
