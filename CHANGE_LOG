@@ -1,3 +1,7 @@
+6.13.13.3
+    Developer:
+        * push(1): Made agnostic of branch
+
 6.13.13.2	2020-10-12T14:08:42-0600
     ldmadmin(1):
         Switched the order of the bin/ and util/ directories when setting PATH
@@ -20,7 +24,7 @@
             000 006 013 005 Ceiling
             010 000 003 002 Sig Hgt Wind Waves and Swell
 
-    Developer
+    Developer:
         * publish.sh
             * Converted to functional form. Needs to be tested.
         * Added targets "push-gempak-tables" & "pull-fmtp"
