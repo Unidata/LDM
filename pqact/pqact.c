@@ -176,6 +176,8 @@ signal_handler(int sig)
     case SIGUSR2 :
             log_roll_level();
             return;
+    case SIGALRM:
+    	    return; // Failsafe. Default action terminates process
     }
 }
 
@@ -192,14 +194,19 @@ set_sigactions(void)
 
     /* Ignore the following */
     sigact.sa_handler = SIG_IGN;
-    (void) sigaction(SIGPIPE, &sigact, NULL);
-    (void) sigaction(SIGXFSZ, &sigact, NULL);       /* file too large */
+    (void)sigaction(SIGPIPE, &sigact, NULL);
+    (void)sigaction(SIGXFSZ, &sigact, NULL); // File is too large
+    /*
+     * The default SIGALRM action is to terminate the process. pq(3) and pbuf(3)
+     * explicitly handle SIGALRM.
+     */
+    (void)sigaction(SIGALRM, &sigact, NULL);
 
     /* Handle the following */
     sigact.sa_handler = signal_handler;
 
     /* Don't restart the following */
-    (void) sigaction(SIGINT, &sigact, NULL);
+    (void)sigaction(SIGINT, &sigact, NULL);
 
     /* Restart the following */
     sigact.sa_flags |= SA_RESTART;
@@ -210,10 +217,10 @@ set_sigactions(void)
      * be handled explicitly.  See the discussion of the SA_RESTART option
      * at http://www.opengroup.org/onlinepubs/007908799/xsh/sigaction.html
      */
-    (void) sigaction(SIGHUP,  &sigact, NULL); // Sets `hupped`
-    (void) sigaction(SIGTERM, &sigact, NULL); // Sets `done`
-    (void) sigaction(SIGUSR1, &sigact, NULL); // Calls log_refresh()
-    (void) sigaction(SIGUSR2, &sigact, NULL); // Calls log_roll_level()
+    (void)sigaction(SIGHUP,  &sigact, NULL); // Sets `hupped`
+    (void)sigaction(SIGTERM, &sigact, NULL); // Sets `done`
+    (void)sigaction(SIGUSR1, &sigact, NULL); // Calls log_refresh()
+    (void)sigaction(SIGUSR2, &sigact, NULL); // Calls log_roll_level()
 
     sigset_t sigset;
     (void)sigemptyset(&sigset);
