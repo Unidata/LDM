@@ -500,7 +500,7 @@ static int create_ldm_tcp_svc(
                             inet_ntoa(addr.sin_addr), (unsigned) port);
 
                     log_debug("Calling listen()");
-                    if (listen(sock, 32) != 0) {
+                    if (listen(sock, 1024) != 0) {
                         error = errno;
 
                         log_syserr("Couldn't listen() on server's socket");
