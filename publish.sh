@@ -150,7 +150,7 @@ referenceDoc()
                            <a href="\$href">Documentation</a> 
                           </td>
                           <td>
-                           <a href="ftp://ftp.unidata.ucar.edu/pub/ldm/\$href.tar.gz">Download</a> 
+                           <a href="\$href.tar.gz">Download</a> 
                           </td>
                            <td>
                            <a href="\$href/CHANGE_LOG">Release Notes</a> 
