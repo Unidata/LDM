@@ -152,7 +152,7 @@ referenceDoc()
                           <td>
                            <a href="\$href.tar.gz">Download</a> 
                           </td>
-                           <td>
+                          <td>
                            <a href="\$href/CHANGE_LOG">Release Notes</a> 
                           </td>
                          </tr>
