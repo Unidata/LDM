@@ -1,6 +1,11 @@
 6.13.13.3
+    ldmd(1):
+        * Increased the size of the listen(2) queue from 32 to 1024 in order to
+          support the Unidata LDM that's accepting rtstats(1) messages
+
     Developer:
         * push(1): Made agnostic of branch
+        * Removed FTP references when modifying "versions.inc" on website
 
 6.13.13.2	2020-10-12T14:08:42-0600
     ldmadmin(1):
