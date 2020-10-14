@@ -140,20 +140,20 @@ referenceDoc()
                 rm -f versions.inc.new
             else
                 for vers in \`cat versions\`; do
-                    href=ldm-\$vers
+                    versName=ldm-\$vers
                     cat <<END_VERS >>versions.inc.new
                          <tr>
                           <td>
                            <b>\$vers</b>
                           </td>
                           <td>
-                           <a href="\$href">Documentation</a> 
+                           <a href="\$versName">Documentation</a> 
                           </td>
                           <td>
-                           <a href="\$href.tar.gz">Download</a> 
+                           <a href="/downloads/ldm/\$versName.tar.gz">Download</a>
                           </td>
                           <td>
-                           <a href="\$href/CHANGE_LOG">Release Notes</a> 
+                           <a href="\$versName/CHANGE_LOG">Release Notes</a> 
                           </td>
                          </tr>
 
