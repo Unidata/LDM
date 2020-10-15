@@ -14,7 +14,7 @@ pqact
 \%[-f\ \fIfeedtype\fP]
 \%[-p\ \fIpattern\fP]
 \%[-i\ \fIinterval\fP]
-\%[-t\ \fItime\fP]
+\%[-t\ \fItimeout\fP]
 \%[-o\ \fItime\fP]
 \%[\fIconf_file\fP]
 .hy
@@ -142,6 +142,11 @@ seconds earlier than the current time.
 The default is to begin just after the time stamp of the oldest product
 in the queue at startup.
 This option might be used when manually processing data from an old queue.
+.TP
+.BI \-t " timeout"
+Timeout, in seconds, for piping a buffer's worth of data to a decoder before
+declaring the decoder unresponsive, closing the connection, and moving on to the
+next matching action.
 .TP
 .I conf_file
 Configuration file.  This is the pattern-action file that specifies what to
