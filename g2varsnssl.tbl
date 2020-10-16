@@ -8,12 +8,11 @@
 ! Lightning
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
-209 002 000 000 CG Lightning Density 1min        flash km**-2 min**-1 LgtDens1min      0  -9999.00
-209 002 001 000 CG Lightning Density 5min        flash km**-2 min**-1 LgtDens5min      0  -9999.00
-209 002 002 000 CG Lightning Density 15min       flash km**-2 min**-1 LgtDens15min     0  -9999.00
-209 002 003 000 CG Lightning Density 30min       flash km**-2 min**-1 LgtDens30min     0  -9999.00
-209 002 004 000 Lightning Probability 0-30min    %                    LgtProb30min     0  -9999.00
-209 002 005 000 CG Lightning Probability 0-30min %                    CgLgtProb30m     0  -9999.00
+209 002 000 000 CG Lightning Density 1min        flash km**-2 min**-1 LgtDens1min      0     -1.00
+209 002 001 000 CG Lightning Density 5min        flash km**-2 min**-1 LgtDens5min      0     -1.00
+209 002 002 000 CG Lightning Density 15min       flash km**-2 min**-1 LgtDens15min     0     -1.00
+209 002 003 000 CG Lightning Density 30min       flash km**-2 min**-1 LgtDens30min     0     -1.00
+209 002 005 000 Lightning Prob. next 30min Grid  %                    LgtProb30min     0      0.00
 !
 ! Radar products
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
@@ -101,20 +100,20 @@
 209 006 027 000 Mountain Map precip accum 24hour mm                   MtnMapQPE24H     0  -9999.00
 209 006 028 000 Mountain Map precip accum 48hour mm                   MtnMapQPE48H     0  -9999.00
 209 006 029 000 Mountain Map precip accum 72hour mm                   MtnMapQPE72H     0  -9999.00
-209 006 030 000 MultiSensor QPE 1hour Pass1      mm                   MrgdQpe1HP1      0  -9999.00
-209 006 031 000 MultiSensor QPE 3hour Pass1      mm                   MrgdQpe3HP1      0  -9999.00
-209 006 032 000 MultiSensor QPE 6hour Pass1      mm                   MrgdQpe6HP1      0  -9999.00
-209 006 033 000 MultiSensor QPE 12hour Pass1     mm                   MrgdQpe12HP1     0  -9999.00
-209 006 034 000 MultiSensor QPE 24hour Pass1     mm                   MrgdQpe24HP1     0  -9999.00
-209 006 035 000 MultiSensor QPE 48hour Pass1     mm                   MrgdQpe48HP1     0  -9999.00
-209 006 036 000 MultiSensor QPE 72hour Pass1     mm                   MrgdQpe72HP1     0  -9999.00
-209 006 037 000 MultiSensor QPE 1hour Pass2      mm                   MrgdQpe1HP2      0  -9999.00
-209 006 038 000 MultiSensor QPE 3hour Pass2      mm                   MrgdQpe3HP2      0  -9999.00
-209 006 039 000 MultiSensor QPE 6hour Pass2      mm                   MrgdQpe6HP2      0  -9999.00
-209 006 040 000 MultiSensor QPE 12hour Pass2     mm                   MrgdQpe12HP2     0  -9999.00
-209 006 041 000 MultiSensor QPE 24hour Pass2     mm                   MrgdQpe24HP2     0  -9999.00
-209 006 042 000 MultiSensor QPE 48hour Pass2     mm                   MrgdQpe48HP2     0  -9999.00
-209 006 043 000 MultiSensor QPE 72hour Pass2     mm                   MrgdQpe72HP2     0  -9999.00
+209 006 030 000 MultiSensor QPE 01H Pass1        mm                   MrgdQpe1HP1      0     -1.00
+209 006 031 000 MultiSensor QPE 03H Pass1        mm                   MrgdQpe3HP1      0     -1.00
+209 006 032 000 MultiSensor QPE 06H Pass1        mm                   MrgdQpe6HP1      0     -1.00
+209 006 033 000 MultiSensor QPE 12H Pass1        mm                   MrgdQpe12HP1     0     -1.00
+209 006 034 000 MultiSensor QPE 24H Pass1        mm                   MrgdQpe24HP1     0     -1.00
+209 006 035 000 MultiSensor QPE 48H Pass1        mm                   MrgdQpe48HP1     0     -1.00
+209 006 036 000 MultiSensor QPE 72H Pass1        mm                   MrgdQpe72HP1     0     -1.00
+209 006 037 000 MultiSensor QPE 01H Pass2        mm                   MrgdQpe1HP2      0     -1.00
+209 006 038 000 MultiSensor QPE 03H Pass2        mm                   MrgdQpe3HP2      0     -1.00
+209 006 039 000 MultiSensor QPE 06H Pass2        mm                   MrgdQpe6HP2      0     -1.00
+209 006 040 000 MultiSensor QPE 12H Pass2        mm                   MrgdQpe12HP2     0     -1.00
+209 006 041 000 MultiSensor QPE 24H Pass2        mm                   MrgdQpe24HP2     0     -1.00
+209 006 042 000 MultiSensor QPE 48H Pass2        mm                   MrgdQpe48HP2     0     -1.00
+209 006 043 000 MultiSensor QPE 72H Pass2        mm                   MrgdQpe72HP2     0     -1.00
 !
 ! Radar RAP model
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
