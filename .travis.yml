@@ -35,7 +35,7 @@ addons:
     notification_email: emmerson@ucar.edu
     build_command_prepend: true
     build_command:  "make"
-    branch_pattern: master
+#   branch_pattern: master
 
 script: make distcheck
 
