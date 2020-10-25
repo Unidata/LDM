@@ -242,9 +242,10 @@ Up7Down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Up7Down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
 check_PROGRAMS			+= Up7Down7_test
+AM_TESTS_ENVIRONMENT	= PATH=.:$(top_builddir)/mldm_sender:$$PATH;
 # "Up7Down7_test" can't be part of "make check" because it depends on an
 # *installed* mldm_sender(1).
-#TESTS				+= Up7Down7_test
+TESTS				    += Up7Down7_test
 
 # Conditional because Travis can't handle it
 #installcheck-local: $(bindir)/mldm_sender Down7_test Up7Down7_test
@@ -271,5 +272,3 @@ SUFFIXES:	.vg .sup .supp
 	    $${supOpt} ./$< >&$@
 
 endif
-
-AM_TESTS_ENVIRONMENT	= PATH=.:$(top_builddir)/mldm_sender:$$PATH:

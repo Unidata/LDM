@@ -13,7 +13,7 @@
  * after the initial subscription, all exchanges are asynchronous; consequently,
  * the servers don't interfere with the (non-existent) RPC replies.
  *
- * Copyright 2019 University Corporation for Atmospheric Research. All rights
+ * Copyright 2020 University Corporation for Atmospheric Research. All rights
  * reserved. See the the file COPYRIGHT in the top-level source-directory for
  * licensing conditions.
  *
@@ -124,13 +124,46 @@ static bool               pimIsOpen = false;
 static SubscriptionReply* replyPtr = NULL;
 
 /**
+ * Initializes this module. Must be called before any other public function.
+ *
+ * @retval 0           Success
+ * @retval LDM7_LOGIC  Already initialized. `log_add()` called.
+ * @retval LDM7_PQ     Couldn't open product-queue. `log_add()` called.
+ * @see `up7_destroy()`
+ */
+static int
+init()
+{
+    log_debug("Entered");
+
+    int status;
+
+    if (prodQ) {
+        log_add("Product-queue already open");
+        status = LDM7_LOGIC;
+    }
+    else {
+        status = pq_open(getQueuePath(), PQ_READONLY, &prodQ);
+
+        if (status == PQ_CORRUPT) {
+            log_add("The product-queue is corrupt");
+        }
+        else if (status) {
+            log_add_errno(status, "Couldn't open product-queue");
+        }
+    }
+
+    return status;
+}
+
+/**
  * Opens for reading the product-index map associated with a feedtype. Creates
  * the map if it doesn't exist in order to see changes by mldm_sender(1), which
  * is executed asynchronously.
  *
  * @param[in] feed         The feedtype.
  * @retval    0            Success.
- * @retval    LDM7_LOGIC   `up7_init()` hasn't been called. `log_add()` called.
+ * @retval    LDM7_LOGIC   `init()` hasn't been called. `log_add()` called.
  * @retval    LDM7_LOGIC   The product-index map is already open. `log_add()`
  *                         called.
  * @retval    LDM7_INVAL   Number of slots in product-queue is zero. `log_add()`
@@ -141,36 +174,36 @@ static SubscriptionReply* replyPtr = NULL;
 static int
 openProdIndexMap(const feedtypet feed)
 {
-	int status;
+    int status;
 
-	/*
-	 * The maximum number of entries in the product-index map should equal the
-	 * maximum number of products in the product-queue.
-	 */
-	if (prodQ == NULL) {
-		log_add("Module isn't initialized");
-		status = LDM7_LOGIC;
-	}
-	else {
+    /*
+     * The maximum number of entries in the product-index map should equal the
+     * maximum number of products in the product-queue.
+     */
+    if (prodQ == NULL) {
+        log_add("Module isn't initialized");
+        status = LDM7_LOGIC;
+    }
+    else {
         char pathname[PATH_MAX];
         strncpy(pathname, pq_getPathname(prodQ), sizeof(pathname))[sizeof(pathname)-1] = 0;
 
-		char pimDir[PATH_MAX];
-		strncpy(pimDir, dirname(pathname), sizeof(pimDir));
-		// NB: Don't depend on `pathname` from here on because of `dirname()`
+        char pimDir[PATH_MAX];
+        strncpy(pimDir, dirname(pathname), sizeof(pimDir));
+        // NB: Don't depend on `pathname` from here on because of `dirname()`
 
-		status = pim_writeOpen(pimDir, feed, pq_getSlotCount(prodQ));
-		if (status) {
-			log_add("Couldn't ensure existence of product-index map");
-		}
-		else {
-			pim_close();
+        status = pim_writeOpen(pimDir, feed, pq_getSlotCount(prodQ));
+        if (status) {
+            log_add("Couldn't ensure existence of product-index map");
+        }
+        else {
+            pim_close();
 
-			status = pim_readOpen(pimDir, feed);
-			if (status == 0)
-				pimIsOpen = true;
-		} // Product-index map exists
-	} // Product-queue is open
+            status = pim_readOpen(pimDir, feed);
+            if (status == 0)
+                pimIsOpen = true;
+        } // Product-index map exists
+    } // Product-queue is open
 
     return status;
 }
@@ -334,9 +367,9 @@ reduceFeed(
  * @retval     LDM7_SYSTEM   System error. `log_add()` called.
  */
 static int
-subscribe2(  struct SVCXPRT*                   xprt,
-		const CidrAddr* const restrict    fmtpClntCidr,
-        SubscriptionReply* const restrict reply)
+subscribe2( struct SVCXPRT*                   xprt,
+            const CidrAddr* const restrict    fmtpClntCidr,
+            SubscriptionReply* const restrict reply)
 {
     // The cleanup() function in ldmd.c destroys this instance
 
@@ -443,14 +476,14 @@ subscribe(struct SVCXPRT* const restrict    xprt,
                     s_feedtypet(reducedFeed));
         }
         else {
-        	if (mi_new(&mcastInfo, reducedFeed,
+            if (mi_new(&mcastInfo, reducedFeed,
                     isa_toString(smi_getMcastGrp(smi)),
                     isa_toString(smi_getFmtpSrvr(smi)))) {
                 log_add("Couldn't set multicast information");
                 status = LDM7_SYSTEM;
             }
             else {
-				status = subscribe2(xprt, &fmtpClntCidr, reply);
+                status = subscribe2(xprt, &fmtpClntCidr, reply);
 
                 if (status) {
                     mi_free(mcastInfo);
@@ -889,46 +922,32 @@ sendBacklog(
  ******************************************************************************/
 
 /**
- * Initializes this module. Must be called before any other function.
- *
- * @param[in] prodQueue  Product-queue to be used
- * @see `up7_destroy()`
- */
-void
-up7_init(pqueue* const prodQueue)
-{
-    log_debug("Entered");
-    log_assert(prodQueue);
-
-    prodQ = prodQueue;
-}
-
-/**
  * Destroys this module. Should be called when this module is no longer needed.
- * This module may be re-initialized by re-calling `up7_init()`.
+ * This module may be re-initialized by re-calling `init()`.
  *
- * @see `up7_init()`
+ * @see `init()`
  */
 void
 up7_destroy(void)
 {
     log_debug("Entered");
 
-	destroyClient();     // Closes socket. Idempotent
-	closeProdIndexMap(); // Idempotent
+    destroyClient();     // Closes socket. Idempotent
+    closeProdIndexMap(); // Idempotent
 
-	mi_free(mcastInfo);  // Does nothing if `mcastInfo == NULL`
-	mcastInfo = NULL;
+    mi_free(mcastInfo);  // Does nothing if `mcastInfo == NULL`
+    mcastInfo = NULL;
 
-	if (subscribed) {
-		(void)umm_unsubscribe(feedtype, fmtpClntAddr);
-		subscribed = false;
-	}
+    if (subscribed) {
+        (void)umm_unsubscribe(feedtype, fmtpClntAddr);
+        subscribed = false;
+    }
 
-	log_clear();
+    log_clear();
 
-	replyPtr = NULL;
-	prodQ = NULL;
+    replyPtr = NULL;
+    pq_close(prodQ); // NULL safe
+    prodQ = NULL;
 
     log_debug("Returning");
 }
@@ -952,40 +971,45 @@ subscribe_7_svc(
 {
     log_debug("Entered");
 
-    svc_setremote(rqstp);
-
     struct SVCXPRT* const xprt = rqstp->rq_xprt;
-    const char* const     feedspec = s_feedtypet(request->feed);
+    int                   status = init();
 
-    log_notice("Incoming subscription request from %s:%u for feed %s",
-            remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
+    if (status == 0) {
+        const char* const feedspec = s_feedtypet(request->feed);
 
-    if (subscribed) {
-    	log_error("%s is already subscribed", remote_name());
-		replyPtr = NULL; // Don't reply
-        svcerr_systemerr(xprt); // Tell the client
-        log_debug("Returning NULL");
-    }
-    else {
-        static SubscriptionReply reply;
-        int                      status = subscribe(xprt, request->feed,
-        		&request->vcEnd, &reply);
+        svc_setremote(rqstp);
+        log_notice("Incoming subscription request from %s:%u for feed %s",
+                remote_name(), ntohs(xprt->xp_raddr.sin_port), feedspec);
 
-        if (status) {
-            replyPtr = NULL; // Don't reply
-            log_flush_error();
-            svcerr_systemerr(xprt); // Tell the client
-            log_debug("Returning NULL");
+        if (subscribed) {
+            log_add("%s is already subscribed", remote_name());
+            status = LDM7_LOGIC;
         }
         else {
-            replyPtr = &reply;
-            if (log_is_enabled_debug) {
-                char* const subRepStr = subRep_toString(replyPtr);
-                log_debug("Returning %s", subRepStr);
-                free(subRepStr);
+            static SubscriptionReply reply;
+            int                      status = subscribe(xprt, request->feed,
+                    &request->vcEnd, &reply);
+
+            if (status == 0) {
+                replyPtr = &reply;
+                if (log_is_enabled_debug) {
+                    char* const subRepStr = subRep_toString(replyPtr);
+                    log_debug("Returning %s", subRepStr);
+                    free(subRepStr);
+                }
+                subscribed = true;
             }
-            subscribed = true;
         }
+
+        if (status)
+            up7_destroy();
+    } // init() called
+
+    if (status) {
+        log_flush_error();
+        replyPtr = NULL;        // Don't reply
+        svcerr_systemerr(xprt); // Tell the client
+        log_debug("Returning NULL");
     }
 
     return replyPtr;

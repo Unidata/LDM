@@ -395,7 +395,7 @@ sndr_start(
      */
     CU_ASSERT_EQUAL_FATAL(pq_create(UP7_PQ_PATHNAME, 0666, PQ_THREADSAFE, 0,
     		PQ_DATA_CAPACITY, NUM_SLOTS, &pq), 0);
-    up7_init(pq);
+    setQueuePath(UP7_PQ_PATHNAME); // For Up7 module
 
     SepMcastInfo* mcastInfo =
             smi_newFromStr(feed, "224.0.0.1:5173", "127.0.0.1:0");
