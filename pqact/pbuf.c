@@ -68,6 +68,7 @@ err:
  * @param[in] buf        Pipe buffer.
  * @param[in] block      Whether or not write should block.
  * @param[in] timeo      Timeout in seconds. 0 means indefinite timeout.
+ * @param[in] cmd        Command-line of process on other side of pipe
  * @retval    0          Success.
  * @retval    EAGAIN     `block` is false and write would block.
  * @retval    EINTR      Write to pipe was interrupted by signal.
@@ -78,7 +79,8 @@ int
 pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
-    unsigned int        timeo)          /* N.B. Not a struct timeval */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char*         cmd)
 {
     size_t              len = (size_t)(buf->ptr - buf->base);
     int                 status = ENOERR;        /* success */
@@ -109,8 +111,8 @@ pbuf_flush(
             nwrote = 0;
         }
         else {
-            log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zu",
-                    buf->pfd, len);
+            log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zu, "
+                    "cmd=\"%s\"", buf->pfd, len, cmd);
         }
         status = tmpErrno;
     }
@@ -123,8 +125,7 @@ pbuf_flush(
         }
         else if (nwrote > 0) {
             /* partial write, just shift the buffer by the amount written */
-            log_debug("Partial write %d of %d bytes",
-                nwrote, len);
+            log_debug("Partial write %d of %d bytes", nwrote, len);
             len -= nwrote;
             /* could be an overlapping copy */
             memmove(buf->base, buf->base + nwrote, len);
@@ -133,8 +134,8 @@ pbuf_flush(
 
         unsigned long duration = time(NULL) - start;
         if (duration > 5)
-            log_warning_q("Write of %d bytes to decoder took %lu seconds", nwrote,
-                    duration);
+            log_warning_q("Write of %d bytes to decoder took %lu seconds: "
+                    "cmd=\"%s\"", nwrote, duration, cmd);
     }
 
     if (changed)
@@ -146,8 +147,8 @@ flush_timeo:
     if (changed)
         set_fd_nonblock(buf->pfd);
 
-    log_error_q("write(%d,,%lu) to decoder timed-out (%lu s)",
-        buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start));
+    log_error_q("write(%d,,%lu) to decoder timed-out (%lu s): cmd=\"%s\"",
+        buf->pfd, (unsigned long)len, (unsigned long)(time(NULL) - start), cmd);
 
     return ETIMEDOUT;
 }
@@ -159,6 +160,7 @@ flush_timeo:
  * @param[in] ptr        Data to write.
  * @param[in] nbytes     Number of bytes to write.
  * @param[in] timeo      Timeout in seconds. 0 means indefinite timeout.
+ * @param[in] cmd        Command-line of process on other side of pipe
  * @retval    0          Success.
  * @retval    EINTR      Write to pipe was interrupted by signal.
  * @retval    EPIPE      Pipe not open for reading. Reader likely terminated.
@@ -169,7 +171,8 @@ pbuf_write(
     pbuf*               buf,
     const char*         ptr,
     size_t              nbytes,
-    unsigned int        timeo)          /* N.B. Not a struct timeval */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char*         cmd)
 {
     int    status;
     size_t tlen;
@@ -183,7 +186,7 @@ pbuf_write(
         buf->ptr += tlen;
 
         if(buf->ptr == buf->upperbound) {
-            status = pbuf_flush(buf, 1, timeo);
+            status = pbuf_flush(buf, 1, timeo, cmd);
 
             if(status != ENOERR)
                 return status;
@@ -194,7 +197,7 @@ pbuf_write(
     }
 
     /* write what we can */
-    status = pbuf_flush(buf, 0, 0);
+    status = pbuf_flush(buf, 0, 0, cmd);
 
     return (EAGAIN == status) ? 0 : status;     // OK if write would block
 }

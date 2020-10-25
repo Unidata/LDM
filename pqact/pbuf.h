@@ -37,12 +37,14 @@ extern pbuf * new_pbuf(int pfd, size_t bufsize);
 extern int pbuf_flush(
     pbuf*               buf,
     int                 block,          /* bool_t */
-    unsigned int        timeo);         /* N.B. Not a struct timeval */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char*         cmd);           /* Command on other side of pipe */
 extern int pbuf_write(
     pbuf*               buf,
     const char*         ptr,
     size_t              nbytes,
-    unsigned int        timeo);         /* N.B. Not a struct timeval */
+    unsigned int        timeo,          /* N.B. Not a struct timeval */
+    const char*         cmd);           /* Command on other side of pipe */
 #else /* Old Style C */
 extern void free_pbuf();
 extern pbuf * new_pbuf();

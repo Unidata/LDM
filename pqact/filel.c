@@ -1876,7 +1876,7 @@ static int pipe_sync(
 {
     log_debug("%d %s", entry->handle.pbuf->pfd, block ? "" : "non-block");
 
-    int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo);
+    int status = pbuf_flush(entry->handle.pbuf, block, pipe_timeo, entry->path);
 
     if (0 == status) {
         entry_unsetFlag(entry, FL_NEEDS_SYNC);
@@ -1949,7 +1949,8 @@ static int pipe_put(
             status = 0;
         }
         else {
-            status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo);
+            status = pbuf_write(entry->handle.pbuf, data, sz, pipe_timeo,
+                    entry->path);
 
             if (status && status != EINTR) {
                 log_add("Couldn't write %zu-byte product to pipe", sz);
@@ -1986,7 +1987,7 @@ static int pipe_putcreation(
 #if SIZEOF_UINT64_T*CHAR_BIT == 64
     uint64_t uint64 = (uint64_t) creation->tv_sec;
     status = pbuf_write(entry->handle.pbuf, (void*) &uint64,
-            (u_int) sizeof(uint64_t), pipe_timeo);
+            (u_int) sizeof(uint64_t), pipe_timeo, entry->path);
 #else
     uint32_t lower32 = (uint32_t) creation->tv_sec;
 #   if SIZEOF_LONG*CHAR_BIT <= 32
@@ -2054,17 +2055,17 @@ static int pipe_putmeta(
     int status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &totalLen,
-            (u_int) sizeof(totalLen), pipe_timeo);
+            (u_int) sizeof(totalLen), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &info->signature,
-            (u_int) sizeof(info->signature), pipe_timeo);
+            (u_int) sizeof(info->signature), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &sz, (u_int) sizeof(sz),
-            pipe_timeo);
+            pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
@@ -2073,40 +2074,40 @@ static int pipe_putmeta(
         return status;
 
     int32 = (int32_t) info->arrival.tv_usec;
-    status = pbuf_write(entry->handle.pbuf, (void*) &int32, (u_int) sizeof(int32),
-            pipe_timeo);
+    status = pbuf_write(entry->handle.pbuf, (void*) &int32,
+            (u_int)sizeof(int32), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     uint32 = (uint32_t) info->feedtype;
     status = pbuf_write(entry->handle.pbuf, (void*) &uint32, (u_int) sizeof(uint32),
-            pipe_timeo);
+            pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     uint32 = (uint32_t) info->seqno;
-    status = pbuf_write(entry->handle.pbuf, (void*) &uint32, (u_int) sizeof(uint32),
-            pipe_timeo);
+    status = pbuf_write(entry->handle.pbuf, (void*) &uint32,
+            (u_int)sizeof(uint32), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &identLen,
-            (u_int) sizeof(identLen), pipe_timeo);
+            (u_int)sizeof(identLen), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) info->ident, identLen,
-            pipe_timeo);
+            pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) &originLen,
-            (u_int) sizeof(originLen), pipe_timeo);
+            (u_int) sizeof(originLen), pipe_timeo, entry->path);
     if (status != ENOERR)
         return status;
 
     status = pbuf_write(entry->handle.pbuf, (void*) info->origin, originLen,
-            pipe_timeo);
+            pipe_timeo, entry->path);
 
     return status;
 }
