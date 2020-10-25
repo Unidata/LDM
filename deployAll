@@ -2,13 +2,6 @@
 
 set -e
 
-deploy()
-{
-    host=`echo "$@" | awk '{print $NF}'`
-    echo
-    ./deploy "$@" || echo 1>&2 "Couldn't deploy to $host"
-}
-
 cd `dirname $0`
 
 # NOAAPort ingest test system (password required)
@@ -22,12 +15,22 @@ cd `dirname $0`
 #deploy lead
 
 # LDM7 systems (no password required)
-deploy -m              -u ldm7 ca
-#deploy -m              -u ldm7 co
-deploy -m -r centos -s -u ldm7 md
-deploy -m                      mo
-deploy -m                      nj
-deploy -m           -s         ut
-#deploy -m -r ldm7   -s -u ldm7 va
-deploy -m           -s         wa
-deploy -m           -s         wi
+./deploy -m              -u ldm7 ca >&ca.deplog &
+echo
+./deploy -m              -u ldm7 co >&co.deplog &
+echo
+./deploy -m -r centos -s -u ldm7 md >&md.deplog &
+echo
+./deploy -m                      mo >&mo.deplog &
+echo
+./deploy -m                      nj >&nj.deplog &
+echo
+./deploy -m           -s         ut >&ut.deplog &
+echo
+./deploy -m -r ldm7   -s -u ldm7 va >&va.deplog &
+echo
+./deploy -m           -s         wa >&wa.deplog &
+echo
+./deploy -m           -s         wi >&wi.deplog &
+
+wait
