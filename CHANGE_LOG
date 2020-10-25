@@ -1,3 +1,12 @@
+6.13.13.5	2020-10-25T16:47:50-0600
+    pqact(1):
+        * Added decoder command to pbuf_flush() log messages
+
+    Developer:
+        * deployAll(1):
+            * Replaced use of internal shell function with calling deploy(1)
+            * Made all LDM7 deployments asynchronous
+
 6.13.13.4	2020-10-25T13:00:05-0600
     NOAAPort:
         * Changed long names of just-added GEMPAK NSSL paramters according to
