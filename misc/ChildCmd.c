@@ -124,7 +124,7 @@ childCmd_log(void* const arg)
     }
 
     free(line);
-    log_flush_error();
+    log_flush_notice(); // Might or might not be an error
     log_free();
 
     return NULL;
