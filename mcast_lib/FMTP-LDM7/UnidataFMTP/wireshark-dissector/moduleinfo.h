@@ -1,4 +1,4 @@
-/* Included *after* config.h, in order to re-define these macros */
+/* Included *after* FmtpConfig.h, in order to re-define these macros */
 
 #ifdef PACKAGE
 #undef PACKAGE

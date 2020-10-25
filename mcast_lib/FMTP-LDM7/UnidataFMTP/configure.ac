@@ -9,6 +9,7 @@ AC_INIT([FMTP], VERSION_ID, [support-fmtp@unidata.ucar.edu],,
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_HEADERS([FmtpConfig.h])
 AM_INIT_AUTOMAKE([foreign])
 
 AC_USE_SYSTEM_EXTENSIONS
@@ -21,6 +22,13 @@ AC_PROG_CXX
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++11])
 fi
+
+# Check for OpenSSL version 1.1.1 stuff
+AC_CHECK_FILE([/usr/include/openssl11], [
+    CPPFLAGS="-I/usr/include/openssl11${CPPFLAGS:+ $CPPFLAGS}"])
+AC_CHECK_FILE([/usr/lib64/openssl11], [
+    LDFLAGS="-L/usr/lib64/openssl11${LDFLAGS:+ $LDFLAGS}"])
+AC_CHECK_DECLS([EVP_PKEY_new_raw_private_key], , , [#include <openssl/evp.h>])
 
 # Check for the CUNIT unit-testing package
 AC_MSG_NOTICE([checking for the CUnit unit-testing package.])

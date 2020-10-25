@@ -1,10 +1,11 @@
 /**
  * Hash-based message authentication code (HMAC).
  *
- *        File: hmac.cpp
+ *        File: HmacImpl.cpp
  *  Created on: Sep 4, 2020
- *      Author: steve
+ *      Author: Steven R. Emmerson
  */
+#include "FmtpConfig.h"
 
 #include "HmacImpl.h"
 
@@ -15,6 +16,13 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#if !HAVE_DECL_EVP_PKEY_NEW_RAW_PRIVATE_KEY
+    extern "C" EVP_PKEY* EVP_PKEY_new_raw_private_key(
+    		int                  type,
+            ENGINE*              e,
+            const unsigned char* priv,
+            size_t               len);
+#endif
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 
@@ -150,7 +158,7 @@ void HmacImpl::getMac(const FmtpHeader& header,
 		throw std::runtime_error("EVP_DigestUpdate() failure. Code=" +
 				std::to_string(ERR_get_error()));
 
-	size_t nbytes = sizeof(mac);
+	size_t nbytes = MAC_SIZE;
 	if (!EVP_DigestSignFinal(mdCtx, reinterpret_cast<unsigned char*>(mac),
 			&nbytes))
 		throw std::runtime_error("EVP_DigestSignFinal() failure. Code=" +
