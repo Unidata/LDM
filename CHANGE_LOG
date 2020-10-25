@@ -1,7 +1,71 @@
+6.13.13.4	2020-10-25T13:00:05-0600
+    NOAAPort:
+        * Changed long names of just-added GEMPAK NSSL paramters according to
+          NSSL's website,
+          <https://www.nssl.noaa.gov/projects/mrms/operational/tables.php>:
+            209 002 005 000 Lightning Prob. next 30min Grid  %                    LgtProb30min     0      0.00
+            209 006 030 000 MultiSensor QPE 01H Pass1        mm                   MrgdQpe1HP1      0     -1.00
+            209 006 031 000 MultiSensor QPE 03H Pass1        mm                   MrgdQpe3HP1      0     -1.00
+            209 006 032 000 MultiSensor QPE 06H Pass1        mm                   MrgdQpe6HP1      0     -1.00
+            209 006 033 000 MultiSensor QPE 12H Pass1        mm                   MrgdQpe12HP1     0     -1.00
+            209 006 034 000 MultiSensor QPE 24H Pass1        mm                   MrgdQpe24HP1     0     -1.00
+            209 006 035 000 MultiSensor QPE 48H Pass1        mm                   MrgdQpe48HP1     0     -1.00
+            209 006 036 000 MultiSensor QPE 72H Pass1        mm                   MrgdQpe72HP1     0     -1.00
+            209 006 037 000 MultiSensor QPE 01H Pass2        mm                   MrgdQpe1HP2      0     -1.00
+            209 006 038 000 MultiSensor QPE 03H Pass2        mm                   MrgdQpe3HP2      0     -1.00
+            209 006 039 000 MultiSensor QPE 06H Pass2        mm                   MrgdQpe6HP2      0     -1.00
+            209 006 040 000 MultiSensor QPE 12H Pass2        mm                   MrgdQpe12HP2     0     -1.00
+            209 006 041 000 MultiSensor QPE 24H Pass2        mm                   MrgdQpe24HP2     0     -1.00
+            209 006 042 000 MultiSensor QPE 48H Pass2        mm                   MrgdQpe48HP2     0     -1.00
+            209 006 043 000 MultiSensor QPE 72H Pass2        mm                   MrgdQpe72HP2     0     -1.00
+        * Removed 
+            209 002 004 000 Lightning Probability 0-30min    %                    LgtProb30min     0  -9999.00
+          because it's not in NSSL's table and because it's long-name is too
+          similar to and it's short-name is identical to (209,002,005) above
+
+    Multicast:
+        * Up7.c:
+            * Made auto-initialize: changed public up7_init() to static init()
+        * ChldCmd.c:
+            * Demoted log messages from ERROR to NOTE because the message
+              "Success" from the child process isn't an error
+        * Improve handling of OpenSSL:
+            * Move library examination from LDM's to FMTP's configure.ac
+            * Create FmtpConfig.h.in
+            * Add declaration of EVP_PKEY_new_raw_private_key() if necessary
+
+    Developer:
+        * .travis.yml:
+            * Made Coverity Scan act on all branches
+
 6.13.13.3
     ldmd(1):
         * Increased the size of the listen(2) queue from 32 to 1024 in order to
           support the Unidata LDM that's accepting rtstats(1) messages
+
+    pqact(1):
+        * Documented "-t <timeout>" option for piping to a decoder
+
+    NOAAPort:
+        * Added MRMS parameters that just appeared in NOAAPort to GEMPAK's NSSL
+          table:
+            209 002 005 000 CG Lightning Probability 0-30min %                    CgLgtProb30m     0  -9999.00
+            209 006 030 000 MultiSensor QPE 1hour Pass1      mm                   MrgdQpe1HP1      0  -9999.00
+            209 006 031 000 MultiSensor QPE 3hour Pass1      mm                   MrgdQpe3HP1      0  -9999.00
+            209 006 032 000 MultiSensor QPE 6hour Pass1      mm                   MrgdQpe6HP1      0  -9999.00
+            209 006 033 000 MultiSensor QPE 12hour Pass1     mm                   MrgdQpe12HP1     0  -9999.00
+            209 006 034 000 MultiSensor QPE 24hour Pass1     mm                   MrgdQpe24HP1     0  -9999.00
+            209 006 035 000 MultiSensor QPE 48hour Pass1     mm                   MrgdQpe48HP1     0  -9999.00
+            209 006 036 000 MultiSensor QPE 72hour Pass1     mm                   MrgdQpe72HP1     0  -9999.00
+            209 006 037 000 MultiSensor QPE 1hour Pass2      mm                   MrgdQpe1HP2      0  -9999.00
+            209 006 038 000 MultiSensor QPE 3hour Pass2      mm                   MrgdQpe3HP2      0  -9999.00
+            209 006 039 000 MultiSensor QPE 6hour Pass2      mm                   MrgdQpe6HP2      0  -9999.00
+            209 006 040 000 MultiSensor QPE 12hour Pass2     mm                   MrgdQpe12HP2     0  -9999.00
+            209 006 041 000 MultiSensor QPE 24hour Pass2     mm                   MrgdQpe24HP2     0  -9999.00
+            209 006 042 000 MultiSensor QPE 48hour Pass2     mm                   MrgdQpe48HP2     0  -9999.00
+            209 006 043 000 MultiSensor QPE 72hour Pass2     mm                   MrgdQpe72HP2     0  -9999.00
+          I made-up the long and short names based on the MRMS V12 spreadsheet
+          from NSSL.
 
     Developer:
         * push(1): Made agnostic of branch
