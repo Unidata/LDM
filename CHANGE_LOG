@@ -1,4 +1,9 @@
-6.13.13.6	2020-10-26T13:13:28-0600
+6.13.13.7	2020-10-26T13:40:44-0600
+    Developer:
+        * Replace "-I" for /opt/openssl/include with "-I" and "-L" checks for
+          /opt/openssl and /usr/lib64/openssl11
+
+6.13.13.6
     Developer:
         * FMTP's configure.ac: Added check for "/opt/openssl/include"
         * Removed commented-out SSL checks
