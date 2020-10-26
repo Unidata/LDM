@@ -214,15 +214,6 @@ AC_ARG_WITH([multicast],
 AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
 AM_COND_IF([WANT_MULTICAST], [
     AC_DEFINE([WANT_MULTICAST], [1], [Package will have multicast capability])
-#    # Check for OpenSSL library and functions
-#    AC_CHECK_FILE([/usr/lib64/openssl11], [
-#        LDFLAGS="-L/usr/lib64/openssl11${LDFLAGS:+ $LDFLAGS}"])
-#    AC_SEARCH_LIBS([OPENSSL_config], [crypto], ,
-#        [AC_MSG_ERROR([Necessary function not found])])
-#    AC_SEARCH_LIBS([OPENSSL_init_ssl], [ssl], , [
-#        AC_MSG_ERROR([Necessary function not found])])
-#    AC_CHECK_DECLS([EVP_PKEY_new_raw_private_key], , ,
-#        [#include <openssl/evp.h>])
 ])
 
 AC_ARG_WITH([noaaport],
