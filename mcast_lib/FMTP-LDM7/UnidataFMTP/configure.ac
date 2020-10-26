@@ -24,12 +24,12 @@ if test "$GXX" = "yes"; then
 fi
 
 # Check for OpenSSL version 1.1.1 stuff
-AC_CHECK_FILE([/opt/openssl/include], [
-    CPPFLAGS="-I/opt/openssl/include${CPPFLAGS:+ $CPPFLAGS}"], [
+AC_CHECK_FILE([/opt/openssl], [
+    CPPFLAGS="-I/opt/openssl/include${CPPFLAGS:+ $CPPFLAGS}"
+    LDFLAGS="-L/opt/openssl/lib${LDFLAGS:+ $LDFLAGS}"], [
     AC_CHECK_FILE([/usr/include/openssl11], [
-        CPPFLAGS="-I/usr/include/openssl11${CPPFLAGS:+ $CPPFLAGS}"])])
-AC_CHECK_FILE([/usr/lib64/openssl11], [
-    LDFLAGS="-L/usr/lib64/openssl11${LDFLAGS:+ $LDFLAGS}"])
+        CPPFLAGS="-I/usr/include/openssl11${CPPFLAGS:+ $CPPFLAGS}"
+        LDFLAGS="-L/usr/lib64/openssl11${LDFLAGS:+ $LDFLAGS}"])])
 AC_CHECK_DECLS([EVP_PKEY_new_raw_private_key], , , [#include <openssl/evp.h>])
 
 # Check for the CUNIT unit-testing package
