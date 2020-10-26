@@ -1,3 +1,8 @@
+6.13.13.6	2020-10-26T13:13:28-0600
+    Developer:
+        * FMTP's configure.ac: Added check for "/opt/openssl/include"
+        * Removed commented-out SSL checks
+
 6.13.13.5	2020-10-25T16:47:50-0600
     pqact(1):
         * Added decoder command to pbuf_flush() log messages
