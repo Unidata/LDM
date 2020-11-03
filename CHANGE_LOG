@@ -1,27 +1,22 @@
-6.13.13.7	2020-10-26T13:40:44-0600
-    Developer:
-        * Replace "-I" for /opt/openssl/include with "-I" and "-L" checks for
-          /opt/openssl and /usr/lib64/openssl11
+6.13.13	2020-11-03T15:18:17-0700
+    ldmadmin(1):
+        Switched the order of the bin/ and util/ directories when setting PATH
+        because one site had a script named "util/ldmd".
 
-6.13.13.6
-    Developer:
-        * FMTP's configure.ac: Added check for "/opt/openssl/include"
-        * Removed commented-out SSL checks
+    ldmd(1):
+        * Increased the size of the listen(2) queue from 32 to 1024 in order to
+          support the Unidata LDM that's accepting rtstats(1) messages
 
-6.13.13.5	2020-10-25T16:47:50-0600
-    pqact(1):
-        * Added decoder command to pbuf_flush() log messages
-
-    Developer:
-        * deployAll(1):
-            * Replaced use of internal shell function with calling deploy(1)
-            * Made all LDM7 deployments asynchronous
-
-6.13.13.4	2020-10-25T13:00:05-0600
     NOAAPort:
-        * GEMPAK NSSL parameter table:
-            * Changed long names of previously-added paramters according to
-              NSSL's website,
+        * GEMPAK Tables: Added new WMO parameters:
+            000 000 000 010 Temperature
+            000 002 000 006 Wind Direction
+            000 002 022 002 Wind Speed (gust)
+            000 006 001 002 Total Cloud Cover
+            000 006 013 005 Ceiling
+            010 000 003 002 Sig Hgt Wind Waves and Swell
+         * GEMPAK NSSL parameter table:
+            * Added MRMS parameters that just appeared in NOAAPort. See
               <https://www.nssl.noaa.gov/projects/mrms/operational/tables.php>:
                 209 002 005 000 Lightning Prob. next 30min Grid  %                    LgtProb30min     0      0.00
                 209 006 030 000 MultiSensor QPE 01H Pass1        mm                   MrgdQpe1HP1      0     -1.00
@@ -42,6 +37,16 @@
                 209 002 004 000 Lightning Probability 0-30min    %                    LgtProb30min     0  -9999.00
               because it's not in NSSL's table and because it's long-name is too
               similar to and it's short-name is identical to (209,002,005) above
+         from NSSL.
+
+    pqact(1):
+        * Hopefully closed a tiny window-of-vulnerability in which a SIGALRM
+          might be generated after a successful write(2) to a (very) slow
+          decoder but before the alarm is dismissed -- leading to the abnormal
+          termination of the process. This has occurred at more than one site.
+        * Set default SIGALRM handing to "ignore" just in case
+        * Documented "-t <timeout>" option for piping to a decoder
+        * Added decoder command to pbuf_flush() log messages
 
     Multicast:
         * Up7.c:
@@ -53,70 +58,26 @@
             * Move library examination from LDM's to FMTP's configure.ac
             * Create FmtpConfig.h.in
             * Add declaration of EVP_PKEY_new_raw_private_key() if necessary
+        * fmtpRecvv3:
+            * Made handling of index of last multicast product more rigorous
 
     Developer:
+        * publish.sh(1):
+            * Converted to functional form. Needs to be tested.
+            * Removed FTP references when modifying "versions.inc" on website
+        * Top Makefile:
+            * Added targets "push-gempak-tables" & "pull-fmtp"
+        * push(1):
+            * Made agnostic of branch
+            * Replaced use of "git commit <file> ..." with use of "git add"
         * .travis.yml:
             * Made Coverity Scan act on all branches
-
-6.13.13.3
-    ldmd(1):
-        * Increased the size of the listen(2) queue from 32 to 1024 in order to
-          support the Unidata LDM that's accepting rtstats(1) messages
-
-    pqact(1):
-        * Documented "-t <timeout>" option for piping to a decoder
-
-    NOAAPort:
-        * Added MRMS parameters that just appeared in NOAAPort to GEMPAK's NSSL
-          table:
-            209 002 005 000 CG Lightning Probability 0-30min %                    CgLgtProb30m     0  -9999.00
-            209 006 030 000 MultiSensor QPE 1hour Pass1      mm                   MrgdQpe1HP1      0  -9999.00
-            209 006 031 000 MultiSensor QPE 3hour Pass1      mm                   MrgdQpe3HP1      0  -9999.00
-            209 006 032 000 MultiSensor QPE 6hour Pass1      mm                   MrgdQpe6HP1      0  -9999.00
-            209 006 033 000 MultiSensor QPE 12hour Pass1     mm                   MrgdQpe12HP1     0  -9999.00
-            209 006 034 000 MultiSensor QPE 24hour Pass1     mm                   MrgdQpe24HP1     0  -9999.00
-            209 006 035 000 MultiSensor QPE 48hour Pass1     mm                   MrgdQpe48HP1     0  -9999.00
-            209 006 036 000 MultiSensor QPE 72hour Pass1     mm                   MrgdQpe72HP1     0  -9999.00
-            209 006 037 000 MultiSensor QPE 1hour Pass2      mm                   MrgdQpe1HP2      0  -9999.00
-            209 006 038 000 MultiSensor QPE 3hour Pass2      mm                   MrgdQpe3HP2      0  -9999.00
-            209 006 039 000 MultiSensor QPE 6hour Pass2      mm                   MrgdQpe6HP2      0  -9999.00
-            209 006 040 000 MultiSensor QPE 12hour Pass2     mm                   MrgdQpe12HP2     0  -9999.00
-            209 006 041 000 MultiSensor QPE 24hour Pass2     mm                   MrgdQpe24HP2     0  -9999.00
-            209 006 042 000 MultiSensor QPE 48hour Pass2     mm                   MrgdQpe48HP2     0  -9999.00
-            209 006 043 000 MultiSensor QPE 72hour Pass2     mm                   MrgdQpe72HP2     0  -9999.00
-          I made-up the long and short names based on the MRMS V12 spreadsheet
-          from NSSL.
-
-    Developer:
-        * push(1): Made agnostic of branch
-        * Removed FTP references when modifying "versions.inc" on website
-
-6.13.13.2	2020-10-12T14:08:42-0600
-    ldmadmin(1):
-        Switched the order of the bin/ and util/ directories when setting PATH
-        because one site had a script named "util/ldmd".
-
-    pqact(1):
-        * Hopefully closed a tiny window-of-vulnerability in which a SIGALRM
-          might be generated after a successful write(2) to a (very) slow
-          decoder but before the alarm is dismissed -- leading to the abnormal
-          termination of the process. This has occurred at more than one site.
-        * Set default SIGALRM handing to "ignore" just in case
-
-6.13.13.1	2020-10-08T13:30:46-0600
-    NOAAPort:
-        * GEMPAK Tables: Added new WMO parameters:
-            000 000 000 010 Temperature
-            000 002 000 006 Wind Direction
-            000 002 022 002 Wind Speed (gust)
-            000 006 001 002 Total Cloud Cover
-            000 006 013 005 Ceiling
-            010 000 003 002 Sig Hgt Wind Waves and Swell
-
-    Developer:
-        * publish.sh
-            * Converted to functional form. Needs to be tested.
-        * Added targets "push-gempak-tables" & "pull-fmtp"
+        * deployAll(1):
+            * Replaced use of internal shell function with calling deploy(1)
+            * Made all LDM7 deployments asynchronous
+        * configure.ac:
+            * Added "-I" and "-L" checks for /opt/openssl and
+              /usr/lib64/openssl11
 
 6.13.12	2020-09-30T10:25:12-0600
     Installation:
