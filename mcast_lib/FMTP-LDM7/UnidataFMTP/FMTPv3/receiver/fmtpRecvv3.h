@@ -223,21 +223,46 @@ private:
      * @pre                           The multicast socket contains a FMTP BOP
      *                                packet.
      * @param[in] header              The associated, already-decoded FMTP header.
+     * @retval    `true`              The BOP message was valid
+     * @retval    `false`             The BOP message was not valid
      * @throw     std::system_error   if an error occurs while reading the socket.
      * @throw     std::runtime_error  if the packet is invalid.
      */
-    void mcastBOPHandler(const FmtpHeader& header);
+    bool mcastBOPHandler(const FmtpHeader& header);
+    /**
+     * Indicates if a product-index equals the index of the last multicast
+     * product.
+     *
+     * @param[in] prodIndex  Product-index to compare
+     * @retval    `true`     Product-index does equal last multicast product
+     * @retval    `false`    Product-index does not equal last multicast product
+     */
+    bool equalsLastMcastProd(uint32_t prodIndex);
+    /**
+     * Returns the index of the last multicast product.
+     *
+     * @return               Index of last multicast product
+     */
+    uint32_t getLastMcastProd() const;
+    /**
+     * Exchanges the index of the last multicast product.
+     *
+     * @param[in] prodIndex  Product-index to set
+     * @return               Index of last multicast product if set; otherwise,
+     *                       `prodIndex`
+     */
+    uint32_t getLastMcastProd(uint32_t prodIndex);
 	/**
 	 * Handles a multicast data-packet.
 	 *
 	 * @param[in] header           Peeked-at FMTP header
-	 * @throw std::runtime_error   `seqnum + payloadlen` is out of bounds
-	 * @throw std::runtime_error   Packet is invalid
+     * @retval    `true`           The message was valid
+     * @retval    `false`          The message was not valid
 	 * @throw std::runtime_error   Error occurred while reading the socket
 	 */
-	void mcastDataHandler(const FmtpHeader& header);
+	bool mcastDataHandler(const FmtpHeader& header);
     void mcastHandler();
-    void mcastEOPHandler(const FmtpHeader& header);
+    bool mcastEOPHandler(const FmtpHeader& header);
     /**
      * Pushes a request for a data-packet onto the retransmission-request queue.
      *
@@ -368,7 +393,9 @@ private:
     std::string             ifAddr;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
-    std::atomic<uint32_t>   mcastProdIndex;
+    uint32_t                lastMcastProd;      // Index of last multicast product
+    bool                    lastMcastProdSet;   // `lastMcastProd` is set?
+    mutable std::mutex      lastMcastProdMutex; // Mutex for `lastMcastProd`
     std::atomic<uint32_t>   prevMcastSeqNum;
     bool                    prevMcastSeqNumSet;
     /* callback function of the receiving application */
