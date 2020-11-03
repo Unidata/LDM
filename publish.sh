@@ -34,7 +34,7 @@ downloadDir=/web/content/downloads/ldm
 webDir=/web/content/software/ldm
 versionWebDir=$webDir/ldm-$version
 
-copyToFtpDir
+copyToFtpDir()
 {
     status=1
 
@@ -71,7 +71,7 @@ purgeDir()
             rm -f versions
             status=0;
         fi
-        return $status
+        exit $status
 EOF
 }
 
@@ -99,7 +99,7 @@ adjustDownloadHtml()
             mv -f index.html.new index.html
             status=0
         fi
-        return $status
+        exit $status
 EOF
 }
 
@@ -118,7 +118,7 @@ copyDoc()
 referenceDoc()
 {
     ssh -T $host bash --login <<EOF
-        set -ex  # Exit on error
+        set -e  # Exit on error
         status=1
 
         # Go to the top-level of the package's web-pages.
@@ -176,12 +176,12 @@ END_VERS
                 ln -s ldm-$version ldm-current
 
                 status=0
-            fi # `versions.inc.new created
+            fi # "versions.inc.new" created
 
             rm -f versions
-        fi # `versions` created
+        fi # "versions" created
 
-        return $status
+        exit $status
 EOF
 }
 
