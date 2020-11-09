@@ -521,12 +521,8 @@ rcvr_term(const pid_t rcvrPid)
     CU_ASSERT_EQUAL(kill(rcvrPid, SIGTERM), 0);
     int status;
     pid_t pid = waitpid(rcvrPid, &status, 0);
-    if (pid == (pid_t)-1) {
+    if (pid == (pid_t)-1)
  	   log_syserr("waitpid(%ld) returned -1", (long)rcvrPid);
-    }
-    else {
- 	   log_debug("waitpid(%ld) returned %ld", (long)rcvrPid, (long)pid);
-    }
     CU_ASSERT_EQUAL(pid, rcvrPid);
 	CU_ASSERT_TRUE(WIFEXITED(status));
 	return WEXITSTATUS(status);
@@ -567,7 +563,7 @@ test_up7Down7(
     blockSigCont(&oldSigSet);
     */
 
-    umm_setRetxTimeout(5); // SWAG
+    umm_setRetxTimeout(RETX_TIMEOUT);
 
     status = lcf_init(LDM_PORT, NULL);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -585,7 +581,7 @@ test_up7Down7(
 
     CU_ASSERT_EQUAL(sleep(1), 0);
     sndr_fillPq();
-    CU_ASSERT_EQUAL(sleep(1), 0);
+    CU_ASSERT_EQUAL(sleep(RETX_TIMEOUT+1), 0);
 
     log_notice("Stopping receiver");
     CU_ASSERT_EQUAL(rcvr_term(rcvrPid), 0); // Bad exit code if not all received
@@ -610,7 +606,7 @@ int main(
         log_syserr("Couldn't initialize logging module");
         exit(1);
     }
-    log_set_level(LOG_LEVEL_NOTICE);
+    log_set_level(LOG_LEVEL_INFO);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
