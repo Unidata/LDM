@@ -36,9 +36,9 @@ public:
 	 * Constructs from an HMAC key.
 	 *
 	 * @param[in] key                Key for computing HMAC-s. The length of the
-	 *                               key must be at least `2*SIZE`.
+	 *                               key must be at least `2*MAC_SIZE`.
      * @throw std::runtime_error     OpenSSL failure
-     * @throw std::invalid_argument  `key.size() < 2*SIZE`
+     * @throw std::invalid_argument  `key.size() < 2*MAC_SIZE`
 	 */
 	HmacImpl(const std::string& key);
 
