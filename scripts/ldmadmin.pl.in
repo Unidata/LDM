@@ -1757,7 +1757,7 @@ sub getPortCount
     my($totalCount) = 0;
     open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
     while (<FH>) {
-	if (/ESTABLISHED/ && /:$port\W/) {
+	if (/ESTAB/ && /:$port\W/) {
 	    $totalCount++;
 	}
     }
