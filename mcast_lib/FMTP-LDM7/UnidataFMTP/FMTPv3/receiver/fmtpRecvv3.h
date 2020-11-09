@@ -270,20 +270,20 @@ private:
      * @param[in] seqnum     Sequence number of the data-packet.
      * @param[in] datalen    Amount of data in bytes.
      */
-    void pushMissingDataReq(const uint32_t prodindex, const uint32_t seqnum,
+    void pushDataReq(const uint32_t prodindex, const uint32_t seqnum,
                             const uint16_t datalen);
     /**
      * Pushes a request for a BOP-packet onto the retransmission-request queue.
      *
      * @param[in] prodindex  Index of the associated data-product.
      */
-    void pushMissingBopReq(const uint32_t prodindex);
+    void pushBopReq(const uint32_t prodindex);
     /**
      * Pushes a request for a EOP-packet onto the retransmission-request queue.
      *
      * @param[in] prodindex  Index of the associated data-product.
      */
-    void pushMissingEopReq(const uint32_t prodindex);
+    void pushEopReq(const uint32_t prodindex);
     void retxHandler();
     void retxRequester();
     bool rmMisBOPinSet(uint32_t prodindex);
@@ -329,7 +329,7 @@ private:
      * @param[in] openleft   Open left end of the prodindex interval.
      * @param[in] openright  Open right end of the prodindex interval.
      */
-    void requestMissingBops(const uint32_t openleft, const uint32_t openright);
+    void requestBops(const uint32_t openleft, const uint32_t openright);
     /**
      * Requests BOP packets for data-products that come after the current
      * data-product up to and excluding a given data-product.
@@ -337,7 +337,7 @@ private:
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
      *                       missed.
      */
-    void requestMissingBopsExclusive(const uint32_t prodindex);
+    void requestBopsExcl(const uint32_t prodindex);
     /**
      * Requests BOP packets for data-products that come after the current
      * data-product up to and including a given data-product.
@@ -345,7 +345,7 @@ private:
      * @param[in] prodindex  Index of the last data-product whose BOP packet was
      *                       missed.
      */
-    void requestMissingBopsInclusive(const uint32_t prodindex);
+    void requestBopsIncl(const uint32_t prodindex);
     /**
      * Handles a multicast FMTP data-packet given the associated peeked-at and
      * decoded FMTP header. Directly store and check for missing blocks.

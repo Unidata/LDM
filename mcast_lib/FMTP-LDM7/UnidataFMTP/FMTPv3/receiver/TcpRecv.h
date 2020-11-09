@@ -32,6 +32,7 @@
 #define FMTP_RECEIVER_TCPRECV_H_
 
 
+#include "fmtpBase.h"
 #include "TcpBase.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -89,19 +90,14 @@ public:
     bool recvData(void* header, size_t headLen, char* payload,
                      size_t payLen);
     /**
-     * Sends a header and a payload on the TCP connection. Blocks until the packet
-     * is sent or a severe error occurs. Re-establishes the TCP connection if
-     * necessary.
+     * Sends a header on the TCP connection. Blocks until the packet is sent or
+     * a severe error occurs. Re-establishes the TCP connection if necessary.
      *
-     * @param[in] header   Header.
-     * @param[in] headLen  Length of the header in bytes.
-     * @param[in] payload  Payload.
-     * @param[in] payLen   Length of the payload in bytes.
-     * @retval    -1       O/S failure.
-     * @return             Number of bytes sent.
+     * @param[in] header            Header.
+     * @retval    -1                O/S failure.
+     * @return                      Number of bytes sent.
      */
-    ssize_t sendData(void* header, size_t headLen, char* payload,
-                     size_t payLen);
+    ssize_t send(const FmtpHeader& header);
 
 private:
     /**

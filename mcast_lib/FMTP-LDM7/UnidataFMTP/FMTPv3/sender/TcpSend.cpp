@@ -411,9 +411,9 @@ void TcpSend::rmSockInList(int sockfd)
  * with error occurred.
  *
  * @param[in] retxsockfd    retransmission socket file descriptor.
- * @param[in] *sendheader   pointer of a FmtpHeader structure, whose fields
- *                          hold the information in network byte-order.
- * @param[in] *payload      pointer to the ready-to-send memory buffer which
+ * @param[in] sendheader    pointer of a FmtpHeader structure, whose fields
+ *                          hold the information in *network* byte-order.
+ * @param[in] payload       pointer to the ready-to-send memory buffer which
  *                          holds the packet payload.
  * @param[in] paylen        size to be sent (size of the payload)
  * @return    retval        return the total bytes sent.
@@ -422,11 +422,13 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
                       size_t paylen)
 {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
-	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
-			"payloadlen=%s", ntohs(sendheader->flags),
+	log_debug("Unicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s, payload=%p",
+            ntohs(sendheader->flags),
 			std::to_string(ntohl(sendheader->prodindex)).data(),
 			std::to_string(ntohl(sendheader->seqnum)).data(),
-			std::to_string(ntohs(sendheader->payloadlen)).data());
+			std::to_string(ntohs(sendheader->payloadlen)).data(),
+			payload);
 #endif
     sendall(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendall(retxsockfd, payload, paylen);
@@ -453,11 +455,12 @@ int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                   size_t paylen)
 {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
-	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
-			"payloadlen=%s", ntohs(sendheader->flags),
+	log_debug("Unicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s, payload=%p", ntohs(sendheader->flags),
 			std::to_string(ntohl(sendheader->prodindex)).data(),
 			std::to_string(ntohl(sendheader->seqnum)).data(),
-			std::to_string(ntohs(sendheader->payloadlen)).data());
+			std::to_string(ntohs(sendheader->payloadlen)).data(),
+			payload);
 #endif
     sendallstatic(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendallstatic(retxsockfd, payload, paylen);

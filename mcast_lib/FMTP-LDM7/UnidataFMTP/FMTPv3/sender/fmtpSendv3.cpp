@@ -636,16 +636,13 @@ void fmtpSendv3::doneWithProd(const uint32_t prodindex)
 void fmtpSendv3::handleRetxEnd(const uint32_t prodindex,
                                const int      sock)
 {
-    /**
-     * Remove the specific receiver from the unfinished receiver
-     * set. Only if the product is removed by clearUnfinishedSet(),
-     * it returns a true value.
+    /*
+     * Remove the specific receiver from the unfinished receiver set.
      */
-    if (sendMeta->clearUnfinishedSet(prodindex, sock, tcpsend)) {
-        /**
-         * Only if the product is removed by clearUnfinishedSet()
-         * since this receiver is the last one in the unfinished set,
-         * notify the sending application.
+    if (sendMeta->removeReceiver(prodindex, sock, tcpsend)) {
+        /*
+         * The product has been received by all receivers. Notify the sending
+         * application.
          */
         doneWithProd(prodindex);
     } // Only `sock` hadn't acknowledged `prodindex`
@@ -777,8 +774,8 @@ void fmtpSendv3::RunRetxThread(int retxsockfd)
             /* encountered EOF, header incomplete */
             throw std::runtime_error("fmtpSendv3::RunRetxThread() EOF");
         }
-#ifdef LDM_LOGGING
-		log_debug("Received header: flags=%#x, prodindex=%s, seqnum=%s, "
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+		log_debug("Received: flags=%#x, prodindex=%s, seqnum=%s, "
 				"payloadlen=%s", recvheader.flags,
 				std::to_string(recvheader.prodindex).data(),
 				std::to_string(recvheader.seqnum).data(),
@@ -859,6 +856,9 @@ void fmtpSendv3::rejRetxReq(const uint32_t prodindex, const int sock)
     sendheader.seqnum     = 0;
     sendheader.payloadlen = 0;
     sendheader.flags      = htons(FMTP_RETX_REJ);
+    #if !defined(NDEBUG) && defined(LDM_LOGGING)
+        log_debug("Sending rejection");
+    #endif
     tcpsend->sendData(sock, &sendheader, NULL, 0);
 }
 
@@ -913,6 +913,9 @@ void fmtpSendv3::retransmit(
                 char tmp[1460] = {0};
                 int retval = tcpsend->sendData(sock, &sendheader, tmp, payLen);
             #else
+                #if !defined(NDEBUG) && defined(LDM_LOGGING)
+                    log_debug("Sending data");
+                #endif
                 int retval = tcpsend->sendData(sock, &sendheader,
                                 (char*)retxMeta->dataprod_p + start, payLen);
             #endif
@@ -992,20 +995,15 @@ void fmtpSendv3::retransBOP(
 #endif
 
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is correct */
+    #if !defined(NDEBUG) && defined(LDM_LOGGING)
+        log_debug("Retransmitting BOP");
+    #endif
     int retval = tcpsend->sendData(sock, &sendheader, (char*)(&bopMsg),
                                payloadlen);
     if (retval < 0) {
         throw std::runtime_error(
                 "fmtpSendv3::retransBOP() TcpSend::send() error");
     }
-
-#ifdef LDM_LOGGING
-    log_debug("Sent BOP {header={prodindex=%lu, payloadlen=%u}, "
-            "bop={prodsize=%lu, metasize=%u}}",
-            (unsigned long)ntohl(sendheader.prodindex),
-            ntohs(sendheader.payloadlen),
-            (unsigned long)ntohl(bopMsg.prodsize), ntohs(bopMsg.metasize));
-#endif
 
     #ifdef MODBASE
         uint32_t tmpidx = recvheader->prodindex % MODBASE;
@@ -1041,9 +1039,12 @@ void fmtpSendv3::retransEOP(
     sendheader.prodindex  = htonl(recvheader->prodindex);
     sendheader.seqnum     = 0;
     sendheader.payloadlen = 0;
-    /** notice the flags field should be set to RETX_EOP other than EOP */
+    /* notice the flags field should be set to RETX_EOP rather than EOP */
     sendheader.flags      = htons(FMTP_RETX_EOP);
 
+    #if !defined(NDEBUG) && defined(LDM_LOGGING)
+        log_debug("Retransmitting EOP");
+    #endif
     int retval = tcpsend->sendData(sock, &sendheader, NULL, 0);
     if (retval < 0) {
         throw std::runtime_error(
@@ -1111,6 +1112,9 @@ void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
     auto mac = hMacer.getHmac(iov.first, iov.second);
 #endif
 
+    #ifdef LDM_LOGGING
+        log_debug("Multicasting BOP");
+    #endif
     udpsend->send(header, &bopMsg);
 #else
     FmtpHeader    header;
@@ -1221,6 +1225,9 @@ void fmtpSendv3::sendEOPMessage()
         WriteToLog(debugmsg);
     #endif
 #else
+    #ifdef LDM_LOGGING
+        log_debug("Multicasting EOP");
+    #endif
     udpsend->send(header);
 
     #ifdef MEASURE
@@ -1286,6 +1293,9 @@ void fmtpSendv3::sendData(void* data, uint32_t dataSize)
         if (linkspeed) {
             rateshaper.CalcPeriod(sizeof(header) + payloadlen);
         }
+        #ifdef LDM_LOGGING
+            log_debug("Multicasting data");
+        #endif
         udpsend->send(header, data);
         if (linkspeed) {
             rateshaper.Sleep();

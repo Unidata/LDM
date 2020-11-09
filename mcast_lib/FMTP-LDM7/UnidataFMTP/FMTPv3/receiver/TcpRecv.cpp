@@ -29,6 +29,9 @@
 
 
 #include "TcpRecv.h"
+#ifdef LDM_LOGGING
+    #include "log.h"
+#endif
 
 #include <errno.h>
 #include <netdb.h>
@@ -103,24 +106,18 @@ bool TcpRecv::recvData(void* header, size_t headLen, char* payload,
 }
 
 
-/**
- * Sends a header and a payload on the TCP connection. Blocks until the packet
- * is sent or a severe error occurs.
- *
- * @param[in] header   Header.
- * @param[in] headLen  Length of the header in bytes.
- * @param[in] payload  Payload.
- * @param[in] payLen   Length of the payload in bytes.
- * @retval    -1       O/S failure.
- * @return             Number of bytes sent.
- */
-ssize_t TcpRecv::sendData(void* header, size_t headLen, char* payload,
-                          size_t payLen)
+ssize_t TcpRecv::send(const FmtpHeader& header)
 {
-    sendall(header, headLen);
-    sendall(payload, payLen);
+#if !defined(NDEBUG) && defined(LDM_LOGGING)
+	log_debug("Unicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s", ntohs(header.flags),
+			std::to_string(ntohl(header.prodindex)).data(),
+			std::to_string(ntohl(header.seqnum)).data(),
+			std::to_string(ntohs(header.payloadlen)).data());
+#endif
 
-    return (headLen + payLen);
+    sendall(&header, sizeof(header));
+    return (sizeof(header));
 }
 
 

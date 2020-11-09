@@ -167,11 +167,12 @@ void UdpSend::send(const FmtpHeader& header,
     iov[1].iov_len  = header.payloadlen;
 
     #ifdef LDM_LOGGING
-        log_debug("Multicasting header: flags=%#x, prodindex=%s, seqnum=%s, "
-                "payloadlen=%s, mac=%s", header.flags,
+        log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+                "payloadlen=%s, payload=%p, mac=%s", header.flags,
                 std::to_string(header.prodindex).data(),
                 std::to_string(header.seqnum).data(),
                 std::to_string(header.payloadlen).data(),
+                payload,
 				HmacImpl::to_string(mac).c_str());
     #endif
 

@@ -47,6 +47,15 @@ bool UdpRecv::isValid(const FmtpHeader& header,
 	return valid;
 }
 
+void UdpRecv::skipPacket() const
+{
+    char buf[1];
+    if (::recv(sd, buf, sizeof(buf), 0) != sizeof(buf)) // Removes packet
+        throw std::system_error(errno, std::system_category(),
+                "UdpRecv::skipPacket() ::recv() failure on socket " +
+                std::to_string(sd));
+}
+
 UdpRecv::UdpRecv()
 	: sd{-1}
 	, hmacImpl()
@@ -153,18 +162,27 @@ void UdpRecv::peekHeader(FmtpHeader& header)
 				log_warning("Ignoring FMTP message with short header: "
 						"nbytes=%zd", nbytes);
 			#endif
-			char buf[1];
-			(void)::recv(sd, buf, sizeof(buf), 0); // Discards message
-			continue; // Skip invalid messages
+			skipPacket();
 		}
+		else {
+            header.prodindex  = ntohl(netHeader.prodindex);
+            header.seqnum     = ntohl(netHeader.seqnum);
+            header.payloadlen = ntohs(netHeader.payloadlen);
+            header.flags      = ntohs(netHeader.flags);
 
-		header.prodindex  = ntohl(netHeader.prodindex);
-		header.seqnum     = ntohl(netHeader.seqnum);
-		header.payloadlen = ntohs(netHeader.payloadlen);
-		header.flags      = ntohs(netHeader.flags);
-
-		break;
-	}
+            if (header.payloadlen > MAX_FMTP_PAYLOAD) {
+                #ifdef LDM_LOGGING
+                    log_warning("Ignoring FMTP message with too large payload: "
+                            "payloadlen=%u",
+                            static_cast<unsigned>(header.payloadlen));
+                #endif
+                skipPacket();
+            }
+            else {
+                break;
+            } // Payload isn't too large
+		} // Header is correct length
+	} // Packet read loop
 }
 
 bool UdpRecv::readPayload(const FmtpHeader& header,
@@ -173,9 +191,6 @@ bool UdpRecv::readPayload(const FmtpHeader& header,
 	iov[1].iov_base = payload;
 	iov[1].iov_len  = header.payloadlen;
 
-    #ifdef LDM_LOGGING
-		log_debug("Reading FMTP message");
-    #endif
 	int cancelState;
 	(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
 		const auto nbytes = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));

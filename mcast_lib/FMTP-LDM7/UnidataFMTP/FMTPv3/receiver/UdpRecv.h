@@ -42,6 +42,13 @@ class UdpRecv
 	bool isValid(const FmtpHeader& header,
 			     const void*       payload);
 
+	/**
+	 * Skips the current packet.
+	 *
+	 * @throw std::system_error  I/O failure
+	 */
+	void skipPacket() const;
+
 public:
 	/**
 	 * Default constructs.
@@ -78,11 +85,10 @@ public:
 
 	/**
 	 * Peeks at the header of the current FMTP message. Blocks until one is
-	 * available or an error occurs. Skips over messages that can't be an FMTP
-	 * header. The message will not be removed from the input buffer. Upon
-	 * return, the next call should be to either `getPayload()` or
-	 * `discardPayload()`. Enables thread cancellation while and only while
-	 * reading the socket.
+	 * available or an error occurs. Skips over invalid FMTP messages. The
+	 * message will not be removed from the input buffer. Upon return, the next
+	 * call should be to either `getPayload()` or `discardPayload()`. Enables
+	 * thread cancellation while and only while reading the socket.
 	 *
 	 * @param[out] header        FMTP header
 	 * @throw std::system_error  I/O failure
