@@ -16,7 +16,7 @@ before_install:
   - sudo iptables -F
   - mkdir m4
   - autoreconf -fi
-  # No multicast support because OpenSSL 1.1 isn't available
+  # No multicast support because OpenSSL 1.1.1 isn't available
   #- ./configure --disable-root-actions --with-noaaport --with-multicast
   - ./configure --disable-root-actions --with-noaaport
 
@@ -35,7 +35,7 @@ addons:
     notification_email: emmerson@ucar.edu
     build_command_prepend: true
     build_command:  "make"
-#   branch_pattern: master
+    branch_pattern: devel
 
 script: make distcheck
 
