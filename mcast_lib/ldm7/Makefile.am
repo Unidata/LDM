@@ -231,7 +231,7 @@ MldmRpc_test_LDADD		= $(LDADD) @LIBS_CUNIT@
 check_PROGRAMS			+= MldmRpc_test
 TESTS				+= MldmRpc_test
 
-Down7_test_SOURCES		= Down7_test.c Up7Down7_lib.c
+Down7_test_SOURCES		= Down7_test.c Up7Down7_lib.c Up7Down7_lib.h
 Down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
