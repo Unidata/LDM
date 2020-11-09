@@ -1,3 +1,19 @@
+6.13.14.1	2020-11-09T12:55:28-0700
+    ldmadmin(1):
+        * Changed match on "ESTABLISHED" in netstat(1) output to "ESTAB" just in
+          case some netstat(1) use that instead
+
+    Multicast:
+        * fmtpRecvv3(3):
+            * Corrected logic bug in tracking last multicast product index
+            * Improved debug messages
+        * UdpRecv(3) & TcpRecv(3):
+            * Improved debug messages
+
+    Developer:
+        * publish.sh:
+            * Got to work
+
 6.13.13	2020-11-03T15:22:01-0700
     ldmadmin(1):
         Switched the order of the bin/ and util/ directories when setting PATH
