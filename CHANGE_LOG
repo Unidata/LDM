@@ -1,3 +1,8 @@
+6.13.14.2	2020-11-09T16:16:02-0700
+    Developer:
+        * .travis.yml:
+            * Enabled "branch_pattern: devel"
+
 6.13.14.1	2020-11-09T12:55:28-0700
     ldmadmin(1):
         * Changed match on "ESTABLISHED" in netstat(1) output to "ESTAB" just in
