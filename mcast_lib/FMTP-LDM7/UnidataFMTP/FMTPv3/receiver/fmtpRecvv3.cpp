@@ -963,6 +963,11 @@ void fmtpRecvv3::mcastHandler()
         else if (header.flags == FMTP_EOP) {
             mcastEOPHandler(header);
         }
+        else {
+            log_warning("Ignoring invalid message type: flags=%#x",
+                    header.flags);
+            (void)udpRecv.discardPayload(header);
+        }
     } // Indefinite loop
 }
 
