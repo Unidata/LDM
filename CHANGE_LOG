@@ -1,3 +1,8 @@
+6.13.14.3	2020-11-12T13:51:23-0700
+    Multicast:
+        * fmtpRecvv3:
+            * Ignore FMTP message if header flag is unknown
+
 6.13.14.2	2020-11-09T16:16:02-0700
     Developer:
         * .travis.yml:
