@@ -40,6 +40,7 @@
 #include <string>
 #include <string.h>
 #include <stdexcept>
+#include <stdlib.h>
 #include <system_error>
 
 
@@ -60,12 +61,13 @@
 UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
                  const unsigned char ttl, const std::string& ifAddr)
     : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr),
-      sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{}
+      sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{},
+      macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
 {
     iov[0].iov_base = &netHead;
     iov[0].iov_len  = FMTP_HEADER_LEN;
     iov[2].iov_base = mac;
-    iov[2].iov_len  = MAC_SIZE;
+    iov[2].iov_len  = macLen;
 }
 
 
@@ -156,7 +158,8 @@ void UdpSend::send(const FmtpHeader& header,
 	if (header.payloadlen && payload == nullptr)
 		throw std::logic_error("Inconsistent header and payload");
 
-	hmacImpl.getMac(header, payload, mac);
+	if (macLen)
+        hmacImpl.getMac(header, payload, mac);
 
 	netHead.flags      = htons(header.flags);
 	netHead.payloadlen = htons(header.payloadlen);
@@ -177,7 +180,7 @@ void UdpSend::send(const FmtpHeader& header,
     #endif
 
     const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
-    if (nbytes != sizeof(netHead) + header.payloadlen + sizeof(mac))
+    if (nbytes != sizeof(netHead) + header.payloadlen + macLen)
     	throw std::system_error(errno, std::system_category(),
     			"UdpSend::send(): writev() failure: nbytes=" +
 				std::to_string(nbytes));

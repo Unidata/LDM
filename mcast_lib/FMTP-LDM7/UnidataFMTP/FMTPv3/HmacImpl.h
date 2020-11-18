@@ -82,6 +82,15 @@ public:
 	 * @return         String representation
 	 */
 	static std::string to_string(const char mac[MAC_SIZE]);
+
+	/**
+	 * Indicates if HMAC usage is disabled. Usage is disabled if the environment
+	 * variable `DISABLE_HMAC` is defined and not the empty string,
+	 *
+	 * @retval `true`   HMAC usage is disabled
+	 * @retval `false`  HMAC usage is not disabled
+	 */
+	static bool isDisabled();
 };
 
 #endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_ */

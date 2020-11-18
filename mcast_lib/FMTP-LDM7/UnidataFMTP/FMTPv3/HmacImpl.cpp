@@ -28,6 +28,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 
 /**
@@ -177,4 +178,13 @@ std::string HmacImpl::to_string(const char mac[MAC_SIZE])
 	}
 
 	return std::string(buf);
+}
+
+bool HmacImpl::isDisabled()
+{
+    auto value = ::getenv("DISABLE_HMAC");
+    return value != NULL && (
+            ::strcasecmp(value, "1") == 0 ||
+            ::strcasecmp(value, "yes") == 0 ||
+            ::strcasecmp(value, "true") == 0);
 }

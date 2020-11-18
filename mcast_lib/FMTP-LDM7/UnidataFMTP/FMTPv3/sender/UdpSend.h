@@ -91,6 +91,7 @@ private:
 	FmtpHeader            netHead;       ///< Network byte-order FMTP header
     struct iovec          iov[3];        ///< Output vector
     char                  mac[MAC_SIZE]; ///< Message authentication code
+    const unsigned        macLen;        ///< Size of MAC in bytes
 };
 
 

@@ -24,25 +24,32 @@ void UdpRecv::init()
     iov[0].iov_base = &netHeader;
     iov[0].iov_len  = FMTP_HEADER_LEN;
     iov[2].iov_base = mac;
-    iov[2].iov_len  = sizeof(mac);
+    iov[2].iov_len  = macLen;
 }
 
 bool UdpRecv::isValid(const FmtpHeader& header,
 		              const void*       payload)
 {
-	char compMac[MAC_SIZE];
-	hmacImpl.getMac(header, payload, compMac);
+	bool valid;
 
-	const bool valid = ::memcmp(mac, compMac, MAC_SIZE) == 0;
-    #ifdef LDM_LOGGING
-        if (!valid)
-            log_warning("Invalid FMTP message: flags=%#x, prodindex=%u, "
-            		"seqnum=%u, payloadlen=%u, msgMac=%s, compMap=%s",
-            		(unsigned)header.flags, (unsigned)header.prodindex,
-					(unsigned)header.seqnum, (unsigned)header.payloadlen,
-            		HmacImpl::to_string(mac).c_str(),
-            		HmacImpl::to_string(compMac).c_str());
-    #endif
+    if (macLen == 0) {
+        valid = true;
+    }
+    else {
+        char compMac[MAC_SIZE];
+        hmacImpl.getMac(header, payload, compMac);
+
+        const bool valid = ::memcmp(mac, compMac, MAC_SIZE) == 0;
+#       ifdef LDM_LOGGING
+            if (!valid)
+                log_warning("Invalid FMTP message: flags=%#x, prodindex=%u, "
+                        "seqnum=%u, payloadlen=%u, msgMac=%s, compMap=%s",
+                        (unsigned)header.flags, (unsigned)header.prodindex,
+                        (unsigned)header.seqnum, (unsigned)header.payloadlen,
+                        HmacImpl::to_string(mac).c_str(),
+                        HmacImpl::to_string(compMac).c_str());
+#       endif
+    }
 
 	return valid;
 }
@@ -61,6 +68,7 @@ UdpRecv::UdpRecv()
 	, hmacImpl()
 	, netHeader{}
 	, mac{}
+	, macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
 	, iov{}
 {
 	init();
@@ -75,6 +83,7 @@ UdpRecv::UdpRecv(const std::string& srcAddr,
 	, hmacImpl(hmacKey)
 	, netHeader{}
 	, mac{}
+	, macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
 	, iov{}
 {
     init();
@@ -200,8 +209,7 @@ bool UdpRecv::readPayload(const FmtpHeader& header,
 		throw std::system_error(errno, std::system_category(),
 				"UdpRecv::read() ::readv() failure");
 
-	bool valid = (nbytes == FMTP_HEADER_LEN + header.payloadlen +
-			sizeof(mac));
+	bool valid = (nbytes == FMTP_HEADER_LEN + header.payloadlen + macLen);
 	if (!valid) {
         #ifdef LDM_LOGGING
 			log_warning("Small FMTP payload: expected=%zu, actual=%zd",

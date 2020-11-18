@@ -18,11 +18,12 @@
 
 class UdpRecv
 {
-	int          sd;            ///< Socket descriptor
-	HmacImpl     hmacImpl;      ///< HMAC calculator
-	FmtpHeader   netHeader;     ///< FMTP header in network byte-order
-	char         mac[MAC_SIZE]; ///< MAC in message
-	struct iovec iov[3];        ///< FMTP message I/O vector
+	int            sd;            ///< Socket descriptor
+	HmacImpl       hmacImpl;      ///< HMAC calculator
+	FmtpHeader     netHeader;     ///< FMTP header in network byte-order
+	char           mac[MAC_SIZE]; ///< MAC in message
+	const unsigned macLen;        ///< HMAC length in bytes
+	struct iovec   iov[3];        ///< FMTP message I/O vector
 
 	/**
 	 * Initializes some of the members of this instance.
