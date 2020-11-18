@@ -1,3 +1,8 @@
+6.13.14.4	2020-11-18T14:51:37-0700
+    Multicast:
+        * Disable HMAC usage if and only if environment variable DISABLE_HMAC is
+          "1", "yes", or "true".
+
 6.13.14.3	2020-11-12T13:51:23-0700
     Multicast:
         * fmtpRecvv3:
