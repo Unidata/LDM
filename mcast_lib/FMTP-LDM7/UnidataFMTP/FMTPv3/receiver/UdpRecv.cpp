@@ -212,8 +212,8 @@ bool UdpRecv::readPayload(const FmtpHeader& header,
 	bool valid = (nbytes == FMTP_HEADER_LEN + header.payloadlen + macLen);
 	if (!valid) {
         #ifdef LDM_LOGGING
-			log_warning("Small FMTP payload: expected=%zu, actual=%zd",
-					(size_t)header.payloadlen, nbytes);
+			log_warning("Small FMTP payload: expected=%zd, actual=%zu",
+					nbytes, (size_t)header.payloadlen);
         #endif
 	}
 	else {
