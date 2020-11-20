@@ -180,11 +180,11 @@ void UdpRecv::peekHeader(FmtpHeader& header)
             header.flags      = ntohs(netHeader.flags);
 
             if (header.payloadlen > MAX_FMTP_PAYLOAD) {
-                #ifdef LDM_LOGGING
-                    log_warning("Ignoring FMTP message with too large payload: "
-                            "payloadlen=%u",
+#                ifdef LDM_LOGGING
+                    log_warning("Ignoring FMTP message whose payload is too "
+                            "large: payloadlen=%u",
                             static_cast<unsigned>(header.payloadlen));
-                #endif
+#                endif
                 skipPacket();
             }
             else {
@@ -202,19 +202,20 @@ bool UdpRecv::readPayload(const FmtpHeader& header,
 
 	int cancelState;
 	(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-		const auto nbytes = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));
+		const auto nread = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));
 	(void)pthread_setcancelstate(cancelState, &cancelState);
 
-	if (nbytes == -1)
+	if (nread == -1)
 		throw std::system_error(errno, std::system_category(),
 				"UdpRecv::read() ::readv() failure");
 
-	bool valid = (nbytes == FMTP_HEADER_LEN + header.payloadlen + macLen);
+	int  payloadlen = nread - (FMTP_HEADER_LEN + macLen);
+	bool valid = (payloadlen == header.payloadlen);
 	if (!valid) {
-        #ifdef LDM_LOGGING
-			log_warning("FMTP payload is too small: expected=%zd, actual=%zu",
-					nbytes, (size_t)header.payloadlen);
-        #endif
+#        ifdef LDM_LOGGING
+			log_warning("FMTP payload is too small: expected=%u, actual=%d",
+					static_cast<unsigned>(header.payloadlen), payloadlen);
+#        endif
 	}
 	else {
 		valid = isValid(header, payload);
