@@ -1,7 +1,12 @@
+6.13.14.5	2020-11-20T14:00:02-0700
+    UdpRecv.cpp:
+        * Corrected reversed "expected" and "actual" values in error message
+          about a too-small message.
+
 6.13.14.4	2020-11-18T14:51:37-0700
     Multicast:
         * Disable HMAC usage if and only if environment variable DISABLE_HMAC is
-          "1", "yes", or "true".
+          "1", "yes", or "true" (case insensitive comparison).
 
 6.13.14.3	2020-11-12T13:51:23-0700
     Multicast:
