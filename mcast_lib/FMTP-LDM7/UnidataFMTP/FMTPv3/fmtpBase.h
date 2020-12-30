@@ -62,8 +62,8 @@ typedef struct FmtpRetxReqMessage {
 
 
 /* constants used by both sender and receiver */
-const int MIN_MTU         = 1500;
-const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
+const int MIN_MTU         = 1500; // Maximum ethernet frame payload
+const int FMTP_HEADER_LEN = sizeof(FmtpHeader); // Currently 12 bytes
 const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
 
 /// Most significant seconds, least significant seconds, nanoseconds
