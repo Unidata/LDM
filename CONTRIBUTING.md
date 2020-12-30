@@ -13,7 +13,8 @@
 3. Create the autotools(1) infrastructure:
 
         mkdir -p m4
-        autoreconf -f -i
+        aclocal
+        autoreconf -fi
 
 4. Create the build infrastructure:
 
