@@ -18,6 +18,7 @@ lib_la_CPPFLAGS		= -DLDM_LOGGING \
 lib_la_LIBADD		= receiver/lib.la sender/lib.la \
                           SilenceSuppressor/lib.la RateShaper/lib.la \
                           -lssl -lcrypto
+CLEANFILES		= pdu
 
 noinst_PROGRAMS		= IperfFmtpPdu
 IperfFmtpPdu_SOURCES	= IperfFmtpPdu.cpp
