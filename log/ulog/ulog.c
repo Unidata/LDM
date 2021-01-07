@@ -449,9 +449,9 @@ void ulog_set_options(
 #ifdef STDC_ARGS
 int
 vulog(
-        unsigned int               pri,
-        const char* restrict       fmt,
-        va_list                    args)
+        unsigned int pri,
+        const char*  fmt,
+        va_list      args)
 {
 #else
 int
