@@ -6,8 +6,8 @@ pqact</help_text>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>640</x>
-      <y>120</y>
+      <x>340</x>
+      <y>100</y>
       <w>230</w>
       <h>30</h>
     </coordinates>
@@ -20,8 +20,8 @@ fontsize=18</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>530</x>
-      <y>220</y>
+      <x>230</x>
+      <y>200</y>
       <w>520</w>
       <h>250</h>
     </coordinates>
@@ -32,8 +32,8 @@ pqact</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>890</x>
-      <y>510</y>
+      <x>590</x>
+      <y>490</y>
       <w>100</w>
       <h>80</h>
     </coordinates>
@@ -53,8 +53,8 @@ drawArc(0,height*3/5,width,height*2/5,180,180,true) fg=black bg=#222222 //Parame
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>580</x>
-      <y>310</y>
+      <x>280</x>
+      <y>290</y>
       <w>170</w>
       <h>80</h>
     </coordinates>
@@ -66,8 +66,8 @@ File</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>870</x>
-      <y>310</y>
+      <x>570</x>
+      <y>290</y>
       <w>140</w>
       <h>80</h>
     </coordinates>
@@ -79,8 +79,8 @@ Queue</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>590</x>
-      <y>530</y>
+      <x>290</x>
+      <y>510</y>
       <w>140</w>
       <h>50</h>
     </coordinates>
@@ -91,20 +91,20 @@ Decoder</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>330</x>
-      <y>320</y>
+      <x>30</x>
+      <y>300</y>
       <w>120</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-ldmadmin</panel_attributes>
+ldmd</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>440</x>
-      <y>320</y>
+      <x>140</x>
+      <y>300</y>
       <w>110</w>
       <h>50</h>
     </coordinates>
@@ -116,8 +116,8 @@ m1=0..n</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>930</x>
-      <y>380</y>
+      <x>630</x>
+      <y>360</y>
       <w>60</w>
       <h>150</h>
     </coordinates>
@@ -128,8 +128,8 @@ uses</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>740</x>
-      <y>380</y>
+      <x>440</x>
+      <y>360</y>
       <w>190</w>
       <h>150</h>
     </coordinates>
@@ -140,8 +140,8 @@ FILE</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>720</x>
-      <y>530</y>
+      <x>420</x>
+      <y>510</y>
       <w>190</w>
       <h>40</h>
     </coordinates>
@@ -152,8 +152,8 @@ uses</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>650</x>
-      <y>380</y>
+      <x>350</x>
+      <y>360</y>
       <w>80</w>
       <h>170</h>
     </coordinates>
@@ -164,8 +164,8 @@ popen()</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>740</x>
-      <y>330</y>
+      <x>440</x>
+      <y>310</y>
       <w>150</w>
       <h>40</h>
     </coordinates>
@@ -176,8 +176,8 @@ uses</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>370</x>
-      <y>530</y>
+      <x>70</x>
+      <y>510</y>
       <w>140</w>
       <h>50</h>
     </coordinates>
@@ -188,8 +188,8 @@ uses</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>500</x>
-      <y>380</y>
+      <x>200</x>
+      <y>360</y>
       <w>100</w>
       <h>170</h>
     </coordinates>

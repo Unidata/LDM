@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="14.3.0">
-  <zoom_level>10</zoom_level>
+  <zoom_level>8</zoom_level>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>520</x>
-      <y>0</y>
-      <w>230</w>
-      <h>30</h>
+      <x>472</x>
+      <y>48</y>
+      <w>184</w>
+      <h>24</h>
     </coordinates>
-    <panel_attributes>ldmd - Components
+    <panel_attributes>LDM-6 - Components
 style=wordwrap
 halign=center
 fontsize=18</panel_attributes>
@@ -18,10 +18,10 @@ fontsize=18</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>570</x>
-      <y>700</y>
-      <w>140</w>
-      <h>80</h>
+      <x>552</x>
+      <y>616</y>
+      <w>112</w>
+      <h>64</h>
     </coordinates>
     <panel_attributes>symbol=component
 Product
@@ -31,46 +31,36 @@ Queue</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>430</x>
-      <y>530</y>
-      <w>140</w>
-      <h>80</h>
+      <x>376</x>
+      <y>312</y>
+      <w>112</w>
+      <h>64</h>
     </coordinates>
     <panel_attributes>symbol=component
-LDM-5</panel_attributes>
+Downstream
+LDM-6 Requester</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>710</x>
-      <y>530</y>
-      <w>140</w>
-      <h>80</h>
+      <x>552</x>
+      <y>384</y>
+      <w>112</w>
+      <h>64</h>
     </coordinates>
     <panel_attributes>symbol=component
-LDM-6</panel_attributes>
-    <additional_attributes/>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>570</x>
-      <y>360</y>
-      <w>140</w>
-      <h>80</h>
-    </coordinates>
-    <panel_attributes>symbol=component
+LDM-6
 Server</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>340</x>
-      <y>150</y>
-      <w>590</w>
-      <h>680</h>
+      <x>328</x>
+      <y>160</y>
+      <w>472</w>
+      <h>544</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 ldmd</panel_attributes>
@@ -79,10 +69,10 @@ ldmd</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>390</x>
-      <y>60</y>
-      <w>120</w>
-      <h>40</h>
+      <x>368</x>
+      <y>96</y>
+      <w>96</w>
+      <h>32</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 ldmadmin</panel_attributes>
@@ -91,214 +81,134 @@ ldmadmin</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>970</x>
-      <y>380</y>
-      <w>140</w>
-      <h>40</h>
+      <x>832</x>
+      <y>512</y>
+      <w>112</w>
+      <h>48</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Receiving LDM-6</panel_attributes>
+Downstream
+LDM-6 Requester</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>440</x>
-      <y>90</y>
-      <w>70</w>
-      <h>80</h>
+      <x>408</x>
+      <y>120</y>
+      <w>56</w>
+      <h>56</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;.
 starts</panel_attributes>
-    <additional_attributes>10.0;60.0;10.0;10.0</additional_attributes>
+    <additional_attributes>10.0;50.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>700</x>
-      <y>380</y>
-      <w>290</w>
-      <h>40</h>
+      <x>656</x>
+      <y>416</y>
+      <w>232</w>
+      <h>112</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
-FEEDME</panel_attributes>
-    <additional_attributes>10.0;20.0;270.0;20.0</additional_attributes>
+    <panel_attributes>lt=&lt;&lt;-
+m1=FEEDME</panel_attributes>
+    <additional_attributes>10.0;10.0;270.0;120.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>510</x>
-      <y>430</y>
-      <w>90</w>
-      <h>120</h>
+      <x>432</x>
+      <y>256</y>
+      <w>136</w>
+      <h>72</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>10.0;100.0;70.0;10.0</additional_attributes>
+    <panel_attributes>lt=&lt;&lt;-
+REQUEST
+r1=0..n</panel_attributes>
+    <additional_attributes>10.0;70.0;150.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>690</x>
-      <y>430</y>
-      <w>90</w>
-      <h>120</h>
+      <x>656</x>
+      <y>512</y>
+      <w>192</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>60.0;100.0;10.0;10.0</additional_attributes>
+    <panel_attributes>lt=&lt;-
+m1=HEREIS</panel_attributes>
+    <additional_attributes>220.0;10.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>840</x>
-      <y>410</y>
-      <w>200</w>
-      <h>160</h>
+      <x>288</x>
+      <y>536</y>
+      <w>280</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
-HEREIS</panel_attributes>
-    <additional_attributes>180.0;10.0;10.0;140.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>250</x>
-      <y>410</y>
-      <w>200</w>
-      <h>150</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-HEREIS</panel_attributes>
-    <additional_attributes>10.0;10.0;180.0;130.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>560</x>
-      <y>560</y>
-      <w>80</w>
-      <h>160</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>40.0;140.0;10.0;10.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>660</x>
-      <y>560</y>
-      <w>80</w>
-      <h>160</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>10.0;140.0;50.0;10.0</additional_attributes>
+    <panel_attributes>lt=&lt;-
+m1=NOTIFICATION</panel_attributes>
+    <additional_attributes>10.0;10.0;330.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>970</x>
-      <y>560</y>
-      <w>140</w>
-      <h>40</h>
+      <x>184</x>
+      <y>328</y>
+      <w>112</w>
+      <h>48</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Sending LDM-6</panel_attributes>
+Upstream
+LDM-6 Feeder</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>840</x>
-      <y>540</y>
-      <w>150</w>
-      <h>40</h>
+      <x>288</x>
+      <y>312</y>
+      <w>104</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;-
 FEEDME</panel_attributes>
-    <additional_attributes>130.0;20.0;10.0;20.0</additional_attributes>
+    <additional_attributes>10.0;20.0;110.0;20.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>840</x>
-      <y>580</y>
-      <w>150</w>
-      <h>40</h>
+      <x>288</x>
+      <y>336</y>
+      <w>104</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;-
 HEREIS</panel_attributes>
-    <additional_attributes>10.0;20.0;130.0;20.0</additional_attributes>
+    <additional_attributes>110.0;20.0;10.0;20.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>160</x>
-      <y>380</y>
-      <w>140</w>
-      <h>40</h>
+      <x>184</x>
+      <y>520</y>
+      <w>112</w>
+      <h>48</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Receiving LDM-5</panel_attributes>
+Downstream
+LDM-6 Notifyme</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>290</x>
-      <y>380</y>
-      <w>300</w>
-      <h>40</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-FEEDME</panel_attributes>
-    <additional_attributes>280.0;20.0;10.0;20.0</additional_attributes>
-  </element>
-  <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>170</x>
-      <y>560</y>
-      <w>140</w>
-      <h>40</h>
-    </coordinates>
-    <panel_attributes>&lt;&lt;Process&gt;&gt;
-Sending LDM-5</panel_attributes>
-    <additional_attributes/>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>300</x>
-      <y>580</y>
-      <w>150</w>
-      <h>40</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-HEREIS</panel_attributes>
-    <additional_attributes>130.0;20.0;10.0;20.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>300</x>
-      <y>540</y>
-      <w>150</w>
-      <h>40</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-FEEDME</panel_attributes>
-    <additional_attributes>10.0;20.0;130.0;20.0</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>350</x>
-      <y>880</y>
-      <w>120</w>
-      <h>40</h>
+      <x>688</x>
+      <y>768</y>
+      <w>96</w>
+      <h>32</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 pqact</panel_attributes>
@@ -307,23 +217,23 @@ pqact</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>430</x>
-      <y>430</y>
-      <w>230</w>
-      <h>470</h>
+      <x>656</x>
+      <y>248</y>
+      <w>112</w>
+      <h>536</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
-exec()
+    <panel_attributes>lt=&lt;&lt;-
+m2=EXEC
 m1=0..n</panel_attributes>
-    <additional_attributes>10.0;450.0;10.0;230.0;210.0;230.0;210.0;10.0</additional_attributes>
+    <additional_attributes>90.0;650.0;90.0;10.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>590</x>
-      <y>860</y>
-      <w>100</w>
-      <h>80</h>
+      <x>560</x>
+      <y>752</y>
+      <w>80</w>
+      <h>64</h>
     </coordinates>
     <panel_attributes>customelement=
 // Text Elemnt
@@ -341,34 +251,34 @@ drawArc(0,height*3/5,width,height*2/5,180,180,true) fg=black bg=#222222 //Parame
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>770</y>
-      <w>60</w>
-      <h>110</h>
+      <x>592</x>
+      <y>672</y>
+      <w>48</w>
+      <h>96</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;.
 uses</panel_attributes>
-    <additional_attributes>10.0;90.0;10.0;10.0</additional_attributes>
+    <additional_attributes>10.0;100.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>460</x>
-      <y>880</y>
-      <w>150</w>
-      <h>40</h>
+      <x>632</x>
+      <y>768</y>
+      <w>72</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;.
 uses</panel_attributes>
-    <additional_attributes>130.0;20.0;10.0;20.0</additional_attributes>
+    <additional_attributes>10.0;20.0;70.0;20.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>570</x>
-      <y>220</y>
-      <w>140</w>
-      <h>80</h>
+      <x>552</x>
+      <y>224</y>
+      <w>112</w>
+      <h>64</h>
     </coordinates>
     <panel_attributes>symbol=component
 LDM
@@ -379,25 +289,246 @@ File</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>290</y>
-      <w>60</w>
-      <h>90</h>
+      <x>136</x>
+      <y>248</y>
+      <w>440</w>
+      <h>552</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;.
 uses</panel_attributes>
-    <additional_attributes>10.0;10.0;10.0;70.0</additional_attributes>
+    <additional_attributes>530.0;670.0;10.0;670.0;10.0;10.0;520.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>552</x>
+      <y>512</y>
+      <w>112</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>symbol=component
+Upstream
+LDM-6
+Feeder/Notifier</panel_attributes>
+    <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>680</x>
-      <y>250</y>
-      <w>510</w>
-      <h>670</h>
+      <x>656</x>
+      <y>536</y>
+      <w>192</w>
+      <h>32</h>
     </coordinates>
-    <panel_attributes>lt=&lt;.
+    <panel_attributes>lt=&lt;&lt;-
+r1=COMINGSOON</panel_attributes>
+    <additional_attributes>220.0;20.0;10.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>288</x>
+      <y>360</y>
+      <w>104</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+COMINGSOON</panel_attributes>
+    <additional_attributes>110.0;20.0;10.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>160</x>
+      <y>208</y>
+      <w>160</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+Asynchronous</panel_attributes>
+    <additional_attributes>180.0;20.0;10.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>160</x>
+      <y>160</y>
+      <w>160</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+Synchronous</panel_attributes>
+    <additional_attributes>180.0;20.0;10.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>688</x>
+      <y>568</y>
+      <w>264</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>Primary Mode   &lt;=&gt; HEREIS only
+Alternate Mode &lt;=&gt; COMINGSOON &amp; HEREIS
+bg=yellow</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>184</x>
+      <y>384</y>
+      <w>264</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>Primary Mode   &lt;=&gt; HEREIS only
+Alternate Mode &lt;=&gt; COMINGSOON &amp; HEREIS
+bg=yellow</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>240</x>
+      <y>384</y>
+      <w>328</w>
+      <h>152</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+m1=NOTIFYME</panel_attributes>
+    <additional_attributes>390.0;10.0;10.0;170.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>600</x>
+      <y>440</y>
+      <w>48</w>
+      <h>88</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+fork</panel_attributes>
+    <additional_attributes>10.0;90.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>640</x>
+      <y>568</y>
+      <w>48</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.
 uses</panel_attributes>
-    <additional_attributes>10.0;650.0;460.0;650.0;460.0;10.0;30.0;10.0</additional_attributes>
+    <additional_attributes>10.0;10.0;10.0;60.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>560</x>
+      <y>568</y>
+      <w>96</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+r2=pq_sequence</panel_attributes>
+    <additional_attributes>10.0;60.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>600</x>
+      <y>280</y>
+      <w>48</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.
+uses</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;130.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>832</x>
+      <y>384</y>
+      <w>112</w>
+      <h>48</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Process&gt;&gt;
+Downstream
+LDM-6 Sender
+// E.g., rtstats(1), ldmsend(1), pqsend(1)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>656</x>
+      <y>400</y>
+      <w>192</w>
+      <h>32</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+m1=HEREIS</panel_attributes>
+    <additional_attributes>10.0;10.0;220.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>480</x>
+      <y>520</y>
+      <w>88</w>
+      <h>128</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+m1=pq_insert
+// This is a result of a downstream LDM-6 process (e.g.
+// ldmsend(1), pqsend(1)) sending data-products out-of-
+// the-blue to an LDM server</panel_attributes>
+    <additional_attributes>90.0;130.0;10.0;130.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>432</x>
+      <y>464</y>
+      <w>112</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>symbol=component
+Downstream
+LDM-6 Acceptor
+// This component results from an out-of-the-blue
+// connection from an upstream LDM (e.g., rtstats(1),
+// ldmsend(1), pqsend(1)) for which the local
+// configuration-file has an ACCEPT entry</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>488</x>
+      <y>424</y>
+      <w>80</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+fork</panel_attributes>
+    <additional_attributes>10.0;50.0;80.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>392</x>
+      <y>368</y>
+      <w>176</w>
+      <h>320</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;-
+m1=pq_insert
+// This is a result of a downstream LDM-6 process (e.g.
+// ldmsend(1), pqsend(1)) sending data-products out-of-
+// the-blue to an LDM server</panel_attributes>
+    <additional_attributes>200.0;370.0;10.0;370.0;10.0;10.0</additional_attributes>
   </element>
 </diagram>
