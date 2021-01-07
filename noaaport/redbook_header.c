@@ -44,11 +44,11 @@ if(*FF == 3)
    {
    /*printf("FF flag 3 mode %d\n",chvalue & 0x3F );*/
    }
-(void)read_short1(bpos,&sval); bpos+=2;
+(void)read_short1((unsigned char*)bpos,&sval); bpos+=2;
 *blen = sval & 0x3FFF;
-(void)read_char1(bpos,&chvalue); bpos++;
+(void)read_char1((unsigned char*)bpos,&chvalue); bpos++;
 *mode = chvalue;
-(void)read_char1(bpos,&chvalue); bpos++;
+(void)read_char1((unsigned char*)bpos,&chvalue); bpos++;
 *submode = chvalue;
 /*printf("FF %d len %d mode %d sub %d\n",*FF,*blen,*mode,*submode);*/
 }
@@ -81,15 +81,15 @@ if(len*2 > 31)
    }
    
 i = 20;
-(void)read_short1(buf+i,&sval); i+=2;
+(void)read_short1((unsigned char*)buf+i,&sval); i+=2;
 year = sval;
-(void)read_char1(buf+i,&chvalue); i++;
+(void)read_char1((unsigned char*)buf+i,&chvalue); i++;
 month = chvalue;
-(void)read_char1(buf+i,&chvalue); i++;
+(void)read_char1((unsigned char*)buf+i,&chvalue); i++;
 day = chvalue;
-(void)read_char1(buf+i,&chvalue); i++;
+(void)read_char1((unsigned char*)buf+i,&chvalue); i++;
 hour = chvalue;
-(void)read_char1(buf+i,&chvalue); i++;
+(void)read_char1((unsigned char*)buf+i,&chvalue); i++;
 minute = chvalue;
 sprintf(dstr,"%04d%02d%02d %02d%02d",
         year,month,day,hour,minute);
