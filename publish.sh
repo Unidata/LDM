@@ -202,7 +202,7 @@ if make install >&install.log; then
         if purgeDir $ftpDir; then
         
             # Ensure that the download directory has a link to the tarball
-            echo Creating symbolic link to $host:$ftpDir in $downloadDir
+            echo Creating symbolic link to $host:$ftpDir in $host:$downloadDir
             if linkToTarball; then
             
                 # Purge the download directory of symbolic links that are older
@@ -212,16 +212,16 @@ if make install >&install.log; then
                 
                     # Modify the HTML file in the download directory to
                     # reference the tarball's symbolic link
-                    echo Modifying HTML file in download directory
+                    echo Modifying HTML file in $host:$downloadDir 
                     if adjustDownloadHtml; then
                     
                         # Copy the documentation to the package's website
-                        echo Copying documentation to $versionWebDir
+                        echo Copying documentation to $host:$versionWebDir
                         if copyDoc; then
                         
                             # Ensure that the package's home-page references the
                             # just-copied documentation.
-                            echo Modifying HTML file in home directory
+                            echo Modifying HTML file in $host:$webDir
                             if referenceDoc; then
                                 status=0
                             fi # New documentation referenced
