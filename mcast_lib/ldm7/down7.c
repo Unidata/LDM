@@ -2111,7 +2111,7 @@ downlet_run()
     int status;
 
     // Sets `downlet.up7Proxy` and `downlet.sock`
-    status = downlet_initClient(downlet); // Potentially lengthy
+    status = downlet_initClient(); // Potentially lengthy
 
     if (status) {
         log_add("Couldn't create client for feed %s from server %s",

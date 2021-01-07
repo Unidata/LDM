@@ -65,10 +65,10 @@ ldm_format(
  */
 const char*
 ldm_formatCmd(
-		char* const  buf,
-		const size_t size,
-		int          argc,
-		char**       argv);
+		char* const        buf,
+		const size_t       size,
+		int                argc,
+		const char** const argv);
 
 extern int
 sprint_time_t(char *buf, size_t bufsize, time_t ts); /* obsolete ? */

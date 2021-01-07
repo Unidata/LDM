@@ -2459,7 +2459,7 @@ int processProducts (FILE_LIST *fileList) {
 #ifdef LDM_SUPPORT
                         case OUT_LDM:
                                 MD5Init(md5ctxp);
-                                MD5Update (md5ctxp, ProdBuf + SIZE_SBN_HDR, finalSize - SIZE_SBN_HDR);
+                                MD5Update (md5ctxp, (unsigned char*)ProdBuf + SIZE_SBN_HDR, finalSize - SIZE_SBN_HDR);
                                 MD5Final (ldmProd.info.signature, md5ctxp);
 
                                 ldmProd.info.origin     = LocalHostName;

@@ -342,7 +342,7 @@ static int stream_log(
     int               status = dest->lock(dest);
 
     if (status == 0) {
-    	pthread_cleanup_push(dest_unlock, dest);
+    	pthread_cleanup_push(dest_unlock, (void*)dest);
 
         while (*msg) {
             // Timestamp

@@ -746,7 +746,7 @@ int    nnnxxx_offset;
                                 /* Request retrans when prod is partially received but before completion */
                                 /* if there is frame error and continue with different prod then, we need */
                                 /* to abort the old prod and clear retrans table. */
-                                if((retrans_xmit_enable == OPTION_ENABLE) /*&& (pdh->dbno != 0)*/){
+                                if(retrans_xmit_enable == OPTION_ENABLE /*&& (pdh->dbno != 0)*/){
                                  acq_tbl->proc_acqtab_prodseq_errs++;
                                  if(proc_orig_prod_seqno_last_save != acq_tbl->proc_orig_prod_seqno_last){
                                  /* Clear retrans table for the orig prod if the previous prod is retrans */
@@ -951,8 +951,8 @@ int    nnnxxx_offset;
                                         if(retrans_xmit_enable == OPTION_ENABLE){
                                           acq_tbl->proc_acqtab_prodseq_errs++;
                                           if((pfrag->seqno != prod.seqno) ||
-                                                  (pfrag->seqno == prod.seqno) &&
-                                                  (genRetransReq == 0)) {
+                                                  ((pfrag->seqno == prod.seqno) &&
+                                                  (genRetransReq == 0))) {
                                               do_prod_mismatch(acq_tbl,buff_hdr);
                                               genRetransReq = 1;
                                           }
