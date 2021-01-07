@@ -1,3 +1,25 @@
+6.13.14.7
+    Multicast:
+        * IperfFmtpPdu(1): Created to create invalid FMTP packet for malicious
+          testing by iperf(1)
+        * Log closing of retransmission socket and ensure set to -1 on error
+
+    DevOps:
+        * push(1):
+            * Tag the commit if and only if it's on the main branch
+            * Execute autoreconf(1) after setting a new version identifier in
+              "configure.ac"
+        * Doxygen:
+            * Doxyfile.developer: Set output directory to "doxygen-output"
+            * Delete obsolete parameters
+        * .git/hooks: Created pre-commit(1) & pre-push(1)
+        * UXF diagrams: Improved and added to repository
+        * dev-makefile(5): Created
+        * check(1): Created
+        * publish(1): Improved messages
+        * configure.ac: Improved setting of CFLAGS, CXXFLAGS, AM_CFLAGS, &
+          AM_CXXFLAGS
+
 6.13.14.6	2020-11-23T10:41:39-0700
     UdpRecv.cpp:
         * Corrected "actual" value in too-small payload error message
