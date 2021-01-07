@@ -108,15 +108,15 @@ int main(int argc, char **argv)
 
     
 	/* Send the subsriber's public key (C-string) to the publisher */
-	writeMsg(sock, pub_key, pub_len + 1);
+	writeMsg(sock, (unsigned char*)pub_key, pub_len + 1);
 
 	free(pub_key);
 
     
 	/* Read the encrypted shared secret */
 	char buff[1500] = {};
-	size_t encryptLen = readMsg(sock, buff);
-	printf("read %d bytes - publisher's encrypted HMAC key\n", encryptLen);
+	size_t encryptLen = readMsg(sock, (unsigned char*)buff);
+	printf("read %zu bytes - publisher's encrypted HMAC key\n", encryptLen);
 
 
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 	/* returns the size of the recovered plaintext.                                               */
 	/**********************************************************************************************/
 
-	ret = RSA_private_decrypt(encryptLen, buff, decrypt, rsa, padding);
+	ret = RSA_private_decrypt(encryptLen, (unsigned char*)buff, decrypt, rsa, padding);
 	if(ret == -1) {
 		printf("ERROR decrypting\n");
 		fprintf(stderr, "%s\n", ERR_error_string(ERR_get_error(), NULL));
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 	/* Receive publisher calculated HMAC code */
 	uint8_t buffer[1500] = {};
 	size_t hmacLen = readMsg(sock, buffer);
-	printf("read %d bytes - publisher's calculated HMAC code\n", hmacLen);
+	printf("read %zu bytes - publisher's calculated HMAC code\n", hmacLen);
 
 
 	/* Convert the received HMAC key from uint8_t to EVP_PKEY */
