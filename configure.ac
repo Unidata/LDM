@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.14.6], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.13.14.7], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -17,20 +17,17 @@ AC_ARG_ENABLE([debug],
     [
 	case "$enableval" in
 	yes) enable_debug=true
-            case "$CFLAGS" in
-                *-g*);;
-                *) CFLAGS="${CFLAGS:+$CFLAGS }-g -O0";;
-            esac
-            case "$CXXFLAGS" in
-                *-g*);;
-                *) CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0";;
-            esac
+	     # The ": CFLAGS=..." form doesn't work. Bad colon!
+	     # CFLAGS and CXXFLAGS are automatically substituted
+	     CFLAGS="${CFLAGS:+$CFLAGS }-g -O0"
+	     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0"
             ;;
 	no) enable_debug=false
             AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
             ;;
 	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-debug]);;
+	    [bad value {$enableval} for --enable-debug])
+	    ;;
 	esac
     ],
     [
@@ -38,28 +35,29 @@ AC_ARG_ENABLE([debug],
         AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
     ])
 
-# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
-if test "$GCC" = "yes"; then
-#    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
-#    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
-##    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # doesn't work
-     CPPFLAGS="$CPPFLAGS${CPPFLAGS+ }-std=c99"
-fi
-ccList='c99 gcc'
-test `uname` = Darwin && ccList=gcc
-AC_PROG_CC([$ccList])
-AC_PROG_CC_C99
-if test "$ac_cv_prog_cc_c99" = "no"; then
+AC_PROG_CC()
+if test "$ac_cv_prog_cc_c99" -a "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])
 fi
+if test "$GCC" = "yes"; then
+    AM_CFLAGS="${AM_CFLAGS:+$AM_CFLAGS }-std=c99"
+fi
+# "AM_CFLAGS" is not automatically substituted
+AC_SUBST([AM_CFLAGS])
+
+# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
 # The following always defines _GNU_SOURCE which conflicts with _XOPEN_SOURCE=600
 #AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CXX
+if test "$GXX" = "yes"; then
+    AM_CXXFLAGS="${AM_CXXFLAGS:+$AM_CXXFLAGS }-std=c++11"
+fi
+# "AM_CXXFLAGS" is not automatically substituted
+AC_SUBST([AM_CXXFLAGS])
 
 if test "$GXX" = "yes"; then
-    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
     case `$CXX -dumpversion` in
         ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
         (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
