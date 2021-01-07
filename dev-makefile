@@ -1,30 +1,22 @@
+LDMHOME		= `cd .. && pwd`
+CONFIGURE_OPTS	= --disable-root-actions --enable-debug --with-noaaport --with-multicast --prefix=$(LDMHOME) LDMHOME=$(LDMHOME)
+
 FORCE:
 
-TRIGGER_FILES   = lib dev-makefile
+# Check package using cc(1)
+check-cc: FORCE
+	$(MAKE) maintainer-clean >/dev/null
+	./configure $(CONFIGURE_OPTS) CC=cc
+	$(MAKE) distcheck
 
-# Check package using make(1) and given compiler
-check-make-comp:
-	-if find $(TRIGGER_FILES) Makefile -newer $(TARGET) | \
-	       fgrep -v .git/ | egrep '.+' >/dev/null; then \
-	    rm -f *.gz; \
-	    $(MAKE) CC=$(CC) distcheck; \
-	fi
-	touch $(TARGET)
+# Check package using clang(1)
+check-clang: FORCE
+	$(MAKE) maintainer-clean >/dev/null
+	./configure $(CONFIGURE_OPTS) CC=clang
+	$(MAKE) distcheck
 
-# Check package using make(1) and cc(1)
-check-make-cc: FORCE
-	$(MAKE) -f dev-makefile CC=cc TARGET=$@ check-make-comp
-
-# Check package using make(1) and clang(1)
-check-make-clang: FORCE
-	$(MAKE) -f dev-makefile CC=clang TARGET=$@ check-make-comp
-
-check-make: check-make-clang check-make-cc
-	touch $@
-
-# Check package using cross product of build tools and compilers
-check:  check-make
-	touch $@
+# Check package
+check:  check-cc check-clang
 
 # Scan code using clang(1)
 clang-scan:   check
