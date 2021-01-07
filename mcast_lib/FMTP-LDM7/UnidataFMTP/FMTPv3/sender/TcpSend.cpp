@@ -346,6 +346,7 @@ void TcpSend::Init()
     }
     catch (std::runtime_error& e) {
         close(sockfd);
+        sockfd = -1;
         /**
          * Let the sender make some noise instead of quietly sending a FIN
          * to the receiver. The exception caught in TcpSend will bubble up

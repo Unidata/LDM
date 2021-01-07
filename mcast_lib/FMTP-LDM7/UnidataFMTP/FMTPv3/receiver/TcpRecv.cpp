@@ -140,6 +140,7 @@ void TcpRecv::initSocket()
     const int yes = true;
     if (::setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) < 0) {
         close(sockfd);
+        sockfd = -1;
         throw std::system_error(errno, std::system_category(),
                 "TcpRecv::initSocket() Couldn't enable TCP keep-alive "
                 "option");
@@ -160,6 +161,7 @@ void TcpRecv::initSocket()
         if (bind(sockfd, reinterpret_cast<struct sockaddr*>(&addr),
                 sizeof(addr))) {
             close(sockfd);
+            sockfd = -1;
             throw std::system_error(errno, std::system_category(),
                     "TcpRecv:initSocket() Couldn't bind socket to interface " +
                     addr);
@@ -168,6 +170,7 @@ void TcpRecv::initSocket()
 
     if (connect(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr))) {
         close(sockfd);
+        sockfd = -1;
         throw std::system_error(errno, std::system_category(),
                 "TcpRecv::initSocket() Error connecting to " + servAddr);
     }

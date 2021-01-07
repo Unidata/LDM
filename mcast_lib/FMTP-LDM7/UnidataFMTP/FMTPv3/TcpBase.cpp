@@ -57,7 +57,12 @@ TcpBase::TcpBase()
  */
 TcpBase::~TcpBase()
 {
-    close(sockfd);
+    if (sockfd >= 0) {
+#       ifdef LDM_LOGGING
+            log_notice("Closing socket %d", sockfd);
+#       endif
+        close(sockfd);
+    }
 }
 
 bool TcpBase::recvall(const int sock, void* const buf, const size_t nbytes)
