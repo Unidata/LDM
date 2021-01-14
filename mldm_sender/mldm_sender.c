@@ -843,6 +843,7 @@ startAuthorization(
 
             if (authorizer == NULL) {
                 log_add_syserr("Couldn't create authorizer of remote clients");
+                status = LDM7_SYSTEM;
             }
             else {
                 mldmCmdSrvr = mldmSrvr_new(fmtpClntAddrs);

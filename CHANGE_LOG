@@ -1,3 +1,9 @@
+6.13.14.8       2021-01-14T10:47:30-0700
+    Multicast:
+        * FmtpRecvv3: Extract and encapsulate multicast product-index and
+          sequence number into separate object with mutex protection
+        * mldm_sender(1): Removed lint
+
 6.13.14.7       2021-01-07T16:38:46-0700
     Multicast:
         * IperfFmtpPdu(1): Created to create invalid FMTP packet for malicious
