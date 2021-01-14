@@ -34,6 +34,16 @@ enum err_level {
     err_new(code, cause, __FILE__, __LINE__, fmt, a1, a2, a3, a4, a5)
 
 
+/**
+ * Calls `abort()` if a new error-object can't be allocated.
+ *
+ * @param code
+ * @param cause
+ * @param file
+ * @param line
+ * @param fmt
+ * @return
+ */
 ErrorObj*
 err_new(
     const int                   code,

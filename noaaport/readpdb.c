@@ -199,11 +199,10 @@ int npunz (char *zstr, int *lenout, int *ioff)
 
     if (err != Z_STREAM_END) {
         CHECK_ERR(err, "large inflate");
-        err = inflateEnd(&d_stream);
+        (void)inflateEnd(&d_stream);
         return(-1);
     }
 
-    lentot += d_stream.total_in;
     *lenout = *lenout + d_stream.total_out;
 
     err = inflateEnd ( &d_stream );

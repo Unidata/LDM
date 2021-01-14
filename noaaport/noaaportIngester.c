@@ -1183,7 +1183,7 @@ execute2(
          * input-reader thread, which might have the highest priority,
          */
         blockTermSignals();
-        ProductMaker* productMaker;
+        ProductMaker* productMaker = NULL;
         pthread_t     pmThread;
         status = spawnProductMaker(&attr, fifo, prodQueue, &productMaker,
                 &pmThread);
@@ -1259,7 +1259,6 @@ execute(const char* const restrict mcastSpec,
         } // `fifo` created
 
         (void)close(fd);
-        fd = -1;
     } // `fd` open
 
     return status;

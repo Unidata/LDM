@@ -641,8 +641,12 @@ int main(
                 memcpy(prod.info.signature, msg + 8, 4);
 
                 status = set_timestamp(&prod.info.arrival);
-                status = pq_insert(pq, &prod);
+                if (status) {
+                    log_add("Couldn't set timestamp");
+                    log_flush_error();
+                }
 
+                status = pq_insert(pq, &prod);
                 if (status != 0) {
                     if (status == PQUEUE_DUP) {
                         log_notice_q("SBN %u already in queue", prod.info.seqno);

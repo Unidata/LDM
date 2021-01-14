@@ -475,7 +475,7 @@ req6_new(
     pqueue* const                       pq,
     const int                           isPrimary)
 {
-    prod_class_t*   prodClass;
+    prod_class_t*   prodClass = NULL;
     ErrorObj*       errObj = adjustByLastInfo(request, &prodClass);
 
     log_assert(upName != NULL);
@@ -484,7 +484,7 @@ req6_new(
     log_assert(pqPathname != NULL);
     log_assert(pq != NULL);
 
-    if (NULL != errObj) {
+    if (errObj) {
         errObj = ERR_NEW(REQ6_SYSTEM_ERROR, errObj,
             "Couldn't adjust product-class");
     }

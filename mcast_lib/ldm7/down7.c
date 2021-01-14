@@ -614,9 +614,10 @@ backstop_init(McastReceiverMemory* const mrm)
         backstop.prevLastMcastSet = mrm_getLastMcastProd(backstop.mrm,
                 backstop.prevLastMcast);
         backstop.state = TASK_INITIALIZED;
+        status = 0;
     } // Mutex is initialized
 
-    return 0;
+    return status;
 }
 
 /**

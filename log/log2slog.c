@@ -370,7 +370,7 @@ static int stream_log(
             // Message
             static const int MSG_POS = 94;
             if (pos < MSG_POS)
-                pos += fprintf(dest->stream, "%*s", MSG_POS - pos, "");
+                (void)fprintf(dest->stream, "%*s", MSG_POS - pos, "");
             const char* const newline = strchr(msg, '\n');
             if (newline) {
                 (void)fprintf(dest->stream, "%.*s\n", (int)(newline-msg), msg);

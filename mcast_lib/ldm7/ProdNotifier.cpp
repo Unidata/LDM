@@ -239,11 +239,12 @@ void ProdNotifier::missedProd(const FmtpProdIndex prodIndex)
                 prodStart = iter->second.pqRegion;
                 pqeIndex = iter->second.index;
                 prodInfos.erase(iter);
+
+                log_info("Missed product: prodIndex=%lu, prodStart=%p",
+                        (unsigned long)prodIndex, prodStart);
             }
         }
 
-        log_info("Missed product: prodIndex=%lu, prodStart=%p",
-                (unsigned long)prodIndex, prodStart);
         missed_prod_func(mlr, prodIndex, found ? &pqeIndex : nullptr);
     }
     catch (const std::exception& e) {

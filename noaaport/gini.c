@@ -1152,7 +1152,7 @@ static gini_status_t gini_scan_data_blocks(
         size_t         left = nbytes;
         unsigned       num_blocks;
         unsigned       num_uncomp_bytes_first_block = 0;
-        status = 0;
+
         for (num_blocks = 0; left; num_blocks++) {
             uint8_t uncomp_bytes[NBS_MAX_FRAME_SIZE];
             unsigned num_uncomp_bytes, num_comp_bytes_scanned;

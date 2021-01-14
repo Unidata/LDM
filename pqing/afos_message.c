@@ -107,7 +107,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 		if(isascii(ch))
 			unnextc(buf, ch);
 		else
-			ch = nextc(buf);
+			nextc(buf);
 	}
 	
 	{

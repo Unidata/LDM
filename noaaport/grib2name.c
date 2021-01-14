@@ -705,7 +705,7 @@ int grib2name (
     g2int              listsec0[3];   /* GRIB-2 section 0 parameters */
     g2int              listsec1[13];  /* GRIB-2 section 1 parameters */
     g2int              numlocal;      /* Number of GRIB section 2-s */
-    int                model_id;      /* ID of model */
+    int                model_id = 0;  /* ID of model */
     int                grid_id;       /* ID of grid */
     char               fdats[80];     /* No idea */
     char               levelstmp[80]; /* Level? */

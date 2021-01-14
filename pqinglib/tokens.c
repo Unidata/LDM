@@ -34,7 +34,7 @@ get_line(
         char *str,
         int maxlen)
 {
-        int ch;
+        int ch = EOB;
         int len = 0;
 
         static enum {
@@ -68,7 +68,8 @@ get_line(
 
         }
 done :
-        *str = 0;
+        if (maxlen > 0)
+            *str = 0;
         return ch;
 }
 
@@ -148,7 +149,7 @@ get_num(
         int *num, /* returns scanned value or -1 */
         int maxlen)
 {
-        int ch;
+        int ch = EOB;
         int len;
         int accum = 0;
 
@@ -196,7 +197,7 @@ dget_num(
         int *num,
         int maxlen)
 {
-        int ch;
+        int ch = EOB;
         int len;
         int accum = 0;
         int failnum = -1;

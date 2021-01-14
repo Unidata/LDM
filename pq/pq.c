@@ -4112,7 +4112,7 @@ mm_ftom(pqueue* const pq,
                 if (status == 0) {
                     vp = (char*)vp + rem;
                     rp->vp = vp; // Set region-in-use pointer. Was `NULL`.
-                    *ptrp = vp;
+                    *ptrp = vp; // Nothing wrong with this
                 } // Region was successfully memory-mapped
             } // Region in file was successfully extended if necessary
 
@@ -6890,7 +6890,7 @@ pq_get_write_count(
 
         status = pq_open(path, PQ_READONLY, &pq);
 
-        if (!status) {
+        if (status == 0) {
             /*
              * Get the control-block.
              */
@@ -6944,10 +6944,10 @@ pq_clear_write_count(const char* const path)
 
         status = pq_open(path, 0, &pq);         /* open for writing */
 
-        if (!status) {
+        if (status == 0) {
             status = ctl_get(pq, RGN_WRITE);
 
-            if (!status) {
+            if (status == 0) {
                 int    rflags = 0;              /* control-block unmodified */
                 pqctl* ctlp = pq->ctlp;
 

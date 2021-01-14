@@ -479,7 +479,7 @@ readPatFile(const char *path)
                 pal = othr;
             }
 
-            pal = paList = begin;
+            paList = begin;
 
             log_info_q("Successfully read configuration-file \"%s\"", path);
         }
@@ -762,13 +762,7 @@ date_sub(
                 "jan","feb","mar","apr","may","jun",
                 "jul","aug","sep","oct","nov","dec"};
 
-            if (dom == 0) {
-                /*
-                 * Special date indicator.  Use day-of-month from product-time.
-                 */
-                dom = tdom;
-            }
-            else {
+            if (dom) {
                 /*
                  * The matched substring in the product-identifier is a valid
                  * day-of-month.  Adjust the product-time so that it falls on

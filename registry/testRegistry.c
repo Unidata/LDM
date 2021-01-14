@@ -110,7 +110,7 @@ test_regBool(void)
     }
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getBool("/fooBool_key", &value);
+    status = reg_getBool("/fooBool_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regBool(): Couldn't get boolean");
     }

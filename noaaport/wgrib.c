@@ -2635,6 +2635,7 @@ int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny) {
 void GDS_prt_thin_lon(unsigned char *gds) {
     int iy, i, col, pl;
 
+    // The following does nothing because `iy` is never used. Steve 2021-01-09
     iy = GDS_LatLon_ny(gds);
     iy = (iy + 1) / 2;
     iy = GDS_LatLon_ny(gds);

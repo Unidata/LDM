@@ -118,10 +118,8 @@ void stopFlag_timedWait(
             int status = pthread_cond_timedwait(&stopFlag->cond,
                     &stopFlag->mutex, when);
 
-            if (status == ETIMEDOUT) {
-                status = 0;
+            if (status == ETIMEDOUT)
                 break;
-            }
 
             log_assert(status == 0);
         }

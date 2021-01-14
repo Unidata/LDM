@@ -183,7 +183,7 @@ skip(
 	xbuf *buf,
 	int cnt)
 {
-	int ch;
+	int ch = EOB;
 	while(cnt-- > 0)
 		ch = nextc(buf);
 	return ch;		

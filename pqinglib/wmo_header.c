@@ -70,12 +70,11 @@ get_wmo_header(xbuf *buf, wmo_header_t *hdr)
         if( get_wline(buf, line, sizeof(line)) == EOB ) return NULL;
 
         { /* inline inner */
-        const char *cp = &line[0];
         const char *const end = &line[strlen(line)];
         
 
         /* N.B. twisted flow here */
-        for(cp = &line[0]; *cp != 0 && *cp != CR && cp + 2 < end; cp++)
+        for(const char* cp = line; *cp != 0 && *cp != CR && cp + 2 < end; cp++)
         {
                 switch( cp[0] ) {
                 case 'R' :

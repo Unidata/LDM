@@ -159,7 +159,7 @@ int readccb(
         b1 = (unsigned char)buf[12];
         b2 = (unsigned char)buf[13];
         ccb->user1 = b1;
-        ccb->user2 = b1;
+        ccb->user2 = b1; // Typo? Should be `b2`? Steve 2021-01-08
 
         log_debug("ccb user1 %d ccb user2 %d", ccb->user1, ccb->user2);
 

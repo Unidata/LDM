@@ -242,6 +242,7 @@ static int msg_format(
             // EINTR, EILSEQ, ENOMEM, or EOVERFLOW
             logl_internal(LOG_LEVEL_ERROR, "vsnprintf() failure: "
                     "fmt=\"%s\", errno=\"%s\"", fmt, strerror(errno));
+            status = errno;
         }
         else {
             // The buffer is too small for the message. Expand it.
