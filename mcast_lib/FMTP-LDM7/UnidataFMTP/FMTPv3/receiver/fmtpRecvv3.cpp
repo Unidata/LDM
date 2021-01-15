@@ -103,7 +103,7 @@ fmtpRecvv3::McastProdPar::McastProdPar()
 {}
 
 /**
- * Sets the multicast product-index.
+ * Sets the index of the multicast product.
  *
  * @param[in] index  Product index
  * @return           Previous product-index or, if unset, then the given
@@ -124,18 +124,19 @@ uint32_t fmtpRecvv3::McastProdPar::setIndex(const uint32_t index)
 
     if (index != prevIndex) {
         this->index = index;
-        seqnumSet = false;
+        seqnumSet = false; // Because new product
     }
 
     return prevIndex;
 }
 
 /**
- * Sets the multicast product-index and sequence number from an FMTP header.
+ * Sets the index and sequence number of the multicast product from an FMTP
+ * header.
  *
  * @param[in] header             FMTP header
  * @throw std::invalid_argument  FMTP header specifies lower or same sequence
- *                               number for current data-product
+ *                               number for same data-product
  */
 void fmtpRecvv3::McastProdPar::set(const FmtpHeader& header)
 {
@@ -143,10 +144,10 @@ void fmtpRecvv3::McastProdPar::set(const FmtpHeader& header)
 
     if (indexSet && header.prodindex == index &&
             seqnumSet && header.seqnum <= seqnum)
-        throw std::runtime_error("Unexpected sequence number: product=" +
-                std::to_string(index) + ", current=" +
-                std::to_string(header.seqnum) + ", previous=" +
-                std::to_string(seqnum));
+        throw std::invalid_argument("Unexpected sequence number: "
+                "product=" + std::to_string(index) + ", "
+                "this->seqnum=" + std::to_string(seqnum) + ", "
+                "header.seqnum=" + std::to_string(header.seqnum));
 
     index = header.prodindex;
     indexSet = true;

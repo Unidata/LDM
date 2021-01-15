@@ -146,15 +146,15 @@ class fmtpRecvv3 {
         McastProdPar();
 
         /**
-         * No copy construction because there should only be one instance per
-         * FMTP receiver.
+         * No copy or move construction because there should only be one
+         * instance per FMTP receiver.
          */
         McastProdPar(const McastProdPar& that) =delete;
         McastProdPar(McastProdPar&& that) =delete;
 
         /**
-         * No copy assignment because there should only be one instance per
-         * FMTP receiver.
+         * No copy or move assignment because there should only be one instance
+         * per FMTP receiver.
          */
         McastProdPar& operator=(const McastProdPar& rhs) =delete;
         McastProdPar& operator=(McastProdPar&& rhs) =delete;
@@ -166,8 +166,8 @@ class fmtpRecvv3 {
         /**
          * Returns the product-index.
          *
-         * @param[in] header              FMTP header
-         * @throws    std::runtime_error  Data-packet is unexpected
+         * @return  Product-index. Will be 0 if `setIndex()` or `set()` hasn't
+         *          been called.
          */
         inline uint32_t getIndex() const {
             Guard guard(mutex);
