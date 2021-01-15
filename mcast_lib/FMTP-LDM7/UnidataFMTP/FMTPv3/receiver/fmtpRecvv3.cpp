@@ -114,12 +114,15 @@ uint32_t fmtpRecvv3::McastProdPar::setIndex(const uint32_t index)
     Guard    guard(mutex);
     uint32_t prevIndex;
 
+    // Once-per-session initialization
     if (!indexSet) {
-        prevIndex = this->index = index;
+        this->index = index;
         indexSet = true;
     }
-    else if (index != this->index) {
-        prevIndex = this->index;
+
+    prevIndex = this->index;
+
+    if (index != prevIndex) {
         this->index = index;
         seqnumSet = false;
     }

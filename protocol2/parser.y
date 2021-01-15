@@ -153,7 +153,7 @@ decodeHostSet(
             }
 
             if (error)
-                free(dup);
+                free(dup); // lcf_freeHostSet() frees `dup` on success
         }                               /* "dup" set */
 
         if (error)

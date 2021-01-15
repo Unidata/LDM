@@ -186,7 +186,7 @@ ldm_clnttcp_create_vers(
             "Couldn't get IP address of host %s", upName);
     }
     else {
-        int                     sock;
+        int                     sock = -1; // Assignment quiets scan-build(1)
         int                     errCode;
         CLIENT*                 clnt = NULL;
 

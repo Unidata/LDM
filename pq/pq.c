@@ -6886,7 +6886,7 @@ pq_get_write_count(
         status = EINVAL;
     }
     else {
-        pqueue* pq;
+        pqueue* pq = NULL; // Assignment quiets scan-build(1)
 
         status = pq_open(path, PQ_READONLY, &pq);
 
@@ -6940,7 +6940,7 @@ pq_clear_write_count(const char* const path)
         status = EINVAL;
     }
     else {
-        pqueue* pq;
+        pqueue* pq = NULL; // Assignment quiets scan-build(1)
 
         status = pq_open(path, 0, &pq);         /* open for writing */
 

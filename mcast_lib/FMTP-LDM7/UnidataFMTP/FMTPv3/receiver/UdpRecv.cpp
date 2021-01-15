@@ -28,9 +28,9 @@ void UdpRecv::init()
 }
 
 bool UdpRecv::isValid(const FmtpHeader& header,
-		              const void*       payload)
+                      const void*       payload)
 {
-	bool valid;
+    bool valid;
 
     if (macLen == 0) {
         valid = true;
@@ -39,7 +39,7 @@ bool UdpRecv::isValid(const FmtpHeader& header,
         char compMac[MAC_SIZE];
         hmacImpl.getMac(header, payload, compMac);
 
-        const bool valid = ::memcmp(mac, compMac, MAC_SIZE) == 0;
+        valid = ::memcmp(mac, compMac, MAC_SIZE) == 0;
 #       ifdef LDM_LOGGING
             if (!valid)
                 log_warning("Invalid FMTP message: flags=%#x, prodindex=%u, "
@@ -51,7 +51,7 @@ bool UdpRecv::isValid(const FmtpHeader& header,
 #       endif
     }
 
-	return valid;
+    return valid;
 }
 
 void UdpRecv::skipPacket() const

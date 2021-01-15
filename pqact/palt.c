@@ -694,8 +694,6 @@ date_sub(
     if (gmtime_r(&prodClock, &utcProdTime) == NULL)
         log_error_q("gmtime_r() returns NULL");
 
-    tdom = utcProdTime.tm_mday;         /* UTC-based day-of-month */
-
     for (is = istring; regexec(&prog, is, 3, pmatch, 0) == 0; is = e2 + 1) {
         /*
          * Process the next date indicator in "istring".

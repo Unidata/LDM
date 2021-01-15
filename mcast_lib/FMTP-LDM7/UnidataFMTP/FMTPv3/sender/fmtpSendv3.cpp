@@ -454,12 +454,15 @@ void fmtpSendv3::sendMacKey(const int sd)
  * @return               The corresponding retransmission entry.
  * @throw std::runtime_error  if a retransmission entry couldn't be created.
  */
-RetxMetadata* fmtpSendv3::addRetxMetadata(void* const data,
-                                           const uint32_t dataSize,
-                                           void* const metadata,
-                                           const uint16_t metaSize,
-                                           const struct timespec* const startTime)
+RetxMetadata* fmtpSendv3::addRetxMetadata(void* const                  data,
+                                          const uint32_t               dataSize,
+                                          void* const                  metadata,
+                                          const uint16_t               metaSize,
+                                          const struct timespec* const startTime)
 {
+    if (metaSize && metadata == NULL)
+        throw std::invalid_argument("Positive metadata size but NULL pointer");
+
     /* Create a new RetxMetadata struct for this product */
     RetxMetadata* senderProdMeta = new RetxMetadata();
     if (senderProdMeta == NULL) {
@@ -1082,21 +1085,24 @@ void fmtpSendv3::retransEOP(
  * @throw std::invalid_argument `metaSize > MAX_BOP_METADATA`
  * @throw std::runtime_error    if the UdpSend::SendTo() fails.
  */
-void fmtpSendv3::SendBOPMessage(uint32_t prodSize, void* metadata,
-                                 const uint16_t metaSize,
-                                 const struct timespec& startTime)
+void fmtpSendv3::SendBOPMessage(uint32_t               prodSize,
+                                void*                  metadata,
+                                const uint16_t         metaSize,
+                                const struct timespec& startTime)
 {
-	if (metadata && metaSize > MAX_BOP_METADATA)
-		throw std::invalid_argument("Metadata is too large: " +
-				std::to_string(metaSize) + " bytes");
+    if (metadata && metaSize > MAX_BOP_METADATA)
+        throw std::invalid_argument("Metadata is too large: " +
+                std::to_string(metaSize) + " bytes");
+    if (metaSize && metadata == NULL)
+        throw std::invalid_argument("Positive metadata size but NULL pointer");
 
 #if 1
-	// FMTP header in host byte-order (UdpSend converts):
-	FmtpHeader header;
-	header.prodindex  = prodIndex;
-	header.seqnum     = 0;
-	header.payloadlen = metaSize + MAX_FMTP_PAYLOAD - MAX_BOP_METADATA;
-	header.flags      = FMTP_BOP;
+    // FMTP header in host byte-order (UdpSend converts):
+    FmtpHeader header;
+    header.prodindex  = prodIndex;
+    header.seqnum     = 0;
+    header.payloadlen = metaSize + MAX_FMTP_PAYLOAD - MAX_BOP_METADATA;
+    header.flags      = FMTP_BOP;
 
     // BOPMsg in network byte-order (UdpSend doesn't convert payload):
     BOPMsg bopMsg;
