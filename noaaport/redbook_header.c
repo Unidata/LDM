@@ -37,7 +37,7 @@ short sval;
 
 *blen = 0;
 
-(void)read_char1(bpos,&chvalue);
+(void)read_char1((unsigned char*)bpos,&chvalue);
 
 *FF = (chvalue >> 6) ;
 if(*FF == 3)

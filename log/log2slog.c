@@ -188,12 +188,13 @@ static const char* level_to_string(
     return logl_vet_level(level) ? strings[level] : "UNKNOWN";
 }
 
-static void dest_unlock(dest_t* const dest)
+static void dest_unlock(void* dest)
 {
-	int status = dest->unlock(dest);
+    dest_t* dst = dest;
+    int     status = dst->unlock(dst);
 
-	if (status && status != EINTR)
-		abort();
+    if (status && status != EINTR)
+        abort();
 }
 
 /******************************************************************************
@@ -342,7 +343,7 @@ static int stream_log(
     int               status = dest->lock(dest);
 
     if (status == 0) {
-    	pthread_cleanup_push(dest_unlock, (void*)dest);
+    	pthread_cleanup_push(dest_unlock, dest);
 
         while (*msg) {
             // Timestamp
