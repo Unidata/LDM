@@ -5,13 +5,13 @@ FORCE:
 
 # Check package using cc(1)
 check-cc: FORCE
-	$(MAKE) maintainer-clean >/dev/null
+	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=cc
 	$(MAKE) distcheck
 
 # Check package using clang(1)
 check-clang: FORCE
-	$(MAKE) maintainer-clean >/dev/null
+	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=clang
 	$(MAKE) distcheck
 

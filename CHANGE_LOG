@@ -2,6 +2,10 @@
     Misc:
         * Removed much lint identified by scan-build(1)
 
+    DevOps:
+        * dev-makefile: Replaced "make maintainer-clean" with just "make clean"
+          in "check-cc" and "check-clang" targets
+
 6.13.14.8       2021-01-14T10:47:30-0700
     Multicast:
         * FmtpRecvv3: Extract and encapsulate multicast product-index and
