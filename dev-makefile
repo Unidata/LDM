@@ -8,19 +8,23 @@ check-cc: FORCE
 	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=cc
 	$(MAKE) distcheck
+	touch $@
 
 # Check package using clang(1)
 check-clang: FORCE
 	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=clang
 	$(MAKE) distcheck
+	touch $@
 
 # Check package
 check:  check-cc check-clang
+	touch $@
 
 # Scan code using clang(1)
-clang-scan:   check
+clang-scan: check
 	scan-build --view $(MAKE)
+	touch $@
 
 COVERITY_SCAN_FILE      = ldm.tgz
 
@@ -41,6 +45,9 @@ coverity-scan:  $(COVERITY_SCAN_FILE)
 	   > $@.log # Redirection is necessary to avoid appearance of hanging
 	mv $@.log $@
 	rm -rf cov-int
+
+scan:	clang-scan coverity-scan
+	touch $@
 
 configure.ac:  CHANGE_LOG
 	versionId=`awk '{print $$1;exit}' CHANGE_LOG`; \

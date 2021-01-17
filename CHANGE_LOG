@@ -1,18 +1,24 @@
 6.13.14.9
-    Multicast:
-        * FmtpRecvv3: Improved log message, documentation, and commentary
-
     Misc:
         * Removed much lint identified by clang(1) and scan-build(1)
 
+    Multicast:
+        * FmtpRecvv3:
+            * Improved log message, documentation, and commentary
+            * Improved McastProdPar
+
     DevOps:
-        * dev-makefile: Replaced "make maintainer-clean" with just "make clean"
-          in targets "check-cc" and "check-clang"
+        * dev-makefile:
+            * Replaced "make maintainer-clean" with just "make clean"
+              in targets "check-cc" and "check-clang"
+            * Added "scan" target and modified scan(1) to use
+        * scan(1): Modified to use new "scan" target
 
 6.13.14.8       2021-01-14T10:47:30-0700
     Multicast:
         * FmtpRecvv3: Extract and encapsulate multicast product-index and
-          sequence number into separate object with mutex protection
+          sequence number into separate object with mutex protection,
+          McastProdPar
         * mldm_sender(1): Removed lint
 
 6.13.14.7       2021-01-07T16:38:46-0700
