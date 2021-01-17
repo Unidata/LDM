@@ -131,16 +131,20 @@ class fmtpRecvv3 {
         void pop();
     };
 
+    /**
+     * Tracks the product-index and sequence number of received multicast FMTP
+     * packets.
+     */
     class McastProdPar
     {
         using Mutex = std::mutex;
         using Guard = std::lock_guard<Mutex>;
 
-        mutable Mutex mutex;     /// Concurrent access mutex
-        uint32_t      index;     /// Index of multicast product
-        uint32_t      seqnum;    /// Byte-offset of data-segment
-        bool          indexSet;  /// Index of multicast product is set?
-        bool          seqnumSet; /// Sequence number of data-segment set?
+        mutable Mutex mutex;      /// Concurrent access mutex
+        uint32_t      prodIndex;  /// Index of multicast product
+        uint32_t      seqnum;     /// Byte-offset of data-segment
+        bool          indexSet;   /// Product-index is set?
+        bool          seqnumSet;  /// Sequence number is set?
 
     public:
         McastProdPar();
@@ -159,9 +163,7 @@ class fmtpRecvv3 {
         McastProdPar& operator=(const McastProdPar& rhs) =delete;
         McastProdPar& operator=(McastProdPar&& rhs) =delete;
 
-        uint32_t setIndex(const uint32_t index);
-
-        void set(const FmtpHeader& header);
+        uint32_t set(const FmtpHeader& header);
 
         /**
          * Returns the product-index.
@@ -171,7 +173,7 @@ class fmtpRecvv3 {
          */
         inline uint32_t getIndex() const {
             Guard guard(mutex);
-            return index;
+            return prodIndex;
         }
     };
 
@@ -381,40 +383,8 @@ private:
      * @param[in] openright  Open right end of the prodindex interval.
      */
     void requestBops(const uint32_t openleft, const uint32_t openright);
-    /**
-     * Requests BOP packets for data-products that come after the current
-     * data-product up to and excluding a given data-product but only if the BOP
-     * hasn't already been requested (i.e., each missed BOP is requested only
-     * once).
-     *
-     * Sets the multicast product index.
-     *
-     * Executed on the multicast receiving thread.
-     *
-     * @param[in] prodindex           Index of the data-product of the last
-     *                                packet to be received. Used to set the
-     *                                multicast product index.
-     * @throws    std::runtime_error  Product-index gap is impossibly large
-     */
-    void requestBopsExcl(const uint32_t prodindex);
-    /**
-     * Requests BOP packets for data-products that come after the current
-     * data-product up to and including a given data-product but only if the BOP
-     * hasn't already been requested (i.e., each missed BOP is requested only
-     * once).
-     *
-     * Sets the multicast product index.
-     *
-     * Called when a BOP message for the current product-index hasn't been
-     * received.
-     *
-     * Executed on the multicast receiving thread.
-     *
-     * @param[in] prodindex           Index of the data-product of the last
-     *                                packet to be received.
-     * @throws    std::runtime_error  Product-index gap is impossibly large
-     */
-    void requestBopsIncl(const uint32_t prodindex);
+    void requestBopsExcl(const FmtpHeader& header);
+    void requestBopsIncl(const FmtpHeader& header);
     /**
      * Handles a multicast FMTP data-packet given the associated peeked-at and
      * decoded FMTP header. Directly store and check for missing blocks.
