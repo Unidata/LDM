@@ -78,12 +78,10 @@ int main(int argc, char *argv[])
     // enable for debug only:
     //traverseIngestList(listHead);
 
-
     printf("\n\t == Cscour: Launching %d threads...\n\n", validEntriesCounter);
 
     multiThreadedScour(listHead, deleteDirsFlag);
  
-
     printf("\n\n\tCscour: Complete!\n\n");
 
     exit(0);
@@ -114,18 +112,18 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
         items->daysOldInEpoch,  tmp->daysOldInEpoch;
         strcpy(items->pattern,  tmp->pattern);
         
-        items->deleteDirsFlag = deleteDirsFlag;
+        items->deleteDirsFlag = deleteDirsFlag;     // delete or not delete empty directories
 
         // Create attributes & init
         pthread_attr_t attr;
         pthread_attr_init(&attr);
-
         pthread_create(&tids[threadsCounter++], &attr, 
                     scourFilesAndDirsForThisPath, items);
    
         tmp = tmp->nextEntry;
     }
     printf("\n");
+
     // wait until the thread is done executing
     tmp = head;
     int i=0;
@@ -146,7 +144,7 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
     ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *) oneItemStruct;
 
     char *dirPath   = currentItem.dir;
-    int   daysOldInEpoch   = currentItem.daysOldInEpoch;     //string:  <days>[-HHMMSS], eg. 1-122033
+    int   daysOldInEpoch   = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
     char *pattern   = currentItem.pattern;
 
     int   deleteDirOrNot = currentItem.deleteDirsFlag;
@@ -162,7 +160,6 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
         remove(dirPath);
     }
         
-
     pthread_exit(0); 
 }
 
@@ -243,6 +240,7 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
                 else
                 {
                     printf("File %s does NOT match pattern: %s\n",  dp->d_name, pattern);   
+                    continue;
                 }
                 
                 //if( isOlderThan(daysOld, epochLastModified) )
@@ -250,7 +248,7 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
                 {
                     if( !remove(path) ) 
                     {
-                        printf("\t %s is older than %d days - DELETED!\n", path, daysOldInEpoch);
+                        printf("\t %s is older than %d days - DELETED!\n", path, (daysOldInEpoch - epochLastModified)/SECONDS_IN_1DAY);
                     }
                     else {
                         fprintf(stderr, "rmdir(\"%s\") failed: %s\n",
@@ -261,12 +259,12 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
                 else
                 {
                     printf("\t %s is NOT older than %d days - Not yet a candidate for deletion!\n", 
-                        path, daysOldInEpoch);
+                        path, (daysOldInEpoch - epochLastModified)/SECONDS_IN_1DAY);
                 }
             }
         else if(S_ISLNK(sb.st_mode)) 
             {   
-               
+                // follow SYMLINK
                 printf("SYMLINK file: %s  !!!!!!!!!!!!!!!!!!!!\n", dp->d_name);
             }
         else 
@@ -276,21 +274,10 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
             }
 
     }
-
     closedir(dir);
 }
 
-int checkGlobPatternMatch(char *pattern, char *pathName)
-{
-    if(strcmp(pattern, STAR_CHAR) == 0) return 1;
-
-    // extract filename: 
-    char *filename;
-    filename = basename(pathName);
-
-
-}
-
+// not used
 int isOlderThan(int scouringDays, long epochLastModified)
 {
     struct timespec timeNow;
@@ -355,7 +342,7 @@ int hasDirChanged(char * currentDirPath)
         return 1;   
     }
     int epochDotScourFileChanged = stats.st_ctime;
-    epochPrettyPrinting(scourPath, epochDotScourFileChanged);    
+    verbose && epochPrettyPrinting(scourPath, epochDotScourFileChanged);    
 
     // Stat this current directory:
     if(stat(currentDirPath, &dirstats) < 0)
@@ -365,7 +352,7 @@ int hasDirChanged(char * currentDirPath)
         return -1;
     }
     int epochLastCurrentDirChanged = dirstats.st_ctime;
-    epochPrettyPrinting(currentDirPath, epochLastCurrentDirChanged);    
+    verbose && epochPrettyPrinting(currentDirPath, epochLastCurrentDirChanged);    
 
     // same epoch time: returns 0, directory did not change
     if(dirstats.st_ctime <= stats.st_ctime) {
@@ -408,9 +395,12 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
     *deleteDirOption = 0;
     int opt;
 
-    // TO-DO: Add -l option to redirect standard output to a log file
+    // TO-DO: 
+    //  1. Add -l option to redirect standard output to a log file
     // This program being called from a script, the standard output
     // can be redirected...
+    //  2. Add option argument to verbose mode to set the level of verbosity
+    //  3. Add usage()
     while (( opt = getopt(argc, argv, "dv")) != -1) {
         switch (opt) {
 
