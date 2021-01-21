@@ -163,6 +163,7 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
     pthread_exit(0); 
 }
 
+// This is the recursive function to traverse the directory tree, depth-first
 int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int deleteDirsFlag) 
 {
     struct dirent *dp;
