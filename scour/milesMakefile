@@ -1,0 +1,15 @@
+all: clean Cscour.o parser.o
+	@echo -e "\n\tStarted making...\n"
+	gcc  Cscour.o parser.o -pthread -o Cscour
+	@echo -e "\n\tDone!\n"
+
+Cscour.o: Cscour.c
+	gcc -c Cscour.c -I ./  -pthread -g
+
+parser.o: parser.c
+	gcc -c parser.c -I ./  -g
+
+clean:
+	@echo -e "\n\tCleaning...\n"
+	rm -rf *.o
+	rm -rf Cscour
