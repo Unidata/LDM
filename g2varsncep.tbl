@@ -591,6 +591,7 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 010 002 000 000 Ice Cover                        Proportion           ICEC             0  -9999.00
+010 002 001 000 Ice Thickness                    m                    ICETK            0  -9999.00
 010 002 006 000 Ice Growth Rate                  m s**-1              ICEG             0  -9999.00
 
 !
