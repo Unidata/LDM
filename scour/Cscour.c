@@ -44,9 +44,7 @@
 # subdirectories.  Scour should be invoked periodically by cron(8).
 #
 */
-#define TEST_PATH_TOTO          "./toto"
-#define TEST_PATH_TILDA_LDM     "~ldm"
-#define EMPTY_STRING            ""
+
 #define STAR_CHAR               "*"
 
 // pass 2 arguments to threaded function
