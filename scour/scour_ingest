@@ -1,0 +1,22 @@
+# Each line consists of a directory, a retention time (in days), and
+# (optionally) a shell filename pattern for files to be deleted.  If no
+# filename pattern is specified, "*" representing all files not beginning with
+# "." is assumed.  The syntax "~user" is understood.  Non-absolute pathnames
+# are relative to the directory `regutil regpath{PQACT_DATADIR_PATH}`.
+#
+# A hash in column one indicates a comment line.
+
+# Directory         Days-old    Optional-filename-pattern
+
+dir0
+#~/toto			7-1130 	*.txt   
+~miles                    2       *.foo	
+#~/toto		2	*.foo	
+#~/titi		2-0732	*.foo	
+~/toto		2-09	*.foo	
+~/titi		2	*.txt	
+#~miles/toto		2       *.foo	
+dir3			4       *.boo
+~ldm/var/logs		1       *.stats
+dir4			4
+dir5			9

@@ -52,6 +52,7 @@ typedef struct config_items_args {
     
     char    dir[DIR_SIZE];
     int     daysOldInEpoch;         // daysOld: 1-hhmmss converted to Epoch 
+    char    daysOld[DAYS_OLD_SIZE];
     char    pattern[PATTERN_SIZE]; 
     int     deleteDirsFlag;
 
@@ -60,29 +61,31 @@ typedef struct config_items_args {
 } ConfigItemsAndDeleteFlag_t;
 
 int verbose=0;
+
 int main(int argc, char *argv[])
 {
     
     int deleteDirsFlag;
 
-    printf("\n\n\tCscour: STARTED...\n\n");
-    printf("\n\n\t == Cscour: parsing...\n\n");
     parseArgv(argc, argv, &deleteDirsFlag, &verbose);
     
+    verbose && printf("\n\n\tCscour: STARTED...\n\n");
+    verbose && printf("\n\n\t == Cscour: parsing...\n\n");
+
     // Call config parser
     int validEntriesCounter;
     IngestEntry_t *listHead = parseConfig(&validEntriesCounter);
     
-    printf("\n\t == Cscour: parsing complete!\n\n");
+    verbose && printf("\n\t == Cscour: parsing complete!\n\n");
 
     // enable for debug only:
     //traverseIngestList(listHead);
 
-    printf("\n\t == Cscour: Launching %d threads...\n\n", validEntriesCounter);
+    verbose && printf("\n\t == Cscour: Launching %d threads...\n\n", validEntriesCounter);
 
     multiThreadedScour(listHead, deleteDirsFlag);
  
-    printf("\n\n\tCscour: Complete!\n\n");
+    verbose && printf("\n\n\tCscour: Complete!\n\n");
 
     exit(0);
 }
@@ -91,13 +94,12 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
 {
 
     IngestEntry_t *tmp = head;
-    if(head) printf("\n\tCscour: List of validated items sourced in user's configuration file: %s\n", SCOUR_INGEST_FILENAME);
+    if(head) verbose && printf("\n\tCscour: List of validated items sourced in user's configuration file: %s\n", SCOUR_INGEST_FILENAME);
     
     pthread_t tids[MAX_THREADS];
     int threadsCounter  =   0;
 
-    ConfigItemsAndDeleteFlag_t *items = (ConfigItemsAndDeleteFlag_t *) 
-                        malloc(sizeof(ConfigItemsAndDeleteFlag_t));
+    ConfigItemsAndDeleteFlag_t *items;
         
 
    //start from the beginning of the config parsed list
@@ -106,12 +108,16 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
         //TO-DO:  check threads limit
         //checkThreadsMax();
 
-        printf("\t%s \t %d \t %s\n",tmp->dir, tmp->daysOldInEpoch, tmp->pattern);
+        items = (ConfigItemsAndDeleteFlag_t *) 
+                        malloc(sizeof(ConfigItemsAndDeleteFlag_t));
+
+        verbose && printf("\n\t====> Processing directory:%s with daysOld: %s (%d) and pattern: %s\n",
+            tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
 
         strcpy(items->dir,      tmp->dir);
         items->daysOldInEpoch,  tmp->daysOldInEpoch;
-        strcpy(items->pattern,  tmp->pattern);
-        
+        strcpy(items->daysOld,  tmp->daysOld);
+        strcpy(items->pattern,  tmp->pattern);     
         items->deleteDirsFlag = deleteDirsFlag;     // delete or not delete empty directories
 
         // Create attributes & init
@@ -122,7 +128,7 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
    
         tmp = tmp->nextEntry;
     }
-    printf("\n");
+//    verbose && printf("\n");
 
     // wait until the thread is done executing
     tmp = head;
@@ -131,7 +137,7 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
     {
         // Thread ID:
         pthread_join(tids[i++], NULL);
-        verbose && printf("Scouring directory (%s) completed with thread ID counter: %d!\n", tmp->dir, i-1);
+        verbose && printf("\nScouring directory (%s) completed with thread ID counter: %d!\n", tmp->dir, i-1);
         
         tmp = tmp->nextEntry; 
     } 
@@ -143,15 +149,19 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
 
     ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *) oneItemStruct;
 
-    char *dirPath   = currentItem.dir;
-    int   daysOldInEpoch   = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
-    char *pattern   = currentItem.pattern;
+    char *dirPath           = currentItem.dir;
+    char *daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
+    int   daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
+    char *pattern           = currentItem.pattern;
 
-    int   deleteDirOrNot = currentItem.deleteDirsFlag;
+    int   deleteDirOrNot    = currentItem.deleteDirsFlag;
+
+    // free memory in this thread that was allocated with malloc in calling function
+    free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
 
     // scour candidate files and directories under 'path' - recursively
     // delete empty directories and delete option (-d) set
-    scourFilesAndDirs(dirPath,  daysOldInEpoch, pattern, deleteDirOrNot); 
+    scourFilesAndDirs(dirPath, daysOldInEpoch, pattern, deleteDirOrNot, daysOld); 
     
     // remove top directory if empty and if delete option is set
     if( isDirectoryEmpty(dirPath) && deleteDirOrNot)
@@ -164,7 +174,8 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
 }
 
 // This is the recursive function to traverse the directory tree, depth-first
-int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int deleteDirsFlag) 
+int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, 
+                        char *pattern, int deleteDirsFlag, char *daysOld) 
 {
     struct dirent *dp;
     struct stat statbuf;
@@ -180,14 +191,15 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
     }
 
     int dfd = dirfd(dir);
-
+     
     // check if already visited:
-    if( !hasDirChanged(basePath) ) 
+/*    if( !haveFilesChangedForThisPattern(basePath, pattern) ) 
     {
-        printf("Directory \"%s\" unchanged since scour's last visit\n\n", basePath);
+        verbose && printf("Files of pattern (%s) unchanged since scour's last visit of directory: %s\n\n", 
+                pattern, basePath);
         return 0;
     }    
-
+*/
     while ((dp = readdir(dir)) != NULL) {
 
         struct stat sb;
@@ -207,15 +219,18 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
             if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
                 continue;
         
-            printf("[%s]\n", dp->d_name);
+            verbose && printf("[%s]\n", dp->d_name);
             
             // depth-first traversal
-            scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag);
+            scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld);
 
             if( isDirectoryEmpty(path) && deleteDirsFlag)
             {
-// TO-DO
-                printf("\tDeleting this (empty) directory if older than daysOld: %s\n\n", path);
+// TO-DO: 
+//                if( daysOldInEpoch >= epochLastModified) 
+
+                verbose && printf("\tDeleting this (empty) directory %s if older than %s (days[-HHMMSS]) (epoch: %d)\n\n", 
+                                path, daysOld, daysOldInEpoch);
                 if(rmdir(path))
                 {
                     fprintf(stderr, "rmdir(\"%s\") failed: %s\n",
@@ -225,22 +240,28 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
             }
             else
             {
-                printf("Directory not empty!: %s\n\n", path);
+                verbose && printf("Directory not empty!: %s\n\n", path);
             }
         } 
         else if(S_ISREG(sb.st_mode)) 
             {   
-                long epochLastModified = sb.st_ctime;
-                printf("(r) %s\n", path);
-                
+                long epochLastModified = sb.st_mtime;
+
+                if( isScourFile(dp->d_name, pattern) ) 
+                {
+                    verbose && printf("\n(r) %s is skipped\n", path);
+                    continue;
+                } 
+                verbose && printf("\n(r) %s\n", path);
+
                 // if not matching the pattern, skip this file
                 if( !fnmatch(pattern, dp->d_name, FNM_PATHNAME) ) 
                 {
-                    printf("File %s matches pattern: %s\n",  dp->d_name, pattern);
+                    verbose && printf("\t(+) File \"%s\" matches pattern: %s\n",  dp->d_name, pattern);
                 }
                 else
                 {
-                    printf("File %s does NOT match pattern: %s\n",  dp->d_name, pattern);   
+                    verbose && printf("\t(-) File \"%s\" does NOT match pattern: %s\n",  dp->d_name, pattern);   
                     continue;
                 }
                 
@@ -249,7 +270,8 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
                 {
                     if( !remove(path) ) 
                     {
-                        printf("\t %s is older than %d days - DELETED!\n", path, (daysOldInEpoch - epochLastModified)/SECONDS_IN_1DAY);
+                        verbose && printf("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", 
+                                        path, daysOld);
                     }
                     else {
                         fprintf(stderr, "rmdir(\"%s\") failed: %s\n",
@@ -259,19 +281,18 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, char *pattern, int de
                 }
                 else
                 {
-                    printf("\t %s is NOT older than %d days - Not yet a candidate for deletion!\n", 
-                        path, (daysOldInEpoch - epochLastModified)/SECONDS_IN_1DAY);
+                    verbose && printf("\t(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Not yet a candidate for deletion!\n", 
+                        path, daysOld);
                 }
             }
         else if(S_ISLNK(sb.st_mode)) 
             {   
                 // follow SYMLINK
-                printf("SYMLINK file: %s  !!!!!!!!!!!!!!!!!!!!\n", dp->d_name);
+                verbose && printf("SYMLINK file: \"%s\"  !!!!!!!!!!!!!!!!!!!!\n", dp->d_name);
             }
         else 
             {   
-               
-                printf("NOT a regular file, nor a symlink: %s  !!!!!!!!!!!!!!!!!!!!\n", dp->d_name);
+                verbose && printf("NOT a regular file, nor a symlink: \"%s\"  !!!!!!!!!!!!!!!!!!!!\n", dp->d_name);
             }
 
     }
@@ -288,10 +309,18 @@ int isOlderThan(int scouringDays, long epochLastModified)
     int howOldSecs = epochTimeNow - epochLastModified;
     int howOldDays = howOldSecs / SECONDS_IN_1DAY;
 
-    //printf( "How old (sec): %ld \t in days:%ld\n", howOldSecs, howOldDays);
+    //verbose && printf( "How old (sec): %ld \t in days:%ld\n", howOldSecs, howOldDays);
 
     return howOldDays >= scouringDays? 1:0;
 
+}
+
+int isScourFile(char *currentFilename, char *pattern)
+{
+    char scourDotPattern[DAYS_OLD_SIZE + 7];
+    snprintf(scourDotPattern, sizeof(scourDotPattern), ".scour$%s", pattern);
+
+    return !strcmp(currentFilename, scourDotPattern);
 }
 
 int isDirectoryEmpty(char* dirname)
@@ -314,26 +343,26 @@ int isDirectoryEmpty(char* dirname)
     return n == 0? 1 : 0;
 }
 
-int hasDirChanged(char * currentDirPath)
+int haveFilesChangedForThisPattern(char * currentDirPath, char *pattern)
 {
     struct stat stats;
     struct stat dirstats;
 
     const char* scourFilename = SCOUR_FILENAME;
     char scourPath[PATH_SIZE];
-    strcpy(scourPath, currentDirPath);
-    strcat(scourPath, scourFilename);
+    snprintf(scourPath, sizeof(scourPath), "%s%s%s%s",
+                currentDirPath,scourFilename,"$", pattern);
 
     // check if scour exists, if not create it.
     if(stat(scourPath, &stats)  < 0)
     {
-        printf("stat(\"%s\") failed, thus, creating .scour file in %s\n", 
-            scourPath, currentDirPath);
+        verbose && printf("stat(\"%s\") failed. Thus, creating scour file (%s) in %s\n", 
+            scourPath, scourPath, currentDirPath);
 
         FILE *fp;
         if((fp = fopen(scourPath, "w")) == NULL)
         {
-            printf("Unable to create .scour: %s\n", scourPath);
+            verbose && printf("Unable to create .scour: %s\n", scourPath);
             return 0;
         }
 
@@ -342,27 +371,27 @@ int hasDirChanged(char * currentDirPath)
         fclose(fp);
         return 1;   
     }
-    int epochDotScourFileChanged = stats.st_ctime;
+    int epochDotScourFileChanged = stats.st_mtime;
     verbose && epochPrettyPrinting(scourPath, epochDotScourFileChanged);    
 
     // Stat this current directory:
     if(stat(currentDirPath, &dirstats) < 0)
     {
-        fprintf(stderr, "stat(\"%s\") failed: %s\n",
+        verbose && fprintf(stderr, "stat(\"%s\") failed: %s\n",
             currentDirPath, strerror(errno));
         return -1;
     }
-    int epochLastCurrentDirChanged = dirstats.st_ctime;
+    int epochLastCurrentDirChanged = dirstats.st_mtime;
     verbose && epochPrettyPrinting(currentDirPath, epochLastCurrentDirChanged);    
 
     // same epoch time: returns 0, directory did not change
-    if(dirstats.st_ctime <= stats.st_ctime) {
+    if(dirstats.st_mtime <= stats.st_mtime) {
         return 0;
     }
 
     // dir has changed: update .scour's ctime to that of dir
     // It is not possible to change the ctime/mtime of a file: so recreate it!
-    //stats.st_ctime = dirstats.st_ctime;// epochLastCurrentDirChanged;
+    //stats.st_mtime = dirstats.st_mtime;// epochLastCurrentDirChanged;
 
     if( remove(scourPath) < 0 )
     {
@@ -374,7 +403,7 @@ int hasDirChanged(char * currentDirPath)
     FILE *fp;
     if((fp = fopen(scourPath, "w")) == NULL)
     {
-        printf("Unable to create .scour: %s\n", scourPath);
+        verbose && printf("Unable to create .scour: %s\n", scourPath);
         return 0;
     }
     fclose(fp);
@@ -385,11 +414,18 @@ int hasDirChanged(char * currentDirPath)
     return 1;
 }
 
-void epochPrettyPrinting(char * fileOrDir, time_t epochCTime)
+int epochPrettyPrinting(char * fileOrDir, time_t epochCTime)
 {
-    printf("\t%s: Epoch time: %d -  Last changed: %s \n", 
-        fileOrDir, epochCTime, asctime(localtime(&epochCTime)));
+    char *localAsctime = asctime(localtime(&epochCTime));
+    int len = strlen(localAsctime) - 1;  // remove ending '\n'
+    char *localDayAndTime = strndup(localAsctime, len) ;
+    printf("\t%s: Epoch time: %d (%s) \n", 
+        fileOrDir, epochCTime, localDayAndTime );
+
+    free(localDayAndTime);
+    return 1;
 }
+
 
 void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
 {

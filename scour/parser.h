@@ -41,19 +41,21 @@
 
 
 #define MAX_NOT_ALLOWED_DIRPATHS 100
-#define STRING_SIZE	80
+#define STRING_SIZE		80
+#define DAYS_OLD_SIZE	15
 #define NOT_ALLOWED_DIR_PATHS_FILE "notAllowedDirs.txt"
 
 typedef struct IngestEntry {
 
 	char dir[DIR_SIZE];
 	int  daysOldInEpoch;	
+	char daysOld[DAYS_OLD_SIZE];
 	char pattern[PATTERN_SIZE];	
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
 void newEntryNode(char *, char *, char *);
-void traverseIngestList(IngestEntry_t *);
+int traverseIngestList(IngestEntry_t *);
 IngestEntry_t *parseConfig();
 
 int regexOps(char *, char *, int);

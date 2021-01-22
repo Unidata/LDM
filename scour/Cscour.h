@@ -35,9 +35,10 @@ int     isAbsolutePath(char *);
 
 int     existsAndIsAccessible(char *); 
 void    parseArgv(int, char **, int *, int *);
+//int     hasDirChanged(char *, char *);
 int     hasDirChanged(char *);
-void    epochPrettyPrinting(char *, time_t);
+int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
 void	multiThreadedScour(IngestEntry_t *, int);
-int 	scourFilesAndDirs(char *,  int, char *, int); 
+int 	scourFilesAndDirs(char *,  int, char *, int, char *); 
 int 	checkGlobPatternMatch(char *, char *);

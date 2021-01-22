@@ -32,7 +32,6 @@
 # are relative to the directory `regutil regpath{PQACT_DATADIR_PATH}`.
 #
 # A hash in column one indicates a comment line.
-
 # directory			  Days-old		Optional-filename-pattern
 #					(days-HHMMSS)
 #dir1                   2
@@ -79,7 +78,7 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 	char *line = NULL;
 	char dirName[DIR_SIZE] = "";
 	char pattern[PATTERN_SIZE] = "";
-	char daysOld[DAYS_SIZE] = "";
+	char daysOld[DAYS_OLD_SIZE] = "";
 	char delim[] = " \t\n"; // space, tab and new line
     size_t len = 0;
 
@@ -118,7 +117,7 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
      	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, 
      			notAllowedCounter) )
      			{
-     				printf("\tDirectory '%s' is invalid. Will not get processed.\n\n", dirName);
+     				verbose && printf("\t(-) Directory '%s' does not exist (or could not be opened). Skipping...\n\n", dirName);
      				continue;
      			} 
 
@@ -147,12 +146,12 @@ int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE],
 	// 2. check if it starts with tilda and vet the expanded path
 	//	  return the exanpded path for subsequent vetting below
 	char pathName[80];
-	printf("\tvetThisDirectoryPath (dirName): %s\n", dirName);
+	verbose && printf("\tparser(): validating directory: %s\n", dirName);
 
 	if( (startsWithTilda(dirName, pathName)) == NULL ) return -1;
 	else {
 		strcpy(dirName, pathName);
-		verbose && printf("\tExpanded directory name:'%s'\n", dirName);
+		verbose && printf("\tparser(): tilda expanded directory:'%s'\n", dirName);
 	}
 	
 
@@ -187,7 +186,7 @@ int isNotAllowed(char * dirName, char (*list)[STRING_SIZE], int notAllowedCounte
 	int i;
 	for(i=0; i<notAllowedCounter; i++) {
 		if( strcmp(dirName, list[i]) == 0) {
-			printf("isNotAllowed: path %s is NOT allowed!\n", dirName);
+			verbose && printf("isNotAllowed: path %s is NOT allowed!\n", dirName);
 			return 1;
 		}
 	}
@@ -214,6 +213,7 @@ void newEntryNode(char *dir, char *daysOld, char *pattern)
 
     // populate node
     strcpy(tmp->dir, dir);
+    strcpy(tmp->daysOld, daysOld);
     tmp->daysOldInEpoch = daysOldInEpoch;
     strcpy(tmp->pattern, pattern);
 
@@ -222,23 +222,25 @@ void newEntryNode(char *dir, char *daysOld, char *pattern)
 	head = tmp;
 }
 
-void traverseIngestList(IngestEntry_t *listhead)
+int traverseIngestList(IngestEntry_t *listhead)
 {
 
 	IngestEntry_t *tmp = listhead;
-	printf("\n\tparser: Traversing the list of scour items from configuration file: \n");
+	verbose && printf("\n\tparser: Traversing the list of scour items from configuration file: \n");
 	if(tmp == NULL) {
-		printf("\n\tEMPTY LIST! \n");
+		verbose && printf("\n\tEMPTY LIST! \n");
 		exit(-1);
 	}
 
    //start from the beginning
    while(tmp != NULL) {
-      printf("\t%s \t %d (Epoch) \t %s\n",tmp->dir, tmp->daysOldInEpoch, tmp->pattern);
+      verbose && printf("\t%s \t %s (%d) \t %s\n",tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
       tmp = tmp->nextEntry;
    }
 	
-   printf("\n");
+   verbose && printf("\n");
+
+   return 1;
 
 }
 // ===============================================================================
@@ -260,7 +262,7 @@ int nowInEpoch()
 	time_t t = time(NULL);
 	struct tm tm = *localtime(&t);
 
-	//printf("\n\tNow: %d-%02d-%02d %02d:%02d:%02d\n", 
+	//verbose && printf("\n\tNow: %d-%02d-%02d %02d:%02d:%02d\n", 
 	//		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     time_t today, todayEpoch;
@@ -289,7 +291,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		strncpy(result, &daysOldItem[group[1].rm_so], group[1].rm_eo - group[1].rm_so);
 		days = atoi(result);
 		if(days > DAYS_SINCE_1994) {
-			printf("Too many days back: %d\n", days);
+			verbose && printf("Too many days back: %d\n", days);
 			return -1;
 		}
 
@@ -303,7 +305,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 			case 3: //days_HH
 				
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS; 
-				verbose && printf("\tdaysOld: %d -- hours: %d  - epoch: %d\n\n", 
+				verbose && printf("\t(+) daysOld: %d -- hours: %d  (epoch: %d)\n\n", 
 					days, hours, todayEpoch - daysEtcInSeconds);
 				
 				break;
@@ -315,7 +317,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				minutes = atoi(result);
 		
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS; 
-				verbose && printf("\tdaysOld: %d -- hours: %d -- minutes: %d - epoch: %d\n\n", 
+				verbose && printf("\t(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)\n\n", 
 					days, hours, minutes, todayEpoch - daysEtcInSeconds);
 		
 				break;
@@ -331,7 +333,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				seconds = atoi(result);
 
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds; 
-				verbose && printf("\tdaysOld: %d -- hours: %d -- minutes: %d -- seconds %d -- epoch: %d\n\n", 
+				verbose && printf("\t(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)\n\n", 
 					days, hours, minutes, seconds, todayEpoch - daysEtcInSeconds);
 
 				break;
@@ -376,7 +378,7 @@ int convertDaysOldToEpoch(char *daysOldItem)
 	if (status == 0) 
 	{
 		int daysOnlyInSeconds = atoi(daysOldItem) * DAY_SECONDS;
-		printf("\tdaysOld: %s - epoch: %d\n\n", daysOldItem, todayEpoch - daysOnlyInSeconds);
+		verbose && printf("\t(+) daysOld: %s (epoch: %d)\n\n", daysOldItem, todayEpoch - daysOnlyInSeconds);
 		return todayEpoch - daysOnlyInSeconds;
 	} 
 
@@ -446,7 +448,7 @@ char * loginHomeDir(char *providedLgn)
             return NULL;
         }
         if (resultp == NULL) {
-            verbose && fprintf(stderr, "%s: No such user\n", lgn);
+            verbose && fprintf(stderr, "\tUser \"%s\"  does not exist on this system.\n", lgn);
             free(buffer);
             return NULL;
         }
@@ -538,7 +540,7 @@ char *startsWithTilda(char *dirPath, char *expandedDirName)
  		char *currentHomeDir = loginHomeDir(providedLgn);
  		if(currentHomeDir == NULL) 
  		{
-	        //fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
+	        //verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
  			return NULL;
  		}
  		
@@ -566,8 +568,6 @@ char *startsWithTilda(char *dirPath, char *expandedDirName)
  		char *homeDir = loginHomeDir(NULL);
  		if(homeDir == NULL) return NULL;
 
-		strcpy(subDirPath, homeDir);
- 		strcat(subDirPath, dirPath + 1);
 
  		strcpy(subDirPath, homeDir);
  		strcat(subDirPath, dirPath + 1);
