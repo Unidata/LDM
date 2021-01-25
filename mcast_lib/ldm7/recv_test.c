@@ -257,7 +257,7 @@ bool isSourceSpecific(const struct in_addr* const addr)
  * Configures a socket for receiving multicast packets.
  *
  * @param[in] sock        Socket
- * @param[in] groupAddr   IP address of multicast group
+ * @param[in] groupAddr   Internet address of multicast group
  * @param[in] ifaceAddr   IP address of interface on which to receive packets
  * @param[in] sourceAddr  IP address of source of multicast packets or `NULL`
  *                        to indicate non-source-specific multicast
@@ -275,13 +275,10 @@ configure_socket(
     bool success;
     char groupSockAddrStr[80];
 
-    if (debug) {
-		const struct sockaddr_in* const inAddr =
-				(struct sockaddr_in*)&groupSockAddr;
-
+    if (debug)
     	snprintf(groupSockAddrStr, sizeof(groupSockAddrStr), "%s:%d",
-    			inet_ntoa(inAddr->sin_addr), ntohs(inAddr->sin_port));
-    }
+                inet_ntoa(groupSockAddr->sin_addr),
+                ntohs(groupSockAddr->sin_port));
 
     /*
      * Bind the local endpoint of the socket to the address and port number of
