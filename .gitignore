@@ -100,3 +100,5 @@ vgcore.*
 /check-make-cc
 /check-make-clang
 /consistent
+/check-cc
+/check-clang

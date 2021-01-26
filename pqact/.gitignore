@@ -7,3 +7,4 @@ awips
 /freopen_test
 /stderr_test
 /pqact.vg
+/callgrind.out.*
