@@ -1,10 +1,12 @@
-6.13.14.10
+6.13.14.10      2021-01-26T13:11:10-0700
     NOAAPort GEMPAK Tables:
         * Added Ice Thickness (ICETK, (10,2,1,0))
 
     Multicast:
         * recv_test(1): Corrected documentation & simplified diagnostic
           statement
+        * fmtpRecvv3: Improved handling of last product whose BOP needn't be
+          requested
 
 6.13.14.9       2021-01-17T16:27:15-0700
     Misc:
