@@ -132,49 +132,37 @@ class fmtpRecvv3 {
     };
 
     /**
-     * Tracks the product-index and sequence number of received multicast FMTP
-     * packets.
+     * Tracks the last product-index.
      */
-    class McastProdPar
+    class LastProdIndex
     {
         using Mutex = std::mutex;
         using Guard = std::lock_guard<Mutex>;
 
         mutable Mutex mutex;      /// Concurrent access mutex
         uint32_t      prodIndex;  /// Index of multicast product
-        uint32_t      seqnum;     /// Byte-offset of data-segment
         bool          indexSet;   /// Product-index is set?
-        bool          seqnumSet;  /// Sequence number is set?
 
     public:
-        McastProdPar();
+        LastProdIndex();
 
         /**
          * No copy or move construction because there should only be one
          * instance per FMTP receiver.
          */
-        McastProdPar(const McastProdPar& that) =delete;
-        McastProdPar(McastProdPar&& that) =delete;
+        LastProdIndex(const LastProdIndex& that) =delete;
+        LastProdIndex(LastProdIndex&& that) =delete;
 
         /**
          * No copy or move assignment because there should only be one instance
          * per FMTP receiver.
          */
-        McastProdPar& operator=(const McastProdPar& rhs) =delete;
-        McastProdPar& operator=(McastProdPar&& rhs) =delete;
+        LastProdIndex& operator=(const LastProdIndex& rhs) =delete;
+        LastProdIndex& operator=(LastProdIndex&& rhs) =delete;
 
-        uint32_t set(const FmtpHeader& header);
+        uint32_t set(const uint32_t prodIndex);
 
-        /**
-         * Returns the product-index.
-         *
-         * @return  Product-index. Will be 0 if `setIndex()` or `set()` hasn't
-         *          been called.
-         */
-        inline uint32_t getIndex() const {
-            Guard guard(mutex);
-            return prodIndex;
-        }
+        uint32_t get() const;
     };
 
 public:
@@ -232,12 +220,6 @@ private:
                     const char* const payload);
     void checkPayloadLen(const FmtpHeader& header, const size_t nbytes);
     void clearEOPStatus(const uint32_t prodindex);
-    /**
-     * Decodes the header of a FMTP packet in-place.
-     *
-     * @param[in,out] header  The FMTP header to be decoded.
-     */
-    void decodeHeader(FmtpHeader& header);
     /**
      * Decodes a FMTP packet header.
      *
@@ -305,15 +287,15 @@ private:
      *                       `prodIndex`
      */
     uint32_t setMcastProdId(uint32_t prodIndex);
-	/**
-	 * Handles a multicast data-packet.
-	 *
-	 * @param[in] header           Peeked-at FMTP header
+    /**
+     * Handles a multicast data-packet.
+     *
+     * @param[in] header           Peeked-at FMTP header
      * @retval    `true`           The message was valid
      * @retval    `false`          The message was not valid
-	 * @throw std::runtime_error   Error occurred while reading the socket
-	 */
-	bool mcastDataHandler(const FmtpHeader& header);
+     * @throw std::runtime_error   Error occurred while reading the socket
+     */
+    bool mcastDataHandler(const FmtpHeader& header);
     void mcastHandler();
     bool mcastEOPHandler(const FmtpHeader& header);
     /**
@@ -363,8 +345,8 @@ private:
      *                            socket.
      */
     bool readMcastData(const FmtpHeader& header,
-    		           void* const       prodptr,
-					   const uint32_t    prodsize);
+                       void* const       prodptr,
+                       const uint32_t    prodsize);
     /**
      * Requests data-packets that lie between the last previously-received
      * data-packet of the current data-product and its most recently-received
@@ -383,20 +365,8 @@ private:
      * @param[in] openright  Open right end of the prodindex interval.
      */
     void requestBops(const uint32_t openleft, const uint32_t openright);
-    void requestBopsExcl(const FmtpHeader& header);
-    void requestBopsIncl(const FmtpHeader& header);
-    /**
-     * Handles a multicast FMTP data-packet given the associated peeked-at and
-     * decoded FMTP header. Directly store and check for missing blocks.
-     *
-     * @pre                       The socket contains a FMTP data-packet.
-     * @param[in] header          The associated, peeked-at and decoded header.
-     * @retval    `true`          FMTP message is valid
-     * @retval    `false`         FMTP message is not valid
-     * @throw std::system_error   if an error occurs while reading the socket.
-     * @throw std::runtime_error  if the packet is invalid.
-     */
-    bool recvMcastData(const FmtpHeader& header);
+    void requestBopsExcl(const uint32_t prodindex);
+    void requestBopsIncl(const uint32_t prodindex);
     /**
      * request EOP retx if EOP is not received yet and return true if
      * the request is sent out. Otherwise, return false.
@@ -432,13 +402,6 @@ private:
     std::string             ifAddr;
     int                     retxSock;
     struct sockaddr_in      mcastgroup;
-#ifdef OLD
-    uint32_t                mcastProdId;    // Index of multicast product
-    bool                    mcastProdIdSet; // `mcastProdId` is set?
-    mutable std::mutex      mcastProdMutex; // Mutex for `mcastProdId`
-    std::atomic<uint32_t>   mcastSeqNum;
-    bool                    mcastSeqNumSet;
-#endif
     /* callback function of the receiving application */
     RecvProxy*              notifier;
     TcpRecv*                tcprecv;
@@ -482,7 +445,8 @@ private:
     uint32_t                notifyprodidx;
     std::condition_variable notify_cv;
     UdpRecv                 udpRecv;
-    McastProdPar            mcastProdPar;
+    // Open lower index for BOP requests
+    LastProdIndex           openLeftIndex;
 
     /* member variables for measurement use only */
     Measure*                measure;

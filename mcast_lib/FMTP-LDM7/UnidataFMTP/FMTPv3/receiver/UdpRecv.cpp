@@ -150,30 +150,30 @@ UdpRecv& UdpRecv::operator=(UdpRecv&& rhs)
 
 void UdpRecv::peekHeader(FmtpHeader& header)
 {
-	for (;;) {
-		/*
-		 * `::recv()` is called with a MSG_PEEK flag to prevent the packet from
-		 * being removed from the input buffer. The call will block until a
-		 * packet arrives.
-		 */
-		int  cancelState;
-		(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-			const ssize_t nbytes = ::recv(sd, &netHeader, FMTP_HEADER_LEN, MSG_PEEK);
-		(void)pthread_setcancelstate(cancelState, &cancelState);
+    for (;;) {
+        /*
+         * `::recv()` is called with a MSG_PEEK flag to prevent the packet from
+         * being removed from the input buffer. The call will block until a
+         * packet arrives.
+         */
+        int  cancelState;
+        (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+            const ssize_t nbytes = ::recv(sd, &netHeader, FMTP_HEADER_LEN, MSG_PEEK);
+        (void)pthread_setcancelstate(cancelState, &cancelState);
 
-		if (nbytes == -1)
-			throw std::system_error(errno, std::system_category(),
+        if (nbytes == -1)
+            throw std::system_error(errno, std::system_category(),
                     "UdpRecv::read() ::recv() failure on socket " +
-					std::to_string(sd));
+                    std::to_string(sd));
 
-		if (nbytes != FMTP_HEADER_LEN) {
-			#ifdef LDM_LOGGING
-				log_warning("Ignoring FMTP message with short header: "
-						"nbytes=%zd", nbytes);
-			#endif
-			skipPacket();
-		}
-		else {
+        if (nbytes != FMTP_HEADER_LEN) {
+            #ifdef LDM_LOGGING
+                log_warning("Ignoring FMTP message with short header: "
+                        "nbytes=%zd", nbytes);
+            #endif
+            skipPacket();
+        }
+        else {
             header.prodindex  = ntohl(netHeader.prodindex);
             header.seqnum     = ntohl(netHeader.seqnum);
             header.payloadlen = ntohs(netHeader.payloadlen);
@@ -190,42 +190,42 @@ void UdpRecv::peekHeader(FmtpHeader& header)
             else {
                 break;
             } // Payload isn't too large
-		} // Header is correct length
-	} // Packet read loop
+        } // Header is correct length
+    } // Packet read loop
 }
 
 bool UdpRecv::readPayload(const FmtpHeader& header,
-		                  char*             payload)
+                          char*             payload)
 {
-	iov[1].iov_base = payload;
-	iov[1].iov_len  = header.payloadlen;
+    iov[1].iov_base = payload;
+    iov[1].iov_len  = header.payloadlen;
 
-	int cancelState;
-	(void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-		const auto nread = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));
-	(void)pthread_setcancelstate(cancelState, &cancelState);
+    int cancelState;
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+            const auto nread = ::readv(sd, iov, sizeof(iov)/sizeof(iov[0]));
+    (void)pthread_setcancelstate(cancelState, &cancelState);
 
-	if (nread == -1)
-		throw std::system_error(errno, std::system_category(),
-				"UdpRecv::read() ::readv() failure");
+    if (nread == -1)
+            throw std::system_error(errno, std::system_category(),
+                    "UdpRecv::read() ::readv() failure");
 
-	int  payloadlen = nread - (FMTP_HEADER_LEN + macLen);
-	bool valid = (payloadlen == header.payloadlen);
-	if (!valid) {
-#        ifdef LDM_LOGGING
-			log_warning("FMTP payload is too small: expected=%u, actual=%d",
-					static_cast<unsigned>(header.payloadlen), payloadlen);
-#        endif
-	}
-	else {
-		valid = isValid(header, payload);
-	}
+    int  payloadlen = nread - (FMTP_HEADER_LEN + macLen);
+    bool valid = (payloadlen == header.payloadlen);
+    if (!valid) {
+#       ifdef LDM_LOGGING
+            log_warning("FMTP payload is too small: expected=%u, actual=%d",
+                    static_cast<unsigned>(header.payloadlen), payloadlen);
+#       endif
+    }
+    else {
+        valid = isValid(header, payload);
+    }
 
-	return valid;
+    return valid;
 }
 
 bool UdpRecv::discardPayload(const FmtpHeader& header)
 {
-	char payload[MAX_FMTP_PAYLOAD];
-	return readPayload(header, payload);
+    char payload[MAX_FMTP_PACKET]; // Larger than strictly necessary
+    return readPayload(header, payload);
 }
