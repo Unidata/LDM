@@ -21,3 +21,4 @@ cscope.*
 .libs
 m4/*
 FmtpConfig.h
+FmtpConfig.h.in
