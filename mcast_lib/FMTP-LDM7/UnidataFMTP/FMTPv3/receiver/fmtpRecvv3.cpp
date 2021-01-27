@@ -105,7 +105,7 @@ fmtpRecvv3::LastProdIndex::LastProdIndex()
  * Tracks a product-index. Returns the product-index from the previous call.
  *
  * @param[in] prodindex          Product-index to be saved
- * @return                       On first call, given product-index  minus one;
+ * @return                       On first call, given product-index minus one;
  *                               otherwise, product-index of previous call
  */
 uint32_t fmtpRecvv3::LastProdIndex::set(const uint32_t prodindex)
@@ -115,8 +115,8 @@ uint32_t fmtpRecvv3::LastProdIndex::set(const uint32_t prodindex)
 
 #   ifdef LDM_LOGGING
         if (indexSet && (prodindex - this->prodIndex > UINT32_MAX/2))
-            log_warning("Retrograde product-index: prodindex=" PRIu32
-                    ", this->prodIndex=" PRIu32, prodindex, this->prodIndex);
+            log_warning("Retrograde product-index: prodindex=%" PRIu32
+                    ", this->prodIndex=%" PRIu32, prodindex, this->prodIndex);
 #   endif
 
     this->prodIndex = prodindex;
@@ -1656,8 +1656,8 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
     if (seqnum != mostRecent) {
 #       ifdef LDM_LOGGING
             if (mostRecent < seqnum)
-                log_warning("Unexpected sequence number: product=" PRIu32
-                        ", expected=" PRIu32 ", actual=" PRIu32,
+                log_warning("Unexpected sequence number: product=%" PRIu32
+                        ", expected=%" PRIu32 ", actual=%" PRIu32,
                         prodindex, seqnum, mostRecent);
 #       endif
 
