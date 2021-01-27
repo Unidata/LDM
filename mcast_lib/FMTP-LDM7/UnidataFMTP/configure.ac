@@ -18,6 +18,8 @@ LT_INIT
 
 AC_PROG_LIBTOOL
 
+AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
+
 AC_PROG_CXX
 if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++11])
