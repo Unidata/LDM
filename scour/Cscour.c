@@ -62,6 +62,7 @@ typedef struct config_items_args {
 } ConfigItemsAndDeleteFlag_t;
 
 int verbose=0;
+char *ingestFilename;
 
 int main(int argc, char *argv[])
 {
@@ -98,7 +99,7 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
     IngestEntry_t *tmp = head;
     if(head) 
         verbose && printf("\n\tCscour: List of validated items sourced in user's configuration file: %s\n", 
-            SCOUR_INGEST_FILENAME);
+            ingestFilename);
     
     pthread_t tids[MAX_THREADS];
     int threadsCounter  =   0;

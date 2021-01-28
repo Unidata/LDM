@@ -61,7 +61,7 @@ IngestEntry_t* head = NULL;
 
 
 extern int verbose;
-char *ingestFilename;
+extern char *ingestFilename;
 
 void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
 {

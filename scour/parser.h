@@ -23,7 +23,6 @@
 #ifndef PARSER_DOT_H
 #define PARSER_DOT_H
 
-#define SCOUR_INGEST_FILENAME "/tmp/scour_ingest"
 #define PATH_SIZE		1024
 #define MAX_STRING_SIZE	40
 #define ALL_FILES		"*"
