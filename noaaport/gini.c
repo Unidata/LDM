@@ -2186,7 +2186,7 @@ gini_status_t gini_pack(
         const unsigned                out_size,
         unsigned* const restrict      out_nbytes)
 {
-    z_stream d_stream;
+    z_stream d_stream = {};
     d_stream.zalloc = (alloc_func)0;
     d_stream.zfree  = (free_func)0;
     d_stream.opaque = (voidpf)0;
@@ -2240,7 +2240,7 @@ gini_status_t gini_unpack(
         unsigned* const restrict      out_nbytes,
         unsigned* const restrict      nscanned)
 {
-    z_stream d_stream;
+    z_stream d_stream = {};
     d_stream.zalloc = (alloc_func)0;
     d_stream.zfree  = (free_func)0;
     d_stream.opaque = (voidpf)0;

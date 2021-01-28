@@ -175,7 +175,7 @@ int npunz (char *zstr, int *lenout, int *ioff)
     /*
      * ZLIB decompression variables.
      */
-    z_stream        d_stream;
+    z_stream        d_stream = {}; // Initializes to zero
     uLong           lentot=0;
 
     int nbytes=540, err;

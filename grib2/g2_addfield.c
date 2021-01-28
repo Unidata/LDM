@@ -294,7 +294,7 @@ g2int g2_addfield(unsigned char *cgrib,size_t sz,g2int ipdsnum,g2int *ipdstmpl,
       //  if bit-map is provided with field.
       */
       if ( ibmap == 0 || ibmap==254 ) {
-         pfld=(g2float *)malloc(ngrdpts*sizeof(g2float));
+         pfld=calloc(ngrdpts, sizeof(g2float)); // Initializes to 0
          ndpts=0;
          for (j=0;j<ngrdpts;j++) {
              if ( bmap[j]==1 ) pfld[ndpts++]=fld[j];

@@ -1,3 +1,12 @@
+6.13.14.11
+    Misc:
+        * Removed lint found by Coverity Scan
+
+    Multicast:
+        * configure.ac & FmtpConfig.h.in: Added _XOPEN_SOURCE
+        * FmtpConfig.h{,.in}: Removed from repository
+        * FmtpRecvv3.c: Corrected use of PRIu32 macro
+
 6.13.14.10      2021-01-26T13:11:10-0700
     NOAAPort GEMPAK Tables:
         * Added Ice Thickness (ICETK, (10,2,1,0))

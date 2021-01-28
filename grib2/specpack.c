@@ -66,7 +66,7 @@ void specpack(g2float *fld,g2int ndpts,g2int JJ,g2int KK,g2int MM,
 //   values within the sub-spectrum Js, Ks, Ms, and the other with values 
 //   outside of the sub-spectrum to be packed.
 */
-      tfld=(g2float *)malloc(ndpts*sizeof(g2float));
+      tfld=(g2float *)calloc(ndpts, sizeof(g2float));
       unpk=(g2float *)malloc(ndpts*sizeof(g2float));
       ifld=(g2int *)malloc(ndpts*sizeof(g2int));
       inc=0;
