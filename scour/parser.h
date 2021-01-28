@@ -45,6 +45,10 @@
 #define DAYS_OLD_SIZE	15
 #define NOT_ALLOWED_DIR_PATHS_FILE "notAllowedDirs.txt"
 
+#define OPTSTR	"dv"
+#define USAGE_FMT  "\n\tUsage: \t%s [-v] [-d] <scour_ingest_filename>\n\n"
+#define PROGRAM_NAME	"Cscour"
+#
 typedef struct IngestEntry {
 
 	char dir[DIR_SIZE];
@@ -67,6 +71,7 @@ int isNotAllowed(char *, char (*)[STRING_SIZE], int);
 int vetThisDirectoryPath(char *, char (*)[STRING_SIZE], int); 
 char *startsWithTilda(char *, char *);
 int compareWithGetLogin(char *);
+void usage();
 
 int verbose;
 #endif	// PARSER_DOT_H

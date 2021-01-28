@@ -13,8 +13,8 @@ dir0
 ~miles                    2       *.foo	
 #~/toto		2	*.foo	
 #~/titi		2-0732	*.foo	
-~/toto		2-09	*.foo	
-~/titi		2	*.txt	
+~/dev/testTree/toto		3-09	*.foo	
+~/dev/testTree/titi		2	*.txt	
 #~miles/toto		2       *.foo	
 dir3			4       *.boo
 ~ldm/var/logs		1       *.stats

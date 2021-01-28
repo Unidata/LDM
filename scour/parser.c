@@ -61,11 +61,67 @@ IngestEntry_t* head = NULL;
 
 
 extern int verbose;
+char *ingestFilename;
+
+void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
+{
+    *deleteDirOption = 0;
+    int opt;
+    int optionsCounter = 0;
+    // TO-DO: 
+    //  1. Add -l option to redirect standard output to a log file
+    // This program being called from a script, the standard output
+    // can be redirected...
+    //  2. Add option argument to verbose mode to set the level of verbosity
+    //  3. Add usage()
+    while (( opt = getopt(argc, argv, OPTSTR)) != -1) {
+        switch (opt) {
+
+        case 'd': *deleteDirOption = 1; optionsCounter++; break;
+        case 'v': *verbose = 1; optionsCounter++; break;
+            
+        default: abort();
+
+        }
+    }
+    optionsCounter++;
+    if( argc - optionsCounter != 1)	usage();
+
+    ingestFilename = argv[optind];
+
+ 	// check if exists:
+ 	if( !isRegularFile( ingestFilename )  ) 
+ 	{
+    	// file doesn't exist
+    	printf(" Scour Configuration file (%s) does not exist (or not a text file)! Bailing out...\n", 
+    		ingestFilename);
+    	exit(EXIT_FAILURE);
+	}
+}
+
+void usage() 
+{
+	fprintf(stderr, USAGE_FMT, PROGRAM_NAME);
+	exit(EXIT_FAILURE);
+}
+
+int isRegularFile(const char *path)
+{
+    struct stat path_stat;
+
+    if (stat(path, &path_stat) == -1) 
+    {
+        printf("\tIngest file (\"%s\") does not exist.\n", path);
+        return 0;
+    }
+
+    return S_ISREG(path_stat.st_mode);
+}
 
 IngestEntry_t *parseConfig(int *directoriesCounter)
 {
-	struct stat stats;
-	const char* ingestFilename = SCOUR_INGEST_FILENAME;
+	
+	//const char* ingestFilename = SCOUR_INGEST_FILENAME;
     char rejectedDirPathsList[MAX_NOT_ALLOWED_DIRPATHS][STRING_SIZE];
 
 	int notAllowedCounter = readNotAllowedList(rejectedDirPathsList);

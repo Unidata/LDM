@@ -26,19 +26,25 @@
 #define PATH_SIZE       1024
 #define SCOUR_FILENAME "/.scour"	// ony use with path
 #define MAX_THREADS		200
+#define IS_DIRECTORY_SYMLINK 1
+#define IS_NOT_DIRECTORY_SYMLINK	0
 
 void*	scourFilesAndDirsForThisPath(void* arg);
 int     isOlderThan(int, long);
-int     isDirectoryEmpty(char*);
+int     isDirectoryEmpty(char*, char *);
 int     isRootPath(char *);
 int     isAbsolutePath(char *);
 
 int     existsAndIsAccessible(char *); 
 void    parseArgv(int, char **, int *, int *);
-//int     hasDirChanged(char *, char *);
 int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
 void	multiThreadedScour(IngestEntry_t *, int);
-int 	scourFilesAndDirs(char *,  int, char *, int, char *); 
+int 	scourFilesAndDirs(char *,  int, char *, int, char *, char *, int); 
 int 	checkGlobPatternMatch(char *, char *);
+void	callReadLink(char *, char *);
+void	buildDotScourFilename(char *, char *);
+int 	createScourFile(char *, char *);
+int 	dotScourFileExists(char *, char *);
+int 	epochOfLastModified(char *, char *);
