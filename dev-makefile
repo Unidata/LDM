@@ -22,14 +22,16 @@ check:  check-cc check-clang
 	touch $@
 
 # Scan code using clang(1)
-clang-scan: check
-	scan-build --view $(MAKE)
+clang-scan:
+	scan-build $(MAKE)
+	@url=file://`ls -dt /tmp/scan-build-* | head -1`/index.html; \
+        echo "Display $$url in browser"
 	touch $@
 
 COVERITY_SCAN_FILE      = ldm.tgz
 
 # Create a submission file for Coverity Scan
-$(COVERITY_SCAN_FILE):   check
+$(COVERITY_SCAN_FILE):
 	$(MAKE) clean
 	cov-build --dir cov-int $(MAKE)
 	tar czvf $(COVERITY_SCAN_FILE) cov-int
@@ -46,7 +48,7 @@ coverity-scan:  $(COVERITY_SCAN_FILE)
 	mv $@.log $@
 	rm -rf cov-int
 
-scan:	clang-scan coverity-scan
+scan:	coverity-scan clang-scan
 	touch $@
 
 configure.ac:  CHANGE_LOG

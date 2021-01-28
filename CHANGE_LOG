@@ -1,3 +1,8 @@
+6.13.14.12
+    DevOps:
+        * dev-makefile: Moved coverity-scan before clang-scan, which now emits
+          URL
+
 6.13.14.11      2021-01-28T10:18:40-0700
     Misc:
         * Removed lint found by Coverity Scan
