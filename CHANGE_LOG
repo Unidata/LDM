@@ -1,7 +1,13 @@
 6.13.14.12
+    Multicase:
+        * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
+          macro
+
     DevOps:
-        * dev-makefile: Moved coverity-scan before clang-scan, which now emits
-          URL
+        * dev-makefile targets:
+            * scan: Moved coverity-scan before clang-scan
+            * clang-scan: Replaced "--view" with printing of URL so that ^C
+              doesn't stop "touch $@"
 
 6.13.14.11      2021-01-28T10:18:40-0700
     Misc:

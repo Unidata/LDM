@@ -39,7 +39,7 @@
 #include <errno.h>
 #include <exception>
 #include <fcntl.h>
-#include <inttypes.h>
+#include <cinttypes>
 #include <math.h>
 #include <memory.h>
 #include <netinet/in.h>
