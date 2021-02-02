@@ -1,6 +1,6 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
+ * This file is the C version of the program (parser module header) 
+ * of the Shell script scour of the Unidata LDM package.
  *
  *  @file:  parser.h
  * @author: Mustapha Iles

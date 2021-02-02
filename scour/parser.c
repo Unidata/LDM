@@ -1,6 +1,6 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
+ * This file is the C version of the program (parser module) of the Shell 
+ * script scour of the Unidata LDM package.
  *
  *  @file:  parser.c
  * @author: Mustapha Iles
@@ -21,24 +21,21 @@
  */
 
 /*
-# Configuration file for "scour" utility, to delete all files older than a
-# specified number of days from specified directories and all their
-# subdirectories.  Scour should be invoked periodically by cron(8).
-#
 # Each line consists of a directory, a retention time (in days), and
 # (optionally) a shell filename pattern for files to be deleted.  If no
 # filename pattern is specified, "*" representing all files not beginning with
 # "." is assumed.  The syntax "~user" is understood.  Non-absolute pathnames
-# are relative to the directory `regutil regpath{PQACT_DATADIR_PATH}`.
+# are relative to the current directory.
 #
 # A hash in column one indicates a comment line.
-# directory			  Days-old		Optional-filename-pattern
-#					(days-HHMMSS)
+# directory		Days-old		Optional-filename-pattern
+#			(days-HHMMSS)
+#
 #dir1                   2
 #dir2                   2       		*.foo
 #~ldm/var/logs          1       		*.stats
-#dir3                   2-113055       	*.foo
-#dir3                   90-1130       	*.boo
+#dir3                   2-113055       		*.foo
+#dir3                   90-1130       		*.boo
 */
 
 #include <stdio.h>
