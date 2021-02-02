@@ -2,6 +2,8 @@
 
 set -e
 
+versOpt=${1:+-v $1}
+
 cd `dirname $0`
 
 # NOAAPort ingest test system (password required)
@@ -15,14 +17,14 @@ cd `dirname $0`
 #deploy lead
 
 # LDM7 systems (no password required)
-./deploy -m              -u ldm7 ca >&ca.deplog &
-./deploy -m              -u ldm7 co >&co.deplog &
-./deploy -m -r centos -s -u ldm7 md >&md.deplog &
-./deploy -m                      mo >&mo.deplog &
-./deploy -m                      nj >&nj.deplog &
-./deploy -m           -s         ut >&ut.deplog &
-./deploy -m -r ldm7   -s -u ldm7 va >&va.deplog &
-./deploy -m           -s         wa >&wa.deplog &
-./deploy -m           -s         wi >&wi.deplog &
+./deploy -m              -u ldm7 $versOpt ca >&ca.deplog &
+#./deploy -m              -u ldm7 $versOpt co >&co.deplog &
+./deploy -m -r centos -s -u ldm7 $versOpt md >&md.deplog &
+./deploy -m                      $versOpt mo >&mo.deplog &
+./deploy -m                      $versOpt nj >&nj.deplog &
+./deploy -m           -s         $versOpt ut >&ut.deplog &
+#./deploy -m -r ldm7   -s -u ldm7 $versOpt va >&va.deplog &
+./deploy -m           -s         $versOpt wa >&wa.deplog &
+#./deploy -m           -s         $versOpt wi >&wi.deplog &
 
 wait

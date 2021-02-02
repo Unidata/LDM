@@ -1,5 +1,5 @@
 6.13.14.12
-    Multicase:
+    Multicast:
         * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
           macro
 
@@ -8,6 +8,7 @@
             * scan: Moved coverity-scan before clang-scan
             * clang-scan: Replaced "--view" with printing of URL so that ^C
               doesn't stop "touch $@"
+        * deployAll(1): Added version argument
 
 6.13.14.11      2021-01-28T10:18:40-0700
     Misc:
