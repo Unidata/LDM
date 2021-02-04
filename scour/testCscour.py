@@ -27,13 +27,19 @@
 import os
 from os import path
 from pathlib import Path
-
+import time
 import subprocess
 from subprocess import PIPE
 import sys
 import errno
 import shutil
 
+ASSERT_FILE_DELETED	="Expect file to be deleted"
+ASSERT_DIR_DELETED	="Expect directory to be deleted"
+ASSERT_DIR_LINK_NOT_DELETED	="Expect directory and symlink NOT be deleted"
+ASSERT_FILE_LINK_DELETED	="Expect file and its symlink be deleted"
+ASSERT_SUCCESS		="SUCCESS"
+ASSERT_FAIL			="FAIL"
 
 class CommonFileSystem:
 
@@ -115,32 +121,68 @@ class CommonFileSystem:
 	def getMTime(aPath):
 		mtime = Path(aPath).stat().st_mtime
 
-		print(f"\t{aPath} - mtime: \t{int(mtime)}")
+		print(f"\tCurrent mtime: \t{CommonFileSystem.convertEpochToHumanDate(mtime)} - ({int(mtime)}) for {aPath}")
+		
 		return int(mtime) 
 
-	def changeMTime(precipitation, secondsIncrement):
-		mtime = Path(precipitation).stat().st_mtime
+
+	def changeMTime(aPath, secondsIncrement):
+		mtime = Path(aPath).stat().st_mtime
 
 		#with open(precipitation, 'wt') as f: pass
-		result = os.stat(Path(precipitation))
+		result = os.stat(Path(aPath))
 
 		# change mtime:
-		os.utime(precipitation, (result.st_atime, result.st_mtime + secondsIncrement))
-		result = os.stat(precipitation)
-		print(f"{precipitation} - Changed mtime:\t{int(result.st_mtime)}")
+		currentTimeEpoch = int(time.time())
+		negativeNewTimeEpoch = currentTimeEpoch - secondsIncrement
+		os.utime(aPath, (negativeNewTimeEpoch, negativeNewTimeEpoch))
+#		os.utime(aPath, (result.st_atime + secondsIncrement, result.st_mtime + secondsIncrement))
+		result = os.stat(aPath)
+		print(f"\tNew mtime: \t{CommonFileSystem.convertEpochToHumanDate(int(result.st_mtime))} - ({int(result.st_mtime)}) for {aPath}")
+		
+
 
 		return int(result.st_mtime)
 		
+
+	def convertEpochToHumanDate(epochTime):
+
+		
+		mtime = time.gmtime(epochTime)
+		#time.struct_time(tm_year=2012, tm_mon=8, tm_mday=28, tm_hour=0, tm_min=45, tm_sec=17, tm_wday=1, tm_yday=241, tm_isdst=0)  
+
+		humanTime = time.strftime('%m/%d/%Y %H:%M:%S',  time.gmtime(epochTime))
+		# '08/28/2012 00:45:17'
+
+		return humanTime
+
+
+
 	def executeCscour(deleteFlag, ingestFile):
-		if deleteFlag == "":
-			result = subprocess.run(
-			    ["./Cscour", "-v",  ingestFile], stderr=PIPE, stdout=PIPE)
-		else:
-			result = subprocess.run(
+		if deleteFlag == "-d":
+			process = subprocess.Popen(
 			    ["./Cscour", "-v", deleteFlag,  ingestFile], stderr=PIPE, stdout=PIPE)
+		else:
+			process = subprocess.run(
+			    ["./Cscour", "-v",  ingestFile], stderr=PIPE, stdout=PIPE)
+		out, err = process.communicate()
+
+		f = open("/tmp/scour_log.txt", "w+")
+		f.write(CommonFileSystem.unwrapIt(out))
+		f.close()
+
+		print(CommonFileSystem.unwrapIt(out))
+		
+
+	def unwrapIt(text):
+		s=""
+		for i in text:
+			#if chr(i) == '\n': continue
 			
-		print("\nstdout:\n", result.stdout)
-		print("\nstderr:\n", result.stderr)
+			s+= chr(i)
+		
+		return s
+		
 
 
 # Scenario: 
@@ -154,7 +196,7 @@ class CommonFileSystem:
 
 class SymlinkDeletion:	
 
-	fileList=[	"~/vesuvius/.scour$*.foo", 
+	fileList=[	"~/vesuvius/.scour$*.txt", 
 				"~/vesuvius/precipitation.foo",
 				"~/vesuvius/precipitation.txt",
 				"~/etna/precipitation.txt",
@@ -164,9 +206,11 @@ class SymlinkDeletion:
 	]
 	def __init__(self):
 		
-		self.ingestFile = "/tmp/scourTest.conf"
-		#self.entries 	= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
-		self.entries 	= "~/vesuvius		2	*.txt"
+		self.ingestFile 	= "/tmp/scourTest.conf"
+		#self.entries 		= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
+		self.entries 		= "~/vesuvius		2	*.txt"
+		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
+
 		# a dict has .items(). .keys(), .values()
 		self.fileToSymlinkDict={
 				"~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
@@ -188,28 +232,52 @@ class SymlinkDeletion:
 
 	def createSymlinks(self):
 
-		print(f"Scour entries: \n{self.entries}\n")
+		print(f"\nScour config file entrie(s): \n{self.entries}")
+
+
+		print(f"\nCreate symlink(s): ")
 
 		for kTarget, vLink  in self.fileToSymlinkDict.items():
 			expandedTarget =  os.path.expanduser(kTarget)
 			expandedLink =  os.path.expanduser(vLink)
 
-			print(f"\t{expandedLink} --> {expandedTarget}")
+			print(f"\t{expandedLink} \t--> {expandedTarget}")
 			if not os.path.exists(expandedLink):
 				os.symlink(expandedTarget, expandedLink)
 			
-			#if os.path.isdir(expandedTarget): 
-			#	continue
-			
-			print("\n\n")
-			CommonFileSystem.getMTime(expandedTarget)
-			CommonFileSystem.changeMTime(expandedTarget, 100)
-			CommonFileSystem.getMTime(expandedTarget)
-			print("\n\n")
+		print("\n")
 
-	def markEligibleForDeletion(self, YES_NO):
+
+	def markEligibleForDeletion(self, daysOldInSecs):
+
 		# Set mtime to appropriate value to have file deleted
-		pass
+		# for kTarget, vLink  in self.fileToSymlinkDict.items():
+		# 	expandedTarget =  os.path.expanduser(kTarget)
+		# 	expandedLink =  os.path.expanduser(vLink)
+		# 	CommonFileSystem.changeMTime(expandedTarget, daysOldInSecs)
+
+		# make .scour$*.txt NEWER than precipitation.txt
+		# Expect precipitation.txt to be deleted.
+		
+	#	scourFile=os.path.expanduser("~/vesuvius/.scour$*.txt")
+	#	CommonFileSystem.changeMTime(scourFile, daysOldInSecs)
+
+
+		# make precipitation.txt OLDER than 2days +50secs
+		# Expect precipitation.txt to be deleted.
+		aFile=os.path.expanduser("~/vesuvius/precipitation.txt")
+		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
+
+
+		aFile=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
+
+
+		# make precipitation.txt OLDER than 2days +50secs
+		# Expect precipitation.txt to be deleted.
+		aFile=os.path.expanduser("~/etna/precipitation.txt")
+		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
+
 
 
 	def createFiles(self):
@@ -220,7 +288,7 @@ class SymlinkDeletion:
 	def runScenario(self, deleteFlag):
 		self.createFiles()
 		self.createSymlinks()
-		self.markEligibleForDeletion("YES")
+		self.markEligibleForDeletion(self.daysOldInSecs)
 		
 		print(f"\n\tExecuting Scour...\n")
 		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
@@ -231,29 +299,72 @@ class SymlinkDeletion:
 
 	def assertSymlink(self):
 		
-		self.fileToSymlinkDict={
-				"~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
-				"~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
-			}
+		# Files:
+		print(f"\nFILES: --------------------------------------")
+		aPath=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
+
+		aPath=os.path.expanduser("~/vesuvius/precipitation.txt")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 
 
+		aPath=os.path.expanduser("~/etna/precipitation.txt")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 
-		for kTarget, vLink  in self.fileToSymlinkDict.items():
-			expandedTarget =  os.path.expanduser(kTarget)
-			expandedLink =  os.path.expanduser(vLink)
+		# Directories
+		print(f"\nDIRECTORIES: --------------------------------------")
 
-			print(f"\t{expandedLink} --> {expandedTarget}")
-			if os.path.exists(expandedTarget) and os.path.isdir(expandedTarget): 
-				print(f"{expandedTarget}: \tExpected directory NOT DELETED. \tOK")
-				continue
-			#  /home/miles/vesuvius/sl_etna_alt_dir --> /home/miles/etna/alt_dir
-			if not os.path.exists(expandedTarget):
-				print(f"{expandedTarget}: \tExpected file DELETED. \tOK")
-				continue
-			else:
-				print(f"{expandedTarget}: \tExpected file DELETED. \tNot OK")
+
+		# Symlinks
+		
+				# "~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
+				# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
+		print(f"\nSYMLINKs: --------------------------------------")
+		kTarget	= "~/etna/precipitation.txt"
+		vLink 	= "~/vesuvius/sl_etna_file"
+		expandedTarget =  os.path.expanduser(kTarget)
+		expandedLink =  os.path.expanduser(vLink)
+
+
+		print(f"\t{expandedLink} --> {expandedTarget}")
+		if 	not os.path.exists(expandedTarget)	\
+			and not os.path.islink(expandedLink):
+			
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_LINK_DELETED}: {expandedLink}")			
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {expandedTarget}")
+		else:
+			if os.path.exists(expandedTarget)	\
+				or os.path.islink(expandedLink):
+					
+				print(f"\n\t{ASSERT_FAIL}: \tUn-Expected SymLink behavior! ({expandedTarget} - {expandedLink})  ")
 				
+
+
+		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
+		kTarget	= "~/etna/alt_dir"
+		vLink 	= "~/vesuvius/sl_etna_alt_dir"
+		expandedTarget =  os.path.expanduser(kTarget)
+		expandedLink =  os.path.expanduser(vLink)
+
+		print(f"\t{expandedLink} --> {expandedTarget}")
+		# Do not delete directory and its symlink
+		if 	os.path.exists(expandedTarget) 		\
+			and os.path.isdir(expandedTarget) 	\
+			and os.path.exists(expandedLink) 	\
+			and os.path.islink(expandedLink): 
+
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_LINK_NOT_DELETED}: {expandedTarget}")				
 	
+
 
 
 
@@ -300,16 +411,6 @@ class EmptyDirectoriesDeletion:
 		return false
 
 
-	def markEligibleForDeletion(self, YES_NO):
-		# Set mtime to appropriate value to have file deleted
-
-		for directory in CommonFileSystem.dirList:
-			
-			expandedDir =  os.path.expanduser(directory)
-			if os.path.exists(expandedDir):
-				print(f"\t{expandedDir}")
-
-
 	def runScenario(self, deleteFlag):
 
 		self.createFiles()
@@ -320,6 +421,8 @@ class EmptyDirectoriesDeletion:
 		
 		print(f"\n\tRunning assertions...\n")
 		self.assertSymlink()
+
+
 
 	def createFiles(self):
 
@@ -347,8 +450,8 @@ def main():
 		
 
 		print("\n\t========= EmptyDirectories Deletion scenario ================\n")
-		ed = EmptyDirectoriesDeletion()
-		ed.runScenario("-d")
+		#ed = EmptyDirectoriesDeletion()
+		#ed.runScenario("-d")
 		
 
 

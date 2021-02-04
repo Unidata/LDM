@@ -1,6 +1,6 @@
 /**
- * This file is the C version of the program (header) of the Shell script scour 
- * in the Unidata LDM package.
+ * This file declares the API for mapping from unit systems to their associated
+ * pointers for version 2 of the Unidata UDUNITS package.
  *
  *  @file:  Cscour.h
  * @author: Mustapha Iles
@@ -31,7 +31,7 @@
 
 void*	scourFilesAndDirsForThisPath(void* arg);
 int     isOlderThan(int, long);
-int     isDirectoryEmpty(char*, char *);
+int     isDirectoryEmpty(char*);
 int     isRootPath(char *);
 int     isAbsolutePath(char *);
 
@@ -41,10 +41,7 @@ int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
 void	multiThreadedScour(IngestEntry_t *, int);
-int 	scourFilesAndDirs(char *,  int, char *, int, char *, char *, int); 
+int 	scourFilesAndDirs(char *,  int, char *, int, char *, int); 
 int 	checkGlobPatternMatch(char *, char *);
 void	callReadLink(char *, char *);
-void	buildDotScourFilename(char *, char *);
-int 	createScourFile(char *, char *);
-int 	dotScourFileExists(char *, char *);
 int 	epochOfLastModified(char *, char *);

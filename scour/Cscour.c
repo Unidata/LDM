@@ -1,6 +1,6 @@
 /**
- * This file is the C version program of the Shell script scour 
- * in the Unidata LDM package.
+ * This file declares the API for mapping from unit systems to their associated
+ * pointers for version 2 of the Unidata UDUNITS package.
  *
  *  @file:  Cscour.c
  * @author: Mustapha Iles
@@ -64,6 +64,7 @@ typedef struct config_items_args {
 int verbose=0;
 char *ingestFilename;
 
+
 int main(int argc, char *argv[])
 {
     
@@ -122,7 +123,7 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
             tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
 
         strcpy(items->dir,      tmp->dir);
-        items->daysOldInEpoch,  tmp->daysOldInEpoch;
+        items->daysOldInEpoch =  tmp->daysOldInEpoch;
         strcpy(items->daysOld,  tmp->daysOld);
         strcpy(items->pattern,  tmp->pattern);     
         items->deleteDirsFlag = deleteDirsFlag;     // delete or not delete empty directories
@@ -167,17 +168,14 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
     // free memory of the struct that was allocated in the calling function: multiThreadedScour()
     free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
 
-    char dotScourFilename[PATH_MAX];
-    buildDotScourFilename(pattern, dotScourFilename);
-
     // scour candidate files and directories under 'path' - recursively
     // assume that this first entry directory is NOT a synbolic link
     // delete empty directories if delete option (-d) is set
     scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern, 
-                        deleteDirOrNot, daysOld, dotScourFilename, IS_NOT_DIRECTORY_SYMLINK); 
+                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK); 
     
     // after bubbling up , remove directory if empty and if delete option is set
-    if( isDirectoryEmpty(dirPath, dotScourFilename) && deleteDirOrNot)
+    if( isDirectoryEmpty(dirPath) && deleteDirOrNot)
     {
         // .scour$pattern is removed too
         remove(dirPath);
@@ -192,8 +190,9 @@ void* scourFilesAndDirsForThisPath(void *oneItemStruct)
 // This is the recursive function to traverse the directory tree, depth-first
 int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, 
                         char *pattern, int deleteDirsFlag, 
-                        char *daysOld, char *dotScourFilename, int symlinkFlag) 
+                        char *daysOld, int symlinkFlag) 
 {
+    
     struct dirent *dp;
     
     DIR *dir = opendir(basePath);
@@ -204,12 +203,6 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
                 *basePath, errno, strerror(errno));
         return -1;
     }
-
-    int scourFilenameExistsFlag = dotScourFileExists(basePath, dotScourFilename);
-    int scourFileEpoch = 0;
-
-    if(scourFilenameExistsFlag) 
-        scourFileEpoch = epochOfLastModified(basePath, dotScourFilename);
 
     int dfd = dirfd(dir);
      
@@ -240,18 +233,18 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
             verbose && printf("\n(d) %s\n", dp->d_name);
             
             // depth-first traversal
-            scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld, dotScourFilename, symlinkFlag);
+            scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld, symlinkFlag);
 
             
             // Remove if empty and not symlinked
-            if( isDirectoryEmpty(path, dotScourFilename) && !symlinkFlag && deleteDirsFlag)
+            if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {
 
         // ===========================  TO-DO:  remove dangling REG file Symlinks HERE ! ===============================
                                 
                 verbose && printf("\tDeleting this (empty) directory %s if older than %s (days[-HHMMSS]) (epoch: %d)\n\n", 
                                 path, daysOld, daysOldInEpoch);
-                if( isThisOlderThanThat( daysOldInEpoch,  currentEntryEpoch) )
+                if( isThisOlderThanThat( currentEntryEpoch, daysOldInEpoch) )
                 {
                     if(remove(path))
                     {
@@ -266,32 +259,14 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
                         path, daysOld);
                 }
 
-            } else
-            {
-                verbose && printf("Directory not empty or -d option not provided: %s\n\n", path);
+            } 
 
-                if(!scourFilenameExistsFlag) {
-                    // create it if not exist
-                    verbose && printf("Creating .scour file: %s\n", dotScourFilename);
-                    createScourFile(basePath, dotScourFilename);
-                }
-                else
-                {
-                    // .scour exists: touch it!
-                    verbose && printf("Touching .scour file: %s\n", dotScourFilename);
-                    touchScourFile(basePath, dotScourFilename);
-                }
-            }
             break;
 
         case S_IFREG :
-         
-            if(isScourFile(dp->d_name, dotScourFilename)) 
-            {
-                verbose && printf("\n(-) .scour file \"%s\" is skipped.\n", path);
-                continue;
-            }
-         
+
+            verbose && printf("\n(r) %s\n", path);
+                  
             // Only examine pattern-matching files and non-.scour files 
             // fnmatch returns 0 if match found
             if( fnmatch(pattern, dp->d_name, FNM_PATHNAME)  )
@@ -299,50 +274,17 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
                 verbose && printf("\t(-) File \"%s\" does NOT match pattern: %s\n",  dp->d_name, pattern);   
                 continue;   
             }
-
             verbose && printf("\t(+) File \"%s\" matches pattern: %s\n",  dp->d_name, pattern);
 
-            // 1. if .scour file exists AND file is OLDER than .scour, skip current file: continue
-            if(scourFilenameExistsFlag && isThisOlderThanThat(currentEntryEpoch, scourFileEpoch) )
+            if ( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) )
             {
-                // log a message
-                verbose && printf("\n(-) file \"%s\" is older than .scour file \"%s\". Skipped.\n", path);   
+                removeFile(path, daysOld);
                 continue;
-            }
-
-            // 2. if .scour file DOES not exist OR .scour exists but current file is NEWER 
-            // than .scour, delete current file. 
-            if( !scourFilenameExistsFlag || 
-                (scourFilenameExistsFlag &&  isThisOlderThanThat( scourFileEpoch, currentEntryEpoch) ))
-            {
-                verbose && printf("\n(-) file \"%s\" is NEWER than .scour file \"%s\". \
-                                \n\tDelete it if OLDER than daysOld.\n", path);   
+            }    
                 
-                // The smaller the epoch time the older the file
-                if( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) ) 
-                {
-                    // current file is OLDER than daysOld
-                    if( remove(path) == 0) 
-                    {
-                        // log_info("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
-                        verbose && printf("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", 
-                                        path, daysOld);
-                    }
-                    else 
-                    {
-                        verbose && fprintf(stderr, "remove(\"%s\") failed: %s\n",
-                            path, strerror(errno));
-                        break;
-                    }                
-                }
-                else
-                {
-                    verbose && printf("\t(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...\n", 
-                        path, daysOld);
-                }
-            } 
-
-            verbose && printf("\n(r) %s\n", path);
+            verbose && printf("\t(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...\n", 
+                        path, daysOld);                        
+    
             break;
 
         case S_IFLNK:
@@ -354,9 +296,9 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
 
             if(isSymlinkDirectory(path))
             {
-                verbose && printf("\t(d) Following symlink: %s\n", symlinkedEntry);
+                verbose && printf("\t(d) Following symlink: %s (Will not be removed.)\n", symlinkedEntry);
                 scourFilesAndDirs(symlinkedEntry, daysOldInEpoch, pattern, 
-                                    deleteDirsFlag, daysOld, dotScourFilename, IS_DIRECTORY_SYMLINK);
+                                    deleteDirsFlag, daysOld, IS_DIRECTORY_SYMLINK);
 
                 // Directories of a SYMLINK will not get removed.
             }
@@ -365,34 +307,35 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
                 verbose && printf("\n\t(-sl) %s is a linked file. Remove if OLDER than %s daysOld (days[-HHMMSS])\n", 
                             symlinkedEntry, daysOld);
                 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
-                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, 
-                                    currentEntryEpoch, deleteDirsFlag, daysOld);
+                // however, currentEntryEpoch should NOT be that of the symlink but that of the file pointed to by the slink
+                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, deleteDirsFlag, daysOld);
             } 
             break;
 
         default: 
 
-            verbose && printf("\n(?) NOT a regular file, nor a symlink: \"%s\"\n", 
-                dp->d_name);
+            verbose && printf("\n(?) NOT a regular file, nor a symlink: \"%s\"\n", dp->d_name);
             
             break;
         }
     }
     closedir(dir);
 }
-
-void buildDotScourFilename(char *pattern, char *dotScourPatternFilename)
-{
-    char dotScourArray[PATH_MAX];
-    snprintf(dotScourArray, sizeof(dotScourArray), ".scour$%s", pattern);
-    strcpy(dotScourPatternFilename, dotScourArray);
-}
       
-int isScourFile(char *currentFilename, char *dotScourPattern)
+int removeFile(char *path, char * daysOld)
 {
-    return !strcmp(currentFilename, dotScourPattern);
+    // current file is OLDER than daysOld
+    if( remove(path) == 0) 
+    {
+        // log_info("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
+        verbose && printf("\t(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!\n", 
+                        path, daysOld);
+    }
+    else 
+    {
+        verbose && printf("removeFile(\"%s\") failed.\n", path);
+    } 
 }
-
 void getFQFilename(char *dirPath, char *filename, char *FQFilename)
 {
     char fullFilename[PATH_MAX];
@@ -404,21 +347,6 @@ void getFQFilename(char *dirPath, char *filename, char *FQFilename)
 
     strncpy(FQFilename, fullFilename, strlen(fullFilename));
 
-}
-
-int dotScourFileExists(char *dirPath, char *dotScourFilename)
-{
-    char FQScourFilename[PATH_MAX];
-    getFQFilename(dirPath, dotScourFilename, FQScourFilename);
-    
-    struct stat sb;
-    if (stat(FQScourFilename, &sb) == -1) 
-    {
-        verbose && printf("\t.scour file (\"%s\") does not exist.\n", 
-                    FQScourFilename);
-        return 0;
-    }
-    return 1;
 }
 
 int epochOfLastModified(char *dirPath, char *aFile)
@@ -437,38 +365,30 @@ int epochOfLastModified(char *dirPath, char *aFile)
     
 }
 
-int createScourFile(char *path, char *dotScourFilename)
-{
-    char dotScourFileToCreate[PATH_MAX];
-    getFQFilename(path, dotScourFilename, dotScourFileToCreate);
-    FILE * fp;
-    fp = fopen(dotScourFileToCreate, "w");
-
-    if(fp == NULL)
-    {
-        verbose && printf("Unable to create file.\n");
-        return 0;
-    }
-    fclose(fp);
-    return 1;
-}
 
 // The lower the epoch time the older the file
 int isThisOlderThanThat(int thisFileEpoch, int thatFileEpoch)
-{
+{   
     return (thisFileEpoch <= thatFileEpoch);
 }
 
 
 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
 int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoch, 
-                    int currentEntryEpoch, int deleteDirsFlag, char *daysOld)
+                     int deleteDirsFlag, char *daysOld)
 {
     char symlinkedFileToRemove[PATH_MAX];
-    getFQFilename(symlinkPath, symlinkedEntry, symlinkedFileToRemove);
     
-    if( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) ) {
-        remove(symlinkedFileToRemove);
+    struct stat sb;
+    if (stat(symlinkedEntry, &sb) == -1) 
+    {
+        printf("stat(\"%s\") failed.\n", symlinkedEntry);
+        return -1;
+    }
+
+    int targetedFileEpoch = sb.st_mtime;
+    if( isThisOlderThanThat(targetedFileEpoch, daysOldInEpoch) ) {
+        remove(symlinkedEntry);
         // and remove the symlink too:
         remove(symlinkPath);
     }
@@ -476,36 +396,10 @@ int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoc
 }
 
 
-int touchScourFile(char *path, char *dotScourFilename)
-{
-    char dotScourFileToTouch[PATH_MAX];
-    getFQFilename(path, dotScourFilename, dotScourFileToTouch);
-
-    time_t mtime;
-    struct utimbuf new_times;
-
-    struct stat sb;
-    if (stat(dotScourFileToTouch, &sb) == -1) 
-    {
-        fprintf(stderr, "stat(\"%s\") failed: %s\n", 
-            dotScourFileToTouch, strerror(errno));
-        return -1;
-    }
-    // keep atime unchanged
-    new_times.actime = sb.st_atime;   
-    // set mtime to current time 
-    new_times.modtime = time(NULL);   
-    utime(dotScourFileToTouch, &new_times);
-
-    return 0;
-}
-
-
 // check if directory is empty except for ,scour file. 
 // If .scour file there remove it.
-int isDirectoryEmpty(char* dirname, char *dotScourFilename)
+int isDirectoryEmpty(char* dirname)
 {
-    int scourFileExists = 0;
     int n=0;
     struct dirent *dp;
     
@@ -513,25 +407,10 @@ int isDirectoryEmpty(char* dirname, char *dotScourFilename)
     while((dp = readdir(dir))!=NULL && n<4) 
     {
         if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) continue;
-        if( strcmp(dp->d_name, dotScourFilename) == 0)
-        {
-            scourFileExists = 1;
-            continue;
-        }
-        // if current file is a dangling SYMLINK to t a file: remove the SYMLINK and continue;
-        //if()
-
         n++;
     }
     closedir(dir);
 
-    if( n == 0 && scourFileExists == 1 )
-    {
-        char dotScourFileToDelete[PATH_MAX];
-        getFQFilename(dirname, dotScourFilename, dotScourFileToDelete);
-        // remove scourFile
-        remove(dotScourFileToDelete);
-    }
     return n == 0? 1 : 0;
 }
 
