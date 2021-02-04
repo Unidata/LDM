@@ -581,6 +581,7 @@
 010 001 001 000 Current Speed                    m s**-1              SPC              0  -9999.00
 010 001 002 000 U-Component of Current           m s**-1              UOGRD            0  -9999.00
 010 001 003 000 V-Component of Current           m s**-1              VOGRD            0  -9999.00
+010 001 004 000 Rip Current Occurrence Prob.     %                    RIPCOP           0  -9999.00
 !
 010 001 192 000 Ocean Mixed Layer U Velocity     m s**-1              OLMU             0  -9999.00
 010 001 193 000 Ocean Mixed Layer V Velocity     m s**-1              OLMV             0  -9999.00
@@ -615,6 +616,10 @@
 010 003 201 000 Kinetic Energy                   J kg-1               KENG             0  -9999.00
 010 003 202 000 Salt Flux                        kg m-2 s-1           SLTFL            0  -9999.00
 010 003 204 000 Freezing Spray                   -                    FRZSPR           0  -9999.00
+010 003 205 000 Total Water Level (everything)   m                    TWLWAV           0  -9999.00
+010 003 207 000 Mean Incr. Water Level (Waves)   m                    SETUP            0  -9999.00
+010 003 208 000 Incr. in Water Level from Waves  m                    SWASH            0  -9999.00
+010 003 252 000 Erosion Occurrence Probability   %                    EROSNP           0  -9999.00
 010 003 242 000 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 242 010 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 243 000 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
