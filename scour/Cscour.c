@@ -361,6 +361,7 @@ int epochOfLastModified(char *dirPath, char *aFile)
             FQFilename, strerror(errno));
         return -1;
     }
+
     return sb.st_mtime;
     
 }

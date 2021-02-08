@@ -134,7 +134,7 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
     int entryCounter = 0;
 
 	char *line = NULL;
-	char dirName[DIR_SIZE] = "";
+	char dirName[PATH_MAX] = "";
 	char pattern[PATTERN_SIZE] = "";
 	char daysOld[DAYS_OLD_SIZE] = "";
 	char delim[] = " \t\n"; // space, tab and new line
@@ -155,6 +155,12 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 		char *ptr = strtok(line, delim);	
 		while(ptr != NULL)
 		{
+
+			if(strlen(ptr) > PATH_MAX) {
+				verbose && printf("ERROR: %s is TOO long (%zu) !\n", ptr, strlen(ptr));	
+				ptr="";
+			}
+
 			switch(itemsCounted)
 			{
 				case 0: strcpy(dirName, ptr);
@@ -172,12 +178,12 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 		}
      
      	// validate dirName path
-     	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, 
-     			notAllowedCounter) )
-     			{
-     				verbose && printf("\t(-) Directory '%s' does not exist (or could not be opened). Skipping...\n\n", dirName);
-     				continue;
-     			} 
+     	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, notAllowedCounter) )
+		{
+			verbose && printf("\t(-) Directory '%s' does not exist (or is invalid.) Skipping...\n\n", 
+				dirName);
+			continue;
+		} 
 
 		if(itemsCounted == 2) newEntryNode(dirName, daysOld, ALL_FILES);
 		if(itemsCounted == 3) newEntryNode(dirName, daysOld, pattern);
@@ -197,28 +203,26 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE], 
 		int notAllowedCounter) 
 {
+
+	verbose && printf("\tparser(): validating directory: %s\n", dirName);
+
 	// 1. check if dirName is in the list. If not continue the vetting process
 	if( isNotAllowed(dirName, list, notAllowedCounter) ) return -1;
 
-
 	// 2. check if it starts with tilda and vet the expanded path
-	//	  return the exanpded path for subsequent vetting below
-	char pathName[80];
-	verbose && printf("\tparser(): validating directory: %s\n", dirName);
-
+	//	  return the expanded path for subsequent vetting below
+	char pathName[PATH_MAX];
 	if( (startsWithTilda(dirName, pathName)) == NULL ) return -1;
 	else {
 		strcpy(dirName, pathName);
 		verbose && printf("\tparser(): tilda expanded directory:'%s'\n", dirName);
 	}
-	
 
 	// 3. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	if( !isSameAsLoginDirectory(dirName) ) return -1;
 
-// check that the directory is a valid one
+	// 4. check that the directory is a valid one
     if( notExistAndAccessible(dirName) ) return -1;
-
 
 	return 0;
 }
@@ -241,11 +245,14 @@ int notExistAndAccessible(char *dirPath)
 
 int isNotAllowed(char * dirName, char (*list)[STRING_SIZE], int notAllowedCounter)
 {
+	// this can happen if parser found a too long dir path: set it to empty string
+	if(dirName == NULL || strlen(dirName) == 0) return -1; 
+
 	int i;
 	for(i=0; i<notAllowedCounter; i++) {
 		if( strcmp(dirName, list[i]) == 0) {
 			verbose && printf("isNotAllowed: path %s is NOT allowed!\n", dirName);
-			return 1;
+			return -1;
 		}
 	}
 	return 0;
@@ -317,12 +324,6 @@ int traverseIngestList(IngestEntry_t *listhead)
 
 int nowInEpoch()
 {
-	time_t t = time(NULL);
-	struct tm tm = *localtime(&t);
-
-	//verbose && printf("\n\tNow: %d-%02d-%02d %02d:%02d:%02d\n", 
-	//		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-
     time_t today, todayEpoch;
 	time(&today);
 	struct tm *tm_today = localtime(&today);
@@ -548,7 +549,6 @@ char *substring(char *string, int position, int length)
 
 char *startsWithTilda(char *dirPath, char *expandedDirName)
 {
-
     // case ~ldm, expands to ldm's $HOME/ but NOT ALLOWED
     // case ~/ldm, return ldm's $HOME/ldm
     // reject ~ and ~/  only
@@ -557,13 +557,13 @@ char *startsWithTilda(char *dirPath, char *expandedDirName)
 	// "~"					// NOT 	ALLOWED
 	// "~ldm"				// NOT 	ALLOWED
 	// "~/"					// NOT 	ALLOWED
-	// "~miles/titi/tata"	//		ALLOWED
-	// "~/tata"				//		ALLOWED
-	// "~ldm/toto"			//  	ALLOWED if ldm is a user
+	// "~miles/etna/hight"	//		ALLOWED
+	// "~/vesuvius"			//		ALLOWED
+	// "~ldm/precip"		//  	ALLOWED if ldm is a user
 
-	char subDirPath[80];
+	char subDirPath[PATH_MAX];
 
-    int dirPathLength = strlen(dirPath);
+    int dirPathLength = strlen(dirPath);	// length already checked in parser
 
     char *tildaPath = strchr(dirPath, '~');
     int tildaPosition = tildaPath == NULL ? -1 : tildaPath - dirPath;
@@ -594,13 +594,17 @@ char *startsWithTilda(char *dirPath, char *expandedDirName)
  	if(tildaRootPosition > 1 && dirPathLength > tildaRootPosition) 
  	{		
 	 	// Expand ldm to LDM_HOME
- 		char *providedLgn = substring(dirPath, 2, tildaRootPosition - 1) ;
+ 		char *providedLgn = substring(dirPath, 2, tildaRootPosition - 1);
  		char *currentHomeDir = loginHomeDir(providedLgn);
+
  		if(currentHomeDir == NULL) 
  		{
-	        //verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
+	        verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
  			return NULL;
  		}
+
+ 		// Check the length of the expanded login: bail out if new path is too long
+ 		if(strlen(currentHomeDir) + dirPathLength > PATH_MAX) return NULL;
  		
  		strcpy(subDirPath, currentHomeDir);
  		strcat(subDirPath, dirPath + tildaRootPosition);

@@ -50,7 +50,7 @@
 #
 typedef struct IngestEntry {
 
-	char dir[DIR_SIZE];
+	char dir[PATH_MAX];
 	int  daysOldInEpoch;	
 	char daysOld[DAYS_OLD_SIZE];
 	char pattern[PATTERN_SIZE];	
