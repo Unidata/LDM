@@ -619,7 +619,6 @@
 010 003 205 000 Total Water Level (everything)   m                    TWLWAV           0  -9999.00
 010 003 207 000 Mean Incr. Water Level (Waves)   m                    SETUP            0  -9999.00
 010 003 208 000 Incr. in Water Level from Waves  m                    SWASH            0  -9999.00
-010 003 252 000 Erosion Occurrence Probability   %                    EROSNP           0  -9999.00
 010 003 242 000 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 242 010 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 243 000 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
@@ -637,6 +636,7 @@
 010 003 250 008 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
 010 003 250 009 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
 010 003 251 000 Tide                             m                    TIDE             0  -9999.00
+010 003 252 000 Erosion Occurrence Probability   %                    EROSNP           0  -9999.00
 
 !
 ! Category 4 - Sub-Surface properties
