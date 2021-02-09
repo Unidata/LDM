@@ -2,9 +2,10 @@
 
  #
  #
- # This file helps testing the C-based scour program - Cscour(1) - of the Unidata LDM package.
+ # This file helps testing the C-based scour program - Cscour(1) - of 
+ # the Unidata LDM package.
  #
- #  @file:  testCscour.py
+ # @file:  testCscour.py
  # @author: Mustapha Iles
  #
  #    Copyright 2021 University Corporation for Atmospheric Research
@@ -139,8 +140,6 @@ class CommonFileSystem:
 #		os.utime(aPath, (result.st_atime + secondsIncrement, result.st_mtime + secondsIncrement))
 		result = os.stat(aPath)
 		print(f"\tNew mtime: \t{CommonFileSystem.convertEpochToHumanDate(int(result.st_mtime))} - ({int(result.st_mtime)}) for {aPath}")
-		
-
 
 		return int(result.st_mtime)
 		
@@ -273,7 +272,7 @@ class SymlinkDeletion:
 		CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
 
 
-		# make precipitation.txt OLDER than 2days +50secs
+		# make precipitation.txt OLDER than 4 days +50secs
 		# Expect precipitation.txt to be deleted.
 		aFile=os.path.expanduser("~/etna/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
@@ -320,14 +319,11 @@ class SymlinkDeletion:
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 
-		# Directories
-		print(f"\nDIRECTORIES: --------------------------------------")
-
 
 		# Symlinks
 		
-				# "~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
-				# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
+		# "~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
+		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
 		print(f"\nSYMLINKs: --------------------------------------")
 		kTarget	= "~/etna/precipitation.txt"
 		vLink 	= "~/vesuvius/sl_etna_file"
@@ -348,7 +344,6 @@ class SymlinkDeletion:
 				print(f"\n\t{ASSERT_FAIL}: \tUn-Expected SymLink behavior! ({expandedTarget} - {expandedLink})  ")
 				
 
-
 		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
 		kTarget	= "~/etna/alt_dir"
 		vLink 	= "~/vesuvius/sl_etna_alt_dir"
@@ -366,21 +361,14 @@ class SymlinkDeletion:
 	
 
 
-
-
 # Scenario: 
 #	- Create a directory tree with files that all eligible for deletion (no symlink)
 #	- Expected: all tree gets deleted
 
 class EmptyDirectoriesDeletion:
 
-	fileList=["~/vesuvius/.scour$*.foo", 
-				"~/vesuvius/precipitation.foo",
-				"~/vesuvius/precipitation.txt",
-				"~/etna/precipitation.txt",
-				"~/etna/alt_dir/precipitation.txt",
-				"~/etna/vesuvius.foo",
-				"~/etna/.scour$*.foo"
+	fileList=["~/etna/precipitation.txt",
+				"~/etna/alt_dir/precipitation.txt"
 	]
 
 	dirList=[
@@ -393,9 +381,9 @@ class EmptyDirectoriesDeletion:
 		
 		self.ingestFile = "/tmp/scourTest.conf"
 		#self.entries 	= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
-		self.entries 	= "~/vesuvius		2	*.txt"
-		# a dict has .items(). .keys(), .values()
-		
+		self.entries 	= "~/etna		2	*.txt"
+		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
+
 		# Create the scour config file with entries 
 		# for Cscour to use as CLI argument
 		f = open(self.ingestFile, "w+")
@@ -411,49 +399,95 @@ class EmptyDirectoriesDeletion:
 		return false
 
 
-	def runScenario(self, deleteFlag):
-
-		self.createFiles()
-		self.markEligibleForDeletion("YES")
-		
-		print(f"\n\tExecuting Scour...\n")
-		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
-		
-		print(f"\n\tRunning assertions...\n")
-		self.assertSymlink()
-
-
-
 	def createFiles(self):
 
 		print("\nCreate files:")
 		CommonFileSystem.createFiles(self.fileList)
 
 
-	def assertSymlink(self):
-		pass
+	def markEligibleForDeletion(self, daysOldInSecs):
+
+		# Set mtime to appropriate value to have file(s) deleted
+		
+		# TO REMOVE:
+		# "~/etna/precipitation.txt",
+		# "~/etna/alt_dir/precipitation.txt",
+		# "~/etna",
+		# "~/etna/alt_dir"		
+
+		# make precipitation.txt OLDER than 4 days +50secs
+		# Expect precipitation.txt to be deleted.
+		aFile=os.path.expanduser("~/etna/precipitation.txt")
+		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
+
+		aFile=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
+
+
+	def runScenario(self, deleteFlag):
+		self.createFiles()
+		self.markEligibleForDeletion(self.daysOldInSecs)
+		
+		print(f"\n\tExecuting Scour...\n")
+		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
+		
+		print(f"\n\tRunning assertions...\n")
+		self.assertDirectoriesRemoved()
+
+
+	def assertDirectoriesRemoved(self):
+		
+		# Files:
+		print(f"\nFILES: --------------------------------------")
+		
+		aPath=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
+
+		aPath=os.path.expanduser("~/etna/precipitation.txt")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
+
+
+		# Directories
+		print(f"\nDIRECTORIES: --------------------------------------")
+
+		aPath=os.path.expanduser("~/etna/alt_dir")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
+
+		aPath=os.path.expanduser("~/etna")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
+
 
 def main():
 
-
+		print("\n\t========= Symlink Deletion scenario ================\n")
 		print("\nTear down directories:")
 		CommonFileSystem.removeDirectories()
-
 		print("\nCreate directories:")
 		CommonFileSystem.createDirectories()
-
-		#-----------------------------------------------#
-
-		print("\n\t========= Symlink Deletion scenario ================\n")
 		sl = SymlinkDeletion()
 		sl.runScenario("-d")
-		
 
-		print("\n\t========= EmptyDirectories Deletion scenario ================\n")
-		#ed = EmptyDirectoriesDeletion()
-		#ed.runScenario("-d")
-		
 
+		print("\n\t========== EmptyDirectories Deletion scenario =======\n")
+		print("\nTear down directories:")
+		CommonFileSystem.removeDirectories()
+		print("\nCreate directories:")
+		CommonFileSystem.createDirectories()
+		ed = EmptyDirectoriesDeletion()
+		ed.runScenario("-d")
+		
 
 if __name__ == '__main__':
 		main()

@@ -1,5 +1,8 @@
 6.13.14.7
-    Cscour(1): Created a C program to scour faster than the scour script
+    scour(1): 
+	* Cscour(1): a C program to scour faster than the scour script
+	* aSpringTree(1): builds a tree of depth and breadth for testing scour 
+	* benchMarkIt(1): script to prepare the environment for testing scour
 
 6.13.14.6	2020-11-23T10:41:39-0700
     UdpRecv.cpp:

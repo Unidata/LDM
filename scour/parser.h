@@ -1,6 +1,5 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
+ * This file parses the ingest config file for the Cscour program input
  *
  *  @file:  parser.h
  * @author: Mustapha Iles
@@ -42,7 +41,7 @@
 #define MAX_NOT_ALLOWED_DIRPATHS 100
 #define STRING_SIZE		80
 #define DAYS_OLD_SIZE	15
-#define NOT_ALLOWED_DIR_PATHS_FILE "notAllowedDirs.txt"
+#define NOT_ALLOWED_DIR_PATHS_FILE "/tmp/notAllowedDirs.txt"		// to prepend with current dir (cwd)
 
 #define OPTSTR	"dv"
 #define USAGE_FMT  "\n\tUsage: \t%s [-v] [-d] <scour_ingest_filename>\n\n"

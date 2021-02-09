@@ -1,6 +1,5 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
+ * This file parses the ingest config file for the Cscour program input
  *
  *  @file:  parser.c
  * @author: Mustapha Iles
@@ -54,6 +53,8 @@
 #include <regex.h> 
 #include <time.h>
 #include <pwd.h>
+#include <limits.h>
+
 
 #include "parser.h"
 
@@ -127,7 +128,7 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
     char rejectedDirPathsList[MAX_NOT_ALLOWED_DIRPATHS][STRING_SIZE];
 
 	int notAllowedCounter = readNotAllowedList(rejectedDirPathsList);
-	if(notAllowedCounter <= 0) return NULL;
+	//if(notAllowedCounter <= 0) return NULL;
 
     FILE *fp = NULL;	
     IngestEntry_t* node= NULL;
@@ -655,6 +656,22 @@ int xstrcmp(char *str1, char * str2)
 	return strcmp(strArray1, strArray2);
 	
 }
+
+
+int getCurrentDir(char *currentDir) {
+	char cwd[PATH_MAX];
+	if (getcwd(cwd, sizeof(cwd)) != NULL) 
+	{
+		strcpy(currentDir, cwd);
+		return 0;
+	} 
+	else 
+	{
+		perror("getcwd() error");
+		return -11;
+	}
+}
+
 /*
 	Code to read a file of NON-ALLOWED directory paths into an array
 	which is used to skip processing these directories
@@ -663,12 +680,19 @@ int xstrcmp(char *str1, char * str2)
 int readNotAllowedList(char (*list)[STRING_SIZE])
 {
     FILE *fp = NULL;
-	char *allowedDirsFilename=NOT_ALLOWED_DIR_PATHS_FILE;
+	char notAllowedDirsFilename[PATH_MAX]=NOT_ALLOWED_DIR_PATHS_FILE;
+	char currentWorkDir[PATH_MAX];
+	if( getCurrentDir(currentWorkDir) == -1)
+	{
+		fprintf(stderr, "parser::readNotAllowedList(): getcwd() failed: %s\n", strerror(errno));
+        return -1;
+	}
+	//sprintf(notAllowedDirsFilename, "%s/%s", currentWorkDir, NOT_ALLOWED_DIR_PATHS_FILE);
 
-    if((fp = fopen(allowedDirsFilename, "r")) == NULL)
+    if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
     {
         fprintf(stderr, "parser::readNotAllowedList(): fopen(\"%s\") failed: %s\n",
-            allowedDirsFilename, strerror(errno));
+            notAllowedDirsFilename, strerror(errno));
         return -1;
     }
 

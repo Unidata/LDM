@@ -6,7 +6,6 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-if $SCRIPTED_SCOUR
 # EXTRA_DIST		= scour.conf.in scour.1.in
 # BUILT_SOURCES		= scour.conf
 # dist_bin_SCRIPTS	= scour
@@ -40,11 +39,11 @@ if $SCRIPTED_SCOUR
 #
 # Process this file with automake(1) to produce file Makefile.in
 #######################################################################
-bin_PROGRAMS	= C_scour
+bin_PROGRAMS	= Cscour
 #AM_CPPFLAGS	= \
 #	            -I$(top_builddir)/log    -I$(top_srcdir)/log
 	            
-C_scour_SOURCES	= C_scour.c  parser.c
-#C_scour_LDADD	= $(top_builddir)/lib/libldm.la 
+Cscour_SOURCES	= Cscour.c  parser.c
+#_scour_LDADD	= $(top_builddir)/lib/libldm.la 
 #TAGS_FILES	= \
 #	            ../log/*.c ../log/*.h 

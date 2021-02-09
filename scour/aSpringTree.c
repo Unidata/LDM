@@ -1,3 +1,26 @@
+/**
+ * This file generates a pq-like tree used by benchMarkIt for the 
+ * Cscour program vs. scour script benchmark
+ *
+ *  @file:  aSpringTree.c
+ * @author: Mustapha Iles
+ *
+ *    Copyright 2021 University Corporation for Atmospheric Research
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -223,8 +246,8 @@ int randomFilesCreation(char *dirName, int daysOldInSecs)
           int nb, fSize;
           char filename[PATH_MAX];
 
-          char *dirNameDup = strdup(dirName);
-          char *strippedDir = replaceSlashes(dirNameDup);
+     //     char *dirNameDup = strdup(dirName);
+          char *strippedDir = "Stromboli"; //replaceSlashes(dirNameDup);
           
           for(nb=0; nb<randomNumberOfFiles(); nb++)
           {
@@ -260,6 +283,7 @@ DirectoryFile_t *mkTreeAndLeaves(char *path, int depth,
      strcat(tlmSlash, "/");
 
      for (c = 'A'; c <= 'Z'; ++c)
+     //for (c = 'A'; c <= 'B'; ++c)
      {
           // TREE LEVEL 0 (relative root)
           strcpy(listOfDirectories[i].dirName, tlmSlash);   //        tlm/      
@@ -268,7 +292,7 @@ DirectoryFile_t *mkTreeAndLeaves(char *path, int depth,
           
           if( randomFilesCreation(listOfDirectories[i].dirName, daysOldInSecs) ) continue;
 
-          
+          //if(0){
           // TREE LEVEL 1: A0, B0, etc.
           char printFormat[]="%s/%c%d";
           strcpy(str1, listOfDirectories[i].dirName);
@@ -284,6 +308,7 @@ DirectoryFile_t *mkTreeAndLeaves(char *path, int depth,
           strcpy(printFormat, "%s/%c%c%c%d");
           strcpy(str, str1);
           createDirInDepth(c, listOfDirectories, str, depth, printFormat, &i, daysOldInSecs);
+          //}
      }
      *pCounter = i;
 
