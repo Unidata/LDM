@@ -68,7 +68,6 @@ int convertDaysOldToEpoch(char *);
 char * loginHomeDir(char *);
 int isNotAllowed(char *, char (*)[STRING_SIZE], int);
 int vetThisDirectoryPath(char *, char (*)[STRING_SIZE], int); 
-char *startsWithTilda(char *, char *);
 int compareWithGetLogin(char *);
 void usage();
 

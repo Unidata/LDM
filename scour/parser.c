@@ -181,7 +181,6 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
     char rejectedDirPathsList[MAX_NOT_ALLOWED_DIRPATHS][STRING_SIZE];
 
 	int notAllowedCounter = readNotAllowedList(rejectedDirPathsList);
-	//if(notAllowedCounter <= 0) return NULL;
 
     FILE *fp = NULL;	
     IngestEntry_t* node= NULL;
@@ -232,7 +231,7 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 		}
      
      	// validate dirName path
-     	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, notAllowedCounter) )
+     	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, notAllowedCounter) == -1 )
 		{
 			verbose && printf("\t(-) Directory '%s' does not exist (or is invalid.) Skipping...\n\n", 
 				dirName);
@@ -277,6 +276,135 @@ int isSameAsLoginDirectory(char * dirName)
 	return strcmp(dirName, lgnHomeDir);
 }
 
+static
+char *substring(char *string, int position, int length)
+{
+   char *p;
+   int c;
+
+   p = malloc(length+1);
+
+   if (p == NULL)
+   {
+		fprintf(stderr, "parser(): malloc(\"%d\") failed: %s\n",
+        	length +1, strerror(errno));
+    	return NULL;
+   }
+
+   for (c = 0; c < length; c++)
+   {
+      *(p+c) = *(string+position-1);
+      string++;
+   }
+
+   *(p+c) = '\0';
+
+   return p;
+}
+
+static
+int startsWithTilda(char *dirPath, char *expandedDirName)
+{
+    // case ~ldm, expands to ldm's $HOME/ but NOT ALLOWED
+    // case ~/ldm, return ldm's $HOME/ldm
+    // reject ~ and ~/  only
+    // no regex
+
+	// "~"					// NOT 	ALLOWED
+	// "~ldm"				// NOT 	ALLOWED
+	// "~/"					// NOT 	ALLOWED
+	// "~miles/etna/hight"	//		ALLOWED
+	// "~/vesuvius"			//		ALLOWED
+	// "~ldm/precip"		//  	ALLOWED if ldm is a user
+
+	char subDirPath[PATH_MAX];
+
+    int dirPathLength = strlen(dirPath);	// length already checked in parser
+
+    char *tildaPath = strchr(dirPath, '~');
+    int tildaPosition = tildaPath == NULL ? -1 : tildaPath - dirPath;
+
+    if( tildaPosition == -1 || tildaPosition >0)
+    {
+    	strcpy(expandedDirName, dirPath);
+    	return 0; // no tilda to expand
+    }
+
+    char *tildaRootPath = strchr(dirPath, '/');
+    int tildaRootPosition = tildaRootPath == NULL ? -1 : tildaRootPath - dirPath;
+
+
+ 	// patterns that are NOT allowed:
+	//----------------------------
+
+ 	// path is ~ only
+ 	if(dirPathLength == 1) return -1;
+
+	// path is ~/   only
+ 	if(tildaRootPosition == 1 && dirPathLength == 2) return -1;
+
+ 	// path is ~ldm only
+	if(tildaRootPosition == -1 && dirPathLength > 1) return -1;
+
+
+ 	// patterns that are allowed:
+	//----------------------------
+
+ 	// path is ~ldm/titi ==> $LDM_HOME/titi
+ 	if(tildaRootPosition > 1 && dirPathLength > tildaRootPosition)
+ 	{
+	 	// Expand ldm to LDM_HOME
+ 		char *providedLgn = substring(dirPath, 2, tildaRootPosition - 1);
+ 		char *currentHomeDir = loginHomeDir(providedLgn);
+
+ 		if(currentHomeDir == NULL)
+ 		{
+	        verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
+ 			return -1;
+ 		}
+
+ 		// Check the length of the expanded login: bail out if new path is too long
+ 		if(strlen(currentHomeDir) + dirPathLength > PATH_MAX) return -1;
+
+ 		strcpy(subDirPath, currentHomeDir);
+ 		strcat(subDirPath, dirPath + tildaRootPosition);
+
+ 		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
+ 		if( tmp == NULL )
+ 		{
+	        fprintf(stderr, "startsWithTilda: malloc() failed: %s\n",  strerror(errno));
+ 			return -1;
+ 		}
+ 		strcpy(tmp, subDirPath);
+
+ 		// return this new dirPath
+ 		strcpy(expandedDirName, tmp);
+
+ 		return 0;
+	}
+
+
+ 	// path is ~/tata ==> $LOGN_HOME/tata
+	if(tildaRootPosition == 1 && dirPathLength > tildaRootPosition)
+ 	{
+ 		char *homeDir = loginHomeDir(NULL);
+ 		if(homeDir == NULL) return -1;
+
+ 		strcpy(subDirPath, homeDir);
+ 		strcat(subDirPath, dirPath + 1);
+ 		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
+
+ 		if( tmp == NULL) return -1;
+ 		strcpy(tmp, subDirPath);
+ 		// return this new dirPath
+ 		//expandedDirName = tmp;
+ 		strcpy(expandedDirName, tmp);
+ 		return 0;
+	}
+
+	return 0;
+}
+
 int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE], 
 		int notAllowedCounter) 
 {
@@ -284,15 +412,17 @@ int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE],
 	verbose && printf("\tparser(): validating directory: %s\n", dirName);
 
 	// 1. check if dirName is in the list. If not continue the vetting process
-	if( isNotAllowed(dirName, list, notAllowedCounter) ) return -1;
+	if( isNotAllowed(dirName, list, notAllowedCounter) ) return -2;
 
 	// 2. check if it starts with tilda and vet the expanded path
 	//	  return the expanded path for subsequent vetting below
 	char pathName[PATH_MAX];
-	if( (startsWithTilda(dirName, pathName)) == NULL ) return -1;
+	int tildaFlag = startsWithTilda(dirName, pathName);
+	if( tildaFlag == -1) return -1;
 	else {
 		strcpy(dirName, pathName);
 		verbose && printf("\tparser(): tilda expanded directory:'%s'\n", dirName);
+		return 0;
 	}
 
 	// 3. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
@@ -574,130 +704,6 @@ char * loginHomeDir(char *providedLgn)
     }
     free(buffer);
     return NULL;
-}
-
-char *substring(char *string, int position, int length)
-{
-   char *p;
-   int c;
- 
-   p = malloc(length+1);
-   
-   if (p == NULL)
-   {
-		fprintf(stderr, "parser(): malloc(\"%d\") failed: %s\n",
-        	length +1, strerror(errno));
-    	return NULL;
-   }
- 
-   for (c = 0; c < length; c++)
-   {
-      *(p+c) = *(string+position-1);      
-      string++;  
-   }
- 
-   *(p+c) = '\0';
- 
-   return p;
-}
-
-char *startsWithTilda(char *dirPath, char *expandedDirName)
-{
-    // case ~ldm, expands to ldm's $HOME/ but NOT ALLOWED
-    // case ~/ldm, return ldm's $HOME/ldm
-    // reject ~ and ~/  only
-    // no regex
-
-	// "~"					// NOT 	ALLOWED
-	// "~ldm"				// NOT 	ALLOWED
-	// "~/"					// NOT 	ALLOWED
-	// "~miles/etna/hight"	//		ALLOWED
-	// "~/vesuvius"			//		ALLOWED
-	// "~ldm/precip"		//  	ALLOWED if ldm is a user
-
-	char subDirPath[PATH_MAX];
-
-    int dirPathLength = strlen(dirPath);	// length already checked in parser
-
-    char *tildaPath = strchr(dirPath, '~');
-    int tildaPosition = tildaPath == NULL ? -1 : tildaPath - dirPath;
-
-    if( tildaPosition == -1 || tildaPosition >0) return NULL; // no tilda to expand
-
-    char *tildaRootPath = strchr(dirPath, '/');
-    int tildaRootPosition = tildaRootPath == NULL ? -1 : tildaRootPath - dirPath;
-
-	
- 	// patterns that are NOT allowed:
-	//----------------------------
-	
- 	// path is ~ only  
- 	if(dirPathLength == 1) return NULL;
- 
-	// path is ~/   only   	
- 	if(tildaRootPosition == 1 && dirPathLength == 2) return NULL;
-
- 	// path is ~ldm only 	
-	if(tildaRootPosition == -1 && dirPathLength > 1) return NULL; 
- 	
-
- 	// patterns that are allowed:
-	//----------------------------
-	
- 	// path is ~ldm/titi ==> $LDM_HOME/titi
- 	if(tildaRootPosition > 1 && dirPathLength > tildaRootPosition) 
- 	{		
-	 	// Expand ldm to LDM_HOME
- 		char *providedLgn = substring(dirPath, 2, tildaRootPosition - 1);
- 		char *currentHomeDir = loginHomeDir(providedLgn);
-
- 		if(currentHomeDir == NULL) 
- 		{
-	        verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
- 			return NULL;
- 		}
-
- 		// Check the length of the expanded login: bail out if new path is too long
- 		if(strlen(currentHomeDir) + dirPathLength > PATH_MAX) return NULL;
- 		
- 		strcpy(subDirPath, currentHomeDir);
- 		strcat(subDirPath, dirPath + tildaRootPosition);
- 		
- 		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
- 		if( tmp == NULL )
- 		{
-	        fprintf(stderr, "startsWithTilda: malloc() failed: %s\n",  strerror(errno));
- 			return NULL;
- 		}
- 		strcpy(tmp, subDirPath);
- 		
- 		// return this new dirPath
- 		strcpy(expandedDirName, tmp);
-
- 		return expandedDirName;
-	}
-
-
- 	// path is ~/tata ==> $LOGN_HOME/tata
-	if(tildaRootPosition == 1 && dirPathLength > tildaRootPosition) 
- 	{
- 		char *homeDir = loginHomeDir(NULL);
- 		if(homeDir == NULL) return NULL;
-
-
- 		strcpy(subDirPath, homeDir);
- 		strcat(subDirPath, dirPath + 1);
- 		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
- 		if( tmp == NULL) return NULL;
- 		strcpy(tmp, subDirPath);
- 		// return this new dirPath
- 		//expandedDirName = tmp;
- 		strcpy(expandedDirName, tmp);
-
- 		return expandedDirName;
-	}
-
-	return "";
 }
 
 int xstrcmp(char *str1, char * str2)
