@@ -155,16 +155,16 @@ const std::string& UdpSend::getMacKey() const noexcept
 void UdpSend::send(const FmtpHeader& header,
                    const void*       payload)
 {
-	if (header.payloadlen && payload == nullptr)
-		throw std::logic_error("Inconsistent header and payload");
+    if (header.payloadlen && payload == nullptr)
+        throw std::logic_error("Inconsistent header and payload");
 
-	if (macLen)
+    if (macLen)
         hmacImpl.getMac(header, payload, mac);
 
-	netHead.flags      = htons(header.flags);
-	netHead.payloadlen = htons(header.payloadlen);
-	netHead.prodindex  = htonl(header.prodindex);
-	netHead.seqnum     = htonl(header.seqnum);
+    netHead.flags      = htons(header.flags);
+    netHead.payloadlen = htons(header.payloadlen);
+    netHead.prodindex  = htonl(header.prodindex);
+    netHead.seqnum     = htonl(header.seqnum);
 
     iov[1].iov_base = const_cast<void*>(payload);
     iov[1].iov_len  = header.payloadlen;
@@ -176,7 +176,7 @@ void UdpSend::send(const FmtpHeader& header,
                 std::to_string(header.seqnum).data(),
                 std::to_string(header.payloadlen).data(),
                 payload,
-				HmacImpl::to_string(mac).c_str());
+                HmacImpl::to_string(mac).c_str());
     #endif
 
     const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
