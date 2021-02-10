@@ -151,46 +151,70 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
     } 
 }
 
-// This is the thread function
-void* scourFilesAndDirsForThisPath(void *oneItemStruct) 
+// The lower the epoch time the older the file
+static int isThisOlderThanThat(int thisFileEpoch, int thatFileEpoch)
 {
+    return (thisFileEpoch <= thatFileEpoch);
+}
 
-    ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *) 
-                                                oneItemStruct;
+static int removeFile(char *path, char * daysOld)
+{
+    int status = remove(path);
 
-    char *dirPath           = currentItem.dir;
-    char *daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
-    int   daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
-    char *pattern           = currentItem.pattern;
-
-    int   deleteDirOrNot    = currentItem.deleteDirsFlag;
-
-    // free memory of the struct that was allocated in the calling function: multiThreadedScour()
-    free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
-
-    // scour candidate files and directories under 'path' - recursively
-    // assume that this first entry directory is NOT a synbolic link
-    // delete empty directories if delete option (-d) is set
-    scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern, 
-                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK); 
-    
-    // after bubbling up , remove directory if empty and if delete option is set
-    if( isDirectoryEmpty(dirPath) && deleteDirOrNot)
+    // current file is OLDER than daysOld
+    if (status)
     {
-        // .scour$pattern is removed too
-        remove(dirPath);
+        verbose && printf("removeFile(\"%s\") failed.\n", path);
+    }
+    else
+    {
+        // log_info("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
+        verbose && printf("\t(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!\n",
+                        path, daysOld);
+    }
+    return status;
+}
+
+int isSymlinkDirectory(char *path)
+{
+    struct stat sb;
+    if (stat(path, &sb) == -1)
+    {
+        verbose && printf("\tisSymlinkDirectory: symlink \"%s\"  is broken! Removing it...\n",
+            path);
+        unlink(path);
+        return 0;
+    }
+    return S_ISDIR(sb.st_mode);
+}
+
+// delete the symlink if target file  is older than daysOld, so that symlink is not left broken
+static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoch,
+                     int deleteDirsFlag, char *daysOld)
+{
+    char symlinkedFileToRemove[PATH_MAX];
+
+    struct stat sb;
+    if (stat(symlinkedEntry, &sb) == -1)
+    {
+        printf("stat(\"%s\") failed.\n", symlinkedEntry);
+        return -1;
     }
 
-    // TO-DO:  remove dangling Symlinks
-
-
-    pthread_exit(0); 
+    int targetedFileEpoch = sb.st_mtime;
+    if( isThisOlderThanThat(targetedFileEpoch, daysOldInEpoch) ) {
+        remove(symlinkedEntry);
+        // and remove the symlink too:
+        remove(symlinkPath);
+    }
+    return 1;
 }
 
 // This is the recursive function to traverse the directory tree, depth-first
-int scourFilesAndDirs(char *basePath,  int daysOldInEpoch, 
-                        char *pattern, int deleteDirsFlag, 
-                        char *daysOld, int symlinkFlag) 
+static
+int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
+                      char *pattern,  int deleteDirsFlag,
+                      char *daysOld,  int symlinkFlag)
 {
     
     struct dirent *dp;
@@ -200,7 +224,7 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
     if(!dir) 
     {
         fprintf(stderr, "failed to open directory \"%s\" (%d: %s)\n",
-                *basePath, errno, strerror(errno));
+                basePath, errno, strerror(errno));
         return -1;
     }
 
@@ -320,22 +344,45 @@ int scourFilesAndDirs(char *basePath,  int daysOldInEpoch,
         }
     }
     closedir(dir);
+    return 0;
 }
-      
-int removeFile(char *path, char * daysOld)
+
+// This is the thread function
+void* scourFilesAndDirsForThisPath(void *oneItemStruct)
 {
-    // current file is OLDER than daysOld
-    if( remove(path) == 0) 
+
+    ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *)
+                                                oneItemStruct;
+
+    char *dirPath           = currentItem.dir;
+    char *daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
+    int   daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
+    char *pattern           = currentItem.pattern;
+
+    int   deleteDirOrNot    = currentItem.deleteDirsFlag;
+
+    // free memory of the struct that was allocated in the calling function: multiThreadedScour()
+    free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
+
+    // scour candidate files and directories under 'path' - recursively
+    // assume that this first entry directory is NOT a synbolic link
+    // delete empty directories if delete option (-d) is set
+    scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern,
+                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK);
+
+    // after bubbling up , remove directory if empty and if delete option is set
+    if( isDirectoryEmpty(dirPath) && deleteDirOrNot)
     {
-        // log_info("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
-        verbose && printf("\t(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!\n", 
-                        path, daysOld);
+        // .scour$pattern is removed too
+        remove(dirPath);
     }
-    else 
-    {
-        verbose && printf("removeFile(\"%s\") failed.\n", path);
-    } 
+
+    // TO-DO:  remove dangling Symlinks
+
+
+    pthread_exit(0);
 }
+
 void getFQFilename(char *dirPath, char *filename, char *FQFilename)
 {
     char fullFilename[PATH_MAX];
@@ -366,37 +413,6 @@ int epochOfLastModified(char *dirPath, char *aFile)
     
 }
 
-
-// The lower the epoch time the older the file
-int isThisOlderThanThat(int thisFileEpoch, int thatFileEpoch)
-{   
-    return (thisFileEpoch <= thatFileEpoch);
-}
-
-
-// delete the symlink if target file  is older than daysOld, so that symlink is not left broken
-int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoch, 
-                     int deleteDirsFlag, char *daysOld)
-{
-    char symlinkedFileToRemove[PATH_MAX];
-    
-    struct stat sb;
-    if (stat(symlinkedEntry, &sb) == -1) 
-    {
-        printf("stat(\"%s\") failed.\n", symlinkedEntry);
-        return -1;
-    }
-
-    int targetedFileEpoch = sb.st_mtime;
-    if( isThisOlderThanThat(targetedFileEpoch, daysOldInEpoch) ) {
-        remove(symlinkedEntry);
-        // and remove the symlink too:
-        remove(symlinkPath);
-    }
-    return 1;
-}
-
-
 // check if directory is empty except for ,scour file. 
 // If .scour file there remove it.
 int isDirectoryEmpty(char* dirname)
@@ -413,19 +429,6 @@ int isDirectoryEmpty(char* dirname)
     closedir(dir);
 
     return n == 0? 1 : 0;
-}
-
-int isSymlinkDirectory(char *path)
-{
-    struct stat sb;
-    if (stat(path, &sb) == -1) 
-    {
-        verbose && printf("\tisSymlinkDirectory: symlink \"%s\"  is broken! Removing it...\n", 
-            path, path);
-        unlink(path);
-        return 0;
-    }
-    return S_ISDIR(sb.st_mode);
 }
 
 void callReadLink(char *path, char *target)

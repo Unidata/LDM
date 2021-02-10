@@ -41,7 +41,6 @@ int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
 void	multiThreadedScour(IngestEntry_t *, int);
-int 	scourFilesAndDirs(char *,  int, char *, int, char *, int); 
 int 	checkGlobPatternMatch(char *, char *);
 void	callReadLink(char *, char *);
 int 	epochOfLastModified(char *, char *);

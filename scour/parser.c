@@ -65,6 +65,19 @@ extern int verbose;
 extern char *ingestFilename;
 extern int traverseIngestList(IngestEntry_t *);
 
+static int isRegularFile(const char *path)
+{
+    struct stat path_stat;
+
+    if (stat(path, &path_stat) == -1)
+    {
+        printf("\tIngest file (\"%s\") does not exist.\n", path);
+        return 0;
+    }
+
+    return S_ISREG(path_stat.st_mode);
+}
+
 void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
 {
     *deleteDirOption = 0;
@@ -108,17 +121,57 @@ void usage()
 	exit(EXIT_FAILURE);
 }
 
-int isRegularFile(const char *path)
-{
-    struct stat path_stat;
+static int getCurrentDir(char *currentDir) {
+	char cwd[PATH_MAX];
+	if (getcwd(cwd, sizeof(cwd)) != NULL)
+	{
+		strcpy(currentDir, cwd);
+		return 0;
+	}
+	else
+	{
+		perror("getcwd() error");
+		return -11;
+	}
+}
 
-    if (stat(path, &path_stat) == -1) 
+/*
+	Code to read a file of NON-ALLOWED directory paths into an array
+	which is used to skip processing these directories
+*/
+int readNotAllowedList(char (*list)[STRING_SIZE])
+{
+    FILE *fp = NULL;
+	char notAllowedDirsFilename[PATH_MAX]=NOT_ALLOWED_DIR_PATHS_FILE;
+	char currentWorkDir[PATH_MAX];
+	if( getCurrentDir(currentWorkDir) == -1)
+	{
+		fprintf(stderr, "parser::readNotAllowedList(): getcwd() failed: %s\n", strerror(errno));
+        return -1;
+	}
+	//sprintf(notAllowedDirsFilename, "%s/%s", currentWorkDir, NOT_ALLOWED_DIR_PATHS_FILE);
+
+    if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
     {
-        printf("\tIngest file (\"%s\") does not exist.\n", path);
-        return 0;
+        fprintf(stderr, "parser::readNotAllowedList(): fopen(\"%s\") failed: %s\n",
+            notAllowedDirsFilename, strerror(errno));
+        return -1;
     }
 
-    return S_ISREG(path_stat.st_mode);
+    int i=0;
+    while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
+    {
+		if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
+
+ 		// printf("list[%i] is '%s'\n", i, list[i]);
+
+    	/*  OR, with pointer
+		if((plist + i)[0] == '#' || (plist + i)[0] == '\n' ) continue;
+        printf("list[%i] is '%s'\n", i, plist + i);
+		*/
+        i++;
+    }
+	return i;
 }
 
 IngestEntry_t *parseConfig(int *directoriesCounter)
@@ -201,6 +254,29 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
     return head;
 }
 
+static int notExistAndAccessible(char *dirPath)
+{
+
+    DIR *dir = opendir(dirPath);
+    if(!dir)
+    {
+    	fprintf(stderr, "Cscour: failed to open directory %s: %s\n",
+            dirPath, strerror(errno));
+    	return -1;
+    }
+
+    closedir(dir);
+    return 0;
+}
+
+int isSameAsLoginDirectory(char * dirName)
+{
+	char *lgnHomeDir;
+	if ((lgnHomeDir = loginHomeDir(NULL)) == NULL) return 0;
+
+	return strcmp(dirName, lgnHomeDir);
+}
+
 int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE], 
 		int notAllowedCounter) 
 {
@@ -228,21 +304,6 @@ int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE],
 	return 0;
 }
 
-int notExistAndAccessible(char *dirPath) 
-{
-
-    DIR *dir = opendir(dirPath);
-    if(!dir) 
-    {
-    	fprintf(stderr, "Cscour: failed to open directory %s: %s\n", 
-            dirPath, strerror(errno));
-    	return -1;
-    }
-    
-    closedir(dir);
-    return 0;
-}
-
 
 int isNotAllowed(char * dirName, char (*list)[STRING_SIZE], int notAllowedCounter)
 {
@@ -257,14 +318,6 @@ int isNotAllowed(char * dirName, char (*list)[STRING_SIZE], int notAllowedCounte
 		}
 	}
 	return 0;
-}
-
-int isSameAsLoginDirectory(char * dirName)
-{
-	char *lgnHomeDir;
-	if ((lgnHomeDir = loginHomeDir(NULL)) == NULL) return 0;
-		
-	return strcmp(dirName, lgnHomeDir);
 }
 
 // insert a node at the first location in the list
@@ -643,6 +696,8 @@ char *startsWithTilda(char *dirPath, char *expandedDirName)
 
  		return expandedDirName;
 	}
+
+	return "";
 }
 
 int xstrcmp(char *str1, char * str2)
@@ -655,59 +710,4 @@ int xstrcmp(char *str1, char * str2)
 	
 	return strcmp(strArray1, strArray2);
 	
-}
-
-
-int getCurrentDir(char *currentDir) {
-	char cwd[PATH_MAX];
-	if (getcwd(cwd, sizeof(cwd)) != NULL) 
-	{
-		strcpy(currentDir, cwd);
-		return 0;
-	} 
-	else 
-	{
-		perror("getcwd() error");
-		return -11;
-	}
-}
-
-/*
-	Code to read a file of NON-ALLOWED directory paths into an array
-	which is used to skip processing these directories
-*/
-
-int readNotAllowedList(char (*list)[STRING_SIZE])
-{
-    FILE *fp = NULL;
-	char notAllowedDirsFilename[PATH_MAX]=NOT_ALLOWED_DIR_PATHS_FILE;
-	char currentWorkDir[PATH_MAX];
-	if( getCurrentDir(currentWorkDir) == -1)
-	{
-		fprintf(stderr, "parser::readNotAllowedList(): getcwd() failed: %s\n", strerror(errno));
-        return -1;
-	}
-	//sprintf(notAllowedDirsFilename, "%s/%s", currentWorkDir, NOT_ALLOWED_DIR_PATHS_FILE);
-
-    if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
-    {
-        fprintf(stderr, "parser::readNotAllowedList(): fopen(\"%s\") failed: %s\n",
-            notAllowedDirsFilename, strerror(errno));
-        return -1;
-    }
-
-    int i=0;
-    while((fscanf(fp,"%s", &list[i])) !=EOF) //scanf and check EOF
-    {
-		if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
- 
- 		// printf("list[%i] is '%s'\n", i, list[i]);
-
-    	/*  OR, with pointer
-		if((plist + i)[0] == '#' || (plist + i)[0] == '\n' ) continue;
-        printf("list[%i] is '%s'\n", i, plist + i);
-		*/
-        i++;
-    }
-	return i;
 }
