@@ -1,4 +1,14 @@
 6.13.14.12
+    NOAAPort NCEP GRIB2 Table:
+        * Added:
+            * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
+            * Total Water Level Accounting for Tide, Wind and Waves (TWLWAV)
+              (10,3,205,0)
+            * Mean Increase in Water Level due to Waves (SETUP) (10,3,207,0)
+            * Time-varying Increase in Water Level due to Waves (SWASH)
+              (10,3,208,0)
+            * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
+    
     Multicast:
         * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
           macro

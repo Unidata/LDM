@@ -102,3 +102,4 @@ vgcore.*
 /consistent
 /check-cc
 /check-clang
+/a.c
