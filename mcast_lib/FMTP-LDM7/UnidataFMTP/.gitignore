@@ -20,3 +20,4 @@ cscope.*
 .DS_Store
 .libs
 m4/*
+/FmtpConfig.h
