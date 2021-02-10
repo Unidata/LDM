@@ -3,7 +3,7 @@
 
 /* Define to 1 if you have the declaration of `EVP_PKEY_new_raw_private_key',
    and to 0 if you don't. */
-#define HAVE_DECL_EVP_PKEY_NEW_RAW_PRIVATE_KEY 1
+#define HAVE_DECL_EVP_PKEY_NEW_RAW_PRIVATE_KEY 0
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1

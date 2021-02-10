@@ -18,6 +18,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <limits.h>
 
 #ifndef PARSER_DOT_H
 #define PARSER_DOT_H

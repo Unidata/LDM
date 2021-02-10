@@ -69,7 +69,7 @@ static const int MAGIC;
  */
 
 static ssize_t
-getline(char** const restrict  lineptr,
+mygetline(char** const restrict  lineptr,
         size_t* const restrict size,
         FILE* const restrict   stream)
 {
@@ -117,7 +117,7 @@ childCmd_log(void* const arg)
     size_t          size = 0;
     ssize_t         nbytes;
 
-    while ((nbytes = getline(&line, &size, cmd->stdErr)) > 0) {
+    while ((nbytes = mygetline(&line, &size, cmd->stdErr)) > 0) {
         if (line[nbytes-1] == '\n')
             line[nbytes-1] = 0;
         log_add("%s", line);
@@ -637,10 +637,10 @@ childCmd_getline(
         status = -1;
     }
     else {
-        status = getline(line, size, cmd->stdOut);
+        status = mygetline(line, size, cmd->stdOut);
 
         if (status == -1)
-            log_add("getline() failure on stdout of command \"%s\"",
+            log_add("mygetline() failure on stdout of command \"%s\"",
                     cmd->cmdStr);
     }
 
