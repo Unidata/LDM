@@ -95,3 +95,10 @@ up7_test.pq
 /pq_test.pq
 .metadata
 *.deplog
+/a.c
+/check-cc
+/check-clang
+/check-make
+/check-make-cc
+/check-make-clang
+/consistent
