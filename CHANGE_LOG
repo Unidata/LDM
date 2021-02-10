@@ -2,6 +2,7 @@
     scour(1): 
 	* Cscour(1): a C program to scour faster than the scour script
 	* aSpringTree(1): builds a tree of depth and breadth for testing scour 
+	* testCscour.py(1): Tests Cscour(1) behavior
 	* benchMarkIt(1): script to prepare the environment for testing scour
 
 6.13.14.6	2020-11-23T10:41:39-0700

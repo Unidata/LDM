@@ -6,7 +6,7 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= scour.conf.in scour.1.in
+EXTRA_DIST		= scour.conf.in scour.1.in testCscour.py
 BUILT_SOURCES		= scour.conf
 dist_bin_SCRIPTS	= scour
 bin_PROGRAMS		= Cscour
@@ -30,3 +30,5 @@ $(DESTDIR)$(sysconfdir)/scour.conf:
 
 Cscour_SOURCES		= Cscour.c  parser.c
 TAGS_FILES		=  $(Cscour_SOURCES) ../log/*.c ../log/*.h 
+
+TESTS			= testCscour.py
