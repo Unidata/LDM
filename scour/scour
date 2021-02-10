@@ -1,0 +1,14 @@
+# Deletes old data files.
+#
+# Recursively deletes files older than a specified number of days from a
+# specified set of directories.  The directories, retention time in days,
+# and an optional shell filename pattern appear, separated by tab characters
+# one directory per line, in a configuration file named on the command line.
+#
+# If no files have been written under a directory since the last time scour was
+# run, it will skip deleting old files and log an error message instead.
+#
+# WARNING: scour follows symbolic links, so don't put symbolic links to
+# directories you don't want scoured under data directories.
+
+exec Cscour "$@"
