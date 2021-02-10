@@ -20,8 +20,6 @@
  * limitations under the License.
  */
 
-#include "config.h"
-
 #include <stdio.h>
 #include <dirent.h>
 #include <fcntl.h>
