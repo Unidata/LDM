@@ -258,91 +258,6 @@ hostbyaddr(
 } // `hostbyaddr()`
 
 
-/*
- * Gets the IP address corresponding to a host identifier.
- *
- * Arguments:
- *      id      The host identifier as either a name or an IP address in
- *              dotted-quad form (NNN.NNN.NNN.NNN).
- *      paddr   Pointer to structure to be set to the IP address of the given
- *              host.  Modified on and only on success.  The port is set to
- *              zero, the address family to AF_INET, and the rest is cleared.
- * Returns:
- *      0       Success.
- *      -1      Failure.  No IP address could be found for the given host
- *              identifier.
- */
-int
-addrbyhost(
-    const char* const           id,
-    struct sockaddr_in* const   paddr)
-{
-    int                 errCode = 0;    /* success */
-    in_addr_t           ipAddr;
-    
-    ipAddr = inet_addr(id);
-
-    if (ipAddr != (in_addr_t)-1) {
-        /*
-         * The identifier is a dotted-quad IP address.
-         */
-        paddr->sin_addr.s_addr = ipAddr;
-    }
-    else {
-        timestampt      start;
-        timestampt      stop;
-        double          elapsed;
-        ErrorObj*        error;
-        struct hostent* hp;
-        
-        (void)set_timestamp(&start);
-        hp = gethostbyname(id);
-        (void)set_timestamp(&stop);
-
-        elapsed = d_diff_timestamp(&stop, &start);
-
-        if (hp == NULL) {
-            error = ERR_NEW2(0, NULL,
-                "Couldn't resolve \"%s\" to an Internet address in %g seconds",
-                id, elapsed);
-            errCode = -1;               /* failure */
-        }
-        else if (hp->h_addrtype != AF_INET) {
-            err_log_and_free(
-                ERR_NEW1(0, NULL, "\"%s\" isn't an Internet host identifier",
-                    id),
-                ERR_WARNING);
-            error = NULL;
-            errCode = -1;               /* failure */
-        } else {
-            (void) memcpy((char *)&paddr->sin_addr, hp->h_addr_list[0],
-                (size_t)hp->h_length);
-
-            if (elapsed < RESOLVER_TIME_THRESHOLD &&
-                    !log_is_enabled_info) {
-                error = NULL;
-            }
-            else {
-                error = ERR_NEW3(0, NULL, "Resolving %s to %s took %g seconds",
-                    id, inet_ntoa(paddr->sin_addr), elapsed);
-            }
-        }
-
-        if (error)
-            err_log_and_free(error, 
-                elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO);
-    }
-
-    if (errCode == 0) {
-        paddr->sin_family= AF_INET;
-        paddr->sin_port= 0;
-
-        (void) memset(paddr->sin_zero, 0, sizeof (paddr->sin_zero));
-    }
-
-    return errCode;
-}
-
 
 /*
  * Indicates if a host identifier has a given IP address.
@@ -479,7 +394,7 @@ getservport(
 
 
 /*
- * Attempt to connect to a internet domain udp socket.
+ * Attempt to connect to a Internet domain udp socket.
  * Create & connect.
  * Returns (socket) descriptor or -1 on error.
  */
@@ -906,8 +821,8 @@ err0 :
 #endif /* !TIRPC */
 
 /**
- * Returns the first address information structure corresponding to given
- * information.
+ * Returns the linked list of address information structures corresponding to
+ * given information.
  *
  * @param[in]  nodeName  The Internet identifier. May be a name or a formatted
  *                       IP address.
@@ -916,7 +831,8 @@ err0 :
  * @param[in]  hints     Hints for retrieving address information.
  * @param[out] addrInfo  The first address information structure corresponding
  *                       to the input.
- * @retval     0         Success. `*addrInfo` is set.
+ * @retval     0         Success. `*addrInfo` is set. Caller should call
+ *                       `freeaddrinfo(*addrInfo)` when it's no longer needed.
  * @retval     EAGAIN    A necessary resource is temporarily unavailable.
  *                       `log_add()` called.
  * @retval     EINVAL    Invalid Internet identifier or address family.
@@ -958,6 +874,107 @@ getAddrInfo(
         return ENOMEM;
 
     return ENOSYS;
+}
+
+/**
+ * Gets the IP address corresponding to a host identifier.
+ *
+ * @param[in]  id      The host identifier as either a name or an IP address in
+ *                     dotted-quad form (NNN.NNN.NNN.NNN).
+ * @param[out] paddr   Pointer to structure to be set to the IP address of the
+ *                     given host.  Modified on and only on success.  The port
+ *                     is set to zero, the address family to AF_INET, and the
+ *                     rest is cleared.
+ * @retval     0       Success.
+ * @retval     EAGAIN  A necessary resource is temporarily unavailable.
+ *                     `log_add()` called.
+ * @retval     ENOENT  The Internet identifier doesn't resolve to an IP
+ *                     address. `log_add()` called.
+ * @retval     ENOMEM  Out-of-memory. `log_add()` called.
+ * @retval     ENOSYS  A non-recoverable error occurred when attempting to
+ *                     resolve the name. `log_add()` called.
+ */
+int
+addrbyhost(
+    const char* const           id,
+    struct sockaddr_in* const   paddr)
+{
+    int       status = 0;    /* success */
+    in_addr_t ipAddr;
+
+    ipAddr = inet_addr(id);
+
+    if (ipAddr != (in_addr_t)-1) {
+        /*
+         * The identifier is a dotted-quad IP address.
+         */
+        memset(paddr, 0, sizeof(*paddr));
+        paddr->sin_family = AF_INET;
+        paddr->sin_addr.s_addr = ipAddr;
+    }
+    else {
+        struct addrinfo  hints = {
+                .ai_family=AF_INET,
+                .ai_protocol=IPPROTO_TCP,
+                .ai_socktype=SOCK_STREAM,
+                /*
+                 * AI_NUMERICSERV  `servName` is a port number.
+                 * AI_PASSIVE      The returned socket address is suitable for a
+                 *                 `bind()` operation.
+                 * AI_ADDRCONFIG   The local system must be configured with an
+                 *                 IP address of the specified family.
+                 */
+                .ai_flags=AI_ADDRCONFIG};
+
+        timestampt       start;
+        (void)set_timestamp(&start);
+
+        struct addrinfo* addrInfo;
+        status = getAddrInfo(id, NULL, &hints, &addrInfo);
+
+        timestampt       stop;
+        (void)set_timestamp(&stop);
+
+        double    elapsed = d_diff_timestamp(&stop, &start);
+        ErrorObj* error;
+
+        if (status) {
+            log_assert(status != EINVAL); // Shouldn't happen
+            error = ERR_NEW2(0, NULL,
+                "Couldn't resolve \"%s\" to an Internet address in %g seconds",
+                id, elapsed);
+            status = -1;               /* failure */
+        }
+        else {
+            if (addrInfo->ai_family != AF_INET) {
+                err_log_and_free(
+                    ERR_NEW1(0, NULL, "\"%s\" isn't an Internet host identifier",
+                        id),
+                    ERR_WARNING);
+                error = NULL;
+                status = -1;               /* failure */
+            } else {
+                (void)memcpy((char*)paddr, addrInfo->ai_addr, sizeof(*paddr));
+
+                if (elapsed < RESOLVER_TIME_THRESHOLD &&
+                        !log_is_enabled_info) {
+                    error = NULL;
+                }
+                else {
+                    error = ERR_NEW3(0, NULL, "Resolving %s to %s took %g seconds",
+                        id, inet_ntoa(paddr->sin_addr), elapsed);
+                }
+            }
+
+            freeaddrinfo(addrInfo);
+        } // `addrInfo` is allocated
+
+        if (error)
+            err_log_and_free(error,
+                elapsed >= RESOLVER_TIME_THRESHOLD ? ERR_WARNING : ERR_INFO);
+    }
+
+    return status;
 }
 
 /**

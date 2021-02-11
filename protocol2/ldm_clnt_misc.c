@@ -31,31 +31,32 @@ ErrorObj*
 ldm_clnt_addr(const char* const name, struct sockaddr_in* addr)
 {
     struct sockaddr_in  ad;
-    ErrorObj*            error;
+    ErrorObj*           error;
 
     log_assert(NULL != name);
     log_assert(NULL != addr);
 
-    if (addrbyhost(name, &ad)) {
+    int status = addrbyhost(name, &ad);
+    if (status) {
         const char* msg;
 
-        if (HOST_NOT_FOUND == h_errno) {
+        if (status == ENOENT) {
             msg = "no such host is known";
         }
-        else if (NO_DATA == h_errno) {
+        else if (status == EAGAIN) {
             msg = "no address for name";
         }
-        else if (NO_RECOVERY == h_errno) {
+        else if (status == ENOSYS) {
             msg = "unexpected server failure";
         }
-        else if (TRY_AGAIN == h_errno) {
+        else if (status == EAGAIN) {
             msg = "try again later";
         }
         else {
             msg = "unknown error";
         }
 
-        error = ERR_NEW(h_errno, NULL, msg);
+        error = ERR_NEW(status, NULL, msg);
     }
     else {
         *addr = ad;
