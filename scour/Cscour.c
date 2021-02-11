@@ -263,9 +263,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             // Remove if empty and not symlinked
             if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {
-
-        // ===========================  TO-DO:  remove dangling REG file Symlinks HERE ! ===============================
-                                
+                  
                 verbose && printf("\tDeleting this (empty) directory %s if older than %s (days[-HHMMSS]) (epoch: %d)\n\n", 
                                 path, daysOld, daysOldInEpoch);
                 if( isThisOlderThanThat( currentEntryEpoch, daysOldInEpoch) )
@@ -275,17 +273,20 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                         verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
                             path, strerror(errno));
                             break;
-                    }                
+                    }     
+                    printf("Removed directory: %s \n", path);           
                 }
                 else
                 {
-                    verbose && printf("\tDirectory %s if NOT older than %s (days[-HHMMSS])\n\n", 
+                    verbose && printf("\tDirectory %s is NOT older than %s (days[-HHMMSS])\n\n", 
                         path, daysOld);
                 }
 
-            } 
-
+            } else {
+                printf("NOT deleted! %s - symlink: %d -  deleteFlag: %d\n", path, symlinkFlag, deleteDirsFlag);
+            }
             break;
+
 
         case S_IFREG :
 
