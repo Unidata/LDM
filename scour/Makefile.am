@@ -6,12 +6,14 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= scour.conf.in scour.1.in
+EXTRA_DIST		= scour.conf.in scour.1.in testCscour.py
 BUILT_SOURCES		= scour.conf
 dist_bin_SCRIPTS	= scour
+bin_PROGRAMS		= Cscour
 nodist_man1_MANS	= scour.1
 CLEANFILES              = scour.1 scour.conf
-DISTCLEANFILES		= scour scour.conf
+AM_CPPFLAGS		= -I$(top_builddir)/log    -I$(top_srcdir)/log
+Cscour_LDADD		= $(top_builddir)/lib/libldm.la 
 
 scour.1:	$(srcdir)/scour.1.in
 	../regutil/substPaths <$? >$@.tmp
@@ -22,9 +24,11 @@ scour.conf:	scour.conf.in
 	mv $@.tmp $@
 
 install-data-local:    \
-    $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/scour.conf
+	$(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/scour.conf
 $(DESTDIR)$(sysconfdir)/scour.conf:
 	$(INSTALL_DATA) scour.conf $@
 
-$(DESTDIR)$(sysconfdir):
-	mkdir $@
+Cscour_SOURCES		= Cscour.c  parser.c
+TAGS_FILES		=  $(Cscour_SOURCES) ../log/*.c ../log/*.h 
+
+TESTS			= testCscour.py

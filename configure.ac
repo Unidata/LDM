@@ -45,8 +45,8 @@ fi
 # "AM_CFLAGS" is not automatically substituted
 AC_SUBST([AM_CFLAGS])
 
-# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
+# NB: The Solaris 10 compiler might not support _XOPEN_SOURCE beyond 600
+AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
 # The following always defines _GNU_SOURCE which conflicts with _XOPEN_SOURCE=600
 #AC_USE_SYSTEM_EXTENSIONS
 

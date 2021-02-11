@@ -8,6 +8,11 @@
             * Time-varying Increase in Water Level due to Waves (SWASH)
               (10,3,208,0)
             * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
+
+    scour(1):
+        * Cscour(1): Multi-threaded C program that scours faster than the
+          scour(1) script
+	* scour(1): Modified to just invoke Cscour(1)
     
     Multicast:
         * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
@@ -19,6 +24,11 @@
             * clang-scan: Replaced "--view" with printing of URL so that ^C
               doesn't stop "touch $@"
         * deployAll(1): Added version argument
+        * scour/:
+            * testCscour.py(1): Tests Cscour(1) correctness
+            * aSpringTree(1): Builds a tree of depth and breadth for testing
+              Cscour(1)
+            * benchMarkIt.sh(1): Tests performance of Cscour(1)
 
 6.13.14.11      2021-01-28T10:18:40-0700
     Misc:
