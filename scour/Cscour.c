@@ -189,8 +189,8 @@ int isSymlinkDirectory(char *path)
 }
 
 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
-static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoch,
-                     int deleteDirsFlag, char *daysOld)
+static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, 
+                            int daysOldInEpoch, char *daysOld)
 {
     char symlinkedFileToRemove[PATH_MAX];
 
@@ -324,7 +324,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                             symlinkedEntry, daysOld);
                 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
                 // however, currentEntryEpoch should NOT be that of the symlink but that of the file pointed to by the slink
-                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, deleteDirsFlag, daysOld);
+                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, daysOld);
             } 
             break;
 
