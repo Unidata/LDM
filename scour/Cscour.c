@@ -260,30 +260,21 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld, symlinkFlag);
 
             
-            // Remove if empty and not symlinked
+            // Remove if empty and not symlinked, regardless of its age (daysOld)
             if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {
                   
-                verbose && printf("\tDeleting this (empty) directory %s if older than %s (days[-HHMMSS]) (epoch: %d)\n\n", 
-                                path, daysOld, daysOldInEpoch);
-                if( isThisOlderThanThat( currentEntryEpoch, daysOldInEpoch) )
+                verbose && printf("\tDeleting this (empty) directory %s\n\n", path);
+                if(remove(path))
                 {
-                    if(remove(path))
-                    {
-                        verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
-                            path, strerror(errno));
-                            break;
-                    }     
-                    printf("Removed directory: %s \n", path);           
-                }
-                else
-                {
-                    verbose && printf("\tDirectory %s is NOT older than %s (days[-HHMMSS])\n\n", 
-                        path, daysOld);
-                }
+                    verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
+                        path, strerror(errno));
+                        break;
+                }     
+                printf("Removed directory: %s \n", path);               
 
             } else {
-                printf("NOT deleted! %s - symlink: %d -  deleteFlag: %d\n", path, symlinkFlag, deleteDirsFlag);
+                printf("NOT deleted! %s && symlink: %d  &&  deleteFlag: %d\n", path, symlinkFlag, deleteDirsFlag);
             }
             break;
 
