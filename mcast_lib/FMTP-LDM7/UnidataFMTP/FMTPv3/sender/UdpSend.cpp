@@ -38,7 +38,6 @@
 #include <cstdlib>
 #include <errno.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <string>
 #include <string.h>
 #include <stdexcept>

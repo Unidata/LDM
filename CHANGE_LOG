@@ -19,6 +19,7 @@
     Multicast:
         * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
           macro
+        * UdpSend: Created private BlackHat class for sending invalid packets
 
     DevOps:
         * dev-makefile targets:
