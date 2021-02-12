@@ -293,11 +293,13 @@ class SymlinkDeletion:
 		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
 		
 		print(f"\n\tRunning assertions...\n")
-		self.assertSymlink()
+		return self.assertSymlink()
 
 
 	def assertSymlink(self):
 		
+		status=0
+
 		# Files:
 		print(f"\nFILES: --------------------------------------")
 		aPath=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
@@ -305,20 +307,21 @@ class SymlinkDeletion:
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
+			status=1
 
 		aPath=os.path.expanduser("~/vesuvius/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-
+			status=1
 
 		aPath=os.path.expanduser("~/etna/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-
+			status=1
 
 		# Symlinks
 		
@@ -342,7 +345,7 @@ class SymlinkDeletion:
 				or os.path.islink(expandedLink):
 					
 				print(f"\n\t{ASSERT_FAIL}: \tUn-Expected SymLink behavior! ({expandedTarget} - {expandedLink})  ")
-				
+				status=1	
 
 		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
 		kTarget	= "~/etna/alt_dir"
@@ -358,7 +361,16 @@ class SymlinkDeletion:
 			and os.path.islink(expandedLink): 
 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_LINK_NOT_DELETED}: {expandedTarget}")				
+
+		else:
+			if 	not os.path.exists(expandedTarget) 		\
+				or not os.path.islink(expandedLink): 
+
+				print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_LINK_NOT_DELETED}: {expandedTarget}")				
 	
+				status=1
+
+		return status	
 
 
 # Scenario: 
@@ -432,11 +444,14 @@ class EmptyDirectoriesDeletion:
 		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
 		
 		print(f"\n\tRunning assertions...\n")
-		self.assertDirectoriesRemoved()
+		
+		return self.assertDirectoriesRemoved()
 
 
 	def assertDirectoriesRemoved(self):
 		
+		status=0
+
 		# Files:
 		print(f"\nFILES: --------------------------------------")
 		
@@ -445,13 +460,14 @@ class EmptyDirectoriesDeletion:
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
+			status=1
 
 		aPath=os.path.expanduser("~/etna/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-
+			status=1
 
 		# Directories
 		print(f"\nDIRECTORIES: --------------------------------------")
@@ -461,13 +477,16 @@ class EmptyDirectoriesDeletion:
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
-
+			status=1
+		
 		aPath=os.path.expanduser("~/etna")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
+			status=1
 
+		return status
 
 def main():
 
@@ -477,7 +496,7 @@ def main():
 		print("\nCreate directories:")
 		CommonFileSystem.createDirectories()
 		sl = SymlinkDeletion()
-		sl.runScenario("-d")
+		sl_status = sl.runScenario("-d")
 
 
 		print("\n\t========== EmptyDirectories Deletion scenario =======\n")
@@ -486,8 +505,10 @@ def main():
 		print("\nCreate directories:")
 		CommonFileSystem.createDirectories()
 		ed = EmptyDirectoriesDeletion()
-		ed.runScenario("-d")
+		ed_status = ed.runScenario("-d")
 		
+		exit(ed_status * sl_status)
+
 
 if __name__ == '__main__':
 		main()

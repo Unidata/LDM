@@ -191,8 +191,8 @@ int isSymlinkDirectory(char *path)
 }
 
 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
-static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, int daysOldInEpoch,
-                     int deleteDirsFlag, char *daysOld)
+static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry, 
+                            int daysOldInEpoch, char *daysOld)
 {
     char symlinkedFileToRemove[PATH_MAX];
 
@@ -262,32 +262,24 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld, symlinkFlag);
 
             
-            // Remove if empty and not symlinked
+            // Remove if empty and not symlinked, regardless of its age (daysOld)
             if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {
-
-        // ===========================  TO-DO:  remove dangling REG file Symlinks HERE ! ===============================
-                                
-                verbose && printf("\tDeleting this (empty) directory %s if older than %s (days[-HHMMSS]) (epoch: %d)\n\n", 
-                                path, daysOld, daysOldInEpoch);
-                if( isThisOlderThanThat( currentEntryEpoch, daysOldInEpoch) )
+                  
+                verbose && printf("\tDeleting this (empty) directory %s\n\n", path);
+                if(remove(path))
                 {
-                    if(remove(path))
-                    {
-                        verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
-                            path, strerror(errno));
-                            break;
-                    }                
-                }
-                else
-                {
-                    verbose && printf("\tDirectory %s if NOT older than %s (days[-HHMMSS])\n\n", 
-                        path, daysOld);
-                }
+                    verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
+                        path, strerror(errno));
+                        break;
+                }     
+                printf("Removed directory: %s \n", path);               
 
-            } 
-
+            } else {
+                printf("NOT deleted! %s && symlink: %d  &&  deleteFlag: %d\n", path, symlinkFlag, deleteDirsFlag);
+            }
             break;
+
 
         case S_IFREG :
 
@@ -334,7 +326,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                             symlinkedEntry, daysOld);
                 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
                 // however, currentEntryEpoch should NOT be that of the symlink but that of the file pointed to by the slink
-                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, deleteDirsFlag, daysOld);
+                removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, daysOld);
             } 
             break;
 

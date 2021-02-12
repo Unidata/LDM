@@ -29,6 +29,18 @@ can also be invoked manually as needed.
 
 .SH OPTIONS 
 .TP 8
+.B \-d
+Indicates that the files, directories, and symbolic links are to be deleted 
+if conditions are met:
+.TP
+- directories must be empty and not a symlink
+.TP
+- files must be older than 
+.B daysOld
+set in the 
+.B scour 
+configuration file
+.TP
 .B \-l
 Indicates that messages are appended to a system log used by other LDM
 processes.  In the absence of this flag, messages
