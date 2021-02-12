@@ -1,6 +1,6 @@
 6.13.14.12
-    NOAAPort NCEP GRIB2 Table:
-        * Added:
+    NOAAPort:
+        * Added to NCEP GRIB2 Table:
             * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
             * Total Water Level Accounting for Tide, Wind and Waves (TWLWAV)
               (10,3,205,0)
@@ -8,6 +8,8 @@
             * Time-varying Increase in Water Level due to Waves (SWASH)
               (10,3,208,0)
             * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
+        * dvbs_multicast(1): Replaced non-standard usleep(3) with standard
+          nanosleep(3)
 
     scour(1):
         * Cscour(1): Multi-threaded C program that scours faster than the
