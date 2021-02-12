@@ -35,8 +35,10 @@
     #include "log.h"
 #endif
 
+#include <cstdlib>
 #include <errno.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <string>
 #include <string.h>
 #include <stdexcept>
@@ -47,6 +49,43 @@
 #ifndef NULL
     #define NULL 0
 #endif
+
+const char* const UdpSend::BlackHat::ENV_NAME = "FMTP_INVALID_FRACTION";
+
+UdpSend::BlackHat::BlackHat(UdpSend& udpSend)
+    : udpSend(udpSend)
+    , invalidCount(0)
+    , invalidFraction(0)
+{
+    const auto fractionStr = ::getenv(ENV_NAME);
+    if (fractionStr) {
+        invalidFraction = std::stof(fractionStr, nullptr);
+        if (invalidFraction < 0 || invalidFraction > 1000)
+            throw std::system_error(errno, std::system_category(),
+                    std::string("UdpSend::UdpSend() Invalid ") + ENV_NAME +
+                    "value");
+    }
+}
+
+void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
+{
+    /*
+     * The RHS expression can't be negative because the range of
+     * `invalidFraction` is constrained and because `invalidCount` always lags
+     * `udpSend.validCount` and unsigned subtraction is performed.
+     */
+    const CountType numSend =
+            static_cast<CountType>(invalidFraction*udpSend.validCount + 0.5)
+            - invalidCount;
+
+    if (numSend) {
+        udpSend.mac[0] ^= 1; // Flip one bit in MAC
+        for (auto n = numSend; n > 0; --n)
+            udpSend.privateSend(header);
+        invalidCount += numSend;
+        udpSend.mac[0] ^= 1; // Restore MAC bit
+    }
+}
 
 
 /**
@@ -60,9 +99,10 @@
  */
 UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
                  const unsigned char ttl, const std::string& ifAddr)
-    : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr),
-      sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{},
-      macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
+    : blackHat(*this), recvAddr(recvaddr), recvPort(recvport), ttl(ttl),
+      ifAddr(ifAddr), sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{},
+      macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))},
+      validCount(0)
 {
     iov[0].iov_base = &netHead;
     iov[0].iov_len  = FMTP_HEADER_LEN;
@@ -152,6 +192,26 @@ const std::string& UdpSend::getMacKey() const noexcept
     return hmacImpl.getKey();
 }
 
+void UdpSend::privateSend(const FmtpHeader& header)
+{
+    #ifdef LDM_LOGGING
+        log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+                "payloadlen=%s, payload=%p, mac=%s", header.flags,
+                std::to_string(header.prodindex).data(),
+                std::to_string(header.seqnum).data(),
+                std::to_string(header.payloadlen).data(),
+                iov[1].iov_base,
+                HmacImpl::to_string(mac).c_str());
+    #endif
+
+    const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
+    if (nbytes != sizeof(netHead) + header.payloadlen + macLen)
+    	throw std::system_error(errno, std::system_category(),
+                "UdpSend::send(): writev() failure: nbytes=" +
+                std::to_string(nbytes));
+
+}
+
 void UdpSend::send(const FmtpHeader& header,
                    const void*       payload)
 {
@@ -169,19 +229,15 @@ void UdpSend::send(const FmtpHeader& header,
     iov[1].iov_base = const_cast<void*>(payload);
     iov[1].iov_len  = header.payloadlen;
 
-    #ifdef LDM_LOGGING
-        log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
-                "payloadlen=%s, payload=%p, mac=%s", header.flags,
-                std::to_string(header.prodindex).data(),
-                std::to_string(header.seqnum).data(),
-                std::to_string(header.payloadlen).data(),
-                payload,
-                HmacImpl::to_string(mac).c_str());
-    #endif
+    const bool sendBefore = validCount % 2;
 
-    const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
-    if (nbytes != sizeof(netHead) + header.payloadlen + macLen)
-    	throw std::system_error(errno, std::system_category(),
-    			"UdpSend::send(): writev() failure: nbytes=" +
-				std::to_string(nbytes));
+    if (sendBefore)
+        blackHat.maybeSend(header);
+
+    privateSend(header);
+
+    ++validCount;
+
+    if (!sendBefore)
+        blackHat.maybeSend(header);
 }

@@ -51,7 +51,6 @@ public:
     ~UdpSend();
 
     /**
-     *
      * Initializes this instance. Creates a new UDP socket and sets the address
      * and port from the construction parameters. Connects to the created
      * socket.
@@ -78,9 +77,45 @@ public:
      * @throw std::system_error  I/O failure
      */
     void send(const FmtpHeader& header,
-    		  const void*       payload = nullptr);
+              const void*       payload = nullptr);
 
 private:
+    friend class BlackHat;
+
+    using CountType = unsigned long;
+
+    class BlackHat
+    {
+        UdpSend&  udpSend;
+        CountType invalidCount;
+        float     invalidFraction;
+
+    public:
+        static const char* const ENV_NAME;
+
+        /**
+         * Constructs. The fraction of invalid packets is given by the value of
+         * the environment variable named by `ENV_NAME`.
+         *
+         * @param[in] udpSend  Containing UDP sender instance
+         */
+        BlackHat(UdpSend& udpSend);
+
+        /// No copy or move constructor because only one instance per `UdpSend`
+        BlackHat(BlackHat& blackHat) =delete;
+        BlackHat(BlackHat&& blackHat) =delete;
+
+        /// No copy assignment because only one instance per `UdpSend`
+        BlackHat& operator=(BlackHat& rhs) =delete;
+
+        /**
+         * Maybe sends invalid packets based on the output vector in the
+         * containing `UdpSend` instance.
+         *
+         * @param[in] header  FMTP header in host byte order
+         */
+        void maybeSend(const FmtpHeader& header);
+    }                     blackHat;
     int                   sock_fd;
     struct sockaddr_in    recv_addr;
     const std::string     recvAddr;
@@ -88,10 +123,19 @@ private:
     const unsigned short  ttl;
     const std::string     ifAddr;
     HmacImpl              hmacImpl;
-	FmtpHeader            netHead;       ///< Network byte-order FMTP header
+    FmtpHeader            netHead;       ///< Network byte-order FMTP header
     struct iovec          iov[3];        ///< Output vector
     char                  mac[MAC_SIZE]; ///< Message authentication code
     const unsigned        macLen;        ///< Size of MAC in bytes
+    CountType             validCount;
+
+    /**
+     * Sends the FMTP message referenced by the output vector.
+     *
+     * @param[in] header         FMTP header in host byte-order
+     * @throw std::system_error  I/O failure
+     */
+    void privateSend(const FmtpHeader& header);
 };
 
 
