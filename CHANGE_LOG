@@ -20,6 +20,7 @@
         * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
           macro
         * UdpSend: Created private BlackHat class for sending invalid packets
+          based on the environment variable FMTP_INVALID_PACKET_RATIO
 
     DevOps:
         * dev-makefile targets:

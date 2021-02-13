@@ -29,7 +29,6 @@
  * new layer acts as the sender side transmission library.
  */
 
-
 #ifndef FMTP_SENDER_UDPSOCKET_H_
 #define FMTP_SENDER_UDPSOCKET_H_
 
@@ -40,7 +39,6 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string>
-
 
 class UdpSend
 {
@@ -82,22 +80,27 @@ public:
 private:
     friend class BlackHat;
 
-    using CountType = unsigned long;
+    using IndexType = unsigned long;
 
+    /**
+     * Attacks the protocol by sending invalid packets.
+     */
     class BlackHat
     {
-        UdpSend&  udpSend;
-        CountType invalidCount;
-        float     invalidFraction;
+        UdpSend&  udpSend;          ///< Containing UDP sender instance
+        IndexType validPacketIndex; ///< Index of current, valid packet
+        float     invalidRatio;     ///< Ratio of invalid to valid packets
+        float     indicator;        ///< Send-invalid-packet indicator
 
     public:
-        static const char* const ENV_NAME;
+        static const char ENV_NAME[]; ///< Name of relevant environment variable
 
         /**
          * Constructs. The fraction of invalid packets is given by the value of
          * the environment variable named by `ENV_NAME`.
          *
-         * @param[in] udpSend  Containing UDP sender instance
+         * @param[in] udpSend            Containing UDP sender instance
+         * @throw std::invalid_argument  Environment variable has invalid value
          */
         BlackHat(UdpSend& udpSend);
 
@@ -112,10 +115,13 @@ private:
          * Maybe sends invalid packets based on the output vector in the
          * containing `UdpSend` instance.
          *
-         * @param[in] header  FMTP header in host byte order
+         * @param[in] header        FMTP header in host byte order
+         * @throw std::logic_error  Packet index in containing UDP sender didn't
+         *                          increase by 1
          */
         void maybeSend(const FmtpHeader& header);
-    }                     blackHat;
+    };
+
     int                   sock_fd;
     struct sockaddr_in    recv_addr;
     const std::string     recvAddr;
@@ -127,7 +133,9 @@ private:
     struct iovec          iov[3];        ///< Output vector
     char                  mac[MAC_SIZE]; ///< Message authentication code
     const unsigned        macLen;        ///< Size of MAC in bytes
-    CountType             validCount;
+    IndexType             packetIndex;   ///< Index of current, valid packet
+    bool                  sendBefore;    ///< Send invalid packet(s) after valid?
+    BlackHat              blackHat;      ///< Sends invalid packets
 
     /**
      * Sends the FMTP message referenced by the output vector.
@@ -137,6 +145,5 @@ private:
      */
     void privateSend(const FmtpHeader& header);
 };
-
 
 #endif /* FMTP_SENDER_UDPSOCKET_H_ */

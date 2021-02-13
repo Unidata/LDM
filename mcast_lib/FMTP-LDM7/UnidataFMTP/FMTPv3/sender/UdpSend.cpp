@@ -49,39 +49,46 @@
     #define NULL 0
 #endif
 
-const char* const UdpSend::BlackHat::ENV_NAME = "FMTP_INVALID_FRACTION";
+const char UdpSend::BlackHat::ENV_NAME[] = "FMTP_INVALID_PACKET_RATIO";
 
 UdpSend::BlackHat::BlackHat(UdpSend& udpSend)
     : udpSend(udpSend)
-    , invalidCount(0)
-    , invalidFraction(0)
+    , validPacketIndex(-1)
+    , invalidRatio(0)
+    , indicator(0)
 {
-    const auto fractionStr = ::getenv(ENV_NAME);
-    if (fractionStr) {
-        invalidFraction = std::stof(fractionStr, nullptr);
-        if (invalidFraction < 0 || invalidFraction > 1000)
-            throw std::system_error(errno, std::system_category(),
-                    std::string("UdpSend::UdpSend() Invalid ") + ENV_NAME +
-                    "value");
+    const auto ratioStr = ::getenv(ENV_NAME);
+    if (ratioStr == nullptr) {
+#       ifdef LDM_LOGGING
+            log_notice("Environment variable %s doesn't exist", ENV_NAME);
+#       endif
+    }
+    else {
+        invalidRatio = std::stof(ratioStr, nullptr);
+        if (invalidRatio < 0)
+            throw std::invalid_argument(std::string(
+                    "UdpSend::BlackHat::BlackHat(): Invalid ") + ENV_NAME +
+                    "value: " + ratioStr);
+
+#       ifdef LDM_LOGGING
+            log_notice("Invalid packet ratio set to %g from environment "
+                    "variable %s", invalidRatio, ENV_NAME);
+#       endif
     }
 }
 
 void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
 {
-    /*
-     * The RHS expression can't be negative because the range of
-     * `invalidFraction` is constrained and because `invalidCount` always lags
-     * `udpSend.validCount` and unsigned subtraction is performed.
-     */
-    const CountType numSend =
-            static_cast<CountType>(invalidFraction*udpSend.validCount + 0.5)
-            - invalidCount;
+    ++validPacketIndex;
+    if (validPacketIndex != udpSend.packetIndex)
+        throw std::logic_error("UdpSend::BlackHat::maybeSend(): Valid packet "
+                "index didn't increase by 1");
 
-    if (numSend) {
+    indicator += invalidRatio;
+    if (indicator >= 1) {
         udpSend.mac[0] ^= 1; // Flip one bit in MAC
-        for (auto n = numSend; n > 0; --n)
+        for (; indicator >= 1; indicator -= 1)
             udpSend.privateSend(header);
-        invalidCount += numSend;
         udpSend.mac[0] ^= 1; // Restore MAC bit
     }
 }
@@ -98,10 +105,19 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
  */
 UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
                  const unsigned char ttl, const std::string& ifAddr)
-    : blackHat(*this), recvAddr(recvaddr), recvPort(recvport), ttl(ttl),
-      ifAddr(ifAddr), sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{},
+    : recvAddr(recvaddr),
+      recvPort(recvport),
+      ttl(ttl),
+      ifAddr(ifAddr),
+      sock_fd(-1),
+      recv_addr(),
+      hmacImpl(),
+      netHead{},
+      iov{},
       macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))},
-      validCount(0)
+      packetIndex(0),
+      sendBefore(false),
+      blackHat(*this)
 {
     iov[0].iov_base = &netHead;
     iov[0].iov_len  = FMTP_HEADER_LEN;
@@ -228,15 +244,15 @@ void UdpSend::send(const FmtpHeader& header,
     iov[1].iov_base = const_cast<void*>(payload);
     iov[1].iov_len  = header.payloadlen;
 
-    const bool sendBefore = validCount % 2;
-
-    if (sendBefore)
+    if (sendBefore) {
         blackHat.maybeSend(header);
-
-    privateSend(header);
-
-    ++validCount;
-
-    if (!sendBefore)
+        privateSend(header);
+    }
+    else {
+        privateSend(header);
         blackHat.maybeSend(header);
+    }
+    sendBefore = !sendBefore;
+
+    ++packetIndex;
 }
