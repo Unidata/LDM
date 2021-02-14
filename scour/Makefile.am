@@ -28,7 +28,8 @@ install-data-local:    \
 $(DESTDIR)$(sysconfdir)/scour.conf:
 	$(INSTALL_DATA) scour.conf $@
 
-Cscour_SOURCES		= Cscour.c  parser.c
+Cscour_SOURCES		= Cscour.c Cscour.h \
+			  parser.c parser.h
 TAGS_FILES		=  $(Cscour_SOURCES) ../log/*.c ../log/*.h 
 
 TESTS			= testCscour.py
