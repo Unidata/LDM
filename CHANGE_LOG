@@ -1,4 +1,4 @@
-6.13.14.12
+6.13.14.12      2021-02-13T17:15:10-0700
     NOAAPort:
         * Added to NCEP GRIB2 Table:
             * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
