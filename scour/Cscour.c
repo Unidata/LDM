@@ -1,7 +1,8 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
- *
+ * 
+ * Cscour(1): a Multi-threaded C program that scours faster than the
+ *         scour(1) script
+ *         
  *  @file:  Cscour.c
  * @author: Mustapha Iles
  *
@@ -38,6 +39,7 @@
 #include <pthread.h>
 #include <libgen.h>
 #include <fnmatch.h>
+#include <log.h>
 
 #include "Cscour.h"
 #include "parser.h"
@@ -69,29 +71,43 @@ char *ingestFilename;
 
 int main(int argc, char *argv[])
 {
+
+     int status;
+
+    /*
+     * Initialize logging. Done first for just in case something happens 
+     * that needs to be reported.
+     */
+    if (log_init(argv[0])) {
+        log_syserr("Couldn't initialize logging module");
+        status = 1;
+    }
     
     int deleteDirsFlag;
 
     parseArgv(argc, argv, &deleteDirsFlag, &verbose);
     
-    verbose && printf("\n\n\tCscour: STARTED...\n\n");
-    verbose && printf("\n\n\t == Cscour: parsing...\n\n");
+    log_add("\n\n\tCscour: STARTED...\n\n");
+    log_add("\n\n\t == Cscour: parsing...\n\n");
+    log_flush_info();
 
     // Call config parser
     int validEntriesCounter;
     IngestEntry_t *listHead = parseConfig(&validEntriesCounter);
     
-    verbose && printf("\n\t == Cscour: parsing complete!\n\n");
+    log_add("\n\t == Cscour: parsing complete!\n\n");
 
     // enable for debug only:
     //traverseIngestList(listHead);
 
-    verbose && printf("\n\t == Cscour: Launching %d threads...\n\n", 
+    log_add("\n\t == Cscour: Launching %d threads...\n\n", 
                         validEntriesCounter);
+    log_flush_info();
 
     multiThreadedScour(listHead, deleteDirsFlag);
  
-    verbose && printf("\n\n\tCscour: Complete!\n\n");
+    log_add("\n\n\tCscour: Complete!\n\n");
+    log_flush_info();
 
     exit(0);
 }
@@ -101,9 +117,10 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
 
     IngestEntry_t *tmp = head;
     if(head) 
-        verbose && printf("\n\tCscour: List of validated items sourced in user's configuration file: %s\n", 
+        log_add("\n\tCscour: List of validated items sourced in user's configuration file: %s\n", 
             ingestFilename);
-    
+        log_flush_info();
+
     pthread_t tids[MAX_THREADS];
     int threadsCounter  =   0;
 
@@ -121,9 +138,10 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
         items = (ConfigItemsAndDeleteFlag_t *) 
                         malloc(sizeof(ConfigItemsAndDeleteFlag_t));
 
-        verbose && printf("\n\t====> Processing directory:%s with daysOld: %s (%d) and pattern: %s\n",
+        log_add("\n\t====> Processing directory:%s with daysOld: %s (%d) and pattern: %s\n",
             tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
-
+        log_flush_info();
+        
         strcpy(items->dir,      tmp->dir);
         items->daysOldInEpoch =  tmp->daysOldInEpoch;
         strcpy(items->daysOld,  tmp->daysOld);
@@ -146,9 +164,10 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
     {
         // Thread ID:
         pthread_join(tids[i++], NULL);
-        verbose && printf("\nScouring directory (%s) completed with thread ID counter: %d!\n", 
+        log_add("\nScouring directory (%s) completed with thread ID counter: %d!\n", 
                     tmp->dir, i-1);
-        
+        log_flush_info();
+
         tmp = tmp->nextEntry; 
     } 
 }
@@ -166,14 +185,16 @@ static int removeFile(char *path, char * daysOld)
     // current file is OLDER than daysOld
     if (status)
     {
-        verbose && printf("removeFile(\"%s\") failed.\n", path);
+        log_add("removeFile(\"%s\") failed.\n", path);
+        log_flush_error();
     }
     else
     {
         // log_info("\t(+)File \"%s\" is older than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
-        verbose && printf("\t(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!\n",
-                        path, daysOld);
+        log_add("\t(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!\n", path, daysOld);
+        log_flush_info();
     }
+    
     return status;
 }
 
@@ -182,8 +203,9 @@ int isSymlinkDirectory(char *path)
     struct stat sb;
     if (stat(path, &sb) == -1)
     {
-        verbose && printf("\tisSymlinkDirectory: symlink \"%s\"  is broken! Removing it...\n",
-            path);
+        log_add("\tisSymlinkDirectory: symlink \"%s\"  is broken! Removing it...\n", path);
+        log_flush_info();
+
         unlink(path);
         return 0;
     }
@@ -199,7 +221,8 @@ static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
     struct stat sb;
     if (stat(symlinkedEntry, &sb) == -1)
     {
-        printf("stat(\"%s\") failed.\n", symlinkedEntry);
+        log_add("stat(\"%s\") failed.\n", symlinkedEntry);
+        log_flush_info();
         return -1;
     }
 
@@ -225,8 +248,9 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
     // Unable to open directory stream
     if(!dir) 
     {
-        fprintf(stderr, "failed to open directory \"%s\" (%d: %s)\n",
+        log_add("scourFilesAndDirs:: failed to open directory \"%s\" (%d: %s)\n",
                 basePath, errno, strerror(errno));
+        log_flush_warn();
         return -1;
     }
 
@@ -237,8 +261,10 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
         struct stat sb;
         if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1) 
         {
-            fprintf(stderr, "fstatat(\"%s/%s\") failed: %s\n",
+
+            log_add("scourFilesAndDirs::fstatat(\"%s/%s\") failed: %s\n",
                 basePath, dp->d_name, strerror(errno));
+            log_flush_warn();
             return -1;
         }
 
@@ -256,8 +282,9 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
                 continue;
         
-            verbose && printf("\n(d) %s\n", dp->d_name);
-            
+            log_add("\n(d) %s\n", dp->d_name);
+            log_flush_info();
+
             // depth-first traversal
             scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag, daysOld, symlinkFlag);
 
@@ -266,33 +293,40 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {
                   
-                verbose && printf("\tDeleting this (empty) directory %s\n\n", path);
+                log_add("\tDeleting this (empty) directory %s\n\n", path);
                 if(remove(path))
                 {
-                    verbose && fprintf(stderr, "\n\tdirectory remove(\"%s\") failed: %s\n",
+                    log_add("\n\tdirectory remove(\"%s\") failed: %s\n",
                         path, strerror(errno));
-                        break;
+                    log_flush_warn();
+
+                    break;
                 }     
-                printf("Removed directory: %s \n", path);               
+                log_add("Removed directory: %s \n", path);               
+                log_flush_info();
 
             } else {
-                printf("NOT deleted! %s && symlink: %d  &&  deleteFlag: %d\n", path, symlinkFlag, deleteDirsFlag);
+                log_add("NOT deleted! %s && symlink: %d  &&  deleteFlag: %d\n", 
+                        path, symlinkFlag, deleteDirsFlag);
+                log_flush_info();
             }
             break;
 
 
         case S_IFREG :
 
-            verbose && printf("\n(r) %s\n", path);
+            log_add("\n(r) %s\n", path);
                   
             // Only examine pattern-matching files and non-.scour files 
             // fnmatch returns 0 if match found
             if( fnmatch(pattern, dp->d_name, FNM_PATHNAME)  )
             {
-                verbose && printf("\t(-) File \"%s\" does NOT match pattern: %s\n",  dp->d_name, pattern);   
+                log_add("\t(-) File \"%s\" does NOT match pattern: %s\n",  dp->d_name, pattern);   
+                log_flush_info();
                 continue;   
             }
-            verbose && printf("\t(+) File \"%s\" matches pattern: %s\n",  dp->d_name, pattern);
+            log_add("\t(+) File \"%s\" matches pattern: %s\n",  dp->d_name, pattern);
+            log_flush_info();
 
             if ( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) )
             {
@@ -300,21 +334,26 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                 continue;
             }    
                 
-            verbose && printf("\t(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...\n", 
+            log_add("\t(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...\n", 
                         path, daysOld);                        
-    
+            log_flush_info();
+
             break;
 
         case S_IFLNK:
         
-            verbose && printf("\n(sl) %s\n", path);
+            log_add("\n(sl) %s\n", path);
 
             char symlinkedEntry[PATH_MAX];
             callReadLink(path, symlinkedEntry);
 
             if(isSymlinkDirectory(path))
             {
-                verbose && printf("\t(d) Following symlink: %s (Will not be removed.)\n", symlinkedEntry);
+                log_add("\t(d) Following symlink: %s (Will not be removed.)\n", 
+                    symlinkedEntry);
+                log_flush_info();
+
+                // recursive call:
                 scourFilesAndDirs(symlinkedEntry, daysOldInEpoch, pattern, 
                                     deleteDirsFlag, daysOld, IS_DIRECTORY_SYMLINK);
 
@@ -322,8 +361,10 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             }
             else
             {
-                verbose && printf("\n\t(-sl) %s is a linked file. Remove if OLDER than %s daysOld (days[-HHMMSS])\n", 
+                log_add("\n\t(-sl) %s is a linked file. Remove if OLDER than %s daysOld (days[-HHMMSS])\n", 
                             symlinkedEntry, daysOld);
+                log_flush_info();
+
                 // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
                 // however, currentEntryEpoch should NOT be that of the symlink but that of the file pointed to by the slink
                 removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, daysOld);
@@ -332,8 +373,9 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
 
         default: 
 
-            verbose && printf("\n(?) NOT a regular file, nor a symlink: \"%s\"\n", dp->d_name);
-            
+            log_add("\n(?) NOT a regular file, nor a symlink: \"%s\"\n", dp->d_name);
+            log_flush_info();
+
             break;
         }
     }
@@ -398,8 +440,10 @@ int epochOfLastModified(char *dirPath, char *aFile)
     struct stat sb;
     if (stat(FQFilename, &sb) == -1) 
     {
-        verbose && fprintf(stderr, "epochOfLastModified: stat(\"%s\") failed: %s\n", 
+        log_add(stderr, "epochOfLastModified: stat(\"%s\") failed: %s\n", 
             FQFilename, strerror(errno));
+        log_flush_error();
+
         return -1;
     }
 

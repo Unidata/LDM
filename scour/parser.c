@@ -73,7 +73,8 @@ static int isRegularFile(const char *path)
 
     if (stat(path, &path_stat) == -1)
     {
-        printf("\tIngest file (\"%s\") does not exist.\n", path);
+        log_add("\tIngest file (\"%s\") does not exist.\n", path);
+        log_flush_error();
         return 0;
     }
 
@@ -94,10 +95,24 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
     while (( opt = getopt(argc, argv, OPTSTR)) != -1) {
         switch (opt) {
 
-        case 'd': *deleteDirOption = 1; optionsCounter++; break;
-        case 'v': *verbose = 1; optionsCounter++; break;
-            
-        default: abort();
+        case 'd': 	*deleteDirOption = 1; optionsCounter++; 
+
+        			break;
+        case 'v': 	*verbose = 1; optionsCounter++; 
+                	if (!log_is_enabled_info)
+                    	(void)log_set_level(LOG_LEVEL_WARNING);
+
+        			break;
+        case 'l':  	optionsCounter+=2;
+
+        			if (log_set_destination(argv[optind])) 
+        			{
+        				log_syserr("Couldn't set logging destination to \"%s\"",
+                		argv[optind];);
+        			}
+        			optind++;
+        			break;
+        default: 	abort();
 
         }
     }
@@ -111,15 +126,16 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption, int *verbose)
  	if( !isRegularFile( ingestFilename )  ) 
  	{
     	// file doesn't exist
-    	printf(" Scour Configuration file (%s) does not exist (or not a text file)! Bailing out...\n", 
+    	log_add(" Scour Configuration file (%s) does not exist (or is not a text file)! Bailing out...\n", 
     		ingestFilename);
+    	log_flush_error();
     	exit(EXIT_FAILURE);
 	}
 }
 
 void usage() 
 {
-	fprintf(stderr, USAGE_FMT, PROGRAM_NAME);
+	log_syserr(stderr, USAGE_FMT, PROGRAM_NAME);
 	exit(EXIT_FAILURE);
 }
 
@@ -132,7 +148,8 @@ static int getCurrentDir(char *currentDir) {
 	}
 	else
 	{
-		perror("getcwd() error");
+		log_add("getcwd() error");
+		log_flush_error();
 		return -11;
 	}
 }
@@ -148,15 +165,20 @@ int readNotAllowedList(char (*list)[STRING_SIZE])
 	char currentWorkDir[PATH_MAX];
 	if( getCurrentDir(currentWorkDir) == -1)
 	{
-		fprintf(stderr, "parser::readNotAllowedList(): getcwd() failed: %s\n", strerror(errno));
+		log_add("parser::readNotAllowedList(): getcwd(%s) failed: %s\n", 
+				currentWorkDir, strerror(errno));
+		log_flush_error();
+
         return -1;
 	}
 	//sprintf(notAllowedDirsFilename, "%s/%s", currentWorkDir, NOT_ALLOWED_DIR_PATHS_FILE);
 
     if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
     {
-        fprintf(stderr, "parser::readNotAllowedList(): fopen(\"%s\") failed: %s\n",
+    	log_add("parser::readNotAllowedList(): fopen(\"%s\") failed: %s\n",
             notAllowedDirsFilename, strerror(errno));
+		log_flush_error();
+
         return -1;
     }
 
@@ -197,8 +219,10 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 
     if((fp = fopen(ingestFilename, "r")) == NULL)
     {
-        fprintf(stderr, "fopen(\"%s\") failed: %s\n",
+		log_add("parser:: fopen(\"%s\") failed: %s\n",
             ingestFilename, strerror(errno));
+		log_flush_error();
+
         return NULL;
     }
 
@@ -212,7 +236,8 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
 		{
 
 			if(strlen(ptr) > PATH_MAX) {
-				verbose && printf("ERROR: %s is TOO long (%zu) !\n", ptr, strlen(ptr));	
+				log_add("ERROR: %s is TOO long (%zu) !\n", ptr, strlen(ptr));	
+				log_flush_warn();
 				ptr="";
 			}
 
@@ -235,8 +260,10 @@ IngestEntry_t *parseConfig(int *directoriesCounter)
      	// validate dirName path
      	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, notAllowedCounter) == -1 )
 		{
-			verbose && printf("\t(-) Directory '%s' does not exist (or is invalid.) Skipping...\n\n", 
+			log_add("\t(-) Directory '%s' does not exist (or is invalid.) Skipping...\n\n", 
 				dirName);
+			log_flush_info();
+
 			continue;
 		} 
 
@@ -261,8 +288,10 @@ static int notExistAndAccessible(char *dirPath)
     DIR *dir = opendir(dirPath);
     if(!dir)
     {
-    	fprintf(stderr, "Cscour: failed to open directory %s: %s\n",
+		log_add("parser:: Cscour: failed to open directory %s: %s\n",
             dirPath, strerror(errno));
+		log_flush_error();
+
     	return -1;
     }
 
@@ -288,8 +317,10 @@ char *substring(char *string, int position, int length)
 
    if (p == NULL)
    {
-		fprintf(stderr, "parser(): malloc(\"%d\") failed: %s\n",
+		log_add("parser:: malloc(\"%d\") failed: %s\n",
         	length +1, strerror(errno));
+		log_flush_error();
+
     	return NULL;
    }
 
@@ -361,7 +392,9 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 
  		if(currentHomeDir == NULL)
  		{
-	        verbose && fprintf(stderr, "loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
+			log_add("parser::loginHomeDir() failed:  getpwnam() or getLogin() failed.\n");
+			log_flush_error();
+
  			return -1;
  		}
 
@@ -374,7 +407,8 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
  		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
  		if( tmp == NULL )
  		{
-	        fprintf(stderr, "startsWithTilda: malloc() failed: %s\n",  strerror(errno));
+			log_add("parser::startsWithTilda(): malloc() failed: %s\n",  strerror(errno));
+			log_flush_error();
  			return -1;
  		}
  		strcpy(tmp, subDirPath);
@@ -410,9 +444,12 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE], 
 		int notAllowedCounter) 
 {
-
-	verbose && printf("\tparser(): validating directory: %s\n", dirName);
-
+	log_info("parser::validating directory: %s\n", dirName);
+	log_flush_info();
+	if (verbose)
+	{
+		log_flush(LOG_LEVEL_INFO);	
+	}
 	// 1. check if dirName is in the list. If not continue the vetting process
 	if( isNotAllowed(dirName, list, notAllowedCounter) ) return -2;
 
@@ -423,7 +460,9 @@ int vetThisDirectoryPath(char * dirName, char (*list)[STRING_SIZE],
 	if( tildaFlag == -1) return -1;
 	else {
 		strcpy(dirName, pathName);
-		verbose && printf("\tparser(): tilda expanded directory:'%s'\n", dirName);
+		log_info("\tparser(): tilda expanded directory:'%s'\n", dirName);
+		log_flush_info()
+
 		return 0;
 	}
 
@@ -445,7 +484,9 @@ int isNotAllowed(char * dirName, char (*list)[STRING_SIZE], int notAllowedCounte
 	int i;
 	for(i=0; i<notAllowedCounter; i++) {
 		if( strcmp(dirName, list[i]) == 0) {
-			verbose && printf("isNotAllowed: path %s is NOT allowed!\n", dirName);
+			log_add("isNotAllowed: path %s is NOT allowed!\n", dirName);
+			log_flush_warning();
+
 			return -1;
 		}
 	}
@@ -477,19 +518,22 @@ int traverseIngestList(IngestEntry_t *listhead)
 {
 
 	IngestEntry_t *tmp = listhead;
-	verbose && printf("\n\tparser: Traversing the list of scour items from configuration file: \n");
+	log_add("\n\tparser: Traversing the list of scour items from configuration file: \n");
+	log_flush_info();
 	if(tmp == NULL) {
-		verbose && printf("\n\tEMPTY LIST! \n");
+		log_add("\n\ttraverseIngestList:: EMPTY LIST! \n");
+		log_flush_warning();
 		exit(-1);
 	}
 
    //start from the beginning
    while(tmp != NULL) {
-      verbose && printf("\t%s \t %s (%d) \t %s\n",tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
+      log_add("\t%s \t %s (%d) \t %s\n",tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
       tmp = tmp->nextEntry;
    }
 	
-   verbose && printf("\n");
+   log_add("\n");
+   log_flush_info();
 
    return 1;
 
@@ -536,7 +580,8 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		strncpy(result, &daysOldItem[group[1].rm_so], group[1].rm_eo - group[1].rm_so);
 		days = atoi(result);
 		if(days > DAYS_SINCE_1994) {
-			verbose && printf("Too many days back: %d\n", days);
+			log_add("Too many days back: %d\n", days);
+			log_flush_warn();
 			return -1;
 		}
 
@@ -550,8 +595,10 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 			case 3: //days_HH
 				
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS; 
-				verbose && printf("\t(+) daysOld: %d -- hours: %d  (epoch: %d)\n\n", 
+	
+				log_add("\t(+) daysOld: %d -- hours: %d  (epoch: %d)\n\n", 
 					days, hours, todayEpoch - daysEtcInSeconds);
+				log_flush_info();
 				
 				break;
 
@@ -562,9 +609,10 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				minutes = atoi(result);
 		
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS; 
-				verbose && printf("\t(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)\n\n", 
+				log_add("\t(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)\n\n", 
 					days, hours, minutes, todayEpoch - daysEtcInSeconds);
-		
+				log_flush_info();
+				
 				break;
 
 			case 5: // days_HHMMSS
@@ -578,8 +626,9 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				seconds = atoi(result);
 
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds; 
-				verbose && printf("\t(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)\n\n", 
+				log_add("\t(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)\n\n", 
 					days, hours, minutes, seconds, todayEpoch - daysEtcInSeconds);
+				log_flush_info();
 
 				break;
 
@@ -623,7 +672,9 @@ int convertDaysOldToEpoch(char *daysOldItem)
 	if (status == 0) 
 	{
 		int daysOnlyInSeconds = atoi(daysOldItem) * DAY_SECONDS;
-		verbose && printf("\t(+) daysOld: %s (epoch: %d)\n\n", daysOldItem, todayEpoch - daysOnlyInSeconds);
+		log_add("\t(+) daysOld: %s (epoch: %d)\n\n", daysOldItem, todayEpoch - daysOnlyInSeconds);
+		log_flush_info();
+
 		return todayEpoch - daysOnlyInSeconds;
 	} 
 
@@ -663,7 +714,9 @@ char * loginHomeDir(char *providedLgn)
 	if(providedLgn != NULL) lgn = providedLgn;
 	else
 		if ((lgn = getlogin()) == NULL) {
-		    fprintf(stderr, "\"getlogin()\" failed.\n"); 
+			log_add("parser::getlogin() failed: %s\n",  strerror(errno));
+			log_flush_error();
+
 		    return NULL;
 		}
 
@@ -681,19 +734,22 @@ char * loginHomeDir(char *providedLgn)
     char*          buffer = malloc(len);
     int            status;
     if (buffer == NULL) {
-        perror("Couldn't allocate buffer");
+        log_add("Couldn't allocate buffer");
+        log_flush_error();
         return NULL;
     }
     else {
         int e;
         e = getpwnam_r(lgn, &result, buffer, len, &resultp);
         if (e) {
-            perror("getpwnam_r() failure");
+            log_add("getpwnam_r() failure");
+            log_flush_error();
             free(buffer);
             return NULL;
         }
         if (resultp == NULL) {
-            verbose && fprintf(stderr, "\tUser \"%s\"  does not exist on this system.\n", lgn);
+            log_add("\tUser \"%s\"  does not exist on this system.\n", lgn);
+            log_flush_error();
             free(buffer);
             return NULL;
         }
