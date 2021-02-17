@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
     log_add("\n\n\tCscour: Complete!\n\n");
     log_flush_info();
 
+    log_free();
     exit(0);
 }
 
@@ -167,6 +168,8 @@ void multiThreadedScour(IngestEntry_t *head, int deleteDirsFlag)
         log_add("\nScouring directory (%s) completed with thread ID counter: %d!\n", 
                     tmp->dir, i-1);
         log_flush_info();
+
+        // log_free(); ????????????????
 
         tmp = tmp->nextEntry; 
     } 
