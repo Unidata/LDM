@@ -1,4 +1,7 @@
 6.13.14.13
+    ldmadmin(1):
+        * Corrected error-message in "addmetrics" command
+
     DevOpts:
         * deployAll(1): Modified to use an associative array and to print 
           asynchronous logs at the end
