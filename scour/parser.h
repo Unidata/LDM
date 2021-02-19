@@ -42,10 +42,10 @@
 #define MAX_NOT_ALLOWED_DIRPATHS 100
 #define STRING_SIZE		80
 #define DAYS_OLD_SIZE	15
-#define NOT_ALLOWED_DIR_PATHS_FILE "/tmp/notAllowedDirs.txt"		// to prepend with current dir (cwd)
+#define DIRS_TO_EXCLUDE_FILE "/tmp/scourExcludedDirectories.txt"
 
-#define OPTSTR	"dv"
-#define USAGE_FMT  "\n\tUsage: \t%s [-v] [-d] <scour_ingest_filename>\n\n"
+#define OPTSTR	"dvl:"
+#define USAGE_FMT  "\n\tUsage: \t%s [-v] [-d] [-l <log_file>] <scour_ingest_filename>\n\n"
 #define PROGRAM_NAME	"Cscour"
 #
 typedef struct IngestEntry {
@@ -55,18 +55,19 @@ typedef struct IngestEntry {
 	char daysOld[DAYS_OLD_SIZE];
 	char pattern[PATTERN_SIZE];	
 	struct IngestEntry* nextEntry;
+
 } IngestEntry_t;
 
-void newEntryNode(char *, char *, char *);
+void newEntryNode(IngestEntry_t **, char *, char *, char *);
 int traverseIngestList(IngestEntry_t *);
-IngestEntry_t *parseConfig();
+int parseConfig(int *, IngestEntry_t **);
 
 int regexOps(char *, char *, int);
 int nowInEpoch();
 int convertDaysOldToEpoch(char *);
 
 char * loginHomeDir(char *);
-int isNotAllowed(char *, char (*)[STRING_SIZE], int);
+int isExcluded(char *, char (*)[STRING_SIZE], int);
 int vetThisDirectoryPath(char *, char (*)[STRING_SIZE], int); 
 int compareWithGetLogin(char *);
 void usage();
