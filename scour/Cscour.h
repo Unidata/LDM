@@ -35,8 +35,8 @@ int     isDirectoryEmpty(char*);
 int     isRootPath(char *);
 int     isAbsolutePath(char *);
 
-int     existsAndIsAccessible(char *); 
-void    parseArgv(int, char **, int *, int *);
+int     isAccessible(char *); 
+void    parseArgv(int, char **, int *);
 int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
