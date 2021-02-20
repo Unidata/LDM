@@ -132,7 +132,6 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
     log_info("List of validated items sourced in user's configuration file: %s", 
             ingestFilename);
     
-
     IngestEntry_t *tmp = listTete;
     pthread_t tids[MAX_THREADS];
     int threadsCounter  =   0;
@@ -151,8 +150,7 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
                         malloc(sizeof(ConfigItemsAndDeleteFlag_t));
 
         log_info("multiThreadedScour(): Processing directory:%s with daysOld: %s (%d) and pattern: %s",
-            tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
-        
+                tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
         
         strcpy(items->dir,      tmp->dir);
         items->daysOldInEpoch =  tmp->daysOldInEpoch;

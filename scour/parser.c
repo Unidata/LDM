@@ -1,5 +1,5 @@
 /**
- * This file parses the ingest config file for the Cscour program input
+ * This file parses the scour config file for the Cscour program input
  *
  *  @file:  parser.c
  * @author: Mustapha Iles
@@ -149,7 +149,6 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption)
 	}
 }
 
-
 /*
 	Code to read a file of NON-ALLOWED directory paths into an array
 	which is used to skip processing these directories
@@ -259,7 +258,6 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
     fclose(fp);
     if (line)
         free(line);
-
     return 0;
 }
 
@@ -471,6 +469,21 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	return 0;
 }
 
+int isAccessible(char *dirPath) 
+{
+
+    DIR *dir = opendir(dirPath);
+    if(!dir) 
+    {
+		log_info("parser::isAccessible(\"%s\") failed", dirPath);    	
+    	log_add("parser(): failed to open directory: %s", dirPath);
+    	log_flush_warning();
+    	return -1;
+    }
+    
+    closedir(dir);
+    return 0;
+}
 
 int isAccessible(char *dirPath) 
 {
@@ -531,7 +544,6 @@ void newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *patt
 	*listHead = tmp;
 }
 
-
 int nowInEpoch()
 {
     time_t today, todayEpoch;
@@ -591,8 +603,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS; 
 	
 				log_info("(+) daysOld: %d -- hours: %d  (epoch: %d)", 
-					days, hours, todayEpoch - daysEtcInSeconds);				
-				
+					days, hours, todayEpoch - daysEtcInSeconds);								
 				break;
 
 			case 4: // days_HHMM
@@ -604,8 +615,6 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS; 
 				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)", 
 					days, hours, minutes, todayEpoch - daysEtcInSeconds);
-				
-				
 				break;
 
 			case 5: // days_HHMMSS
@@ -621,6 +630,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds; 
 				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)", 
 					days, hours, minutes, seconds, todayEpoch - daysEtcInSeconds);
+				log_flush_info();
 
 				break;
 
@@ -665,7 +675,7 @@ int convertDaysOldToEpoch(char *daysOldItem)
 	{
 		int daysOnlyInSeconds = atoi(daysOldItem) * DAY_SECONDS;
 		log_info("(+) daysOld: %s (epoch: %d)", daysOldItem, todayEpoch - daysOnlyInSeconds);
-
+    
 		return todayEpoch - daysOnlyInSeconds;
 	} 
 
@@ -694,8 +704,7 @@ char * loginHomeDir(char *providedLgn)
 	if(providedLgn != NULL) lgn = providedLgn;
 	else
 		if ((lgn = getlogin()) == NULL) {
-			log_add("parser(): loginHomeDir:getlogin() failed: %s",  strerror(errno));
-
+			  log_add("parser(): loginHomeDir:getlogin() failed: %s",  strerror(errno));
 		    return NULL;
 		}
 
@@ -721,7 +730,6 @@ char * loginHomeDir(char *providedLgn)
         e = getpwnam_r(lgn, &result, buffer, len, &resultp);
         if (e) {
             log_add("parser(): loginHomeDir:getpwnam_r() failure");
-            
             free(buffer);
             return NULL;
         }
