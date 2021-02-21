@@ -42,7 +42,6 @@ typedef struct IngestEntry {
 	char daysOld[DAYS_OLD_SIZE];
 	char pattern[PATTERN_SIZE];	
 	struct IngestEntry* nextEntry;
-
 } IngestEntry_t;
 
 void newEntryNode(IngestEntry_t **, char *, char *, char *);
