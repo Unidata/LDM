@@ -389,6 +389,7 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 	 	// Expand ldm to LDM_HOME
  		char *providedLgn = substring(dirPath, 2, tildaRootPosition - 1);
  		char *currentHomeDir = loginHomeDir(providedLgn);
+ 		free(providedLgn);
 
  		if(currentHomeDir == NULL)
  		{
@@ -412,6 +413,7 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 
  		// return this new dirPath
  		strcpy(expandedDirName, tmp);
+ 		free(tmp);
 
  		return 0;
 	}
@@ -425,14 +427,17 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
  		strcpy(subDirPath, homeDir);
  		strcat(subDirPath, dirPath + 1);
  		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
-
  		if( tmp == NULL) return -1;
+
  		strcpy(tmp, subDirPath);
 
  		// return this new dirPath
  		strcpy(expandedDirName, tmp);
+ 		free(tmp);
+
  		return 0;
 	}
+	free(tmp);
 
 	return 0;
 }
@@ -443,10 +448,7 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 {
 	log_info("parser(): validating directory: %s", dirName);
 	
-	// 1. check if dirName is in the list. If not continue the vetting process
-	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
-
-	// 2. check if it starts with tilda and vet the expanded path
+	// 1. check if it starts with tilda and vet the expanded path
 	//	  return the expanded path for subsequent vetting below
 	char pathName[PATH_MAX];
 	int tildaFlag = startsWithTilda(dirName, pathName);
@@ -461,12 +463,17 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	strcpy(dirName, pathName);
 	log_info("parser(): tilda expanded directory: \"%s\"", dirName);
 	
-	// 3. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
+	// 2. check if dirName is in the list of excluded direectories. 
+	// If not continue the vetting process
+	// dirtName is an absolute path. Excluded dirs are expected to be too.
+	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
+
+	// 3. check that the directory is a valid one
+    if( !isAccessible(dirName) ) return -1;
+
+	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
 	if( !isSameAsLoginDirectory(dirName) ) return -1;
-
-	// 4. check that the directory is a valid one
-    if( !isAccessible(dirName) ) return -1;
 
 	return 0;
 }
@@ -576,6 +583,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		if(days > DAYS_SINCE_1994) {
 			log_add("regexOps(): Too many days back: %d", days);
 			log_flush_warn();
+			free(result);
 			return -1;
 		}
 
