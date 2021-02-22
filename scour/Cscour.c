@@ -55,7 +55,7 @@
 // pass 2 arguments to threaded function
 typedef struct config_items_args {
     
-    char    dir[DIR_SIZE];
+    char    dir[PATH_MAX];
     int     daysOldInEpoch;         // daysOld: 1-hhmmss converted to Epoch 
     char    daysOld[DAYS_OLD_SIZE];
     char    pattern[PATTERN_SIZE]; 
@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
 
     parseArgv(argc, argv, &deleteDirsFlag);
 
-    log_info("Cscour: STARTED...");    
-    log_info("Cscour: parsing...");    
+    log_info("scour() STARTED...");    
+    log_info("parsing...");    
 
     // Call config parser
     int validEntriesCounter = 0;
@@ -93,24 +93,28 @@ int main(int argc, char *argv[])
 
     if( parseConfig(&validEntriesCounter, &listHead) != 0)
     {
-        log_add("Cscour: parseConfig() failed");
+        log_add("parseConfig() failed");
+        log_add("parsing complete!");
+        log_add("scour() COMPLETED!");        
         log_flush_fatal();
         exit(EXIT_FAILURE);
     }
 
-    if( validEntriesCounter == 0)
+    if( validEntriesCounter == 0 || listHead == NULL)
     {
-        log_add("Cscour: no valid configuration file entries");
+        log_add("no valid configuration file entries");
+        log_add("parsing complete!");
+        log_add("scour() COMPLETED!");
         log_flush_warning();
         exit(EXIT_SUCCESS);
     }
-    
-    log_info("Cscour: parsing complete!");
-    log_info("Cscour: Launching %d threads...", validEntriesCounter);
+
+    log_info("parsing complete!");
+    log_info("Launching %d threads...", validEntriesCounter);
     
     multiThreadedScour(listHead, deleteDirsFlag);
  
-    log_info("Cscour: Complete!");
+    log_info("scour() COMPLETED!");
     log_free(); 
 
     exit(EXIT_SUCCESS);
@@ -118,13 +122,16 @@ int main(int argc, char *argv[])
  
 static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
 {
-
-    if(listTete) {
-
-        log_info("Cscour: List of validated items sourced in user's configuration file: %s", 
-            ingestFilename);
+    if(listTete == NULL)
+    {
+        log_add("Empty list of directories to scour. Bailing out...");
+        log_flush_fatal();
+        return; 
     }
-
+    
+    log_info("List of validated items sourced in user's configuration file: %s", 
+            ingestFilename);
+    
     IngestEntry_t *tmp = listTete;
     pthread_t tids[MAX_THREADS];
     int threadsCounter  =   0;
@@ -142,9 +149,8 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
         items = (ConfigItemsAndDeleteFlag_t *) 
                         malloc(sizeof(ConfigItemsAndDeleteFlag_t));
 
-        log_info("Cscour::multiThreadedScour() - Processing directory:%s with daysOld: %s (%d) and pattern: %s",
-            tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
-        
+        log_info("multiThreadedScour(): Processing directory:%s with daysOld: %s (%d) and pattern: %s",
+                tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
         
         strcpy(items->dir,      tmp->dir);
         items->daysOldInEpoch =  tmp->daysOldInEpoch;
@@ -168,7 +174,7 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
     {
         // Thread ID: wait on this thread
         pthread_join(tids[i++], NULL);
-        log_info("Cscour::multiThreadedScour() - Scouring directory (%s) completed with thread ID counter: %d!", 
+        log_info("multiThreadedScour(): Scouring directory (%s) completed with thread ID counter: %d!", 
                     tmp->dir, i-1);
 
         tmp = tmp->nextEntry; 
@@ -186,7 +192,7 @@ int isSymlinkDirectory(char *path)
     struct stat sb;
     if (stat(path, &sb) == -1)
     {
-        log_add("isSymlinkDirectory: symlink \"%s\"  is broken! Removing it...", path);
+        log_add("isSymlinkDirectory(): symlink \"%s\"  is broken! Removing it...", path);
         log_flush_info();
 
         unlink(path);
@@ -204,7 +210,7 @@ static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
     struct stat sb;
     if (stat(symlinkedEntry, &sb) == -1)
     {
-        log_add("stat(\"%s\") failed", symlinkedEntry);
+        log_add("removeFileSymlink(): stat(\"%s\") failed", symlinkedEntry);
         log_flush_info();
         return -1;
     }
@@ -231,7 +237,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
     // Unable to open directory stream
     if(!dir) 
     {
-        log_add("Cscour::scourFilesAndDirs() failed to open directory \"%s\" (%d: %s)",
+        log_add("scourFilesAndDirs(): failed to open directory \"%s\" (%d: %s)",
                 basePath, errno, strerror(errno));
         log_flush_warning();
         return -1;
@@ -244,7 +250,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
         struct stat sb;
         if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1) 
         {
-            log_add("scourFilesAndDirs::fstatat(\"%s/%s\") failed: %s\n",
+            log_add("scourFilesAndDirs(): fstatat(\"%s/%s\") failed: %s\n",
                 basePath, dp->d_name, strerror(errno));
             log_flush_warning();
             return -1;
@@ -253,7 +259,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
         int currentEntryEpoch = sb.st_mtime;                
 
         // new basePath is either a dir, a file, or a link to follow if it's a directory symlimk
-        char path[PATH_SIZE];
+        char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", basePath, dp->d_name);
         
 
@@ -284,7 +290,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                 log_info("Removed directory: %s \n", path);               
 
             } else {
-                log_info("NOT deleted! %s && symlink: %d  &&  deleteFlag: %d", 
+                log_info("NOT deleted! directory: %s && symlink: %d  &&  deleteFlag: %d", 
                         path, symlinkFlag, deleteDirsFlag);
                 
             }
@@ -414,21 +420,6 @@ void getFQFilename(char *dirPath, char *filename, char *FQFilename)
 
     strncpy(FQFilename, fullFilename, strlen(fullFilename));
 
-}
-
-int epochOfLastModified(char *dirPath, char *aFile)
-{
-    char FQFilename[PATH_MAX];
-    getFQFilename(dirPath, aFile, FQFilename);
-    
-    struct stat sb;
-    if (stat(FQFilename, &sb) == -1) 
-    {
-        log_add("epochOfLastModified: stat(\"%s\") failed", FQFilename);
-        log_flush_error();
-        return -1;
-    }
-    return sb.st_mtime;
 }
 
 // check if directory is empty except for ,scour file. 

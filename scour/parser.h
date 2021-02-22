@@ -23,31 +23,18 @@
 #ifndef PARSER_DOT_H
 #define PARSER_DOT_H
 
-#define PATH_SIZE		1024
-#define MAX_STRING_SIZE	40
 #define ALL_FILES		"*"
-#define DIR_SIZE		80
-#define PATTERN_SIZE	20
-#define DAYS_SIZE		10
-
+#define PATTERN_SIZE	40
 // daysOld defs
-#define MAX_LINES 8
-#define LINE_SIZE 20
+#define DAYS_OLD_SIZE	15
 #define DAY_SECONDS 86400
 #define HOUR_SECONDS 3600
 #define MINUTE_SECONDS 60
 #define DAYS_SINCE_1994 9516
 
-
 #define MAX_NOT_ALLOWED_DIRPATHS 100
-#define STRING_SIZE		80
-#define DAYS_OLD_SIZE	15
 #define DIRS_TO_EXCLUDE_FILE "/tmp/scourExcludedDirectories.txt"
 
-#define OPTSTR	"dvl:"
-#define USAGE_FMT  "\n\tUsage: \t%s [-v] [-d] [-l <log_file>] <scour_ingest_filename>\n\n"
-#define PROGRAM_NAME	"Cscour"
-#
 typedef struct IngestEntry {
 
 	char dir[PATH_MAX];
@@ -55,22 +42,16 @@ typedef struct IngestEntry {
 	char daysOld[DAYS_OLD_SIZE];
 	char pattern[PATTERN_SIZE];	
 	struct IngestEntry* nextEntry;
-
 } IngestEntry_t;
 
 void newEntryNode(IngestEntry_t **, char *, char *, char *);
-int traverseIngestList(IngestEntry_t *);
 int parseConfig(int *, IngestEntry_t **);
-
 int regexOps(char *, char *, int);
 int nowInEpoch();
 int convertDaysOldToEpoch(char *);
-
 char * loginHomeDir(char *);
 int isExcluded(char *, char (*)[STRING_SIZE], int);
 int vetThisDirectoryPath(char *, char (*)[STRING_SIZE], int); 
-int compareWithGetLogin(char *);
-void usage();
+void usage(char *);
 
-int verbose;
 #endif	// PARSER_DOT_H
