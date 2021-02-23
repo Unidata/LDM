@@ -2,6 +2,9 @@
     ldmadmin(1):
         * Corrected error-message in "addmetrics" command
 
+    logging:
+        * Added LOG_LEVEL_FATAL and associated functions/macros
+
     DevOpts:
         * deployAll(1): Modified to use an associative array and to print 
           asynchronous logs at the end
