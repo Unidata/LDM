@@ -22,9 +22,6 @@
 
 #include "parser.h"
 
-#define SECONDS_IN_1DAY 84000
-#define PATH_SIZE       1024
-#define SCOUR_FILENAME "/.scour"	// ony use with path
 #define MAX_THREADS		200
 #define IS_DIRECTORY_SYMLINK 1
 #define IS_NOT_DIRECTORY_SYMLINK	0
@@ -35,12 +32,12 @@ int     isDirectoryEmpty(char*);
 int     isRootPath(char *);
 int     isAbsolutePath(char *);
 
-int     existsAndIsAccessible(char *); 
-void    parseArgv(int, char **, int *, int *);
+int     isAccessible(char *); 
+void    parseArgv(int, char **, int *);
 int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
 void	multiThreadedScour(IngestEntry_t *, int);
 int 	checkGlobPatternMatch(char *, char *);
 void	callReadLink(char *, char *);
-int 	epochOfLastModified(char *, char *);
+

@@ -35,12 +35,14 @@ import sys
 import errno
 import shutil
 
-ASSERT_FILE_DELETED	="Expect file to be deleted"
-ASSERT_DIR_DELETED	="Expect directory to be deleted"
-ASSERT_DIR_LINK_NOT_DELETED	="Expect directory and symlink NOT be deleted"
+ASSERT_FILE_DELETED			="Expect file to be deleted"
 ASSERT_FILE_LINK_DELETED	="Expect file and its symlink be deleted"
-ASSERT_SUCCESS		="SUCCESS"
-ASSERT_FAIL			="FAIL"
+ASSERT_DIR_DELETED			="Expect directory to be deleted"
+ASSERT_NOT_DIR				="Expect not a directory to be skipped"
+ASSERT_DIR_LINK_NOT_DELETED	="Expect directory and symlink NOT be deleted"
+
+ASSERT_SUCCESS				="SUCCESS"
+ASSERT_FAIL					="FAIL"
 
 class CommonFileSystem:
 
@@ -231,8 +233,7 @@ class SymlinkDeletion:
 
 	def createSymlinks(self):
 
-		print(f"\nScour config file entrie(s): \n{self.entries}")
-
+		print(f"\nScour config file entrie(s): \n\t--> {self.entries}")
 
 		print(f"\nCreate symlink(s): ")
 
@@ -288,6 +289,7 @@ class SymlinkDeletion:
 		self.createFiles()
 		self.createSymlinks()
 		self.markEligibleForDeletion(self.daysOldInSecs)
+		
 		
 		print(f"\n\tExecuting Scour...\n")
 		CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
@@ -393,7 +395,8 @@ class EmptyDirectoriesDeletion:
 		
 		self.ingestFile = "/tmp/scourTest.conf"
 		#self.entries 	= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
-		self.entries 	= "~/etna		2	*.txt"
+		self.entries 	= "~/etna		2	*.txt\
+		 \n~/dirDoesNotExist		2	*.txt"
 		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
 
 		# Create the scour config file with entries 
@@ -484,6 +487,13 @@ class EmptyDirectoriesDeletion:
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
+			status=1
+
+		aPath=os.path.expanduser("~/dirDoesNotExist")
+		if not os.path.exists(aPath): 
+			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_NOT_DIR}: {aPath}")
+		else:
+			print(f"\t{ASSERT_FAIL}: \t{ASSERT_NOT_DIR}: {aPath}")
 			status=1
 
 		return status
