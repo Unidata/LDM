@@ -56,8 +56,10 @@
 #include <time.h>
 #include <pwd.h>
 #include <limits.h>
+#include <libgen.h>
 
 #include "parser.h"
+#include "log.h"
 
 extern char *ingestFilename;
 
@@ -219,7 +221,7 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
 
 			if(strlen(ptr) > PATH_MAX) {
 				log_add("ERROR: %s is TOO long (%zu) !", ptr, strlen(ptr));	
-				log_flush_warn();
+				log_flush_warning();
 				ptr="";
 			}
 
@@ -435,7 +437,6 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 
  		return 0;
 	}
-	free(tmp);
 
 	return 0;
 }
@@ -474,22 +475,6 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	if( !isSameAsLoginDirectory(dirName) ) return -1;
 
 	return 0;
-}
-
-int isAccessible(char *dirPath) 
-{
-
-    DIR *dir = opendir(dirPath);
-    if(!dir) 
-    {
-		log_info("parser::isAccessible(\"%s\") failed", dirPath);    	
-    	log_add("parser(): failed to open directory: %s", dirPath);
-    	log_flush_warning();
-    	return -1;
-    }
-    
-    closedir(dir);
-    return 0;
 }
 
 int isAccessible(char *dirPath) 
@@ -594,7 +579,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		days = atoi(result);
 		if(days > DAYS_SINCE_1994) {
 			log_add("regexOps(): Too many days back: %d", days);
-			log_flush_warn();
+			log_flush_warning();
 			free(result);
 			return -1;
 		}

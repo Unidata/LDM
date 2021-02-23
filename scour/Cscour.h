@@ -37,7 +37,7 @@ void    parseArgv(int, char **, int *);
 int     hasDirChanged(char *);
 int    	epochPrettyPrinting(char *, time_t);
 void 	scourOnePath(char *, int);
-void	multiThreadedScour(IngestEntry_t *, int);
+static void	multiThreadedScour(IngestEntry_t *, int);
 int 	checkGlobPatternMatch(char *, char *);
 void	callReadLink(char *, char *);
 

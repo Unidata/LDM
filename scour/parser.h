@@ -50,8 +50,9 @@ int regexOps(char *, char *, int);
 int nowInEpoch();
 int convertDaysOldToEpoch(char *);
 char * loginHomeDir(char *);
-int isExcluded(char *, char (*)[STRING_SIZE], int);
-int vetThisDirectoryPath(char *, char (*)[STRING_SIZE], int); 
-void usage(char *);
+int isExcluded(char *, char (*)[PATH_MAX], int);
+int isAccessible(char *) ;
+static int vetThisDirectoryPath(char *, char (*)[PATH_MAX], int); 
+static void usage(const char *);
 
 #endif	// PARSER_DOT_H
