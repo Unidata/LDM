@@ -118,7 +118,7 @@ int logl_level_to_priority(
 static inline bool logl_vet_level(
         log_level_t level)
 {
-    return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_EMERG;
+    return level >= LOG_LEVEL_DEBUG && level <= LOG_LEVEL_FATAL;
 }
 
 /**
