@@ -493,6 +493,21 @@ int isAccessible(char *dirPath)
     return status;
 }
 
+int isAccessible(char *dirPath) 
+{
+	int status = 0;
+    DIR *dir = opendir(dirPath);
+    if(!dir) 
+    {
+		log_info("parser(): isAccessible(\"%s\") failed", dirPath);    	
+    	log_add("parser(): failed to open directory: %s", dirPath);
+    	log_flush_warning();
+    	status = -1;
+    }
+    
+    closedir(dir);
+    return status;
+}
 
 int isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 {

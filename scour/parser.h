@@ -53,6 +53,5 @@ char * loginHomeDir(char *);
 int isExcluded(char *, char (*)[PATH_MAX], int);
 int isAccessible(char *) ;
 static int vetThisDirectoryPath(char *, char (*)[PATH_MAX], int); 
-static void usage(const char *);
 
 #endif	// PARSER_DOT_H
