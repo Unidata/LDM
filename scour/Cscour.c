@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
     parseArgv(argc, argv, &deleteDirsFlag);
 
-    log_info("scour() STARTED...");    
+    log_info("STARTED...");
     log_info("parsing...");    
 
     // Call config parser
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     {
         log_add("parseConfig() failed");
         log_add("parsing complete!");
-        log_add("scour() COMPLETED!");        
+        log_add("COMPLETED!");
         log_flush_fatal();
         exit(EXIT_FAILURE);
     }
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     {
         log_add("no valid configuration file entries");
         log_add("parsing complete!");
-        log_add("scour() COMPLETED!");
+        log_add("COMPLETED!");
         log_flush_warning();
         exit(EXIT_SUCCESS);
     }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     
     multiThreadedScour(listHead, deleteDirsFlag);
  
-    log_info("scour() COMPLETED!");
+    log_info("COMPLETED!");
     log_free(); 
 
     exit(EXIT_SUCCESS);
@@ -149,7 +149,7 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
         items = (ConfigItemsAndDeleteFlag_t *) 
                         malloc(sizeof(ConfigItemsAndDeleteFlag_t));
 
-        log_info("multiThreadedScour(): Processing directory:%s with daysOld: %s (%d) and pattern: %s",
+        log_info("Processing directory:%s with daysOld: %s (%d) and pattern: %s",
                 tmp->dir, tmp->daysOld, tmp->daysOldInEpoch, tmp->pattern);
         
         strcpy(items->dir,      tmp->dir);
@@ -174,7 +174,7 @@ static void multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
     {
         // Thread ID: wait on this thread
         pthread_join(tids[i++], NULL);
-        log_info("multiThreadedScour(): Scouring directory (%s) completed with thread ID counter: %d!", 
+        log_info("Scouring directory (%s) completed with thread ID counter: %d!",
                     tmp->dir, i-1);
 
         tmp = tmp->nextEntry; 
@@ -192,7 +192,7 @@ int isSymlinkDirectory(char *path)
     struct stat sb;
     if (stat(path, &sb) == -1)
     {
-        log_add("isSymlinkDirectory(): symlink \"%s\"  is broken! Removing it...", path);
+        log_add("symlink \"%s\"  is broken! Removing it...", path);
         log_flush_info();
 
         unlink(path);
@@ -210,7 +210,7 @@ static int removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
     struct stat sb;
     if (stat(symlinkedEntry, &sb) == -1)
     {
-        log_add("removeFileSymlink(): stat(\"%s\") failed", symlinkedEntry);
+        log_add("stat(\"%s\") failed", symlinkedEntry);
         log_flush_info();
         return -1;
     }
@@ -237,7 +237,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
     // Unable to open directory stream
     if(!dir) 
     {
-        log_add("scourFilesAndDirs(): failed to open directory \"%s\" (%d: %s)",
+        log_add("failed to open directory \"%s\" (%d: %s)",
                 basePath, errno, strerror(errno));
         log_flush_warning();
         return -1;
@@ -250,7 +250,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
         struct stat sb;
         if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1) 
         {
-            log_add("scourFilesAndDirs(): fstatat(\"%s/%s\") failed: %s\n",
+            log_add("fstatat(\"%s/%s\") failed: %s\n",
                 basePath, dp->d_name, strerror(errno));
             log_flush_warning();
             return -1;
