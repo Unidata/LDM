@@ -1,5 +1,5 @@
 /**
- * Session key cryptography.
+ * Public key cryptography.
  *
  *        File: PkcKey.h
  *  Created on: Sep 2, 2020
@@ -14,13 +14,14 @@
 
 #include <openssl/rsa.h>
 
+/**
+ * Base class for public key cryptography.
+ */
 class PkcKey
 {
 protected:
     RSA*              rsa;
     static const int  padding = RSA_PKCS1_OAEP_PADDING;
-
-    static void initRandom(const int numBytes);
 
     /**
      * Default constructs.
@@ -35,7 +36,7 @@ public:
     /**
      * Destroys.
      */
-    ~PkcKey();
+    virtual ~PkcKey();
 
     PkcKey& operator=(const PkcKey& crypt) =delete;
 
@@ -48,8 +49,8 @@ public:
      * @param[out] cipherText     Encrypted text
      * @throw std::runtime_error  OpenSSL failure
      */
-    void encrypt(const std::string& plainText,
-                 std::string&       cypherText) const =0;
+    virtual void encrypt(const std::string& plainText,
+                 std::string&               cipherText) const =0;
 
     /**
      * Decrypts ciphertext.
@@ -58,25 +59,16 @@ public:
      * @param[out] plainText      Plain text
      * @throw std::runtime_error  OpenSSL failure
      */
-    void decrypt(const std::string& cipherText,
-                 std::string&       plainText) const =0;
+    virtual void decrypt(const std::string& cipherText,
+                 std::string&               plainText) const =0;
 };
 
 /**
- * Public key.
+ * A Public key.
  */
 class PublicKey final : public PkcKey
 {
-    std::string pubKey;
-
 public:
-    /**
-     * Default constructs. A public/private key-pair is chosen at random.
-     *
-     * @throw std::runtime_error  OpenSSL failure
-     */
-    PublicKey();
-
     /**
      * Constructs from a public-key certificate.
      *
@@ -87,24 +79,17 @@ public:
     PublicKey(const std::string& pubKey);
 
     /**
-     * Returns the public key.
-     *
-     * @return  The public key
-     */
-    const std::string& getPubKey() const noexcept;
-
-    /**
-     * Encrypts plaintext.
+     * Encrypts plaintext using the public key.
      *
      * @param[in]  plainText      Plain text
      * @param[out] cipherText     Encrypted text
      * @throw std::runtime_error  OpenSSL failure
      */
     void encrypt(const std::string& plainText,
-                 std::string&       cypherText) const override;
+                 std::string&       cipherText) const override;
 
     /**
-     * Decrypts ciphertext.
+     * Decrypts ciphertext using the public key.
      *
      * @param[in]  cipherText     Encrypted text
      * @param[out] plainText      Plain text
@@ -115,31 +100,39 @@ public:
 };
 
 /**
- * Private key.
+ * A public and private key-pair.
  */
 class PrivateKey final : public PkcKey
 {
+    std::string pubKey; ///< Associated X.509 public key in PEM format
+
 public:
     /**
-     * Constructs.
+     * Default constructs. A public/private key-pair is chosen at random.
      *
-     * @param[in] privateKey      X.509 private-key certificate in PEM format
      * @throw std::runtime_error  OpenSSL failure
      */
-    PrivateKey(const std::string& privateKey);
+    PrivateKey();
 
     /**
-     * Encrypts plaintext.
+     * Returns the public key.
+     *
+     * @return  The X.509 public key in PEM format
+     */
+    const std::string& getPubKey() const noexcept;
+
+    /**
+     * Encrypts plaintext using the private key.
      *
      * @param[in]  plainText      Plain text
      * @param[out] cipherText     Encrypted text
      * @throw std::runtime_error  OpenSSL failure
      */
     void encrypt(const std::string& plainText,
-                 std::string&       cypherText) const override;
+                 std::string&       cipherText) const override;
 
     /**
-     * Decrypts ciphertext.
+     * Decrypts ciphertext using the public key.
      *
      * @param[in]  cipherText     Encrypted text
      * @param[out] plainText      Plain text

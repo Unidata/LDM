@@ -7,11 +7,12 @@
 EXTRA_DIST		= fmtpBase.cpp fmtpBase.h
 SUBDIRS			= receiver sender SilenceSuppressor RateShaper
 noinst_LTLIBRARIES	= lib.la
-lib_la_SOURCES		= fmtpBase.cpp fmtpBase.h \
-			  TcpBase.cpp TcpBase.h \
-                          SslHelp.cpp SslHelp.h \
+lib_la_SOURCES		= fmtpBase.cpp     fmtpBase.h \
+			  TcpBase.cpp      TcpBase.h \
+                          SslHelp.cpp      SslHelp.h \
                           SessKeyCrypt.cpp SessKeyCrypt.h \
-                          HmacImpl.cpp HmacImpl.h 
+                          HmacImpl.cpp     HmacImpl.h \
+                          PkcKey.cpp       PkcKey.h
 lib_la_CPPFLAGS		= -DLDM_LOGGING \
                           -I$(srcdir)/.. \
                           -I$(top_srcdir)/../../../log

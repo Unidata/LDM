@@ -10,6 +10,7 @@
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_
 
 #include "fmtpBase.h"
+#include "PkcKey.h"
 
 #include <openssl/evp.h>
 
@@ -18,22 +19,24 @@
 
 class HmacImpl
 {
-    std::string key;   ///< HMAC key
-    EVP_PKEY*   pkey;  ///< OpenSSL HMAC key
-    EVP_MD_CTX* mdCtx; ///< Message-digest context
+    std::string key;    ///< HMAC key
+    EVP_PKEY*   pkey;   ///< OpenSSL HMAC key
+    EVP_MD_CTX* mdCtx;  ///< Message-digest context
+    PkcKey&     pkcKey; ///< Key for public-key cryptography
 
     void init(const std::string& key);
 
 public:
     /**
-     * Default constructs. A new HMAC key will be pseudo-randomly chosen.
+     * Default constructs. A new HMAC key will be pseudo-randomly chosen. This
+     * is used by the sender.
      *
      * @throw std::runtime_error  OpenSSL failure
      */
     HmacImpl();
 
     /**
-     * Constructs from an HMAC key.
+     * Constructs from an HMAC key. This is used by a receiver.
      *
      * @param[in] key                Key for computing HMAC-s. The length of the
      *                               key must be at least `2*MAC_SIZE`.

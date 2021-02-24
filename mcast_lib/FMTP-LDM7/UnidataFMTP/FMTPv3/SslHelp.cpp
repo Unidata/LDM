@@ -29,32 +29,32 @@ namespace SslHelp {
  */
 void initRand(const int numBytes)
 {
-	int fd = ::open("/dev/random", O_RDONLY);
-	if (fd < 0)
-		throw std::system_error(errno, std::generic_category(),
-				"open() failure");
+    int fd = ::open("/dev/random", O_RDONLY);
+    if (fd < 0)
+        throw std::system_error(errno, std::generic_category(),
+                "open() failure");
 
-	try {
-		unsigned char bytes[numBytes];
+    try {
+        unsigned char bytes[numBytes];
 
-		for (size_t n = numBytes; n;) {
+        for (size_t n = numBytes; n;) {
             auto nread = ::read(fd, bytes, n);
             if (nread == -1)
                 throw std::system_error(errno, std::generic_category(),
                         "initRand(): read() failure");
-			n -= nread;
+            n -= nread;
         }
 
-		if (RAND_bytes(bytes, numBytes) == 0)
-			throw std::runtime_error("RAND_bytes() failure. "
-				"Code=" + std::to_string(ERR_get_error()));
+        if (RAND_bytes(bytes, numBytes) == 0)
+            throw std::runtime_error("RAND_bytes() failure. "
+                    "Code=" + std::to_string(ERR_get_error()));
 
-		::close(fd);
-	} // `fd` open
-	catch (const std::exception& ex) {
-		::close(fd);
-		throw;
-	}
+        ::close(fd);
+    } // `fd` open
+    catch (const std::exception& ex) {
+        ::close(fd);
+        throw;
+    }
 }
 
 } // Namespace
