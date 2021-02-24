@@ -313,9 +313,9 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
 
             if ( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) )
             {
-                if( remove(dp->d_name) )
+                if( remove(path) )
                 {
-                    log_add("remove(\"%s\") failed", dp->d_name);
+                    log_add("remove(\"%s\") failed", path);
                     log_flush_error();       
                 }
                 else 
