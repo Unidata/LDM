@@ -16,11 +16,11 @@ AM_CPPFLAGS		= -I$(top_builddir)/log    -I$(top_srcdir)/log
 Cscour_LDADD		= $(top_builddir)/lib/libldm.la 
 
 scour.1:	$(srcdir)/scour.1.in
-	../regutil/substPaths <$? >$@.tmp
+	$(builddir)/../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 scour.conf:	scour.conf.in
-	../regutil/substPaths <$? >$@.tmp
+	$(builddir)/../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
 install-data-local:    \

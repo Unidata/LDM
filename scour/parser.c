@@ -115,7 +115,7 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption)
 						usage(progname);
 					}
 					strcpy(logFilename, optarg);
-					log_info("parser::parseArgv - logfilename: %s", logFilename);
+					log_info("logfilename: %s", logFilename);
 					break;
             	}
         case 'v':  {
@@ -162,7 +162,7 @@ int getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
 	
     if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
     {
-    	log_add("parser::getListOfDirsToBeExcluded(): fopen(\"%s\") failed: %s",
+    	log_add("fopen(\"%s\") failed: %s",
             notAllowedDirsFilename, strerror(errno));
 		log_flush_warning();
 
@@ -220,7 +220,7 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
 		{
 
 			if(strlen(ptr) > PATH_MAX) {
-				log_add("ERROR: %s is TOO long (%zu) !", ptr, strlen(ptr));	
+				log_add("%s is TOO long (%zu) !", ptr, strlen(ptr));
 				log_flush_warning();
 				ptr="";
 			}
@@ -270,7 +270,7 @@ int isSameAsLoginDirectory(char * dirName)
 	char *lgnHomeDir;
 	if ((lgnHomeDir = loginHomeDir(NULL)) == NULL) 
 	{
-		log_add("parser::isSameAsLoginDirectory(): Could not determine login HOME");
+		log_add("Could not determine login HOME");
 		log_flush_error();
 		return 0;
 	}
@@ -278,7 +278,7 @@ int isSameAsLoginDirectory(char * dirName)
 	int res = strcmp(dirName, lgnHomeDir);
 	if( res == 0)
 	{
-		log_add("parser::isSameAsLoginDirectory(): dirName \"%s\" is the same as login name \"%s\"", 
+		log_add("dirName \"%s\" is the same as login name \"%s\"",
 			dirName, lgnHomeDir);
 		log_flush_warning();
 		return 0;
@@ -296,7 +296,7 @@ char *substring(char *string, int position, int length)
 
    if (p == NULL)
    {
-		log_add("parser:: malloc(\"%d\") failed: %s",
+		log_add("malloc(\"%d\") failed: %s",
         	length +1, strerror(errno));
 		log_flush_error();
 
@@ -349,7 +349,7 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
     if( tildaPosition == -1 || tildaPosition >0)
     {
     	strcpy(expandedDirName, dirPath);
-    	log_info("parser: path has no tilda to expand");
+    	log_info("path has no tilda to expand");
     	return 0; // no tilda to expand
     }
 
@@ -363,20 +363,20 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
  	// path is ~ only
  	if(dirPathLength == 1) 
  	{
- 		log_add("parser: path ~ (tilda only) NOT allowed.");
+ 		log_add("path ~ (tilda only) NOT allowed.");
  		return -1;
  	}
 	// path is ~/   only
  	if(tildaRootPosition == 1 && dirPathLength == 2)
  	{
- 		log_add("parser: path ~/ (only) NOT allowed.");
+ 		log_add("path ~/ (only) NOT allowed.");
  		return -1;
  	}
 
  	// path is ~ldm only
 	if(tildaRootPosition == -1 && dirPathLength > 1)
 	{
- 		log_add("parser: path ~/<loginName> NOT allowed.");
+ 		log_add("path ~/<loginName> NOT allowed.");
  		return -1;
  	}
 
@@ -393,7 +393,7 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 
  		if(currentHomeDir == NULL)
  		{
-			log_add("parser::loginHomeDir() failed:  getpwnam() or getLogin() failed.");
+			log_add("failed:  getpwnam() or getLogin() failed.");
  			return -1;
  		}
 
@@ -406,7 +406,7 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
  		char *tmp = (char*) malloc((strlen(subDirPath)+1)*sizeof(char));
  		if( tmp == NULL )
  		{
-			log_add("parser::startsWithTilda(): malloc() failed: %s",  strerror(errno));
+			log_add("malloc() failed: %s",  strerror(errno));
  			return -1;
  		}
  		strcpy(tmp, subDirPath);
@@ -445,7 +445,7 @@ static
 int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX], 
 		int excludedDirsCounter) 
 {
-	log_info("parser(): validating directory: %s", dirName);
+	log_info("validating directory: %s", dirName);
 	
 	// 1. check if it starts with tilda and vet the expanded path
 	//	  return the expanded path for subsequent vetting below
@@ -453,14 +453,14 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	int tildaFlag = startsWithTilda(dirName, pathName);
 	if( tildaFlag == -1) 
 	{
-		log_add("parser(): Validation failed for path: \"%s\". Skipping it!", dirName);
+		log_add("Validation failed for path: \"%s\". Skipping it!", dirName);
 		log_flush_warning();
 		return -1;
 	}
 
 	// tilda was found in path and expanded
 	strcpy(dirName, pathName);
-	log_info("parser(): tilda expanded directory: \"%s\"", dirName);
+	log_info("tilda expanded directory: \"%s\"", dirName);
 	
 	// 2. check if dirName is in the list of excluded direectories. 
 	// If not continue the vetting process
@@ -479,28 +479,12 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 
 int isAccessible(char *dirPath) 
 {
-	int status = 0;
+    int status = 0;
     DIR *dir = opendir(dirPath);
     if(!dir) 
     {
-		log_info("parser(): isAccessible(\"%s\") failed", dirPath);    	
-    	log_add("parser(): failed to open directory: %s", dirPath);
-    	log_flush_warning();
-    	status = -1;
-    }
-    
-    closedir(dir);
-    return status;
-}
-
-int isAccessible(char *dirPath) 
-{
-	int status = 0;
-    DIR *dir = opendir(dirPath);
-    if(!dir) 
-    {
-		log_info("parser(): isAccessible(\"%s\") failed", dirPath);    	
-    	log_add("parser(): failed to open directory: %s", dirPath);
+        log_info("isAccessible(\"%s\") failed", dirPath);
+    	log_add("failed to open directory: %s", dirPath);
     	log_flush_warning();
     	status = -1;
     }
@@ -511,18 +495,18 @@ int isAccessible(char *dirPath)
 
 int isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 {
-	// this can happen if parser found a too long dir path: set it to empty string
-	if(excludedDirsCounter < 1 || dirPath == NULL || strlen(dirPath) == 0) 
-	{
-		log_info("parser(): isExcluded() - no directory to exclude ");    	
-		return -1; 
+    // this can happen if parser found a too long dir path: set it to empty string
+    if(excludedDirsCounter < 1 || dirPath == NULL || strlen(dirPath) == 0)
+    {
+        log_info("isExcluded() - no directory to exclude ");
+        return -1;
     }
 
 	int i;
 	for(i=0; i<excludedDirsCounter; i++) {
 
 		if( strcmp(dirPath, list[i]) == 0) {
-			log_add("parser(): isExcluded: path %s is an excluded directory!", dirPath);
+			log_add("isExcluded: path %s is an excluded directory!", dirPath);
 			log_flush_warning();
 			return -1;
 		}
@@ -593,7 +577,7 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		strncpy(result, &daysOldItem[group[1].rm_so], group[1].rm_eo - group[1].rm_so);
 		days = atoi(result);
 		if(days > DAYS_SINCE_1994) {
-			log_add("regexOps(): Too many days back: %d", days);
+			log_add("Too many days back: %d", days);
 			log_flush_warning();
 			free(result);
 			return -1;
@@ -712,7 +696,7 @@ char * loginHomeDir(char *providedLgn)
 	if(providedLgn != NULL) lgn = providedLgn;
 	else
 		if ((lgn = getlogin()) == NULL) {
-			  log_add("parser(): loginHomeDir:getlogin() failed: %s",  strerror(errno));
+			  log_add("loginHomeDir:getlogin() failed: %s",  strerror(errno));
 		    return NULL;
 		}
 
@@ -730,19 +714,19 @@ char * loginHomeDir(char *providedLgn)
     char*          buffer = malloc(len);
     int            status;
     if (buffer == NULL) {
-        log_add("parser(): loginHomeDir(): Couldn't allocate buffer");
+        log_add("loginHomeDir(): Couldn't allocate buffer");
         return NULL;
     }
     else {
         int e;
         e = getpwnam_r(lgn, &result, buffer, len, &resultp);
         if (e) {
-            log_add("parser(): loginHomeDir:getpwnam_r() failure");
+            log_add("loginHomeDir:getpwnam_r() failure");
             free(buffer);
             return NULL;
         }
         if (resultp == NULL) {
-            log_add("parser(): User \"%s\"  does not exist on this system", lgn);
+            log_add("User \"%s\"  does not exist on this system", lgn);
 
             free(buffer);
             return NULL;

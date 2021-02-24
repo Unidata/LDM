@@ -36,6 +36,7 @@ typedef enum {
     LOG_LEVEL_ALERT,    ///< Unused
     LOG_LEVEL_CRIT,     ///< Unused
     LOG_LEVEL_EMERG,    ///< Unused
+    LOG_LEVEL_FATAL = LOG_LEVEL_EMERG,
     LOG_LEVEL_COUNT     ///< Number of levels
 } log_level_t;
 
@@ -441,6 +442,20 @@ bool log_is_level_enabled(
 } while (0)
 
 /**
+ * Logs a single message at the FATAL level, bypassing the message-queue.
+ *
+ * @param[in] ...  Optional arguments of the message -- starting with the format
+ *                 of the message.
+ * @asyncsignalsafety  Unsafe
+ */
+#define log_fatal(...) do {\
+    if (LOG_LEVEL_FATAL >= log_level) {\
+        LOG_LOC_DECL(loc);\
+        logl_log(&loc, LOG_LEVEL_FATAL, __VA_ARGS__);\
+    }\
+} while (0)
+
+/**
  * Logs a single message at the ERROR level based on a system error code
  * bypassing the message queue.
  *
@@ -585,6 +600,11 @@ bool log_is_level_enabled(
 int
 log_flush(const log_level_t level);
 
+/**
+ * Logs the message-queue of the current thread at the FATAL level and then
+ * clears the queue.
+ */
+#define log_flush_fatal()    log_flush(LOG_LEVEL_FATAL)
 /**
  * Logs the message-queue of the current thread at the ERROR level and then
  * clears the queue.

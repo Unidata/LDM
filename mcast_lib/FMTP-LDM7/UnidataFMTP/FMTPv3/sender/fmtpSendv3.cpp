@@ -423,22 +423,22 @@ void fmtpSendv3::Stop()
 void fmtpSendv3::sendMacKey(const int sd)
 {
     std::string pubKey;
-    #ifdef LDM_LOGGING
+#   ifdef LDM_LOGGING
 		log_debug("Receiving public key");
-    #endif
+#   endif
     tcpsend->read(sd, pubKey);
 
     const auto macKey = udpsend->getMacKey();
-    #ifdef LDM_LOGGING
-		log_debug("Encrypting %s-byte MAC key",
-				std::to_string(macKey.size()).c_str());
-    #endif
+#   ifdef LDM_LOGGING
+        log_debug("Encrypting %s-byte MAC key",
+                std::to_string(macKey.size()).c_str());
+#   endif
     const auto cipherKey = Encryptor(pubKey).encrypt(udpsend->getMacKey());
 
-    #ifdef LDM_LOGGING
-		log_debug("Sending %s-byte encrypted MAC key",
-				std::to_string(cipherKey.size()).c_str());
-    #endif
+#   ifdef LDM_LOGGING
+        log_debug("Sending %s-byte encrypted MAC key",
+                std::to_string(cipherKey.size()).c_str());
+#   endif
     tcpsend->write(sd, cipherKey);
 }
 

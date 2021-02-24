@@ -175,11 +175,11 @@ void TcpBase::sendall(const void* const buf, const size_t nbytes)
 }
 
 void TcpBase::write(const int          sd,
-		            const std::string& string)
+                    const std::string& string)
 {
     #ifdef LDM_LOGGING
-		log_debug("Sending %s-byte string on socket %d",
-				std::to_string(string.size()).c_str(), sd);
+        log_debug("Sending %s-byte string on socket %d",
+                std::to_string(string.size()).c_str(), sd);
     #endif
     uint32_t len = htonl(string.size());
     sendall(sd, &len, sizeof(len));
@@ -188,11 +188,11 @@ void TcpBase::write(const int          sd,
 
 void TcpBase::write(const std::string& string)
 {
-	write(sockfd, string);
+    write(sockfd, string);
 }
 
 void TcpBase::read(const int    sd,
-		           std::string& string)
+                   std::string& string)
 {
     #ifdef LDM_LOGGING
 		log_debug("Receiving string length on socket %d", sd);
@@ -203,7 +203,7 @@ void TcpBase::read(const int    sd,
     len = ntohl(len);
 
     #ifdef LDM_LOGGING
-		log_debug("Receiving %u-byte string content on socket %d", len, sd);
+        log_debug("Receiving %u-byte string content on socket %d", len, sd);
     #endif
     char buf[len];
     if (!recvall(sd, buf, len))

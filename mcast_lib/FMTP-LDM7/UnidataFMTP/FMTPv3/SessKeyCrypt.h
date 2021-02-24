@@ -47,61 +47,61 @@ public:
  */
 class Decryptor final : public SessKeyCrypt
 {
-	std::string pubKey;
+    std::string pubKey;
 
-public:
-	/**
-	 * Default constructs. A public/private key-pair is chosen at random.
-	 *
-	 * @throw std::runtime_error  OpenSSL failure
-	 */
-	Decryptor();
+    public:
+    /**
+     * Default constructs. A public/private key-pair is chosen at random.
+     *
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    Decryptor();
 
-	/**
-	 * Destroys.
-	 */
-	~Decryptor() =default;
+    /**
+     * Destroys.
+     */
+    ~Decryptor() =default;
 
-	/**
-	 * Returns the public key.
-	 *
-	 * @return  The public key
-	 */
-	const std::string& getPubKey() const noexcept;
+    /**
+     * Returns the public key.
+     *
+     * @return  The public key
+     */
+    const std::string& getPubKey() const noexcept;
 
-	/**
-	 * Decrypts a publisher's encrypted session key using the subscriber's
-	 * private key.
-	 *
-	 * @param[in] cipherText      Encrypted session key
-	 * @return                    Session key
-	 * @throw std::runtime_error  OpenSSL failure
-	 */
-	std::string decrypt(const std::string& cipherText) const;
+    /**
+     * Decrypts a publisher's encrypted session key using the subscriber's
+     * private key.
+     *
+     * @param[in] cipherText      Encrypted session key
+     * @return                    Session key
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    std::string decrypt(const std::string& cipherText) const;
 };
 
 /**
- * Encrypts a publisher's session key using a subscriber's public key
+ * Encrypts using an asymmetric key
  */
 class Encryptor final : public SessKeyCrypt
 {
 public:
-	/**
-	 * Constructs.
-	 *
-	 * @param[in] pubKey          Subscriber's X.509 public-key certificate in
-	 *                            PEM format
-	 * @throw std::runtime_error  OpenSSL failure
-	 */
-	Encryptor(const std::string& pubKey);
+    /**
+     * Constructs.
+     *
+     * @param[in] pubKey          Subscriber's X.509 public-key certificate in
+     *                            PEM format
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    Encryptor(const std::string& pubKey);
 
-	/**
-	 * Encrypts a publisher's session key using the subscriber's public key.
-	 *
-	 * @param[in] sessKey         Session key to be encrypted
-	 * @throw std::runtime_error  OpenSSL failure
-	 */
-	std::string encrypt(const std::string& sessKey) const;
+    /**
+     * Encrypts a publisher's session key using the subscriber's public key.
+     *
+     * @param[in] sessKey         Session key to be encrypted
+     * @throw std::runtime_error  OpenSSL failure
+     */
+    std::string encrypt(const std::string& sessKey) const;
 };
 
 #endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_SESSKEYCRYPT_H_ */
