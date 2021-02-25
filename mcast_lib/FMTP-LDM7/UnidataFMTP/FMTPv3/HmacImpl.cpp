@@ -82,7 +82,8 @@ static EVP_MD_CTX* createMdCtx()
 }
 
 /**
- * Initializes this instance.
+ * Assigns members `key`, `pkey`, and `mdCtx` after vetting the size of the
+ * HMAC key.
  *
  * @param[in] key                HMAC key
  * @throw std::invalid_argument  `key.size() < 2*SIZE`
@@ -100,6 +101,7 @@ HmacImpl::HmacImpl()
     : key{}
     , pkey{nullptr}
     , mdCtx{nullptr}
+    , pkcKey{new PrivateKey()}
 {
     unsigned char bytes[2*MAC_SIZE];
 
@@ -115,12 +117,15 @@ HmacImpl::HmacImpl(const std::string& key)
     : key{}
     , pkey{nullptr}
     , mdCtx{nullptr}
+    , pkcKey{nullptr}
 {
     init(key);
+    //pkcKey = new PublicKey();
 }
 
 HmacImpl::~HmacImpl()
 {
+    delete pkcKey;
     if (mdCtx)
         EVP_MD_CTX_free(mdCtx);
     if (pkey)

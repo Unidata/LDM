@@ -64,27 +64,27 @@ void UdpRecv::skipPacket() const
 }
 
 UdpRecv::UdpRecv()
-	: sd{-1}
-	, hmacImpl()
-	, netHeader{}
-	, mac{}
-	, macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
-	, iov{}
+    : sd{-1}
+    , hmacImpl()
+    , netHeader{}
+    , mac{}
+    , macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
+    , iov{}
 {
-	init();
+    init();
 }
 
 UdpRecv::UdpRecv(const std::string& srcAddr,
-		         const std::string& mcastAddr,
-		         const in_port_t    mcastPort,
-				 const std::string& ifAddr,
-				 const std::string& hmacKey)
-	: sd{::socket(AF_INET, SOCK_DGRAM, 0)}
-	, hmacImpl(hmacKey)
-	, netHeader{}
-	, mac{}
-	, macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
-	, iov{}
+                 const std::string& mcastAddr,
+                 const in_port_t    mcastPort,
+                 const std::string& ifAddr,
+                 const std::string& hmacKey)
+    : sd{::socket(AF_INET, SOCK_DGRAM, 0)}
+    , hmacImpl(hmacKey)
+    , netHeader{}
+    , mac{}
+    , macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))}
+    , iov{}
 {
     init();
 

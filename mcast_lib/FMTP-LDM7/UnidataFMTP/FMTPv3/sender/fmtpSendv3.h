@@ -287,7 +287,6 @@ private:
     typedef std::lock_guard<Mutex>  Guard;
     typedef std::unique_lock<Mutex> Lock;
 
-    HmacImpl            hmacImpl;
     uint32_t            prodIndex;
     /** underlying udp layer instance */
     UdpSend*            udpsend;

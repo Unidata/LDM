@@ -22,7 +22,7 @@ class HmacImpl
     std::string key;    ///< HMAC key
     EVP_PKEY*   pkey;   ///< OpenSSL HMAC key
     EVP_MD_CTX* mdCtx;  ///< Message-digest context
-    PkcKey&     pkcKey; ///< Key for public-key cryptography
+    PkcKey*     pkcKey; ///< Key for public-key cryptography
 
     void init(const std::string& key);
 

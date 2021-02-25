@@ -136,6 +136,7 @@ private:
     IndexType             packetIndex;   ///< Index of current, valid packet
     bool                  sendBefore;    ///< Send invalid packet(s) after valid?
     BlackHat              blackHat;      ///< Sends invalid packets
+    PrivateKey*           privateKey;    ///< Private key for encrypting HMAC
 
     /**
      * Sends the FMTP message referenced by the output vector.

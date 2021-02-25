@@ -36,6 +36,7 @@
 #endif
 
 #include <cstdlib>
+#include <cstring>
 #include <errno.h>
 #include <netinet/in.h>
 #include <string>
@@ -111,13 +112,14 @@ UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
       ifAddr(ifAddr),
       sock_fd(-1),
       recv_addr(),
-      hmacImpl(),
+      hmacImpl(nullptr),
       netHead{},
       iov{},
       macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))},
       packetIndex(0),
       sendBefore(false),
-      blackHat(*this)
+      blackHat(*this),
+      privateKey{nullptr}
 {
     iov[0].iov_base = &netHead;
     iov[0].iov_len  = FMTP_HEADER_LEN;
@@ -132,7 +134,9 @@ UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
  * @param[in] none
  */
 UdpSend::~UdpSend()
-{}
+{
+    delete privateKey;
+}
 
 
 /**
@@ -233,8 +237,14 @@ void UdpSend::send(const FmtpHeader& header,
     if (header.payloadlen && payload == nullptr)
         throw std::logic_error("Inconsistent header and payload");
 
-    if (macLen)
+    if (macLen) {
         hmacImpl.getMac(header, payload, mac);
+        if (privateKey) {
+            char cipherMac[macLen];
+            privateKey->encrypt(mac, macLen, cipherMac, macLen);
+            ::memcpy(mac, cipherMac, macLen);
+        }
+    }
 
     netHead.flags      = htons(header.flags);
     netHead.payloadlen = htons(header.payloadlen);

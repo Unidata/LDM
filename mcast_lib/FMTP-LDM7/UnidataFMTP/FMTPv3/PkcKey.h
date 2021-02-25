@@ -21,6 +21,7 @@ class PkcKey
 {
 protected:
     RSA*              rsa;
+    int               rsaSize;
     static const int  padding = RSA_PKCS1_OAEP_PADDING;
 
     /**
@@ -124,8 +125,26 @@ public:
     /**
      * Encrypts plaintext using the private key.
      *
+     * @param[in]  plainText         Plain text
+     * @param[in]  plainLen          Length of plain text in bytes
+     * @param[out] cipherText        Encrypted text. Must not overlap plain
+     *                               text.
+     * @param[in]  cipherLen         Length of ciphertext buffer
+     * @return                       Length of ciphertext in bytes
+     * @throw std::invalid_argument  Ciphertext buffer is too small
+     * @throw std::runtime_error     OpenSSL failure
+     */
+    int PrivateKey::encrypt(const char* plainText,
+                            const int   plainLen,
+                            char*       cipherText,
+                            int         cipherLen) const;
+
+    /**
+     * Encrypts plaintext using the private key.
+     *
      * @param[in]  plainText      Plain text
-     * @param[out] cipherText     Encrypted text
+     * @param[out] cipherText     Encrypted text. May be same object as plain
+     *                            text.
      * @throw std::runtime_error  OpenSSL failure
      */
     void encrypt(const std::string& plainText,

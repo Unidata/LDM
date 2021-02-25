@@ -24,6 +24,7 @@
 
 PkcKey::PkcKey()
     : rsa{nullptr}
+    , rsaSize{-1}
 {}
 
 PkcKey::~PkcKey()
@@ -45,6 +46,7 @@ PublicKey::PublicKey(const std::string& pubKey)
             throw std::runtime_error("PEM_read_bio_RSAPublicKey() failure. "
                     "Code=" + std::to_string(ERR_get_error()));
 
+        rsaSize = RSA_size(rsa);
         BIO_free_all(bio);
     } // `bio` allocated
     catch (const std::exception& ex) {
@@ -56,7 +58,7 @@ PublicKey::PublicKey(const std::string& pubKey)
 void PublicKey::encrypt(const std::string& plainText,
                         std::string&       cipherText) const
 {
-    char       buf[RSA_size(rsa)];
+    char       buf[rsaSize];
     const auto cipherLen = RSA_public_encrypt(plainText.length(),
             reinterpret_cast<const unsigned char*>(plainText.data()),
             reinterpret_cast<unsigned char*>(buf), rsa, padding);
@@ -70,7 +72,7 @@ void PublicKey::encrypt(const std::string& plainText,
 void PublicKey::decrypt(const std::string& cipherText,
                         std::string&       plainText) const
 {
-    char      buf[RSA_size(rsa)];
+    char      buf[rsaSize];
     const int plainLen = ::RSA_public_decrypt(cipherText.length(),
             reinterpret_cast<const unsigned char*>(cipherText.data()),
             reinterpret_cast<unsigned char*>(buf), rsa, padding);
@@ -109,6 +111,7 @@ PrivateKey::PrivateKey()
                 throw std::runtime_error("RSA_generate_key_ex() failure. "
                         "Code=" + std::to_string(ERR_get_error()));
 
+            rsaSize = RSA_size(rsa);
             BIO* bio = ::BIO_new(BIO_s_mem());
             if (bio == nullptr)
                 throw std::runtime_error("BIO_new() failure. "
@@ -156,16 +159,34 @@ const std::string& PrivateKey::getPubKey() const noexcept
     return pubKey;
 }
 
-void PrivateKey::encrypt(const std::string& plainText,
-                         std::string&       cipherText) const
+int PrivateKey::encrypt(const char* plainText,
+                        const int   plainLen,
+                        char*       cipherText,
+                        int         cipherLen) const
 {
-    char       buf[RSA_size(rsa)];
-    const auto cipherLen = RSA_private_encrypt(plainText.length(),
-            reinterpret_cast<const unsigned char*>(plainText.data()),
-            reinterpret_cast<unsigned char*>(buf), rsa, padding);
+    if (cipherLen < rsaSize)
+        throw std::invalid_argument(std::to_string(cipherLen) + "-byte "
+                "ciphertext buffer is smaller than " +
+                std::to_string(rsaSize) + " bytes");
+
+    cipherLen = RSA_private_encrypt(plainLen,
+            reinterpret_cast<const unsigned char*>(plainText),
+            reinterpret_cast<unsigned char*>(cipherText), rsa, padding);
     if (cipherLen == -1)
         throw std::runtime_error("(RSA_private_encrypt) failure. "
                 "Code=" + std::to_string(ERR_get_error()));
+
+    return cipherLen;
+}
+
+void PrivateKey::encrypt(const std::string& plainText,
+                         std::string&       cipherText) const
+{
+    char       buf[rsaSize];
+    auto       cipherLen = encrypt(
+            reinterpret_cast<const char*>(plainText.data()),
+            static_cast<int>(plainText.length()),
+            reinterpret_cast<char*>(buf), rsaSize);
 
     cipherText.assign(buf, cipherLen);
 }

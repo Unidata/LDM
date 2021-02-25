@@ -368,25 +368,30 @@ void fmtpRecvv3::Stop()
 
 std::string fmtpRecvv3::getMacKey()
 {
-    Decryptor crypt; // Public/private key nonce
-    auto pubKey = crypt.getPubKey();
-    #ifdef LDM_LOGGING
-		log_debug("Sending %s-byte public key",
-				std::to_string(pubKey.size()).c_str());
-    #endif
-    tcprecv->write(crypt.getPubKey());
-
-	std::string cipherKey;
-    #ifdef LDM_LOGGING
-		log_debug("Receiving encrypted MAC key");
-    #endif
-	tcprecv->read(cipherKey);
+    PrivateKey privateKey{};
+    const auto pubKey = privateKey.getPubKey();
 
     #ifdef LDM_LOGGING
-		log_debug("Decrypting %s-byte MAC key",
-				std::to_string(cipherKey.size()).c_str());
+        log_debug("Sending %s-byte public key",
+                std::to_string(pubKey.size()).c_str());
     #endif
-	return crypt.decrypt(cipherKey);
+    tcprecv->write(pubKey);
+
+    std::string cipherKey;
+    #ifdef LDM_LOGGING
+        log_debug("Receiving encrypted MAC key");
+    #endif
+    tcprecv->read(cipherKey);
+
+    #ifdef LDM_LOGGING
+        log_debug("Decrypting %s-byte MAC key",
+                std::to_string(cipherKey.size()).c_str());
+    #endif
+
+    std::string plainKey;
+    privateKey.decrypt(cipherKey, plainKey);
+
+    return plainKey;
 }
 
 /**

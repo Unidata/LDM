@@ -140,7 +140,6 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
-    hmacImpl{},
     prodIndex(initProdIndex),
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -422,18 +421,19 @@ void fmtpSendv3::Stop()
 
 void fmtpSendv3::sendMacKey(const int sd)
 {
-    std::string pubKey;
+    std::string rcvrPubKey;
 #   ifdef LDM_LOGGING
-		log_debug("Receiving public key");
+        log_debug("Receiving receiver's public key");
 #   endif
-    tcpsend->read(sd, pubKey);
+    tcpsend->read(sd, rcvrPubKey);
 
     const auto macKey = udpsend->getMacKey();
 #   ifdef LDM_LOGGING
         log_debug("Encrypting %s-byte MAC key",
                 std::to_string(macKey.size()).c_str());
 #   endif
-    const auto cipherKey = Encryptor(pubKey).encrypt(udpsend->getMacKey());
+    std::string cipherKey;
+    PublicKey(rcvrPubKey).encrypt(udpsend->getMacKey(), cipherKey);
 
 #   ifdef LDM_LOGGING
         log_debug("Sending %s-byte encrypted MAC key",
