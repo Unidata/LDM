@@ -183,7 +183,7 @@ void PrivateKey::encrypt(const std::string& plainText,
                          std::string&       cipherText) const
 {
     char       buf[rsaSize];
-    auto       cipherLen = encrypt(
+    const auto cipherLen = encrypt(
             reinterpret_cast<const char*>(plainText.data()),
             static_cast<int>(plainText.length()),
             reinterpret_cast<char*>(buf), rsaSize);

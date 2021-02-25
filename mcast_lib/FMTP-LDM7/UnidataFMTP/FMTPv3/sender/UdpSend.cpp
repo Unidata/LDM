@@ -96,16 +96,22 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
 
 
 /**
- * Constructor, set the IP address and port of the receiver, TTL and default
- * multicast ingress interface.
+ * Constructor, set the IP address and port of the receiver, TTL, and default
+ * multicast egress interface.
  *
  * @param[in] recvAddr     IP address of the receiver.
  * @param[in] recvport     Port number of the receiver.
  * @param[in] ttl          Time to live.
- * @param[in] ifAddr       IP of interface to listen for multicast.
+ * @param[in] ifAddr       IP of interface for multicast egress.
+ * @param[in] privateKey   Private key for encrypting HMAC or `nullptr`, in
+ *                         which case no encrypting is done. Caller must not
+ *                         free while this instance might use it.
  */
-UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
-                 const unsigned char ttl, const std::string& ifAddr)
+UdpSend::UdpSend(const std::string&   recvaddr,
+                 const unsigned short recvport,
+                 const unsigned char  ttl,
+                 const std::string&   ifAddr,
+                 PrivateKey* const    privateKey)
     : recvAddr(recvaddr),
       recvPort(recvport),
       ttl(ttl),
@@ -119,7 +125,7 @@ UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
       packetIndex(0),
       sendBefore(false),
       blackHat(*this),
-      privateKey{nullptr}
+      privateKey{privateKey}
 {
     iov[0].iov_base = &netHead;
     iov[0].iov_len  = FMTP_HEADER_LEN;
@@ -129,14 +135,10 @@ UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
 
 
 /**
- * Destroys elements within the udpsend entity which need to be deleted.
- *
- * @param[in] none
+ * Destroys this instance.
  */
 UdpSend::~UdpSend()
-{
-    delete privateKey;
-}
+{}
 
 
 /**

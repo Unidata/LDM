@@ -34,6 +34,7 @@
 
 #include "fmtpBase.h"
 #include "HmacImpl.h"
+#include "PkcKey.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -43,8 +44,11 @@
 class UdpSend
 {
 public:
-    UdpSend(const std::string& recvaddr, const unsigned short recvport,
-            const unsigned char ttl, const std::string& ifAddr);
+    UdpSend(const std::string&   recvaddr,
+            const unsigned short recvport,
+            const unsigned char  ttl,
+            const std::string&   ifAddr,
+            PrivateKey*          privateKey);
 
     ~UdpSend();
 
