@@ -1,6 +1,6 @@
 /**
- * This file declares the API for mapping from unit systems to their associated
- * pointers for version 2 of the Unidata UDUNITS package.
+ *
+ * This file is the header file for the Cscour(1) program. 
  *
  *  @file:  Cscour.h
  * @author: Mustapha Iles

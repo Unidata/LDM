@@ -47,18 +47,18 @@ ASSERT_FAIL					="FAIL"
 class CommonFileSystem:
 
 	dirList=[
-			"~/vesuvius",
-			"~/etna",
-			"~/etna/alt_dir"
+			"/tmp/vesuvius",
+			"/tmp/etna",
+			"/tmp/etna/alt_dir"
 		]		
 
-	fileList=["~/vesuvius/.scour$*.foo", 
-				"~/vesuvius/precipitation.foo",
-				"~/vesuvius/precipitation.txt",
-				"~/etna/precipitation.txt",
-				"~/etna/alt_dir/precipitation.txt",
-				"~/etna/vesuvius.foo",
-				"~/etna/.scour$*.foo"
+	fileList=["/tmp/vesuvius/.scour$*.foo", 
+				"/tmp/vesuvius/precipitation.foo",
+				"/tmp/vesuvius/precipitation.txt",
+				"/tmp/etna/precipitation.txt",
+				"/tmp/etna/alt_dir/precipitation.txt",
+				"/tmp/etna/vesuvius.foo",
+				"/tmp/etna/.scour$*.foo"
 				]
 
 	def __init__(self, filename, timestamp):
@@ -160,19 +160,15 @@ class CommonFileSystem:
 
 
 	def executeCscour(deleteFlag, ingestFile):
+		
+		outPutfile = "/tmp/scour_log.txt"
+
 		if deleteFlag == "-d":
-			process = subprocess.Popen(
-			    ["./Cscour", "-v", deleteFlag,  ingestFile], stderr=PIPE, stdout=PIPE)
-		else:
-			process = subprocess.run(
-			    ["./Cscour", "-v",  ingestFile], stderr=PIPE, stdout=PIPE)
-		out, err = process.communicate()
-
-		f = open("/tmp/scour_log.txt", "w+")
-		f.write(CommonFileSystem.unwrapIt(out))
-		f.close()
-
-		print(CommonFileSystem.unwrapIt(out))
+			with open(outPutfile, "w+") as scourLog:
+				process = subprocess.run(["./Cscour", "-v",  "-d", ingestFile], stdout=scourLog)
+	
+			#cmd = f"./Cscour -v -d {ingestFile} > {outPutfile}"
+			#os.system(cmd)
 		
 
 	def unwrapIt(text):
@@ -197,26 +193,26 @@ class CommonFileSystem:
 
 class SymlinkDeletion:	
 
-	fileList=[	"~/vesuvius/.scour$*.txt", 
-				"~/vesuvius/precipitation.foo",
-				"~/vesuvius/precipitation.txt",
-				"~/etna/precipitation.txt",
-				"~/etna/alt_dir/precipitation.txt",
-				"~/etna/vesuvius.foo",
-				"~/etna/.scour$*.foo"
+	fileList=[	"/tmp/vesuvius/.scour$*.txt", 
+				"/tmp/vesuvius/precipitation.foo",
+				"/tmp/vesuvius/precipitation.txt",
+				"/tmp/etna/precipitation.txt",
+				"/tmp/etna/alt_dir/precipitation.txt",
+				"/tmp/etna/vesuvius.foo",
+				"/tmp/etna/.scour$*.foo"
 	]
+	fileToSymlinkDict={
+				"/tmp/etna/precipitation.txt": "/tmp/vesuvius/sl_etna_file",
+				"/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
+	}
+
 	def __init__(self):
 		
 		self.ingestFile 	= "/tmp/scourTest.conf"
-		#self.entries 		= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
-		self.entries 		= "~/vesuvius		2	*.txt"
+		#self.entries 		= "/tmp/vesuvius		2	*.txt\n/tmp/etna		7-1130	*.foo"
+		self.entries 		= "/tmp/vesuvius		2	*.txt"
 		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
 
-		# a dict has .items(). .keys(), .values()
-		self.fileToSymlinkDict={
-				"~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
-				"~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
-			}
 		# Create the scour config file with entries 
 		# for Cscour to use as CLI argument
 		f = open(self.ingestFile, "w+")
@@ -259,23 +255,23 @@ class SymlinkDeletion:
 		# make .scour$*.txt NEWER than precipitation.txt
 		# Expect precipitation.txt to be deleted.
 		
-	#	scourFile=os.path.expanduser("~/vesuvius/.scour$*.txt")
+	#	scourFile=os.path.expanduser("/tmp/vesuvius/.scour$*.txt")
 	#	CommonFileSystem.changeMTime(scourFile, daysOldInSecs)
 
 
 		# make precipitation.txt OLDER than 2days +50secs
 		# Expect precipitation.txt to be deleted.
-		aFile=os.path.expanduser("~/vesuvius/precipitation.txt")
+		aFile=os.path.expanduser("/tmp/vesuvius/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
 
 
-		aFile=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		aFile=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
 
 
 		# make precipitation.txt OLDER than 4 days +50secs
 		# Expect precipitation.txt to be deleted.
-		aFile=os.path.expanduser("~/etna/precipitation.txt")
+		aFile=os.path.expanduser("/tmp/etna/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
 
 
@@ -304,21 +300,21 @@ class SymlinkDeletion:
 
 		# Files:
 		print(f"\nFILES: --------------------------------------")
-		aPath=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		aPath=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 			status=1
 
-		aPath=os.path.expanduser("~/vesuvius/precipitation.txt")
+		aPath=os.path.expanduser("/tmp/vesuvius/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 			status=1
 
-		aPath=os.path.expanduser("~/etna/precipitation.txt")
+		aPath=os.path.expanduser("/tmp/etna/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
@@ -327,11 +323,11 @@ class SymlinkDeletion:
 
 		# Symlinks
 		
-		# "~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
-		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
+		# "/tmp/etna/precipitation.txt": "/tmp/vesuvius/sl_etna_file",
+		# "/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
 		print(f"\nSYMLINKs: --------------------------------------")
-		kTarget	= "~/etna/precipitation.txt"
-		vLink 	= "~/vesuvius/sl_etna_file"
+		kTarget	= "/tmp/etna/precipitation.txt"
+		vLink 	= "/tmp/vesuvius/sl_etna_file"
 		expandedTarget =  os.path.expanduser(kTarget)
 		expandedLink =  os.path.expanduser(vLink)
 
@@ -349,9 +345,9 @@ class SymlinkDeletion:
 				print(f"\n\t{ASSERT_FAIL}: \tUn-Expected SymLink behavior! ({expandedTarget} - {expandedLink})  ")
 				status=1	
 
-		# "~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
-		kTarget	= "~/etna/alt_dir"
-		vLink 	= "~/vesuvius/sl_etna_alt_dir"
+		# "/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
+		kTarget	= "/tmp/etna/alt_dir"
+		vLink 	= "/tmp/vesuvius/sl_etna_alt_dir"
 		expandedTarget =  os.path.expanduser(kTarget)
 		expandedLink =  os.path.expanduser(vLink)
 
@@ -381,22 +377,22 @@ class SymlinkDeletion:
 
 class EmptyDirectoriesDeletion:
 
-	fileList=["~/etna/precipitation.txt",
-				"~/etna/alt_dir/precipitation.txt"
+	fileList=["/tmp/etna/precipitation.txt",
+				"/tmp/etna/alt_dir/precipitation.txt"
 	]
 
 	dirList=[
-			"~/vesuvius",
-			"~/etna",
-			"~/etna/alt_dir"
+			"/tmp/vesuvius",
+			"/tmp/etna",
+			"/tmp/etna/alt_dir"
 	]
 	
 	def __init__(self):
 		
 		self.ingestFile = "/tmp/scourTest.conf"
-		#self.entries 	= "~/vesuvius		2	*.txt\n~/etna		7-1130	*.foo"
-		self.entries 	= "~/etna		2	*.txt\
-		 \n~/dirDoesNotExist		2	*.txt"
+		#self.entries 	= "/tmp/vesuvius		2	*.txt\n/tmp/etna		7-1130	*.foo"
+		self.entries 	= "/tmp/etna		2	*.txt\
+		 \n/tmp/dirDoesNotExist		2	*.txt"
 		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
 
 		# Create the scour config file with entries 
@@ -425,17 +421,17 @@ class EmptyDirectoriesDeletion:
 		# Set mtime to appropriate value to have file(s) deleted
 		
 		# TO REMOVE:
-		# "~/etna/precipitation.txt",
-		# "~/etna/alt_dir/precipitation.txt",
-		# "~/etna",
-		# "~/etna/alt_dir"		
+		# "/tmp/etna/precipitation.txt",
+		# "/tmp/etna/alt_dir/precipitation.txt",
+		# "/tmp/etna",
+		# "/tmp/etna/alt_dir"		
 
 		# make precipitation.txt OLDER than 4 days +50secs
 		# Expect precipitation.txt to be deleted.
-		aFile=os.path.expanduser("~/etna/precipitation.txt")
+		aFile=os.path.expanduser("/tmp/etna/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
 
-		aFile=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		aFile=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
 		CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
 
 
@@ -458,14 +454,14 @@ class EmptyDirectoriesDeletion:
 		# Files:
 		print(f"\nFILES: --------------------------------------")
 		
-		aPath=os.path.expanduser("~/etna/alt_dir/precipitation.txt")
+		aPath=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
 			status=1
 
-		aPath=os.path.expanduser("~/etna/precipitation.txt")
+		aPath=os.path.expanduser("/tmp/etna/precipitation.txt")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
 		else:
@@ -475,21 +471,21 @@ class EmptyDirectoriesDeletion:
 		# Directories
 		print(f"\nDIRECTORIES: --------------------------------------")
 
-		aPath=os.path.expanduser("~/etna/alt_dir")
+		aPath=os.path.expanduser("/tmp/etna/alt_dir")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
 			status=1
 		
-		aPath=os.path.expanduser("~/etna")
+		aPath=os.path.expanduser("/tmp/etna")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
 		else:
 			print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
 			status=1
 
-		aPath=os.path.expanduser("~/dirDoesNotExist")
+		aPath=os.path.expanduser("/tmp/dirDoesNotExist")
 		if not os.path.exists(aPath): 
 			print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_NOT_DIR}: {aPath}")
 		else:
@@ -517,8 +513,8 @@ def main():
 		ed = EmptyDirectoriesDeletion()
 		ed_status = ed.runScenario("-d")
 		
-		exit(ed_status * sl_status)
-
+		print(f"sl_status: {sl_status} ed_status: {ed_status}")
+		exit( ed_status * sl_status )
 
 if __name__ == '__main__':
 		main()

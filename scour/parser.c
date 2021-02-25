@@ -244,7 +244,7 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
      	// validate dirName path
      	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, excludedDirsCounter) == -1 )
 		{
-			log_add("(-) Directory '%s' does not exist (or is invalid.) Skipping...", dirName);
+			log_add("\n(-) Directory '%s' does not exist (or is invalid.) Skipping...", dirName);
 			log_flush_info();
 
 			continue;
@@ -468,7 +468,7 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
 
 	// 3. check that the directory is a valid one
-    if( !isAccessible(dirName) ) return -1;
+    if( isNotAccessible(dirName) ) return -1;
 
 	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
@@ -477,19 +477,19 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	return 0;
 }
 
-int isAccessible(char *dirPath) 
+int isNotAccessible(char *dirPath) 
 {
     int status = 0;
-    DIR *dir = opendir(dirPath);
-    if(!dir) 
+    int fd = open(dirPath, O_RDONLY);
+    if(fd == -1) 
     {
-        log_info("isAccessible(\"%s\") failed", dirPath);
+        log_info("directory(\"%s\") inaccessible", dirPath);
     	log_add("failed to open directory: %s", dirPath);
     	log_flush_warning();
     	status = -1;
     }
     
-    closedir(dir);
+    close(fd);
     return status;
 }
 
@@ -498,15 +498,15 @@ int isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
     // this can happen if parser found a too long dir path: set it to empty string
     if(excludedDirsCounter < 1 || dirPath == NULL || strlen(dirPath) == 0)
     {
-        log_info("isExcluded() - no directory to exclude ");
-        return -1;
+        log_info("No directory to exclude ");
+        return 0;
     }
 
 	int i;
 	for(i=0; i<excludedDirsCounter; i++) {
 
 		if( strcmp(dirPath, list[i]) == 0) {
-			log_add("isExcluded: path %s is an excluded directory!", dirPath);
+			log_add("path %s is an excluded directory!", dirPath);
 			log_flush_warning();
 			return -1;
 		}
