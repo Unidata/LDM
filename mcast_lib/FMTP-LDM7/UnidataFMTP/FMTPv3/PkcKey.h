@@ -134,7 +134,7 @@ public:
      * @throw std::invalid_argument  Ciphertext buffer is too small
      * @throw std::runtime_error     OpenSSL failure
      */
-    int PrivateKey::encrypt(const char* plainText,
+    int encrypt(const char* plainText,
                             const int   plainLen,
                             char*       cipherText,
                             int         cipherLen) const;
