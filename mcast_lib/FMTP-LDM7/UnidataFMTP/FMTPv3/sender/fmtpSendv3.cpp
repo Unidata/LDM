@@ -38,6 +38,7 @@
 
 
 #include <algorithm>
+#include <cstdlib>
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
@@ -109,6 +110,32 @@ inline static void logMsg(const std::exception& ex)
     logMsg(ex, true);
 }
 
+/**
+ * Returns a pointer to a private key object or the null pointer depending on
+ * whether the relevant environment variable is appropriately set.
+ *
+ * @retval `nullptr`  Relevant environment variable is not appropriately set
+ * @return            Private key object
+ */
+PrivateKey* fmtpSendv3::getPrivateKey()
+{
+    static PrivateKey* privateKey;
+
+    if (privateKey == nullptr) {
+        const char* envVar = ::getenv("FMTP_ENCRYPTED_HMAC");
+
+        if ((envVar != nullptr) && (
+                (::strcasecmp(envVar, "1") == 0) ||
+                (::strcasecmp(envVar, "true") == 0) ||
+                (::strcasecmp(envVar, "yes") == 0) ||
+                (::strcasecmp(envVar, "enable") == 0) ||
+                (::strcasecmp(envVar, "enabled") == 0))) {
+            privateKey = new PrivateKey();
+        }
+    }
+
+    return privateKey;
+}
 
 /**
  * Constructs a sender instance with prodIndex specified and initialized by
@@ -140,8 +167,9 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
+    privateKey{getPrivateKey()},
     prodIndex(initProdIndex),
-    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr, privateKey)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     notifier(notifier),
@@ -164,12 +192,11 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
     txdone(false),
     start_t{},
     end_t{}
-{
-}
+{}
 
 
 /**
- * Destructs the sender instance and release the initialized resources.
+ * Destroys the sender instance and release the initialized resources.
  *
  * @param[in] none
  */
@@ -178,6 +205,7 @@ fmtpSendv3::~fmtpSendv3()
     delete udpsend;
     delete tcpsend;
     delete sendMeta;
+    delete privateKey;
 }
 
 
@@ -443,6 +471,11 @@ void fmtpSendv3::sendMacKey(const int sd)
 }
 
 
+void fmtpSendv3::sendPubKey(const int sd)
+{
+}
+
+
 /**
  * Adds an entry for a data-product to the retransmission set.
  *
@@ -550,6 +583,9 @@ void* fmtpSendv3::coordinator(void* ptr)
             sendptr->tcpsend->updatePathMTU(newtcpsockfd);
 
             sendptr->sendMacKey(newtcpsockfd);
+
+            if (sendptr->privateKey)
+                sendptr->sendPubKey(newtcpsockfd);
 
             int cancelState;
             ::pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
