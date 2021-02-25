@@ -35,9 +35,9 @@ CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
 	mv -f $@.tmp $@
 pq.h:		pq.hin pq.c
 
-check_PROGRAMS		= pq_test
-
 if HAVE_CUNIT
+
+check_PROGRAMS		= pq_test
 
 fileLockedBySelf_SOURCES	= fileLockedBySelf.c
 fileLockedBySelf_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
