@@ -36,12 +36,6 @@ CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
 pq.h:		pq.hin pq.c
 
 if HAVE_CUNIT
-<<<<<<< HEAD
-=======
-
-check_PROGRAMS		= pq_test
-
->>>>>>> branch 'devel' of git@github.com:Unidata/LDM.git
 
 check_PROGRAMS		= pq_test
 
