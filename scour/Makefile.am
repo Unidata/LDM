@@ -28,7 +28,7 @@ install-data-local:    \
 $(DESTDIR)$(sysconfdir)/scour.conf:
 	$(INSTALL_DATA) scour.conf $@
 
-Cscour_SOURCES		= Cscour.c Cscour.h \
+Cscour_SOURCES		= Cscour.c \
 			  parser.c parser.h
 TAGS_FILES		=  $(Cscour_SOURCES) ../log/*.c ../log/*.h 
 
