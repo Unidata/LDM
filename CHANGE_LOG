@@ -1,13 +1,19 @@
-6.13.14.13
+6.13.14.13      2021-02-25T12:30:40-0700
     ldmadmin(1):
         * Corrected error-message in "addmetrics" command
 
     logging:
         * Added LOG_LEVEL_FATAL and associated functions/macros
 
+    Cscour(1):
+        * Squashed bugs in previous distribution
+
     DevOpts:
         * deployAll(1): Modified to use an associative array and to print 
           asynchronous logs at the end
+        * pq/Makefile.am: Moved HAVE_CUNIT to before test_PROGRAMS to enable
+          "make check" on systems with no CUnit package installed
+        * scour/.gitignore: Deleted inappropriate slash prefix of "scour.conf"
 
 6.13.14.12      2021-02-13T17:15:10-0700
     NOAAPort:
