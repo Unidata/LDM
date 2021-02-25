@@ -279,7 +279,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             // Remove if empty and not symlinked, regardless of its age (daysOld)
             if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
             {            
-                log_add("Deleting this (empty) directory %s", path);
+                log_add("\nDeleting this (empty) directory %s", path);
                 if(remove(path))
                 {
                     log_add("directory remove(\"%s\") failed\n", path);
@@ -287,7 +287,6 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
 
                     break;
                 }     
-                log_info("Removed directory: %s \n", path);               
 
             } else {
                 log_info("NOT deleted! directory: %s && symlink: %d  &&  deleteFlag: %d", 
@@ -321,7 +320,7 @@ int scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                 else 
                 {
                     // current file is OLDER than daysOld
-                    log_info("(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", path, daysOld);
+                    log_info("\n(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", path, daysOld);
                 }
                 // in any case
                 continue;

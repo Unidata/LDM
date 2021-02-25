@@ -160,19 +160,15 @@ class CommonFileSystem:
 
 
 	def executeCscour(deleteFlag, ingestFile):
+		
+		outPutfile = "/tmp/scour_log.txt"
+
 		if deleteFlag == "-d":
-			process = subprocess.Popen(
-			    ["./Cscour", "-v", deleteFlag,  ingestFile], stderr=PIPE, stdout=PIPE)
-		else:
-			process = subprocess.run(
-			    ["./Cscour", "-v",  ingestFile], stderr=PIPE, stdout=PIPE)
-		out, err = process.communicate()
-
-		f = open("/tmp/scour_log.txt", "w+")
-		f.write(CommonFileSystem.unwrapIt(out))
-		f.close()
-
-		print(CommonFileSystem.unwrapIt(out))
+			with open(outPutfile, "w+") as scourLog:
+				process = subprocess.run(["./Cscour", "-v",  "-d", ingestFile], stdout=scourLog)
+	
+			#cmd = f"./Cscour -v -d {ingestFile} > {outPutfile}"
+			#os.system(cmd)
 		
 
 	def unwrapIt(text):
@@ -205,6 +201,11 @@ class SymlinkDeletion:
 				"~/etna/vesuvius.foo",
 				"~/etna/.scour$*.foo"
 	]
+	fileToSymlinkDict={
+				"~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
+				"~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
+	}
+
 	def __init__(self):
 		
 		self.ingestFile 	= "/tmp/scourTest.conf"
@@ -212,11 +213,6 @@ class SymlinkDeletion:
 		self.entries 		= "~/vesuvius		2	*.txt"
 		self.daysOldInSecs 	= 172800 			# seconds: 2 * 24 * 3600 s
 
-		# a dict has .items(). .keys(), .values()
-		self.fileToSymlinkDict={
-				"~/etna/precipitation.txt": "~/vesuvius/sl_etna_file",
-				"~/etna/alt_dir": "~/vesuvius/sl_etna_alt_dir"
-			}
 		# Create the scour config file with entries 
 		# for Cscour to use as CLI argument
 		f = open(self.ingestFile, "w+")
@@ -517,8 +513,8 @@ def main():
 		ed = EmptyDirectoriesDeletion()
 		ed_status = ed.runScenario("-d")
 		
-		exit(ed_status * sl_status)
-
+		print(f"sl_status: {sl_status} ed_status: {ed_status}")
+		exit( ed_status * sl_status )
 
 if __name__ == '__main__':
 		main()

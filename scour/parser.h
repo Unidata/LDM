@@ -51,7 +51,7 @@ int nowInEpoch();
 int convertDaysOldToEpoch(char *);
 char * loginHomeDir(char *);
 int isExcluded(char *, char (*)[PATH_MAX], int);
-int isAccessible(char *) ;
+int isNotAccessible(char *) ;
 static int vetThisDirectoryPath(char *, char (*)[PATH_MAX], int); 
 
 #endif	// PARSER_DOT_H
