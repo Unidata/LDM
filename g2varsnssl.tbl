@@ -161,6 +161,13 @@
 ! Radar mosaic
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
-209 011 000 000 Mosaic Base Refl (opt method)    dBZ                  MrgBasReflQC      0  -9999.00
-209 011 001 000 UnQc                             dBZ                  MrgReflComp       0  -9999.00
-209 011 002 000 Comp Refl Mosaic (max ref)       dBZ                  MrgReflQComp      0  -9999.00
+209 011 000 000 Mosaic Base Refl (opt method)    dBZ                  MrgBasReflQC     0  -9999.00
+209 011 001 000 UnQc                             dBZ                  MrgReflComp      0  -9999.00
+209 011 002 000 Comp Refl Mosaic (max ref)       dBZ                  MrgReflQComp     0  -9999.00
+!
+! 
+!D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
+!23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
+209 012 000 000 Flash Crest Max Unit Streamflow  m3/s/km2             FlQpeCrUnSf      0  -9999.00
+209 012 004 000 Flash SAC Max Unit Streamflow    m3/s/km2             FlQpeSacUnSf	   0  -9999.00
+209 012 006 000 Flash SAC Max Soil Saturation    %                    FlQpeSacSoSa     0  -9999.00
