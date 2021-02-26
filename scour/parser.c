@@ -43,6 +43,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -85,17 +86,17 @@ usage(const char* progname)
  * @retval     0             boolean false: 'path' is NOT a regular file                           
  * @retval     !0            boolean true: 'path' is a regular file
  */
-static int 
+static bool 
 isRegularFile(const char *path)
 {
     struct stat path_stat;
 
     if (stat(path, &path_stat) == -1)
     {
-        return 0;
+        return false;
     }
 
-    return S_ISREG(path_stat.st_mode);
+    return (S_ISREG(path_stat.st_mode)) ? true : false;
 }
 
 
@@ -298,16 +299,15 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
     return 0;
 }
 
-int 
+bool 
 isSameAsLoginDirectory(char * dirName)
 {
-	int status = 0;
 	char *lgnHomeDir;
 	if ((lgnHomeDir = loginHomeDir(NULL)) == NULL) 
 	{
 		log_add("Could not determine login HOME");
 		log_flush_warning();
-		status = -1;
+		return true;
 	}
 
 	int res = strcmp(dirName, lgnHomeDir);
@@ -316,9 +316,9 @@ isSameAsLoginDirectory(char * dirName)
 		log_add("dirName \"%s\" is the same as login name \"%s\"",
 			dirName, lgnHomeDir);
 		log_flush_warning();
-		status = -1;
+		return true;
 	}
-	return status;
+	return false;
 }
 
 static char *
@@ -505,11 +505,12 @@ vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	// 2. check if dirName is in the list of excluded direectories. 
 	// If not continue the vetting process
 	// dirtName is an absolute path. Excluded dirs are expected to be too.
+	log_info("Is path %s  an excluded directory?", dirName);
 	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
-
+	log_info("Is path %s  an excluded directory?", dirName);
 	// 3. check that the directory is a valid one
     if( isNotAccessible(dirName) ) return -1;
-
+	log_info("Is path %s  NOT ACCESSIBLE directory?", dirName);
 	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
 	if( isSameAsLoginDirectory(dirName) ) return -1;
@@ -517,28 +518,28 @@ vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	return 0;
 }
 
-int 
+bool
 isNotAccessible(char *dirPath) 
 {
-    int status = 0;
+    int status = false;
     int fd = open(dirPath, O_RDONLY);
     if(fd == -1) 
     {
-    	status = -1;
+    	status = true;
     }
     
     close(fd);
     return status;
 }
 
-int 
+bool
 isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 {
     // Check if there are directories to be excluded from scouring
     if(excludedDirsCounter < 1)
     {
         //log_info("No directory to exclude ");
-        return 0;
+        return false;
     }
 
 	int i;
@@ -547,10 +548,10 @@ isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 		if( strcmp(dirPath, list[i]) == 0) {
 			log_add("path %s is an excluded directory!", dirPath);
 			log_flush_warning();
-			return 1;
+			return true;
 		}
 	}
-	return 0; // not in the to-exclude list
+	return false; // not in the to-exclude list
 }
 
 // insert a node at the first location in the list
@@ -732,6 +733,7 @@ convertDaysOldToEpoch(char *daysOldItem)
 	return res1 >= 0? res1 : res2 >= 0? res2 : res3 >= 0? res3 : -1;
 }
 
+
 char * 
 loginHomeDir(char *providedLgn)
 {
@@ -785,6 +787,7 @@ loginHomeDir(char *providedLgn)
     free(buffer);
     return NULL;
 }
+
 
 int 
 xstrcmp(char *str1, char * str2)
