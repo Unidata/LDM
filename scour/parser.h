@@ -44,15 +44,15 @@ typedef struct IngestEntry {
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-void    parseArgv(int, char **, int *);
-void newEntryNode(IngestEntry_t **, char *, char *, char *);
-int parseConfig(int *, IngestEntry_t **);
-int regexOps(char *, char *, int);
-int nowInEpoch();
-int convertDaysOldToEpoch(char *);
-char * loginHomeDir(char *);
-int isExcluded(char *, char (*)[PATH_MAX], int);
-int isNotAccessible(char *) ;
+void  parseArgv(int, char **, int *);
+void  newEntryNode(IngestEntry_t **, char *, char *, char *);
+int   parseConfig(int *, IngestEntry_t **);
+int   regexOps(char *, char *, int);
+int   nowInEpoch();
+int   convertDaysOldToEpoch(char *);
+char *loginHomeDir(char *);
+int   isExcluded(char *, char (*)[PATH_MAX], int);
+int   isNotAccessible(char *) ;
 static int vetThisDirectoryPath(char *, char (*)[PATH_MAX], int); 
 
 #endif	// PARSER_DOT_H

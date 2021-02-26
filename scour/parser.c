@@ -61,9 +61,11 @@
 #include "parser.h"
 #include "log.h"
 
+// scour configuration file
 extern char *ingestFilename;
 
-static void usage(const char* progname)
+static void 
+usage(const char* progname)
 {
     log_add(
 "Usage:\n"
@@ -76,7 +78,15 @@ static void usage(const char* progname)
     log_flush_error();
 }
 
-static int isRegularFile(const char *path)
+/**
+ * Checks if 'path' is a regular file.
+ *
+ * @param[in]  path 		 scour config file
+ * @retval     0             boolean false: 'path' is NOT a regular file                           
+ * @retval     !0            boolean true: 'path' is a regular file
+ */
+static int 
+isRegularFile(const char *path)
 {
     struct stat path_stat;
 
@@ -88,7 +98,17 @@ static int isRegularFile(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 
-void parseArgv(int argc, char ** argv, int *deleteDirOption)
+
+/**
+ * Parses the command line options for the Cscour program
+ *
+ * @param[in]  argc          	Number of operands.
+ * @param[in]  argv          	Operands.
+ * @param[in]  deleteDirOption 	Delete or not option
+ *
+ */
+void 
+parseArgv(int argc, char ** argv, int *deleteDirOption)
 {
     const char* const   progname = basename(argv[0]);
 
@@ -151,19 +171,24 @@ void parseArgv(int argc, char ** argv, int *deleteDirOption)
 	}
 }
 
-/*
-	Code to read a file of NON-ALLOWED directory paths into an array
-	which is used to skip processing these directories
-*/
-int getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
+/**
+ * Builds a list of to-be-excluded directory paths (not scoured)
+ *
+ * @param[out]  list 		 list of excluded directories as set in 
+ *                           file DIRS_TO_EXCLUDE_FILE (see parser.h) in 
+ *                           absolute path names form
+ * @retval     >0            number of entries in the DIRS_TO_EXCLUDE_FILE file
+ * @retval     -1            error in opening the DIRS_TO_EXCLUDE_FILE file
+ */
+int 
+getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
 {
     FILE *fp = NULL;
-	char notAllowedDirsFilename[PATH_MAX]=DIRS_TO_EXCLUDE_FILE;
-	
-    if((fp = fopen(notAllowedDirsFilename, "r")) == NULL)
+
+    if((fp = fopen(DIRS_TO_EXCLUDE_FILE, "r")) == NULL)
     {
     	log_add("fopen(\"%s\") failed: %s",
-            notAllowedDirsFilename, strerror(errno));
+            DIRS_TO_EXCLUDE_FILE, strerror(errno));
 		log_flush_warning();
 
         return -1;
@@ -185,6 +210,15 @@ int getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
 	return i;
 }
 
+/**
+ * Parses the scour configuration file and builds a linked list of only
+ * vetted dictories
+ *
+ * @param[out]  directoriesCounter   number of valid dictory paths
+ * @param[out]  listHead 		     list of valid directory paths
+ * @retval      0                    all went well 
+ * @retval      -1                   error occurred
+ */
 int
 parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
 {
@@ -220,9 +254,10 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
 		{
 
 			if(strlen(ptr) > PATH_MAX) {
-				log_add("%s is TOO long (%zu) !", ptr, strlen(ptr));
+				log_add("%s in config file is TOO long (%zu) !", ptr, strlen(ptr));
 				log_flush_warning();
-				ptr="";
+
+				continue;
 			}
 
 			switch(itemsCounted)
@@ -244,7 +279,7 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
      	// validate dirName path
      	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, excludedDirsCounter) == -1 )
 		{
-			log_add("\n(-) Directory '%s' does not exist (or is invalid.) Skipping...", dirName);
+			log_add("(-) Directory '%s' (in scour config) does not exist or is invalid. Skipping it...", dirName);
 			log_flush_info();
 
 			continue;
@@ -263,16 +298,16 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
     return 0;
 }
 
-
-
-int isSameAsLoginDirectory(char * dirName)
+int 
+isSameAsLoginDirectory(char * dirName)
 {
+	int status = 0;
 	char *lgnHomeDir;
 	if ((lgnHomeDir = loginHomeDir(NULL)) == NULL) 
 	{
 		log_add("Could not determine login HOME");
-		log_flush_error();
-		return 0;
+		log_flush_warning();
+		status = -1;
 	}
 
 	int res = strcmp(dirName, lgnHomeDir);
@@ -281,13 +316,13 @@ int isSameAsLoginDirectory(char * dirName)
 		log_add("dirName \"%s\" is the same as login name \"%s\"",
 			dirName, lgnHomeDir);
 		log_flush_warning();
-		return 0;
+		status = -1;
 	}
-	return res;
+	return status;
 }
 
-static
-char *substring(char *string, int position, int length)
+static char *
+substring(char *string, int position, int length)
 {
    char *p;
    int c;
@@ -314,18 +349,17 @@ char *substring(char *string, int position, int length)
    return p;
 }
 
-
-/*
-	Code to examines the directory items:
-	- checks for tilda (~) in the directory name and expands it according
-	  to the login name returned by getlogin() when not provided as ~ldm. 
-	  If ~ldm then ldm username will be used in getpwnam_r(1)
-	- checks for NOT ALLOWED directory paths (e.g. /, /var, /home/ldm, ) 
-	  and skips storing them in the list
-*/
-
-static
-int startsWithTilda(char *dirPath, char *expandedDirName)
+/**
+ * Checks the directory path name present in the scour configuration file
+ * to validate the entries there
+ *
+ * @param[in]  dirPath 		 	directory pathname read from the scour config file 
+ * @param[out] expandedDirName	validated directory
+ * @retval     0             	directory name is valid
+ * @retval     -1            	directory name is not valid
+ */
+static int 
+startsWithTilda(char *dirPath, char *expandedDirName)
 {
     // case ~ldm, expands to ldm's $HOME/ but NOT ALLOWED
     // case ~/ldm, return ldm's $HOME/ldm
@@ -349,7 +383,6 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
     if( tildaPosition == -1 || tildaPosition >0)
     {
     	strcpy(expandedDirName, dirPath);
-    	log_info("path has no tilda to expand");
     	return 0; // no tilda to expand
     }
 
@@ -437,15 +470,25 @@ int startsWithTilda(char *dirPath, char *expandedDirName)
 
  		return 0;
 	}
-
 	return 0;
 }
 
-static
-int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX], 
+/**
+ * Checks the directory path name present in the scour configuration file
+ * to validate the entries there, as far as existence of directory, non-exclusion
+ *
+ * @param[in]  dirName             directory pathname read from the scour config file 
+ * @param[in]  excludedDirsList    list of directory paths of directory to exclude 
+ *                                 from scouring
+ * @param[in]  excludedDirsCounter previously computed number of excluded directories 
+ *
+ * @retval     0             	directory name is valid
+ * @retval     -1            	directory name is not valid
+ */
+static int 
+vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX], 
 		int excludedDirsCounter) 
 {
-	log_info("validating directory: %s", dirName);
 	
 	// 1. check if it starts with tilda and vet the expanded path
 	//	  return the expanded path for subsequent vetting below
@@ -453,14 +496,11 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	int tildaFlag = startsWithTilda(dirName, pathName);
 	if( tildaFlag == -1) 
 	{
-		log_add("Validation failed for path: \"%s\". Skipping it!", dirName);
-		log_flush_warning();
 		return -1;
 	}
 
 	// tilda was found in path and expanded
 	strcpy(dirName, pathName);
-	log_info("tilda expanded directory: \"%s\"", dirName);
 	
 	// 2. check if dirName is in the list of excluded direectories. 
 	// If not continue the vetting process
@@ -472,20 +512,18 @@ int vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 
 	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
-	if( !isSameAsLoginDirectory(dirName) ) return -1;
+	if( isSameAsLoginDirectory(dirName) ) return -1;
 
 	return 0;
 }
 
-int isNotAccessible(char *dirPath) 
+int 
+isNotAccessible(char *dirPath) 
 {
     int status = 0;
     int fd = open(dirPath, O_RDONLY);
     if(fd == -1) 
     {
-        log_info("directory(\"%s\") inaccessible", dirPath);
-    	log_add("failed to open directory: %s", dirPath);
-    	log_flush_warning();
     	status = -1;
     }
     
@@ -493,12 +531,13 @@ int isNotAccessible(char *dirPath)
     return status;
 }
 
-int isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
+int 
+isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 {
-    // this can happen if parser found a too long dir path: set it to empty string
-    if(excludedDirsCounter < 1 || dirPath == NULL || strlen(dirPath) == 0)
+    // Check if there are directories to be excluded from scouring
+    if(excludedDirsCounter < 1)
     {
-        log_info("No directory to exclude ");
+        //log_info("No directory to exclude ");
         return 0;
     }
 
@@ -508,14 +547,15 @@ int isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
 		if( strcmp(dirPath, list[i]) == 0) {
 			log_add("path %s is an excluded directory!", dirPath);
 			log_flush_warning();
-			return -1;
+			return 1;
 		}
 	}
 	return 0; // not in the to-exclude list
 }
 
 // insert a node at the first location in the list
-void newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *pattern)
+void 
+newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *pattern)
 {
     // Allocate a new node in the heap and set its data
     IngestEntry_t *tmp = (IngestEntry_t*) malloc(sizeof(IngestEntry_t));
@@ -535,7 +575,8 @@ void newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *patt
 	*listHead = tmp;
 }
 
-int nowInEpoch()
+int 
+nowInEpoch()
 {
     time_t today, todayEpoch;
 	time(&today);
@@ -545,22 +586,40 @@ int nowInEpoch()
 	return todayEpoch;
 }
 
-// ===============================================================================
-//
-// Code to parse a regex on daysOld to convert it to Epoch time. 
-// It returns the Epoch time of the daysOld string.
-// Allowed formats are:
-// - days
-// - days-HH
-// - days-HHMM
-// - days-HHMMSS
-// It will be used to compare the Epoch mtime of a file to determine if it is 
-// a candidate for deletion.
-// 
-// ===============================================================================
-
-int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
+/**
+ * Converts daysOld specified in scour configuration from a form of <days>-[HH[MM[SS]]]
+ * into their Epoch time (seconds) equivalent
+ * @param[in]  dirName             directory pathname read from the scour config file 
+ * @param[in]  excludedDirsList    list of directory paths of directory to exclude 
+ *                                 from scouring
+ * @param[in]  excludedDirsCounter previously computed number of excluded directories 
+ *
+ * @retval     >0             	   daysOld in seconds
+ * @retval     -1            	   invalid daysOld provided
+ */
+int 
+regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 {
+
+	// Allowed formats are:
+	// - days
+	// - days-HH
+	// - days-HHMM
+	// - days-HHMMSS
+
+	/*
+	Examples of daysOld:
+			"1",			--> 1 day
+			"2-0630",		--> 2 days + 6 hours + 30 minutes
+			"3-073050",		--> 3 days + 7 hours + 30 minutes + 50 seconds
+			"3-",			--> error
+			"233-0",		--> error
+			"33-11",		--> 33 days + 11 hours
+			"9000-07",
+			"444"
+			"0-0930"		--> 0 days + 9 hours + 30 minutes 
+	*/
+
 	int daysEtcInSeconds=0, days=0, hours=0, minutes=0, seconds=0;
 
 	int todayEpoch = nowInEpoch();
@@ -636,21 +695,8 @@ int regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 	return -1;
 }
 
-
-/*
-Examples of daysOld:
-		"1",			--> 1 day
-		"2-0630",		--> 2 days + 6 hours + 30 minutes
-		"3-073050",		--> 3 days + 7 hours + 30 minutes + 50 seconds
-		"3-",			--> error
-		"233-0",		--> error
-		"33-11",		--> 33 days + 11 hours
-		"9000-07",
-		"444"
-		"0-0930"		--> 0 days + 9 hours + 30 minutes 
-*/
-
-int convertDaysOldToEpoch(char *daysOldItem)
+int 
+convertDaysOldToEpoch(char *daysOldItem)
 {
 	regex_t regex;
 	regmatch_t group[5];
@@ -666,8 +712,6 @@ int convertDaysOldToEpoch(char *daysOldItem)
 	if (status == 0) 
 	{
 		int daysOnlyInSeconds = atoi(daysOldItem) * DAY_SECONDS;
-		log_info("(+) daysOld: %s (epoch: %d)", daysOldItem, todayEpoch - daysOnlyInSeconds);
-    
 		return todayEpoch - daysOnlyInSeconds;
 	} 
 
@@ -688,16 +732,18 @@ int convertDaysOldToEpoch(char *daysOldItem)
 	return res1 >= 0? res1 : res2 >= 0? res2 : res3 >= 0? res3 : -1;
 }
 
-char * loginHomeDir(char *providedLgn)
+char * 
+loginHomeDir(char *providedLgn)
 {
 	char *lgn;
 	struct passwd *pw;
 
 	if(providedLgn != NULL) lgn = providedLgn;
 	else
-		if ((lgn = getlogin()) == NULL) {
-			  log_add("loginHomeDir:getlogin() failed: %s",  strerror(errno));
-		    return NULL;
+		if ((lgn = getlogin()) == NULL) 
+		{
+            log_add("loginHomeDir:getlogin() failed: %s",  strerror(errno));
+            return NULL;
 		}
 
     long int initlen = sysconf(_SC_GETPW_R_SIZE_MAX);
@@ -727,13 +773,11 @@ char * loginHomeDir(char *providedLgn)
         }
         if (resultp == NULL) {
             log_add("User \"%s\"  does not exist on this system", lgn);
-
             free(buffer);
             return NULL;
         }
         else {
-            // fprintf(stderr, "Found user: %s\n", result.pw_name);
-            //strcpy(path, result.pw_name);
+            // found user
             free(buffer);
             return(result.pw_dir);
         }
@@ -742,7 +786,8 @@ char * loginHomeDir(char *providedLgn)
     return NULL;
 }
 
-int xstrcmp(char *str1, char * str2)
+int 
+xstrcmp(char *str1, char * str2)
 {
 	char strArray1[80];
 	char strArray2[80];
