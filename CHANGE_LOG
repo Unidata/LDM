@@ -1,4 +1,7 @@
 6.13.14.14
+    Cscour(1):
+        * Added directory exclude file option and default
+
     DevOpts:
         * Removed "config.h.in" from repository
 

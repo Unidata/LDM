@@ -485,32 +485,33 @@ test "$sysconfdir" = '${prefix}/etc' && sysconfdir="${LDMHOME}/etc"
 test "$localstatedir" = '${prefix}/var' && localstatedir="${LDMHOME}/var"
 
 AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
-    [Pathname of installed-programs directory])
+    [Default pathname of installed-programs directory])
 AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
 AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
-AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$localstatedir/logs"],
-    [Pathname of LDM logging directory])
+    [Default pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$localstatedir/run"],
-    [Pathname of LDM var/run directory])
+    [Default pathname of LDM var/run directory])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
-    [Pathname of LDM product-queue directory])
+    [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
-    [Pathname of LDM product-queue])
+    [Default pathname of LDM product-queue])
 AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
-    [Pathname of default pqact(1) configuration-file])
+    [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
-    [Pathname of default LDM configuration-file])
+    [Default pathname of LDM configuration-file])
+AC_DEFINE_UNQUOTED([SCOUR_EXCLUDE_PATH], ["$sysconfdir/scour_excludes.conf"],
+    [Default pathname of file containing directories-to-be-excluded by scour(1)])
 AC_DEFINE_UNQUOTED([PQACT_DATA_DIR], ["$localstatedir/data"],
-    [Pathname of default pqact(1) data-directory])
+    [Default pathname of pqact(1) data-directory])
 AC_DEFINE_UNQUOTED([PQSURF_DATA_DIR], ["$localstatedir/data"],
-    [Pathname of default pqsurf(1) data-directory])
+    [Default pathname of pqsurf(1) data-directory])
 AC_DEFINE_UNQUOTED([PQSURF_QUEUE_PATH], [LDM_QUEUE_DIR "/pqsurf.pq"],
-    [Pathname of default pqsurf(1) product-queue])
+    [Default pathname of pqsurf(1) product-queue])
 AC_DEFINE_UNQUOTED([PQSURF_CONFIG_PATH], ["$sysconfdir/pqsurf.conf"],
-    [Pathname of default pqsurf(1) configuration-file])
+    [Default pathname of pqsurf(1) configuration-file])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME

@@ -61,21 +61,33 @@
 
 #include "parser.h"
 #include "log.h"
+#include "globals.h"
+#include "registry.h"
 
 // scour configuration file
 extern char *ingestFilename;
+
+// Pathname of file containing directories to be excluded from scouring
+static char excludePath[PATH_MAX];
 
 static void 
 usage(const char* progname)
 {
     log_add(
 "Usage:\n"
-"       %s [-v] [-d ] [-l log_filename] <scour_configuration_filename>\n"
+"       %s [-v] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
 "Where:\n"
-"  -d             Enable directory deletion\n"
-"  -l filename    log filename\n"
-"  -v             Log INFO messages\n",
-        progname);
+"  -d               Enable directory deletion\n"
+"  -e exclude_path  Pathname of file listing directories to be excluded. "
+                    "Default is \n"
+"                   \"%s\".\n"
+"  -l dest          Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                   (standard error), or file `dest`. Default is\n"
+"                   \"%s\".\n"
+"  -v               Log INFO messages\n",
+            progname,
+            excludePath,
+            log_get_default_destination());
     log_flush_error();
 }
 
@@ -112,8 +124,17 @@ void
 parseArgv(int argc, char ** argv, int *deleteDirOption)
 {
     const char* const   progname = basename(argv[0]);
+    char*       var;
 
-	*deleteDirOption = 0;
+    if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
+        strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
+    }
+    else {
+        strncpy(excludePath, var, sizeof(excludePath)-1);
+        free(var);
+    }
+
+    *deleteDirOption = 0;
     int ch;
     char logFilename[PATH_MAX]="";
 
@@ -122,7 +143,7 @@ parseArgv(int argc, char ** argv, int *deleteDirOption)
     extern char *optarg;
 
     opterr = 0;
-    while (( ch = getopt(argc, argv, ":dvl:")) != -1) {
+    while (( ch = getopt(argc, argv, ":de:vl:")) != -1) {
 
         switch (ch) {
 
@@ -130,6 +151,10 @@ parseArgv(int argc, char ** argv, int *deleteDirOption)
         			*deleteDirOption = 1;
         			break;
         		}
+        case 'e':   {
+                    (void)strncpy(excludePath, optarg, sizeof(excludePath)-1);
+                    break;
+                }
         case 'l':  	{
         			if (log_set_destination(optarg)) {
 						log_syserr("Couldn't set logging destination to \"%s\"", optarg);
