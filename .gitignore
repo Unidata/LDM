@@ -104,3 +104,4 @@ vgcore.*
 /check-cc
 /check-clang
 /a.c
+config.h.in

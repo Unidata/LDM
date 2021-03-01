@@ -1,3 +1,7 @@
+6.13.14.14
+    DevOpts:
+        * Removed "config.h.in" from repository
+
 6.13.14.13      2021-02-25T12:30:40-0700
     ldmadmin(1):
         * Corrected error-message in "addmetrics" command
