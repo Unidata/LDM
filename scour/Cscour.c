@@ -41,6 +41,7 @@
 #include <libgen.h>
 #include <fnmatch.h>
 #include <log.h>
+#include <unistd.h>
 
 #include "globals.h"
 #include "registry.h"
@@ -64,10 +65,10 @@ typedef struct config_items_args {
 
 
 // scour configuration file
-char scourConfPath[PATH_MAX];
+static char scourConfPath[PATH_MAX]="/tmp/scourTest.conf";
 
 // Pathname of file containing directories to be excluded from scouring
-static char excludePath[PATH_MAX];
+static char excludePath[PATH_MAX]="";
 
 
 static bool 
@@ -481,9 +482,14 @@ usage(const char* progname)
 int 
 main(int argc, char *argv[])
 {
-    int status = 0;
-    int deleteDirsFlag = 0;
-
+    int status = 0,
+        deleteDirsFlag = 0,
+        debugMode = 0,
+        ch=0;
+    char logFilename[PATH_MAX]="";
+    
+    int opterr;
+    char *optarg;
     /*
      * Initializes logging. Done first, just in case something happens
      * that needs to be reported.
@@ -495,7 +501,6 @@ main(int argc, char *argv[])
 
     const char* const   progname = basename(argv[0]);
     char*       var;
-
     if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
         strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
     }
@@ -504,15 +509,8 @@ main(int argc, char *argv[])
         free(var);
     }
 
-    int ch;
-    char logFilename[PATH_MAX]="";
-
-    int optind;
-    int opterr;
-    char *optarg;
-
     opterr = 0;
-    while (( ch = getopt(argc, argv, ":de:vl:")) != -1) {
+    while (( ch = getopt(argc, argv, ":de:vxl:")) != -1) {
 
         switch (ch) {
 
@@ -538,6 +536,12 @@ main(int argc, char *argv[])
                         log_set_level(LOG_LEVEL_INFO);
                     break;
                 }
+
+        case 'x':   {                    
+                    if (!log_is_enabled_debug)
+                        log_set_level(LOG_LEVEL_DEBUG);
+                    break;
+                }
         case ':': {
                     log_add("Option \"-%c\" requires a positional argument", ch);                
                     usage(progname);
@@ -553,13 +557,30 @@ main(int argc, char *argv[])
 
 
     if(argc - optind > 1)  usage(progname);
+
+    if(argv[optind] != NULL)
+    {
+        // Check configuration file is valid
+        if(!isRegularFile(argv[optind]))
+        {
+            log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
+                argv[optind]);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        }
+        log_add("Optind: %d = argv[%d]: %s", optind, optind, argv[optind]);    
+        log_flush_debug();
+        (void) strncpy(scourConfPath, argv[optind], sizeof(scourConfPath));
+    }
+    else {
+        log_add("Proceeding with default scour configuration file (%s).", scourConfPath);
+        log_flush_warning();
+    }
+
+    log_add("Excluded Directories pathname: %s", excludePath); 
+    log_add("Scour config file pathname: %s", scourConfPath);
+    log_flush_debug();
     
-    (void) strncpy(scourConfPath, argv[optind], sizeof(scourConfPath));
-
-    printf("\n\n\tExcluded Directories pathname: %s\n\n", excludePath);
-    printf("\n\n\tScour config file pathname: %s\n\n", scourConfPath);
-
-
     // check if exists:
     if( !isRegularFile( scourConfPath )  ) 
     {
@@ -570,9 +591,6 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-
-
-///////////////////////////////////////////////////////////////
     log_info("STARTED...");
     log_info("parsing...");
 

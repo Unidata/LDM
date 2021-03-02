@@ -365,7 +365,9 @@ startsWithTilda(char *dirPath, char *expandedDirName)
 	}
 	return 0;
 }
-
+    
+    
+    
 /**
  * Checks the directory path name present in the scour configuration file
  * to validate the entries there, as far as existence of directory, non-exclusion
@@ -398,12 +400,12 @@ vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	// 2. check if dirName is in the list of excluded direectories. 
 	// If not continue the vetting process
 	// dirtName is an absolute path. Excluded dirs are expected to be too.
-	log_info("Is path %s  an excluded directory?", dirName);
+	
 	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
-	log_info("Is path %s  an excluded directory?", dirName);
+	
 	// 3. check that the directory is a valid one
     if( isNotAccessible(dirName) ) return -1;
-	log_info("Is path %s  NOT ACCESSIBLE directory?", dirName);
+	
 	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
 	if( isSameAsLoginDirectory(dirName) ) return -1;
