@@ -33,8 +33,6 @@
 #define DAYS_SINCE_1994 9516
 
 #define MAX_NOT_ALLOWED_DIRPATHS 100
-#define REG_SCOUR_EXCLUDE_PATH "/scour/exclude-path"
-
 
 typedef struct IngestEntry {
 

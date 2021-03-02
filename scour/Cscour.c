@@ -463,7 +463,7 @@ usage(const char* progname)
 {
     log_add(
 "Usage:\n"
-"       %s [-v] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
+"       %s [-v] [-x] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
 "Where:\n"
 "  -d               Enable directory deletion\n"
 "  -e exclude_path  Pathname of file listing directories to be excluded. "
@@ -472,7 +472,8 @@ usage(const char* progname)
 "  -l dest          Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
 "                   (standard error), or file `dest`. Default is\n"
 "                   \"%s\".\n"
-"  -v               Log INFO messages\n",
+"  -v               Log INFO  messages\n"
+"  -x               Log DEBUG messages\n",
             progname,
             excludePath,
             log_get_default_destination());
@@ -501,11 +502,21 @@ main(int argc, char *argv[])
 
     const char* const   progname = basename(argv[0]);
     char*       var;
+    
+    // Read macro from the registry. If not there, take the default value
+    // from config.h
     if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
         strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
     }
     else {
         strncpy(excludePath, var, sizeof(excludePath)-1);
+        free(var);
+    }
+    if (reg_getString(REG_SCOUR_CONFIG_PATH, &var)) {
+        strncpy(scourConfPath, SCOUR_CONFIG_PATH, sizeof(scourConfPath)-1);
+    }
+    else {
+        strncpy(scourConfPath, var, sizeof(scourConfPath)-1);
         free(var);
     }
 
@@ -549,6 +560,7 @@ main(int argc, char *argv[])
                 }
         default:    {
                     log_add("Unknown option: \"%c\"", ch);
+                    log_flush_error();
                     usage(progname);
                     exit(EXIT_SUCCESS);
                 }
@@ -558,6 +570,7 @@ main(int argc, char *argv[])
 
     if(argc - optind > 1)  usage(progname);
 
+    // scour config file
     if(argv[optind] != NULL)
     {
         // Check configuration file is valid
@@ -575,21 +588,30 @@ main(int argc, char *argv[])
     else {
         log_add("Proceeding with default scour configuration file (%s).", scourConfPath);
         log_flush_warning();
+
+        // check if exists: even as a default it may not be valid
+        if( !isRegularFile( scourConfPath )  ) 
+        {
+            // file doesn't exist
+            log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
+                scourConfPath);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // check if excludePath exists:
+    if( !isRegularFile( excludePath )  ) 
+    {
+        // file doesn't exist
+        log_add("Scour directory exclusion file (%s) does not exist (or is not a text file)!", 
+            excludePath);
+        log_flush_warning();
     }
 
     log_add("Excluded Directories pathname: %s", excludePath); 
     log_add("Scour config file pathname: %s", scourConfPath);
     log_flush_debug();
-    
-    // check if exists:
-    if( !isRegularFile( scourConfPath )  ) 
-    {
-        // file doesn't exist
-        log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
-            scourConfPath);
-        log_flush_error();
-        exit(EXIT_FAILURE);
-    }
 
     log_info("STARTED...");
     log_info("parsing...");
