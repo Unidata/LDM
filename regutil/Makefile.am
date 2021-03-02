@@ -48,13 +48,13 @@ CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
 
 # "regpar.tab" fields:
 #
-# id		Identifier in "regpath{id}" substitution expressions and 
-# 		suffix of "REG_" C macro names
-# path		Pathname of the parameter in the registry
-# desc		Description of the parameter
-# default	Default value
-# perl-id	Identifier of corresponding perl(1) variable in ldmadmin(1)
-# 		configuration-file, if it exists
+# id        Identifier in "regpath{id}" substitution expressions and 
+#           suffix of "REG_" C macro names
+# path      Pathname of the parameter in the registry
+# desc      Description of the parameter
+# default   Default value
+# perl-id   Identifier of corresponding perl(1) variable in ldmadmin(1)
+#           configuration-file, if it exists
 regpar.tab:	$(srcdir)/regpar.tab.in
 	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
 	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \
