@@ -2,6 +2,10 @@
     Cscour(1):
         * Added directory exclude file option and default
 
+    LDM Registry:
+        * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories
+          to be excluded by Cscour(1)
+
     DevOpts:
         * Removed "config.h.in" from repository
 
