@@ -502,6 +502,8 @@ AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
     [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
     [Default pathname of LDM configuration-file])
+AC_DEFINE_UNQUOTED([SCOUR_CONFIG_PATH], ["$sysconfdir/scour.conf"],
+    [Default pathname of scour(1) configuration-file])
 AC_DEFINE_UNQUOTED([SCOUR_EXCLUDE_PATH], ["$sysconfdir/scour_excludes.conf"],
     [Default pathname of file containing directories-to-be-excluded by scour(1)])
 AC_DEFINE_UNQUOTED([PQACT_DATA_DIR], ["$localstatedir/data"],
