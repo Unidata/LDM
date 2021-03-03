@@ -12,7 +12,7 @@
 
 3. Create the autotools(1) infrastructure:
 
-        mkdir -p m4
+        mkdir m4
         aclocal
         autoreconf -fi
 
