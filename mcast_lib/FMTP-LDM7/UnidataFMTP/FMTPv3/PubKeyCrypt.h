@@ -1,47 +1,51 @@
 /**
  * Public key cryptography.
  *
- *        File: PkcKey.h
+ *        File: PubKeyCrypt.h
  *  Created on: Sep 2, 2020
  *      Author: Steven R. Emmerson
  */
 
-#ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PKC_KEY_H_
-#define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PKC_KEY_H_
+#ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PUB_KEY_CRYPT_H_
+#define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PUB_KEY_CRYPT_H_
 
 #include <cstdint>
 #include <string>
 
 #include <openssl/rsa.h>
 
+#define USE_RSA 0
+
 /**
  * Base class for public key cryptography.
  */
-class PkcKey
+class PubKeyCrypt
 {
 protected:
+#if USE_RSA
     RSA*              rsa;
     int               rsaSize;
     static const int  padding = RSA_PKCS1_OAEP_PADDING;
+#endif
 
     /**
      * Default constructs.
      */
-    PkcKey();
+    PubKeyCrypt();
 
 public:
-    PkcKey(PkcKey& crypt) =delete;
+    PubKeyCrypt(PubKeyCrypt& crypt) =delete;
 
-    PkcKey(PkcKey&& crypt) =delete;
+    PubKeyCrypt(PubKeyCrypt&& crypt) =delete;
 
     /**
      * Destroys.
      */
-    virtual ~PkcKey();
+    virtual ~PubKeyCrypt();
 
-    PkcKey& operator=(const PkcKey& crypt) =delete;
+    PubKeyCrypt& operator=(const PubKeyCrypt& crypt) =delete;
 
-    PkcKey& operator=(const PkcKey&& crypt) =delete;
+    PubKeyCrypt& operator=(const PubKeyCrypt&& crypt) =delete;
 
     /**
      * Encrypts plaintext.
@@ -67,7 +71,7 @@ public:
 /**
  * A Public key.
  */
-class PublicKey final : public PkcKey
+class PublicKey final : public PubKeyCrypt
 {
 public:
     /**
@@ -103,7 +107,7 @@ public:
 /**
  * A public and private key-pair.
  */
-class PrivateKey final : public PkcKey
+class PrivateKey final : public PubKeyCrypt
 {
     std::string pubKey; ///< Associated X.509 public key in PEM format
 
@@ -161,4 +165,4 @@ public:
                  std::string&       plainText) const override;
 };
 
-#endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PKC_KEY_H_ */
+#endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_PUB_KEY_CRYPT_H_ */

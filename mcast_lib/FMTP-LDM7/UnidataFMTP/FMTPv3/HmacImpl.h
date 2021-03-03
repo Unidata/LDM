@@ -10,19 +10,18 @@
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_
 
 #include "fmtpBase.h"
-#include "PkcKey.h"
-
 #include <openssl/evp.h>
 
 #include <string>
 #include <sys/uio.h>
+#include "FMTPv3/PubKeyCrypt.h"
 
 class HmacImpl
 {
     std::string key;    ///< HMAC key
     EVP_PKEY*   pkey;   ///< OpenSSL HMAC key
     EVP_MD_CTX* mdCtx;  ///< Message-digest context
-    PkcKey*     pkcKey; ///< Key for public-key cryptography
+    PubKeyCrypt*     pkcKey; ///< Key for public-key cryptography
 
     void init(const std::string& key);
 

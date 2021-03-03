@@ -34,12 +34,11 @@
 
 #include "fmtpBase.h"
 #include "HmacImpl.h"
-#include "PkcKey.h"
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string>
+#include "FMTPv3/PubKeyCrypt.h"
 
 class UdpSend
 {

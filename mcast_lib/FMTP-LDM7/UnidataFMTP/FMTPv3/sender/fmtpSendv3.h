@@ -42,7 +42,6 @@
 #include <utility>
 
 #include "HmacImpl.h"
-#include "PkcKey.h"
 #include "ProdIndexDelayQueue.h"
 #include "RateShaper/RateShaper.h"
 #include "RetxThreads.h"
@@ -52,6 +51,7 @@
 #include "TcpSend.h"
 #include "UdpSend.h"
 #include "fmtpBase.h"
+#include "FMTPv3/PubKeyCrypt.h"
 #include "SockToIndexMap.h"
 
 
