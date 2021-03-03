@@ -6,7 +6,7 @@
         * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories
           to be excluded by Cscour(1)
 
-    DevOpts:
+    DevOps:
         * config.h.in: Removed from repository
         * Mapefile.am: Added CLEANFILES, DISTCLEANFILES, and
           MAINTAINERCLEANFILES
@@ -21,7 +21,7 @@
     Cscour(1):
         * Squashed bugs in previous distribution
 
-    DevOpts:
+    DevOps:
         * deployAll(1): Modified to use an associative array and to print 
           asynchronous logs at the end
         * pq/Makefile.am: Moved HAVE_CUNIT to before test_PROGRAMS to enable
