@@ -1,6 +1,7 @@
 6.13.14.14
     Cscour(1):
-        * Added directory exclude file option and default
+        * Added directory exclude-file option and default
+        * Added scour configuration-file to LDM registry
 
     LDM Registry:
         * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories

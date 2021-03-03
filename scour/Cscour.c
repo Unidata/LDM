@@ -65,7 +65,7 @@ typedef struct config_items_args {
 
 
 // scour configuration file
-static char scourConfPath[PATH_MAX]="/tmp/scourTest.conf";
+static char scourConfPath[PATH_MAX];
 
 // Pathname of file containing directories to be excluded from scouring
 static char excludePath[PATH_MAX]="";
@@ -524,8 +524,6 @@ main(int argc, char *argv[])
         ch=0;
     char logFilename[PATH_MAX]="";
     
-    int opterr;
-    char *optarg;
     /*
      * Initializes logging. Done first, just in case something happens
      * that needs to be reported.
@@ -555,6 +553,9 @@ main(int argc, char *argv[])
         free(var);
     }
 
+    extern char* optarg;
+    extern int   optind;
+    extern int   opterr;
     opterr = 0;
     while (( ch = getopt(argc, argv, ":de:vxl:")) != -1) {
 
