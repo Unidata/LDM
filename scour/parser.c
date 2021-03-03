@@ -64,138 +64,6 @@
 #include "globals.h"
 #include "registry.h"
 
-// scour configuration file
-extern char *ingestFilename;
-
-// Pathname of file containing directories to be excluded from scouring
-static char excludePath[PATH_MAX];
-
-static void 
-usage(const char* progname)
-{
-    log_add(
-"Usage:\n"
-"       %s [-v] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
-"Where:\n"
-"  -d               Enable directory deletion\n"
-"  -e exclude_path  Pathname of file listing directories to be excluded. "
-                    "Default is \n"
-"                   \"%s\".\n"
-"  -l dest          Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"                   (standard error), or file `dest`. Default is\n"
-"                   \"%s\".\n"
-"  -v               Log INFO messages\n",
-            progname,
-            excludePath,
-            log_get_default_destination());
-    log_flush_error();
-}
-
-/**
- * Checks if 'path' is a regular file.
- *
- * @param[in]  path 		 scour config file
- * @retval     0             boolean false: 'path' is NOT a regular file                           
- * @retval     !0            boolean true: 'path' is a regular file
- */
-static bool 
-isRegularFile(const char *path)
-{
-    struct stat path_stat;
-
-    if (stat(path, &path_stat) == -1)
-    {
-        return false;
-    }
-
-    return (S_ISREG(path_stat.st_mode)) ? true : false;
-}
-
-
-/**
- * Parses the command line options for the Cscour program
- *
- * @param[in]  argc          	Number of operands.
- * @param[in]  argv          	Operands.
- * @param[in]  deleteDirOption 	Delete or not option
- *
- */
-void 
-parseArgv(int argc, char ** argv, int *deleteDirOption)
-{
-    const char* const   progname = basename(argv[0]);
-    char*       var;
-
-    if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
-        strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
-    }
-    else {
-        strncpy(excludePath, var, sizeof(excludePath)-1);
-        free(var);
-    }
-
-    *deleteDirOption = 0;
-    int ch;
-    char logFilename[PATH_MAX]="";
-
-    extern int optind;
-    extern int opterr;
-    extern char *optarg;
-
-    opterr = 0;
-    while (( ch = getopt(argc, argv, ":de:vl:")) != -1) {
-
-        switch (ch) {
-
-        case 'd': 	{
-        			*deleteDirOption = 1;
-        			break;
-        		}
-        case 'e':   {
-                    (void)strncpy(excludePath, optarg, sizeof(excludePath)-1);
-                    break;
-                }
-        case 'l':  	{
-        			if (log_set_destination(optarg)) {
-						log_syserr("Couldn't set logging destination to \"%s\"", optarg);
-						usage(progname);
-					}
-					strcpy(logFilename, optarg);
-					log_info("logfilename: %s", logFilename);
-					break;
-            	}
-        case 'v':  {
-        			if (!log_is_enabled_info)
-                    	log_set_level(LOG_LEVEL_INFO);
-                    break;
-                }
-        case ':': {
-                    log_add("Option \"-%c\" requires a positional argument", ch);                
-                    usage(progname);
-                    exit(EXIT_SUCCESS);                   
-                }
-		default:	{
-			        log_add("Unknown option: \"%c\"", ch);
-                    usage(progname);
-                    exit(EXIT_SUCCESS);
-				}
-        }
-    }
-
-	if(argc - optind > 1)  usage(progname);
-    
-    ingestFilename = argv[optind];
-
- 	// check if exists:
- 	if( !isRegularFile( ingestFilename )  ) 
- 	{
-    	// file doesn't exist
-    	log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
-    		ingestFilename);
-    	log_flush_error();
-    	exit(EXIT_FAILURE);
-	}
-}
 
 /**
  * Builds a list of to-be-excluded directory paths (not scoured)
@@ -207,14 +75,14 @@ parseArgv(int argc, char ** argv, int *deleteDirOption)
  * @retval     -1            error in opening the DIRS_TO_EXCLUDE_FILE file
  */
 int 
-getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
+getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
 {
     FILE *fp = NULL;
 
-    if((fp = fopen(DIRS_TO_EXCLUDE_FILE, "r")) == NULL)
+    if((fp = fopen(excludedDirsPath, "r")) == NULL)
     {
-    	log_add("fopen(\"%s\") failed: %s",
-            DIRS_TO_EXCLUDE_FILE, strerror(errno));
+    	log_add("Directory excluded file: fopen(\"%s\") failed: %s. (Skipped.)",
+            excludedDirsPath, strerror(errno));
 		log_flush_warning();
 
         return -1;
@@ -224,13 +92,6 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
     while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
     {
 		if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
-
- 		// printf("list[%i] is '%s'\n", i, list[i]);
-
-    	/*  OR, with pointer
-		if((plist + i)[0] == '#' || (plist + i)[0] == '\n' ) continue;
-        printf("list[%i] is '%s'\n", i, plist + i);
-		*/
         i++;
     }
 	return i;
@@ -246,13 +107,13 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX])
  * @retval      -1                   error occurred
  */
 int
-parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
+parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *excludedDirsPath, char *scourConfPath)
 {
 	
-	//const char* ingestFilename = SCOUR_INGEST_FILENAME;
+	//const char* scourConfPath = SCOUR_INGEST_FILENAME;
     char rejectedDirPathsList[MAX_NOT_ALLOWED_DIRPATHS][PATH_MAX];
 
-	int excludedDirsCounter = getListOfDirsToBeExcluded(rejectedDirPathsList);
+	int excludedDirsCounter = getListOfDirsToBeExcluded(rejectedDirPathsList, excludedDirsPath);
 
     FILE *fp = NULL;	
     int entryCounter = 0;
@@ -264,9 +125,9 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead)
 	char delim[] = " \t\n"; // space, tab and new line
     size_t len = 0;
 
-    if((fp = fopen(ingestFilename, "r")) == NULL)
+    if((fp = fopen(scourConfPath, "r")) == NULL)
     {
-        log_add_syserr("fopen(\"%s\") failed", ingestFilename);
+        log_add_syserr("fopen(\"%s\") failed", scourConfPath);
         return -1;
     }
 
@@ -497,7 +358,9 @@ startsWithTilda(char *dirPath, char *expandedDirName)
 	}
 	return 0;
 }
-
+    
+    
+    
 /**
  * Checks the directory path name present in the scour configuration file
  * to validate the entries there, as far as existence of directory, non-exclusion
@@ -530,12 +393,12 @@ vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 	// 2. check if dirName is in the list of excluded direectories. 
 	// If not continue the vetting process
 	// dirtName is an absolute path. Excluded dirs are expected to be too.
-	log_info("Is path %s  an excluded directory?", dirName);
+	
 	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
-	log_info("Is path %s  an excluded directory?", dirName);
+	
 	// 3. check that the directory is a valid one
     if( isNotAccessible(dirName) ) return -1;
-	log_info("Is path %s  NOT ACCESSIBLE directory?", dirName);
+	
 	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
 	if( isSameAsLoginDirectory(dirName) ) return -1;
