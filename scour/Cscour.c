@@ -41,7 +41,10 @@
 #include <libgen.h>
 #include <fnmatch.h>
 #include <log.h>
+#include <unistd.h>
 
+#include "globals.h"
+#include "registry.h"
 #include "parser.h"
 
 #define MAX_THREADS		200
@@ -60,7 +63,13 @@ typedef struct config_items_args {
 
 } ConfigItemsAndDeleteFlag_t;
 
-char *ingestFilename;
+
+// scour configuration file
+static char scourConfPath[PATH_MAX]="/tmp/scourTest.conf";
+
+// Pathname of file containing directories to be excluded from scouring
+static char excludePath[PATH_MAX]="";
+
 
 static bool 
 isDirectoryEmpty(char* dirname)
@@ -376,7 +385,7 @@ multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
     }
     
     log_info("List of validated items sourced in user's configuration file: %s", 
-            ingestFilename);
+            scourConfPath);
     
     IngestEntry_t *tmp = listTete;
     pthread_t tids[MAX_THREADS];
@@ -428,11 +437,95 @@ multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
 
 }
 
+/**
+ * Checks if 'path' is a regular file.
+ *
+ * @param[in]  path          scour config file
+ * @retval     0             boolean false: 'path' is NOT a regular file                           
+ * @retval     !0            boolean true: 'path' is a regular file
+ */
+static bool 
+isRegularFile(const char *path)
+{
+    struct stat path_stat;
+
+    if (stat(path, &path_stat) == -1)
+    {
+        return false;
+    }
+
+    return (S_ISREG(path_stat.st_mode)) ? true : false;
+}
+
+static void
+validateScourConfFile(char *argvPath, char *scourConfPath)
+{
+    log_add("User input argv: %s", argvPath);
+    log_add("Default conf-file: %s", scourConfPath);
+    log_flush_debug();
+
+    if( argvPath != NULL)
+    {
+        if(!isRegularFile(argvPath))
+        {
+            log_add("conf-file (%s) is NOT accessible! Bailing out...", argvPath);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        } 
+        log_add("conf-file: %s", argvPath);    
+        log_flush_debug();
+
+        (void) memset(scourConfPath, 0, sizeof(scourConfPath));
+        (void) strncpy(scourConfPath, argvPath, PATH_MAX-1);
+    }
+    else {
+        log_add("Proceeding with default scour conf-file (%s).", scourConfPath);
+        log_flush_warning();
+
+        // check if exists: even as a default it may not be valid
+        if( !isRegularFile( scourConfPath )  ) 
+        {
+            log_add("Default conf-file (%s) is NOT accessible! Bailing out...", 
+                scourConfPath);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void 
+usage(const char* progname)
+{
+    log_add(
+"Usage:\n"
+"       %s [-v] [-x] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
+"Where:\n"
+"  -d               Enable directory deletion\n"
+"  -e exclude_path  Pathname of file listing directories to be excluded. "
+                    "Default is \n"
+"                   \"%s\".\n"
+"  -l dest          Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                   (standard error), or file `dest`. Default is\n"
+"                   \"%s\".\n"
+"  -v               Log INFO  messages\n"
+"  -x               Log DEBUG messages\n",
+            progname,
+            excludePath,
+            log_get_default_destination());
+    log_flush_error();
+}
+
 int 
 main(int argc, char *argv[])
 {
-     int status = 0;
-
+    int status = 0,
+        deleteDirsFlag = 0,
+        debugMode = 0,
+        ch=0;
+    char logFilename[PATH_MAX]="";
+    
+    int opterr;
+    char *optarg;
     /*
      * Initializes logging. Done first, just in case something happens
      * that needs to be reported.
@@ -442,9 +535,79 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    int deleteDirsFlag;
+    const char* const   progname = basename(argv[0]);
+    char*       var;
+    
+    // Read macro from the registry. If not there, take the default value
+    // from config.h
+    if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
+        strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
+    }
+    else {
+        strncpy(excludePath, var, sizeof(excludePath)-1);
+        free(var);
+    }
+    if (reg_getString(REG_SCOUR_CONFIG_PATH, &var)) {
+        strncpy(scourConfPath, SCOUR_CONFIG_PATH, sizeof(scourConfPath)-1);
+    }
+    else {
+        strncpy(scourConfPath, var, sizeof(scourConfPath)-1);
+        free(var);
+    }
 
-    parseArgv(argc, argv, &deleteDirsFlag);
+    opterr = 0;
+    while (( ch = getopt(argc, argv, ":de:vxl:")) != -1) {
+
+        switch (ch) {
+
+        case 'd':   {
+                    deleteDirsFlag = 1;
+                    break;
+                }
+        case 'e':   {
+                    (void)strncpy(excludePath, optarg, sizeof(excludePath)-1);
+                    break;
+                }
+        case 'l':   {
+                    if (log_set_destination(optarg)) {
+                        log_syserr("Couldn't set logging destination to \"%s\"", optarg);
+                        usage(progname);
+                    }
+                    strcpy(logFilename, optarg);
+                    log_info("logfilename: %s", logFilename);
+                    break;
+                }
+        case 'v':  {
+                    if (!log_is_enabled_info)
+                        log_set_level(LOG_LEVEL_INFO);
+                    break;
+                }
+
+        case 'x':   {                    
+                    if (!log_is_enabled_debug)
+                        log_set_level(LOG_LEVEL_DEBUG);
+                    break;
+                }
+        case ':': {
+                    log_add("Option \"-%c\" requires a positional argument", ch);                
+                    usage(progname);
+                    exit(EXIT_SUCCESS);                   
+                }
+        default:    {
+                    log_add("Unknown option: \"%c\"", ch);
+                    log_flush_error();
+                    usage(progname);
+                    exit(EXIT_SUCCESS);
+                }
+        }
+    }
+
+
+    if(argc - optind > 1)  usage(progname);
+    
+    validateScourConfFile(argv[optind], scourConfPath);
+    log_info("Scour conf-file pathname: %s", scourConfPath); 
+
 
     log_info("STARTED...");
     log_info("parsing...");
@@ -453,7 +616,7 @@ main(int argc, char *argv[])
     int validEntriesCounter = 0;
     IngestEntry_t *listHead = NULL;
 
-    if( parseConfig(&validEntriesCounter, &listHead) != 0)
+    if( parseConfig(&validEntriesCounter, &listHead, excludePath, scourConfPath) != 0)
     {
         log_add("parseConfig() failed");
         log_add("parsing complete!");

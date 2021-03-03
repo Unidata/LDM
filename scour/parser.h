@@ -33,7 +33,6 @@
 #define DAYS_SINCE_1994 9516
 
 #define MAX_NOT_ALLOWED_DIRPATHS 100
-#define DIRS_TO_EXCLUDE_FILE "/tmp/scourExcludedDirectories.txt"
 
 typedef struct IngestEntry {
 
@@ -44,9 +43,9 @@ typedef struct IngestEntry {
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-void  parseArgv(int, char **, int *);
+void  parseArgv(int, char **, int *, char *);
 void  newEntryNode(IngestEntry_t **, char *, char *, char *);
-int   parseConfig(int *, IngestEntry_t **);
+int   parseConfig(int *, IngestEntry_t **, char *, char *);
 int   regexOps(char *, char *, int);
 int   nowInEpoch();
 int   convertDaysOldToEpoch(char *);
