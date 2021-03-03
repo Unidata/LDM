@@ -81,7 +81,7 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
 
     if((fp = fopen(excludedDirsPath, "r")) == NULL)
     {
-    	log_add("fopen(\"%s\") failed: %s",
+    	log_add("Directory excluded file: fopen(\"%s\") failed: %s. (Skipped.)",
             excludedDirsPath, strerror(errno));
 		log_flush_warning();
 
@@ -92,13 +92,6 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
     while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
     {
 		if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
-
- 		// printf("list[%i] is '%s'\n", i, list[i]);
-
-    	/*  OR, with pointer
-		if((plist + i)[0] == '#' || (plist + i)[0] == '\n' ) continue;
-        printf("list[%i] is '%s'\n", i, plist + i);
-		*/
         i++;
     }
 	return i;

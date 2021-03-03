@@ -457,6 +457,41 @@ isRegularFile(const char *path)
     return (S_ISREG(path_stat.st_mode)) ? true : false;
 }
 
+static void
+validateScourConfFile(char *argvPath, char *scourConfPath)
+{
+    log_add("User input argv: %s", argvPath);
+    log_add("Default conf-file: %s", scourConfPath);
+    log_flush_debug();
+
+    if( argvPath != NULL)
+    {
+        if(!isRegularFile(argvPath))
+        {
+            log_add("conf-file (%s) is NOT accessible! Bailing out...", argvPath);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        } 
+        log_add("conf-file: %s", argvPath);    
+        log_flush_debug();
+
+        (void) memset(scourConfPath, 0, sizeof(scourConfPath));
+        (void) strncpy(scourConfPath, argvPath, PATH_MAX-1);
+    }
+    else {
+        log_add("Proceeding with default scour conf-file (%s).", scourConfPath);
+        log_flush_warning();
+
+        // check if exists: even as a default it may not be valid
+        if( !isRegularFile( scourConfPath )  ) 
+        {
+            log_add("Default conf-file (%s) is NOT accessible! Bailing out...", 
+                scourConfPath);
+            log_flush_error();
+            exit(EXIT_FAILURE);
+        }
+    }
+}
 
 static void 
 usage(const char* progname)
@@ -569,49 +604,10 @@ main(int argc, char *argv[])
 
 
     if(argc - optind > 1)  usage(progname);
+    
+    validateScourConfFile(argv[optind], scourConfPath);
+    log_info("Scour conf-file pathname: %s", scourConfPath); 
 
-    // scour config file
-    if(argv[optind] != NULL)
-    {
-        // Check configuration file is valid
-        if(!isRegularFile(argv[optind]))
-        {
-            log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
-                argv[optind]);
-            log_flush_error();
-            exit(EXIT_FAILURE);
-        }
-        log_add("Optind: %d = argv[%d]: %s", optind, optind, argv[optind]);    
-        log_flush_debug();
-        (void) strncpy(scourConfPath, argv[optind], sizeof(scourConfPath));
-    }
-    else {
-        log_add("Proceeding with default scour configuration file (%s).", scourConfPath);
-        log_flush_warning();
-
-        // check if exists: even as a default it may not be valid
-        if( !isRegularFile( scourConfPath )  ) 
-        {
-            // file doesn't exist
-            log_add("Scour configuration file (%s) does not exist (or is not a text file)! Bailing out...", 
-                scourConfPath);
-            log_flush_error();
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // check if excludePath exists:
-    if( !isRegularFile( excludePath )  ) 
-    {
-        // file doesn't exist
-        log_add("Scour directory exclusion file (%s) does not exist (or is not a text file)!", 
-            excludePath);
-        log_flush_warning();
-    }
-
-    log_add("Excluded Directories pathname: %s", excludePath); 
-    log_add("Scour config file pathname: %s", scourConfPath);
-    log_flush_debug();
 
     log_info("STARTED...");
     log_info("parsing...");
