@@ -12,7 +12,7 @@ lib_la_SOURCES		= fmtpBase.cpp     fmtpBase.h \
                           SslHelp.cpp      SslHelp.h \
                           SessKeyCrypt.cpp SessKeyCrypt.h \
                           HmacImpl.cpp     HmacImpl.h \
-                          PkcKey.cpp       PkcKey.h
+                          PubKeyCrypt.cpp  PubKeyCrypt.h
 lib_la_CPPFLAGS		= -DLDM_LOGGING \
                           -I$(srcdir)/.. \
                           -I$(top_srcdir)/../../../log
