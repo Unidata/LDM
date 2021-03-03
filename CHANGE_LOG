@@ -7,7 +7,9 @@
           to be excluded by Cscour(1)
 
     DevOpts:
-        * Removed "config.h.in" from repository
+        * config.h.in: Removed from repository
+        * Mapefile.am: Added CLEANFILES, DISTCLEANFILES, and
+          MAINTAINERCLEANFILES
 
 6.13.14.13      2021-02-25T12:30:40-0700
     ldmadmin(1):

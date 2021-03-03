@@ -146,6 +146,30 @@ distuninstallcheck_listfiles = find . -type f -print | egrep -v './etc/|./var/'
 LAST_VERSION	= $$(git tag -l v\* | sort -t . -k 1.2n,1 -k 2n,2 -k 3n,3 -k 4n,4 | tail -1)
 ACLOCAL_AMFLAGS = -I m4
 
+CLEANFILES		= *.gz
+DISTCLEANFILES		= config.h
+MAINTAINERCLEANFILES	= \
+    aclocal.m4 \
+    autom4te.cache/* \
+    build-aux/* \
+    check-* \
+    clang-scan \
+    compile \
+    config.* \
+    config.guess \
+    configure \
+    consistent \
+    cov-int/* \
+    cov-int/emit/* \
+    depcomp \
+    *.deplog \
+    install-sh \
+    *.log \
+    ltmain.sh \
+    m4/* \
+    missing \
+    *.tgz
+
 all:
 
 install-data-hook:	ensure-ldmhome-links ensure-var
