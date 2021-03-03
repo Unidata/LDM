@@ -1,4 +1,4 @@
-6.13.14.14      2021-03-03T15:54:10-0700
+6.13.14.14      2021-03-03T15:57:19-0700
     Cscour(1):
         * Added directory exclude-file option and default
         * Added scour configuration-file to LDM registry
