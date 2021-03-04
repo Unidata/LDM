@@ -493,20 +493,26 @@ validateScourConfFile(char *argvPath, char *scourConfPath)
     }
 }
 
+/**
+ * Logs a usage message.
+ *
+ * @param[in] progname  Name of program
+ * @param[in] level     Logging level
+ */
 static void 
-usage(const char* progname)
+usage(const char*       progname,
+      const log_level_t level)
 {
-    printf("\n\tscourConfPath: %s\n", scourConfPath);
-    log_add(
+    log_log(level,
 "Usage:\n"
 "       %s -h \n"
-"       %s [-v] [-x] [-d] [-e excludes] [-l dest] [config]\n"
+"       %s [-dvx] [-e excludes] [-l dest] [config]\n"
 "Where:\n"
 " -d          Enable directory deletion.\n"
 " -e excludes Pathname of file listing directories to be excluded.\n"
 "             Default is \"%s\".\n"
-" -h          This usage() message.\n"
-" -l dest     Log to `dest`. One of: \"(system logging daemon)\", \"-\"\n"
+" -h          Print this usage() message and exit.\n"
+" -l dest     Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
 "             (standard error), or file `dest`.\n"
 "             Default is \"%s\".\n"
 " -v          Log INFO  messages\n"
@@ -516,9 +522,8 @@ usage(const char* progname)
             progname,
             progname,
             excludePath,
-            log_get_default_destination(),
+            log_get_destination(),
             scourConfPath);
-    log_flush_error();
 }
 int 
 main(int argc, char *argv[])
@@ -571,7 +576,10 @@ main(int argc, char *argv[])
                     break;
                 }
         case 'h':   {
-                    usage(progname);
+                    log_level_t prevLevel = log_get_level();
+                    log_set_level(LOG_LEVEL_INFO);
+                    usage(progname, LOG_LEVEL_INFO);
+                    log_set_level(prevLevel);
                     exit(EXIT_SUCCESS);
                 }
         case 'e':   {
@@ -580,8 +588,9 @@ main(int argc, char *argv[])
                 }
         case 'l':   {
                     if (log_set_destination(optarg)) {
-                        log_syserr("Couldn't set logging destination to \"%s\"", optarg);
-                        usage(progname);
+                        log_fatal("Couldn't set logging destination to \"%s\"", optarg);
+                        usage(progname, LOG_LEVEL_FATAL);
+                        exit(EXIT_FAILURE);
                     }
                     strcpy(logFilename, optarg);
                     log_info("logfilename: %s", logFilename);
@@ -599,21 +608,24 @@ main(int argc, char *argv[])
                     break;
                 }
         case ':': {
-                    log_add("Option \"-%c\" requires a positional argument", ch);                
-                    usage(progname);
-                    exit(EXIT_SUCCESS);                   
+                    log_fatal("Option \"-%c\" requires a positional argument", ch);
+                    usage(progname, LOG_LEVEL_FATAL);
+                    exit(EXIT_FAILURE);
                 }
         default:    {
-                    log_add("Unknown option: \"%c\"", ch);
-                    log_flush_error();
-                    usage(progname);
-                    exit(EXIT_SUCCESS);
+                    log_fatal("Unknown option: \"%c\"", ch);
+                    usage(progname, LOG_LEVEL_FATAL);
+                    exit(EXIT_FAILURE);
                 }
         }
     }
 
 
-    if(argc - optind > 1)  usage(progname);
+    if(argc - optind > 1) {
+        log_fatal("Too many arguments");
+        usage(progname, LOG_LEVEL_FATAL);
+        exit(EXIT_FAILURE);
+    }
     
     validateScourConfFile(argv[optind], scourConfPath);
     log_info("Scour conf-file pathname: %s", scourConfPath); 
@@ -645,8 +657,16 @@ main(int argc, char *argv[])
     }
 
     log_info("parsing complete!");
-    log_info("Launching %d threads...", validEntriesCounter);
 
+    // Set the current working directory to the LDM home-directory.
+    if (chdir(LDMHOME)) {
+        log_add_syserr("Couldn't change working directory to \"%s\"", LDMHOME);
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    log_info("Changed working directory to \"%s\"", LDMHOME);
+
+    log_info("Launching %d threads...", validEntriesCounter);
     multiThreadedScour(listHead, deleteDirsFlag);
 
     log_info("COMPLETED!");
