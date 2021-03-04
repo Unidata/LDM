@@ -1074,11 +1074,11 @@ int log_set_destination(const char* const dest)
             status = -1;
         }
         else {
-			pthread_cleanup_push(unlock_cleanup, NULL);
+            pthread_cleanup_push(unlock_cleanup, NULL);
 
             status = logi_set_destination(dest);
 
-			pthread_cleanup_pop(true);
+            pthread_cleanup_pop(true);
         } // Module is locked
     }
 
