@@ -266,7 +266,7 @@ scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                 else
                 {
                     // current file is OLDER than daysOld
-                    log_info("\n(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", path, daysOld);
+                    log_info("(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", path, daysOld);
                 }
                 // in any case
                 continue;
@@ -496,25 +496,30 @@ validateScourConfFile(char *argvPath, char *scourConfPath)
 static void 
 usage(const char* progname)
 {
+    printf("\n\tscourConfPath: %s\n", scourConfPath);
     log_add(
 "Usage:\n"
-"       %s [-v] [-x] [-d] [-e exclude_path] [-l dest] [scour_configuration_pathname]\n"
+"       %s -h \n"
+"       %s [-v] [-x] [-d] [-e excludes] [-l dest] [config]\n"
 "Where:\n"
-"  -d               Enable directory deletion\n"
-"  -e exclude_path  Pathname of file listing directories to be excluded. "
-                    "Default is \n"
-"                   \"%s\".\n"
-"  -l dest          Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"                   (standard error), or file `dest`. Default is\n"
-"                   \"%s\".\n"
-"  -v               Log INFO  messages\n"
-"  -x               Log DEBUG messages\n",
+" -d          Enable directory deletion.\n"
+" -e excludes Pathname of file listing directories to be excluded.\n"
+"             Default is \"%s\".\n"
+" -h          This usage() message.\n"
+" -l dest     Log to `dest`. One of: \"(system logging daemon)\", \"-\"\n"
+"             (standard error), or file `dest`.\n"
+"             Default is \"%s\".\n"
+" -v          Log INFO  messages\n"
+" -x          Log DEBUG messages\n"
+" config      Configuration file.\n"
+"             Default is \"%s\".\n",
+            progname,
             progname,
             excludePath,
-            log_get_default_destination());
+            log_get_default_destination(),
+            scourConfPath);
     log_flush_error();
 }
-
 int 
 main(int argc, char *argv[])
 {
@@ -557,13 +562,17 @@ main(int argc, char *argv[])
     extern int   optind;
     extern int   opterr;
     opterr = 0;
-    while (( ch = getopt(argc, argv, ":de:vxl:")) != -1) {
+    while (( ch = getopt(argc, argv, ":de:hvxl:")) != -1) {
 
         switch (ch) {
 
         case 'd':   {
                     deleteDirsFlag = 1;
                     break;
+                }
+        case 'h':   {
+                    usage(progname);
+                    exit(EXIT_SUCCESS);
                 }
         case 'e':   {
                     (void)strncpy(excludePath, optarg, sizeof(excludePath)-1);

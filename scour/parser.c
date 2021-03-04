@@ -83,7 +83,7 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
     {
     	log_add("Directory excluded file: fopen(\"%s\") failed: %s. (Skipped.)",
             excludedDirsPath, strerror(errno));
-		log_flush_warning();
+		log_flush_info();
 
         return -1;
     }
