@@ -525,6 +525,45 @@ usage(const char*       progname,
             log_get_destination(),
             scourConfPath);
 }
+
+/**
+ * Gets the value of an LDM registry parameter as a string or uses a default
+ * value.
+ *
+ * @param[in]  name    Name of parameter
+ * @param[out] value   Value of parameter
+ * @param[in]  def     Default value for parameter
+ * @retval     0       Success. `*value` is set. Caller should free when it's no
+ *                     longer needed.
+ * @retval     EINVAL  Invalid parameter name. `log_add()` called.
+ * @retval     EIO     Backend database error.  "log_add()" called.
+ * @retval     ENOMEM  System error.  "log_add()" called.
+ */
+static int
+getRegString(const char*       name,
+             char** const      value,
+             const char* const def)
+{
+    int status = reg_getString(name, value);
+
+    if (status == ENOENT) {
+        // No such entry => use default
+        log_clear();
+
+        char* val = strdup(def);
+        if (val == NULL) {
+            log_add_syserr("Couldn't duplicate default value \"%s\"", def);
+            status = ENOMEM;
+        }
+        else {
+            *value = val;
+            status = 0;
+        } // Default string duplicated
+    }
+
+    return status;
+}
+
 int 
 main(int argc, char *argv[])
 {
@@ -647,24 +686,32 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    log_info("parsing complete!");
+
+    // Set the current working directory to that of pqact(1) processes
+    char* workingDir;
+    if (getRegString(REG_PQACT_DATADIR_PATH, &workingDir, PQACT_DATA_DIR)) {
+        log_add("Couldn't get working directory for this program");
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    if (chdir(workingDir)) {
+        log_add_syserr("Couldn't change working directory to \"%s\"",
+                workingDir);
+        log_flush_fatal();
+        free(workingDir);
+        exit(EXIT_FAILURE);
+    }
+    log_info("Changed working directory to \"%s\"", workingDir);
+    free(workingDir);
+
     if( validEntriesCounter == 0 || listHead == NULL)
     {
         log_add("no valid configuration file entries");
-        log_add("parsing complete!");
         log_add("COMPLETED!");
         log_flush_warning();
         exit(EXIT_SUCCESS);
     }
-
-    log_info("parsing complete!");
-
-    // Set the current working directory to the LDM home-directory.
-    if (chdir(LDMHOME)) {
-        log_add_syserr("Couldn't change working directory to \"%s\"", LDMHOME);
-        log_flush_fatal();
-        exit(EXIT_FAILURE);
-    }
-    log_info("Changed working directory to \"%s\"", LDMHOME);
 
     log_info("Launching %d threads...", validEntriesCounter);
     multiThreadedScour(listHead, deleteDirsFlag);

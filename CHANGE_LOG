@@ -2,7 +2,8 @@
     Cscour(1):
         * Improved use of usage()
         * Improved logic under which the program should terminate fatally
-        * Change working directory to LDMHOME (what ldmadmin(1) already does)
+        * Change working directory to that of pqact(1) processes as documented
+          in the scour(1) configuration-file
 
 6.13.14.14      2021-03-03T15:57:19-0700
     Cscour(1):
