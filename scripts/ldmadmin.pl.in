@@ -435,7 +435,7 @@ commands:
                                                  pqsurf(1)
     delsurfqueue [-q q_path ]                Deletes a pqsurf(1) product-queue
     newlog [-n numlogs] [-l logfile]         Rotates a log file
-    scour                                    Scours data directories
+    scour  [-d]                              Scours data directories
     isrunning                                Exits status 0 if LDM is running
                                                  else exit 1
     checkinsertion                           Checks for recent insertion of
@@ -462,6 +462,7 @@ commands:
 options:
     -b begin        Begin time as YYYYMMDD[.hh[mm[ss]]]
     -c              Clobber an exisiting product-queue
+    -d              Delete empty scoured directories
     -e end          End time as YYYYMMDD[.hh[mm[ss]]]
     -f              Create queue \"fast\"
     -f feedset      Feed-set to use with command. Default: $feedset
