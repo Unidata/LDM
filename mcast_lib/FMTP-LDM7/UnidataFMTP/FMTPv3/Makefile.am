@@ -24,6 +24,6 @@ CLEANFILES		= pdu
 noinst_PROGRAMS		= IperfFmtpPdu
 IperfFmtpPdu_SOURCES	= IperfFmtpPdu.cpp
 
-check_PROGRAMS		= ecc_test
-ecc_test_LDADD		= -lcunit -lssl -lcrypto
-TESTS			= $(check_PROGRAMS)
+#check_PROGRAMS		= ecc_test
+#ecc_test_LDADD		= -lcunit -lssl -lcrypto
+#TESTS			= $(check_PROGRAMS)
