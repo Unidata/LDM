@@ -14,7 +14,7 @@
 
 #include <openssl/rsa.h>
 
-#define USE_RSA 0
+#define USE_RSA 1
 
 /**
  * Base class for public key cryptography.

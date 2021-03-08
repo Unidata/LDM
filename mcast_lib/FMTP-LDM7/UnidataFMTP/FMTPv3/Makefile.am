@@ -11,8 +11,8 @@ lib_la_SOURCES		= fmtpBase.cpp     fmtpBase.h \
 			  TcpBase.cpp      TcpBase.h \
                           SslHelp.cpp      SslHelp.h \
                           SessKeyCrypt.cpp SessKeyCrypt.h \
-                          HmacImpl.cpp     HmacImpl.h \
-                          PubKeyCrypt.cpp  PubKeyCrypt.h
+                          HmacImpl.cpp     HmacImpl.h
+#                         PubKeyCrypt.cpp  PubKeyCrypt.h
 lib_la_CPPFLAGS		= -DLDM_LOGGING \
                           -I$(srcdir)/.. \
                           -I$(top_srcdir)/../../../log
@@ -23,3 +23,7 @@ CLEANFILES		= pdu
 
 noinst_PROGRAMS		= IperfFmtpPdu
 IperfFmtpPdu_SOURCES	= IperfFmtpPdu.cpp
+
+check_PROGRAMS		= ecc_test
+ecc_test_LDADD		= -lcunit -lssl -lcrypto
+TESTS			= $(check_PROGRAMS)
