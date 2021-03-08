@@ -238,7 +238,16 @@ elsif ($command eq "newlog") {	# rotate the log files
     $status = new_log();
 }
 elsif ($command eq "scour") {	# scour data directories
-    system("scour $scour_file");
+   while ($_ = $ARGV[0]) {
+        shift;
+        /^-d/ && $delete++;
+    
+    # Build the command line
+    $cmd_line = "scour";
+    $cmd_line .= " -d " if ($delete);
+    $cmd_line .= $scour_file;
+
+    system($cmd_line);
     $status = $?;
 }
 elsif ($command eq "isrunning") { # check if the ldm is running
