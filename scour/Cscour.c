@@ -69,7 +69,8 @@ static char scourConfPath[PATH_MAX];
 
 // Pathname of file containing directories to be excluded from scouring
 static char excludePath[PATH_MAX]="";
-
+static char excludedDirsList[MAX_EXCLUDED_DIRPATHS][PATH_MAX];
+static int  excludedDirsCount = 0;
 
 static bool 
 isDirectoryEmpty(char* dirname)
@@ -164,6 +165,29 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
 }
 
 
+bool
+isExcluded(char * dirPath, char (*list)[PATH_MAX])
+{
+    // Check if there are directories to be excluded from scouring
+    if(excludedDirsCount < 1)
+    {
+        log_add("No directory to exclude ");
+        log_flush_debug();
+        return false;
+    }
+
+    int i;
+    for(i=0; i<excludedDirsCount; i++) {
+
+        if( strcmp(dirPath, list[i]) == 0) {
+            log_add("Path %s is an excluded directory!", dirPath);
+            log_flush_debug();
+            return true;
+        }
+    }
+    return false; // not in the to-exclude list
+}
+
 /**
  * Traverses a directory tree, depth-first to scour eligible 
  * files/directoies. Starting at config-specified directory
@@ -216,6 +240,11 @@ scourFilesAndDirs(char *basePath, int daysOldInEpoch,
         snprintf(path, sizeof(path), "%s/%s", basePath, dp->d_name);
 
 
+        // Check if dirPath is in the list of excluded direectories. 
+        // dirtPath is an absolute path. Excluded dirs are expected to be too.
+        bool isDirExcludedFlag = isExcluded(basePath, excludedDirsList);
+
+
         switch (sb.st_mode & S_IFMT)
         {
         case S_IFDIR :
@@ -224,11 +253,12 @@ scourFilesAndDirs(char *basePath, int daysOldInEpoch,
                 continue;
 
             // depth-first traversal
+            !isDirExcludedFlag &&
             scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag,
                                 daysOld, symlinkFlag);
 
             // Remove if empty and not symlinked, regardless of its age (daysOld)
-            if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag)
+            if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag && isDirExcludedFlag)
             {
                 log_info("Empty directory: %s. DELETED!", path);
                 if(remove(path))
@@ -240,7 +270,7 @@ scourFilesAndDirs(char *basePath, int daysOldInEpoch,
 
             } else 
             {
-                    log_info("Directory \"%s\" is NOT empty. NOT deleted.", path);
+                    log_info("Directory \"%s\" is EXCLUDED or NOT EMPTY. NOT deleted.", path);
             }
             break;
 
@@ -346,14 +376,19 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     // free memory of the struct that was allocated in the calling function: multiThreadedScour()
     free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
 
+    // Check if dirPath is in the list of excluded direectories. 
+    // dirtPath is an absolute path. Excluded dirs are expected to be too.
+    bool thisDirIsNotExcluded = !isExcluded( dirPath, excludedDirsList);
+
     // scour candidate files and directories under 'path' - recursively
     // assume that this first entry directory is NOT a synbolic link
     // delete empty directories if delete option (-d) is set
+    thisDirIsNotExcluded &&
     scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern,
-                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK);
+                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK );
 
     // after bubbling up , remove directory if empty and if delete option is set
-    if( isDirectoryEmpty(dirPath) && deleteDirOrNot )
+    if( thisDirIsNotExcluded && isDirectoryEmpty(dirPath) && deleteDirOrNot )
     {
         remove(dirPath);
     }
@@ -457,6 +492,38 @@ isRegularFile(const char *path)
     return (S_ISREG(path_stat.st_mode)) ? true : false;
 }
 
+/**
+ * Builds a list of to-be-excluded directory paths (not scoured)
+ *
+ * @param[out]  list         list of excluded directories as set in 
+ *                           file DIRS_TO_EXCLUDE_FILE (see parser.h) in 
+ *                           absolute path names form
+ * @retval     >0            number of entries in the DIRS_TO_EXCLUDE_FILE file
+ * @retval     -1            error in opening the DIRS_TO_EXCLUDE_FILE file
+ */
+int 
+getExcludedDirsList(char (*list)[PATH_MAX], char *excludedDirsFilePath)
+{
+    FILE *fp = NULL;
+
+    if((fp = fopen(excludedDirsFilePath, "r")) == NULL)
+    {
+        log_add("Excluded-directory file: fopen(\"%s\") failed: %s. (Continue without it.)",
+            excludedDirsFilePath, strerror(errno));
+        log_flush_info();
+
+        return -1;
+    }
+
+    int i=0;
+    while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
+    {
+        if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
+        i++;
+    }
+    return i;
+}
+
 static void
 validateScourConfFile(char *argvPath, char *scourConfPath)
 {
@@ -468,19 +535,19 @@ validateScourConfFile(char *argvPath, char *scourConfPath)
     {
         if(!isRegularFile(argvPath))
         {
-            log_add("conf-file (%s) is NOT accessible! Bailing out...", argvPath);
+            log_add("User-supplied conf-file (%s) is NOT accessible! Bailing out...", argvPath);
             log_flush_error();
             exit(EXIT_FAILURE);
         } 
-        log_add("conf-file: %s", argvPath);    
-        log_flush_debug();
+        log_add("User-supplied scour conf-file: %s", argvPath);    
+        log_flush_info();
 
         (void) memset(scourConfPath, 0, sizeof(scourConfPath));
         (void) strncpy(scourConfPath, argvPath, PATH_MAX-1);
     }
     else {
-        log_add("Proceeding with default scour conf-file (%s).", scourConfPath);
-        log_flush_warning();
+        log_add("Default scour conf-file (%s).", scourConfPath);
+        log_flush_info();
 
         // check if exists: even as a default it may not be valid
         if( !isRegularFile( scourConfPath )  ) 
@@ -491,6 +558,8 @@ validateScourConfFile(char *argvPath, char *scourConfPath)
             exit(EXIT_FAILURE);
         }
     }
+    log_add("Scour conf-file used: %s", scourConfPath); 
+    log_flush_info();
 }
 
 /**
@@ -560,19 +629,62 @@ getRegString(const char*       name,
             status = 0;
         } // Default string duplicated
     }
-
     return status;
+}
+/*
+ *  Sets global variables: scourConfPath and excludePath
+ */
+void getRegistryConfValues(char * workingDir)
+{
+    char*       var;
+    if (getRegString(REG_SCOUR_EXCLUDE_PATH, &var, SCOUR_EXCLUDE_PATH)) {
+        log_add("Couldn't get exclude config path for this program");
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    strncpy(excludePath, var, sizeof(excludePath)-1);
+    free(var);
+
+    if (getRegString(REG_SCOUR_CONFIG_PATH, &var, SCOUR_CONFIG_PATH)) {
+        log_add("Couldn't get scour config path for this program");
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    strncpy(scourConfPath, var, sizeof(scourConfPath)-1);
+    free(var);   
+
+    // Set the current working directory to that of pqact(1) processes 
+    if (getRegString(REG_PQACT_DATADIR_PATH, &var, PQACT_DATA_DIR)) {
+        log_add("Couldn't get working directory for this program");
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    strcpy(workingDir, var);
+    free(var);       
+
+}
+void 
+changeDirectory(char* workingDir)
+{
+    if (chdir(workingDir)) {
+        log_add_syserr("Couldn't change working directory to \"%s\"",
+                workingDir);
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
+    log_info("Changed working directory to \"%s\"", workingDir);
 }
 
 int 
 main(int argc, char *argv[])
 {
-    int status = 0,
-        deleteDirsFlag = 0,
-        debugMode = 0,
-        ch=0;
+    int  status = 0,
+         deleteDirsFlag = 0,
+         debugMode = 0,
+         ch=0;
     char logFilename[PATH_MAX]="";
-    
+    char workingDir[PATH_MAX];    
+    const char* const   progname = basename(argv[0]);
     /*
      * Initializes logging. Done first, just in case something happens
      * that needs to be reported.
@@ -582,25 +694,9 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    const char* const   progname = basename(argv[0]);
-    char*       var;
-    
     // Read macro from the registry. If not there, take the default value
     // from config.h
-    if (reg_getString(REG_SCOUR_EXCLUDE_PATH, &var)) {
-        strncpy(excludePath, SCOUR_EXCLUDE_PATH, sizeof(excludePath)-1);
-    }
-    else {
-        strncpy(excludePath, var, sizeof(excludePath)-1);
-        free(var);
-    }
-    if (reg_getString(REG_SCOUR_CONFIG_PATH, &var)) {
-        strncpy(scourConfPath, SCOUR_CONFIG_PATH, sizeof(scourConfPath)-1);
-    }
-    else {
-        strncpy(scourConfPath, var, sizeof(scourConfPath)-1);
-        free(var);
-    }
+    (void) getRegistryConfValues(workingDir);
 
     extern char* optarg;
     extern int   optind;
@@ -608,8 +704,8 @@ main(int argc, char *argv[])
     opterr = 0;
     while (( ch = getopt(argc, argv, ":de:hvxl:")) != -1) {
 
-        switch (ch) {
-
+        switch (ch) 
+        {
         case 'd':   {
                     deleteDirsFlag = 1;
                     break;
@@ -659,27 +755,28 @@ main(int argc, char *argv[])
         }
     }
 
-
     if(argc - optind > 1) {
         log_fatal("Too many arguments");
         usage(progname, LOG_LEVEL_FATAL);
         exit(EXIT_FAILURE);
     }
     
-    validateScourConfFile(argv[optind], scourConfPath);
-    log_info("Scour conf-file pathname: %s", scourConfPath); 
-
+    (void) validateScourConfFile(argv[optind], scourConfPath);
+  
+    // build the list of excluded directories
+    excludedDirsCount = getExcludedDirsList(excludedDirsList, excludePath);
 
     log_info("STARTED...");
     log_info("parsing...");
 
-    // Call config parser
     int validEntriesCounter = 0;
     IngestEntry_t *listHead = NULL;
 
-    if( parseConfig(&validEntriesCounter, &listHead, excludePath, scourConfPath) != 0)
+    // Call config parser
+    if( parseConfig(&validEntriesCounter, &listHead, scourConfPath) != 0
+        || validEntriesCounter == 0 )
     {
-        log_add("parseConfig() failed");
+        log_add("Parsing conf-file failed. Or NO VALID directory entries found.");
         log_add("parsing complete!");
         log_add("COMPLETED!");
         log_flush_fatal();
@@ -688,33 +785,10 @@ main(int argc, char *argv[])
 
     log_info("parsing complete!");
 
-    // Set the current working directory to that of pqact(1) processes
-    char* workingDir;
-    if (getRegString(REG_PQACT_DATADIR_PATH, &workingDir, PQACT_DATA_DIR)) {
-        log_add("Couldn't get working directory for this program");
-        log_flush_fatal();
-        exit(EXIT_FAILURE);
-    }
-    if (chdir(workingDir)) {
-        log_add_syserr("Couldn't change working directory to \"%s\"",
-                workingDir);
-        log_flush_fatal();
-        free(workingDir);
-        exit(EXIT_FAILURE);
-    }
-    log_info("Changed working directory to \"%s\"", workingDir);
-    free(workingDir);
-
-    if( validEntriesCounter == 0 || listHead == NULL)
-    {
-        log_add("no valid configuration file entries");
-        log_add("COMPLETED!");
-        log_flush_warning();
-        exit(EXIT_SUCCESS);
-    }
+    (void) changeDirectory(workingDir);
 
     log_info("Launching %d threads...", validEntriesCounter);
-    multiThreadedScour(listHead, deleteDirsFlag);
+    (void) multiThreadedScour(listHead, deleteDirsFlag);
 
     log_info("COMPLETED!");
     log_free();

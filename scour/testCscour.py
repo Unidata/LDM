@@ -36,21 +36,22 @@ import errno
 import shutil
 import argparse
 
-ASSERT_FILE_DELETED            ="Expect file to be deleted"
+ASSERT_FILE_DELETED         ="Expect file to be deleted"
 ASSERT_FILE_LINK_DELETED    ="Expect file and its symlink be deleted"
-ASSERT_DIR_DELETED            ="Expect directory to be deleted"
-ASSERT_NOT_DIR                ="Expect not a directory to be skipped"
-ASSERT_DIR_LINK_NOT_DELETED    ="Expect directory and symlink NOT be deleted"
-
-ASSERT_SUCCESS                ="SUCCESS"
-ASSERT_FAIL                    ="FAIL"
+ASSERT_DIR_DELETED          ="Expect directory to be deleted"
+ASSERT_NOT_DIR              ="Expect 'not-a-directory' to be skipped"
+ASSERT_DIR_LINK_NOT_DELETED ="Expect directory and symlink NOT be deleted"
+ASSERT_EXCLUDED_DIR_NOT_DELETED ="Expect directory to be excluded"
+ASSERT_SUCCESS              ="SUCCESS"
+ASSERT_FAIL                 ="FAIL"
 
 class CommonFileSystem:
 
     dirList=[
             "/tmp/vesuvius",
             "/tmp/etna",
-            "/tmp/etna/alt_dir"
+            "/tmp/etna/alt_dir",
+            "/tmp/etna/exclude_me"
         ]        
 
     fileList=["/tmp/vesuvius/.scour$*.foo", 
@@ -59,12 +60,22 @@ class CommonFileSystem:
                 "/tmp/etna/precipitation.txt",
                 "/tmp/etna/alt_dir/precipitation.txt",
                 "/tmp/etna/vesuvius.foo",
-                "/tmp/etna/.scour$*.foo"
+                "/tmp/etna/.scour$*.foo",
+                "/tmp/excludes.conf"
                 ]
 
     def __init__(self, filename, timestamp):
-        self.filename = filename
+        self.filename  = filename
         self.timestamp = timestamp
+
+        self.excludes  = "/tmp/excludes.conf"
+        self.entries   = "/tmp/etna/exclude_me"
+        
+        # Create the excludes file with one entry 
+        # for Cscour to use as CLI argument for -e option
+        f = open(self.excludes, "w+")
+        f.write(self.entries)
+        f.close()
 
     def __str__(self):
         return f"{self.filename}  {self.timestamp}"
@@ -160,15 +171,15 @@ class CommonFileSystem:
 
 
 
-    def executeCscour(deleteFlag, ingestFile):
+    def executeCscour(deleteFlag, ingestFile, excludesFile):
         
         outPutfile = "/tmp/scour_log.txt"
 
-        print(f"\t./scour -v  -d {ingestFile}") 
+        print(f"\t./scour -v  -d -e {excludesFile}  {ingestFile}") 
 #, stdout=scourLog)
         if deleteFlag == "-d":
             with open(outPutfile, "w+") as scourLog:
-                process = subprocess.run(["./Cscour", "-v",  "-d", ingestFile]) #, stdout=scourLog)
+                process = subprocess.run(["./Cscour", "-v",  "-d", "-e", excludesFile, ingestFile]) #, stdout=scourLog)
     
             #cmd = f"./Cscour -v -d {ingestFile} > {outPutfile}"
             #os.system(cmd)
@@ -221,6 +232,16 @@ class SymlinkDeletion:
         f = open(self.ingestFile, "w+")
         f.write(self.entries)
         f.close()
+
+        self.excludes  = "/tmp/excludes.conf"
+        self.entries   = "/tmp/vesuvius/exclude_me"
+        
+        # Create the excludes file with one entry 
+        # for Cscour to use as CLI argument for -e option
+        f = open(self.excludes, "w+")
+        f.write(self.entries)
+        f.close()
+
 
     def __str__(self):
         return f"{self.filename}  {self.timestamp}"
@@ -295,7 +316,7 @@ class SymlinkDeletion:
                 exit(0)
 
         print(f"\n\tExecuting Scour...\n")
-        CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
+        CommonFileSystem.executeCscour(deleteFlag, self.ingestFile, self.excludes)
         
         print(f"\n\tRunning assertions...\n")
         return self.assertSymlink()
@@ -408,6 +429,15 @@ class EmptyDirectoriesDeletion:
         f.write(self.entries)
         f.close()
 
+        self.excludes  = "/tmp/excludes.conf"
+        self.entries   = "/tmp/vesuvius/exclude_me"
+        
+        # Create the excludes file with one entry 
+        # for Cscour to use as CLI argument for -e option
+        f = open(self.excludes, "w+")
+        f.write(self.entries)
+        f.close()
+
     def __str__(self):
         return f"{self.filename}  {self.timestamp}"
 
@@ -447,7 +477,7 @@ class EmptyDirectoriesDeletion:
         self.markEligibleForDeletion(self.daysOldInSecs)
         
         print(f"\n\tExecuting scour(1)...\n")
-        CommonFileSystem.executeCscour(deleteFlag, self.ingestFile)
+        CommonFileSystem.executeCscour(deleteFlag, self.ingestFile, self.excludes)
         
         print(f"\n\tRunning assertions...\n")
         
@@ -499,6 +529,13 @@ class EmptyDirectoriesDeletion:
             print(f"\t{ASSERT_FAIL}: \t{ASSERT_NOT_DIR}: {aPath}")
             status=1
 
+        # Expect an EXCLUDED directory to be still not deleted!
+        aPath=os.path.expanduser("/tmp/vesuvius/exclude_me")
+        if not os.path.exists(aPath): 
+            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
+        else:
+            print(f"\t{ASSERT_FAIL}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
+            status=1
         return status
 
 def main():
@@ -516,7 +553,9 @@ def main():
         debug = args.x
         debug and system('clear')
 
+
         debug and print("\n\t========= Symlink Deletion scenario ================\n")
+        
         debug and print("\nTear down directories:")
         CommonFileSystem.removeDirectories(debug)
         debug and print("\nCreate directories:")
@@ -526,6 +565,7 @@ def main():
 
 
         print("\n\t========== EmptyDirectories Deletion scenario =======\n")
+        
         debug and print("\nTear down directories:")
         CommonFileSystem.removeDirectories(debug)
         debug and print("\nCreate directories:")

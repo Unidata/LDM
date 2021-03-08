@@ -32,7 +32,7 @@
 #define MINUTE_SECONDS 60
 #define DAYS_SINCE_1994 9516
 
-#define MAX_NOT_ALLOWED_DIRPATHS 100
+#define MAX_EXCLUDED_DIRPATHS 100
 
 typedef struct IngestEntry {
 
@@ -43,15 +43,14 @@ typedef struct IngestEntry {
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-void  parseArgv(int, char **, int *, char *);
 void  newEntryNode(IngestEntry_t **, char *, char *, char *);
-int   parseConfig(int *, IngestEntry_t **, char *, char *);
+int   parseConfig(int *, IngestEntry_t **, char *);
 int   regexOps(char *, char *, int);
 int   nowInEpoch();
 int   convertDaysOldToEpoch(char *);
 char *loginHomeDir(char *);
-bool   isExcluded(char *, char (*)[PATH_MAX], int);
+bool   isExcluded(char *, char (*)[PATH_MAX]);
 bool   isNotAccessible(char *) ;
-static int vetThisDirectoryPath(char *, char (*)[PATH_MAX], int); 
+static int vetThisDirectoryPath(char *); 
 
 #endif	// PARSER_DOT_H

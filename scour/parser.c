@@ -64,39 +64,6 @@
 #include "globals.h"
 #include "registry.h"
 
-
-/**
- * Builds a list of to-be-excluded directory paths (not scoured)
- *
- * @param[out]  list 		 list of excluded directories as set in 
- *                           file DIRS_TO_EXCLUDE_FILE (see parser.h) in 
- *                           absolute path names form
- * @retval     >0            number of entries in the DIRS_TO_EXCLUDE_FILE file
- * @retval     -1            error in opening the DIRS_TO_EXCLUDE_FILE file
- */
-int 
-getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
-{
-    FILE *fp = NULL;
-
-    if((fp = fopen(excludedDirsPath, "r")) == NULL)
-    {
-    	log_add("Directory excluded file: fopen(\"%s\") failed: %s. (Skipped.)",
-            excludedDirsPath, strerror(errno));
-		log_flush_info();
-
-        return -1;
-    }
-
-    int i=0;
-    while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
-    {
-		if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
-        i++;
-    }
-	return i;
-}
-
 /**
  * Parses the scour configuration file and builds a linked list of only
  * vetted dictories
@@ -107,14 +74,8 @@ getListOfDirsToBeExcluded(char (*list)[PATH_MAX], char *excludedDirsPath)
  * @retval      -1                   error occurred
  */
 int
-parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *excludedDirsPath, char *scourConfPath)
+parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPath)
 {
-	
-	//const char* scourConfPath = SCOUR_INGEST_FILENAME;
-    char rejectedDirPathsList[MAX_NOT_ALLOWED_DIRPATHS][PATH_MAX];
-
-	int excludedDirsCounter = getListOfDirsToBeExcluded(rejectedDirPathsList, excludedDirsPath);
-
     FILE *fp = NULL;	
     int entryCounter = 0;
 
@@ -164,7 +125,7 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *excludedDir
 		}
      
      	// validate dirName path
-     	if( vetThisDirectoryPath(dirName, rejectedDirPathsList, excludedDirsCounter) == -1 )
+     	if( vetThisDirectoryPath(dirName) == -1 )
 		{
 			log_add("(-) Directory '%s' (in scour config) does not exist or is invalid. Skipping it...", dirName);
 			log_flush_info();
@@ -374,8 +335,7 @@ startsWithTilda(char *dirPath, char *expandedDirName)
  * @retval     -1            	directory name is not valid
  */
 static int 
-vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX], 
-		int excludedDirsCounter) 
+vetThisDirectoryPath(char * dirName) 
 {
 	
 	// 1. check if it starts with tilda and vet the expanded path
@@ -389,17 +349,11 @@ vetThisDirectoryPath(char * dirName, char (*excludedDirsList)[PATH_MAX],
 
 	// tilda was found in path and expanded
 	strcpy(dirName, pathName);
-	
-	// 2. check if dirName is in the list of excluded direectories. 
-	// If not continue the vetting process
-	// dirtName is an absolute path. Excluded dirs are expected to be too.
-	
-	if( isExcluded(dirName, excludedDirsList, excludedDirsCounter) ) return -1;
-	
-	// 3. check that the directory is a valid one
+		
+	// 2. check that the directory is a valid one
     if( isNotAccessible(dirName) ) return -1;
 	
-	// 4. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
+	// 3. check if dir is /home/<userName> and compare with getLogin() --> /home/<userName>
 	//    error if same (dirName should not be /home/<user>)
 	if( isSameAsLoginDirectory(dirName) ) return -1;
 
@@ -418,28 +372,6 @@ isNotAccessible(char *dirPath)
     
     close(fd);
     return status;
-}
-
-bool
-isExcluded(char * dirPath, char (*list)[PATH_MAX], int excludedDirsCounter)
-{
-    // Check if there are directories to be excluded from scouring
-    if(excludedDirsCounter < 1)
-    {
-        //log_info("No directory to exclude ");
-        return false;
-    }
-
-	int i;
-	for(i=0; i<excludedDirsCounter; i++) {
-
-		if( strcmp(dirPath, list[i]) == 0) {
-			log_add("path %s is an excluded directory!", dirPath);
-			log_flush_warning();
-			return true;
-		}
-	}
-	return false; // not in the to-exclude list
 }
 
 // insert a node at the first location in the list
