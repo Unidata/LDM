@@ -243,8 +243,8 @@ elsif ($command eq "scour") {	# scour data directories
         /^-d/ && $delete++;
     
     # Build the command line
-    $cmd_line = "scour";
-    $cmd_line .= " -d " if ($delete);
+    $cmd_line = "scour ";
+    $cmd_line .= "-d " if ($delete);
     $cmd_line .= $scour_file;
 
     system($cmd_line);
