@@ -71,6 +71,7 @@ static int numLines(
 
 static void logMessages(void)
 {
+    log_fatal("Fatal");
     log_error("Error");
     log_warning("Warning");
     log_notice("Notice");
@@ -92,6 +93,7 @@ static void vlogMessage(
 
 static void vlogMessages(void)
 {
+    vlogMessage(LOG_LEVEL_FATAL, "%s", "Fatal message");
     vlogMessage(LOG_LEVEL_ERROR, "%s", "Error message");
     vlogMessage(LOG_LEVEL_WARNING, "%s", "Warning");
     vlogMessage(LOG_LEVEL_NOTICE, "%s", "Notice");
@@ -181,7 +183,7 @@ static void test_log_open_file(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 6);
+    CU_ASSERT_EQUAL(n, 7);
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -228,9 +230,9 @@ static void test_log_open_default(void)
 static void test_log_levels(void)
 {
     int status;
-    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
+    log_level_t logLevels[] = {LOG_LEVEL_FATAL, LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
             LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
-    int         nlines[] = {1, 2, 3, 4, 6}; // NB: "DEBUG Terminating logging"
+    int         nlines[] = {1, 2, 3, 4, 5, 7}; // NB: "DEBUG Terminating logging"
     for (int i = 0; i < sizeof(logLevels)/sizeof(log_level_t); ++i) {
         status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -257,8 +259,9 @@ static void test_log_levels(void)
 static void test_lower_level_not_clear(void)
 {
     int status;
-    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
-            LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
+    log_level_t logLevels[] = {LOG_LEVEL_FATAL, LOG_LEVEL_ERROR,
+            LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE, LOG_LEVEL_INFO,
+            LOG_LEVEL_DEBUG};
     for (int index = 0; index < sizeof(logLevels)/sizeof(*logLevels); index++) {
         status = log_init(progname);
         CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -290,8 +293,9 @@ static void test_lower_level_not_clear(void)
 
 static void test_log_get_level(void)
 {
-    log_level_t logLevels[] = {LOG_LEVEL_ERROR, LOG_LEVEL_WARNING,
-            LOG_LEVEL_NOTICE, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG};
+    log_level_t logLevels[] = {LOG_LEVEL_FATAL, LOG_LEVEL_ERROR,
+            LOG_LEVEL_WARNING, LOG_LEVEL_NOTICE, LOG_LEVEL_INFO,
+            LOG_LEVEL_DEBUG};
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
@@ -341,8 +345,12 @@ static void test_log_roll_level(void)
     int status = log_init(progname);
     CU_ASSERT_EQUAL_FATAL(status, 0);
 
-    log_set_level(LOG_LEVEL_ERROR);
+    log_set_level(LOG_LEVEL_FATAL);
     log_level_t level;
+
+    log_roll_level();
+    level = log_get_level();
+    CU_ASSERT_EQUAL(level, LOG_LEVEL_ERROR);
 
     log_roll_level();
     level = log_get_level();
@@ -383,7 +391,7 @@ static void test_log_vlog(void)
     log_fini();
 
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 6);
+    CU_ASSERT_EQUAL(n, 7);
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -466,7 +474,7 @@ static void test_log_refresh(void)
 
     logMessages();
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -476,7 +484,7 @@ static void test_log_refresh(void)
     logMessages();
     log_fini();
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 6); // Plus "INFO Terminating logging"
+    CU_ASSERT_EQUAL(n, 7); // Plus "INFO Terminating logging"
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);
@@ -510,7 +518,7 @@ static void test_sigusr1_prog(void)
 
     logMessages();
     int n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = rename(tmpPathname, tmpPathname1);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -519,7 +527,7 @@ static void test_sigusr1_prog(void)
 
     logMessages();
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = sigaction(SIGUSR1, &oldsigact, NULL);
     CU_ASSERT_EQUAL(status, 0);
@@ -550,7 +558,7 @@ static void test_change_file(void)
 
     int n;
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     status = log_set_destination(tmpPathname1);
     CU_ASSERT_EQUAL(status, 0);
@@ -558,7 +566,7 @@ static void test_change_file(void)
     logMessages();
 
     n = numLines(tmpPathname1);
-    CU_ASSERT_EQUAL(n, 5);
+    CU_ASSERT_EQUAL(n, 6);
 
     log_fini();
 
@@ -603,7 +611,7 @@ static void test_fork(void)
 
     int n;
     n = numLines(tmpPathname);
-    CU_ASSERT_EQUAL(n, 12); // Plus 2 "INFO Terminating logging" messages
+    CU_ASSERT_EQUAL(n, 14); // Plus 2 "INFO Terminating logging" messages
 
     status = unlink(tmpPathname);
     CU_ASSERT_EQUAL(status, 0);

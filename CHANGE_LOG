@@ -1,4 +1,7 @@
 6.13.14.16
+    logging:
+        * Merged logging levels ALERT, CRIT, & EMERG into just FATAL
+
     scour(1):
         * Renamed "scour" script to "scour.sh"
         * Renamed "Cscour" to "scour"

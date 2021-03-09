@@ -54,15 +54,12 @@ typedef struct {
 } code_t;
 
 static const code_t log_levels[] = {
-        {"alert",        LOG_LEVEL_ALERT},
-        {"crit",         LOG_LEVEL_CRIT},
+        {"fatal",        LOG_LEVEL_FATAL},
         {"debug",        LOG_LEVEL_DEBUG},
-        {"emerg",        LOG_LEVEL_EMERG},
         {"err",          LOG_LEVEL_ERROR},
         {"error",        LOG_LEVEL_ERROR},   // DEPRECATED
         {"info",         LOG_LEVEL_INFO},
         {"notice",       LOG_LEVEL_NOTICE},
-        {"panic",        LOG_LEVEL_EMERG},   // DEPRECATED
         {"warn",         LOG_LEVEL_WARNING}, // DEPRECATED
         {"warning",      LOG_LEVEL_WARNING},
         {NULL,           -1}};

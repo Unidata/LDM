@@ -346,7 +346,7 @@ static void init_once(void)
 			unlock_or_abort);
 
 	if (status) {
-		logl_internal(LOG_LEVEL_CRIT, "pthread_atfork() failure: %s",
+		logl_internal(LOG_LEVEL_FATAL, "pthread_atfork() failure: %s",
 				strerror(status));
 		abort();
 	}
@@ -354,13 +354,13 @@ static void init_once(void)
 		int status = pthread_key_create(&queueKey, queue_free);
 
 		if (status != 0) {
-			logl_internal(LOG_LEVEL_CRIT, "pthread_key_create() failure: "
+			logl_internal(LOG_LEVEL_FATAL, "pthread_key_create() failure: "
 					"errno=\"%s\"", strerror(status));
 			abort();
 		}
 
 		if (atexit(queue_delete_key)) {
-			logl_internal(LOG_LEVEL_CRIT, "Couldn't register "
+			logl_internal(LOG_LEVEL_FATAL, "Couldn't register "
 					"queue_delete_key() with atexit()");
 			abort();
 		}

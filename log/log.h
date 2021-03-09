@@ -33,10 +33,7 @@ typedef enum {
     LOG_LEVEL_NOTICE,   ///< Notices
     LOG_LEVEL_WARNING,  ///< Warnings
     LOG_LEVEL_ERROR,    ///< Error messages
-    LOG_LEVEL_ALERT,    ///< Unused
-    LOG_LEVEL_CRIT,     ///< Unused
-    LOG_LEVEL_EMERG,    ///< Unused
-    LOG_LEVEL_FATAL = LOG_LEVEL_EMERG,
+    LOG_LEVEL_FATAL,    ///< Fatal messages
     LOG_LEVEL_COUNT     ///< Number of levels
 } log_level_t;
 
