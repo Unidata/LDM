@@ -22,6 +22,13 @@ protected:
      */
     Ecdsa();
 
+    /**
+     * Throws a nested runtime exception due to an OpenSSL error.
+     *
+     * @param[in] msg  Outermost message
+     */
+    void throwExcept(const std::string& msg) const;
+
 public:
     Ecdsa(Ecdsa& ecdsa) =delete;
 

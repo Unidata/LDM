@@ -28,81 +28,108 @@
 
 #include "ecdsa.h"
 
+#include <openssl/ec.h>
+#include <openssl/evp.h>
+#include <stdexcept>
+
 Ecdsa::Ecdsa()
 {}
 
 Ecdsa::~Ecdsa()
 {
-    int status = -1;
-    EC_KEY *eckey=EC_KEY_new_by_curve_name(NID_);
-    if (NULL == eckey)
+    EC_builtin_curve curve;
+
+    EC_get_builtin_curves(&curve, 1);
+    EC_KEY* ecKey = EC_KEY_new_by_curve_name(curve.nid);
+    if (ecKey == nullptr)
+        throw std::runtime_error("EC_KEY_new_by_curve_name() failure");
+
+    try {
+        if (EC_KEY_generate_key(ecKey) == 0)
+            throw std::runtime_error("EC_KEY_generate_key() failure");
+    } // `ecKey` allocated
+    catch (const std::exception& ex) {
+        EC_KEY_free(ecKey);
+        throw;
+    }
+}
+
+#if 0
+    throw std::runtime_error("EVP_MD_CTX_new() failure: " +
+            std::string(ERR_get_error()))
+
+void Ecdsa::throwExcept(const std::string& msg) const
+{
+    throw openssl
+            std::string(ERR_get_error()))
+}
+#endif
+
+EcdsaSigner::EcdsaSigner()
+    : Ecdsa{}
+{}
+
+void EcdsaSigner::sign(const std::string& message,
+                       std::string&       signature)
+{
+#if 0
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new(); // Message digest context
+
+    if (mdctx == 0)
+        throw std::runtime_error("EVP_MD_CTX_new() failure: " +
+                std::string(ERR_get_error()))
+
+    /* Initialise the DigestSign operation - SHA-256 has been selected as the message digest function in this example */
+     if(1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key)) goto err;
+
+     /* Call update with the message */
+     if(1 != EVP_DigestSignUpdate(mdctx, msg, strlen(msg))) goto err;
+
+     /* Finalise the DigestSign operation */
+     /* First call EVP_DigestSignFinal with a NULL sig parameter to obtain the length of the
+      * signature. Length is returned in slen */
+     if(1 != EVP_DigestSignFinal(mdctx, NULL, slen)) goto err;
+     /* Allocate memory for the signature based on size in slen */
+     if(!(*sig = OPENSSL_malloc(sizeof(unsigned char) * (*slen)))) goto err;
+     /* Obtain the signature */
+     if(1 != EVP_DigestSignFinal(mdctx, *sig, slen)) goto err;
+
+     /* Success */
+     ret = 1;
+
+     err:
+     if(ret != 1)
+     {
+       /* Do some error handling */
+     }
+
+     /* Clean up */
+     if(*sig && !ret) OPENSSL_free(*sig);
+     if(mdctx) EVP_MD_CTX_destroy(mdctx);
+#endif
+
+#if 0
+    ECDSA_SIG *signature = ECDSA_do_sign(hash, strlen(hash), eckey);
+    if (NULL == signature)
     {
-        printf("Failed to create new EC Key\n");
+        printf("Failed to generate EC Signature\n");
         status = -1;
     }
     else
     {
-        EC_GROUP *ecgroup= EC_GROUP_new_by_curve_name(NID_secp192k1);
-        if (NULL == ecgroup)
+
+        int verify_status = ECDSA_do_verify(hash, strlen(hash), signature, eckey);
+        const int verify_success = 1;
+        if (verify_success != verify_status)
         {
-            printf("Failed to create new EC Group\n");
+            printf("Failed to verify EC Signature\n");
             status = -1;
         }
         else
         {
-            int set_group_status = EC_KEY_set_group(eckey,ecgroup);
-            const int set_group_success = 1;
-            if (set_group_success != set_group_status)
-            {
-                printf("Failed to set group for EC Key\n");
-                status = -1;
-            }
-            else
-            {
-                const int gen_success = 1;
-                int gen_status = EC_KEY_generate_key(eckey);
-                if (gen_success != gen_status)
-                {
-                    printf("Failed to generate EC Key\n");
-                    status = -1;
-                }
-                else
-                {
-                    ECDSA_SIG *signature = ECDSA_do_sign(hash, strlen(hash), eckey);
-                    if (NULL == signature)
-                    {
-                        printf("Failed to generate EC Signature\n");
-                        status = -1;
-                    }
-                    else
-                    {
-
-                        int verify_status = ECDSA_do_verify(hash, strlen(hash), signature, eckey);
-                        const int verify_success = 1;
-                        if (verify_success != verify_status)
-                        {
-                            printf("Failed to verify EC Signature\n");
-                            status = -1;
-                        }
-                        else
-                        {
-                            printf("Verifed EC Signature\n");
-                            status = 1;
-                        }
-                    }
-                }
-            }
-            EC_GROUP_free(ecgroup);
+            printf("Verifed EC Signature\n");
+            status = 1;
         }
-        EC_KEY_free(eckey);
     }
-
-  return status;
-
-}
-
-EcdsaSigner::EcdsaSigner()
-    : Ecdsa{}
-{
-
+#endif
 }
