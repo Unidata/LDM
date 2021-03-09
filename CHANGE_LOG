@@ -7,6 +7,9 @@
         * Renamed "Cscour" to "scour"
         * Added "-d" option to scour(1) man-page
 
+    Devops:
+        * Decreased time for "make check" in pqact/ subdirectory
+
 6.13.14.15      2021-03-08T11:54:09-0700
     Cscour(1):
         * Improved use of usage()

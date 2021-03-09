@@ -75,7 +75,7 @@ check-local:	pqact
 	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
 	./pqact -d $(srcdir) -q pqact_test.pq $(srcdir)/pqact_test.conf & \
 		pid=$$!; \
-	../pqinsert/pq_test_insert -q pqact_test.pq -m 2000 -n 1000; \
+	../pqinsert/pq_test_insert -g 10000000 -q pqact_test.pq -m 2000 -n 1000; \
 	sleep 1; \
 	kill $$pid
 	rm -f pqact_test.conf.state pqact_test.pq
