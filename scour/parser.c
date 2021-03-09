@@ -1,5 +1,5 @@
 /**
- * This file parses the scour config file for the Cscour program input
+ * This file parses the scour configuration-file for the scour(1) program input
  *
  *  @file:  parser.c
  * @author: Mustapha Iles

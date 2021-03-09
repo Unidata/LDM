@@ -1,3 +1,5 @@
+
+# $Id: scour.in,v 1.1.16.6.2.7 2009/07/16 19:27:13 steve Exp $
 # Deletes old data files.
 #
 # Recursively deletes files older than a specified number of days from a

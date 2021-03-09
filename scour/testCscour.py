@@ -2,7 +2,7 @@
 
  #
  #
- # This file helps testing the C-based scour program - Cscour(1) - of 
+ # This file helps testing the C-based scour program - scour(1) - of 
  # the Unidata LDM package.
  #
  # @file:  testCscour.py
@@ -72,7 +72,7 @@ class CommonFileSystem:
         self.entries   = "/tmp/etna/exclude_me"
         
         # Create the excludes file with one entry 
-        # for Cscour to use as CLI argument for -e option
+        # for scour to use as CLI argument for -e option
         f = open(self.excludes, "w+")
         f.write(self.entries)
         f.close()
@@ -179,9 +179,9 @@ class CommonFileSystem:
 #, stdout=scourLog)
         if deleteFlag == "-d":
             with open(outPutfile, "w+") as scourLog:
-                process = subprocess.run(["./Cscour", "-v",  "-d", "-e", excludesFile, ingestFile]) #, stdout=scourLog)
+                process = subprocess.run(["./scour", "-v",  "-d", "-e", excludesFile, ingestFile]) #, stdout=scourLog)
     
-            #cmd = f"./Cscour -v -d {ingestFile} > {outPutfile}"
+            #cmd = f"./scour -v -d {ingestFile} > {outPutfile}"
             #os.system(cmd)
         
 
@@ -228,7 +228,7 @@ class SymlinkDeletion:
         self.daysOldInSecs     = 172800             # seconds: 2 * 24 * 3600 s
 
         # Create the scour config file with entries 
-        # for Cscour to use as CLI argument
+        # for scour to use as CLI argument
         f = open(self.ingestFile, "w+")
         f.write(self.entries)
         f.close()
@@ -237,7 +237,7 @@ class SymlinkDeletion:
         self.entries   = "/tmp/vesuvius/exclude_me"
         
         # Create the excludes file with one entry 
-        # for Cscour to use as CLI argument for -e option
+        # for scour to use as CLI argument for -e option
         f = open(self.excludes, "w+")
         f.write(self.entries)
         f.close()
@@ -424,7 +424,7 @@ class EmptyDirectoriesDeletion:
         self.daysOldInSecs     = 172800             # seconds: 2 * 24 * 3600 s
 
         # Create the scour config file with entries 
-        # for Cscour to use as CLI argument
+        # for scour to use as CLI argument
         f = open(self.ingestFile, "w+")
         f.write(self.entries)
         f.close()
@@ -433,7 +433,7 @@ class EmptyDirectoriesDeletion:
         self.entries   = "/tmp/vesuvius/exclude_me"
         
         # Create the excludes file with one entry 
-        # for Cscour to use as CLI argument for -e option
+        # for scour to use as CLI argument for -e option
         f = open(self.excludes, "w+")
         f.write(self.entries)
         f.close()
@@ -542,7 +542,7 @@ def main():
 
         cliParser = argparse.ArgumentParser(
             prog='testCscour.py',
-            description='''This file is the test file for Cscour(1) .''',
+            description='''This file is the test file for scour(1) .''',
             usage='''%(prog)s [-x]\n''',
             epilog='''
 

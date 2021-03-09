@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #  *
-#  * This file sets up an environment for testing the Cscour program and
+#  * This file sets up an environment for testing the scour C program and
 #  * and benchmark with its scour script counterpart. 
 #  *
 #  *  @file:  benchMarkIt
@@ -91,7 +91,7 @@ function diffThem()
 	tlm_C_output="$PWD/tlm_C_output.txt"
 
 
-	# tree  2 roots: script and Cscour
+	# tree  2 roots: script and scour
 	tlm_S_data_dir="$PWD/tlm_S_data"
 	tlm_C_data_dir="$PWD/tlm_C_data"
 
@@ -122,11 +122,11 @@ function diffThem()
 	echo -e "\t--> Running $scourScript_sh"
 	time $scourScript_sh
 
-	# 2. Run the Cscour.c on tlm_C_data_dir
-	echo -e "\n\n\t4. Launching Cscour on $tlm_C_data_dir\n"
-	Cscour="./Cscour -d $scour_C_ingest"
-	echo -e "\t--> Running $Cscour"
-	time $Cscour
+	# 2. Run the scour program on tlm_C_data_dir
+	echo -e "\n\n\t4. Launching scour on $tlm_C_data_dir\n"
+	scour="./scour -d $scour_C_ingest"
+	echo -e "\t--> Running $scour"
+	time $scour
 
 	# 3. Check the diff in /tmp
 	echo -e "n\n\t5. diff-ing the 2 output files...into file: /tmp/scour_log.txt \n"

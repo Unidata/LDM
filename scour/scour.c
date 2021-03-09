@@ -1,9 +1,9 @@
 /**
  * 
- * Cscour(1): a Multi-threaded C program that scours faster than the
- *         scour(1) script
+ * scour(1): a Multi-threaded C program that scours faster than the
+ *         scour.sh(1) script
  *         
- *  @file:  Cscour.c
+ *  @file:  scour.c
  * @author: Mustapha Iles
  *
  *    Copyright 2021 University Corporation for Atmospheric Research
