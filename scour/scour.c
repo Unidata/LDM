@@ -508,9 +508,9 @@ getExcludedDirsList(char (*list)[PATH_MAX], char *excludedDirsFilePath)
 
     if((fp = fopen(excludedDirsFilePath, "r")) == NULL)
     {
-        log_add("Excluded-directory file: fopen(\"%s\") failed: %s. (Continue without it.)",
-            excludedDirsFilePath, strerror(errno));
-        log_flush_info();
+        log_info("Excluded-directory file: fopen(\"%s\") failed: %s. "
+                "(Continuing without it.)", excludedDirsFilePath,
+                strerror(errno));
 
         return -1;
     }
@@ -773,24 +773,22 @@ main(int argc, char *argv[])
     // build the list of excluded directories
     excludedDirsCount = getExcludedDirsList(excludedDirsList, excludePath);
 
-    log_info("STARTED...");
-    log_info("parsing...");
-
     int validEntriesCounter = 0;
     IngestEntry_t *listHead = NULL;
 
     // Call config parser
-    if( parseConfig(&validEntriesCounter, &listHead, scourConfPath) != 0
-        || validEntriesCounter == 0 )
+    if( parseConfig(&validEntriesCounter, &listHead, scourConfPath) != 0)
     {
-        log_add("Parsing conf-file failed. Or NO VALID directory entries found.");
-        log_add("parsing complete!");
-        log_add("COMPLETED!");
+        log_add("Parsing conf-file failed.");
         log_flush_fatal();
         exit(EXIT_FAILURE);
     }
-
-    log_info("parsing complete!");
+    if( validEntriesCounter == 0 )
+    {
+        log_add("NO VALID directory entries found.");
+        log_flush_warning();
+        exit(EXIT_SUCCESS);
+    }
 
     if (!changeDirectory(workingDir)) {
         char buf[PATH_MAX] = {};
@@ -802,7 +800,6 @@ main(int argc, char *argv[])
     log_info("Launching %d threads...", validEntriesCounter);
     (void) multiThreadedScour(listHead, deleteDirsFlag);
 
-    log_info("COMPLETED!");
     log_free();
 
     exit(EXIT_SUCCESS);
