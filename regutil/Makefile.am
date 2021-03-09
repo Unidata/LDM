@@ -41,7 +41,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib/ldm7
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
-BUILT_SOURCES		= regpar.tab substPaths
+BUILT_SOURCES		= regpar.tab substPaths registry.xml
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
 			  registry.xml

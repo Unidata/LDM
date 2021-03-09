@@ -663,16 +663,23 @@ void getRegistryConfValues(char * workingDir)
     free(var);       
 
 }
-void 
+
+static bool
 changeDirectory(char* workingDir)
 {
+    bool success;
+
     if (chdir(workingDir)) {
         log_add_syserr("Couldn't change working directory to \"%s\"",
                 workingDir);
-        log_flush_fatal();
-        exit(EXIT_FAILURE);
+        success = false;
     }
-    log_info("Changed working directory to \"%s\"", workingDir);
+    else {
+        log_info("Changed working directory to \"%s\"", workingDir);
+        success = true;
+    }
+
+    return success;
 }
 
 int 
@@ -785,7 +792,12 @@ main(int argc, char *argv[])
 
     log_info("parsing complete!");
 
-    (void) changeDirectory(workingDir);
+    if (!changeDirectory(workingDir)) {
+        char buf[PATH_MAX] = {};
+        log_add("Relative pathnames in configuration-file will be interpreted "
+                "relative to %s", getcwd(buf, sizeof(buf)-1));
+        log_flush_warning();
+    }
 
     log_info("Launching %d threads...", validEntriesCounter);
     (void) multiThreadedScour(listHead, deleteDirsFlag);
