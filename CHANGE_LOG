@@ -1,4 +1,4 @@
-6.13.14.16      2021-03-09T12:11:59-0700
+6.13.14.16
     scour(1):
         * Renamed "scour" script to "scour.sh"
         * Renamed "Cscour" to "scour"
