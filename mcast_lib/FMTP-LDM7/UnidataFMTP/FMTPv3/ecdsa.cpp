@@ -55,7 +55,7 @@ Ecdsa::~Ecdsa()
 }
 
 #if 0
-    throw std::runtime_error("EVP_MD_CTX_new() failure: " +
+Ecdsa::
             std::string(ERR_get_error()))
 
 void Ecdsa::throwExcept(const std::string& msg) const
