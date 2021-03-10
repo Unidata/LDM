@@ -43,7 +43,7 @@ typedef struct IngestEntry {
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-void  newEntryNode(IngestEntry_t **, char *, char *, char *);
+bool  newEntryNode(IngestEntry_t **, char *, char *, char *);
 int   parseConfig(int *, IngestEntry_t **, char *);
 int   regexOps(char *, char *, int);
 int   nowInEpoch();
