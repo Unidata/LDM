@@ -1,4 +1,10 @@
 6.13.14.18
+    scour(1):
+        * Increased maximum size of pattern field to MAX_INPUT bytes
+
+    Misc:
+        * Removed lint identified by Coverity Scan
+
     Devops:
         * dev-makefile:
             * Added ".PHONY" target with dependencies

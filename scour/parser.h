@@ -24,7 +24,7 @@
 #define PARSER_DOT_H
 
 #define ALL_FILES		"*"
-#define PATTERN_SIZE	40
+#define PATTERN_SIZE	(MAX_INPUT+1)
 // daysOld defs
 #define DAYS_OLD_SIZE	15
 #define DAY_SECONDS 86400
