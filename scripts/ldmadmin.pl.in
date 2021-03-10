@@ -241,6 +241,7 @@ elsif ($command eq "scour") {	# scour data directories
    while ($_ = $ARGV[0]) {
         shift;
         /^-d/ && $delete++;
+    }
     
     # Build the command line
     $cmd_line = "scour ";

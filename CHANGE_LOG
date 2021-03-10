@@ -1,3 +1,7 @@
+6.13.14.17      2021-03-09T16:56:19-0700
+    ldmadmin(1):
+        * Added missing "}" to 'while ($_ = $ARGV[0]) {'
+
 6.13.14.16      2021-03-09T16:10:10-0700
     logging:
         * Merged logging levels ALERT, CRIT, & EMERG into just FATAL
