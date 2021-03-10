@@ -9,6 +9,8 @@
 #ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_ECDSA_H_
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_ECDSA_H_
 
+#include <openssl/ec.h>
+#include <queue>
 #include <string>
 
 /**
@@ -16,6 +18,22 @@
  */
 class Ecdsa
 {
+    using OpenSslErrCode = unsigned long;
+    using CodeQ          = std::queue<OpenSslErrCode>;
+
+    EC_KEY* ecKey; ///< Elliptic curve key
+
+    /**
+     * Throws a queue of OpenSSL errors as a nested exception. If the queue is
+     * empty, then simply returns. Recursive.
+     *
+     * @param[in,out] codeQ         Queue of OpenSSL error codes. Will be empty
+     *                              on return.
+     * @throw std::runtime_error    Earliest OpenSSL error
+     * @throw std::nested_exception Nested OpenSSL runtime exceptions
+     */
+    static void throwExcept(CodeQ& codeQ);
+
 protected:
     /**
      * Default constructs.
@@ -23,11 +41,13 @@ protected:
     Ecdsa();
 
     /**
-     * Throws a nested runtime exception due to an OpenSSL error.
+     * Throws an OpenSSL error. If a current OpenSSL error exists, then it is
+     * thrown as a nested exception; otherwise, a regular exception is thrown.
      *
-     * @param[in] msg  Outermost message
+     * @param msg                     Top-level (non-OpenSSL) message
+     * @throw std::runtime_exception  Regular or nested exception
      */
-    void throwExcept(const std::string& msg) const;
+    static void throwOpenSslError(const std::string& msg);
 
 public:
     Ecdsa(Ecdsa& ecdsa) =delete;

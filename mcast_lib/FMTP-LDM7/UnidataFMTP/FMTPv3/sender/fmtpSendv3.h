@@ -51,7 +51,7 @@
 #include "TcpSend.h"
 #include "UdpSend.h"
 #include "fmtpBase.h"
-#include "FMTPv3/PubKeyCrypt.h"
+#include "PubKeyCrypt.h"
 #include "SockToIndexMap.h"
 
 

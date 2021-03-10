@@ -28,25 +28,23 @@
 
 #include "ecdsa.h"
 
-#include <openssl/ec.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
+#include <queue>
 #include <stdexcept>
 
 Ecdsa::Ecdsa()
-{}
-
-Ecdsa::~Ecdsa()
 {
     EC_builtin_curve curve;
 
     EC_get_builtin_curves(&curve, 1);
     EC_KEY* ecKey = EC_KEY_new_by_curve_name(curve.nid);
     if (ecKey == nullptr)
-        throw std::runtime_error("EC_KEY_new_by_curve_name() failure");
+        throwOpenSslError("EC_KEY_new_by_curve_name() failure");
 
     try {
         if (EC_KEY_generate_key(ecKey) == 0)
-            throw std::runtime_error("EC_KEY_generate_key() failure");
+            throwOpenSslError("EC_KEY_generate_key() failure");
     } // `ecKey` allocated
     catch (const std::exception& ex) {
         EC_KEY_free(ecKey);
@@ -54,16 +52,43 @@ Ecdsa::~Ecdsa()
     }
 }
 
-#if 0
-Ecdsa::
-            std::string(ERR_get_error()))
-
-void Ecdsa::throwExcept(const std::string& msg) const
+Ecdsa::~Ecdsa()
 {
-    throw openssl
-            std::string(ERR_get_error()))
+    EC_KEY_free(ecKey);
 }
-#endif
+
+void Ecdsa::throwExcept(CodeQ& codeQ)
+{
+    if (!codeQ.empty()) {
+        OpenSslErrCode code = codeQ.front();
+        codeQ.pop();
+
+        try {
+            throwExcept(codeQ);
+            throw std::runtime_error(ERR_reason_error_string(code));
+        }
+        catch (const std::exception& ex) {
+            std::throw_with_nested(std::runtime_error(
+                    ERR_reason_error_string(code)));
+        }
+    }
+}
+
+void Ecdsa::throwOpenSslError(const std::string& msg)
+{
+    CodeQ codeQ;
+
+    for (OpenSslErrCode code = ERR_get_error(); code; code = ERR_get_error())
+        codeQ.push(code);
+
+    try {
+        throwExcept(codeQ);
+        throw std::runtime_error(msg);
+    }
+    catch (const std::runtime_error& ex) {
+        std::throw_with_nested(std::runtime_error(msg));
+    }
+}
 
 EcdsaSigner::EcdsaSigner()
     : Ecdsa{}
@@ -72,15 +97,20 @@ EcdsaSigner::EcdsaSigner()
 void EcdsaSigner::sign(const std::string& message,
                        std::string&       signature)
 {
-#if 0
+    //throw std::runtime_error("Unimplemented");
+#if 1
     EVP_MD_CTX *mdctx = EVP_MD_CTX_new(); // Message digest context
 
     if (mdctx == 0)
-        throw std::runtime_error("EVP_MD_CTX_new() failure: " +
-                std::string(ERR_get_error()))
+        throwOpenSslError("EVP_MD_CTX_new() failure: ");
 
-    /* Initialise the DigestSign operation - SHA-256 has been selected as the message digest function in this example */
-     if(1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key)) goto err;
+    EC_key* key = EC_KEY_new_by_curve_name
+    /*
+     * Initialize the DigestSign operation. SHA-256 -- with a security level of
+     * 128 bits -- is the message digest function.
+     */
+     if (EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key))
+         throwOpenSslError("EVP_DigestSignInit() failure");
 
      /* Call update with the message */
      if(1 != EVP_DigestSignUpdate(mdctx, msg, strlen(msg))) goto err;

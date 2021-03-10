@@ -10,11 +10,11 @@
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_HMACIMPL_H_
 
 #include "fmtpBase.h"
-#include <openssl/evp.h>
+#include "PubKeyCrypt.h"
 
+#include <openssl/evp.h>
 #include <string>
 #include <sys/uio.h>
-#include "FMTPv3/PubKeyCrypt.h"
 
 class HmacImpl
 {

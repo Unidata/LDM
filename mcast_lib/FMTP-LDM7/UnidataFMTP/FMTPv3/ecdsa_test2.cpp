@@ -58,6 +58,14 @@ TEST_F(EcdsaTest, DefaultSignerConstruction)
     EcdsaSigner();
 }
 
+// Tests signing a message
+TEST_F(EcdsaTest, Signing)
+{
+    EcdsaSigner signer;
+    std::string signature;
+    signer.sign("Hello, world!", signature);
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
