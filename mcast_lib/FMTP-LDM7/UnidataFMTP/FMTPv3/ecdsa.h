@@ -69,6 +69,7 @@ public:
  */
 class EcdsaSigner final : public Ecdsa
 {
+    EVP_PKEY* pKey;
 
 public:
     /**
@@ -77,6 +78,11 @@ public:
      * @throw std::runtime_error  OpenSSL failure
      */
     EcdsaSigner();
+
+    /**
+     * Destroys.
+     */
+    ~EcdsaSigner();
 
     /**
      * Returns the public key.

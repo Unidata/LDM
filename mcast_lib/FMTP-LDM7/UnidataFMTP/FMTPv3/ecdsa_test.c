@@ -35,7 +35,7 @@ static void test_default_signer(void)
     EcdsaSigner();
 }
 
-#if 0
+#if 1
 static void test_public_key(void)
 {
     EC_builtin_curve curve;
