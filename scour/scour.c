@@ -174,17 +174,7 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
 bool
 isExcluded(char * dirPath, char (*list)[PATH_MAX])
 {
-    // Check if there are directories to be excluded from scouring
-    if(excludedDirsCount < 1)
-    {
-        log_add("No directory to exclude ");
-        log_flush_debug();
-        return false;
-    }
-
-    int i;
-    for(i=0; i<excludedDirsCount; i++) {
-
+    for(int i=0; i<excludedDirsCount; i++) {
         if( strcmp(dirPath, list[i]) == 0) {
             log_add("Path %s is an excluded directory!", dirPath);
             log_flush_debug();
@@ -509,33 +499,61 @@ isRegularFile(const char *path)
 /**
  * Builds a list of to-be-excluded directory paths (not scoured)
  *
- * @param[out]  list         list of excluded directories as set in 
- *                           file DIRS_TO_EXCLUDE_FILE (see parser.h) in 
- *                           absolute path names form
- * @retval     >0            number of entries in the DIRS_TO_EXCLUDE_FILE file
- * @retval     -1            error in opening the DIRS_TO_EXCLUDE_FILE file
+ * @param[in]  pathname     Pathname of file containing pathnames of directories
+ *                          to be excluded from scouring
+ * @param[out] list         List of directories to be excluded
+ * @retval     >=0          Number of directories to be excluded
+ * @retval     -1           Error parsing exclusion file
  */
 int 
-getExcludedDirsList(char (*list)[PATH_MAX], char *excludedDirsFilePath)
+getExcludedDirsList(char (*list)[PATH_MAX], char *pathname)
 {
     FILE *fp = NULL;
 
-    if((fp = fopen(excludedDirsFilePath, "r")) == NULL)
+    if (access(pathname, F_OK)) {
+        if (errno == ENOENT)
+            // If it doesn't exist, that's not an error: there are no entries
+            return 0;
+    }
+    if((fp = fopen(pathname, "r")) == NULL)
     {
+        // If it exists but can't be opened, that's an error
         log_info("Excluded-directory file: fopen(\"%s\") failed: %s. "
-                "(Continuing without it.)", excludedDirsFilePath,
+                "(Continuing without it.)", pathname,
                 strerror(errno));
-
         return -1;
     }
 
-    int i=0;
-    while((fscanf(fp,"%s", list[i])) !=EOF) //scanf and check EOF
-    {
-        if(list[i][0] == '#' || list[i][0] == '\n' ) continue;
-        i++;
+    char*  lineptr = NULL;
+    size_t bufsize = 0;
+    int    lineNo = 0;
+    for (;;) {
+        ssize_t nchar = getline(&lineptr, &bufsize, fp);
+        if (nchar == -1) {
+            if (ferror(fp)) {
+                log_add_syserr("getline() failure");
+                return -1;
+            }
+            break; // EOF encountered
+        }
+        if (lineNo >= MAX_EXCLUDED_DIRPATHS) {
+            log_add("Number of entries exceeds limit of %d",
+                    MAX_EXCLUDED_DIRPATHS);
+            return -1;
+        }
+        if (lineptr[nchar-1] == '\n') {
+            lineptr[nchar-1] = 0;
+            --nchar;
+        }
+        if (nchar >= sizeof(*list)) {
+            log_add("Line %d in \"%s\" is too long: \"%s\"", lineNo+1,
+                    pathname, lineptr);
+            return -1;
+        }
+        (void)strncpy(list[lineNo++], lineptr, sizeof(*list));
     }
-    return i;
+    free(lineptr);
+    return lineNo; // EOF encountered
 }
 
 static void
@@ -786,6 +804,11 @@ main(int argc, char *argv[])
   
     // build the list of excluded directories
     excludedDirsCount = getExcludedDirsList(excludedDirsList, excludePath);
+    if (excludedDirsCount == -1) {
+        log_add("Couldn't parse excluded-directories file");
+        log_flush_fatal();
+        exit(EXIT_FAILURE);
+    }
 
     int validEntriesCounter = 0;
     IngestEntry_t *listHead = NULL;
