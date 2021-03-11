@@ -92,28 +92,68 @@ void Ecdsa::throwOpenSslError(const std::string& msg)
 
 EcdsaSigner::EcdsaSigner()
     : Ecdsa{}
-{}
+{
+    EC_builtin_curve curve;
+    EC_get_builtin_curves(&curve, 1);
+    ::printf("Curve name=\"%s\"\n", curve.comment);
+
+    EC_KEY* ecKey = EC_KEY_new_by_curve_name(curve.nid);
+    if (ecKey == nullptr)
+        throwOpenSslError("EC_KEY_new_by_curve_name() failure");
+
+    try {
+        pKey = EVP_PKEY_new();
+        if (pKey == nullptr)
+            throwOpenSslError("EVP_PKEY_new() failure");
+
+        try {
+            /*
+             * According to
+             * <https://www.openssl.org/docs/man1.0.2/man3/EVP_PKEY_set1_RSA.html>,
+             * `ecKey` will not be freed by `EVP_KEY_free()`
+             */
+            if (!EVP_PKEY_set1_EC_KEY(pKey, ecKey))
+                throwOpenSslError("EVP_PKEY_set1_EC_KEY() failure");
+        } // `pKey` allocated
+        catch (const std::exception& ex) {
+            EVP_PKEY_free(pKey); // Doesn't free `ecKey`
+            throw;
+        }
+    } // `ecKey` allocated
+    catch (const std::exception& ex) {
+        EC_KEY_free(ecKey);
+        throw;
+    }
+}
+
+EcdsaSigner::~EcdsaSigner()
+{
+    EC_KEY* ecKey = EVP_PKEY_get1_EC_KEY(pKey);
+    EVP_PKEY_free(pKey); // Doesn't free `ecKey`
+    EC_KEY_free(ecKey);
+}
 
 void EcdsaSigner::sign(const std::string& message,
                        std::string&       signature)
 {
     //throw std::runtime_error("Unimplemented");
 #if 1
-    EVP_MD_CTX *mdctx = EVP_MD_CTX_new(); // Message digest context
+    EVP_MD_CTX* mdctx = EVP_MD_CTX_new(); // Message digest context
 
     if (mdctx == 0)
         throwOpenSslError("EVP_MD_CTX_new() failure: ");
 
-    EC_key* key = EC_KEY_new_by_curve_name
     /*
-     * Initialize the DigestSign operation. SHA-256 -- with a security level of
-     * 128 bits -- is the message digest function.
+     * Initialize the DigestSign operation. The SHA-256 message digest function
+     * has a security level of 128 bits.
      */
-     if (EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key))
+     if (EVP_DigestSignInit(mdctx, nullptr, EVP_sha256(), nullptr, pKey))
          throwOpenSslError("EVP_DigestSignInit() failure");
 
      /* Call update with the message */
-     if(1 != EVP_DigestSignUpdate(mdctx, msg, strlen(msg))) goto err;
+     if (!EVP_DigestSignUpdate(mdctx, static_cast<void*>(message.data()),
+             message.length()))
+         throwOpenSslError("EVP_DigestSignUpdate() failure");
 
      /* Finalise the DigestSign operation */
      /* First call EVP_DigestSignFinal with a NULL sig parameter to obtain the length of the

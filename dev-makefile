@@ -8,18 +8,15 @@ check-cc:
 	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=cc
 	$(MAKE) distcheck
-	touch $@
 
 # Check package using clang(1)
 check-clang:
 	$(MAKE) clean >/dev/null
 	./configure $(CONFIGURE_OPTS) CC=clang
 	$(MAKE) distcheck
-	touch $@
 
 # Check package
 check:  check-cc check-clang
-	touch $@
 
 # Scan code using clang(1)
 clang-scan:
@@ -27,7 +24,6 @@ clang-scan:
 	scan-build $(MAKE) -f dev-makefile
 	@url=file://`ls -dt /tmp/scan-build-* | head -1`/index.html; \
         echo "Display $$url in browser"
-	touch $@
 
 COVERITY_SCAN_FILE      = ldm.tgz
 
@@ -50,7 +46,6 @@ coverity-scan:  $(COVERITY_SCAN_FILE)
 	rm -rf cov-int
 
 scan:	coverity-scan clang-scan
-	touch $@
 
 configure.ac:  CHANGE_LOG
 	versionId=`awk '{print $$1;exit}' CHANGE_LOG`; \
