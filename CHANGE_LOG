@@ -1,6 +1,8 @@
 6.13.14.19
     scour(1):
         * Improved function getExcludedDirsList() and its use
+        * Don't error exit if there's no entry in the registry for the
+          directory-exclusion file 
 
 6.13.14.18      2021-03-10T16:32:31-0700
     scour(1):

@@ -668,13 +668,9 @@ getRegString(const char*       name,
  */
 void getRegistryConfValues(char * workingDir)
 {
-    char*       var;
-    if (getRegString(REG_SCOUR_EXCLUDE_PATH, &var, SCOUR_EXCLUDE_PATH)) {
-        log_add("Couldn't get exclude config path for this program");
-        log_flush_fatal();
-        exit(EXIT_FAILURE);
-    }
-    strncpy(excludePath, var, sizeof(excludePath)-1);
+    char* var = NULL;
+    if (getRegString(REG_SCOUR_EXCLUDE_PATH, &var, SCOUR_EXCLUDE_PATH) == 0)
+        strncpy(excludePath, var, sizeof(excludePath)-1);
     free(var);
 
     if (getRegString(REG_SCOUR_CONFIG_PATH, &var, SCOUR_CONFIG_PATH)) {
