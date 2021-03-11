@@ -157,9 +157,15 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
 
     int targetedFileEpoch = sb.st_mtime;
     if( isThisOlderThanThat(targetedFileEpoch, daysOldInEpoch) ) {
-        remove(symlinkedEntry);
+        if (remove(symlinkedEntry)) {
+            log_add_syserr("Couldn't remove file \"%s\"", symlinkedEntry);
+            log_flush_warning();
+        }
         // and remove the symlink itself too:
-        remove(symlinkPath);
+        if (remove(symlinkPath)) {
+            log_add_syserr("Couldn't remove symbolic link \"%s\"", symlinkPath);
+            log_flush_warning();
+        }
     }
     return 0;
 }
@@ -390,7 +396,10 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     // after bubbling up , remove directory if empty and if delete option is set
     if( thisDirIsNotExcluded && isDirectoryEmpty(dirPath) && deleteDirOrNot )
     {
-        remove(dirPath);
+        if (remove(dirPath)) {
+            log_add_syserr("Couldn't remove directory \"%s\"", dirPath);
+            log_flush_warning();
+        }
     }
 
     // TO-DO:  remove dangling Symlinks
@@ -451,8 +460,13 @@ multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
         // Create attributes & init
         pthread_attr_t attr;
         pthread_attr_init(&attr);
-        pthread_create(&tids[threadsCounter++], &attr, 
+        int status = pthread_create(&tids[threadsCounter++], &attr,
                     scourFilesAndDirsForThisPath, items);
+        if (status) {
+            log_add_errno(status, "Couldn't create thread for directory \"%s\"",
+                    items->dir);
+            log_flush_warning();
+        }
         
         tmp = tmp->nextEntry;
     }
@@ -463,7 +477,7 @@ multiThreadedScour(IngestEntry_t *listTete, int deleteDirsFlag)
     while(tmp != NULL) 
     {
         // Thread ID: wait on this thread
-        pthread_join(tids[i++], NULL);
+        (void)pthread_join(tids[i++], NULL); // Threads can't deadlock
         log_add("Directory scouring (%s) completed in thread #%d!", tmp->dir, i-1);
         log_flush_info();
   

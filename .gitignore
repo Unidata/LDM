@@ -101,4 +101,8 @@ ulog/ulogger
 up7_test.pq
 vgcore.*
 *.yaml
+<<<<<<< HEAD
 coverity-scan
+=======
+/coverity-scan
+>>>>>>> refs/heads/devel

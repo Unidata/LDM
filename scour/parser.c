@@ -71,7 +71,7 @@
  * @param[out]  directoriesCounter   number of valid dictory paths
  * @param[out]  listHead 		     list of valid directory paths
  * @retval      0                    all went well 
- * @retval      -1                   error occurred
+ * @retval      -1                   Fatal system error occurred
  */
 int
 parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPath)
@@ -116,7 +116,8 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPa
 				case 1: strcpy(daysOld, ptr);
 						break;
 
-				case 2: strcpy(pattern, ptr);
+				case 2: strncpy(pattern, ptr, sizeof(pattern));
+				        pattern[sizeof(pattern)-1] = 0;
 						break;
 			}
 
@@ -126,17 +127,23 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPa
      
      	// validate dirName path
      	if( vetThisDirectoryPath(dirName) == -1 )
-		{
-			log_add("(-) Directory '%s' (in scour config) does not exist or is invalid. Skipping it...", dirName);
-			log_flush_info();
+        {
+            log_add("(-) Directory '%s' (in scour config) does not exist or is invalid. Skipping it...", dirName);
+            log_flush_info();
 
-			continue;
-		} 
-		
-		if(itemsCounted == 2) newEntryNode(listHead, dirName, daysOld, ALL_FILES);
-		if(itemsCounted == 3) newEntryNode(listHead, dirName, daysOld, pattern);
-		
-		entryCounter++;
+            continue;
+        }
+
+        if(itemsCounted == 2) {
+            if (!newEntryNode(listHead, dirName, daysOld, ALL_FILES))
+                return -1; // DANGER! Assumes list will be freed by termination
+        }
+        if(itemsCounted == 3) {
+            if (!newEntryNode(listHead, dirName, daysOld, pattern))
+                return -1; // DANGER! Assumes list will be freed by termination
+        }
+
+        entryCounter++;
     }
 
     *directoriesCounter = entryCounter;
@@ -278,7 +285,7 @@ startsWithTilda(char *dirPath, char *expandedDirName)
  		}
 
  		// Check the length of the expanded login: bail out if new path is too long
- 		if(strlen(currentHomeDir) + dirPathLength > PATH_MAX) return -1;
+ 		if(strlen(currentHomeDir) + dirPathLength >= PATH_MAX) return -1;
 
  		strcpy(subDirPath, currentHomeDir);
  		strcat(subDirPath, dirPath + tildaRootPosition);
@@ -374,26 +381,46 @@ isNotAccessible(char *dirPath)
     return status;
 }
 
-// insert a node at the first location in the list
-void 
+/**
+ * Inserts a node at the first location in the list.
+ *
+ * @retval `true`   Success. Node created and added if entry is valid
+ * @retval `false`  System failure. `log_add()` called.
+ */
+bool
 newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *pattern)
 {
+    bool success = false;
+
     // Allocate a new node in the heap and set its data
     IngestEntry_t *tmp = (IngestEntry_t*) malloc(sizeof(IngestEntry_t));
-    
-    // convert user's daysOld to Epoch time
-    int daysOldInEpoch = convertDaysOldToEpoch(daysOld);
-    if(daysOldInEpoch == -1) return;
+    if (tmp == NULL) {
+        log_add_syserr("Couldn't allocate configuration entry");
+    }
+    else {
+        // convert user's daysOld to Epoch time
+        int daysOldInEpoch = convertDaysOldToEpoch(daysOld);
+        if(daysOldInEpoch == -1) {
+            log_warning("Invalid days-old parameter: \"%s\"", daysOld);
+            free(tmp);
+        }
+        else {
+            // populate node
+            strncpy(tmp->dir, dir, sizeof(tmp->dir))[sizeof(tmp->dir)-1] = 0;
+            strncpy(tmp->daysOld, daysOld, sizeof(tmp->daysOld));
+            tmp->daysOld[sizeof(tmp->daysOld)-1] = 0;
+            tmp->daysOldInEpoch = daysOldInEpoch;
+            strncpy(tmp->pattern, pattern, sizeof(tmp->pattern));
+            tmp->pattern[sizeof(tmp->pattern)-1] = 0;
 
-    // populate node
-    strcpy(tmp->dir, dir);
-    strcpy(tmp->daysOld, daysOld);
-    tmp->daysOldInEpoch = daysOldInEpoch;
-    strcpy(tmp->pattern, pattern);
+            //point it to old first node
+            tmp->nextEntry = *listHead; //head;
+            *listHead = tmp;
+        }
+        success = true;
+    } // 'tmp` allocated
 
-	//point it to old first node
-	tmp->nextEntry = *listHead; //head;
-	*listHead = tmp;
+    return success;
 }
 
 int 
@@ -456,16 +483,17 @@ regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 		result = (char*)malloc(group[1].rm_eo - group[1].rm_so);
 		strncpy(result, &daysOldItem[group[1].rm_so], group[1].rm_eo - group[1].rm_so);
 		days = atoi(result);
+        free(result);
 		if(days > DAYS_SINCE_1994) {
 			log_add("Too many days back: %d", days);
 			log_flush_warning();
-			free(result);
 			return -1;
 		}
 
 		result = (char*)malloc(group[2].rm_eo - group[2].rm_so);
 		strncpy(result, &daysOldItem[group[2].rm_so], group[2].rm_eo - group[2].rm_so);
 		hours = atoi(result);
+		free(result);
 
 		// 
 		switch(groupingNumber)
@@ -483,6 +511,7 @@ regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				result = (char*)malloc(group[3].rm_eo - group[3].rm_so);
 				strncpy(result, &daysOldItem[group[3].rm_so], group[3].rm_eo - group[3].rm_so);
 				minutes = atoi(result);
+                free(result);
 		
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS; 
 				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)", 
@@ -494,10 +523,12 @@ regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 				result = (char*)malloc(group[3].rm_eo - group[3].rm_so);
 				strncpy(result, &daysOldItem[group[3].rm_so], group[3].rm_eo - group[3].rm_so);
 				minutes = atoi(result);			
+                free(result);
 
 				result = (char*)malloc(group[4].rm_eo - group[4].rm_so);
 				strncpy(result, &daysOldItem[group[4].rm_so], group[4].rm_eo - group[4].rm_so);
 				seconds = atoi(result);
+                free(result);
 
 				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds; 
 				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)", 
@@ -508,7 +539,6 @@ regexOps(char *pattern, char *daysOldItem, int groupingNumber)
 
 			default: break;
 		}
-		free(result);
 		regfree(&regex);
 
 		return todayEpoch - daysEtcInSeconds;
@@ -557,16 +587,14 @@ convertDaysOldToEpoch(char *daysOldItem)
 char * 
 loginHomeDir(char *providedLgn)
 {
-	char *lgn;
-	struct passwd *pw;
+    char *lgn;
+    struct passwd *pw;
 
-	if(providedLgn != NULL) lgn = providedLgn;
-	else
-		if ((lgn = getlogin()) == NULL) 
-		{
-            log_add("loginHomeDir:getlogin() failed: %s",  strerror(errno));
-            return NULL;
-		}
+    if(providedLgn != NULL) lgn = providedLgn;
+    else if ((lgn = getlogin()) == NULL) {
+        log_add("loginHomeDir:getlogin() failed: %s",  strerror(errno));
+        return NULL;
+    }
 
     long int initlen = sysconf(_SC_GETPW_R_SIZE_MAX);
     size_t   len;
@@ -604,20 +632,11 @@ loginHomeDir(char *providedLgn)
             return(result.pw_dir);
         }
     }
-    free(buffer);
-    return NULL;
 }
 
 
 int 
 xstrcmp(char *str1, char * str2)
 {
-	char strArray1[80];
-	char strArray2[80];
-	
-	strcpy(strArray1, str1);
-	strcpy(strArray2, str2);
-	
-	return strcmp(strArray1, strArray2);
-	
+	return strcmp(str1, str2);
 }

@@ -1,3 +1,15 @@
+6.13.14.18      2021-03-10T16:32:31-0700
+    scour(1):
+        * Increased maximum size of pattern field to MAX_INPUT bytes
+
+    Misc:
+        * Removed lint identified by Coverity Scan
+
+    Devops:
+        * dev-makefile:
+            * Added ".PHONY" target with dependencies
+            * Added "make clean" to start of target "clang-scan"
+
 6.13.14.17      2021-03-09T16:56:19-0700
     ldmadmin(1):
         * Added missing "}" to 'while ($_ = $ARGV[0]) {'

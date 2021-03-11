@@ -24,7 +24,7 @@
 #define PARSER_DOT_H
 
 #define ALL_FILES		"*"
-#define PATTERN_SIZE	40
+#define PATTERN_SIZE	(MAX_INPUT+1)
 // daysOld defs
 #define DAYS_OLD_SIZE	15
 #define DAY_SECONDS 86400
@@ -43,7 +43,7 @@ typedef struct IngestEntry {
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-void  newEntryNode(IngestEntry_t **, char *, char *, char *);
+bool  newEntryNode(IngestEntry_t **, char *, char *, char *);
 int   parseConfig(int *, IngestEntry_t **, char *);
 int   regexOps(char *, char *, int);
 int   nowInEpoch();
