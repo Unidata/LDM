@@ -1,4 +1,4 @@
-6.13.14.19
+6.13.14.19      2021-03-11T13:52:45-0700
     scour(1):
         * Improved function getExcludedDirsList() and its use
         * Don't error exit if there's no entry in the registry for the
