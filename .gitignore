@@ -101,3 +101,4 @@ ulog/ulogger
 up7_test.pq
 vgcore.*
 *.yaml
+coverity-scan
