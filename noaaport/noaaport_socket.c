@@ -68,15 +68,18 @@ initNportSockAddr(
  * @param[in]  ifaceSpec  IPv4 address of interface on which to listen for
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
+ * @param[in]  setBufSize Enable socket receiver buffer size increase.
  * @retval     0          Success. `*socket` is set.
  * @retval     1          Usage failure. `log_add()` called.
  * @retval     2          O/S failure. `log_add()` called.
+ * @retval     3          O/S failure. `log_add()` called.
  */
 int
 nportSock_init(
         int* const restrict        socket,
         const char* const restrict nportSpec,
-        const char* const restrict ifaceSpec)
+        const char* const restrict ifaceSpec,
+		int                        setBufSize)
 {
     struct sockaddr_in nportSockAddr;
     int                status = initNportSockAddr(&nportSockAddr, nportSpec);
@@ -95,7 +98,17 @@ nportSock_init(
             status = mcastRecvSock_init(socket, &nportSockAddr, &ifaceAddr);
             if (status)
                 log_add("Couldn't initialize socket for multicast reception");
-        }
+            else if (setBufSize) {
+                    int recvBufferSize = (8 * 1024 * 1024);
+                    status = setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+                    		(void*)&recvBufferSize, sizeof(recvBufferSize));
+            		if (status) {
+                        log_warning("setsockopt(SO_RCVBUF) failure");
+                        (void)close(fd);
+                         status = 0;
+            		}
+                }
+            }
     }
 
     return status;

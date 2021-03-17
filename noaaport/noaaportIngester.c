@@ -84,7 +84,8 @@ decodeCommandLine(
         size_t* const         npages,
         char** const restrict prodQueuePath,
         char** const restrict mcastSpec,
-        char** const restrict interface)
+        char** const restrict interface,
+		int                   setBufSize)
 {
     int                 status = 0;
     extern int          optind;
@@ -94,7 +95,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:s:t:u:vx")) != -1) {
+            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:S:s:t:u:vx")) != -1) {
         switch (ch) {
             extern char*    optarg;
             extern int      optopt;
@@ -150,6 +151,9 @@ decodeCommandLine(
                   retrans_xmit_enable = OPTION_DISABLE;
 #endif
                 break;
+            case 'S':
+                   setBufSize = TRUE;
+                   break;
             case 's': {
 #ifdef RETRANS_SUPPORT
                 strncpy(sbn_channel_name, optarg, 12);
@@ -296,7 +300,7 @@ static void usage(
 "%s\n"
 "\n"
 "Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
-"          [-r <1|0>] [-t] [-s channel-name]\n"
+"          [-r <1|0>] [-S] [-t] [-s channel-name]\n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
@@ -308,6 +312,7 @@ static void usage(
 "               Default is to read from the standard input stream.\n"
 "   -n          Log through level NOTE. Report each data-product.\n"
 "   -q queue    Use \"queue\" as LDM product-queue. Default is \"%s\".\n"
+"   -S          Enable socket receiver buffer size increase. \n"
 "   -u n        Use logging facility local\"n\". Default is to use the\n"
 "               default LDM logging facility, %s. Implies \"-l ''\".\n"
 "   -v          Log through level INFO.\n"
@@ -480,6 +485,7 @@ unblockTermSignals(void)
  * @param[in] interface      IPv4 address of interface on which to listen for
  *                           multicast NOAAPort packets or NULL to listen on all
  *                           interfaces. Ignored iff `mcastSpec == NULL`.
+ * @param[in]  setBufSize    Enable socket receiver buffer size increase.
  * @param[out] isMcastInput  Is input from NOAAPort multicast?
  * @retval    -1             Failure. `log_add()` called.
  * @return                   Input file descriptor. `*isMcastInput` is set.
@@ -489,7 +495,8 @@ static int
 getInputFd(
         const char* const restrict mcastSpec,
         const char* const restrict interface,
-        bool* const restrict       isMcastInput)
+        bool* const restrict       isMcastInput,
+		int                        setBufSize)
 {
     int fd; // Input file descriptor
     bool mcastInput = mcastSpec != NULL;
@@ -502,7 +509,7 @@ getInputFd(
             log_add_syserr(
                     "Couldn't get file-descriptor of standard input stream");
     }
-    else if (nportSock_init(&fd, mcastSpec, interface)) {
+    else if (nportSock_init(&fd, mcastSpec, interface, setBufSize)) {
         log_add("Couldn't open NOAAPort socket");
         fd = -1;
     }
@@ -1210,6 +1217,7 @@ execute2(
  *                            all interfaces. Ignored iff `mcastSpec == NULL`.
  * @param[in] npages          Size of the queue in pages.
  * @param[in] prodQueuePath   Pathname of product-queue.
+ * @param[in] setBufSize      Enable socket receiver buffer size increase.
  * @retval    1               Couldn't open input. `log_add()` called.
  * @retval    2               Couldn't create FIFO. `log_add()` called.
  * @retval    3               Couldn't open product-queue. `log_add()` called.
@@ -1218,13 +1226,14 @@ static int
 execute(const char* const restrict mcastSpec,
         const char* const restrict interface,
         const size_t               npages,
-        const char* const restrict prodQueuePath)
+        const char* const restrict prodQueuePath,
+		int                        setBufSize)
 {
     log_assert(npages > 0);
 
     int  status;
     bool isMcastInput;
-    int  fd = getInputFd(mcastSpec, interface, &isMcastInput);
+    int  fd = getInputFd(mcastSpec, interface, &isMcastInput, setBufSize);
 
     if (fd == -1) {
         log_add("Couldn't open input");
@@ -1351,10 +1360,11 @@ int main(
             // Read from standard input stream
             char*             mcastSpec = NULL;
             char*             interface = NULL; // Listen on all interfaces
+            int               setBufSize= FALSE;
             const char* const COPYRIGHT_NOTICE = "Copyright (C) 2019 "
                     "University Corporation for Atmospheric Research";
             status = decodeCommandLine(argc, argv, &npages, &prodQueuePath,
-                    &mcastSpec, &interface);
+                    &mcastSpec, &interface, &setBufSize);
 
             if (status) {
                 log_error_q("Couldn't decode command-line");
@@ -1366,7 +1376,8 @@ int main(
 
                 tryLockingProcessInMemory(); // because NOAAPORT is realtime
 
-                status = execute(mcastSpec, interface, npages, prodQueuePath);
+                status = execute(mcastSpec, interface, npages, prodQueuePath,
+                		         setBufSize);
 
                 if (status) {
                     log_add("Couldn't ingest NOAAPort data");
