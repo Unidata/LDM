@@ -96,7 +96,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:Ss:t:u:vx")) != -1) {
+            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:S:s:t:u:vx")) != -1) {
         switch (ch) {
             extern char*    optarg;
             extern int      optopt;
@@ -305,7 +305,7 @@ static void usage(
 "%s\n"
 "\n"
 "Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
-"          [-r <1|0>] [-S] [-t] [-s channel-name]\n"
+"          [-r <1|0>] [-S bufSize] [-t] [-s channel-name]\n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
@@ -317,7 +317,7 @@ static void usage(
 "               Default is to read from the standard input stream.\n"
 "   -n          Log through level NOTE. Report each data-product.\n"
 "   -q queue    Use \"queue\" as LDM product-queue. Default is \"%s\".\n"
-"   -S bufSize  Receiver buffer size in bytes\n"
+"   -S bufSize  Receiver buffer size in bytes. Default is system dependent.\n"
 "   -u n        Use logging facility local\"n\". Default is to use the\n"
 "               default LDM logging facility, %s. Implies \"-l ''\".\n"
 "   -v          Log through level INFO.\n"
@@ -1312,6 +1312,10 @@ execute(const char* const restrict mcastSpec,
  *      <dt>-q <em>queue</em></dt>
  *      <dd>Use \e queue as the pathname of the LDM product-queue. The default
  *      is to use the default LDM pathname of the product-queue.</dd>
+ *
+ *      <dt>-S <em>bufSize</em></dt>
+ *      <dd>Set the receive buffer size for the NOAAPort UDP packets to
+ *      <em>bufSize</em> bytes. The default is system dependent.</dd>
  *
  *      <dt>-u <em>n</em></dt>
  *      <dd>If logging is to the system logging daemon, then use facility 
