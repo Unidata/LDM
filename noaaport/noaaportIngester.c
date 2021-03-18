@@ -86,7 +86,7 @@ decodeCommandLine(
         char**  const restrict prodQueuePath,
         char**  const restrict mcastSpec,
         char**  const restrict interface,
-		int*    const restrict rcvBufSize)
+        int*    const restrict rcvBufSize)
 {
     int                 status = 0;
     extern int          optind;
