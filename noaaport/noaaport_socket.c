@@ -80,7 +80,7 @@ nportSock_init(
         int* const restrict        socket,
         const char* const restrict nportSpec,
         const char* const restrict ifaceSpec,
-		int                        rcvBufSize)
+        int                        rcvBufSize)
 {
     struct sockaddr_in nportSockAddr;
     int                status = initNportSockAddr(&nportSockAddr, nportSpec);

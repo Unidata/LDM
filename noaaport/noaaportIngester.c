@@ -501,7 +501,7 @@ getInputFd(
         const char* const restrict mcastSpec,
         const char* const restrict interface,
         bool* const restrict       isMcastInput,
-		int                        rcvBufSize)
+        int                        rcvBufSize)
 {
     int fd; // Input file descriptor
     bool mcastInput = mcastSpec != NULL;
