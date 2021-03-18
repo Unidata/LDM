@@ -20,6 +20,7 @@ config.sub
 configure
 /consistent
 core.*
+coverity-scan
 cov-int
 .cproject
 data
@@ -65,6 +66,7 @@ missing
 /nbs_test.pq
 notifyme/notifyme
 *.o
+*.patch
 *.pim
 pqact/pqact
 pqcat/pqcat
@@ -101,8 +103,3 @@ ulog/ulogger
 up7_test.pq
 vgcore.*
 *.yaml
-<<<<<<< HEAD
-coverity-scan
-=======
-/coverity-scan
->>>>>>> refs/heads/devel
