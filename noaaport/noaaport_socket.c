@@ -106,7 +106,7 @@ nportSock_init(
                             &rcvBufSize, sizeof(rcvBufSize));
                     if (status) {
                         log_add_syserr("Couldn't set receiver buffer size to "
-                                "%d bytes", rcvBufSize);
+                                "%d bytes. Continuing.", rcvBufSize);
                         log_flush_warning();
                         status = 0;
                     }
