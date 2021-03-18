@@ -149,26 +149,26 @@ ACLOCAL_AMFLAGS = -I m4
 CLEANFILES		= *.gz
 DISTCLEANFILES		= config.h
 MAINTAINERCLEANFILES	= \
-    aclocal.m4 \
-    autom4te.cache/* \
-    build-aux/* \
-    check-* \
-    clang-scan \
-    compile \
-    config.* \
-    config.guess \
-    configure \
-    consistent \
-    cov-int/* \
-    cov-int/emit/* \
-    depcomp \
-    *.deplog \
-    install-sh \
-    *.log \
-    ltmain.sh \
-    m4/* \
-    missing \
-    *.tgz
+	aclocal.m4 \
+	autom4te.cache/* \
+	build-aux/* \
+	check-* \
+	clang-scan \
+	compile \
+	config.* \
+	config.guess \
+	configure \
+	consistent \
+	cov-int/* \
+	cov-int/emit/* \
+	depcomp \
+	*.deplog \
+	install-sh \
+	*.log \
+	ltmain.sh \
+	m4/* \
+	missing \
+	*.tgz
 
 all:
 
@@ -305,6 +305,7 @@ pull-fmtp:
 #		--squash fmtp/master
 #	git commit -m "Pulled FMTP-LDM7"
 
+# test
 push-gempak-tables:
 	git subtree push --prefix=gempak/tables gempak-tables master
 

@@ -21,11 +21,12 @@ class HmacImpl
     std::string key;    ///< HMAC key
     EVP_PKEY*   pkey;   ///< OpenSSL HMAC key
     EVP_MD_CTX* mdCtx;  ///< Message-digest context
-    PubKeyCrypt*     pkcKey; ///< Key for public-key cryptography
 
     void init(const std::string& key);
 
 public:
+    static const int HMAC_SIZE;
+
     /**
      * Default constructs. A new HMAC key will be pseudo-randomly chosen. This
      * is used by the sender.
