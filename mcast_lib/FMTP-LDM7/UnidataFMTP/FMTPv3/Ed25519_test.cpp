@@ -144,7 +144,7 @@ TEST_F(Ed25519Test, VerifySignatureSequence)
 
         std::cerr << "Signature=0x";
         for (int i = 0; i < sigLen; ++i)
-            ::fprintf(stderr, "%02x", signature[i]);
+            ::fprintf(stderr, "%02x", (unsigned char)signature[i]);
         std::cerr << '\n';
 
         if (i != 1) // Skip a msgBuf

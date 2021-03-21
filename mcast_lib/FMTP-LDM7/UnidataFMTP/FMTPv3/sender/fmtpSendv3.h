@@ -149,16 +149,6 @@ private:
     void sendMacKey(const int sd);
 
     /**
-     * Sends the public key for decrypting the message authentication code of
-     * multicast FMTP messages.
-     *
-     * @param[in] sd              Socket descriptor
-     * @throw std::system_error   I/O failure
-     * @throw std::runtime_error  OpenSSL failure
-     */
-    void sendPubKey(const int sd);
-
-    /**
      * Adds and entry for a data-product to the retransmission set.
      *
      * @param[in] data       The data-product.
@@ -293,13 +283,11 @@ private:
     fmtpSendv3(fmtpSendv3&);
     fmtpSendv3& operator=(const fmtpSendv3&);
     void WriteToLog(const std::string& content);
-    static PrivateKey* getPrivateKey();
 
     typedef std::mutex              Mutex;
     typedef std::lock_guard<Mutex>  Guard;
     typedef std::unique_lock<Mutex> Lock;
 
-    PrivateKey*         privateKey; ///< Private key for encrypting HMAC
     uint32_t            prodIndex;
     /** underlying udp layer instance */
     UdpSend*            udpsend;

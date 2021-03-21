@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      UdpSend.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 23, 2014
  *
@@ -33,8 +34,7 @@
 #define FMTP_SENDER_UDPSOCKET_H_
 
 #include "fmtpBase.h"
-#include "HmacImpl.h"
-#include "PubKeyCrypt.h"
+#include "mac.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -43,45 +43,6 @@
 
 class UdpSend
 {
-public:
-    UdpSend(const std::string&   recvaddr,
-            const unsigned short recvport,
-            const unsigned char  ttl,
-            const std::string&   ifAddr,
-            PrivateKey*          privateKey);
-
-    ~UdpSend();
-
-    /**
-     * Initializes this instance. Creates a new UDP socket and sets the address
-     * and port from the construction parameters. Connects to the created
-     * socket.
-     */
-    void Init();
-
-    /**
-     * Returns the key used to compute the message authentication code of FMTP
-     * messages.
-     *
-     * @return  Key used to compute the MAC of FMTP messages
-     */
-    const std::string& getMacKey() const noexcept;
-
-    /**
-     * Sends an FMTP message. The FMTP header is sent in network byte-order. The
-     * payload is sent as-is (i.e., it is not converted to network byte-order).
-     *
-     * @param[in] header         FMTP header in *host* byte-order
-     * @param[in] payload        FMTP message payload. Size, in bytes, is given
-     *                           by `header.payloadlen`. Ignored if size is
-     *                           zero.
-     * @throw std::logic_error   `header.payloadlen && payload == nullptr`
-     * @throw std::system_error  I/O failure
-     */
-    void send(const FmtpHeader& header,
-              const void*       payload = nullptr);
-
-private:
     friend class BlackHat;
 
     using IndexType = unsigned long;
@@ -132,23 +93,66 @@ private:
     const unsigned short  recvPort;
     const unsigned short  ttl;
     const std::string     ifAddr;
-    HmacImpl              hmacImpl;
-    FmtpHeader            netHead;       ///< Network byte-order FMTP header
-    struct iovec          iov[3];        ///< Output vector
-    char                  mac[MAC_SIZE]; ///< Message authentication code
-    const unsigned        macLen;        ///< Size of MAC in bytes
+    union {
+        struct {
+            FmtpHeader header;     ///< FMTP header in Network byte-order
+            char       payload[0]; ///< FMTP packet payload
+        };                           ///< Structured send buffer
+        char bytes[MAX_FMTP_PACKET]; ///< Unstructured send buffer
+    }                     packet;        ///< Send buffer
     IndexType             packetIndex;   ///< Index of current, valid packet
+    Mac                   signer;        ///< Message authentication code signer
+    size_t                msgLen;        ///< Non-MAC packet length in bytes
+    size_t                macLen;        ///< MAC length in bytes
     bool                  sendBefore;    ///< Send invalid packet(s) after valid?
     BlackHat              blackHat;      ///< Sends invalid packets
-    PrivateKey*           privateKey;    ///< Private key for encrypting HMAC
 
     /**
-     * Sends the FMTP message referenced by the output vector.
+     * Writes the FMTP message.
      *
      * @param[in] header         FMTP header in host byte-order
      * @throw std::system_error  I/O failure
      */
-    void privateSend(const FmtpHeader& header);
+    void write(const FmtpHeader& header);
+
+public:
+    const int maxPayload; ///< Maximum payload size in bytes
+
+    UdpSend(const std::string&   recvaddr,
+            const unsigned short recvport,
+            const unsigned char  ttl,
+            const std::string&   ifAddr);
+
+    ~UdpSend();
+
+    /**
+     * Initializes this instance. Creates a new UDP socket and sets the address
+     * and port from the construction parameters. Connects to the created
+     * socket.
+     */
+    void Init();
+
+    /**
+     * Returns the key used to compute the message authentication code of FMTP
+     * messages.
+     *
+     * @return  Key used to compute the MAC of FMTP messages
+     */
+    const std::string getMacKey() const noexcept;
+
+    /**
+     * Sends an FMTP message. The FMTP header is sent in network byte-order. The
+     * payload is sent as-is (i.e., it is not converted to network byte-order).
+     *
+     * @param[in] header            FMTP header in *host* byte-order
+     * @param[in] payload           FMTP message payload. Size, in bytes, is
+     *                              given by `header.payloadlen`. Ignored if
+     *                              size is zero.
+     * @throw std::invalid_argument `header.payloadlen && payload == nullptr`
+     * @throw std::system_error     I/O failure
+     */
+    void send(const FmtpHeader& header,
+              const void*       payload = nullptr);
 };
 
 #endif /* FMTP_SENDER_UDPSOCKET_H_ */

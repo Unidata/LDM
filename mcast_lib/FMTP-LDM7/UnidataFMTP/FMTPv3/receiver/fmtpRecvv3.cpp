@@ -430,11 +430,11 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  * @pre                       The multicast socket contains a FMTP BOP packet.
  * @param[in] header          The associated, peeked-at and already-decoded
  *                            FMTP header.
- * @retval    `true`          The BOP message was valid
- * @retval    `false`         The BOP message was not valid
+ * @param[in] payload         `header.payloadlen` bytes of payload
  * @throw std::system_error   if an error occurs while reading the socket.
  */
-bool fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
+void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
+                                 const char*       payload)
 {
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
@@ -450,20 +450,14 @@ bool fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header)
         WriteToLog(debugmsg);
     #endif
 
-    char payload[header.payloadlen];
-    bool isValid = udpRecv.readPayload(header, payload) &&
-            BOPHandler(header, payload);
+    BOPHandler(header, payload);
 
-    if (isValid) {
-        /*
-         * Detects completely missing products by checking the consistency
-         * between the last logged product-index and the currently-received one.
-         */
-        // Also sets future open left product-index for BOP requests
-        requestBopsExcl(header.prodindex);
-    }
-
-    return isValid;
+    /*
+     * Detects completely missing products by checking the consistency
+     * between the last logged product-index and the currently-received one.
+     */
+    // Also sets future open left product-index for BOP requests
+    requestBopsExcl(header.prodindex);
 }
 
 
@@ -503,10 +497,9 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
  * @retval    `true`          FMTP message is valid
  * @retval    `false`         FMTP message is not valid
  */
-bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
+void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                             const char* const payload)
 {
-    bool     isValid = false;
     void*    prodptr = NULL;
     BOPMsg   BOPmsg;
     /*
@@ -539,9 +532,6 @@ bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
             #endif
         }
         else {
-            // At this point, the BOP message appears to be valid
-            isValid = true;
-
             wire = (const char*)uint16p;
             (void)memcpy(BOPmsg.metadata, wire, BOPmsg.metasize);
 
@@ -660,8 +650,6 @@ bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
             #endif
         } // Metadata isn't too big
     } // Payload isn't too small
-
-    return isValid;
 }
 
 
@@ -905,9 +893,9 @@ void fmtpRecvv3::initEOPStatus(const uint32_t prodindex)
  * @throw std::runtime_error   Error occurred while reading the socket
  * @throw std::runtime_error   Out-of-sequence data-packet
  */
-bool fmtpRecvv3::mcastDataHandler(const FmtpHeader& header)
+void fmtpRecvv3::mcastDataHandler(const FmtpHeader& header,
+                                  const char*       payload)
 {
-    bool     isValid;
     uint32_t prodsize = 0;
     void*    prodptr = nullptr;
     {
@@ -927,42 +915,34 @@ bool fmtpRecvv3::mcastDataHandler(const FmtpHeader& header)
      * BOP loss is the only possibility.
      */
     if (prodptr) {
-        isValid = readMcastData(header, prodptr, prodsize);
+        readMcastData(header, payload, prodptr, prodsize);
 
-        if (isValid) {
-            // The FMTP message was valid *and* the data was saved.
+        // The data was saved.
 
-            std::lock_guard<std::mutex> lock(antiracemtx);
+        std::lock_guard<std::mutex> lock(antiracemtx);
 
-            requestAnyMissingData(header.prodindex, header.seqnum);
+        requestAnyMissingData(header.prodindex, header.seqnum);
 
-            /* update most recent seqnum and payloadlen */
-            {
-                std::lock_guard<std::mutex> lock(trackermtx);
-                if (trackermap.count(header.prodindex)) {
-                    trackermap[header.prodindex].seqnum = header.seqnum;
-                    trackermap[header.prodindex].paylen = header.payloadlen;
-                }
+        /* update most recent seqnum and payloadlen */
+        {
+            std::lock_guard<std::mutex> lock(trackermtx);
+            if (trackermap.count(header.prodindex)) {
+                trackermap[header.prodindex].seqnum = header.seqnum;
+                trackermap[header.prodindex].paylen = header.payloadlen;
             }
+        }
 
-            openLeftIndex.set(header.prodindex);
-        } // Valid FMTP message and data was saved
+        openLeftIndex.set(header.prodindex);
     } // Product information exists
     else {
-    	// The data won't be saved though the FMTP message might be valid
-        isValid = udpRecv.discardPayload(header);
-
-        if (isValid)
-            // Also sets future open left index for BOP requests
-            requestBopsIncl(header.prodindex);
+        // Also sets future open left index for BOP requests
+        requestBopsIncl(header.prodindex);
     } // Product information doesn't exist
 
 #    ifdef MEASURE
         if (isValid)
             measure->setMcastClock(header.prodindex);
 #    endif
-
-    return isValid;
 }
 
 
@@ -983,7 +963,8 @@ void fmtpRecvv3::mcastHandler()
 
     while(1) {
         FmtpHeader header;
-        udpRecv.peekHeader(header); // Temporarily enables cancellation
+        char*      payload;
+        udpRecv.getPacket(header, &payload); // Temporarily enables cancellation
 
         #if 1
             log_debug("Received via multicast: flags=%#x, prodindex=%s, "
@@ -995,10 +976,10 @@ void fmtpRecvv3::mcastHandler()
         #endif
 
         if (header.flags == FMTP_BOP) {
-            mcastBOPHandler(header);
+            mcastBOPHandler(header, payload);
         }
         else if (header.flags == FMTP_MEM_DATA) {
-            mcastDataHandler(header);
+            mcastDataHandler(header, payload);
         }
         else if (header.flags == FMTP_EOP) {
             mcastEOPHandler(header);
@@ -1006,7 +987,6 @@ void fmtpRecvv3::mcastHandler()
         else {
             log_warning("Ignoring invalid message type: flags=%#x",
                     header.flags);
-            (void)udpRecv.discardPayload(header);
         }
     } // Indefinite loop
 }
@@ -1016,76 +996,67 @@ void fmtpRecvv3::mcastHandler()
  * Handles a received EOP on the multicast thread.
  *
  * @param[in] FmtpHeader       Reference to the received FMTP packet header
- * @retval    `true`           The message was valid
- * @retval    `false`          The message was not valid
  * @throws std::out_of_range   The notifier doesn't know about
  *                             `header.prodindex`.
  * @throws std::runtime_error  Receiving application error.
  * @throws std::runtime_error  Product-index gap is impossibly large
  */
-bool fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
+void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
 {
-    // Payload is irrelevant in EOP messages
-    bool isValid = udpRecv.discardPayload(header);
+    #ifdef MEASURE
+        measure->setMcastClock(header.prodindex);
+    #endif
 
-    if (isValid) {
-        #ifdef MEASURE
-            measure->setMcastClock(header.prodindex);
+    #ifdef MODBASE
+        uint32_t tmpidx = header.prodindex % MODBASE;
+    #else
+        uint32_t tmpidx = header.prodindex;
+    #endif
+
+    #ifdef DEBUG2
+        std::string debugmsg = "[MCAST EOP] Product #" +
+                std::to_string(tmpidx);
+        debugmsg += ": EOP is received";
+        std::cout << debugmsg << std::endl;
+        WriteToLog(debugmsg);
+    #endif
+
+    bool hasBOP = false;
+    {
+        std::lock_guard<std::mutex> lock(trackermtx);
+        if (trackermap.count(header.prodindex))
+            hasBOP = true;
+    }
+
+    if (hasBOP) {
+        setEOPStatus(header.prodindex);
+        timerWake.notify_all();
+        EOPHandler(header);
+        openLeftIndex.set(header.prodindex);
+    }
+    else {
+        // Also sets future open left index for BOP requests
+        requestBopsIncl(header.prodindex);
+        #if 0
+            /**
+             * `lastMcastProd` is only updated if no corresponding BOP is
+             * found. Because if we assume packets arriving in sequence,
+             * then the index would not change upon EOP arrival. On the
+             * other hand, if there do exist out-of-sequence packets,
+             * updating `lastMcastProd` could decrease the value. When
+             * following packets arrive, the receiver may think a BOP is
+             * missed. But if no BOP is found, this EOP is the first packet
+             * received with the index, `lastMcastProd` has to be updated to
+             * avoid duplicate BOP request since retxBOPHandler does not
+             * update `lastMcastProd`. Whether to update lastprodidx after
+             * requestMissingBops() returns depends on the return value. A
+             * return value of 2 suggests discarding the out-of-sequence
+             * packet.
+             */
+            if (state == 1)
+                mcastProdId = header.prodindex;
         #endif
-
-        #ifdef MODBASE
-            uint32_t tmpidx = header.prodindex % MODBASE;
-        #else
-            uint32_t tmpidx = header.prodindex;
-        #endif
-
-        #ifdef DEBUG2
-            std::string debugmsg = "[MCAST EOP] Product #" +
-                    std::to_string(tmpidx);
-            debugmsg += ": EOP is received";
-            std::cout << debugmsg << std::endl;
-            WriteToLog(debugmsg);
-        #endif
-
-        bool hasBOP = false;
-        {
-            std::lock_guard<std::mutex> lock(trackermtx);
-            if (trackermap.count(header.prodindex))
-                hasBOP = true;
-        }
-
-        if (hasBOP) {
-            setEOPStatus(header.prodindex);
-            timerWake.notify_all();
-            EOPHandler(header);
-            openLeftIndex.set(header.prodindex);
-        }
-        else {
-            // Also sets future open left index for BOP requests
-            requestBopsIncl(header.prodindex);
-            #if 0
-                /**
-                 * `lastMcastProd` is only updated if no corresponding BOP is
-                 * found. Because if we assume packets arriving in sequence,
-                 * then the index would not change upon EOP arrival. On the
-                 * other hand, if there do exist out-of-sequence packets,
-                 * updating `lastMcastProd` could decrease the value. When
-                 * following packets arrive, the receiver may think a BOP is
-                 * missed. But if no BOP is found, this EOP is the first packet
-                 * received with the index, `lastMcastProd` has to be updated to
-                 * avoid duplicate BOP request since retxBOPHandler does not
-                 * update `lastMcastProd`. Whether to update lastprodidx after
-                 * requestMissingBops() returns depends on the return value. A
-                 * return value of 2 suggests discarding the out-of-sequence
-                 * packet.
-                 */
-                if (state == 1)
-                    mcastProdId = header.prodindex;
-            #endif
-        } // BOP message wasn't received
-    } // FMTP message is valid
-
-    return isValid;
+    } // BOP message wasn't received
 }
 
 
@@ -1587,6 +1558,7 @@ void fmtpRecvv3::retxEOPHandler(const FmtpHeader& header)
  *
  * @pre                       The socket contains a FMTP data-packet.
  * @param[in] header          The associated, peeked-at, and decoded header.
+ * @param[in] payload         `header.payloadlen` bytes of payload
  * @param[in] prodptr         Destination for data
  * @param[in] prodsize        Size of data in bytes
  * @retval    `true`          FMTP message was valid and data was saved
@@ -1594,22 +1566,22 @@ void fmtpRecvv3::retxEOPHandler(const FmtpHeader& header)
  * @throw std::system_error   if an error occurs while reading the multicast
  *                            socket.
  */
-bool fmtpRecvv3::readMcastData(const FmtpHeader& header,
+void fmtpRecvv3::readMcastData(const FmtpHeader& header,
+                               const char*       payload,
                                void* const       prodptr,
                                const uint32_t    prodsize)
 {
     assert(prodptr);
 
-    bool isValid = false;
-
     if (header.seqnum + header.payloadlen > prodsize) {
         #if !defined(NDEBUG) && defined(LDM_LOGGING)
             log_warning("Data segment extends beyond product. Discarding.");
         #endif
-        udpRecv.discardPayload(header);
     }
-    else if (udpRecv.readPayload(header,
-            static_cast<char*>(prodptr)+header.seqnum)) {
+    else {
+        ::memcpy(static_cast<char*>(prodptr)+header.seqnum, payload,
+                header.payloadlen);
+
         #ifdef MODBASE
             uint32_t tmpidx = header.prodindex % MODBASE;
         #else
@@ -1634,11 +1606,7 @@ bool fmtpRecvv3::readMcastData(const FmtpHeader& header,
          * will be ACKed.
          */
         pSegMNG->set(header.prodindex, header.seqnum, header.payloadlen);
-
-        isValid = true;
     } // Data-segment size is not too large and payload length is correct
-
-    return isValid;
 }
 
 

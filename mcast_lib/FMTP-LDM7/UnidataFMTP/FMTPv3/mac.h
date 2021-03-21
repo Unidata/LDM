@@ -9,6 +9,10 @@
 #ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_
 
+#ifndef __cplusplus
+#   define FMTP_MAC_ENV_NAME "FMTP_MAC_LEVEL"
+#else
+
 #include <string>
 #include <memory>
 
@@ -26,7 +30,7 @@ private:
 
 public:
     static const char* ENV_NAME; ///< Name of controlling environment variable
-    int maxLen;                  ///< Maximum MAC length in bytes
+    int maxLen;                  ///< Maximum, instance-specific MAC length in bytes
 
     /**
      * Default constructs. This constructor is appropriate for signers of
@@ -42,9 +46,9 @@ public:
      * @throw std::runtime_error  Failure
      * @see getKey();
      */
-    Mac(const std::string& pubKey);
+    Mac(const std::string& key);
 
-    Mac(Mac& Mac) =delete;
+    Mac(const Mac& Mac) =delete;
 
     Mac(Mac&& Mac) =delete;
 
@@ -52,7 +56,7 @@ public:
 
     Mac& operator=(const Mac& Mac) =delete;
 
-    Mac& operator=(const Mac&& Mac) =delete;
+    Mac& operator=(Mac&& Mac) =default;
 
     /**
      * Returns the MAC key in a form suitable for construction by
@@ -116,5 +120,6 @@ public:
     bool verify(const std::string& msg,
                 const std::string& mac) const;
 };
+#endif
 
 #endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_ */

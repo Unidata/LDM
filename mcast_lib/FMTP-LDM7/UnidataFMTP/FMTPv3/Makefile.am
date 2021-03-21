@@ -10,8 +10,6 @@ noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= fmtpBase.cpp     fmtpBase.h \
 			  TcpBase.cpp      TcpBase.h \
 			  SslHelp.cpp      SslHelp.h \
-			  SessKeyCrypt.cpp SessKeyCrypt.h \
-			  HmacImpl.cpp     HmacImpl.h \
 			  PubKeyCrypt.cpp  PubKeyCrypt.h \
 			  Ed25519.cpp      Ed25519.h \
 			  mac.cpp          mac.h

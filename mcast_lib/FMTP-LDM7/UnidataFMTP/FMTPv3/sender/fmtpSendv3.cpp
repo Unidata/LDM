@@ -111,33 +111,6 @@ inline static void logMsg(const std::exception& ex)
 }
 
 /**
- * Returns a pointer to a private key object or the null pointer depending on
- * whether the relevant environment variable is appropriately set.
- *
- * @retval `nullptr`  Relevant environment variable is not appropriately set
- * @return            Private key object
- */
-PrivateKey* fmtpSendv3::getPrivateKey()
-{
-    static PrivateKey* privateKey;
-
-    if (privateKey == nullptr) {
-        const char* envVar = ::getenv("FMTP_ENCRYPTED_HMAC");
-
-        if ((envVar != nullptr) && (
-                (::strcasecmp(envVar, "1") == 0) ||
-                (::strcasecmp(envVar, "true") == 0) ||
-                (::strcasecmp(envVar, "yes") == 0) ||
-                (::strcasecmp(envVar, "enable") == 0) ||
-                (::strcasecmp(envVar, "enabled") == 0))) {
-            privateKey = new PrivateKey();
-        }
-    }
-
-    return privateKey;
-}
-
-/**
  * Constructs a sender instance with prodIndex specified and initialized by
  * receiving applications. FMTP sender will start from this given prodindex.
  * Besides, timeoutratio for all the products will be passed in, which means
@@ -167,9 +140,8 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
-    privateKey{getPrivateKey()},
     prodIndex(initProdIndex),
-    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr, privateKey)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     notifier(notifier),
@@ -205,7 +177,6 @@ fmtpSendv3::~fmtpSendv3()
     delete udpsend;
     delete tcpsend;
     delete sendMeta;
-    delete privateKey;
 }
 
 
@@ -461,18 +432,13 @@ void fmtpSendv3::sendMacKey(const int sd)
                 std::to_string(macKey.size()).c_str());
 #   endif
     std::string cipherKey;
-    PublicKey(rcvrPubKey).encrypt(udpsend->getMacKey(), cipherKey);
+    PublicKey(rcvrPubKey).encrypt(macKey, cipherKey);
 
 #   ifdef LDM_LOGGING
         log_debug("Sending %s-byte encrypted MAC key",
                 std::to_string(cipherKey.size()).c_str());
 #   endif
     tcpsend->write(sd, cipherKey);
-}
-
-
-void fmtpSendv3::sendPubKey(const int sd)
-{
 }
 
 
@@ -583,9 +549,6 @@ void* fmtpSendv3::coordinator(void* ptr)
             sendptr->tcpsend->updatePathMTU(newtcpsockfd);
 
             sendptr->sendMacKey(newtcpsockfd);
-
-            if (sendptr->privateKey)
-                sendptr->sendPubKey(newtcpsockfd);
 
             int cancelState;
             ::pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
@@ -1311,8 +1274,8 @@ void fmtpSendv3::sendData(void* data, uint32_t dataSize)
 
     /* check if there is more data to send */
     while (datasize > 0) {
-        uint16_t payloadlen = datasize < MAX_FMTP_PAYLOAD ?
-                              datasize : MAX_FMTP_PAYLOAD;
+        uint16_t payloadlen = datasize < udpsend->maxPayload ?
+                              datasize : udpsend->maxPayload;
 
         header.seqnum     = seqNum;
         header.payloadlen = payloadlen;

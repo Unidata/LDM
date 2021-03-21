@@ -204,7 +204,7 @@ private:
      * @retval    `false`         FMTP message is not valid
      * @throw std::runtime_error  if the payload is too small.
      */
-    bool BOPHandler(const FmtpHeader& header,
+    void BOPHandler(const FmtpHeader& header,
                     const char* const payload);
     void checkPayloadLen(const FmtpHeader& header, const size_t nbytes);
     void clearEOPStatus(const uint32_t prodindex);
@@ -239,12 +239,12 @@ private:
      * @pre                           The multicast socket contains a FMTP BOP
      *                                packet.
      * @param[in] header              The associated, already-decoded FMTP header.
-     * @retval    `true`              The BOP message was valid
-     * @retval    `false`             The BOP message was not valid
+     * @param[in] payload             FMTP packet payload of `header.payloadlen`
+     *                                bytes
      * @throw     std::system_error   if an error occurs while reading the socket.
      * @throw     std::runtime_error  if the packet is invalid.
      */
-    bool mcastBOPHandler(const FmtpHeader& header);
+    void mcastBOPHandler(const FmtpHeader& header, const char* payload);
     /**
      * Indicates if a product-index equals the index of the last multicast
      * product.
@@ -279,13 +279,13 @@ private:
      * Handles a multicast data-packet.
      *
      * @param[in] header           Peeked-at FMTP header
-     * @retval    `true`           The message was valid
-     * @retval    `false`          The message was not valid
+     * @param[in] payload          `header.payloadlen` bytes of payload
      * @throw std::runtime_error   Error occurred while reading the socket
      */
-    bool mcastDataHandler(const FmtpHeader& header);
+    void mcastDataHandler(const FmtpHeader& header,
+                          const char*       payload);
     void mcastHandler();
-    bool mcastEOPHandler(const FmtpHeader& header);
+    void mcastEOPHandler(const FmtpHeader& header);
     /**
      * Pushes a request for a data-packet onto the retransmission-request queue.
      *
@@ -325,14 +325,14 @@ private:
      *
      * @pre                       The socket contains a FMTP data-packet.
      * @param[in] header          The associated, peeked-at and decoded header.
+     * @param[in] payload         `header.payloadlen` bytes of payload
      * @param[in] prodptr         Destination for data
      * @param[in] prodsize        Size of data in bytes
-     * @retval    `true`          FMTP message is valid and data was saved
-     * @retval    `false`         Failure message is not valid
      * @throw std::system_error   if an error occurs while reading the multicast
      *                            socket.
      */
-    bool readMcastData(const FmtpHeader& header,
+    void readMcastData(const FmtpHeader& header,
+                       const char*       payload,
                        void* const       prodptr,
                        const uint32_t    prodsize);
     /**

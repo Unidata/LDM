@@ -32,6 +32,7 @@
 
 #include <cassert>
 #include <cerrno>
+#include <cstring>
 #include <openssl/rand.h>
 #include <stdexcept>
 
@@ -98,9 +99,26 @@ public:
 class NoMac final : public Mac::Impl
 {
 public:
+    /**
+     * Constructs.
+     */
     NoMac()
         : Impl{0}
     {}
+
+    /**
+     * Constructs.
+     *
+     * @param[in] key                MAC key from `getKey()`
+     * @throw std::invalid_argument  MAC key is not the empty string
+     */
+    NoMac(const std::string& key)
+        : Impl(0)
+    {
+        if (key.size())
+            throw std::invalid_argument("MAC key isn't empty string: \"" +
+                    key + "\"");
+    }
 
     /**
      * Returns the empty string.
@@ -134,13 +152,13 @@ public:
      * @param[in]  msgLen         Length of message in bytes
      * @param[in]  mac            MAC to be verified
      * @param[in]  macLen         Length of MAC in bytes
-     * @return     true           Always
+     * @return     true           Iff MAC length is zero
      */
     bool verify(const char*  msg,
                 const size_t msgLen,
                 const char*  mac,
                 const size_t macLen) override {
-        return true;
+        return macLen == 0;
     }
 };
 
@@ -274,12 +292,18 @@ public:
                 const size_t msgLen,
                 const char*  mac,
                 const size_t macLen) override {
+        //(void)EVP_MD_CTX_reset(mdCtx);
         if (EVP_DigestSignInit(mdCtx, NULL, EVP_sha256(), NULL, pKey) != 1)
             SslHelp::throwOpenSslError("EVP_DigestSignInit() failure");
 
-        return EVP_DigestVerify(mdCtx,
-                reinterpret_cast<const unsigned char*>(mac), macLen,
-                reinterpret_cast<const unsigned char*>(msg), msgLen) == 1;
+        unsigned char compMac[EVP_MAX_MD_SIZE];
+        size_t        compMacLen = EVP_MAX_MD_SIZE;
+        if (!EVP_DigestSign(mdCtx, compMac, &compMacLen,
+                reinterpret_cast<const unsigned char*>(msg), msgLen))
+            SslHelp::throwOpenSslError("EVP_DigestSign() failure");
+
+        return (compMacLen == macLen) &&
+                (::memcmp(compMac, mac, macLen) == 0);
     }
 };
 
@@ -355,10 +379,9 @@ public:
 
 const char* Mac::ENV_NAME = "FMTP_MAC_LEVEL";
 
-Mac::Mac()
-    : pImpl{}
+static int getMacLevel()
 {
-    const char*       envStr = ::getenv(ENV_NAME);
+    const char* envStr = ::getenv(Mac::ENV_NAME);
     if (envStr == nullptr)
         envStr = "0";
 
@@ -366,11 +389,18 @@ Mac::Mac()
     char* end;
     auto level = ::strtol(envStr, &end, 0);
 
-    if (errno || *end)
-        throw std::runtime_error(std::string("Environment variable ") + ENV_NAME
-                + " has an invalid value: " + envStr);
+    if (errno || *end || level < 0 || level > 2)
+        throw std::runtime_error(std::string("Environment variable ") +
+                Mac::ENV_NAME + " has an invalid value: " + envStr);
 
-    switch (level) {
+    return level;
+}
+
+Mac::Mac()
+    : pImpl{}
+{
+    switch (getMacLevel()) {
+    default:
     case 0:
         pImpl = Pimpl{new NoMac()};
         break;
@@ -380,9 +410,25 @@ Mac::Mac()
     case 2:
         pImpl = Pimpl{new Dsa()};
         break;
+    }
+
+    maxLen = pImpl->maxLen;
+}
+
+Mac::Mac(const std::string& key)
+    : pImpl{}
+{
+    switch (getMacLevel()) {
     default:
-        throw std::runtime_error(std::string("Environment variable ") + ENV_NAME
-                + " has an invalid value: \"" + envStr + "\"");
+    case 0:
+        pImpl = Pimpl{new NoMac(key)};
+        break;
+    case 1:
+        pImpl = Pimpl{new Hmac(key)};
+        break;
+    case 2:
+        pImpl = Pimpl{new Dsa(key)};
+        break;
     }
 
     maxLen = pImpl->maxLen;

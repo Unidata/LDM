@@ -73,14 +73,13 @@ typedef uint32_t StartTime[3];
 const int MTU                 = MIN_MTU;
 const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
 const int MAC_SIZE            = 32; ///<  Size of message authentication code
-// Maximum FmtpHeader.payloadlen:
-const int MAX_FMTP_PAYLOAD    = (MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_SIZE);
-// Maximum BOPMsg.metadata length in bytes.
+// Maximum FmtpHeader.payloadlen. Will be less if packets include MAC
+const int MAX_FMTP_PAYLOAD    = (MAX_FMTP_PACKET - FMTP_HEADER_LEN);
+// Maximum BOPMsg.metadata length in bytes. Will be less if packets include MAC
 const int MAX_BOP_METADATA       = (MAX_FMTP_PAYLOAD
 		- sizeof(StartTime)
         - sizeof(uint32_t)   // BOPMsg.prodsize
 		- sizeof(uint16_t)); // BOPMsg.metasize
-
 
 /**
  * structure of Begin-Of-Product message

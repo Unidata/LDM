@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      UdpSend.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 23, 2014
  *
@@ -87,10 +88,10 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
 
     indicator += invalidRatio;
     if (indicator >= 1) {
-        udpSend.mac[0] ^= 1; // Flip one bit in MAC
+        udpSend.packet.bytes[udpSend.msgLen] ^= 1; // Flip one bit in MAC
         for (; indicator >= 1; indicator -= 1)
-            udpSend.privateSend(header);
-        udpSend.mac[0] ^= 1; // Restore MAC bit
+            udpSend.write(header);
+        udpSend.packet.bytes[udpSend.msgLen] ^= 1; // Restore MAC bit
     }
 }
 
@@ -103,35 +104,25 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
  * @param[in] recvport     Port number of the receiver.
  * @param[in] ttl          Time to live.
  * @param[in] ifAddr       IP of interface for multicast egress.
- * @param[in] privateKey   Private key for encrypting HMAC or `nullptr`, in
- *                         which case no encrypting is done. Caller must not
- *                         free while this instance might use it.
  */
 UdpSend::UdpSend(const std::string&   recvaddr,
                  const unsigned short recvport,
                  const unsigned char  ttl,
-                 const std::string&   ifAddr,
-                 PrivateKey* const    privateKey)
+                 const std::string&   ifAddr)
     : recvAddr(recvaddr),
       recvPort(recvport),
       ttl(ttl),
       ifAddr(ifAddr),
       sock_fd(-1),
       recv_addr(),
-      hmacImpl(nullptr),
-      netHead{},
-      iov{},
-      macLen{HmacImpl::isDisabled() ? 0 : static_cast<unsigned>(sizeof(mac))},
       packetIndex(0),
+      signer{},
+      msgLen{0},
+      macLen{0},
       sendBefore(false),
       blackHat(*this),
-      privateKey{privateKey}
-{
-    iov[0].iov_base = &netHead;
-    iov[0].iov_len  = FMTP_HEADER_LEN;
-    iov[2].iov_base = mac;
-    iov[2].iov_len  = macLen;
-}
+      maxPayload{MAX_FMTP_PACKET - FMTP_HEADER_LEN - signer.maxLen}
+{}
 
 
 /**
@@ -208,63 +199,58 @@ void UdpSend::Init()
 
 }
 
-const std::string& UdpSend::getMacKey() const noexcept
+const std::string UdpSend::getMacKey() const noexcept
 {
-    return hmacImpl.getKey();
+    return signer.getKey();
 }
 
-void UdpSend::privateSend(const FmtpHeader& header)
+void UdpSend::write(const FmtpHeader& header)
 {
     #ifdef LDM_LOGGING
         log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
-                "payloadlen=%s, payload=%p, mac=%s", header.flags,
+                "payloadlen=%s, macLen=%zu", header.flags,
                 std::to_string(header.prodindex).data(),
                 std::to_string(header.seqnum).data(),
                 std::to_string(header.payloadlen).data(),
-                iov[1].iov_base,
-                HmacImpl::to_string(mac).c_str());
+                macLen);
     #endif
 
-    const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
-    if (nbytes != sizeof(netHead) + header.payloadlen + macLen)
+    const size_t totLen = msgLen + macLen;
+    const auto   nbytes = ::write(sock_fd, packet.bytes, totLen);
+    if (nbytes != totLen)
     	throw std::system_error(errno, std::system_category(),
-                "UdpSend::send(): writev() failure: nbytes=" +
+                "UdpSend::send(): write() failure: nbytes=" +
                 std::to_string(nbytes));
-
 }
 
 void UdpSend::send(const FmtpHeader& header,
                    const void*       payload)
 {
     if (header.payloadlen && payload == nullptr)
-        throw std::logic_error("Inconsistent header and payload");
+        throw std::invalid_argument(
+                "Payload length is positive but payload is null");
+    if (header.payloadlen > maxPayload)
+        throw std::invalid_argument("FMTP payload is too large: nbytes=" +
+                std::to_string(header.payloadlen));
 
-    if (macLen) {
-        hmacImpl.getMac(header, payload, mac);
-        if (privateKey) {
-            char cipherMac[macLen];
-            privateKey->encrypt(mac, macLen, cipherMac, macLen);
-            ::memcpy(mac, cipherMac, macLen);
-        }
-    }
+    packet.header.flags      = htons(header.flags);
+    packet.header.payloadlen = htons(header.payloadlen);
+    packet.header.prodindex  = htonl(header.prodindex);
+    packet.header.seqnum     = htonl(header.seqnum);
 
-    netHead.flags      = htons(header.flags);
-    netHead.payloadlen = htons(header.payloadlen);
-    netHead.prodindex  = htonl(header.prodindex);
-    netHead.seqnum     = htonl(header.seqnum);
+    if (payload)
+        ::memcpy(packet.payload, payload, header.payloadlen);
 
-    iov[1].iov_base = const_cast<void*>(payload);
-    iov[1].iov_len  = header.payloadlen;
+    msgLen = FMTP_HEADER_LEN + header.payloadlen;
+    macLen = signer.getMac(packet.bytes, msgLen, packet.bytes+msgLen,
+            signer.maxLen);
 
-    if (sendBefore) {
+    if (macLen && sendBefore)
         blackHat.maybeSend(header);
-        privateSend(header);
-    }
-    else {
-        privateSend(header);
+    write(header);
+    if (macLen && !sendBefore)
         blackHat.maybeSend(header);
-    }
+
     sendBefore = !sendBefore;
-
     ++packetIndex;
 }

@@ -47,6 +47,36 @@ TEST_F(MacTest, NoMac)
     ASSERT_TRUE(verifier.verify(msgStr, mac));
 }
 
+// Tests HMAC
+TEST_F(MacTest, HMAC)
+{
+    ::setenv(Mac::ENV_NAME, "1", 1);
+    Mac signer{};
+    Mac verifier{signer.getKey()};
+    for (int i = 0; i < 3; ++i) {
+        msgStr[0] = i;
+        auto mac = signer.getMac(msgStr);
+        ASSERT_EQ(32, mac.size());
+        if (i != 1) // Tests non-contiguity
+            ASSERT_TRUE(verifier.verify(msgStr, mac));
+    }
+}
+
+// Tests digital signature algorithm
+TEST_F(MacTest, DSA)
+{
+    ::setenv(Mac::ENV_NAME, "2", 1);
+    Mac signer{};
+    Mac verifier{signer.getKey()};
+    for (int i = 0; i < 3; ++i) {
+        msgStr[0] = i;
+        auto mac = signer.getMac(msgStr);
+        ASSERT_EQ(64, mac.size());
+        if (i != 1) // Tests non-contiguity
+            ASSERT_TRUE(verifier.verify(msgStr, mac));
+    }
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
