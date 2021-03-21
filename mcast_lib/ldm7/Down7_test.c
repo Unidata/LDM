@@ -539,6 +539,7 @@ int main(
         log_syserr("Couldn't initialize logging module");
         exit(1);
     }
+    log_notice("Starting up");
     //log_set_level(LOG_LEVEL_DEBUG);
 
     opterr = 1; // Prevent getopt(3) from printing error messages

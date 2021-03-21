@@ -19,6 +19,7 @@
 #include "LdmConfFile.h"
 #include "ldmprint.h"
 #include "log.h"
+#include "mac.h"
 #include "mcast_info.h"
 #include "mldm_sender_map.h"
 #include "MldmRcvrMemory.h"
@@ -545,7 +546,7 @@ test_up7(
 }
 
 static void
-test_up7Down7(
+run_up7Down7(
         void)
 {
     Sender   sender;
@@ -596,6 +597,27 @@ test_up7Down7(
     CU_ASSERT_EQUAL(status, 0);
 }
 
+static void
+test_up7Down7_0(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "0", 1);
+    run_up7Down7();
+}
+
+static void
+test_up7Down7_1(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "1", 1);
+    run_up7Down7();
+}
+
+static void
+test_up7Down7_2(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "2", 1);
+    run_up7Down7();
+}
+
 int main(
         const int    argc,
         char* const* argv)
@@ -606,7 +628,7 @@ int main(
         log_syserr("Couldn't initialize logging module");
         exit(1);
     }
-    log_set_level(LOG_LEVEL_INFO);
+    //log_set_level(LOG_LEVEL_INFO);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
@@ -640,7 +662,9 @@ int main(
 
         if (NULL != testSuite) {
             if (    CU_ADD_TEST(testSuite, test_up7) &&
-                    CU_ADD_TEST(testSuite, test_up7Down7)
+                    CU_ADD_TEST(testSuite, test_up7Down7_0) &&
+                    CU_ADD_TEST(testSuite, test_up7Down7_1) &&
+                    CU_ADD_TEST(testSuite, test_up7Down7_2)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();
