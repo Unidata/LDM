@@ -32,7 +32,7 @@
 #ifdef LDM_LOGGING
     #include "log.h"
 #endif
-#include "SessKeyCrypt.h"
+#include "PubKeyCrypt.h"
 
 #include <arpa/inet.h>
 #include <cassert>

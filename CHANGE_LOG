@@ -1,3 +1,8 @@
+6.13.14.21
+    Multicast:
+        * Replaced "SessKeyCrypt" with "PubKeyCrypt"
+        * Removed "HmacImpl.h" references
+
 6.13.14.20      2021-03-21T13:20:55-0600
     Multicast:
         * Created three levels of message authentication of multicast packets

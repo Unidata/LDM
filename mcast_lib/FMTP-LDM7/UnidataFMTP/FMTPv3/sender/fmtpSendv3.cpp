@@ -30,7 +30,6 @@
 
 
 #include "fmtpSendv3.h"
-#include "SessKeyCrypt.h"
 #include "SockToIndexMap.h"
 #ifdef LDM_LOGGING
     #include "log.h"

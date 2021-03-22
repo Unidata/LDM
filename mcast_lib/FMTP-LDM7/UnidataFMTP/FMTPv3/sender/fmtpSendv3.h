@@ -41,7 +41,6 @@
 #include <set>
 #include <utility>
 
-#include "HmacImpl.h"
 #include "ProdIndexDelayQueue.h"
 #include "RateShaper/RateShaper.h"
 #include "RetxThreads.h"
