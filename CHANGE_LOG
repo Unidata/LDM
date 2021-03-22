@@ -2,6 +2,7 @@
     Multicast:
         * Replaced "SessKeyCrypt" with "PubKeyCrypt"
         * Removed "HmacImpl.h" references
+        * Improved NoMac::verify() documentation
 
 6.13.14.20      2021-03-21T13:20:55-0600
     Multicast:

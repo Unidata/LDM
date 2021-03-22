@@ -152,7 +152,8 @@ public:
      * @param[in]  msgLen         Length of message in bytes
      * @param[in]  mac            MAC to be verified
      * @param[in]  macLen         Length of MAC in bytes
-     * @return     true           Iff MAC length is zero
+     * @return     true           MAC length is zero
+     * @return     false          MAC length is not zero
      */
     bool verify(const char*  msg,
                 const size_t msgLen,
