@@ -37,7 +37,7 @@ sites+=(co)
 #sites+=(ut)
 sites+=(va)
 #sites+=(wa)
-#sites+=(wi)
+sites+=(wi)
 
 for site in ${sites[*]}; do
     ./deploy ${deployOpts[$site]} $versOpt $site >&$site.deplog &
