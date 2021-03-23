@@ -9,7 +9,7 @@
 #ifndef FMTPV3_RECEIVER_UDPRECV_H_
 #define FMTPV3_RECEIVER_UDPRECV_H_
 
-#include "fmtpBase.h"
+#include "FmtpBase.h"
 #include "mac.h"
 
 #include <cstddef>
@@ -18,9 +18,10 @@
 
 class UdpRecv
 {
-    int        sd;       ///< Socket descriptor
-    FmtpPacket packet;   ///< Buffer for FMTP packet
-    Mac        verifier; ///< Verifier of message authentication code
+    int            sd;         ///< Socket descriptor
+    FmtpPacket     packet;     ///< Buffer for FMTP packet
+    Mac            verifier;   ///< Verifier of message authentication code
+    const unsigned MIN_PACKET; ///< Minimum packet size in bytes
 
     public:
     /**

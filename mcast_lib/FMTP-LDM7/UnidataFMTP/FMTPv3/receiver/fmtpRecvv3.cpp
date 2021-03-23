@@ -159,6 +159,7 @@ fmtpRecvv3::fmtpRecvv3(
     RecvProxy*           notifier,
     const std::string    ifAddr)
 :
+    fmtpBase{},
     tcpAddr(tcpAddr),
     tcpPort(tcpPort),
     mcastAddr(mcastAddr),
@@ -1654,8 +1655,8 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
         /* merged requests, multiple missing blocks in one request */
         // pushMissingDataReq(prodindex, seqnum, mostRecent - seqnum);
 
-        for (; seqnum < mostRecent; seqnum += MAX_FMTP_PAYLOAD) {
-            pushDataReq(prodindex, seqnum, MAX_FMTP_PAYLOAD);
+        for (; seqnum < mostRecent; seqnum += fmtpBase.MAX_PAYLOAD) {
+            pushDataReq(prodindex, seqnum, fmtpBase.MAX_PAYLOAD);
 
             #ifdef MODBASE
                 uint32_t tmpidx = prodindex % MODBASE;

@@ -139,6 +139,7 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
                        const uint32_t              initProdIndex,
                        const float                 tsnd)
 :
+    fmtpBase{},
     prodIndex(initProdIndex),
     udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
@@ -296,7 +297,7 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
             throw std::runtime_error(
                     "fmtpSendv3::sendProduct() dataSize out of range");
         if (metadata) {
-            if (MAX_BOP_METADATA < metaSize)
+            if (fmtpBase.MAX_BOP_METADATA < metaSize)
                 throw std::runtime_error(
                         "fmtpSendv3::SendProduct(): metaSize too large");
         }
@@ -503,7 +504,6 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const                  data,
 
     return senderProdMeta;
 }
-
 
 /**
  * The sender side coordinator thread. Listen for incoming TCP connection
@@ -892,8 +892,8 @@ void fmtpSendv3::retransmit(
         /**
          * aligns starting seqnum to the multiple-of-MTU boundary.
          */
-        start = (start/MAX_FMTP_PAYLOAD) * MAX_FMTP_PAYLOAD;
-        uint16_t payLen = MAX_FMTP_PAYLOAD;
+        start = (start/fmtpBase.MAX_PAYLOAD) * fmtpBase.MAX_PAYLOAD;
+        uint16_t payLen = fmtpBase.MAX_PAYLOAD;
 
         /**
          * Support sending multiple blocks.
@@ -904,7 +904,7 @@ void fmtpSendv3::retransmit(
                 /** only last block might be truncated */
                 payLen = nbytes;
             } else {
-                payLen = MAX_FMTP_PAYLOAD;
+                payLen = fmtpBase.MAX_PAYLOAD;
             }
 
             sendheader.seqnum     = htonl(start);
@@ -971,7 +971,8 @@ void fmtpSendv3::retransBOP(
     /* Set the FMTP packet header. */
     sendheader.prodindex  = htonl(recvheader->prodindex);
     sendheader.seqnum     = 0;
-    const auto payloadlen = retxMeta->metaSize + (MAX_FMTP_PAYLOAD - MAX_BOP_METADATA);
+    const auto payloadlen = retxMeta->metaSize +
+            (fmtpBase.MAX_PAYLOAD - fmtpBase.MAX_BOP_METADATA);
     sendheader.payloadlen = htons(payloadlen);
     sendheader.flags      = htons(FMTP_RETX_BOP);
 
@@ -1088,7 +1089,7 @@ void fmtpSendv3::SendBOPMessage(uint32_t               prodSize,
                                 const uint16_t         metaSize,
                                 const struct timespec& startTime)
 {
-    if (metadata && metaSize > MAX_BOP_METADATA)
+    if (metadata && metaSize > fmtpBase.MAX_BOP_METADATA)
         throw std::invalid_argument("Metadata is too large: " +
                 std::to_string(metaSize) + " bytes");
     if (metaSize && metadata == NULL)
@@ -1099,7 +1100,7 @@ void fmtpSendv3::SendBOPMessage(uint32_t               prodSize,
     FmtpHeader header;
     header.prodindex  = prodIndex;
     header.seqnum     = 0;
-    header.payloadlen = metaSize + MAX_FMTP_PAYLOAD - MAX_BOP_METADATA;
+    header.payloadlen = metaSize + fmtpBase.MAX_PAYLOAD - fmtpBase.MAX_BOP_METADATA;
     header.flags      = FMTP_BOP;
 
     // BOPMsg in network byte-order (UdpSend doesn't convert payload):

@@ -23,6 +23,7 @@ UdpRecv::UdpRecv()
     : sd{-1}
     , packet{}
     , verifier{}
+    , MIN_PACKET{FMTP_HEADER_LEN + verifier.getSize()}
 {}
 
 UdpRecv::UdpRecv(const std::string& srcAddr,
@@ -33,6 +34,7 @@ UdpRecv::UdpRecv(const std::string& srcAddr,
     : sd{::socket(AF_INET, SOCK_DGRAM, 0)}
     , packet{}
     , verifier(macKey)
+    , MIN_PACKET{FMTP_HEADER_LEN + verifier.getSize()}
 {
     if (sd < 0)
         throw std::system_error(errno, std::system_category(),
@@ -110,18 +112,18 @@ void UdpRecv::getPacket(FmtpHeader&  header,
         header.payloadlen = ntohs(packet.header.payloadlen);
         header.flags      = ntohs(packet.header.flags);
 
-        const int msgLen = FMTP_HEADER_LEN + header.payloadlen;
-        if (nbytes < msgLen) {
+        if (nbytes < MIN_PACKET + header.payloadlen) {
             #ifdef LDM_LOGGING
-                log_warning("Ignoring too-small FMTP message: nbytes=%zd",
-                        nbytes);
+                log_warning("Ignoring too-small FMTP message: "
+                        "nbytes=%zd, MIN_PACKET=%u, payload=%u",
+                        nbytes, MIN_PACKET, header.payloadlen);
             #endif
         }
         else {
-            const size_t macLen = nbytes - msgLen;
+            const unsigned msgLen = FMTP_HEADER_LEN + header.payloadlen;
 
             if (verifier.verify(packet.bytes, msgLen, packet.bytes+msgLen,
-                    macLen)) {
+                    nbytes-msgLen)) {
                 *payload = packet.payload;
                 break;
             }

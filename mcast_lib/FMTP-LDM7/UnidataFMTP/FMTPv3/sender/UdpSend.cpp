@@ -36,6 +36,7 @@
     #include "log.h"
 #endif
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
@@ -118,10 +119,10 @@ UdpSend::UdpSend(const std::string&   recvaddr,
       packetIndex(0),
       signer{},
       msgLen{0},
-      macLen{0},
+      MAC_LEN{signer.getSize()},
       sendBefore(false),
       blackHat(*this),
-      maxPayload{MAX_FMTP_PACKET - FMTP_HEADER_LEN - signer.maxLen}
+      maxPayload{MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_LEN}
 {}
 
 
@@ -208,14 +209,14 @@ void UdpSend::write(const FmtpHeader& header)
 {
     #ifdef LDM_LOGGING
         log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
-                "payloadlen=%s, macLen=%zu", header.flags,
+                "payloadlen=%s, MAC_LEN=%u", header.flags,
                 std::to_string(header.prodindex).data(),
                 std::to_string(header.seqnum).data(),
                 std::to_string(header.payloadlen).data(),
-                macLen);
+                MAC_LEN);
     #endif
 
-    const size_t totLen = msgLen + macLen;
+    const size_t totLen = msgLen + MAC_LEN;
     const auto   nbytes = ::write(sock_fd, packet.bytes, totLen);
     if (nbytes != totLen)
     	throw std::system_error(errno, std::system_category(),
@@ -242,13 +243,14 @@ void UdpSend::send(const FmtpHeader& header,
         ::memcpy(packet.payload, payload, header.payloadlen);
 
     msgLen = FMTP_HEADER_LEN + header.payloadlen;
-    macLen = signer.getMac(packet.bytes, msgLen, packet.bytes+msgLen,
-            signer.maxLen);
+    const auto macLen = signer.getMac(packet.bytes, msgLen, packet.bytes+msgLen,
+            MAC_LEN);
+    assert(macLen == MAC_LEN);
 
-    if (macLen && sendBefore)
+    if (MAC_LEN && sendBefore)
         blackHat.maybeSend(header);
     write(header);
-    if (macLen && !sendBefore)
+    if (MAC_LEN && !sendBefore)
         blackHat.maybeSend(header);
 
     sendBefore = !sendBefore;

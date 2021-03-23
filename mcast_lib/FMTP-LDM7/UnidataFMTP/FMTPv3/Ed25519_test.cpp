@@ -46,7 +46,7 @@ TEST_F(Ed25519Test, DefaultSignerConstruction)
 TEST_F(Ed25519Test, SigningBuffer)
 {
     Ed25519     signer{};
-    char        signature[Ed25519::MAX_SIGLEN];
+    char        signature[Ed25519::SIGLEN];
     size_t      sigLen = signer.sign(msgBuf, sizeof(msgBuf), signature,
             sizeof(signature));
 
@@ -92,7 +92,7 @@ TEST_F(Ed25519Test, VerifySignatureBuffer)
 {
     Ed25519      signer{};
     std::string pubKey = signer.getPubKey();
-    char        signature[Ed25519::MAX_SIGLEN];
+    char        signature[Ed25519::SIGLEN];
     size_t      sigLen = signer.sign(msgBuf, sizeof(msgBuf), signature,
             sizeof(signature));
 
@@ -135,7 +135,7 @@ TEST_F(Ed25519Test, VerifySignatureSequence)
     Ed25519      verifier{pubKey};
 
     for (int i = 0; i < 3; ++i) {
-        char   signature[Ed25519::MAX_SIGLEN];
+        char   signature[Ed25519::SIGLEN];
 
         msgBuf[0] = i;
 

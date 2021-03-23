@@ -33,7 +33,7 @@
 #ifndef FMTP_SENDER_UDPSOCKET_H_
 #define FMTP_SENDER_UDPSOCKET_H_
 
-#include "fmtpBase.h"
+#include "FmtpBase.h"
 #include "mac.h"
 
 #include <arpa/inet.h>
@@ -93,13 +93,13 @@ class UdpSend
     const unsigned short  recvPort;
     const unsigned short  ttl;
     const std::string     ifAddr;
-    FmtpPacket            packet;        ///< Buffer for FMTP packet
-    IndexType             packetIndex;   ///< Index of current, valid packet
-    Mac                   signer;        ///< Message authentication code signer
-    size_t                msgLen;        ///< Non-MAC packet length in bytes
-    size_t                macLen;        ///< MAC length in bytes
-    bool                  sendBefore;    ///< Send invalid packet(s) after valid?
-    BlackHat              blackHat;      ///< Sends invalid packets
+    FmtpPacket            packet;      ///< Buffer for FMTP packet
+    IndexType             packetIndex; ///< Index of current, valid packet
+    Mac                   signer;      ///< Message authentication code signer
+    unsigned              msgLen;      ///< Non-MAC packet length in bytes
+    const unsigned        MAC_LEN;     ///< MAC length in bytes
+    bool                  sendBefore;  ///< Send invalid packet(s) after valid?
+    BlackHat              blackHat;    ///< Sends invalid packets
 
     /**
      * Writes the FMTP message.
@@ -110,7 +110,7 @@ class UdpSend
     void write(const FmtpHeader& header);
 
 public:
-    const int maxPayload; ///< Maximum payload size in bytes
+    unsigned maxPayload;  ///< Maximum payload in bytes (excl. MAC)
 
     UdpSend(const std::string&   recvaddr,
             const unsigned short recvport,

@@ -42,14 +42,14 @@ protected:
     /**
      * Constructs.
      *
-     * @param[in] maxLen  Maximum length of a MAC in bytes
+     * @param[in] macLen  Length of a MAC in bytes
      */
-    Impl(const int maxLen)
-        : maxLen{maxLen}
+    Impl(const unsigned macLen)
+        : MAC_LEN{macLen}
     {}
 
 public:
-    const int maxLen; ///< Maximum MAC length in bytes
+    const unsigned MAC_LEN; ///< MAC length in bytes
 
     /**
      * Destroys.
@@ -99,11 +99,13 @@ public:
 class NoMac final : public Mac::Impl
 {
 public:
+    static const unsigned MAC_SIZE = 0;
+
     /**
      * Constructs.
      */
     NoMac()
-        : Impl{0}
+        : Impl{MAC_SIZE}
     {}
 
     /**
@@ -165,10 +167,10 @@ public:
 
 class Hmac final : public Mac::Impl
 {
+private:
     std::string      key;            ///< HMAC key
     EVP_PKEY*        pKey;           ///< OpenSSL HMAC key
     EVP_MD_CTX*      mdCtx;          ///< Message-digest context
-    static const int HMAC_SIZE = 32; ///< HMAC size in bytes
 
     /**
      * Vets the size of the HMAC key.
@@ -178,7 +180,7 @@ class Hmac final : public Mac::Impl
      */
     static void vetKeySize(const std::string& key)
     {
-        if (key.size() < 2*HMAC_SIZE) // Double hash size => more secure
+        if (key.size() < 2*MAC_SIZE) // Double hash size => more secure
             throw std::invalid_argument("key.size()=" +
                     std::to_string(key.size()));
     }
@@ -207,18 +209,20 @@ class Hmac final : public Mac::Impl
     }
 
 public:
+    static const unsigned MAC_SIZE = 32;   ///< HMAC size in bytes
+
     /**
      * Constructs. Returned instance is appropriate for a signer.
      *
      * @throw std::runtime_error  OpenSSL failure
      */
     Hmac()
-        : Impl{HMAC_SIZE}
+        : Impl{MAC_SIZE}
         , key{}
         , pKey{nullptr}
         , mdCtx{nullptr}
     {
-        unsigned char bytes[2*HMAC_SIZE];
+        unsigned char bytes[2*MAC_SIZE];
 
         SslHelp::initRand(sizeof(bytes));
         if (RAND_bytes(bytes, sizeof(bytes)) == 0)
@@ -231,11 +235,11 @@ public:
      * Constructs. Returns instance is appropriate for a verifier.
      *
      * @param[in] key                HMAC key from `getKey()`
-     * @throw std::invalid_argument  `key.size() < 2*HMAC_SIZE`
+     * @throw std::invalid_argument  `key.size() < 2*MAC_LEN`
      * @throw std::runtime_error     OpenSSL failure
      */
     Hmac(const std::string& key)
-        : Impl{HMAC_SIZE}
+        : Impl{MAC_SIZE}
         , key{}
         , pKey{nullptr}
         , mdCtx{nullptr}
@@ -273,7 +277,7 @@ public:
                 reinterpret_cast<unsigned char*>(mac), &macLen,
                 reinterpret_cast<const unsigned char*>(msg), msgLen))
             SslHelp::throwOpenSslError("EVP_DigestSign() failure");
-        assert(HMAC_SIZE == macLen);
+        assert(MAC_SIZE == macLen);
 
         return macLen;
     }
@@ -313,13 +317,15 @@ class Dsa final : public Mac::Impl
     Ed25519 digSig; ///< Ed25519 digital signer/verifier
 
 public:
+    static const unsigned MAC_SIZE = Ed25519::SIGLEN;
+
     /**
      * Constructs. Returned instance is appropriate for a signer.
      *
      * @throw std::runtime_error  OpenSSL failure
      */
     Dsa()
-        : Impl{Ed25519::MAX_SIGLEN}
+        : Impl{MAC_SIZE}
     {}
 
     /**
@@ -329,7 +335,7 @@ public:
      * @throw std::runtime_error     OpenSSL failure
      */
     Dsa(const std::string& key)
-        : Impl{Ed25519::MAX_SIGLEN}
+        : Impl{MAC_SIZE}
         , digSig{key}
     {}
 
@@ -397,6 +403,19 @@ static int getMacLevel()
     return level;
 }
 
+unsigned Mac::getSize()
+{
+    switch (getMacLevel()) {
+    default:
+    case 0:
+        return NoMac::MAC_SIZE;
+    case 1:
+        return Hmac::MAC_SIZE;
+    case 2:
+        return Dsa::MAC_SIZE;
+    }
+}
+
 Mac::Mac()
     : pImpl{}
 {
@@ -412,8 +431,6 @@ Mac::Mac()
         pImpl = Pimpl{new Dsa()};
         break;
     }
-
-    maxLen = pImpl->maxLen;
 }
 
 Mac::Mac(const std::string& key)
@@ -431,8 +448,6 @@ Mac::Mac(const std::string& key)
         pImpl = Pimpl{new Dsa(key)};
         break;
     }
-
-    maxLen = pImpl->maxLen;
 }
 
 Mac::~Mac()
@@ -453,7 +468,7 @@ size_t Mac::getMac(const char*  msg,
 
 std::string Mac::getMac(const std::string& msg) const
 {
-    char         mac[pImpl->maxLen];
+    char         mac[pImpl->MAC_LEN];
     const size_t macLen = pImpl->getMac(msg.data(), msg.size(), mac,
             sizeof(mac));
 

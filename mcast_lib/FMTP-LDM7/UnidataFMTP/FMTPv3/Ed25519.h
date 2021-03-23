@@ -24,7 +24,7 @@ protected:
     std::string pubKey; ///< Public key
 
 public:
-    static const int MAX_SIGLEN = 64; ///< Maximum signature length in bytes
+    static const int SIGLEN = 64; ///< Signature length in bytes
 
     /**
      * Default constructs. This constructor is appropriate for digital signers.

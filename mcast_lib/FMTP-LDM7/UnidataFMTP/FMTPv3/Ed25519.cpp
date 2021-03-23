@@ -149,8 +149,8 @@ size_t Ed25519::sign(const char*  msg,
 
 std::string Ed25519::sign(const std::string& msg)
 {
-    char         sig[MAX_SIGLEN];
-    const size_t sigLen = sign(msg.data(), msg.size(), sig, MAX_SIGLEN);
+    char         sig[SIGLEN];
+    const size_t sigLen = sign(msg.data(), msg.size(), sig, SIGLEN);
 
     return std::string(sig, sigLen);
 }

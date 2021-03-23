@@ -46,12 +46,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "FmtpBase.h"
 #include "Measure.h"
 #include "ProdSegMNG.h"
 #include "RecvProxy.h"
 #include "TcpRecv.h"
 #include "UdpRecv.h"
-#include "fmtpBase.h"
 
 
 class fmtpRecvv3;
@@ -76,7 +76,6 @@ typedef std::unordered_map<uint32_t, ProdTracker> TrackerMap;
 typedef std::unordered_map<uint32_t, bool> EOPStatusMap;
 
 class fmtpRecvv3 {
-
 	/**
 	 * A thread-safe queue of messages from this receiver to the FMTP sender.
 	 */
@@ -164,33 +163,67 @@ class fmtpRecvv3 {
         uint32_t get() const;
     };
 
-public:
-    /**
-     * Constructs.
-     *
-     * @param[in] tcpAddr       Sender TCP unicast address for retransmission.
-     * @param[in] tcpPort       Sender TCP unicast port for retransmission.
-     * @param[in] mcastAddr     UDP multicast address for receiving data products.
-     * @param[in] mcastPort     UDP multicast port for receiving data products.
-     * @param[in] notifier      Callback function to notify receiving application
-     *                          of incoming Begin-Of-Product messages.
-     * @param[in] ifAddr        IPv4 address of local interface receiving
-     *                          multicast packets and retransmitted data-blocks.
-     */
-    fmtpRecvv3(const std::string    tcpAddr,
-               const unsigned short tcpPort,
-               const std::string    mcastAddr,
-               const unsigned short mcastPort,
-               RecvProxy*           notifier = NULL,
-               const std::string    ifAddr = "0.0.0.0");
-    ~fmtpRecvv3();
+    FmtpBase                fmtpBase; ///< Runtime constants
+    /* Sender VLAN Unique IP address */
+    std::string             tcpAddr;
+    /* Sender FMTP TCP Connection port number */
+    unsigned short          tcpPort;
+    std::string             mcastAddr;
+    unsigned short          mcastPort;
+    /* IP address of the default interface */
+    std::string             ifAddr;
+    int                     retxSock;
+    struct sockaddr_in      mcastgroup;
+    /* callback function of the receiving application */
+    RecvProxy*              notifier;
+    TcpRecv*                tcprecv;
+    /* a map from prodindex to struct ProdTracker */
+    TrackerMap              trackermap;
+    std::mutex              trackermtx;
+    /* eliminate race conditions between mcast and retx */
+    std::mutex              antiracemtx;
+    /* a map from prodindex to EOP arrival status */
+    EOPStatusMap            EOPmap;
+    std::mutex              EOPmapmtx;
+    ProdSegMNG*             pSegMNG;
+    MsgQueue                msgQueue;
+    /* track all the missing BOP until received */
+    std::unordered_set<uint32_t> misBOPset;
+    std::mutex              BOPSetMtx;
+    /* Retransmission request thread */
+    pthread_t               retx_rq;
+    /* Retransmission receive thread */
+    pthread_t               retx_t;
+    /* Multicast receiver thread */
+    pthread_t               mcast_t;
+    /* BOP timer thread */
+    pthread_t               timer_t;
+    /* a queue containing timerParam structure for each product */
+    std::queue<timerParam>  timerParamQ;
+    std::condition_variable timerQfilled;
+    std::mutex              timerQmtx;
+    std::condition_variable timerWake;
+    std::mutex              timerWakemtx;
+    std::mutex              exitMutex;
+    std::condition_variable exitCond;
+    bool                    stopRequested;
+    std::exception_ptr      except;
+    std::mutex              linkmtx;
+    /* max link speed up to 18000 Pbps */
+    uint64_t                linkspeed;
+    std::atomic_flag        retxHandlerCanceled;
+    std::atomic_flag        mcastHandlerCanceled;
+    std::mutex              notifyprodmtx;
+    uint32_t                notifyprodidx;
+    std::condition_variable notify_cv;
+    UdpRecv                 udpRecv;
+    // Open lower index for BOP requests
+    LastProdIndex           openLeftIndex;
 
-    uint32_t getNotify();
-    void SetLinkSpeed(uint64_t speed);
-    void Start();
-    void Stop();
+    /* member variables for measurement use only */
+    Measure*                measure;
+    /* member variables for measurement use ends */
 
-private:
     std::string getMacKey();
 
     bool addUnrqBOPinSet(uint32_t prodindex);
@@ -379,65 +412,32 @@ private:
     void stopJoinRetxHandler();
     void stopJoinTimerThread();
     void stopJoinMcastHandler();
-    /* Sender VLAN Unique IP address */
-    std::string             tcpAddr;
-    /* Sender FMTP TCP Connection port number */
-    unsigned short          tcpPort;
-    std::string             mcastAddr;
-    unsigned short          mcastPort;
-    /* IP address of the default interface */
-    std::string             ifAddr;
-    int                     retxSock;
-    struct sockaddr_in      mcastgroup;
-    /* callback function of the receiving application */
-    RecvProxy*              notifier;
-    TcpRecv*                tcprecv;
-    /* a map from prodindex to struct ProdTracker */
-    TrackerMap              trackermap;
-    std::mutex              trackermtx;
-    /* eliminate race conditions between mcast and retx */
-    std::mutex              antiracemtx;
-    /* a map from prodindex to EOP arrival status */
-    EOPStatusMap            EOPmap;
-    std::mutex              EOPmapmtx;
-    ProdSegMNG*             pSegMNG;
-    MsgQueue                msgQueue;
-    /* track all the missing BOP until received */
-    std::unordered_set<uint32_t> misBOPset;
-    std::mutex              BOPSetMtx;
-    /* Retransmission request thread */
-    pthread_t               retx_rq;
-    /* Retransmission receive thread */
-    pthread_t               retx_t;
-    /* Multicast receiver thread */
-    pthread_t               mcast_t;
-    /* BOP timer thread */
-    pthread_t               timer_t;
-    /* a queue containing timerParam structure for each product */
-    std::queue<timerParam>  timerParamQ;
-    std::condition_variable timerQfilled;
-    std::mutex              timerQmtx;
-    std::condition_variable timerWake;
-    std::mutex              timerWakemtx;
-    std::mutex              exitMutex;
-    std::condition_variable exitCond;
-    bool                    stopRequested;
-    std::exception_ptr      except;
-    std::mutex              linkmtx;
-    /* max link speed up to 18000 Pbps */
-    uint64_t                linkspeed;
-    std::atomic_flag        retxHandlerCanceled;
-    std::atomic_flag        mcastHandlerCanceled;
-    std::mutex              notifyprodmtx;
-    uint32_t                notifyprodidx;
-    std::condition_variable notify_cv;
-    UdpRecv                 udpRecv;
-    // Open lower index for BOP requests
-    LastProdIndex           openLeftIndex;
 
-    /* member variables for measurement use only */
-    Measure*                measure;
-    /* member variables for measurement use ends */
+public:
+    /**
+     * Constructs.
+     *
+     * @param[in] tcpAddr       Sender TCP unicast address for retransmission.
+     * @param[in] tcpPort       Sender TCP unicast port for retransmission.
+     * @param[in] mcastAddr     UDP multicast address for receiving data products.
+     * @param[in] mcastPort     UDP multicast port for receiving data products.
+     * @param[in] notifier      Callback function to notify receiving application
+     *                          of incoming Begin-Of-Product messages.
+     * @param[in] ifAddr        IPv4 address of local interface receiving
+     *                          multicast packets and retransmitted data-blocks.
+     */
+    fmtpRecvv3(const std::string    tcpAddr,
+               const unsigned short tcpPort,
+               const std::string    mcastAddr,
+               const unsigned short mcastPort,
+               RecvProxy*           notifier = NULL,
+               const std::string    ifAddr = "0.0.0.0");
+    ~fmtpRecvv3();
+
+    uint32_t getNotify();
+    void SetLinkSpeed(uint64_t speed);
+    void Start();
+    void Stop();
 };
 
 

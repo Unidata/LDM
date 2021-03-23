@@ -6,8 +6,7 @@
  *      Author: Steven R. Emmerson
  */
 
-#include "fmtpBase.h"
-
+#include <FmtpBase.h>
 #include <iostream>
 #include <netinet/in.h>
 

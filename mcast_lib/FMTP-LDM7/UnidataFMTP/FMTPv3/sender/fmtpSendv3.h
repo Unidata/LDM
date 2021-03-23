@@ -41,6 +41,7 @@
 #include <set>
 #include <utility>
 
+#include "FmtpBase.h"
 #include "ProdIndexDelayQueue.h"
 #include "RateShaper/RateShaper.h"
 #include "RetxThreads.h"
@@ -49,7 +50,6 @@
 #include "SilenceSuppressor/SilenceSuppressor.h"
 #include "TcpSend.h"
 #include "UdpSend.h"
-#include "fmtpBase.h"
 #include "PubKeyCrypt.h"
 #include "SockToIndexMap.h"
 
@@ -88,53 +88,46 @@ struct StartTimerThreadInfo
  */
 class fmtpSendv3
 {
-public:
-    explicit fmtpSendv3(
-                 const char*           tcpAddr,
-                 const unsigned short  tcpPort,
-                 const char*           mcastAddr,
-                 const unsigned short  mcastPort,
-                 SendProxy*            notifier = NULL,
-                 const unsigned char   ttl = 1,
-                 const std::string     ifAddr = "0.0.0.0",
-                 const uint32_t        initProdIndex = 0,
-                 const float           tsnd = 10.0);
-    ~fmtpSendv3();
+    typedef std::mutex              Mutex;
+    typedef std::lock_guard<Mutex>  Guard;
+    typedef std::unique_lock<Mutex> Lock;
 
-    /* ----------- testapp-specific APIs begin ----------- */
-    /* performs reset for each run in multiple runs */
-    void           clearRuninProdSet(int run);
-    /*
-     * gets notification of a complete and ACKed file,
-     * should be used together with silence suppressor.
-     */
-    uint32_t       getNotify();
-    /*
-     * releases memory of a complete and ACKed file,
-     * should be used together with silence suppressor.
-     */
-    uint32_t       releaseMem();
-    /* ----------- testapp-specific APIs end ----------- */
+    FmtpBase            fmtpBase;
+    uint32_t            prodIndex;
+    /** underlying udp layer instance */
+    UdpSend*            udpsend;
+    /** underlying tcp layer instance */
+    TcpSend*            tcpsend;
+    /** maintaining metadata for retx use. */
+    senderMetadata*     sendMeta;
+    /** sending application callback hook */
+    SendProxy*          notifier;
+    ProdIndexDelayQueue timerDelayQ;
+    pthread_t           coor_t;
+    pthread_t           timer_t;
+    /** tracks all the dynamically created retx threads */
+    RetxThreads         retxThreadList;
+    Mutex               linkmtx;
+    uint64_t            linkspeed;
+    Mutex               exitMutex;
+    std::exception_ptr  except;
+    RateShaper          rateshaper;
+    Mutex               notifyprodmtx;
+    Mutex               notifycvmtx;
+    uint32_t            notifyprodidx;
+    std::condition_variable notify_cv;
+    std::condition_variable memrelease_cv;
+    /* SilenceSuppressor is only used for testapp */
+    SilenceSuppressor*  suppressor;
+    /* sender maximum retransmission timeout */
+    double              tsnd;
 
-    unsigned short getTcpPortNum();
-    /**
-     * Returns the number of receivers
-     *
-     * @return           Number of receivers
-     * @exceptionsafety  No throw
-     */
-    int            rcvrCount() const noexcept;
-    uint32_t       getNextProdIndex() const {return prodIndex;}
-    uint32_t       sendProduct(void* data, uint32_t dataSize);
-    uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
-                               uint16_t metaSize);
-    void           SetSendRate(uint64_t speed);
-    /** Sender side start point, the first function to be called */
-    void           Start();
-    /** Sender side stop point */
-    void           Stop();
+    /* member variables for measurement use only */
+    bool                txdone;
+    std::chrono::high_resolution_clock::time_point start_t;
+    std::chrono::high_resolution_clock::time_point end_t;
+    /* member variables for measurement use ends */
 
-private:
     /**
      * Sends the key for verifying the message authentication code of multicast
      * FMTP messages. Reads the subscriber's public key from the TCP connection,
@@ -161,7 +154,13 @@ private:
     RetxMetadata* addRetxMetadata(void* const data, const uint32_t dataSize,
                                   void* const metadata, const uint16_t metaSize,
                                   const struct timespec* startTime);
-    static uint32_t blockIndex(uint32_t start) {return start/MAX_FMTP_PAYLOAD;}
+    /**
+     * Returns the origin-0 index of the data-block with the given byte-offset.
+     *
+     * @param[in] start  Byte-offset of data-block
+     * @return           Origin-0 index of data-block
+     */
+    uint32_t blockIndex (uint32_t start) {return start/fmtpBase.MAX_PAYLOAD;}
     /** new coordinator thread */
     static void* coordinator(void* ptr);
     /**
@@ -283,44 +282,51 @@ private:
     fmtpSendv3& operator=(const fmtpSendv3&);
     void WriteToLog(const std::string& content);
 
-    typedef std::mutex              Mutex;
-    typedef std::lock_guard<Mutex>  Guard;
-    typedef std::unique_lock<Mutex> Lock;
+public:
+    explicit fmtpSendv3(
+                 const char*           tcpAddr,
+                 const unsigned short  tcpPort,
+                 const char*           mcastAddr,
+                 const unsigned short  mcastPort,
+                 SendProxy*            notifier = NULL,
+                 const unsigned char   ttl = 1,
+                 const std::string     ifAddr = "0.0.0.0",
+                 const uint32_t        initProdIndex = 0,
+                 const float           tsnd = 10.0);
+    ~fmtpSendv3();
 
-    uint32_t            prodIndex;
-    /** underlying udp layer instance */
-    UdpSend*            udpsend;
-    /** underlying tcp layer instance */
-    TcpSend*            tcpsend;
-    /** maintaining metadata for retx use. */
-    senderMetadata*     sendMeta;
-    /** sending application callback hook */
-    SendProxy*          notifier;
-    ProdIndexDelayQueue timerDelayQ;
-    pthread_t           coor_t;
-    pthread_t           timer_t;
-    /** tracks all the dynamically created retx threads */
-    RetxThreads         retxThreadList;
-    Mutex               linkmtx;
-    uint64_t            linkspeed;
-    Mutex               exitMutex;
-    std::exception_ptr  except;
-    RateShaper          rateshaper;
-    Mutex               notifyprodmtx;
-    Mutex               notifycvmtx;
-    uint32_t            notifyprodidx;
-    std::condition_variable notify_cv;
-    std::condition_variable memrelease_cv;
-    /* SilenceSuppressor is only used for testapp */
-    SilenceSuppressor*  suppressor;
-    /* sender maximum retransmission timeout */
-    double              tsnd;
+    /* ----------- testapp-specific APIs begin ----------- */
+    /* performs reset for each run in multiple runs */
+    void           clearRuninProdSet(int run);
+    /*
+     * gets notification of a complete and ACKed file,
+     * should be used together with silence suppressor.
+     */
+    uint32_t       getNotify();
+    /*
+     * releases memory of a complete and ACKed file,
+     * should be used together with silence suppressor.
+     */
+    uint32_t       releaseMem();
+    /* ----------- testapp-specific APIs end ----------- */
 
-    /* member variables for measurement use only */
-    bool                txdone;
-    std::chrono::high_resolution_clock::time_point start_t;
-    std::chrono::high_resolution_clock::time_point end_t;
-    /* member variables for measurement use ends */
+    unsigned short getTcpPortNum();
+    /**
+     * Returns the number of receivers
+     *
+     * @return           Number of receivers
+     * @exceptionsafety  No throw
+     */
+    int            rcvrCount() const noexcept;
+    uint32_t       getNextProdIndex() const {return prodIndex;}
+    uint32_t       sendProduct(void* data, uint32_t dataSize);
+    uint32_t       sendProduct(void* data, uint32_t dataSize, void* metadata,
+                               uint16_t metaSize);
+    void           SetSendRate(uint64_t speed);
+    /** Sender side start point, the first function to be called */
+    void           Start();
+    /** Sender side stop point */
+    void           Stop();
 };
 
 

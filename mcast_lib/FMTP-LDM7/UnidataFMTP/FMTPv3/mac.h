@@ -9,10 +9,6 @@
 #ifndef MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_
 #define MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_
 
-#ifndef __cplusplus
-#   define FMTP_MAC_ENV_NAME "FMTP_MAC_LEVEL"
-#else
-
 #include <string>
 #include <memory>
 
@@ -25,12 +21,22 @@ public:
     class Impl;
 
 private:
-    using Pimpl = std::shared_ptr<Impl>;
-    Pimpl pImpl;
+    using      Pimpl = std::shared_ptr<Impl>;
+    Pimpl      pImpl;
 
 public:
     static const char* ENV_NAME; ///< Name of controlling environment variable
-    int maxLen;                  ///< Maximum, instance-specific MAC length in bytes
+
+    /**
+     * Returns the MAC length in bytes. The value depends on the value of the
+     * environment variable `ENV_NAME`:
+     *   - Unset or "0":  0
+     *   - "1":          32
+     *   - "2":          64
+     *
+     * @return Maximum MAC length in bytes
+     */
+    static unsigned getSize();
 
     /**
      * Default constructs. This constructor is appropriate for signers of
@@ -120,6 +126,5 @@ public:
     bool verify(const std::string& msg,
                 const std::string& mac) const;
 };
-#endif
 
 #endif /* MCAST_LIB_FMTP_LDM7_UNIDATAFMTP_FMTPV3_MAC_H_ */

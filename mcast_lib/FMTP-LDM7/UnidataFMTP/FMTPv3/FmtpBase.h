@@ -71,14 +71,7 @@ typedef uint32_t StartTime[3];
 /* non-constants, could change with MTU */
 const int MTU                 = MIN_MTU;
 const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
-const int MAC_SIZE            = 32; ///<  Size of message authentication code
 // Maximum FmtpHeader.payloadlen. Will be less if packets include MAC
-const int MAX_FMTP_PAYLOAD    = (MAX_FMTP_PACKET - FMTP_HEADER_LEN);
-// Maximum BOPMsg.metadata length in bytes. Will be less if packets include MAC
-const int MAX_BOP_METADATA       = (MAX_FMTP_PAYLOAD
-		- sizeof(StartTime)
-        - sizeof(uint32_t)   // BOPMsg.prodsize
-		- sizeof(uint16_t)); // BOPMsg.metasize
 
 typedef union {
     struct {
@@ -95,7 +88,7 @@ typedef struct FmtpBOPMessage {
     StartTime startTime;    ///< Start of transmission of product
     uint32_t  prodsize;     /*!< support 4GB maximum */
     uint16_t  metasize;
-    char      metadata[MAX_BOP_METADATA];
+    char      metadata[MAX_FMTP_PACKET]; ///< Oversize
     /* Be aware this default constructor could implicitly create a new BOP */
     FmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
 } BOPMsg;
@@ -137,10 +130,17 @@ typedef struct timerParameter {
 } timerParam;
 
 
-class fmtpBase {
+/**
+ * Class for holding runtime (i.e., not compile-time) constants.
+ */
+class FmtpBase {
 public:
-    fmtpBase();
-    ~fmtpBase();
+    const unsigned MAC_SIZE;         ///< MAC size in bytes
+    const unsigned MAX_PAYLOAD;      ///< Maximum payload in bytes (excl. MAC)
+    const unsigned MAX_BOP_METADATA; ///< Maximum BOP metadata in bytes
+
+    FmtpBase();
+    ~FmtpBase();
 
 private:
 };

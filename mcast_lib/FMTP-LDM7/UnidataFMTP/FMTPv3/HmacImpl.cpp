@@ -5,11 +5,12 @@
  *  Created on: Sep 4, 2020
  *      Author: Steven R. Emmerson
  */
+#include <FmtpBase.h>
+
 #include "FmtpConfig.h"
 
 #include "HmacImpl.h"
 
-#include "fmtpBase.h"
 #include "SslHelp.h"
 
 #include <openssl/rsa.h>
