@@ -3,6 +3,7 @@
         * FmtpPacket:
             * fmtpBase.h: Defined with flexible array payload
             * UdpSend & UdpRecv: Made use of
+            * Made maximum payload depend on MAC
 
     DevOps:
         * Up7Down7_test: Increased sleep after product insertions from 1 s to 2

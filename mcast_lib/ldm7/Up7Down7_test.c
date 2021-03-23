@@ -19,7 +19,6 @@
 #include "LdmConfFile.h"
 #include "ldmprint.h"
 #include "log.h"
-#include "mac.h"
 #include "mcast_info.h"
 #include "mldm_sender_map.h"
 #include "MldmRcvrMemory.h"
@@ -56,6 +55,8 @@
 #ifndef MAX
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 #endif
+
+#define FMTP_MAC_ENV_NAME "FMTP_MAC_LEVEL"
 
 typedef struct {
     SVCXPRT*              xprt;
