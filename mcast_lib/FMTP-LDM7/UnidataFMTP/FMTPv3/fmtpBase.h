@@ -51,7 +51,6 @@ typedef struct FmtpPacketHeader {
     uint16_t   flags;
 } FmtpHeader;
 
-
 /**
  * struct of Fmtp retx-request-message
  */
@@ -80,6 +79,14 @@ const int MAX_BOP_METADATA       = (MAX_FMTP_PAYLOAD
 		- sizeof(StartTime)
         - sizeof(uint32_t)   // BOPMsg.prodsize
 		- sizeof(uint16_t)); // BOPMsg.metasize
+
+typedef union {
+    struct {
+        FmtpHeader header;     ///< FMTP header in network byte-order
+        char       payload[];  ///< FMTP payload
+    };
+    char bytes[MAX_FMTP_PACKET];
+} FmtpPacket;
 
 /**
  * structure of Begin-Of-Product message

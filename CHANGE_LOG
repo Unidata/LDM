@@ -1,3 +1,9 @@
+6.13.14.22
+    Multicast:
+        * FmtpPacket:
+            * fmtpBase.h: Defined with flexible array payload
+            * UdpSend & UdpRecv: Made use of
+
 6.13.14.21      2021-03-22T10:56:12-0600
     Multicast:
         * Replaced "SessKeyCrypt" with "PubKeyCrypt"

@@ -18,15 +18,9 @@
 
 class UdpRecv
 {
-    int sd;            ///< Socket descriptor
-    union {
-        struct {
-            FmtpHeader header;     ///< FMTP header in network byte-order
-            char       payload[0]; ///< FMTP payload
-        };
-        char bytes[MAX_FMTP_PACKET];
-    }   packet;        ///< Buffer for FMTP packet
-    Mac verifier;      ///< Message authentication code verifier
+    int        sd;       ///< Socket descriptor
+    FmtpPacket packet;   ///< Buffer for FMTP packet
+    Mac        verifier; ///< Verifier of message authentication code
 
     public:
     /**

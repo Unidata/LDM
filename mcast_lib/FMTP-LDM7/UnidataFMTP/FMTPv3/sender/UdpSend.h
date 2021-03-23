@@ -93,13 +93,7 @@ class UdpSend
     const unsigned short  recvPort;
     const unsigned short  ttl;
     const std::string     ifAddr;
-    union {
-        struct {
-            FmtpHeader header;     ///< FMTP header in Network byte-order
-            char       payload[0]; ///< FMTP packet payload
-        };                           ///< Structured send buffer
-        char bytes[MAX_FMTP_PACKET]; ///< Unstructured send buffer
-    }                     packet;        ///< Send buffer
+    FmtpPacket            packet;        ///< Buffer for FMTP packet
     IndexType             packetIndex;   ///< Index of current, valid packet
     Mac                   signer;        ///< Message authentication code signer
     size_t                msgLen;        ///< Non-MAC packet length in bytes
