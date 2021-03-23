@@ -4,6 +4,10 @@
             * fmtpBase.h: Defined with flexible array payload
             * UdpSend & UdpRecv: Made use of
 
+    DevOps:
+        * Up7Down7_test: Increased sleep after product insertions from 1 s to 2
+          s to give EdDSA more time
+
 6.13.14.21      2021-03-22T10:56:12-0600
     Multicast:
         * Replaced "SessKeyCrypt" with "PubKeyCrypt"

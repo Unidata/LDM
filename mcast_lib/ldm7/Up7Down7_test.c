@@ -582,7 +582,7 @@ run_up7Down7(
 
     CU_ASSERT_EQUAL(sleep(1), 0);
     sndr_fillPq();
-    CU_ASSERT_EQUAL(sleep(RETX_TIMEOUT+1), 0);
+    CU_ASSERT_EQUAL(sleep(RETX_TIMEOUT+2), 0);
 
     log_notice("Stopping receiver");
     CU_ASSERT_EQUAL(rcvr_term(rcvrPid), 0); // Bad exit code if not all received
