@@ -4,7 +4,6 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-EXTRA_DIST		= fmtpBase.cpp fmtpBase.h
 SUBDIRS			= receiver sender SilenceSuppressor RateShaper
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= FmtpBase.cpp     FmtpBase.h \
@@ -12,8 +11,7 @@ lib_la_SOURCES		= FmtpBase.cpp     FmtpBase.h \
 			  SslHelp.cpp      SslHelp.h \
 			  PubKeyCrypt.cpp  PubKeyCrypt.h \
 			  Ed25519.cpp      Ed25519.h \
-			  mac.cpp          mac.h \
-			  FmtpBase.cpp     FmtpBase.h
+			  mac.cpp          mac.h
 lib_la_CPPFLAGS		= -DLDM_LOGGING \
                           -I$(srcdir)/.. \
                           -I$(top_srcdir)/../../../log
