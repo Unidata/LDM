@@ -442,7 +442,8 @@ commands:
     checkinsertion                           Checks for recent insertion of
                                                  data-product into product-queue
     vetqueuesize                             Vets the size of the product-queue
-    pqactcheck [-p pqact_conf] [conf_file]   Checks syntax of pqact(1) files
+    pqactcheck [-p pqact_conf]               Checks syntax of pqact(1) files
+    pqactcheck [conf_file]                   Checks syntax of pqact(1) files
     pqactHUP                                 Sends HUP signal to pqact(1)
                                                  program
     queuecheck                               Checks for product-queue corruption
@@ -472,6 +473,10 @@ options:
     -M max_clients  Maximum number of active clients
     -n numlogs      Number of logs to rotate. Default: $numlogs
     -o offset       Unconditional data-request temporal-offset
+    -p pqact_conf   Specify a pqact config path. 
+                    Default: valid pqact path(s) in EXEC \"pqact\" line(s)
+                    in LDM config file,
+                    LDM default: $pqact_path
     -q q_path       Specify a product-queue path. LDM Default: $pq_path,
                     pqsurf(1) default: $surf_path
     -v              Turn on verbose mode
