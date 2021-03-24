@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      fmtpBase.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 7, 2014
  *
@@ -50,6 +51,7 @@ typedef struct FmtpPacketHeader {
     uint16_t   payloadlen;      ///< Length of payload in bytes
     uint16_t   flags;
 } FmtpHeader;
+const int FMTP_HEADER_LEN = sizeof(FmtpHeader); // DANGER! sizeof() use!
 
 /**
  * struct of Fmtp retx-request-message
@@ -59,31 +61,27 @@ typedef struct FmtpRetxReqMessage {
     uint16_t length;
 } RetxReqMsg;
 
-
-/* constants used by both sender and receiver */
 const int MIN_MTU         = 1500; // Maximum ethernet frame payload
-const int FMTP_HEADER_LEN = sizeof(FmtpHeader); // Currently 12 bytes
-const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
-
-/// Most significant seconds, least significant seconds, nanoseconds
-typedef uint32_t StartTime[3];
 
 /* non-constants, could change with MTU */
 const int MTU                 = MIN_MTU;
 const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
-// Maximum FmtpHeader.payloadlen. Will be less if packets include MAC
 
 typedef union {
     struct {
         FmtpHeader header;     ///< FMTP header in network byte-order
-        char       payload[];  ///< FMTP payload
+        char       payload[1]; ///< FMTP payload (excludes any MAC)
     };
     char bytes[MAX_FMTP_PACKET];
 } FmtpPacket;
 
+/// Most significant seconds, least significant seconds, nanoseconds
+typedef uint32_t StartTime[3];
+
 /**
  * structure of Begin-Of-Product message
  */
+#if 0
 typedef struct FmtpBOPMessage {
     StartTime startTime;    ///< Start of transmission of product
     uint32_t  prodsize;     /*!< support 4GB maximum */
@@ -92,7 +90,25 @@ typedef struct FmtpBOPMessage {
     /* Be aware this default constructor could implicitly create a new BOP */
     FmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
 } BOPMsg;
+#else
+typedef struct FmtpBOPMessage {
+    union {
+        struct {
+            StartTime startTime;    ///< Start of transmission of product
+            uint32_t  prodsize;     /*!< support 4GB maximum */
+            uint16_t  metasize;
+            char      metadata[1];
+        };
+        char bytes[MAX_FMTP_PACKET]; ///< Oversize
+    };
 
+    static const unsigned HEADER_SIZE = sizeof(StartTime) + sizeof(uint32_t) +
+            sizeof(uint16_t);
+
+    /* Be aware this default constructor could implicitly create a new BOP */
+    FmtpBOPMessage() : prodsize(0), metasize(0) {}
+} BOPMsg;
+#endif
 
 const uint16_t FMTP_BOP       = 0x0001;
 const uint16_t FMTP_EOP       = 0x0002;

@@ -507,9 +507,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
      * Every time a new BOP arrives, save the msg to check following data
      * packets
      */
-    const size_t BOPCONST = sizeof(BOPmsg.startTime) + sizeof(BOPmsg.prodsize)
-            + sizeof(BOPmsg.metasize);
-    if (header.payloadlen < BOPCONST) {
+    if (header.payloadlen < BOPMsg::HEADER_SIZE) {
         #ifdef LDM_LOGGING
             log_warning("Payload is too small");
         #endif
@@ -527,7 +525,7 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
         const uint16_t* uint16p = (const uint16_t*)uint32p;
         BOPmsg.metasize = ntohs(*uint16p++);
 
-        if (header.payloadlen < BOPCONST + BOPmsg.metasize) {
+        if (header.payloadlen < BOPMsg::HEADER_SIZE + BOPmsg.metasize) {
             #ifdef LDM_LOGGING
                 log_warning("Metadata is too big");
             #endif

@@ -1,3 +1,11 @@
+6.13.14.23
+    Multicast:
+        * Improved I/O handling of FMTP packet structures:
+            * Deleted RETX_REQ_LEN.
+            * Replaced flexible arrays with [1] to accomodate g++ 8.3
+            * Improved BOPMsg structure
+            * Eliminated use of sizeof(struct ...) where appropriate
+
 6.13.14.22      2021-03-23T17:39:37-0600
     Multicast:
         * FmtpPacket:

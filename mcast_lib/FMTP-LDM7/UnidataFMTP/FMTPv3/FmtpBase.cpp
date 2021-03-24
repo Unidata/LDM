@@ -35,10 +35,10 @@
 FmtpBase::FmtpBase()
     : MAC_SIZE{Mac::getSize()}
     , MAX_PAYLOAD{MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_SIZE}
-    , MAX_BOP_METADATA{MAX_PAYLOAD
-		- static_cast<int>(sizeof(StartTime))
-        - static_cast<int>(sizeof(uint32_t))   // BOPMsg.prodsize
-		- static_cast<int>(sizeof(uint16_t))}  // BOPMsg.metasize
+    , MAX_BOP_METADATA{MAX_PAYLOAD - BOPMsg::HEADER_SIZE}
+		//- static_cast<int>(sizeof(StartTime))
+        //- static_cast<int>(sizeof(uint32_t))   // BOPMsg.prodsize
+		//- static_cast<int>(sizeof(uint16_t))}  // BOPMsg.metasize
 {}
 
 FmtpBase::~FmtpBase()

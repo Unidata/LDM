@@ -987,15 +987,6 @@ void fmtpSendv3::retransBOP(
     bopMsg.metasize = htons(retxMeta->metaSize);
     memcpy(&bopMsg.metadata, retxMeta->metadata, retxMeta->metaSize);
 
-#ifdef HMAC
-    struct iovec iov[2];
-	iov[0].iov_base = &sendheader;
-	iov[0].iov_len=sizeof(sendheader);
-	iov[1].iov_base = &bopMsg;
-	iov[1].iov_len=sizeof(payloadlen);
-	auto mac = hMacer.getHmac(iov, 2);
-#endif
-
     /** actual BOPmsg size may not be AVAIL_BOP_LEN, payloadlen is correct */
     #if !defined(NDEBUG) && defined(LDM_LOGGING)
         log_debug("Retransmitting BOP");
@@ -1134,7 +1125,7 @@ void fmtpSendv3::SendBOPMessage(uint32_t               prodSize,
     header.flags      = htons(FMTP_BOP);
 
     ioVec[0].iov_base = &header;
-    ioVec[0].iov_len  = sizeof(FmtpHeader);
+    ioVec[0].iov_len  = FMTP_HEADER_LEN;
 
     // Start-of-transmission time is set later
     ioVec[1].iov_base = &bopMsg.start.wire;
@@ -1296,7 +1287,7 @@ void fmtpSendv3::sendData(void* data, uint32_t dataSize)
          */
         //TODO: use Rateshaper to replace tc?
         if (linkspeed) {
-            rateshaper.CalcPeriod(sizeof(header) + payloadlen);
+            rateshaper.CalcPeriod(FMTP_HEADER_LEN + payloadlen);
         }
         #ifdef LDM_LOGGING
             log_debug("Multicasting data");
