@@ -29,14 +29,14 @@ deployOpts+=([wa]='-m           -s        ')
 deployOpts+=([wi]='-m           -s        ')
 
 declare -a sites
-#sites+=(ca)
+sites+=(ca)
 sites+=(co)
-#sites+=(md)
-#sites+=(mo)
-#sites+=(nj)
-#sites+=(ut)
+sites+=(md)
+sites+=(mo)
+sites+=(nj)
+sites+=(ut)
 sites+=(va)
-#sites+=(wa)
+sites+=(wa)
 sites+=(wi)
 
 for site in ${sites[*]}; do
