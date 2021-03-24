@@ -1,3 +1,7 @@
+6.13.14.24
+    ldmadmin(1):
+        * Documented the 2 "pqactcheck" invocations in the manual-page
+
 6.13.14.23      2021-03-24T11:20:31-0600
     Multicast:
         * Improved I/O handling of FMTP packet structures:
