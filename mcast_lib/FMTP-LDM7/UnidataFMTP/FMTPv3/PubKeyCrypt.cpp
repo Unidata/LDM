@@ -13,7 +13,6 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
-#include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
@@ -21,6 +20,7 @@
 #include <exception>
 #include <string>
 #include <system_error>
+#include <stdexcept>
 
 PubKeyCrypt::PubKeyCrypt()
 #if USE_RSA

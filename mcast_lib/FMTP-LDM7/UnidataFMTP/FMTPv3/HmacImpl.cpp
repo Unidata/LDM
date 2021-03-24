@@ -5,11 +5,12 @@
  *  Created on: Sep 4, 2020
  *      Author: Steven R. Emmerson
  */
+#include <FmtpBase.h>
+
 #include "FmtpConfig.h"
 
 #include "HmacImpl.h"
 
-#include "fmtpBase.h"
 #include "SslHelp.h"
 
 #include <openssl/rsa.h>
@@ -81,6 +82,8 @@ static EVP_MD_CTX* createMdCtx()
     return mdCtx;
 }
 
+const int HmacImpl::HMAC_SIZE = 32;
+
 /**
  * Assigns members `key`, `pkey`, and `mdCtx` after vetting the size of the
  * HMAC key.
@@ -101,7 +104,6 @@ HmacImpl::HmacImpl()
     : key{}
     , pkey{nullptr}
     , mdCtx{nullptr}
-    , pkcKey{new PrivateKey()}
 {
     unsigned char bytes[2*MAC_SIZE];
 
@@ -117,15 +119,12 @@ HmacImpl::HmacImpl(const std::string& key)
     : key{}
     , pkey{nullptr}
     , mdCtx{nullptr}
-    , pkcKey{nullptr}
 {
     init(key);
-    //pkcKey = new PublicKey();
 }
 
 HmacImpl::~HmacImpl()
 {
-    delete pkcKey;
     if (mdCtx)
         EVP_MD_CTX_free(mdCtx);
     if (pkey)

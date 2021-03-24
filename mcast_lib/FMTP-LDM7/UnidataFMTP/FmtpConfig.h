@@ -39,6 +39,9 @@
    */
 #define LT_OBJDIR ".libs/"
 
+/* whether or not to disable assertions */
+/* #undef NDEBUG */
+
 /* Name of package */
 #define PACKAGE "fmtp"
 

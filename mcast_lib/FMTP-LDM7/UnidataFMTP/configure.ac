@@ -25,6 +25,30 @@ if test "$GXX" = "yes"; then
     AC_SUBST([AM_CXXFLAGS], [-std=c++11])
 fi
 
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--enable-debug],
+	[enable support for debugging [[default=disabled]]]),
+    [
+	case "$enableval" in
+	yes) enable_debug=true
+	     # The ": CFLAGS=..." form doesn't work. Bad colon!
+	     # CFLAGS and CXXFLAGS are automatically substituted
+	     CFLAGS="${CFLAGS:+$CFLAGS }-g -O0"
+	     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0"
+            ;;
+	no) enable_debug=false
+            AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
+            ;;
+	*) AC_MSG_ERROR(
+	    [bad value {$enableval} for --enable-debug])
+	    ;;
+	esac
+    ],
+    [
+	enable_debug=false
+        AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
+    ])
+
 # Check for OpenSSL version 1.1.1 stuff
 AC_CHECK_FILE([/opt/openssl], [
     CPPFLAGS="-I/opt/openssl/include${CPPFLAGS:+ $CPPFLAGS}"

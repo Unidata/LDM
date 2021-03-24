@@ -125,9 +125,16 @@ Performs a \fBtail -f\fP on the LDM logfile
 \fB$(regutil regpath{LOG_FILE})\fP.
 .hy
 .TP
-.B pqactcheck
-Check pqact.conf file(s) for errors.
+.BI "pqactcheck [" ldmd_conf "]"
+Check the pqact(1) configuration files that are referenced in the LDM
+configuration file, \fIldmd_conf\fP, for errors.
 Status messages are written to the standard-output stream.
+This is the default if no argument is specified.
+.TP
+.BI "pqactcheck [-p " pqact_conf "]"
+Check the pqact(1) configuration-file, \fIpqact_conf\fP, for errors.
+Status messages are written to the standard-output stream.
+If no option is specified, then the previous form is used.
 .TP
 .B queuecheck
 Check LDM queue for errors.

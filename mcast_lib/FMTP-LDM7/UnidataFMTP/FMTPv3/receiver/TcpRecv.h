@@ -32,8 +32,9 @@
 #define FMTP_RECEIVER_TCPRECV_H_
 
 
-#include "fmtpBase.h"
+#include "FmtpBase.h"
 #include "TcpBase.h"
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <mutex>

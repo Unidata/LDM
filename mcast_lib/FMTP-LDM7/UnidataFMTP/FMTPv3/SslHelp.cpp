@@ -13,6 +13,7 @@
 
 #include <cerrno>
 #include <fcntl.h>
+#include <stdexcept>
 #include <system_error>
 #include <unistd.h>
 
@@ -54,6 +55,39 @@ void initRand(const int numBytes)
     catch (const std::exception& ex) {
         ::close(fd);
         throw;
+    }
+}
+
+void throwExcept(CodeQ& codeQ)
+{
+    if (!codeQ.empty()) {
+        OpenSslErrCode code = codeQ.front();
+        codeQ.pop();
+
+        try {
+            throwExcept(codeQ);
+            throw std::runtime_error(ERR_reason_error_string(code));
+        }
+        catch (const std::exception& ex) {
+            std::throw_with_nested(std::runtime_error(
+                    ERR_reason_error_string(code)));
+        }
+    }
+}
+
+void throwOpenSslError(const std::string& msg)
+{
+    CodeQ codeQ;
+
+    for (OpenSslErrCode code = ERR_get_error(); code; code = ERR_get_error())
+        codeQ.push(code);
+
+    try {
+        throwExcept(codeQ);
+        throw std::runtime_error(msg);
+    }
+    catch (const std::runtime_error& ex) {
+        std::throw_with_nested(std::runtime_error(msg));
     }
 }
 

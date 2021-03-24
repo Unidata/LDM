@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      fmtpBase.cpp
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 7, 2014
  *
@@ -27,13 +28,18 @@
  */
 
 
-#include "fmtpBase.h"
+#include <FmtpBase.h>
+#include "mac.h"
 
 
-fmtpBase::fmtpBase()
-{
-}
+FmtpBase::FmtpBase()
+    : MAC_SIZE{Mac::getSize()}
+    , MAX_PAYLOAD{MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_SIZE}
+    , MAX_BOP_METADATA{MAX_PAYLOAD - BOPMsg::HEADER_SIZE}
+		//- static_cast<int>(sizeof(StartTime))
+        //- static_cast<int>(sizeof(uint32_t))   // BOPMsg.prodsize
+		//- static_cast<int>(sizeof(uint16_t))}  // BOPMsg.metasize
+{}
 
-fmtpBase::~fmtpBase()
-{
-}
+FmtpBase::~FmtpBase()
+{}
