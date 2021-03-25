@@ -1,11 +1,14 @@
+6.13.14.25
+
 6.13.14.24      2021-03-24T17:10:21-0600
     ldmadmin(1):
-        * Documented the 2 "pqactcheck" invocations in the manual-page
+        * Documented the two types of "pqactcheck" invocations in the
+          manual-page
 
 6.13.14.23      2021-03-24T11:20:31-0600
     Multicast:
-        * Improved I/O handling of FMTP packet structures:
-            * Deleted RETX_REQ_LEN.
+        * Improved FMTP packet structures regarding I/O handling and padding:
+            * Deleted RETX_REQ_LEN
             * Replaced flexible arrays with [1] to accomodate g++ 8.3
             * Improved BOPMsg structure
             * Eliminated use of sizeof(struct ...) where appropriate
@@ -13,8 +16,8 @@
 6.13.14.22      2021-03-23T17:39:37-0600
     Multicast:
         * FmtpPacket:
-            * fmtpBase.h: Defined with flexible array payload
-            * UdpSend & UdpRecv: Made use of
+            * fmtpBase.h: Defined FMTP packet with flexible array payload
+            * UdpSend & UdpRecv: Made use of new FMTP packet
             * Made maximum payload depend on MAC
 
     DevOps:
@@ -34,6 +37,7 @@
             - unset or "0": No MAC
             - "1":          SHA256 HMAC
             - "2":          Ed25519
+
 6.13.14.19      2021-03-11T13:52:45-0700
     scour(1):
         * Improved function getExcludedDirsList() and its use
