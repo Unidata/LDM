@@ -54,7 +54,7 @@
 typedef struct config_items_args {
     
     char    dir[PATH_MAX];
-    int     daysOldInEpoch;
+    time_t  daysOldInEpoch;
     char    daysOld[DAYS_OLD_SIZE];
     char    pattern[PATTERN_SIZE]; 
     int     deleteDirsFlag;
@@ -91,7 +91,7 @@ isDirectoryEmpty(char* dirname)
 
 // The lower the epoch time the older the file
 static bool
-isThisOlderThanThat(int thisFileEpoch, int thatFileEpoch)
+isThisOlderThanThat(time_t thisFileEpoch, time_t thatFileEpoch)
 {
     return (thisFileEpoch <= thatFileEpoch)? true : false;
 }
@@ -200,7 +200,7 @@ isExcluded(char * dirPath, char (*list)[PATH_MAX])
  * @retval     -1                 error occured
  */
 static int 
-scourFilesAndDirs(char *basePath, int daysOldInEpoch,
+scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
                       char *pattern,  int deleteDirsFlag,
                       char *daysOld,  int symlinkFlag)
 {
@@ -229,7 +229,7 @@ scourFilesAndDirs(char *basePath, int daysOldInEpoch,
             return -1;
         }
 
-        int currentEntryEpoch = sb.st_mtime;
+        time_t currentEntryEpoch = sb.st_mtime;
 
         // new basePath is either a dir, a file, or a link to follow if it's a directory symlimk
         char path[PATH_MAX];
@@ -362,10 +362,10 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *)
                                                 oneItemStruct;
 
-    char *dirPath           = currentItem.dir;
-    char *daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
-    int   daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
-    char *pattern           = currentItem.pattern;
+    char*  dirPath           = currentItem.dir;
+    char*  daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
+    time_t daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
+    char*  pattern           = currentItem.pattern;
 
     int   deleteDirOrNot    = currentItem.deleteDirsFlag;
 

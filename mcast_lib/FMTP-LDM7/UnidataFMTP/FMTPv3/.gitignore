@@ -8,9 +8,7 @@ size.txt-bak
 *.csv
 config.status
 .libs
-/IperfFmtpPdu
-<<<<<<< HEAD
-/pdu
-=======
->>>>>>> refs/heads/MI_C_scour
-/mac_test
+IperfFmtpPdu
+pdu
+mac_test
+Ed25519_test
