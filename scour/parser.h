@@ -36,21 +36,21 @@
 
 typedef struct IngestEntry {
 
-	char dir[PATH_MAX];
-	int  daysOldInEpoch;	
-	char daysOld[DAYS_OLD_SIZE];
-	char pattern[PATTERN_SIZE];	
+	char   dir[PATH_MAX];
+	time_t daysOldInEpoch;
+	char   daysOld[DAYS_OLD_SIZE];
+	char   pattern[PATTERN_SIZE];
 	struct IngestEntry* nextEntry;
 } IngestEntry_t;
 
-bool  newEntryNode(IngestEntry_t **, char *, char *, char *);
-int   parseConfig(int *, IngestEntry_t **, char *);
-int   regexOps(char *, char *, int);
-int   nowInEpoch();
-int   convertDaysOldToEpoch(char *);
-char *loginHomeDir(char *);
-bool   isExcluded(char *, char (*)[PATH_MAX]);
-bool   isNotAccessible(char *) ;
+bool       newEntryNode(IngestEntry_t **, char *, char *, char *);
+int        parseConfig(int *, IngestEntry_t **, char *);
+time_t     regexOps(char *, char *, int);
+time_t     nowInEpoch();
+time_t     convertDaysOldToEpoch(char *);
+char*      loginHomeDir(char *);
+bool       isExcluded(char *, char (*)[PATH_MAX]);
+bool       isNotAccessible(char *) ;
 static int vetThisDirectoryPath(char *); 
 
 #endif	// PARSER_DOT_H

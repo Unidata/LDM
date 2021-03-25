@@ -399,9 +399,11 @@ newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *pattern)
     }
     else {
         // convert user's daysOld to Epoch time
-        int daysOldInEpoch = convertDaysOldToEpoch(daysOld);
+        time_t daysOldInEpoch = convertDaysOldToEpoch(daysOld);
         if(daysOldInEpoch == -1) {
-            log_warning("Invalid days-old parameter: \"%s\"", daysOld);
+            log_add("Couldn't convert days-old parameter: \"%s\"", daysOld);
+            log_add("This entry will be ignored");
+            log_flush_warning();
             free(tmp);
         }
         else {
@@ -423,7 +425,7 @@ newEntryNode(IngestEntry_t **listHead, char *dir, char *daysOld, char *pattern)
     return success;
 }
 
-int 
+time_t
 nowInEpoch()
 {
     time_t today, todayEpoch;
@@ -440,147 +442,79 @@ nowInEpoch()
  * @param[in]  dirName             directory pathname read from the scour config file 
  * @param[in]  excludedDirsList    list of directory paths of directory to exclude 
  *                                 from scouring
- * @param[in]  excludedDirsCounter previously computed number of excluded directories 
+ * @param[in]  nmatch              Maximum number of substring matches
  *
  * @retval     >0             	   daysOld in seconds
- * @retval     -1            	   invalid daysOld provided
+ * @retval     -1            	   Failure. `log_add()` called.
  */
-int 
-regexOps(char *pattern, char *daysOldItem, int groupingNumber)
+time_t
+regexOps(char *pattern, char *daysOldItem, int nmatch)
 {
-
 	// Allowed formats are:
 	// - days
 	// - days-HH
-	// - days-HHMM
-	// - days-HHMMSS
+	// - days-HH:MM
 
 	/*
 	Examples of daysOld:
 			"1",			--> 1 day
-			"2-0630",		--> 2 days + 6 hours + 30 minutes
-			"3-073050",		--> 3 days + 7 hours + 30 minutes + 50 seconds
+			"2-06:30",		--> 2 days + 6 hours + 30 minutes
 			"3-",			--> error
 			"233-0",		--> error
+			"-"             --> error
+			"-09"           --> 9 hours
 			"33-11",		--> 33 days + 11 hours
-			"9000-07",
-			"444"
-			"0-0930"		--> 0 days + 9 hours + 30 minutes 
+			"9000-07",      --> Valid. But seriously!
+			"444"           --> 444 days
+			"0-09:30"		--> 0 days + 9 hours + 30 minutes
 	*/
 
-	int daysEtcInSeconds=0, days=0, hours=0, minutes=0, seconds=0;
+	int        daysEtcInSeconds=0, days=0, hours=0, minutes=0;
+	regex_t    regex;
+	regmatch_t group[nmatch];
+	char*      result;
+	time_t     status = regcomp(&regex, pattern, REG_EXTENDED);
 
-	int todayEpoch = nowInEpoch();
-	regex_t regex;
-	regmatch_t group[5];
-	char *result;
+	if (status) {
+	    const size_t nbytes = regerror(status, &regex, NULL, 0);
+	    char         errbuf[nbytes];
+	    (void)regerror(status, &regex, errbuf, nbytes);
+	    log_add(errbuf);
+	    log_add("Couldn't compile pattern \"%s\"", pattern);
+	    status = -1;
+	}
+	else {
+        status = regexec(&regex, daysOldItem , nmatch, group, 0);
+        if (status == 0) {
+            char* end;
+            if (group[1].rm_eo - group[1].rm_so > 0) {
+                days = strtol(daysOldItem+group[1].rm_so, &end, 0);
+                if(days > DAYS_SINCE_1994) {
+                    log_add("Too many days back: %d", days);
+                    return -1;
+                }
+            }
 
-	int status;
-	status = regcomp(&regex, pattern, REG_EXTENDED);
-	status = regexec(&regex, daysOldItem , groupingNumber, group, 0);
-	if (status == 0) 
-	{
-		result = (char*)malloc(group[1].rm_eo - group[1].rm_so);
-		strncpy(result, &daysOldItem[group[1].rm_so], group[1].rm_eo - group[1].rm_so);
-		days = atoi(result);
-        free(result);
-		if(days > DAYS_SINCE_1994) {
-			log_add("Too many days back: %d", days);
-			log_flush_warning();
-			return -1;
-		}
+            if (group[2].rm_eo - group[2].rm_so > 0)
+                hours = strtol(daysOldItem+group[2].rm_so, &end, 0);
 
-		result = (char*)malloc(group[2].rm_eo - group[2].rm_so);
-		strncpy(result, &daysOldItem[group[2].rm_so], group[2].rm_eo - group[2].rm_so);
-		hours = atoi(result);
-		free(result);
+            if (group[3].rm_eo - group[3].rm_so > 0)
+                minutes = strtol(daysOldItem+group[3].rm_so, &end, 0);
 
-		// 
-		switch(groupingNumber)
-		{
-			case 3: //days_HH
-				
-				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS; 
-	
-				log_info("(+) daysOld: %d -- hours: %d  (epoch: %d)", 
-					days, hours, todayEpoch - daysEtcInSeconds);								
-				break;
+            status = nowInEpoch() - (days*DAY_SECONDS + hours*HOUR_SECONDS +
+                    minutes*MINUTE_SECONDS);
 
-			case 4: // days_HHMM
+            regfree(&regex);
+        } // `regex` allocated
+	}
 
-				result = (char*)malloc(group[3].rm_eo - group[3].rm_so);
-				strncpy(result, &daysOldItem[group[3].rm_so], group[3].rm_eo - group[3].rm_so);
-				minutes = atoi(result);
-                free(result);
-		
-				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS; 
-				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d (epoch: %d)", 
-					days, hours, minutes, todayEpoch - daysEtcInSeconds);
-				break;
-
-			case 5: // days_HHMMSS
-
-				result = (char*)malloc(group[3].rm_eo - group[3].rm_so);
-				strncpy(result, &daysOldItem[group[3].rm_so], group[3].rm_eo - group[3].rm_so);
-				minutes = atoi(result);			
-                free(result);
-
-				result = (char*)malloc(group[4].rm_eo - group[4].rm_so);
-				strncpy(result, &daysOldItem[group[4].rm_so], group[4].rm_eo - group[4].rm_so);
-				seconds = atoi(result);
-                free(result);
-
-				daysEtcInSeconds =  days * DAY_SECONDS + hours * HOUR_SECONDS + minutes * MINUTE_SECONDS + seconds; 
-				log_info("(+) daysOld: %d -- hours: %d -- minutes: %d -- seconds %d (epoch: %d)", 
-					days, hours, minutes, seconds, todayEpoch - daysEtcInSeconds);
-				log_flush_info();
-
-				break;
-
-			default: break;
-		}
-		regfree(&regex);
-
-		return todayEpoch - daysEtcInSeconds;
-	} 
-	return -1;
+	return status;
 }
 
-int 
+time_t
 convertDaysOldToEpoch(char *daysOldItem)
 {
-	regex_t regex;
-	regmatch_t group[5];
-	int status;
-	int todayEpoch = nowInEpoch();
-
-	// days_only
-	char *daysOnlyPattern="^[0-9]+$";
-	status = regcomp(&regex, daysOnlyPattern, REG_EXTENDED);
-	status = regexec(&regex, daysOldItem , 0, NULL, 0);  // no grouping needed
-	regfree(&regex);
-
-	if (status == 0) 
-	{
-		int daysOnlyInSeconds = atoi(daysOldItem) * DAY_SECONDS;
-		return todayEpoch - daysOnlyInSeconds;
-	} 
-
-	//days-HH
-
-	char *daysHHPattern="^([0-9]+)[-]([0-9]{2})$";
-	int res1 = regexOps(daysHHPattern, daysOldItem, 3);
-
-	//days-HHMM
-	char *daysHHMMPattern="^([0-9]+)[-]([0-9]{2})([0-9]{2})$";
-	int res2 = regexOps(daysHHMMPattern, daysOldItem, 4);
-	
-	//days-HHMMSS
-	char *daysHHMMSSPattern="^([0-9]+)[-]([0-9]{2})([0-9]{2})([0-9]{2})";
-	int res3 = regexOps(daysHHMMSSPattern, daysOldItem, 5);
-	
-
-	return res1 >= 0? res1 : res2 >= 0? res2 : res3 >= 0? res3 : -1;
+	return regexOps("^([0-9]*)(-([0-9]{2})(:([0-9]{2}))?)?$", daysOldItem, 4);
 }
 
 
