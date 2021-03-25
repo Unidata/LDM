@@ -476,8 +476,11 @@ RetxMetadata* fmtpSendv3::addRetxMetadata(void* const                  data,
      * the content of metadata is copied to a dynamically allocated array
      * and saved in senderProdMeta.
      */
-    char* metadata_ptr = new char[metaSize];
-    (void)memcpy(metadata_ptr, metadata, metaSize);
+    char* metadata_ptr = nullptr;
+    if (metaSize) {
+        metadata_ptr = new char[metaSize];
+        (void)memcpy(metadata_ptr, metadata, metaSize);
+    }
 
     /* Update current prodindex in RetxMetadata */
     senderProdMeta->prodindex        = prodIndex;
@@ -1096,7 +1099,8 @@ void fmtpSendv3::SendBOPMessage(uint32_t               prodSize,
 
     // BOPMsg in network byte-order (UdpSend doesn't convert payload):
     BOPMsg bopMsg;
-    ::memcpy(bopMsg.metadata, metadata, metaSize);
+    if (metadata)
+        ::memcpy(bopMsg.metadata, metadata, metaSize);
     bopMsg.metasize     = htons(metaSize);
     bopMsg.prodsize     = htonl(prodSize);
     bopMsg.startTime[0] = htonl(startTime.tv_sec >> 32);
