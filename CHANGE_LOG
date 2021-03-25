@@ -1,4 +1,7 @@
 6.13.14.25
+    scour(1):
+        * Changed absolute time-threshold from "int" to "time_t"
+        * Simplified ERE handling of days-old field
 
 6.13.14.24      2021-03-24T17:10:21-0600
     ldmadmin(1):

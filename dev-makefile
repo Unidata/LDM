@@ -21,29 +21,35 @@ check:  check-cc check-clang
 # Scan code using clang(1)
 clang-scan:
 	$(MAKE) clean
-	scan-build $(MAKE) -f dev-makefile
-	@url=file://`ls -dt /tmp/scan-build-* | head -1`/index.html; \
-        echo "Display $$url in browser"
+	rm -rf /tmp/scan-build-*
+	scan-build $(MAKE)
 
 COVERITY_SCAN_FILE      = ldm.tgz
 
 # Create a submission file for Coverity Scan
 $(COVERITY_SCAN_FILE):
 	$(MAKE) clean
+	rm -rf cov-int
 	cov-build --dir cov-int $(MAKE)
+	tail cov-int/build-log.txt
+	tail cov-int/build-log.txt | \
+	       grep 'Compilation units (.*) are ready for analysis'
+	tail cov-int/build-log.txt | \
+	       grep -F 'The cov-build utility completed successfully'
 	tar czvf $(COVERITY_SCAN_FILE) cov-int
+	rm -rf cov-int
 
 # Scan code using Coverity Scan
 coverity-scan:  $(COVERITY_SCAN_FILE) 
-	curl --form token=0pf-X2cUm8wazhJpRepz9w \
+	curl --form token=`cat $$HOME/.ssh/ldm-coverity-scan-token` \
 	--form email=emmerson@ucar.edu \
 	--form file=@$(COVERITY_SCAN_FILE)  \
 	--form version=`awk '{print $$1; exit}' CHANGE_LOG` \
-	--form description="make scan" \
+	--form description="make scan" 
+	--silent --show-error \
 	https://scan.coverity.com/builds?project=Unidata%2FLDM \
 	   > $@.log # Redirection is necessary to avoid appearance of hanging
 	mv $@.log $@
-	rm -rf cov-int
 
 scan:	coverity-scan clang-scan
 
