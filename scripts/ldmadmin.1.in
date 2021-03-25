@@ -203,7 +203,8 @@ action from their \fBcrontab\fP file.  For example, the following entry
 0/15 * * * * bin/ldmadmin check >/dev/null
 .RE
 .sp
-would check the LDM system every fifteen minutes (and not send email to the user.)
+would check the LDM system every fifteen minutes and send email to the user
+but only if an error was found.)
 .RE
 .TP
 .B printmetrics
