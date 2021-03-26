@@ -96,7 +96,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:S:s:t:u:vx")) != -1) {
+            (ch = getopt(argc, argv, "b:cfI:l:m:nq:r:R:s:t:u:vx")) != -1) {
         switch (ch) {
             extern char*    optarg;
             extern int      optopt;
@@ -152,7 +152,7 @@ decodeCommandLine(
                   retrans_xmit_enable = OPTION_DISABLE;
 #endif
                 break;
-            case 'S':
+            case 'R':
                    if (sscanf(optarg, "%d", &rcvBufSize) != 1 ||
                            rcvBufSize <= 0) {
                        log_add("Invalid receive buffer size: \"%s\"", optarg);
@@ -1313,7 +1313,7 @@ execute(const char* const restrict mcastSpec,
  *      <dd>Use \e queue as the pathname of the LDM product-queue. The default
  *      is to use the default LDM pathname of the product-queue.</dd>
  *
- *      <dt>-S <em>bufSize</em></dt>
+ *      <dt>-R <em>bufSize</em></dt>
  *      <dd>Set the receive buffer size for the NOAAPort UDP packets to
  *      <em>bufSize</em> bytes. The default is system dependent.</dd>
  *

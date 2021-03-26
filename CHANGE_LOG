@@ -3,6 +3,9 @@
         * Changed absolute time-threshold from "int" to "time_t"
         * Simplified ERE handling of days-old field
 
+    noaaportIngester(1):
+        * Changed receiver-buffer-size option from "S" to "R" (for "receive")
+
     DevOps:
         * Improved targets "clang-scan" and "coverity-scan"
 
