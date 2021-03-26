@@ -317,7 +317,7 @@ static void usage(
 "               Default is to read from the standard input stream.\n"
 "   -n          Log through level NOTE. Report each data-product.\n"
 "   -q queue    Use \"queue\" as LDM product-queue. Default is \"%s\".\n"
-"   -S bufSize  Receiver buffer size in bytes. Default is system dependent.\n"
+"   -R bufSize  Receiver buffer size in bytes. Default is system dependent.\n"
 "   -u n        Use logging facility local\"n\". Default is to use the\n"
 "               default LDM logging facility, %s. Implies \"-l ''\".\n"
 "   -v          Log through level INFO.\n"
