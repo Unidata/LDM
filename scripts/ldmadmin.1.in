@@ -200,11 +200,11 @@ action from their \fBcrontab\fP file.  For example, the following entry
 .sp
 .RS
 .RS +4
-0,15,30,45 * * * * bin/ldmadmin scour >/dev/null
+0/15 * * * * bin/ldmadmin check >/dev/null
 .RE
 .sp
-would check the LDM system every fifteen minutes and send email to the
-LDM user only if a problem was found.
+would check the LDM system every fifteen minutes and send email to the user
+but only if an error was found.)
 .RE
 .TP
 .B printmetrics
