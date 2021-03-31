@@ -6,6 +6,9 @@
     noaaportIngester(1):
         * Changed receiver-buffer-size option from "S" to "R" (for "receive")
 
+    Documentation:
+        * Removed reference to installing from an RPM because it doesn't exist
+
     DevOps:
         * Improved targets "clang-scan" and "coverity-scan"
 
