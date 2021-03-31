@@ -1,4 +1,7 @@
 6.13.14.25
+    ldmadmin(1):
+        * Made more(1) the default pager for "ldmadmin log"
+
     scour(1):
         * Changed absolute time-threshold from "int" to "time_t"
         * Simplified ERE handling of days-old field
