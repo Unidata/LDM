@@ -270,7 +270,8 @@ public:
                   size_t      msgLen,
                   char*       mac,
                   size_t      macLen) override {
-        if (EVP_DigestSignInit(mdCtx, NULL, EVP_sha256(), NULL, pKey) != 1)
+        if (EVP_DigestSignInit(mdCtx, nullptr, EVP_sha256(), nullptr, pKey)
+                != 1)
             SslHelp::throwOpenSslError("EVP_DigestSignInit() failure");
 
         if (!EVP_DigestSign(mdCtx,
@@ -449,9 +450,6 @@ Mac::Mac(const std::string& key)
         break;
     }
 }
-
-Mac::~Mac()
-{}
 
 std::string Mac::getKey() const
 {

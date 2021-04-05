@@ -58,8 +58,6 @@ public:
 
     Mac(Mac&& Mac) =delete;
 
-    virtual ~Mac();
-
     Mac& operator=(const Mac& Mac) =delete;
 
     Mac& operator=(Mac&& Mac) =default;
