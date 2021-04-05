@@ -446,8 +446,20 @@ commands:
     checkinsertion                           Checks for recent insertion of
                                                  data-product into product-queue
     vetqueuesize                             Vets the size of the product-queue
-    pqactcheck [-p pqact_conf]               Checks syntax of pqact(1) files
-    pqactcheck [conf_file]                   Checks syntax of pqact(1) files
+    pqactcheck [ldmd_conf]                   Check the pqact(1) configuration files 
+                                                 that are referenced in the LDM
+                                                 configuration file, ldmd_conf, for 
+                                                 errors.
+                                                 Status messages are written to 
+                                                 the standard-output stream.
+                                                 This is the default if no argument 
+                                                 is specified.
+    pqactcheck [-p pqact_conf]               Check the pqact(1) configuration-file, 
+                                                 pqact_conf, for errors.
+                                                 Status messages are written to 
+                                                 the standard-output stream.
+                                                 If no option is specified, then 
+                                                 the previous form is used.
     pqactHUP                                 Sends HUP signal to pqact(1)
                                                  program
     queuecheck                               Checks for product-queue corruption
