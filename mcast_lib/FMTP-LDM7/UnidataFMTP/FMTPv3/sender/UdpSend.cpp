@@ -101,15 +101,17 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
  * Constructor, set the IP address and port of the receiver, TTL, and default
  * multicast egress interface.
  *
- * @param[in] recvAddr     IP address of the receiver.
- * @param[in] recvport     Port number of the receiver.
- * @param[in] ttl          Time to live.
- * @param[in] ifAddr       IP of interface for multicast egress.
+ * @param[in] recvAddr      IP address of the receiver.
+ * @param[in] recvport      Port number of the receiver.
+ * @param[in] ttl           Time to live.
+ * @param[in] ifAddr        IP of interface for multicast egress.
+ * @param[in] canonPduSize  Canonical size of protocol data unit in bytes
  */
 UdpSend::UdpSend(const std::string&   recvaddr,
                  const unsigned short recvport,
                  const unsigned char  ttl,
-                 const std::string&   ifAddr)
+                 const std::string&   ifAddr,
+                 const unsigned       canonPduSize)
     : recvAddr(recvaddr),
       recvPort(recvport),
       ttl(ttl),
@@ -122,7 +124,7 @@ UdpSend::UdpSend(const std::string&   recvaddr,
       MAC_LEN{signer.getSize()},
       sendBefore(false),
       blackHat(*this),
-      maxPayload{MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_LEN}
+      maxPayload{canonPduSize - FMTP_HEADER_LEN - MAC_LEN}
 {}
 
 

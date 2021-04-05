@@ -115,7 +115,8 @@ public:
     UdpSend(const std::string&   recvaddr,
             const unsigned short recvport,
             const unsigned char  ttl,
-            const std::string&   ifAddr);
+            const std::string&   ifAddr,
+            const unsigned       canonPduSize);
 
     ~UdpSend();
 

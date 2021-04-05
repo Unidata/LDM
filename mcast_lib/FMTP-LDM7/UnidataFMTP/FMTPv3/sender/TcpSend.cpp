@@ -245,18 +245,6 @@ int TcpSend::sockListSize() const noexcept
 
 
 /**
- * Gets the min path MTU.
- *
- * @param[in] none
- * @return    pmtu    Up-to-date min path MTU.
- */
-int TcpSend::getMinPathMTU()
-{
-    return pmtu;
-}
-
-
-/**
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
@@ -295,7 +283,6 @@ void TcpSend::Init()
     int alive = 1;
     //int aliveidle = 10; /* keep alive time = 10 sec */
     int aliveintvl = 30; /* keep alive interval = 30 sec */
-    pmtu = MIN_MTU; /* initialize pmtu with defined min MTU */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -467,41 +454,4 @@ int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
     sendallstatic(retxsockfd, payload, paylen);
 
     return (sizeof(FmtpHeader) + paylen);
-}
-
-
-/**
- * Reads the path MTU of a receiver connection, and updates the minimum path
- * MTU with the new obtained value (or remains unchanged).
- *
- * @param[in] sockfd    socket file descriptor of a receiver connection.
- *
- * @throw  std::system_error    if obtained MTU is invalid.
- */
-void TcpSend::updatePathMTU(int sockfd)
-{
-    int mtu = MIN_MTU;
-#ifdef IP_MTU
-    socklen_t mtulen = sizeof(mtu);
-    /*
-     * Coverity Scan #1: Fix #7: getsockopt has a return value of 0 if
-     * successful, -1 if unsuccessful. The fix simply handles the return value
-     * and throws a runtime error should the return value be -1
-     */
-    if (getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen)){
-		throw std::system_error(errno, std::system_category(),
-				"fmtpRecvv3::updatePathMTU() getsockopt failed with return "
-				"value -1 in an attempt to obtain MTU.");
-    }
-    if (mtu <= 0) {
-        throw std::system_error(errno, std::system_category(),
-                "TcpSend::updatePathMTU() error obtaining MTU");
-    }
-    /* force mtu to be at least MIN_MTU, cannot afford mtu to be too small */
-    mtu = (mtu < MIN_MTU) ? MIN_MTU : mtu;
-#endif
-    /* update pmtu with the newly joined mtu */
-    if (mtu < pmtu) {
-         pmtu = mtu;
-    }
 }

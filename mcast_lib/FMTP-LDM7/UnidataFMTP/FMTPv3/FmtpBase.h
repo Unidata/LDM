@@ -61,18 +61,19 @@ typedef struct FmtpRetxReqMessage {
     uint16_t length;
 } RetxReqMsg;
 
-const int MIN_MTU         = 1500; // Maximum ethernet frame payload
+///< Maximum possible UDP payload in bytes
+const int MAX_UDP_PAYLOAD      = 65507;
+/// Maximum possible FMTP PDU size in bytes (rounded down for alignment)
+const int MAX_FMTP_PACKET = ((MAX_UDP_PAYLOAD/8)*8);
 
-/* non-constants, could change with MTU */
-const int MTU                 = MIN_MTU;
-const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
+const int MAX_ETHERNET_PAYLOAD = 1500;  ///< Maximum ethernet payload in bytes
 
 typedef union {
     struct {
         FmtpHeader header;     ///< FMTP header in network byte-order
         char       payload[1]; ///< FMTP payload (excludes any MAC)
     };
-    char bytes[MAX_FMTP_PACKET];
+    char bytes[MAX_FMTP_PACKET]; ///< Doubtless, more than sufficient
 } FmtpPacket;
 
 /// Most significant seconds, least significant seconds, nanoseconds
@@ -81,25 +82,15 @@ typedef uint32_t StartTime[3];
 /**
  * structure of Begin-Of-Product message
  */
-#if 0
-typedef struct FmtpBOPMessage {
-    StartTime startTime;    ///< Start of transmission of product
-    uint32_t  prodsize;     /*!< support 4GB maximum */
-    uint16_t  metasize;
-    char      metadata[MAX_FMTP_PACKET]; ///< Oversize
-    /* Be aware this default constructor could implicitly create a new BOP */
-    FmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
-} BOPMsg;
-#else
 typedef struct FmtpBOPMessage {
     union {
         struct {
             StartTime startTime;    ///< Start of transmission of product
-            uint32_t  prodsize;     /*!< support 4GB maximum */
+            uint32_t  prodsize;     /*!< supports maximum (2^32)-1 bytes */
             uint16_t  metasize;
             char      metadata[1];
         };
-        char bytes[MAX_FMTP_PACKET]; ///< Oversize
+        char bytes[MAX_FMTP_PACKET]; ///< Doubtless, more than sufficient
     };
 
     static const unsigned HEADER_SIZE = sizeof(StartTime) + sizeof(uint32_t) +
@@ -108,7 +99,6 @@ typedef struct FmtpBOPMessage {
     /* Be aware this default constructor could implicitly create a new BOP */
     FmtpBOPMessage() : prodsize(0), metasize(0) {}
 } BOPMsg;
-#endif
 
 const uint16_t FMTP_BOP       = 0x0001;
 const uint16_t FMTP_EOP       = 0x0002;
@@ -150,15 +140,23 @@ typedef struct timerParameter {
  * Class for holding runtime (i.e., not compile-time) constants.
  */
 class FmtpBase {
+    /**
+     * Returns the size, in bytes, of a canonical FMTP protocol data unit (PDU).
+     * The canonical size is set at runtime and will, in general, be less than
+     * the maximum, possible PDU size.
+     *
+     * @return Size of a canonical FMTP PDU in bytes
+     */
+    static unsigned getCanonPduSize();
+
 public:
+    const unsigned CANON_PDU_SIZE;     ///< Maximum PDU in bytes
     const unsigned MAC_SIZE;         ///< MAC size in bytes
     const unsigned MAX_PAYLOAD;      ///< Maximum payload in bytes (excl. MAC)
     const unsigned MAX_BOP_METADATA; ///< Maximum BOP metadata in bytes
 
     FmtpBase();
     ~FmtpBase();
-
-private:
 };
 
 

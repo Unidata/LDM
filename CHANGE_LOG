@@ -15,6 +15,9 @@
     DevOps:
         * Improved targets "clang-scan" and "coverity-scan"
 
+    Multicast:
+        * Converted FMTP PDU size from a compile-time to a runtime parameter
+
 6.13.14.24      2021-03-24T17:10:21-0600
     ldmadmin(1):
         * Documented the two types of "pqactcheck" invocations in the

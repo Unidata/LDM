@@ -66,7 +66,6 @@ public:
      * @exceptionsafety  No throw
      */
     int sockListSize() const noexcept;
-    int getMinPathMTU();
     unsigned short getPortNum();
     void Init(); /*!< start point that upper layer should call */
     /**
@@ -92,7 +91,6 @@ public:
                  size_t paylen);
     static int send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                     size_t paylen);
-    void updatePathMTU(int sockfd);
 
 private:
     typedef std::mutex             Mutex;
@@ -103,7 +101,6 @@ private:
     unsigned short     tcpPort;
     std::set<int>      connSockList;
     mutable Mutex      sockListMutex; /*!< to protect shared sockList */
-    std::atomic<int>   pmtu; /* min path MTU of the mcast group */
 
     /**
      * Sets the keep-alive mechanism on a TCP socket.

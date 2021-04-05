@@ -141,7 +141,8 @@ fmtpSendv3::fmtpSendv3(const char*                 tcpAddr,
 :
     fmtpBase{},
     prodIndex(initProdIndex),
-    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr)),
+    udpsend(new UdpSend(mcastAddr, mcastPort, ttl, ifAddr,
+            fmtpBase.CANON_PDU_SIZE)),
     tcpsend(new TcpSend(tcpAddr, tcpPort)),
     sendMeta(new senderMetadata()),
     notifier(notifier),
@@ -313,8 +314,6 @@ uint32_t fmtpSendv3::sendProduct(void* data, uint32_t dataSize, void* metadata,
         RetxMetadata* senderProdMeta = addRetxMetadata(data, dataSize,
                                                        metadata, metaSize,
                                                        &now);
-        // TODO: use latest MTU for file to be sent
-        // TcpSend::getMinPathMTU()
         /* send out BOP message */
         SendBOPMessage(dataSize, metadata, metaSize, now);
         /* Send the data */
@@ -547,8 +546,6 @@ void* fmtpSendv3::coordinator(void* ptr)
                     continue;
                 }
             }
-            /* If new receiver accepted, measure its path MTU and update */
-            sendptr->tcpsend->updatePathMTU(newtcpsockfd);
 
             sendptr->sendMacKey(newtcpsockfd);
 
