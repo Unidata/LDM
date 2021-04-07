@@ -101,11 +101,28 @@ nportSock_init(
                 log_add("Couldn't initialize socket for multicast reception");
             }
             else {
-                if (rcvBufSize > 0) {
+                if (rcvBufSize <= 0) {
+                    socklen_t len = sizeof(rcvBufSize);
+                    status = getsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
+                            &rcvBufSize, &len);
+                    if (status) {
+                        log_add_syserr("Couldn't get default receive buffer "
+                                "size. Continuing.");
+                        log_flush_warning();
+                        status = 0;
+                    }
+                    else {
+                        log_notice("Using default receive buffer size of %d "
+                                "bytes", rcvBufSize);
+                    }
+                }
+                else {
+                    log_notice("Setting receive buffer size to %d bytes",
+                            rcvBufSize);
                     status = setsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
                             &rcvBufSize, sizeof(rcvBufSize));
                     if (status) {
-                        log_add_syserr("Couldn't set receiver buffer size to "
+                        log_add_syserr("Couldn't set receive buffer size to "
                                 "%d bytes. Continuing.", rcvBufSize);
                         log_flush_warning();
                         status = 0;

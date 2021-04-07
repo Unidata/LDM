@@ -153,8 +153,8 @@ decodeCommandLine(
 #endif
                 break;
             case 'R':
-                   if (sscanf(optarg, "%d", &rcvBufSize) != 1 ||
-                           rcvBufSize <= 0) {
+                   if (sscanf(optarg, "%d", rcvBufSize) != 1 ||
+                           *rcvBufSize <= 0) {
                        log_add("Invalid receive buffer size: \"%s\"", optarg);
                        status = EINVAL;
                    }
