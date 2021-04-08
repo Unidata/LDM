@@ -1,3 +1,8 @@
+6.13.14.27
+    configure(1):
+        * Added "regpar.tab" to configured files
+        * Changed "388" to "@LDM_PORT@" in registry
+
 6.13.14.26      2021-04-07T17:00:12-0600
     noaaportIngester(1):
         * Corrected handling of receive buffer size option

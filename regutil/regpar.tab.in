@@ -29,7 +29,7 @@ LDMD_CONFIG_PATH:/server/config-path:The pathname of the LDM server configuratio
 IP_ADDR:/server/ip-addr:The IP address of the interface on which the LDM server should listen for incoming connections.  An address of <tt>0.0.0.0</tt> will cause the server to listen on all available interfaces.:0.0.0.0:ip_addr
 MAX_CLIENTS:/server/max-clients:The maximum number of remotely-initiated connections the LDM server should allow before ignoring additional remotely-initiated connection attempts.:256:max_clients
 MAX_LATENCY:/server/max-latency:The maximum acceptible <a href="glindex.html#data-product latency">data-product latency</a> in seconds.  Arriving data-products with greater latency will be discarded.  This also defines the <a href="glindex.html#minimum virtual residence time">minimum virtual residence time</a> for detecting duplicate data-products.:3600:max_latency
-PORT:/server/port:The number of the port on which the LDM server should listen for incoming connections.:388:port
+PORT:/server/port:The number of the port on which the LDM server should listen for incoming connections.:@LDM_PORT@:port
 TIME_OFFSET:/server/time-offset:A cold-started LDM server will request data from this many seconds ago.:3600:offset
 ANTI_DOS:/server/enable-anti-DOS:Whether or not to enable the anti-denial-of-service feature, which ensures non-overlapping feeds to each downstream host.:TRUE
 SURFQUEUE_PATH:/surf-queue/path:The pathname of the <tt>pqsurf(1)</tt> product-queue.  The default is set by the <tt>configure(1)</tt> script.:@QUEUE_DIR@/pqsurf.pq
