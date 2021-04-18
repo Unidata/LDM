@@ -756,6 +756,7 @@ AC_CONFIG_FILES([
     pqcheck/Makefile
     pqcopy/Makefile
     pqcreate/Makefile
+    pqcreate/pqcreate.1
     pqexpire/Makefile
     pqinglib/Makefile
     pqing/Makefile

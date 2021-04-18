@@ -3,6 +3,13 @@
         * Added "regpar.tab" to configured files
         * Changed "388" to "@LDM_PORT@" in registry
 
+    pqcreate(1):
+        * Fixed manual-page regarding the computation of the default number of
+          product slots
+        * Corrected approximate mean product-size from 51 kB to 140 kB. This
+          value is used when the number of slots registry parameter is
+          "default".
+
 6.13.14.26      2021-04-07T17:00:12-0600
     noaaportIngester(1):
         * Corrected handling of receive buffer size option
