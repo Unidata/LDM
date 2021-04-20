@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ -z ${LDMHOME+x} ]; then 
+	echo -e "\n\tLDMHOME is NOT set. No checking can be performed without it!\n"
+	exit 1
+fi
+
+echo -e "\nLDMHOME:"
+echo $LDMHOME
+
+declare -a programs=(
+				"hupsyslog" 
+				"ldmd" 
+				"noaaportIngester" 
+				"dvbs_multicast"
+				)
+
+echo -e "\nSetuid programs verification:"
+for prog in "${programs[@]}"
+do
+   ls -l $LDMHOME/bin | grep "$prog"
+done
+
+echo -e "\n$ ls -l $LDMHOME"
+ls -l $LDMHOME
+
+echo -e "\n$ ls -l $LDMHOME/bin/"
+ls -l $LDMHOME/bin/
+
+echo -e "\n$ ldmadmin config"
+ldmadmin config
+
+echo -e "\n$ mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'` "
+mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'`
+
+sestatus >/dev/null 2>&1
+if [ "$?" -eq "0" ] 
+then
+	echo -e "\n$ sestatus"
+	sestatus
+fi
+
+echo -e "\n\n"
