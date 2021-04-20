@@ -10,6 +10,7 @@ EXTRA_DIST		= \
     ldm7PreInstall \
     ldm7Install \
     ldmadmin.1.in \
+    showSettings.in \
     ldmadmin.pl.in \
     ldmfail.in \
     netcheck.in \
@@ -22,6 +23,7 @@ dist_bin_SCRIPTS	= \
     keep_running
 nodist_bin_SCRIPTS	= \
     ldmadmin \
+    showSettings \
     ldmfail \
     netcheck \
     plotMetrics \
@@ -38,6 +40,10 @@ ldmadmin.1:	$(srcdir)/ldmadmin.1.in
 	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
+showSettings:	showSettings.in
+	../regutil/substPaths <$? >$@.tmp
+	mv $@.tmp $@
+	
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/netcheck.conf
 $(DESTDIR)$(sysconfdir):
