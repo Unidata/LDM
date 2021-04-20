@@ -384,6 +384,9 @@ elsif ($command eq "newmetrics") {
 elsif ($command eq "updategempaktables") {
     $status = system("updateGempakTables");
 }
+elsif ($command eq "showsettings") {  
+    $status = system("bash showSettings");
+}
 elsif ($command eq "usage") {	# print usage message
     print_usage();
     $status = 0;
@@ -474,6 +477,7 @@ commands:
     addmetrics                               Accumulates LDM metrics
     plotmetrics [-b begin] [-e end]          Plots LDM metrics
     newmetrics                               Rotates the metrics files
+    showsettings                             Reveals current installation settings
     updategempaktables                       Updates the GEMPAK tables
     usage                                    Prints this message
 
