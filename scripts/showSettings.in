@@ -1,19 +1,22 @@
 #!/bin/bash
 
+# Set the $ldmhome variable from the LDMHOME environment variable if available;
+# otherwise, use the configure(1)-determined value. 
+
 if [ -z ${LDMHOME+x} ]; then 
-	echo -e "\n\tLDMHOME is NOT set. No checking can be performed without it!\n"
-	exit 1
+	echo -e "\n\tLDMHOME environment varriable is NOT set. Setting it to default!\n"
+	LDMHOME="@LDMHOME@"
 fi
 
 echo -e "\nLDMHOME:"
 echo $LDMHOME
 
 declare -a programs=(
-				"hupsyslog" 
-				"ldmd" 
-				"noaaportIngester" 
-				"dvbs_multicast"
-				)
+    "hupsyslog" 
+    "ldmd" 
+    "noaaportIngester" 
+    "dvbs_multicast"
+)
 
 echo -e "\nSetuid programs verification:"
 for prog in "${programs[@]}"
