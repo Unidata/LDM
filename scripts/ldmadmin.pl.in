@@ -385,7 +385,7 @@ elsif ($command eq "updategempaktables") {
     $status = system("updateGempakTables");
 }
 elsif ($command eq "showsettings") {  
-    $status = system("bash showSettings");
+    $status = system("showSettings");
 }
 elsif ($command eq "usage") {	# print usage message
     print_usage();
