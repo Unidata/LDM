@@ -39,7 +39,7 @@ pqinsert.1:	$(srcdir)/pqinsert.1.in
 check-local:		pq_test_insert
 # The "-c" (clobber) option is used to prevent `pq_test_insert` from exiting due
 # to a duplicate data-product from a previous invocation.
-	../pqcreate/pqcreate -c -s 500k -q pq_test_insert.pq
+	../pqcreate/pqcreate -c -s 2M -q pq_test_insert.pq
 #	cat $(srcdir)/pq_test_insert.txt
 	./pq_test_insert -vl - -q pq_test_insert.pq $(srcdir)/pq_test_insert.txt
 #	1000 products of mean size 1000 kB inserted as quickly as possible into
