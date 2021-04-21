@@ -566,8 +566,8 @@ int    nnnxxx_offset;
             log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
-                    psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d",
+                    psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error_q("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)

@@ -154,6 +154,9 @@ process_prod(
             case PROD_TYPE_NWSTG:
                 prod.info.feedtype = NGRID;
                 break;
+            case PROD_TYPE_NEXRAD:
+                prod.info.feedtype = NEXRAD;
+                break;
             default:
                 prod.info.feedtype = NOTHER;
         }
