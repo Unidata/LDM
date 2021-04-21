@@ -161,6 +161,24 @@
 ! Radar mosaic
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
-209 011 000 000 Mosaic Base Refl (opt method)    dBZ                  MrgBasReflQC      0  -9999.00
-209 011 001 000 UnQc                             dBZ                  MrgReflComp       0  -9999.00
-209 011 002 000 Comp Refl Mosaic (max ref)       dBZ                  MrgReflQComp      0  -9999.00
+209 011 000 000 Mosaic Base Refl (opt method)    dBZ                  MrgBasReflQC     0  -9999.00
+209 011 001 000 UnQc                             dBZ                  MrgReflComp      0  -9999.00
+209 011 002 000 Comp Refl Mosaic (max ref)       dBZ                  MrgReflQComp     0  -9999.00
+!
+! FLASH parameters
+!D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
+!23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
+209 012 000 000 Flash Crest Max Unit Streamflow  m3/s/km2             FlQpeCrUnSf      0  -9999.00
+209 012 004 000 Flash SAC Max Unit Streamflow    m3/s/km2             FlQpeSacUnSf	   0  -9999.00
+209 012 006 000 Flash SAC Max Soil Saturation    %                    FlSacMaxSoSa     0  -9999.00
+209 012 014 000 Flash QPE Avg Recur Inter 30-min years                FlQpeAri30m      0  -9999.00
+209 012 015 000 Flash QPE Avg Recur Inter 1-hr   years                FlQpeAri1h       0  -9999.00
+209 012 016 000 Flash QPE Avg Recur Inter 3-hr   years                FlQpeAri3h       0  -9999.00
+209 012 017 000 Flash QPE Avg Recur Inter 6-hr   years                FlQpeAri6h       0  -9999.00
+209 012 018 000 Flash QPE Avg Recur Inter 12-hr  years                FlQpeAri12h      0  -9999.00
+209 012 019 000 Flash QPE Avg Recur Inter 24-hr  years                FlQpeAri24h      0  -9999.00
+209 012 020 000 Flash QPE Avg Recur Inter Max    years                FlQpeAriMax      0  -9999.00
+209 012 026 000 Flash QPE to FFG Ratio 1-hr      non-dim              FlQpe/Ffg1h      0  -9999.00
+209 012 027 000 Flash QPE to FFG Ratio 3-hr      non-dim              FlQpe/Ffg3h      0  -9999.00
+209 012 028 000 Flash QPE to FFG Ratio 6-hr      non-dim              FlQpe/Ffg6h      0  -9999.00
+209 012 029 000 Flash QPE to FFG Ratio Max       non-dim              FlQpe/FfgMax     0  -9999.00
