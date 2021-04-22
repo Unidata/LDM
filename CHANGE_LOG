@@ -1,7 +1,11 @@
-6.13.14.27
+6.13.14.27      2021-04-22T09:37:22-0600
     configure(1):
         * Added "regpar.tab" to configured files
         * Changed "388" to "@LDM_PORT@" in registry
+
+    ldmadmin(1):
+        * Created "showsettings" command to print information on the LDM
+          installation to assist troubleshooting
 
     pqcreate(1):
         * Fixed manual-page regarding the computation of the default number of
@@ -14,6 +18,7 @@
         * Ensure that the NEXRAD feedtype is assigned to every product whose
           parameter "product-specific type" in the product-specific header
           identifies it as being NEXRAD
+        * Update GEMPAK tables with latest from GitHub
 
 6.13.14.26      2021-04-07T17:00:12-0600
     noaaportIngester(1):
