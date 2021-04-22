@@ -46,7 +46,11 @@ fi
 AC_SUBST([AM_CFLAGS])
 
 # NB: The Solaris 10 compiler might not support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
+if test `uname -s` = "SunOS"; then
+    AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
+else
+    AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
+fi
 # The following always defines _GNU_SOURCE which conflicts with _XOPEN_SOURCE=600
 #AC_USE_SYSTEM_EXTENSIONS
 
