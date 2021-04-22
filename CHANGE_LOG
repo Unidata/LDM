@@ -1,3 +1,11 @@
+6.13.14.28
+    configure(1):
+        * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems;
+          otherwise, it's 700
+
+    Misc:
+        * Made mygetline(3) stand-alone (SunOS doesn't have getline(3))
+
 6.13.14.27      2021-04-22T09:37:22-0600
     configure(1):
         * Added "regpar.tab" to configured files
