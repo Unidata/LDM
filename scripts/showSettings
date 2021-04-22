@@ -41,4 +41,14 @@ then
 	sestatus
 fi
 
+config_log="$LDMHOME/src/config.log"
+if [ -f "$config_log"  ]; 
+then
+	printf "\n%s\n"  "$ head $config_log"
+	printf "\n%s\n" "---------------------------------------------------------------------------------"
+	head $config_log
+	printf "%s\n" "---------------------------------------------------------------------------------"
+fi
+
 printf "\n\n%s"  ""
+
