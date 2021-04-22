@@ -303,6 +303,9 @@ Keeps the latest
 files.
 See the \fIprintmetrics\fP command.
 .TP
+.B showsettings
+Reveal current installation settings.
+.TP
 .B usage
 Display an \fIldmadmin\fP usage message.
 .SH OPTIONS
