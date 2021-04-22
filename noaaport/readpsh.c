@@ -210,9 +210,9 @@ int readccb(
              * header check
              */
             if (((psh->ccbmode == 2) && (psh->ccbsubmode == 0)) &&
-                ((memcmp(buf+ccb->len,"SDUS5",5) == 0)||
-                 (memcmp(buf+ccb->len,"SDUS2",5) == 0)||
+                ((memcmp(buf+ccb->len,"SDUS2",5) == 0)||
                  (memcmp(buf+ccb->len,"SDUS3",5) == 0)||
+                 (memcmp(buf+ccb->len,"SDUS5",5) == 0)||
                  (memcmp(buf+ccb->len,"SDUS6",5) == 0)||
                  (memcmp(buf+ccb->len,"SDUS7",5) == 0)||
                  (memcmp(buf+ccb->len,"SDUS8",5) == 0)))
