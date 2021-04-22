@@ -1,0 +1,44 @@
+# Set the $ldmhome variable from the LDMHOME environment variable if available;
+# otherwise, use the configure(1)-determined value. 
+
+if [ -z ${LDMHOME+x} ]; then 
+	printf "\n\t%s\n"  "LDMHOME environment varriable is NOT set. Setting it to default!"
+	LDMHOME="@LDMHOME@"
+fi
+
+printf "\n%s"  "LDMHOME:"
+echo $LDMHOME
+
+declare -a programs=(
+              "hupsyslog" 
+              "ldmd" 
+              "noaaportIngester" 
+              "dvbs_multicast"
+               )
+
+printf "\n%s\n"  "Setuid programs verification:"
+for prog in "${programs[@]}"
+do
+   ls -l $LDMHOME/bin | grep "$prog"
+done
+
+printf "\n%s\n"  "$ ls -l $LDMHOME"
+ls -l $LDMHOME
+
+printf "\n%s\n"  "$ ls -l $LDMHOME/bin/"
+ls -l $LDMHOME/bin/
+
+printf "\n%s\n"  "$ ldmadmin config"
+ldmadmin config
+
+printf "\n%s\n"  "$ mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'` "
+mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'`
+
+sestatus >/dev/null 2>&1
+if [ "$?" -eq "0" ] 
+then
+	printf "\n%s\n"  "$ sestatus"
+	sestatus
+fi
+
+printf "\n\n%s"  ""
