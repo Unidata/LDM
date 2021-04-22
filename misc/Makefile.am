@@ -47,6 +47,7 @@ lib_la_SOURCES	= \
 	InetSockAddr.c InetSockAddr.h \
 	inetutil.c \
 	mkdirs_open.c \
+	mygetline.c mygetline.h \
 	pattern.c \
 	queue.c queue.h \
 	RegularExpressions.c \
