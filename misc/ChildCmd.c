@@ -585,9 +585,16 @@ childCmd_getline(
     else {
         status = mygetline(line, size, cmd->stdOut);
 
-        if (status == -1)
-            log_add("mygetline() failure on stdout of command \"%s\"",
-                    cmd->cmdStr);
+        if (status == -1) {
+            // Invalid arguments, EOF, or I/O error
+            if (ferror(cmd->stdOut)) {
+                log_add("mygetline() failure on stdout of command \"%s\"",
+                        cmd->cmdStr);
+            }
+            else {
+                status = 0; // EOF
+            }
+        }
     }
 
     return status;

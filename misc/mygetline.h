@@ -33,10 +33,13 @@
  *                         otherwise ignored. Will contain number of bytes
  *                         `*lineptr` points to on successful return.
  * @param[in]     stream   Stream from which to read a line of input
- * @retval        -1       Error. `log_add()` called
- * @retval         0       EOF
- * @return                 Number of bytes read -- excluding the terminating
- *                         NUL. `*lineptr` and `*size` are set.
+ * @retval        -1       Invalid argument(s). `log_add()` called.
+ * @retval        -1       Error. `log_add()` called. `ferror(stream)` will be
+ *                         true.
+ * @retval        -1       EOF. `log_add()` called. `feof(stream)` will be true.
+ * @return                 Number of bytes read -- including the terminating
+ *                         newline (if one was encountered) but excluding the
+ *                         terminating NUL. `*lineptr` and `*size` are set.
  */
 ssize_t
 mygetline(char** const restrict  lineptr,
