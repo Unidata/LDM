@@ -44,7 +44,7 @@ mygetline(char** const restrict  lineptr,
                 nbytes = strlen(line);
             } // Line read
 
-			*lineptr = line;
+            *lineptr = line;
         } // `line` allocated
     } // Valid arguments
 
