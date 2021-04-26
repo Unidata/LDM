@@ -24,7 +24,7 @@ mygetline(char** const restrict  lineptr,
           size_t* const restrict size,
           FILE* const restrict   stream)
 {
-    ssize_t nbytes = -1;
+    ssize_t nbytes = -1; // Error
 
     if (lineptr == NULL || size == NULL) {
         log_add("Invalid argument: lineptr=%p, size=%p", lineptr, size);
@@ -35,19 +35,16 @@ mygetline(char** const restrict  lineptr,
 
         if (line) {
             if (fgets(line, SIZE, stream) == NULL) {
-                if (ferror(stream)) {
+                if (ferror(stream))
                     log_add_syserr("fgets() failure");
-                }
-                else {
-                    nbytes = 0; // EOF
-                }
+                nbytes = -1; // EOF
             }
             else {
                 *size = SIZE;
                 nbytes = strlen(line);
             } // Line read
 
-			*lineptr = line;
+            *lineptr = line;
         } // `line` allocated
     } // Valid arguments
 

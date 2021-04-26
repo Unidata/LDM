@@ -46,10 +46,11 @@
 #include "globals.h"
 #include "registry.h"
 #include "parser.h"
+#include "mygetline.h"
 
 #define MAX_THREADS		200
-#define IS_DIRECTORY_SYMLINK 1
-#define IS_NOT_DIRECTORY_SYMLINK	0
+#define DIRECTORY_IS_A_SYMLINK 1
+#define DIRECTORY_IS_NOT_A_SYMLINK	0
 
 typedef struct config_items_args {
     
@@ -125,18 +126,37 @@ callReadLink(char *path, char *target)
 }
 
 static bool
-isSymlinkDirectory(char *path)
+isThisSymlinkADirectory(char *path)
 {
     struct stat sb;
-    if (stat(path, &sb) == -1)
+    
+    if (lstat(path, &sb) == -1)
     {
-        log_info("symlink \"%s\"  is broken! Unlinking it...", path);
+        log_info("symlink \"%s\"  is broken! DELETED!", path);
         
         unlink(path);
 
         return false;
     }
+
     return S_ISDIR(sb.st_mode)? true : false;
+}
+
+static bool
+isThisDirectoryASymlink(char *path)
+{
+    struct stat sb;
+
+    if (lstat(path, &sb) == -1)
+    {
+        log_info("symlink \"%s\"  is broken! DELETED!", path);
+        
+        unlink(path);
+
+        return false;
+    }
+
+    return S_ISLNK(sb.st_mode)? true : false;
 }
 
 // delete the symlink if target file is older than daysOld, 
@@ -147,11 +167,22 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
 {
     char symlinkedFileToRemove[PATH_MAX];
 
+    log_add("removeFileSymlink(): (\"%s\") ", symlinkedEntry);
+    log_flush_debug();
+
     struct stat sb;
     if (stat(symlinkedEntry, &sb) == -1)
     {
-        log_add("stat(\"%s\") failed", symlinkedEntry);
-        log_flush_error();
+        log_info("stat(\"%s\") failed. Or already deleted.", symlinkedEntry);
+
+        // and remove the symlink itself too:
+        if (remove(symlinkPath)) {
+            log_add_syserr("Couldn't remove symbolic link \"%s\"", symlinkPath);
+            log_flush_warning();
+        }
+
+
+        //log_flush_error();
         return -1;
     }
 
@@ -187,12 +218,12 @@ isExcluded(char * dirPath, char (*list)[PATH_MAX])
 /**
  * Traverses a directory tree, depth-first to scour eligible 
  * files/directoies. Starting at config-specified directory
- * entry and recursively in-depth first
+ * entry and recursively down in-depth first
  *
  * @param[in]  basePath           directory at current depth
  * @param[in]  daysOldInEpoch     daysOld (config) in Epoch time
- * @param[in]  pattern     s
- * @param[in]  deleteDirsFlag     s
+ * @param[in]  pattern            set in config file. e.g. *.txt
+ * @param[in]  deleteDirsFlag     allow / disallow empty directory deletion
  * @param[in]  daysOld            daysOld (as set in config  file)
  * @param[in]  symlinkFlag        flag to distinguish a regular directory
  *                                from a symlink directory traversal type
@@ -206,6 +237,15 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
 {
     char symlinkedEntry[PATH_MAX];
     
+    // Check if basePath is in the list of excluded directories. 
+    // basePath is an absolute path. Excluded dirs are expected to be too.
+    if(isExcluded(basePath, excludedDirsList))
+    {
+        log_info("\nscourFilesAndDirs():  %s is EXLUDED!\n", basePath);
+        return 0;
+    }
+
+
     struct dirent *dp;
     DIR *dir = opendir(basePath);
     // Unable to open directory stream
@@ -216,57 +256,99 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
         log_flush_error();
         return -1;
     }
-
-    int dfd = dirfd(dir);
+    
+    //int dfd = dirfd(dir);
 
     while ((dp = readdir(dir)) != NULL)
     {
-        struct stat sb;
-        if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1)
+        struct stat sb;        
+
+        // new basePath 'absPath' is either a dir, a file, or a link to follow if it's a directory symlink
+        char absPath[PATH_MAX];
+        snprintf(absPath, sizeof(absPath), "%s/%s", basePath, dp->d_name);
+
+        
+        if(isExcluded(basePath, excludedDirsList))
         {
-            log_add("fstatat(\"%s/%s\") failed: %s", basePath, dp->d_name, strerror(errno));
+            log_info("\nscourFilesAndDirs():  %s is EXLUDED!\n", basePath);
+            return 0;
+        }
+
+        //if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1)
+        if (lstat(absPath, &sb) == -1)
+        {
+            log_add("lstat(\"%s\") failed: %s", absPath, strerror(errno));
             log_flush_error();
             return -1;
         }
 
         time_t currentEntryEpoch = sb.st_mtime;
 
-        // new basePath is either a dir, a file, or a link to follow if it's a directory symlimk
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", basePath, dp->d_name);
-
-
-        // Check if dirPath is in the list of excluded direectories. 
-        // dirtPath is an absolute path. Excluded dirs are expected to be too.
-        bool isDirExcludedFlag = isExcluded(basePath, excludedDirsList);
-
-
         switch (sb.st_mode & S_IFMT)
         {
+        case S_IFLNK:
+
+            if ( callReadLink(absPath, symlinkedEntry) == -1 )
+            {
+                log_flush_warning();
+                continue;
+            }
+
+            if(isThisSymlinkADirectory(absPath))
+            {
+                log_info("(sl-d) Following symlink: %s (Will not be removed.)\n", symlinkedEntry);
+
+                // recursive call:
+                scourFilesAndDirs(symlinkedEntry, daysOldInEpoch, pattern,
+                                    deleteDirsFlag, daysOld, DIRECTORY_IS_A_SYMLINK);
+
+                // Directories of a SYMLINK will not get removed: How to ensure that??
+            }
+            else
+            {
+                // delete the symlink if target file is older than daysOld, so that symlink 
+                // is not left broken. However, currentEntryEpoch should NOT be that of the 
+                // symlink but that of the target file pointed to by the slink
+                if( !removeFileSymlink(absPath, symlinkedEntry, daysOldInEpoch, daysOld))
+                {
+                    log_info("(sl-r) %s is a symlinked file and OLDER than %s daysOld (days[-HHMMSS]). DELETED!", 
+                            symlinkedEntry, daysOld);
+                }
+            }
+            break;
+
         case S_IFDIR :
 
             if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
                 continue;
 
             // depth-first traversal
-            !isDirExcludedFlag &&
-            scourFilesAndDirs(path, daysOldInEpoch, pattern, deleteDirsFlag,
+            scourFilesAndDirs(absPath, daysOldInEpoch, pattern, deleteDirsFlag,
                                 daysOld, symlinkFlag);
 
+
+            // The excluded path is a leaf (no deep dive performed): DO NOT DELETE
+            bool isExcludedDirFlag = isExcluded(absPath, excludedDirsList);
+
             // Remove if empty and not symlinked, regardless of its age (daysOld)
-            if( isDirectoryEmpty(path) && !symlinkFlag && deleteDirsFlag && isDirExcludedFlag)
+            if( isDirectoryEmpty(absPath) && !symlinkFlag && deleteDirsFlag && !isExcludedDirFlag)
             {
-                log_info("Empty directory: %s. DELETED!", path);
-                if(remove(path))
+                log_info("Empty directory and NOT a symlink: %s. DELETED!", absPath);
+                if(remove(absPath))
                 {
-                    log_add("directory remove(\"%s\") failed", path);
+                    log_add("directory remove(\"%s\") failed", absPath);
                     log_flush_error();
                     break;
                 }
-
-            } else 
+            }
+            else 
             {
-                    log_info("Directory \"%s\" is EXCLUDED or NOT EMPTY. NOT deleted.", path);
+                if( symlinkFlag )
+                    log_info("Directory \"%s\" is a SYMLINK. NOT deleted.", absPath);
+                if( isExcludedDirFlag )
+                    log_info("Directory \"%s\" is EXCLUDED. NOT deleted.", absPath);
+                else
+                    log_info("Directory \"%s\" is NOT EMPTY. NOT deleted.", absPath);
             }
             break;
 
@@ -281,62 +363,30 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
             }
 
             //log_add("(+) File \"%s\" matches pattern: %s",  dp->d_name, pattern);
-
             if ( isThisOlderThanThat(currentEntryEpoch, daysOldInEpoch) )
             {
-                if( remove(path) )
+                if( remove(absPath) )
                 {
-                    log_add("remove(\"%s\") failed", path);
+                    log_add("remove(\"%s\") failed", absPath);
                     log_flush_error();
                 }
                 else
                 {
                     // current file is OLDER than daysOld
-                    log_info("(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", path, daysOld);
+                    log_info("(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", absPath, daysOld);
                 }
                 // in any case
                 continue;
             }
 
             //log_info("(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...",
-            //            path, daysOld);
-
+            //            absPath, daysOld);
             break;
 
-        case S_IFLNK:
-
-            if ( callReadLink(path, symlinkedEntry) == -1 )
-            {
-                log_flush_warning();
-                continue;
-            }
-
-            if(isSymlinkDirectory(path))
-            {
-                log_info("(sl-d) Following symlink: %s (Will not be removed.)\n",
-                    symlinkedEntry);
-
-                // recursive call:
-                scourFilesAndDirs(symlinkedEntry, daysOldInEpoch, pattern,
-                                    deleteDirsFlag, daysOld, IS_DIRECTORY_SYMLINK);
-
-                // Directories of a SYMLINK will not get removed.
-            }
-            else
-            {
-                // delete the symlink if target file  is older than daysOld, so that symlink is not left broken
-                // however, currentEntryEpoch should NOT be that of the symlink but that of the file pointed to by the slink
-                if( !removeFileSymlink(path, symlinkedEntry, daysOldInEpoch, daysOld))
-                {
-                    log_info("(sl-r) %s is a symlinked file and OLDER than %s daysOld (days[-HHMMSS]). DELETED!", 
-                            symlinkedEntry, daysOld);
-                }
-            }
-            break;
 
         default:
             // It should never get here
-            log_add("(?) NOT a regular file, nor a symlink: \"%s\"", dp->d_name);
+            log_add("(?) NOT a regular file, nor a symlink: \"%s\"", absPath);
             log_flush_error();
 
             break;
@@ -376,14 +426,15 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     // dirtPath is an absolute path. Excluded dirs are expected to be too.
     bool thisDirIsNotExcluded = !isExcluded( dirPath, excludedDirsList);
 
-    // scour candidate files and directories under 'path' - recursively
-    // assume that this first entry directory is NOT a synbolic link
-    // delete empty directories if delete option (-d) is set
+    // - scour candidate files and directories under 'path' - recursively
+    // - It ASSUMES that this first entry directory is NOT a synbolic link
+    //   (should we consider a starting directory as a symlink?)
+    // - delete empty directories if delete option (-d) is set
     thisDirIsNotExcluded &&
     scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern,
-                        deleteDirOrNot, daysOld, IS_NOT_DIRECTORY_SYMLINK );
+                        deleteDirOrNot, daysOld, DIRECTORY_IS_NOT_A_SYMLINK );
 
-    // after bubbling up , remove directory if empty and if delete option is set
+    // after bubbling up, remove top directory if empty and if delete option is set
     if( thisDirIsNotExcluded && isDirectoryEmpty(dirPath) && deleteDirOrNot )
     {
         if (remove(dirPath)) {
@@ -528,10 +579,13 @@ getExcludedDirsList(char (*list)[PATH_MAX], char *pathname)
     size_t bufsize = 0;
     int    lineNo = 0;
     for (;;) {
-        ssize_t nchar = getline(&lineptr, &bufsize, fp);
+        ssize_t nchar = mygetline(&lineptr, &bufsize, fp);
+        if (nchar == 0) {   // EOF
+            return lineNo;
+        }
         if (nchar == -1) {
             if (ferror(fp)) {
-                log_add_syserr("getline() failure");
+                log_add_syserr("mygetline() failure");
                 return -1;
             }
             break; // EOF encountered
