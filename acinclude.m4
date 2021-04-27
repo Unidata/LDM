@@ -189,7 +189,8 @@ AC_DEFUN([UD_PROG_RPCGEN], [dnl
     AC_ARG_VAR([RPCGEN], [rpcgen(1) command])
     AC_CACHE_VAL([ac_cv_path_RPCGEN], [AC_PATH_PROG([RPCGEN], [rpcgen])])
     if test -z "$RPCGEN"; then
-	AC_MSG_ERROR([Could not find rpcgen(1) utility])
+	AC_MSG_NOTICE([Could not find rpcgen(1) utility. Setting to "rpcgen".])
+        AC_SUBST([RPCGEN], [rpcgen])
     fi
 ])dnl
 
