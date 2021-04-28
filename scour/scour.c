@@ -241,7 +241,7 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
     // basePath is an absolute path. Excluded dirs are expected to be too.
     if(isExcluded(basePath, excludedDirsList))
     {
-        log_info("\nscourFilesAndDirs():  %s is EXLUDED!\n", basePath);
+        log_info("scourFilesAndDirs():  %s is EXLUDED!\n", basePath);
         return 0;
     }
 
