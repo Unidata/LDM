@@ -535,7 +535,22 @@ AC_PROG_AWK
 UD_PROG_SH
 AC_PROG_YACC
 AC_CHECK_PROGS([DOXYGEN], [doxygen /Volumes/storage/local/bin/doxygen], [])
-UD_PROG_RPCGEN
+
+# The following is necessary because
+#   * NOAA's RHEL-8 installations don't have rpcgen(1) and don't allow it to be
+#     installed; and
+#   * The LDM won't build on MacOS unless the native rpcgen(1) is used.
+AC_ARG_VAR([RPCGEN], [Pathname of rpcgen(1) utility])
+AC_CHECK_PROG([RPCGEN], [rpcgen], [rpcgen], [])
+if test -z "$RPCGEN"; then
+    if uname -s | grep Darwin >/dev/null; then
+        AC_MSG_ERROR([Couldn't find necessary rpcgen(1) utility])
+    else
+        AC_MSG_NOTICE([Will use rpcgen(1) output files supplied by package])
+    fi
+fi
+AM_CONDITIONAL([HAVE_RPCGEN], [test "$RPCGEN"])
+
 UD_PROG_NTPDATE
 UD_PROG_NETSTAT
 UD_PROG_TOP
