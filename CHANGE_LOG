@@ -2,7 +2,10 @@
     configure(1):
         * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems;
           otherwise, it's 700
-        * Demoted requirement of rpcgen(1) from error to notice
+        * rpcgen(1):
+            * Require on MacOS system
+            * Use if possible; otherwise, use package-supplied rpcgen(1) output
+              files
 
     rpc(3) library:
         * Replaced call to bindresvport() in clnttcp_create() with binding to an

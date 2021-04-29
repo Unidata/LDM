@@ -31,7 +31,12 @@ version=`awk 'NR==1{print $1; exit;}' CHANGE_LOG`
 tarball=ldm-$version.tar.gz
 ftpDir=/web/ftp/pub/ldm
 downloadDir=/web/content/downloads/ldm
+
+#Current destination for documentation
 webDir=/web/content/software/ldm
+#New destination for documentation (wait for Jen's and/or Doug's signal)
+#webDir=/web/docs/ldm
+
 versionWebDir=$webDir/ldm-$version
 
 copyToFtpDir()
