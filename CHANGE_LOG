@@ -4,6 +4,10 @@
           otherwise, it's 700
         * Demoted requirement of rpcgen(1) from error to notice
 
+    rpc(3) library:
+        * Replaced call to bindresvport() in clnttcp_create() with binding to an
+          ephemeral port
+
     Misc:
         * Made mygetline(3) stand-alone (SunOS doesn't have getline(3))
           and more like the getline(3) declaration

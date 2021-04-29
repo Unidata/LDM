@@ -415,9 +415,23 @@ clnttcp_create(
 			rpc_createerr.cf_error.re_errno = errno;
 			goto fooy;
 		}
+#if 1
+		// Local socket address: all interfaces; O/S chooses port number
+		struct sockaddr_in laddr = {.sin_family=AF_INET, .sin_addr=INADDR_ANY,
+		        .sin_port=0};
+		if (bind(*sockp, (struct sockaddr*)&laddr, sizeof(laddr)) == -1) {
+		    (void)close(*sockp);
+			goto fooy;
+		}
+#else
+		/*
+		 * This original code is replaced because the operating system could
+		 * prevent a non-privileged client from binding to a reserved port
+		 * number.
+		 */
 		(void)bindresvport(*sockp, (struct sockaddr_in *)0);
-		if (connect(*sockp, (struct sockaddr *)raddr, sizeof(*raddr))
-                                < 0) {
+#endif
+		if (connect(*sockp, (struct sockaddr *)raddr, sizeof(*raddr)) < 0) {
 			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 			rpc_createerr.cf_error.re_errno = errno;
 			(void)close(*sockp);
