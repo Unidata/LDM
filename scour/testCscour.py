@@ -24,77 +24,40 @@
  #
 
 
-import os
-from os import system
-from os import path
-from pathlib import Path
-import time
-import subprocess
-from subprocess import PIPE
-import sys
-import errno
-import shutil
-import argparse
+import  os
+from    os      import system
+from    os      import path
+from    pathlib import Path
+import  time
+import  subprocess
+from    subprocess import PIPE
+import  sys
+import  errno
+import  shutil
+import  argparse
 
-ASSERT_FILE_DELETED         ="Expect file to be deleted"
-ASSERT_FILE_LINK_DELETED    ="Expect file and its symlink be deleted"
-ASSERT_DIR_DELETED          ="Expect directory to be deleted"
-ASSERT_NOT_DIR              ="Expect 'not-a-directory' to be skipped"
-ASSERT_DIR_LINK_NOT_DELETED ="Expect directory and symlink NOT be deleted"
-ASSERT_EXCLUDED_DIR_NOT_DELETED ="Expect directory to be excluded"
-ASSERT_SUCCESS              ="SUCCESS"
-ASSERT_FAIL                 ="FAIL"
+ASSERT_FILE_DELETED             = "Expect file to be deleted"
+ASSERT_FILE_NOT_DELETED         = "Expect file NOT to be deleted"
+ASSERT_SYMLINK_FILE_NOT_DELETED = "Expect file and its symlink be deleted"
+ASSERT_SYMLINK_DIR_NOT_DELETED  = "Expect directory and its symlink NOT be deleted"
+ASSERT_SYMLINK_DIR_DELETED      = "Expect directory and its symlink be deleted"
+ASSERT_DIR_DELETED              = "Expect directory to be deleted"
+ASSERT_DIR_NOT_DELETED          = "Expect directory NOT be deleted"
+ASSERT_NOT_DIR                  = "Expect 'not-a-directory' to be skipped"
+ASSERT_EXCLUDED_DIR_NOT_DELETED = "Expect directory to be excluded"
+ASSERT_SUCCESS                  = "SUCCESS"
+ASSERT_FAIL                     = "FAIL"
 
 class CommonFileSystem:
-
-    dirList=[
-            "/tmp/vesuvius",
-            "/tmp/etna",
-            "/tmp/etna/alt_dir",
-            "/tmp/etna/exclude_me"
-        ]        
-
-    fileList=["/tmp/vesuvius/.scour$*.foo", 
-                "/tmp/vesuvius/precipitation.foo",
-                "/tmp/vesuvius/precipitation.txt",
-                "/tmp/etna/precipitation.txt",
-                "/tmp/etna/alt_dir/precipitation.txt",
-                "/tmp/etna/vesuvius.foo",
-                "/tmp/etna/.scour$*.foo",
-                "/tmp/excludes.conf"
-                ]
-
-    def __init__(self, filename, timestamp):
-        self.filename  = filename
-        self.timestamp = timestamp
-
-        self.excludes  = "/tmp/excludes.conf"
-        self.entries   = "/tmp/etna/exclude_me"
-        
-        # Create the excludes file with one entry 
-        # for scour to use as CLI argument for -e option
-        f = open(self.excludes, "w+")
-        f.write(self.entries)
-        f.close()
-
-    def __str__(self):
-        return f"{self.filename}  {self.timestamp}"
-
-    __repr__ = __str__
-
-    def __eq__(self, other):
-        if self.filename == other.filename:
-            return true
-        return false
-
-    def changeIt(self, timestamp):
-        self.timestamp = timestamp
-        return self;
+    
+    def __init__(self):
+        pass
 
     def createFiles(fileList, debug):
 
         for file in fileList:
             expandedFile =  os.path.expanduser(file)
+            debug and print(f"--> {expandedFile}")
             if not os.path.exists(expandedFile):
                 debug and print(f"\tCreating file: {expandedFile}")
                 f = open(expandedFile, "w+")
@@ -104,9 +67,9 @@ class CommonFileSystem:
         fileDict={}.fromkeys(fileList,0)
         return fileDict
 
-    def createDirectories(debug):
+    def createDirectories(dirList, debug):
 
-        for directory in CommonFileSystem.dirList:
+        for directory in dirList:
             
             expandedDir =  os.path.expanduser(directory)
             if os.path.exists(expandedDir):
@@ -120,9 +83,9 @@ class CommonFileSystem:
                 print(e)
             
 
-    def removeDirectories(debug):
+    def removeDirsAndFiles(dirList, fileList, debug):
 
-        for directory in CommonFileSystem.dirList:
+        for directory in dirList:
             
             expandedDir =  os.path.expanduser(os.path.expandvars(directory))
             try:
@@ -132,6 +95,13 @@ class CommonFileSystem:
             except OSError as e:
                 print(e)
             
+
+        for file in fileList:
+            #excludes = "/tmp/excludes.conf"
+            try: 
+                os.remove(file)
+            except:
+                pass
 
     def getMTime(aPath):
         mtime = Path(aPath).stat().st_mtime
@@ -175,14 +145,18 @@ class CommonFileSystem:
         
         outPutfile = "/tmp/scour_log.txt"
 
-        print(f"\t./scour -v  -d -e {excludesFile}  {ingestFile}") 
-#, stdout=scourLog)
+        print(f"\t./scour -v  -d -e {excludesFile}  {ingestFile}") #, stdout=scourLog)
         if deleteFlag == "-d":
             with open(outPutfile, "w+") as scourLog:
-                process = subprocess.run(["./scour", "-v",  "-d", "-e", excludesFile, ingestFile]) #, stdout=scourLog)
+                process = subprocess.run(["./scour", "-v", "-d", "-e", excludesFile, ingestFile]) #, stdout=scourLog)
+        else:
+            with open(outPutfile, "w+") as scourLog:
+                process = subprocess.run(["./scour", "-v",  "-e", excludesFile, ingestFile]) #, stdout=scourLog)
     
-            #cmd = f"./scour -v -d {ingestFile} > {outPutfile}"
-            #os.system(cmd)
+
+        # Alternately:
+        #cmd = f"./scour -v -d {ingestFile} > {outPutfile}"
+        #os.system(cmd)
         
 
     def unwrapIt(text):
@@ -203,54 +177,126 @@ class CommonFileSystem:
 #     Expected:
 #    - file gets deleted and its symlink too
 #    - directory becomes empty (all its scoured files are deleted OR some files remain)
-#   - directory (and its symlink) is not deleted.
+#    - directory (and its symlink) is not deleted.
 
 class SymlinkDeletion:    
 
-    fileList=[    "/tmp/vesuvius/.scour$*.txt", 
-                "/tmp/vesuvius/precipitation.foo",
-                "/tmp/vesuvius/precipitation.txt",
-                "/tmp/etna/precipitation.txt",
-                "/tmp/etna/alt_dir/precipitation.txt",
-                "/tmp/etna/vesuvius.foo",
-                "/tmp/etna/.scour$*.foo"
+    dirList =[      # to create
+        "/tmp/vesuvius",                        # should NOT be deleted
+        "/tmp/vesuvius/exclude_me",             # should NOT be deleted (from /tmp/excludes.txt)
+        "/tmp/vesuvius/symlinked_target_dir",          # should NOT be deleted
+        "/tmp/vesuvius/dir_to_delete_old",          # should be deleted when empty 
+        "/tmp/vesuvius/dir_toNOT_delete"        # should NOT be delete (not empty)
     ]
-    fileToSymlinkDict={
-                "/tmp/etna/precipitation.txt": "/tmp/vesuvius/sl_etna_file",
-                "/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
+    
+    fileList=[      # to create
+        "/tmp/vesuvius/.scour$*.txt",                   # should be deleted
+        "/tmp/vesuvius/precipitation.foo",              # should be deleted
+        "/tmp/vesuvius/precipitation.txt",              # should be deleted
+        "/tmp/vesuvius/symlinked_file.txt",             # should be deleted
+        "/tmp/vesuvius/dir_to_delete_old/old_images.txt",   # should be deleted  
+        "/tmp/vesuvius/dir_toNOT_delete/new_images.txt" # should NOT be deleted  
+    ]
+
+    fileToSymlinkDict={      # create their symlink
+        "/tmp/vesuvius/symlinked_file.txt"  : "/tmp/vesuvius/sl_symlinked_file.txt",    # both symlink and file should be deleted
+        "/tmp/vesuvius/symlinked_target_dir"       : "/tmp/vesuvius/sl_symlinked_dir"          # NONE should be deleted
     }
 
-    def __init__(self):
-        
-        self.ingestFile     = "/tmp/scourTest.conf"
-        #self.entries         = "/tmp/vesuvius        2    *.txt\n/tmp/etna        7-1130    *.foo"
-        self.entries         = "/tmp/vesuvius        2    *.txt"
-        self.daysOldInSecs     = 172800             # seconds: 2 * 24 * 3600 s
+    deleteList=[   # mark them OLD (change their mtime)
+        "/tmp/vesuvius/.scour$*.txt",                   # should be deleted
+        "/tmp/vesuvius/precipitation.foo",              # should be deleted
+        "/tmp/vesuvius/precipitation.txt",              # should be deleted
+        "/tmp/vesuvius/symlinked_file.txt",             # should be deleted
+        "/tmp/vesuvius/dir_to_delete_old/old_images.txt"    # should be deleted  
+    ]
 
-        # Create the scour config file with entries 
-        # for scour to use as CLI argument
-        f = open(self.ingestFile, "w+")
+    # ASSERTIONS lists:
+
+    # ========================== FILES ====================================
+    expectedDeletedFilesList = [
+        "/tmp/vesuvius/.scour$*.txt",                   # should be deleted
+        "/tmp/vesuvius/precipitation.txt",              # should be deleted
+        "/tmp/vesuvius/dir_to_delete/old_images.txt"    # should be deleted          
+    ]
+
+
+    expectedNotDeletedFilesList = [
+        "/tmp/vesuvius/dir_toNOT_delete/new_images.txt", # should NOT be deleted
+        "/tmp/vesuvius/precipitation.foo"                # should NOT be deleted (not the concerned pattern: '*.txt')
+    ]
+
+
+    # ========================== SYMLINKS ==================================
+    # DOES NOT WORK! Hence the inversion in the test condition: not
+    expectedNotDeletedSymlinkDirsList = [
+        "/tmp/vesuvius/symlinked_target_dir",              # should NOT be deleted
+        "/tmp/vesuvius/sl_symlinked_dir"            # should NOT be deleted
+    ]
+
+
+    expectedDeletedSymlinkedFilesList = [
+        "/tmp/vesuvius/symlinked_file.txt",         # symlink target should be deleted: already in files list to delete
+        "/tmp/vesuvius/sl_symlinked_file.txt"       # symlink        should be deleted
+    ]
+
+
+    # ========================== DIRECTORIES =================================
+    expectedDeletedDirsList = [
+        "/tmp/vesuvius/dir_to_delete_old"           # should be deleted when empty
+    ]
+
+    expectedNotDeletedDirsList = [
+        "/tmp/vesuvius",                            # should NOT be deleted
+        "/tmp/vesuvius/dir_toNOT_delete"            # should NOT be delete (not empty, contains images.txt)
+    ]
+
+    expectedNotDeletedExcludedDirsList = [
+        "/tmp/vesuvius/exclude_me"                  # should NOT be deleted (from /tmp/excludes.txt)
+    ]
+      
+
+    def __init__(self, debug):
+        
+        self.ingestFile = "/tmp/scourTest.conf"
+        entry1          ="/tmp/vesuvius        2    *.txt"
+        entry2          ="/tmp/dirDoesNotExist"
+        entry3          ="/tmp/etna        7-1130    *.foo"   # etna not created
+        self.entries    = f"{entry1}\n{entry2}"
+        self.daysOldInSecs = 172800             # seconds: 2 (days) * 24 * 3600 s
+
+        # 1. Create the scour config file with entries 
+        f = open(self.ingestFile, "w")
         f.write(self.entries)
         f.close()
 
+        # 2. Create the to-be-excluded files conf-file
         self.excludes  = "/tmp/excludes.conf"
         self.entries   = "/tmp/vesuvius/exclude_me"
-        
-        # Create the excludes file with one entry 
-        # for scour to use as CLI argument for -e option
-        f = open(self.excludes, "w+")
+        f = open(self.excludes, "w")
         f.write(self.entries)
         f.close()
 
+        # 3. Prepare the scenario structure
+        #
+        # 3.1 Tear down
+        debug and print("\nTear down directories:")
+        CommonFileSystem.removeDirsAndFiles(self.dirList, self.fileList, debug)
+        
+        # 3.2 Create directories
+        debug and print("\nCreate directories:")
+        CommonFileSystem.createDirectories(self.dirList, debug)
 
-    def __str__(self):
-        return f"{self.filename}  {self.timestamp}"
+        # 3.3 Create files
+        self.createFiles(debug)
 
-    def __eq__(self, other):
-        if self.filename == other.filename:
-            return true
-        return false
+        # 3.4 Create symlinks
+        self.createSymlinks(debug)
 
+        # 3.5 Timestamp files eligible for deletion 
+        self.markEligibleForDeletion(self.deleteList, self.daysOldInSecs)
+
+    
     def createSymlinks(self, debug):
 
         debug and print(f"\nScour config file entrie(s): \n\t--> {self.entries}")
@@ -268,37 +314,15 @@ class SymlinkDeletion:
         print("\n")
 
 
-    def markEligibleForDeletion(self, daysOldInSecs):
+    def markEligibleForDeletion(self, electedFiles, daysOldInSecs):
 
         # Set mtime to appropriate value to have file deleted
-        # for kTarget, vLink  in self.fileToSymlinkDict.items():
-        #     expandedTarget =  os.path.expanduser(kTarget)
-        #     expandedLink =  os.path.expanduser(vLink)
-        #     CommonFileSystem.changeMTime(expandedTarget, daysOldInSecs)
+        for file in electedFiles:
 
-        # make .scour$*.txt NEWER than precipitation.txt
-        # Expect precipitation.txt to be deleted.
-        
-    #    scourFile=os.path.expanduser("/tmp/vesuvius/.scour$*.txt")
-    #    CommonFileSystem.changeMTime(scourFile, daysOldInSecs)
-
-
-        # make precipitation.txt OLDER than 2days +50secs
-        # Expect precipitation.txt to be deleted.
-        aFile=os.path.expanduser("/tmp/vesuvius/precipitation.txt")
-        CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
-
-
-        aFile=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
-        CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
-
-
-        # make precipitation.txt OLDER than 4 days +50secs
-        # Expect precipitation.txt to be deleted.
-        aFile=os.path.expanduser("/tmp/etna/precipitation.txt")
-        CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
-
-
+            # make precipitation.txt OLDER than 2days +50secs
+            # Expect precipitation.txt to be deleted.
+            aFile=os.path.expanduser(file)
+            CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
 
     def createFiles(self, debug):
         debug and print("\nCreate files:")
@@ -306,12 +330,9 @@ class SymlinkDeletion:
 
 
     def runScenario(self, deleteFlag, debug):
-        self.createFiles(debug)
-        self.createSymlinks(debug)
-        self.markEligibleForDeletion(self.daysOldInSecs)
-        
+
         if debug:
-            yes_no = input("Execute scour?")
+            yes_no = input("Execute scour? (yes is default) ")
             if yes_no == "n":
                 exit(0)
 
@@ -322,221 +343,106 @@ class SymlinkDeletion:
         return self.assertSymlink()
 
 
+
     def assertSymlink(self):
-        
+    
         status=0
 
-        # Files:
+        # ========================== FILES ====================================
         print(f"\nFILES: --------------------------------------")
-        aPath=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-            status=1
-
-        aPath=os.path.expanduser("/tmp/vesuvius/precipitation.txt")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-            status=1
-
-        aPath=os.path.expanduser("/tmp/etna/precipitation.txt")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-            status=1
-
-        # Symlinks
-        
-        # "/tmp/etna/precipitation.txt": "/tmp/vesuvius/sl_etna_file",
-        # "/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
-        print(f"\nSYMLINKs: --------------------------------------")
-        kTarget    = "/tmp/etna/precipitation.txt"
-        vLink     = "/tmp/vesuvius/sl_etna_file"
-        expandedTarget =  os.path.expanduser(kTarget)
-        expandedLink =  os.path.expanduser(vLink)
-
-
-        print(f"\t{expandedLink} --> {expandedTarget}")
-        if     not os.path.exists(expandedTarget)    \
-            and not os.path.islink(expandedLink):
-            
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_LINK_DELETED}: {expandedLink}")            
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {expandedTarget}")
-        else:
-            if os.path.exists(expandedTarget)    \
-                or os.path.islink(expandedLink):
-                    
-                print(f"\n\t{ASSERT_FAIL}: \tUn-Expected SymLink behavior! ({expandedTarget} - {expandedLink})  ")
-                status=1    
-
-        # "/tmp/etna/alt_dir": "/tmp/vesuvius/sl_etna_alt_dir"
-        kTarget    = "/tmp/etna/alt_dir"
-        vLink     = "/tmp/vesuvius/sl_etna_alt_dir"
-        expandedTarget =  os.path.expanduser(kTarget)
-        expandedLink =  os.path.expanduser(vLink)
-
-        print(f"\t{expandedLink} --> {expandedTarget}")
-        # Do not delete directory and its symlink
-        if     os.path.exists(expandedTarget)         \
-            and os.path.isdir(expandedTarget)     \
-            and os.path.exists(expandedLink)     \
-            and os.path.islink(expandedLink): 
-
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_LINK_NOT_DELETED}: {expandedTarget}")                
-
-        else:
-            if     not os.path.exists(expandedTarget)         \
-                or not os.path.islink(expandedLink): 
-
-                print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_LINK_NOT_DELETED}: {expandedTarget}")                
-    
+        # expectedDeletedFilesList
+        for file in self.expectedDeletedFilesList:
+            aPath=os.path.expanduser(file)
+            if not os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
                 status=1
 
-        return status    
+        print("")
 
+        # expectedNotDeletedFilesList
+        for file in self.expectedNotDeletedFilesList:
+            aPath=os.path.expanduser(file)
+            if os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_NOT_DELETED}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_NOT_DELETED}: {aPath}")
+                status=1
 
-# Scenario: 
-#    - Create a directory tree with files that all eligible for deletion (no symlink)
-#    - Expected: all tree gets deleted
+        # ========================== SYMLINKS ==================================
+        print(f"\nSYMLINKs: --------------------------------------")
 
-class EmptyDirectoriesDeletion:
+        # expectedDeletedSymlinkedFilesList
+        for file in self.expectedDeletedSymlinkedFilesList:
+            # print(f"\t{file} --> {expectedDeletedSymlinkedFilesList[file]}")
 
-    fileList=["/tmp/etna/precipitation.txt",
-                "/tmp/etna/alt_dir/precipitation.txt"
-    ]
-
-    dirList=[
-            "/tmp/vesuvius",
-            "/tmp/etna",
-            "/tmp/etna/alt_dir"
-    ]
+            aPath=os.path.expanduser(file)
+            if not os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_SYMLINK_FILE_NOT_DELETED}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_SYMLINK_FILE_NOT_DELETED}: {aPath}")
+                status=1
+        
+        print("")
+        
+        # expectedNotDeletedSymlinkDirsList
+        for file in self.expectedNotDeletedSymlinkDirsList:
     
-    def __init__(self):
-        
-        self.ingestFile = "/tmp/scourTest.conf"
-        #self.entries     = "/tmp/vesuvius        2    *.txt\n/tmp/etna        7-1130    *.foo"
-        self.entries     = "/tmp/etna        2    *.txt\
-         \n/tmp/dirDoesNotExist        2    *.txt"
-        self.daysOldInSecs     = 172800             # seconds: 2 * 24 * 3600 s
-
-        # Create the scour config file with entries 
-        # for scour to use as CLI argument
-        f = open(self.ingestFile, "w+")
-        f.write(self.entries)
-        f.close()
-
-        self.excludes  = "/tmp/excludes.conf"
-        self.entries   = "/tmp/vesuvius/exclude_me"
-        
-        # Create the excludes file with one entry 
-        # for scour to use as CLI argument for -e option
-        f = open(self.excludes, "w+")
-        f.write(self.entries)
-        f.close()
-
-    def __str__(self):
-        return f"{self.filename}  {self.timestamp}"
-
-    def __eq__(self, other):
-        if self.filename == other.filename:
-            return true
-        return false
+            aPath=os.path.expanduser(file)
+            if not os.path.exists(aPath): 
+                #print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_SYMLINK_DIR_NOT_DELETED}: {aPath}")
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_SYMLINK_DIR_DELETED}: {aPath}")
+            else:
+                #print(f"\t{ASSERT_FAIL}: \t{ASSERT_SYMLINK_DIR_NOT_DELETED}: {aPath}")
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_SYMLINK_DIR_DELETED}: {aPath}")
+                status=1
 
 
-    def createFiles(self, debug):
-
-        debug and print("\nCreate files:")
-        CommonFileSystem.createFiles(self.fileList, debug)
-
-
-    def markEligibleForDeletion(self, daysOldInSecs):
-
-        # Set mtime to appropriate value to have file(s) deleted
-        
-        # TO REMOVE:
-        # "/tmp/etna/precipitation.txt",
-        # "/tmp/etna/alt_dir/precipitation.txt",
-        # "/tmp/etna",
-        # "/tmp/etna/alt_dir"        
-
-        # make precipitation.txt OLDER than 4 days +50secs
-        # Expect precipitation.txt to be deleted.
-        aFile=os.path.expanduser("/tmp/etna/precipitation.txt")
-        CommonFileSystem.changeMTime(aFile, 2 * daysOldInSecs +50)
-
-        aFile=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
-        CommonFileSystem.changeMTime(aFile, daysOldInSecs +50)
-
-
-    def runScenario(self, deleteFlag, debug):
-        self.createFiles(debug)
-        self.markEligibleForDeletion(self.daysOldInSecs)
-        
-        print(f"\n\tExecuting scour(1)...\n")
-        CommonFileSystem.executeCscour(deleteFlag, self.ingestFile, self.excludes)
-        
-        print(f"\n\tRunning assertions...\n")
-        
-        return self.assertDirectoriesRemoved()
-
-
-    def assertDirectoriesRemoved(self):
-        
-        status=0
-
-        # Files:
-        print(f"\nFILES: --------------------------------------")
-        
-        aPath=os.path.expanduser("/tmp/etna/alt_dir/precipitation.txt")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-            status=1
-
-        aPath=os.path.expanduser("/tmp/etna/precipitation.txt")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_FILE_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_FILE_DELETED}: {aPath}")
-            status=1
-
-        # Directories
+        # ========================== DIRECTORIES =================================
         print(f"\nDIRECTORIES: --------------------------------------")
+        # expectedDeletedDirsList
+        for file in self.expectedDeletedDirsList:
+            aPath=os.path.expanduser(file)
+            
+            if not os.path.exists(aPath): 
+                
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
+            else:
+                
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
+                status=1
 
-        aPath=os.path.expanduser("/tmp/etna/alt_dir")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
-            status=1
-        
-        aPath=os.path.expanduser("/tmp/etna")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_DELETED}: {aPath}")
-            status=1
+        print("")
 
-        aPath=os.path.expanduser("/tmp/dirDoesNotExist")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_NOT_DIR}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_NOT_DIR}: {aPath}")
-            status=1
+        # expectedNotDeletedDirsList
+        for file in self.expectedNotDeletedDirsList:
+            aPath=os.path.expanduser(file)
+            if os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_DIR_NOT_DELETED}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_DIR_NOT_DELETED}: {aPath}")
+                status=1
 
-        # Expect an EXCLUDED directory to be still not deleted!
-        aPath=os.path.expanduser("/tmp/vesuvius/exclude_me")
-        if not os.path.exists(aPath): 
-            print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
-        else:
-            print(f"\t{ASSERT_FAIL}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
-            status=1
-        return status
+        # ========================== EXCLUDED DIRECTORIES =================================
+        print(f"\nEXCLUDED dirs: --------------------------------------")
+
+        # expectedNotDeletedExcludedDirsList
+        for file in self.expectedNotDeletedExcludedDirsList:
+            aPath=os.path.expanduser(file)
+            if os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_EXCLUDED_DIR_NOT_DELETED}: {aPath}")
+                status=1
+
+
+        print("\n\n")
+        # Not covered: 'not-a-directory' (directory does not exists: skipped)
+        #   ASSERT_NOT_DIR                  = "Expect 'not-a-directory' to be skipped"
+
+
+        return status    
 
 def main():
 
@@ -549,33 +455,16 @@ def main():
             '''
             )
         cliParser.add_argument('-x', action='store_true', help='debug')
-        args = cliParser.parse_args()
-        debug = args.x
+        args    = cliParser.parse_args()
+        debug   = args.x
         debug and system('clear')
-
-
-        debug and print("\n\t========= Symlink Deletion scenario ================\n")
         
-        debug and print("\nTear down directories:")
-        CommonFileSystem.removeDirectories(debug)
-        debug and print("\nCreate directories:")
-        CommonFileSystem.createDirectories(debug)
-        sl = SymlinkDeletion()
-        sl_status = sl.runScenario("-d", debug)
+        sl          = SymlinkDeletion(debug)
+        sl_status   = sl.runScenario("-d", debug)
 
+        exit( sl_status )
 
-        print("\n\t========== EmptyDirectories Deletion scenario =======\n")
         
-        debug and print("\nTear down directories:")
-        CommonFileSystem.removeDirectories(debug)
-        debug and print("\nCreate directories:")
-        CommonFileSystem.createDirectories(debug)
-        ed = EmptyDirectoriesDeletion()
-        ed_status = ed.runScenario("-d", debug)
-        
-        debug and print(f"sl_status: {sl_status} ed_status: {ed_status}")
-
-        exit( ed_status * sl_status )
 
 if __name__ == '__main__':
         main()
