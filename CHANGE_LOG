@@ -11,6 +11,12 @@
         * Replaced call to bindresvport() in clnttcp_create() with binding to an
           ephemeral port
 
+    scour(1):
+        * Function replacements to accommodate SunOS 5:
+             * getline(3) with mygetline(3)
+             * fstatat(2) with lstat(2)
+        * Improved unit testing
+
     Misc:
         * Made mygetline(3) stand-alone (SunOS doesn't have getline(3))
           and more like the getline(3) declaration
