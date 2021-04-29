@@ -15,7 +15,8 @@ CLEANFILES              = scour.1 scour.conf
 AM_CPPFLAGS		= -I$(top_builddir)/log      -I$(top_srcdir)/log \
 			  -I$(top_builddir)/registry -I$(top_srcddir)/registry \
 			  -I$(top_srcdir)/protocol2 \
-			  -I$(top_builddir)/protocol
+			  -I$(top_builddir)/protocol \
+			  -I$(top_srcdir)/misc 
 scour_LDADD		= $(top_builddir)/lib/libldm.la 
 
 scour.1:	$(srcdir)/scour.1.in
