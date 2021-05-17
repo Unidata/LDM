@@ -523,16 +523,13 @@ typedef struct fornme_reply_t fornme_reply_t;
 typedef ldm_errt comingsoon_reply_t;
 
 #define MIN_LDM_VERSION 5
-#define MAX_LDM_VERSION 7
+#define MAX_LDM_VERSION 6
 
 void ldmprog_5(struct svc_req *rqstp, register SVCXPRT *transp);
 void ldmprog_6(struct svc_req *rqstp, register SVCXPRT *transp);
-void ldmprog_7(struct svc_req *rqstp, register SVCXPRT *transp);
-const char* ldm7_errmsg(int status);
 int one_svc_run(const int xp_sock, const int inactive_timeo);
 void* nullproc_6(void *argp, CLIENT *clnt);
 enum clnt_stat clnt_stat(CLIENT *clnt);
-int clntStatusToLdm7Status(CLIENT* clnt);
 struct product {
  prod_info info;
  void *data;
@@ -548,116 +545,6 @@ struct ServiceAddr {
 	u_short port;
 };
 typedef struct ServiceAddr ServiceAddr;
-
-/*
- * LDM-7 status values:
- */
-
-enum Ldm7Status {
-	LDM7_OK = 0,
-	LDM7_LOGIC = 0 + 1,
-	LDM7_INTR = 0 + 2,
-	LDM7_TIMEDOUT = 0 + 3,
-	LDM7_RPC = 0 + 4,
-	LDM7_INVAL = 0 + 5,
-	LDM7_UNAUTH = 0 + 6,
-	LDM7_IPV6 = 0 + 7,
-	LDM7_REFUSED = 0 + 8,
-	LDM7_SYSTEM = 0 + 9,
-	LDM7_MCAST = 0 + 10,
-	LDM7_SHUTDOWN = 0 + 11,
-	LDM7_NOENT = 0 + 12,
-	LDM7_DUP = 0 + 13,
-	LDM7_EXISTS = 0 + 14,
-	LDM7_PQ = 0 + 15,
-	LDM7_NORCVR = 0 + 16,
-};
-typedef enum Ldm7Status Ldm7Status;
-
-/*
- * CIDR (Classless Inter-Domain Routing) address
- */
-
-typedef u_short SubnetLen;
-
-struct CidrAddr {
-	in_addr_t addr;
-	SubnetLen prefixLen;
-};
-typedef struct CidrAddr CidrAddr;
-
-/*
- * Virtual-circuit endpoint:
- */
-
-typedef u_short VlanId;
-
-struct VcEndPoint {
-	char *switchId;
-	char *portId;
-	VlanId vlanId;
-};
-typedef struct VcEndPoint VcEndPoint;
-
-/*
- * Multicast subscription request:
- */
-
-struct McastSubReq {
-	feedtypet feed;
-	VcEndPoint vcEnd;
-};
-typedef struct McastSubReq McastSubReq;
-
-typedef u_int McastProdIndex;
-
-/*
- * Missed data-product:
- */
-
-struct MissedProduct {
-	McastProdIndex iProd;
-	product prod;
-};
-typedef struct MissedProduct MissedProduct;
-
-/*
- * Data-product backlog specification:
- */
-
-struct BacklogSpec {
-	signaturet after;
-	int afterIsSet;
-	signaturet before;
-	u_int timeOffset;
-};
-typedef struct BacklogSpec BacklogSpec;
-
-
-struct McastInfo {
-	feedtypet feed;
-	char *group;
-	char *server;
-};
-typedef struct McastInfo McastInfo;
-
-struct McastSubInfo {
-	struct McastInfo mcastInfo;
-	CidrAddr fmtpAddr;
-};
-typedef struct McastSubInfo McastSubInfo;
-
-/*
- * Multicast subscription return values:
- */
-
-struct SubscriptionReply {
-	Ldm7Status status;
-	union {
-		McastSubInfo info;
-	} SubscriptionReply_u;
-};
-typedef struct SubscriptionReply SubscriptionReply;
 
 #define LDMPROG LDM_PROG
 #define FIVE 5
@@ -752,62 +639,6 @@ extern  void * blkdata_6();
 extern  void * blkdata_6_svc();
 extern int ldmprog_6_freeresult ();
 #endif /* K&R C */
-#define SEVEN 7
-
-#if defined(__STDC__) || defined(__cplusplus)
-#define SUBSCRIBE 1
-extern  SubscriptionReply * subscribe_7(McastSubReq *, CLIENT *);
-extern  SubscriptionReply * subscribe_7_svc(McastSubReq *, struct svc_req *);
-#define REQUEST_PRODUCT 2
-extern  void * request_product_7(McastProdIndex *, CLIENT *);
-extern  void * request_product_7_svc(McastProdIndex *, struct svc_req *);
-#define REQUEST_BACKLOG 3
-extern  void * request_backlog_7(BacklogSpec *, CLIENT *);
-extern  void * request_backlog_7_svc(BacklogSpec *, struct svc_req *);
-#define TEST_CONNECTION 4
-extern  void * test_connection_7(void *, CLIENT *);
-extern  void * test_connection_7_svc(void *, struct svc_req *);
-#define DELIVER_MISSED_PRODUCT 5
-extern  void * deliver_missed_product_7(MissedProduct *, CLIENT *);
-extern  void * deliver_missed_product_7_svc(MissedProduct *, struct svc_req *);
-#define NO_SUCH_PRODUCT 6
-extern  void * no_such_product_7(McastProdIndex *, CLIENT *);
-extern  void * no_such_product_7_svc(McastProdIndex *, struct svc_req *);
-#define DELIVER_BACKLOG_PRODUCT 7
-extern  void * deliver_backlog_product_7(product *, CLIENT *);
-extern  void * deliver_backlog_product_7_svc(product *, struct svc_req *);
-#define END_BACKLOG 8
-extern  void * end_backlog_7(void *, CLIENT *);
-extern  void * end_backlog_7_svc(void *, struct svc_req *);
-extern int ldmprog_7_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
-
-#else /* K&R C */
-#define SUBSCRIBE 1
-extern  SubscriptionReply * subscribe_7();
-extern  SubscriptionReply * subscribe_7_svc();
-#define REQUEST_PRODUCT 2
-extern  void * request_product_7();
-extern  void * request_product_7_svc();
-#define REQUEST_BACKLOG 3
-extern  void * request_backlog_7();
-extern  void * request_backlog_7_svc();
-#define TEST_CONNECTION 4
-extern  void * test_connection_7();
-extern  void * test_connection_7_svc();
-#define DELIVER_MISSED_PRODUCT 5
-extern  void * deliver_missed_product_7();
-extern  void * deliver_missed_product_7_svc();
-#define NO_SUCH_PRODUCT 6
-extern  void * no_such_product_7();
-extern  void * no_such_product_7_svc();
-#define DELIVER_BACKLOG_PRODUCT 7
-extern  void * deliver_backlog_product_7();
-extern  void * deliver_backlog_product_7_svc();
-#define END_BACKLOG 8
-extern  void * end_backlog_7();
-extern  void * end_backlog_7_svc();
-extern int ldmprog_7_freeresult ();
-#endif /* K&R C */
 
 /* the xdr functions */
 
@@ -834,18 +665,6 @@ extern  bool_t xdr_hiya_reply_t (XDR *, hiya_reply_t*);
 extern  bool_t xdr_fornme_reply_t (XDR *, fornme_reply_t*);
 extern  bool_t xdr_comingsoon_reply_t (XDR *, comingsoon_reply_t*);
 extern  bool_t xdr_ServiceAddr (XDR *, ServiceAddr*);
-extern  bool_t xdr_Ldm7Status (XDR *, Ldm7Status*);
-extern  bool_t xdr_SubnetLen (XDR *, SubnetLen*);
-extern  bool_t xdr_CidrAddr (XDR *, CidrAddr*);
-extern  bool_t xdr_VlanId (XDR *, VlanId*);
-extern  bool_t xdr_VcEndPoint (XDR *, VcEndPoint*);
-extern  bool_t xdr_McastSubReq (XDR *, McastSubReq*);
-extern  bool_t xdr_McastProdIndex (XDR *, McastProdIndex*);
-extern  bool_t xdr_MissedProduct (XDR *, MissedProduct*);
-extern  bool_t xdr_BacklogSpec (XDR *, BacklogSpec*);
-extern  bool_t xdr_McastInfo (XDR *, McastInfo*);
-extern  bool_t xdr_McastSubInfo (XDR *, McastSubInfo*);
-extern  bool_t xdr_SubscriptionReply (XDR *, SubscriptionReply*);
 
 #else /* K&R C */
 extern bool_t xdr_feedtypet ();
@@ -870,18 +689,6 @@ extern bool_t xdr_hiya_reply_t ();
 extern bool_t xdr_fornme_reply_t ();
 extern bool_t xdr_comingsoon_reply_t ();
 extern bool_t xdr_ServiceAddr ();
-extern bool_t xdr_Ldm7Status ();
-extern bool_t xdr_SubnetLen ();
-extern bool_t xdr_CidrAddr ();
-extern bool_t xdr_VlanId ();
-extern bool_t xdr_VcEndPoint ();
-extern bool_t xdr_McastSubReq ();
-extern bool_t xdr_McastProdIndex ();
-extern bool_t xdr_MissedProduct ();
-extern bool_t xdr_BacklogSpec ();
-extern bool_t xdr_McastInfo ();
-extern bool_t xdr_McastSubInfo ();
-extern bool_t xdr_SubscriptionReply ();
 
 #endif /* K&R C */
 
