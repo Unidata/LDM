@@ -564,5 +564,6 @@ Workshop-specific instructions</a>.
 document.write(date_modified);
 </script>
 
-</BODY>
+<script src="/js/ldm_add_in.js" type="text/javascript"></script>
+</body>
 </HTML>
