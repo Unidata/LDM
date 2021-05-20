@@ -1,3 +1,8 @@
+6.13.14.29      2021-05-20T15:49:35-0600
+    scour(1) (C program):
+        * Squashed bug that would crash program when empty directory-deletion
+          was requested (-d option) and a directory didn't exist.
+
 6.13.14.28      2021-04-29T17:05:13-0600
     configure(1):
         * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems;
