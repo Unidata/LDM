@@ -256,6 +256,11 @@ class SymlinkDeletion:
     ]
       
 
+    expectedNonExistentDirectorySkippedList = [
+        "/tmp/vesuvius/dirDoesNotExist"                  # should NOT be deleted (from /tmp/excludes.txt)
+    ]
+
+
     def __init__(self, debug):
         
         self.ingestFile = "/tmp/scourTest.conf"
@@ -437,9 +442,25 @@ class SymlinkDeletion:
                 status=1
 
 
+        print("")
+        # 'not-a-directory' (directory does not exists: no scouring BUT no system crash either.)
+        #  ASSERT_NOT_DIR    = "Expect 'not-a-directory' to be skipped from scouring"
+
+        # ========================== NON-EXISTENT DIRECTORIES: to escape scouring ===========
+        print(f"\nSkip scouring non-existent dirs: ---------- (expect no crash) ------")
+
+        # expectedNonExistentDirectorySkippedList
+        for file in self.expectedNonExistentDirectorySkippedList:
+            aPath=os.path.expanduser(file)
+            if not os.path.exists(aPath): 
+                print(f"\t{ASSERT_SUCCESS}: \t{ASSERT_NOT_DIR}: {aPath}")
+            else:
+                print(f"\t{ASSERT_FAIL}: \t{ASSERT_NOT_DIR}: {aPath}")
+                status=1
+
+
         print("\n\n")
-        # Not covered: 'not-a-directory' (directory does not exists: skipped)
-        #   ASSERT_NOT_DIR                  = "Expect 'not-a-directory' to be skipped"
+        
 
 
         return status    
