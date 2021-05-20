@@ -85,6 +85,8 @@ isDirectoryEmpty(char* dirname)
     DIR *dir = opendir(dirname);
     if( dir == NULL)
     {
+        log_add("failed to open directory \"%s\" (%d: %s)", dirname, errno, strerror(errno));
+        log_flush_error();
         return NON_EXISTENT_DIR;
     }
 
@@ -342,8 +344,6 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
             int dirStatus = isDirectoryEmpty(absPath);
             if (dirStatus == NON_EXISTENT_DIR)
             {
-                log_add("directory (\"%s\") does not exist (opendir() failed)", absPath);
-                log_flush_error();
                 break;
             }
             // Remove if empty and not symlinked, regardless of its age (daysOld)
