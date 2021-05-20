@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
+	<TITLE>LDM Cluster at the UPC</TITLE>
+	<META NAME="AUTHOR" CONTENT="Yoksas, Schmidt, Stokes">
+	<META NAME="CREATED" CONTENT="2005-06">
+	<META NAME="DESCRIPTION" CONTENT="Article on LDM Cluster at UPC">
+	<META NAME="KEYWORDS" CONTENT="LDM, cluster, UPC">
+	<META NAME="BOOKMARK" CONTENT="LDM Cluster">
+</HEAD>
+<BODY>
+  <h1> LDM Cluster Development </h1>
+  <p>by Tom Yoksas, John Stokes, and Mike Schmidt</p>
+<p>June, 2005</p>
+  <hr>
+<p><a href="clusterimage.jpg"><img src="clusterimagecrop.jpg" width="300" height="226" border="1" align="right"></a></p>
+  <p>The Program Center operates the two level IDD relay nodes, one at the
+  Unidata Program Center offices in Boulder (idd.unidata.ucar.edu also
+  known as thelma.ucar.edu), and one at the ATM offices of NSF in
+  Arlington, Virginia (atm.geo.nsf.gov).  The NSF/ATM node represents the
+  class of machine that has long been used in the IDD for relaying high
+  volume datastreams.  The machine hosted in Boulder, on the other hand,
+  represents a new approach we are taking towards data relay: it is a
+  cluster composed of a <b>director</b> (a machine that forwards IDD feed
+  requests to other machines) and several <b>data servers</b> (machines
+  that are fed requests by the <b>director</b>) that service data
+  requests.  The <b>director</b> relays feed requests to a <b>data
+  server</b> using the the IP Virtual Server (IPVS) facility that is
+  a standard part of the 2.6 kernel in current versions of Linux.</p>
+
+<p>
+The cluster we have built, depicted in the figure at the right, is
+currently composed of four Sun SunFire V20Z 1U rackmount servers.  All
+of the machines are identically configured with dual 2 Ghz AMD Opteron
+processors, two 36 GB 10K RPM SCSI hard disks, dual Gbps Ethernet
+interfaces, and each runs the 64-bit version of Fedora Core 3 (FC3)
+Linux.  The <b>director</b> is configured with 4 GB of RAM, and the
+<b>data servers</b> are each configured with 12 GB of RAM.  The cost of
+these machines was modest:  $3000 for the <b>director</b> and $4800 for
+each <b>data server</b>; all were purchased under a Sun educational
+discount program.  These SunFire V20Z machines have proven to be
+stellar performers as IDD data relays.
+
+<p>
+We plan to replace the V20Z <b>director</b> with redundant Dell
+PowerEdge 2850 rackmount servers which are less costly (approx. $2200)
+since that they have much less memory.  <b>directors</b> do not need to
+be nearly as well configured as the <b>data servers</b> in processing
+power or memory.
+
+<p>
+We chose 64-bit FC3 Linux after head-to-head comparisons of three
+operating systems (OS) running on identical hardware.  The other OSes
+tested were Sun Solaris x86 10 and FreeBSD 5.3. All three OSes tested
+are 64-bit.  In our testing, FC3 emerged as the <b>clear</b> winner;
+FreeBSD was second; and Solaris x86 10 was a <b>distant</b> third.
+
+<p>
+Since we have learned a great deal about how to maximize the relay
+performance of the <b>data servers</b> during our last three months of
+testing, we plan to revisit use of Sun Solaris x86 10, FreeBSD 5.3, and
+try the newly released 64-bit Fedora Core 4 version of Linux.
+
+<p>
+As indicated earlier, the cluster is seen as one machine, the
+<b>director,</b> idd.unidata.ucar.edu, to the outside world.  This
+machine is running IPVS along with LDM 6.3.0 configured to run on a
+second Ethernet interface (different IP address).  The IPVS
+<b>director</b> forwards port 388 requests to the <b>data servers</b>
+each of which are configured to be known internally as
+idd.unidata.ucar.edu.  Since the <b>data servers</b> do not <b>ARP</b>,
+they are not seen as idd.unidata.ucar.edu by the outside world.  The
+IPVS software keeps track of how many IDD feed connections are active
+on each of the <b>data servers</b> and "load levels" based on the
+number of those connections.  We will be experimenting with load
+leveling approaches other than numbers of connections (e.g., weighted
+average of system load on each box) as we continue our
+experimentation.  Since the <b>data servers</b> are configured
+identically: same RAM, same LDM queue size (8 GB currently), same
+ldmd.conf contents, etc., the expectation is that machines will receive
+the same data regardless of which node is feeding them.
+
+<p>
+Currently, all connection requests from a downstream machine are sent
+to the same <b>data server</b> as long as the downstream's last
+successful connection did not terminate more than one minute prior to
+the new request. This setup allows downstream LDMs to send "are you
+alive" queries to the same server that they have not received data from
+in the past minute.  Once there have been no feed requests by a
+downstream host for one minute, new requests will be forwarded to the
+data server that is servicing the fewest number of connections.
+
+<p>
+This cluster design allows us to take down any of the <b>data
+servers</b> for whatever maintenance is needed (hardware replacement,
+software upgrades, etc.) whenever we need to make changes.  When a
+<b>data server</b> goes down or is taken offline, the IPVS server is
+automatically informed that the server is no longer available, and all
+downstream feed requests are sent to the other active <b>data
+servers</b>.
+
+<p>
+In one test setup, we operated two <b>directors</b>, thelma.ucar.edu
+and idd.unidata.ucar.edu, located on different LANs within UCAR, and
+had both <b>directors</b> sent feed requests the same set of <b>data
+servers</b>.  The success of this experiment has left us with the
+expectation that a large "virtual machine" composed of geographically
+distributed <b>directors</b> and <b>data servers</b> could be
+constructed (with appropriate cooperation of IT groups in charge of the
+various LANs involved).  We plan to further explore this possibility
+after we identify university Unidata community members that would like
+to participate in distributed testing.
+
+<p>
+The cluster currently relays an average of 130 Mbps (~1.4
+TB/day) to approximately 215 downsteam connections. Peak relay rates
+routinely exceed 250 Mbps (2.7 TB/day).
+
+<p>
+Stress testing the cluster using two <b>data servers</b> have lead us
+believe that we could field literally every IDD feed request in the
+world if needed thus creating an "ultimate" failover site. The beauty
+of the cluster approach is if the load on the <b>data servers</b> ever
+becomes too high, all we need do is add one or more additional boxes to
+the mix.
+
+<p>
+During a recent 3 day stress test (figures below), we were able to push
+an average of 500 Mbps (5.4 TB/day) of data to downstreams
+<b><em>without</em></b> introduction of latency.  Since the
+<b>director</b> and <b>data servers</b> were essentially idling during
+this test, we believe that, if necessary, we could push rates up to the
+limit of our 1 Gbps LAN and routers.
+
+<p>
+Below are some graphics depicting our 3 day stress test.
+  <br>
+<p>
+<center>
+Figure 1:  IDD relay node statistics for a 24 hour period ending on June
+12, 2005 at 09:15 MDT.
+</center>
+
+<p align="center"><img src="idd_stress_20050615_0915_stats.png" width="684" height="277">
+
+<p>
+<center>
+<br>
+Figure 2: IDD relay node daily traffic captured on June 12.  The color filled
+green trace represents data being relayed by the cluster; the blue trace
+represents data flowing into the cluster.
+</center>
+
+<p align="center"><img src="idd_stress_20050614_0915_daily.png" width="566" height="273">
+
+<p>
+<center>
+<br>
+Figure 3: IDD relay node weekly traffic captured on June 12.  The color filled
+green trace represents data being relayed by the cluster; the blue trace
+represents data flowing into the cluster.
+</center>
+
+<p align="center"><img src="idd_stress_20050612_0915_weekly.png" width="562" height="274">
+
+<script src="/js/ldm_add_in.js" type="text/javascript"></script>
+</BODY>
+</HTML>
