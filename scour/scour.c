@@ -48,9 +48,12 @@
 #include "parser.h"
 #include "mygetline.h"
 
-#define MAX_THREADS		200
-#define DIRECTORY_IS_A_SYMLINK 1
+#define MAX_THREADS                 200
+#define DIRECTORY_IS_A_SYMLINK      1
 #define DIRECTORY_IS_NOT_A_SYMLINK	0
+#define NON_EXISTENT_DIR            0
+#define EMPTY_DIR                   1
+#define NON_EMPTY_DIR               2
 
 typedef struct config_items_args {
     
@@ -73,13 +76,18 @@ static char excludePath[PATH_MAX]="";
 static char excludedDirsList[MAX_EXCLUDED_DIRPATHS][PATH_MAX];
 static int  excludedDirsCount = 0;
 
-static bool 
+static int 
 isDirectoryEmpty(char* dirname)
 {
     int n=0;
     struct dirent *dp;
 
     DIR *dir = opendir(dirname);
+    if( dir == NULL)
+    {
+        return NON_EXISTENT_DIR;
+    }
+
     while((dp = readdir(dir))!=NULL && n<4)
     {
         if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) continue;
@@ -87,7 +95,7 @@ isDirectoryEmpty(char* dirname)
     }
     closedir(dir);
 
-    return n == 0? true : false;
+    return n == 0? EMPTY_DIR : NON_EMPTY_DIR;
 }
 
 // The lower the epoch time the older the file
@@ -330,8 +338,16 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
             // The excluded path is a leaf (no deep dive performed): DO NOT DELETE
             bool isExcludedDirFlag = isExcluded(absPath, excludedDirsList);
 
+            // Directory status: empty | not empty | non-existent (opendir() failed)
+            int dirStatus = isDirectoryEmpty(absPath);
+            if (dirStatus == NON_EXISTENT_DIR)
+            {
+                log_add("directory (\"%s\") does not exist (opendir() failed)", absPath);
+                log_flush_error();
+                break;
+            }
             // Remove if empty and not symlinked, regardless of its age (daysOld)
-            if( isDirectoryEmpty(absPath) && !symlinkFlag && deleteDirsFlag && !isExcludedDirFlag)
+            if( (dirStatus == EMPTY_DIR) && !symlinkFlag && deleteDirsFlag && !isExcludedDirFlag)
             {
                 log_info("Empty directory and NOT a symlink: %s. DELETED!", absPath);
                 if(remove(absPath))
@@ -412,12 +428,12 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     ConfigItemsAndDeleteFlag_t currentItem = *(ConfigItemsAndDeleteFlag_t *)
                                                 oneItemStruct;
 
-    char*  dirPath           = currentItem.dir;
-    char*  daysOld           = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
-    time_t daysOldInEpoch    = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
-    char*  pattern           = currentItem.pattern;
+    char*  dirPath          = currentItem.dir;
+    char*  daysOld          = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
+    time_t daysOldInEpoch   = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
+    char*  pattern          = currentItem.pattern;
 
-    int   deleteDirOrNot    = currentItem.deleteDirsFlag;
+    int    deleteDirFlag    = currentItem.deleteDirsFlag;
 
     // free memory of the struct that was allocated in the calling function: multiThreadedScour()
     free((ConfigItemsAndDeleteFlag_t *) oneItemStruct);
@@ -426,16 +442,26 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
     // dirtPath is an absolute path. Excluded dirs are expected to be too.
     bool thisDirIsNotExcluded = !isExcluded( dirPath, excludedDirsList);
 
+    // Check directory status for non-existent (opendir() failed)
+    int dirStatus = isDirectoryEmpty(dirPath);
+    if (dirStatus == NON_EXISTENT_DIR)
+    {
+        log_add("directory (\"%s\") does not exist (opendir() failed)", dirPath);
+        log_flush_error();   
+    }
+
     // - scour candidate files and directories under 'path' - recursively
-    // - It ASSUMES that this first entry directory is NOT a synbolic link
+    // - It ASSUMES that this first entry directory is NOT a symbolic link
     //   (should we consider a starting directory as a symlink?)
     // - delete empty directories if delete option (-d) is set
-    thisDirIsNotExcluded &&
+    thisDirIsNotExcluded && (dirStatus != NON_EXISTENT_DIR) &&
     scourFilesAndDirs(  dirPath, daysOldInEpoch, pattern,
-                        deleteDirOrNot, daysOld, DIRECTORY_IS_NOT_A_SYMLINK );
+                        deleteDirFlag, daysOld, DIRECTORY_IS_NOT_A_SYMLINK );
 
     // after bubbling up, remove top directory if empty and if delete option is set
-    if( thisDirIsNotExcluded && isDirectoryEmpty(dirPath) && deleteDirOrNot )
+
+
+    if( thisDirIsNotExcluded && (dirStatus == EMPTY_DIR) && deleteDirFlag )
     {
         if (remove(dirPath)) {
             log_add_syserr("Couldn't remove directory \"%s\"", dirPath);
