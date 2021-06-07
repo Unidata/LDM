@@ -10,15 +10,16 @@
 #include <inttypes.h>
 #include <time.h>
 
-#define PORT	 		8080
+#define PORT            9127
 #define MAXLINE 		1024
 #define	SAMPLE_SIZE 	1000
 #define	SBN_FRAME_SIZE 	4000
 
 // Build the i-th frame
 // i is used to set the sequence number and can be any positive integer 
-void buildFrameI(int i, unsigned char *frame, uint16_t run)
+void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run)
 {
+
 	// Build the frame:
 
 	// byte[0]: HDLC address:
@@ -37,8 +38,7 @@ void buildFrameI(int i, unsigned char *frame, uint16_t run)
 
     // uint32_t sequence = rand() % 10;
 
-	uint32_t sequence 	= 1000 + i;
-	printf("Sequence: %lu\n",  sequence);
+	//printf("Sequence: %lu\n",  sequence);
 	*(uint32_t*)(frame+8) = (uint32_t) htonl(sequence); 
 
 	// receiving
@@ -48,7 +48,7 @@ void buildFrameI(int i, unsigned char *frame, uint16_t run)
 
 	// SBN run number: byte [12-13]
 	*(uint16_t*)(frame+12) = (uint16_t) htons(run); 
-	printf("run: %u\n", run);
+	//printf("run: %u\n", run);
 
 
 	// SBN checksum: on 2 bytes = unsigned sum of bytes 0 to 13
@@ -57,13 +57,14 @@ void buildFrameI(int i, unsigned char *frame, uint16_t run)
 	{
 		sum += (unsigned char) frame[byteIndex];
 	}
-	printf("checksum: %d\n", sum);
+	//printf("checksum: %d\n", sum);
 	*(uint16_t*)(frame+14) = (uint16_t) htons(sum); 
 	
 
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
 	
 	int sockfd;
 	unsigned char buffer[MAXLINE];
@@ -83,42 +84,66 @@ int main(int argc, char** argv) {
 	// Filling server information
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	// Creating socket file descriptor
-	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) 
+	{
 		perror("socket creation failed");
 		exit(EXIT_FAILURE);
+	}
+	if( connect(sockfd, 
+				(const struct sockaddr *) &servaddr,
+					 sizeof(servaddr)) 
+				)
+	{
+		perror("Error");
+		exit(0);
 	}
 
     // Build the frame:
     unsigned char frame[SBN_FRAME_SIZE] = {};
     uint16_t run = 435;
+    uint32_t sequenceNum = 1000;
+
+	int numberOfFramesSent = 0;
+
     //for (int s=0; s< SAMPLE_SIZE; s++)
     //for (int s=0; ; s++)
-    for (int s=0; s < 21; s++)
+    for (int s=0; s < 50; s++)
     {
-    	// simulate a run# change:
-    	if( s == 10) run = 436;
+    	// simulate a run# change every 10 frames:
+    	if( !(s % 10) ) 
+		{
+			run++;
+			sequenceNum = 1000;	// reset after run# change
+			printf("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
+		}
 
 
     	// build the s-th frame
-    	(void) buildFrameI(s, frame, run);
+    	(void) buildFrameI(sequenceNum, frame, run);
 
-    	
-	    printf("\n\t--> Client: sent %d-th frame/checksum [14][15]to server: %x \n", s, (uint16_t*) (frame+14)) ;
+    	uint16_t chksum = *(uint16_t*)(frame+14);
+	    printf("\t--> Client: sent %d-th frame (seqNum: %u, checksum: %u, run: %u) to server.\n", 
+	    	s, sequenceNum, chksum, run) ;
 
-		if( sendto(sockfd, (const char *)frame, sizeof(frame), 0, 
-					(const struct sockaddr *) &servaddr,
-					 sizeof(servaddr)) < 0)
+	    if( write(sockfd, (const char *)frame, sizeof(frame)) != sizeof(frame))
 	    {
-	         perror("sendto()");
-	         exit(1);
+	    	perror("Error");
+	    	exit(0);
 	    }
+	    
+	    const struct timespec t = {.tv_sec=0, .tv_nsec=5000000};
+	    nanosleep(&t, NULL);
 
+		numberOfFramesSent++;
+	    ++sequenceNum;
 
     }
 
 	close(sockfd);
+
+	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
 	return 0;
 }

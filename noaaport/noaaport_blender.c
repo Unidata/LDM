@@ -12,17 +12,19 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <sys/time.h>
   
 #define HASH_TABLE_SIZE 1000
 
-#define PORT 		8080
-#define MAXLINE 	1024
-#define SAMPLE_SIZE     5
-#define SBN_FRAME_SIZE  4000
+#define PORT                        9127
+#define MAXLINE                     1024
+#define SAMPLE_SIZE                 5
+#define SBN_FRAME_SIZE              4000
+#define MIN_SOCK_TIMEOUT_MICROSEC   9000
 
-const char* const COPYRIGHT_NOTICE 	= "Copyright (C) 2021 "
+const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
-const char* const PACKAGE_VERSION 	= "0.0.1";
+const char* const PACKAGE_VERSION   = "0.0.1";
 
 typedef struct sockaddr_in SOCK4ADDR;
 
@@ -47,12 +49,12 @@ static void usage(
     const char* const          progName,
     const char* const restrict copyright)
 {
-	/*
+    /*
     int level = log_get_level();
     (void)log_set_level(LOG_LEVEL_NOTICE);
 
     log_notice_q(
-	*/
+    */
     printf(
 "\n\t%s - version %s\n"
 "\n\t%s\n"
@@ -77,36 +79,16 @@ static void usage(
 }
 
 
-void initAndBindSocket(int *psockfd, SOCK4ADDR *pservaddr , SOCK4ADDR *pcliaddr) 
-{
-	SOCK4ADDR servaddr = *pservaddr; 
-	SOCK4ADDR cliaddr  = *pcliaddr;	
-	int sockfd = *psockfd;
-
-	// Filling server information
-	servaddr.sin_family = AF_INET; // IPv4
-	servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_port = htons(PORT);
-
-	// Bind the socket with the server address
-	if ( bind(sockfd, (const struct sockaddr *)&servaddr,
-			sizeof(servaddr)) < 0 )
-	{
-		perror("bind failed");
-		exit(EXIT_FAILURE);
-	}
-}
-
 void
 joinMulticastGroup(struct in_addr mcastAddr, char* imr_interface, int sockfd) {
 
     int                 rc;
 
     SOCK4ADDR  cliAddr, servAddr = {};
-    struct ip_mreq 		mreq; 
+    struct ip_mreq      mreq; 
     struct hostent*     h;
 
-  	/* Join multicast group */
+    /* Join multicast group */
     mreq.imr_multiaddr.s_addr = mcastAddr.s_addr;
     mreq.imr_interface.s_addr = (imr_interface == NULL )
         ? htonl(INADDR_ANY)
@@ -146,17 +128,18 @@ decodeCommandLine(
         char**  const restrict argv,
         char**  const restrict mcastSpec,
         char**  const restrict imr_interface,
+        int*    const restrict sockTimeOut,
         int*    const restrict rcvBufSize)
 {
     int                 status = 0;
     extern int          optind;
     extern int          opterr;
     extern char         *optarg;
-	extern int      	optopt;
+    extern int          optopt;
     
-	int                 ch;
-
-	opterr = 0;                         /* no error messages from getopt(3) */
+    int                 ch;
+    
+    opterr = 0;                         /* no error messages from getopt(3) */
     /* Initialize the logger. */
 /*    if (log_init(argv[0])) {
         log_syserr("Couldn't initialize logging module");
@@ -164,29 +147,37 @@ decodeCommandLine(
     }
 */
     while (0 == status &&
-           (ch = getopt(argc, argv, "vxl:m:R:I:")) != -1) {
+           (ch = getopt(argc, argv, "vxI:l:m:R:r:")) != -1) {
         switch (ch) {
-	        case 'v':
-	            	printf("set verbose mode");
-	            break;
-	        case 'x':
-	            	printf("set debug mode");
-	            break;
-	        case 'I':
-	            	*imr_interface = optarg;
-	            break;
+            case 'v':
+                    printf("set verbose mode");
+                break;
+            case 'x':
+                    printf("set debug mode");
+                break;
+            case 'I':
+                    *imr_interface = optarg;
+                break;
+            case 'l':
+                    printf("logger spec");
+                break;
             case 'm':
-            		*mcastSpec = optarg;
-            	break;
-	       	case 'R':
-		        if (sscanf(optarg, "%d", rcvBufSize) != 1 || *rcvBufSize <= 0) {
-	                   printf("Invalid receive buffer size: \"%s\"", optarg);
-	                   //log_add("Invalid receive buffer size: \"%s\"", optarg);
-	                   status = EINVAL;
-		        }
-		        break;
-		    default:
-		    	break;	      
+                    *mcastSpec = optarg;
+                break;
+            case 'R':
+                if (sscanf(optarg, "%lf", rcvBufSize) != 1 || *rcvBufSize <= 0) {
+                       printf("Invalid receive buffer size: \"%s\"", optarg);
+                       //log_add("Invalid receive buffer size: \"%s\"", optarg);
+                       status = EINVAL;
+                }
+                break;
+            case 'r':
+                if (sscanf(optarg, "%d", sockTimeOut) != 1 || *sockTimeOut < 0) {
+                       printf("Invalid socket time-out value: \"%s\"", optarg);
+                }
+                break;
+            default:
+                break;        
         }
     }
 
@@ -229,12 +220,13 @@ void printHashTable(Frame_t *frameHashTable)
       }
       else
       {
-        printf("\t%d --> Frame(%lu, %x)\n", i, frameHashTable[i].seqNum, frameHashTable[i].frameData);
+        printf("\t%d --> Frame(%lu, %lu)\n", i, frameHashTable[i].seqNum, frameHashTable[i].frameData);
       }
     }
 }
 
-void removeFrameFromHashTable(Frame_t *frameHashTable, uint32_t sequenceNumber)
+void removeFrameFromHashTable(  Frame_t *frameHashTable, 
+                                uint32_t sequenceNumber)
 {
 
     int index = hashMe(sequenceNumber);
@@ -243,10 +235,10 @@ void removeFrameFromHashTable(Frame_t *frameHashTable, uint32_t sequenceNumber)
 }
 
 static
-int retrieveHeaderFields(unsigned char *buffer, 
-                            uint32_t *pSequenceNumber, 
-                            uint16_t *pRun, 
-                            uint16_t *pCheckSum)
+int retrieveHeaderFields(   unsigned char   *buffer, 
+                            uint32_t        *pSequenceNumber, 
+                            uint16_t        *pRun, 
+                            uint16_t        *pCheckSum)
 {
     int status = 0;     // success
 
@@ -470,92 +462,140 @@ void printCounters(char *stage, int numberOfFramesReceivedRun1,
     printf("\tLast Sequence Number (sent):\t\tSession1: %d,  Session2: %d \n\n", 
         lastSequenceNumberSentRun1, lastSequenceNumberSentRun2);
 }
+
+void setTimerOnSocket(int *pSockFd, int microSec)
+{
+    // set a timeout on the receiving socket
+    struct timeval read_timeout;
+    read_timeout.tv_sec = 0;
+    read_timeout.tv_usec = microSec;
+    setsockopt(*pSockFd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof(read_timeout));
+
+}
 /********************************************************/
 
 static int 
-execute(char* mcastSpec, char* imr_interface, int rcvBufSize) {
+execute(char* mcastSpec, char* imr_interface, int sockTimeOut, int rcvBufSize) {
 
-	int status = 0;
+    int status = 0;
 
     int                 sd, rc, n, len;
     socklen_t           cliLen;
     
-    SOCK4ADDR  cliAddr, servAddr = {};
     struct in_addr      mcastAddr;
-    struct hostent*     h;
-
-	SOCK4ADDR servaddr, cliaddr;
-	int sockfd;
-	unsigned char buffer[SBN_FRAME_SIZE] = {};
     
-	// Creating socket file descriptor
-	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-		perror("socket creation failed");
-		exit(EXIT_FAILURE);
-	}
+    SOCK4ADDR servaddr= { .sin_family       = AF_INET, 
+                          .sin_addr.s_addr  = htonl(INADDR_LOOPBACK), 
+                          .sin_port         = htons(PORT)
+                        }, 
+                        cliaddr;
+    
+    int sockfd;
+    unsigned char buffer[SBN_FRAME_SIZE] = {};
+    
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
 
-	initAndBindSocket(&sockfd, &servaddr, &cliaddr);
+    }
+
+    if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) )
+    {
+        perror("bind failure!");
+        exit(EXIT_FAILURE);
+    }
 
 
-	//joinMulticastGroup(mcastAddr, imr_interface, sockfd);
-	
-
+    //joinMulticastGroup(mcastAddr, imr_interface, sockfd);
+    
+    // set a timeout on the receiving socket, sockTimeOut in micro seconds
+    setTimerOnSocket(&sockfd, sockTimeOut);
+    
     // Initialize the SBN hash table
     initHashTable(frameHashTableRun1);
     initHashTable(frameHashTableRun2);
 
     Frame_t *frameHashTable;    
     
-    int zero =0;
     int         totalFramesReceived             = 0;
-    int         *pNumberOfFramesReceivedRun1 = NULL; // modulo 1000
     int         numberOfFramesReceivedRun1      = 0;
-    int         *pNumberOfFramesReceivedRun2 = NULL; // modulo 1000
     int         numberOfFramesReceivedRun2      = 0;
-    
     int         maxFramesToKeep                 = 6;    // max is 1000 (default), or input from user
+
     uint16_t    previousRun                     = 0;
     uint16_t    currentRun                      = 0;
     int         sessionRun                      = 1;
     bool        sessionFlipped                  = true;
     
-    uint32_t    sequenceNumber;
+    
     uint16_t    checkSum;
-
-    uint32_t    *pLastSequenceNumberSentRun1    = &zero;
-    uint32_t    *pLastSequenceNumberSentRun2    = &zero;
-
+    uint32_t    sequenceNumber;
     uint32_t    lastSequenceNumberSentRun1      = 0;
     uint32_t    lastSequenceNumberSentRun2      = 0;
 
 
-    uint32_t    *pLastSequenceNumberSent        = &zero;
-
- /*   
-    *pNumberOfFramesReceivedRun1 = 0; // modulo 1000
-    *pNumberOfFramesReceivedRun2 = 0; // modulo 1000
-    
-    *pLastSequenceNumberSent = 0;*/
-	/* Infinite server loop */  
-	for (;;) 
+    /* Infinite server loop */  
+    for (;;) 
     {
 
-		cliLen = sizeof(cliaddr); 
-		n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-					MSG_WAITALL, ( struct sockaddr *) &cliaddr,
-					&cliLen);
 
-        if (n <= 0) 
+        // Start measuring time
+        struct timeval debut, fin;
+        gettimeofday(&debut, 0);
+        
+
+        cliLen = sizeof(cliaddr); 
+
+        n = recvfrom(sockfd, (char *)buffer, MAXLINE,
+                    MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+                    &cliLen);
+
+        if( n < 0) 
         {
-            printf("\n===> Server: received zero bytes\n");
-            sleep(1);
+            if (errno == EWOULDBLOCK) 
+            {
+                // send remaining frames (purge current buffer)
+                if( numberOfFramesReceivedRun1 > 0 || numberOfFramesReceivedRun2 > 0 )
+                {
+                    printf("\n===> Server: Wake up and send remaining frames (purge current buffer)..\n");
+
+                    if( sendTopFrameToIngester(sessionRun, 
+                            &lastSequenceNumberSentRun1, &lastSequenceNumberSentRun2, 
+                            &numberOfFramesReceivedRun1, &numberOfFramesReceivedRun2)  == -1)
+                    {
+                        printf("Error sending frame...\n" );
+                    }
+                }  
+            } else 
+            {
+                perror("recvfrom error");
+            }
+
             continue;
+        }
+
+
+
+        if (n > 0 )
+        { 
+            // globally, i.e. for both hashTable
+            totalFramesReceived++;
+            printf("\n\t =============== Total frames received so far: %d =================\n\n", totalFramesReceived);
+
+            // Calculate the elapsed time between 2 recvfrom() calls
+            gettimeofday(&fin, 0);
+            long seconds = fin.tv_sec - debut.tv_sec;
+            long microseconds = fin.tv_usec - debut.tv_usec;
+            double elapsed = seconds + microseconds*1e-6;
+            printf("\n\t UDP packet receiving rate: %lf\n\n", elapsed);
         }
 
         int byteIndex;
         if( (byteIndex = getWellFormedFrame(buffer, n) ) < 0)
         {
-            printf("No frame detected within n bytes received!");
+           
+            printf("\n\t =============== No new frame detected in buffer =================\n\n");
             continue;
         }
         
@@ -564,17 +604,16 @@ execute(char* mcastSpec, char* imr_interface, int rcvBufSize) {
 
         if( retrieveHeaderFields(buffer, &sequenceNumber, &currentRun, &checkSum) != 0) 
         {
+            printf("\n\t =============== Checksum failed =================\n\n");
             continue;   // checksum failed
         } 
 
-        // globally, i.e. for both hashTable
-        totalFramesReceived++;
 
         // SBN run number
-
         // Determine when the session has flipped: assumption: we can only have one session running at any one time
         // if 'previousRun' has a non-zero value (i.e. not at start)
         //  and run# has changed from previous
+        // Consequently, the new sequence number has to be reset from the sender side (client)
         if( previousRun && (previousRun != currentRun ))
         {
             sessionRun = sessionRun == 1? 2:1;
@@ -606,11 +645,8 @@ execute(char* mcastSpec, char* imr_interface, int rcvBufSize) {
         int mod6 = (numberOfFramesReceivedRun2 + numberOfFramesReceivedRun1) % maxFramesToKeep;
         printf("\t%d + %d mod %d = %d \n", numberOfFramesReceivedRun1, numberOfFramesReceivedRun2, maxFramesToKeep, mod6);
         
-        if ( mod6 == 0)  
-        {
-            pNumberOfFramesReceivedRun1 = &numberOfFramesReceivedRun1;
-            pNumberOfFramesReceivedRun2 = &numberOfFramesReceivedRun2;
-            
+        if ( mod6 == 0 )  
+        {            
             printCounters("Current", numberOfFramesReceivedRun1, numberOfFramesReceivedRun2, 
                             lastSequenceNumberSentRun1, lastSequenceNumberSentRun2);
 
@@ -624,6 +660,7 @@ execute(char* mcastSpec, char* imr_interface, int rcvBufSize) {
         printCounters("New", numberOfFramesReceivedRun1, numberOfFramesReceivedRun2, 
                         lastSequenceNumberSentRun1, lastSequenceNumberSentRun2);
                     
+
         // show partially populated hash table
         if(numberOfFramesReceivedRun1 > 0)
         {
@@ -642,9 +679,9 @@ execute(char* mcastSpec, char* imr_interface, int rcvBufSize) {
         printf("Continue receiving..\n\n");
         // push message to queue via the hash table        
 
-	} // for()
+    } // for()
 
-	return status;    
+    return status;    
 }
 
 
@@ -669,12 +706,12 @@ int main(
         (void)log_set_level(LOG_LEVEL_WARNING);
 
 */          
-            char*             mcastSpec = NULL;
-            char*             interface = NULL; // Listen on all interfaces unless specified on argv
-            int               rcvBufSize= 0;
+            char*   mcastSpec = NULL;
+            char*   interface = NULL; // Listen on all interfaces unless specified on argv
+            int     rcvBufSize= 0;
+            int     socketTimeOut = MIN_SOCK_TIMEOUT_MICROSEC;
            
-
-            status = decodeCommandLine(argc, argv, &mcastSpec, &interface, &rcvBufSize);
+            status = decodeCommandLine(argc, argv, &mcastSpec, &interface, &socketTimeOut, &rcvBufSize); 
 
             if (status) {
                 printf("Couldn't decode command-line");
@@ -685,13 +722,12 @@ int main(
             }
             else {
 
-    			printf("\n\tStarting Up (-v%s)\n", PACKAGE_VERSION);
+                printf("\n\tStarting Up (v%s)\n", PACKAGE_VERSION);
                 printf("\n\t%s\n", COPYRIGHT_NOTICE);
 /*              log_notice("Starting up %s", PACKAGE_VERSION);
                 log_notice("%s", COPYRIGHT_NOTICE);
 */
-
-                status = execute(mcastSpec, interface, rcvBufSize);
+                status = execute(mcastSpec, interface, socketTimeOut, rcvBufSize);
 
                 if (status) {
                     printf("Couldn't ingest NOAAPort data");
