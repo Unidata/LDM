@@ -13,7 +13,7 @@ cd `dirname $0`
 # Tom's using uni14 for fanout testing
 #deploy uni17
 
-# Lead
+# Lead (for testing pqact(1))
 #deploy lead
 
 # LDM7 systems (no password required)
