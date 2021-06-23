@@ -1358,13 +1358,15 @@ processProduct(
             }
         }
     }
-    if (didMatch && queue_par->is_oldest && queue_par->is_full) {
+    if (didMatch && queue_par->is_full && queue_par->early_cursor) {
         char        buf[LDM_INFO_MAX];
         timestampt  now;
         (void)set_timestamp(&now);
-        log_warning("Processed oldest product in full queue: age=%g s, prod=%s",
+        log_warning("At oldest end of full queue: age=%g s, prod=%s",
             d_diff_timestamp(&now, &queue_par->inserted),
             s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
+        log_warning("Some desired products might not be processed! "
+                "Queue too small? System overloaded?");
     }
 
     if (!errorOccurred) {
@@ -1412,7 +1414,7 @@ dummyprod(char *ident)
         queue_par_t queue_par = {
                 .inserted = TS_NONE,
                 .offset = 0,
-                .is_oldest = false,
+                .early_cursor = false,
                 .is_full = false
         };
         bool        noError;

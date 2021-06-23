@@ -8095,12 +8095,14 @@ pq_next(
                 status = PQUEUE_END;
             }
             else {
+                timestampt oldest = tqe_first(pq->tqp)->tv;
+                queue_par.early_cursor = tvCmp(pq->cursor, oldest, <=);
+
                 // Update product-queue time-cursor
                 pq_cset(pq, &tqep->tv);
                 pq_coffset(pq, tqep->offset);
 
                 queue_par.inserted = tqep->tv;
-                queue_par.is_oldest = (tqep == tqe_first(pq->tqp));
 
                 // Find region in product-queue that contains product
                 region* rp;
