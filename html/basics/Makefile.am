@@ -50,7 +50,6 @@ EXTRA_DIST	= \
     Upstream_6.4_Primary.gif \
     upstream6.gif \
     feedtypes/conduit.html \
-    feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
     feedtypes/howto-nnexrad.html \
@@ -62,7 +61,6 @@ EXTRA_DIST	= \
     feedtypes/nogaps_coamps.html \
     feedtypes/ntext.html \
     feedtypes/public_bulletins.html \
-    feedtypes/wsi.html \
     upstream_ldm6_activity.svg
 html_DATA	= \
     activating.html \
@@ -117,7 +115,6 @@ html_DATA	= \
     upstream_ldm6_activity.svg
 nobase_html_DATA	= \
     feedtypes/conduit.html \
-    feedtypes/fnexrad.html \
     feedtypes/gem.html \
     feedtypes/hds.html \
     feedtypes/howto-nnexrad.html \
@@ -128,8 +125,7 @@ nobase_html_DATA	= \
     feedtypes/nimage.html \
     feedtypes/nogaps_coamps.html \
     feedtypes/ntext.html \
-    feedtypes/public_bulletins.html \
-    feedtypes/wsi.html
+    feedtypes/public_bulletins.html
 CLEANFILES              = configuring.html LDM-registry.html
 
 LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
