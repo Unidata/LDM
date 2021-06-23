@@ -1,3 +1,14 @@
+6.13.14.30      2021-06-23T10:53:55-0600
+    pqact(1):
+        * Enhanced log message about pqact(1) being at the oldest end of the
+          queue to include waking up to discover its position in the queue is
+          older than the oldest data-product. The word "oldest" still appears in
+          the warning -- so you can still search on it.
+
+    Documentation:
+        * Updated the instructions on using metrics to monitor the LDM
+        * Remove obsolete feedtype webpages
+
 6.13.14.29      2021-05-20T15:49:35-0600
     scour(1) (C program):
         * Squashed bug that would crash program when empty directory-deletion
