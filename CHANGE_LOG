@@ -1,3 +1,15 @@
+6.13.14.31      2021-06-28T12:42:57-0600
+    Multicast:
+        * FmtpRecvv3: Adapted to retrograde product-indexes
+            * Modified "LastProdIndex" to keep product-index iff it's
+              higher (modulo) than the prevous index
+            * Replaced throwing an exception in requestBops() with logging a
+              warning if the product-index gap is negative
+
+    Developer:
+        * configure.ac: Removed "pqcreate.1" and "regpar.tab" from
+          AC_CONFIG_FILES
+
 6.13.14.30      2021-06-23T10:53:55-0600
     pqact(1):
         * Enhanced log message about pqact(1) being at the oldest end of the
