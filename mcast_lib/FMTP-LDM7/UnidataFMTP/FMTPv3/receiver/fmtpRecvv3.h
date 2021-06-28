@@ -130,9 +130,9 @@ class fmtpRecvv3 {
     };
 
     /**
-     * Tracks the last product-index.
+     * Tracks the highest product-index (modulo (UINT32_MAX+1)) received so far.
      */
-    class LastProdIndex
+    class HighestProdIndex
     {
         using Mutex = std::mutex;
         using Guard = std::lock_guard<Mutex>;
@@ -142,23 +142,23 @@ class fmtpRecvv3 {
         bool          indexSet;   /// Product-index is set?
 
     public:
-        LastProdIndex();
+        HighestProdIndex();
 
         /**
          * No copy or move construction because there should only be one
          * instance per FMTP receiver.
          */
-        LastProdIndex(const LastProdIndex& that) =delete;
-        LastProdIndex(LastProdIndex&& that) =delete;
+        HighestProdIndex(const HighestProdIndex& that) =delete;
+        HighestProdIndex(HighestProdIndex&& that) =delete;
 
         /**
          * No copy or move assignment because there should only be one instance
          * per FMTP receiver.
          */
-        LastProdIndex& operator=(const LastProdIndex& rhs) =delete;
-        LastProdIndex& operator=(LastProdIndex&& rhs) =delete;
+        HighestProdIndex& operator=(const HighestProdIndex& rhs) =delete;
+        HighestProdIndex& operator=(HighestProdIndex&& rhs) =delete;
 
-        uint32_t set(const uint32_t prodIndex);
+        uint32_t setIfHigher(const uint32_t prodIndex);
 
         uint32_t get() const;
     };
@@ -218,7 +218,7 @@ class fmtpRecvv3 {
     std::condition_variable notify_cv;
     UdpRecv                 udpRecv;
     // Open lower index for BOP requests
-    LastProdIndex           openLeftIndex;
+    HighestProdIndex           openLeftIndex;
 
     /* member variables for measurement use only */
     Measure*                measure;

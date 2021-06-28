@@ -95,32 +95,35 @@ void fmtpRecvv3::MsgQueue::pop()
 /**
  * Constructs.
  */
-fmtpRecvv3::LastProdIndex::LastProdIndex()
+fmtpRecvv3::HighestProdIndex::HighestProdIndex()
     : mutex()
     , prodIndex(0)
     , indexSet(false)
 {}
 
 /**
- * Tracks a product-index. Returns the product-index from the previous call.
+ * Sets the product-index if it's greater (modulo arithmetic) than the previous
+ * one. Returns the previous value.
  *
- * @param[in] prodindex          Product-index to be saved
+ * @param[in] prodindex          Product-index to be considered
  * @return                       On first call, given product-index minus one;
- *                               otherwise, product-index of previous call
+ *                               otherwise, previously-saved value
  */
-uint32_t fmtpRecvv3::LastProdIndex::set(const uint32_t prodindex)
+uint32_t fmtpRecvv3::HighestProdIndex::setIfHigher(const uint32_t prodindex)
 {
     Guard    guard(mutex);
     uint32_t prevProdIndex = indexSet ? this->prodIndex : prodindex - 1;
 
-#   ifdef LDM_LOGGING
-        if (indexSet && (prodindex - this->prodIndex > UINT32_MAX/2))
-            log_warning("Retrograde product-index: prodindex=%" PRIu32
-                    ", this->prodIndex=%" PRIu32, prodindex, this->prodIndex);
-#   endif
-
-    this->prodIndex = prodindex;
-    indexSet = true;
+    if (indexSet && (prodindex - this->prodIndex > UINT32_MAX/2)) {
+#       ifdef LDM_LOGGING
+            log_warning("Retrograde product-index: new=%" PRIu32
+                    ", previous=%" PRIu32, prodindex, this->prodIndex);
+#       endif
+    }
+    else {
+        this->prodIndex = prodindex;
+        indexSet = true;
+    }
     // NB: Product-index set from now on
 
     return prevProdIndex;
@@ -132,7 +135,7 @@ uint32_t fmtpRecvv3::LastProdIndex::set(const uint32_t prodindex)
  * @return                  Product-index
  * @throw std::logic_error  `set()` hasn't been called
  */
-uint32_t fmtpRecvv3::LastProdIndex::get() const {
+uint32_t fmtpRecvv3::HighestProdIndex::get() const {
     Guard guard(mutex);
     if (!indexSet)
         throw std::logic_error("set() hasn't been called");
@@ -433,6 +436,7 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
  *                            FMTP header.
  * @param[in] payload         `header.payloadlen` bytes of payload
  * @throw std::system_error   if an error occurs while reading the socket.
+ * @throw std::runtime_error  Product-index gap is impossibly large
  */
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
                                  const char*       payload)
@@ -455,7 +459,8 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
 
     /*
      * Detects completely missing products by checking the consistency
-     * between the last logged product-index and the currently-received one.
+     * between the previously received product-index and the currently-received
+     * one.
      */
     // Also sets future open left product-index for BOP requests
     requestBopsExcl(header.prodindex);
@@ -931,7 +936,7 @@ void fmtpRecvv3::mcastDataHandler(const FmtpHeader& header,
             }
         }
 
-        openLeftIndex.set(header.prodindex);
+        openLeftIndex.setIfHigher(header.prodindex);
     } // Product information exists
     else {
         // Also sets future open left index for BOP requests
@@ -1031,7 +1036,7 @@ void fmtpRecvv3::mcastEOPHandler(const FmtpHeader& header)
         setEOPStatus(header.prodindex);
         timerWake.notify_all();
         EOPHandler(header);
-        openLeftIndex.set(header.prodindex);
+        openLeftIndex.setIfHigher(header.prodindex);
     }
     else {
         // Also sets future open left index for BOP requests
@@ -1679,10 +1684,10 @@ void fmtpRecvv3::requestAnyMissingData(const uint32_t prodindex,
 
 
 /**
- * Requests BOP packets for a prodindex interval.
+ * Requests BOP packets for a positive product-index gap.
  *
- * @param[in] openleft            Open left end of the prodindex interval.
- * @param[in] openright           Open right end of the prodindex interval.
+ * @param[in] openleft            Open left end of the product-index interval.
+ * @param[in] openright           Open right end of the product-index interval.
  * @throws    std::runtime_error  Product-index gap is impossibly large
  */
 void fmtpRecvv3::requestBops(const uint32_t openleft,
@@ -1691,36 +1696,39 @@ void fmtpRecvv3::requestBops(const uint32_t openleft,
     const uint32_t delta = openright - openleft;
 
     if (delta) {
-        if (delta > UINT32_MAX/2)
-            throw std::runtime_error("Invalid product gap: openleft=" +
-                    std::to_string(openleft) + ", openright=" +
-                    std::to_string(openright));
-
-        for (uint32_t i = (openleft + 1); i != openright; i++)
-            if (addUnrqBOPinSet(i))
-                pushBopReq(i);
+        if (delta > UINT32_MAX/2) {
+#           if LDM_LOGGING
+                log_warning("Invalid product gap: openleft=" PRIu32
+                        ", openright=" PRIu32, openleft, openright);
+#           endif
+        }
+        else {
+            for (uint32_t i = (openleft + 1); i != openright; ++i)
+                if (addUnrqBOPinSet(i))
+                    pushBopReq(i);
+        }
     }
 }
 
 /**
  * Requests BOP packets for data-products that come after the data-product
- * returned by `openLeftIndex.set()` and up to but excluding a given
+ * returned by `openLeftIndex.setIfHigher()` and up to but excluding a given
  * data-product.
  *
  * Called when a BOP message for the previous multicast product hasn't been
  * received.
  *
- * Sets the index of the last product whose BOP doesn't need to be requested to
- * the given index.
+ * Calls `openLeftIndex.setIfHigher()` with the given index.
  *
  * Executed on the multicast receiving thread.
  *
  * @param[in] prodindex           Product-index to be excluded and given to
- *                                `openLeftIndex.set()`
+ *                                `openLeftIndex.setIfHigher()`
+ * @throws    std::runtime_error  Product-index gap is impossibly large
  */
 void fmtpRecvv3::requestBopsExcl(const uint32_t prodindex)
 {
-    const uint32_t leftIndex = openLeftIndex.set(prodindex);
+    const uint32_t leftIndex = openLeftIndex.setIfHigher(prodindex);
 
     requestBops(leftIndex, prodindex);
 }
@@ -1728,23 +1736,22 @@ void fmtpRecvv3::requestBopsExcl(const uint32_t prodindex)
 
 /**
  * Requests BOP packets for data-products that come after the data-product
- * returned by `openLeftIndex.set()` and up to and including a given
+ * returned by `openLeftIndex.setIfHigher()` and up to and including a given
  * data-product.
  *
  * Called when a BOP message for the current multicast product hasn't been
  * received.
  *
- * Sets the index of the last product whose BOP doesn't need to be requested to
- * the given index.
+ * Calls `openLeftIndex.setIfHigher()` with the given index.
  *
  * Executed on the multicast receiving thread.
  *
  * @param[in] prodindex           Product-index to be include and given to
- *                                `openLeftIndex.set()`
+ *                                `openLeftIndex.setIfHigher()`
  */
 void fmtpRecvv3::requestBopsIncl(const uint32_t prodindex)
 {
-    const uint32_t leftIndex = openLeftIndex.set(prodindex);
+    const uint32_t leftIndex = openLeftIndex.setIfHigher(prodindex);
 
     requestBops(leftIndex, prodindex+1);
 }
