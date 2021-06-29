@@ -470,11 +470,13 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
 /**
  * Handles a retransmitted BOP message given its FMTP header.
  *
- * @param[in] header           Header associated with the packet.
+ * @param[in] header          Header associated with the packet.
  * @param[in] FmtpPacketData  Pointer to payload of FMTP packet.
+ * @retval    `true`          Message is valid
+ * @retval    `false`         Message is not valid
  */
-void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
-                                 const char* const  FmtpPacketData)
+bool fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
+                                const char* const FmtpPacketData)
 {
     #ifdef MODBASE
         uint32_t tmpidx = header.prodindex % MODBASE;
@@ -490,7 +492,7 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
         WriteToLog(debugmsg);
     #endif
 
-    BOPHandler(header, FmtpPacketData);
+    return BOPHandler(header, FmtpPacketData);
 }
 
 
@@ -500,12 +502,13 @@ void fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
  *
  * @param[in] header          Header associated with the packet.
  * @param[in] payload         Pointer to payload of FMTP packet.
- * @retval    `true`          FMTP message is valid
- * @retval    `false`         FMTP message is not valid
+ * @retval    `true`          Message is valid
+ * @retval    `false`         Message is not valid
  */
-void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
+bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                             const char* const payload)
 {
+    bool     isValid = false;
     void*    prodptr = NULL;
     BOPMsg   BOPmsg;
     /*
@@ -614,6 +617,8 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                     timerParamQ.push(timerparam);
                     timerQfilled.notify_all();
                 }
+
+                isValid = true;
             } // Product wasn't in segment-manager and isn't in trackermap
             else {
                 #if !defined(NDEBUG) && defined(LDM_LOGGING)
@@ -654,6 +659,8 @@ void fmtpRecvv3::BOPHandler(const FmtpHeader& header,
             #endif
         } // Metadata isn't too big
     } // Payload isn't too small
+
+    return isValid;
 }
 
 
@@ -723,7 +730,7 @@ void fmtpRecvv3::updateAckedProd(const uint32_t prodindex)
 void fmtpRecvv3::doneWithProd(
         const bool       inTracker,
         struct timespec& now,
-                const uint32_t   prodindex,
+        const uint32_t   prodindex,
         const uint32_t   numRetrans)
 {
     if (notifier && inTracker) {
@@ -1193,56 +1200,59 @@ void fmtpRecvv3::retxHandler()
                         "Error reading FMTP_RETX_BOP: "
                         "EOF read from the retransmission TCP socket.");
             }
-            else {
-                retxBOPHandler(header, paytmp);
-            }
+            else if (retxBOPHandler(header, paytmp)) {
+                /** remove the BOP from missing list */
+                (void)rmMisBOPinSet(header.prodindex);
 
-            /** remove the BOP from missing list */
-            (void)rmMisBOPinSet(header.prodindex);
-
-            uint32_t prodsize    = 0;
-            uint32_t seqnum      = 0;
-            {
-                uint32_t leftIndex; // Last multicast BOP
-
-                std::lock_guard<std::mutex> lock(antiracemtx);
                 {
-                    std::lock_guard<std::mutex> lock(trackermtx);
-                    if (trackermap.count(header.prodindex)) {
-                        ProdTracker tracker  = trackermap[header.prodindex];
-                        prodsize             = tracker.prodsize;
-                        seqnum               = tracker.seqnum;
+                    uint32_t                    prodsize;
+                    uint32_t                    seqnum;
+                    uint32_t                    leftIndex; // Last multicast BOP
+                    bool                        inTracker = false;
+                    std::lock_guard<std::mutex> lock(antiracemtx);
 
-                        leftIndex = openLeftIndex.get();
-                    }
-                }
-                if (prodsize > 0) {
-                    /**
-                     * If seqnum != 0, the seqnum is updated right after the
-                     * retx BOP is handled, which means the multicast thread
-                     * is receiving blocks. In this case, nothing needs to be
-                     * done.
-                     */
-                    if (seqnum == 0) {
-                        /**
-                         * If two indices don't equal, the product is totally
-                         * missed. Thus, all blocks should be requested.
-                         * On the other hand, if they equal, there could be
-                         * concurrency or a gap before next product arrives.
-                         * Only requesting EOP is the most economic choice.
-                         */
-                        if (leftIndex != header.prodindex) {
-                            requestAnyMissingData(header.prodindex, prodsize);
+                    {
+                        std::lock_guard<std::mutex> lock(trackermtx);
+                        if (trackermap.count(header.prodindex)) {
+                            ProdTracker tracker  = trackermap[header.prodindex];
+                            prodsize             = tracker.prodsize;
+                            seqnum               = tracker.seqnum;
+                            leftIndex            = openLeftIndex.get();
+                            inTracker            = true;
                         }
-                        pushEopReq(header.prodindex);
                     }
-                }
-                else {
-                    throw std::runtime_error("fmtpRecvv3::retxHandler() "
-                            "Product not found in BOPMap after receiving retx BOP");
-                }
-            }
-        }
+                    if (inTracker) {
+                        /**
+                         * If seqnum != 0, the seqnum is updated right after the
+                         * retx BOP is handled, which means the multicast thread
+                         * is receiving blocks. In this case, nothing needs to
+                         * be done.
+                         */
+                        if (seqnum == 0) {
+                            /**
+                             * If two indices don't equal, the product is
+                             * totally missed. Thus, all blocks should be
+                             * requested. On the other hand, if they equal,
+                             * there could be concurrency or a gap before next
+                             * product arrives. Only requesting EOP is the most
+                             * economic choice.
+                             */
+                            if (leftIndex != header.prodindex) {
+                                requestAnyMissingData(header.prodindex, prodsize);
+                            }
+                            pushEopReq(header.prodindex);
+                        }
+                    } // Product has entry in tracker-map
+                    else {
+                        # if LDM_LOGGING
+                            log_notice("fmtpRecvv3::retxHandler() Product not "
+                                    "found in trackermap after retx BOP. "
+                                    "Erased by another thread?");
+                        # endif
+                    } // Product doesn't have entry in tracker-map
+                } // Anti-race mutex is locked
+            } // BOP message is valid
+        } // Message is BOP retransmission
         else if (header.flags == FMTP_RETX_DATA) {
             #ifdef MEASURE
                 /* log the time first */

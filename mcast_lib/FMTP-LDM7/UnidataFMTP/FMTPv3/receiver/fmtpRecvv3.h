@@ -345,10 +345,12 @@ class fmtpRecvv3 {
     /**
      * Handles a retransmitted BOP message.
      *
-     * @param[in] header           Header associated with the packet.
+     * @param[in] header          Header associated with the packet.
      * @param[in] FmtpPacketData  Pointer to payload of FMTP packet.
+     * @retval    `true`          Message is valid
+     * @retval    `false`         Message is not valid
      */
-    void retxBOPHandler(const FmtpHeader& header,
+    bool retxBOPHandler(const FmtpHeader& header,
                         const char* const  FmtpPacketData);
     void retxEOPHandler(const FmtpHeader& header);
     /**
