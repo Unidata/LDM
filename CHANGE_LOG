@@ -1,3 +1,19 @@
+6.13.14.32      2021-06-29T17:57:21-0600
+    Misc:
+        * GEMPAK (GRIB2) Tables README: Modified the "clone" command to
+          work-around permission problems
+
+    Multicast:
+        * FmtpRecvv3: Made handling of retransmitted duplicate BOP more robust:
+            * retxBOPHandler() and BOPHandler(): Made return-value indicate if
+              BOP was invalid or a duplicate
+            * retxHandler():
+                * Modified to ignore an invalid BOP
+                * No longer relies on a positive product-size to indicate a
+                  tracker-map entry
+                * Exception throwing on no tracker-map entry replaced with
+                  logging a notice
+
 6.13.14.31      2021-06-28T12:42:57-0600
     Multicast:
         * FmtpRecvv3: Adapted to retrograde product-indexes
