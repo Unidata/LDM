@@ -455,15 +455,15 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
         WriteToLog(debugmsg);
     #endif
 
-    BOPHandler(header, payload);
-
-    /*
-     * Detects completely missing products by checking the consistency
-     * between the previously received product-index and the currently-received
-     * one.
-     */
-    // Also sets future open left product-index for BOP requests
-    requestBopsExcl(header.prodindex);
+    if (BOPHandler(header, payload)) {
+        /*
+         * Detects completely missing products by checking the consistency
+         * between the previously received product-index and the
+         * currently-received one.
+         */
+        // Also sets future open left product-index for BOP requests
+        requestBopsExcl(header.prodindex);
+    }
 }
 
 

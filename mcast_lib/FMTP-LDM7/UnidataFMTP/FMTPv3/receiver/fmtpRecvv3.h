@@ -236,7 +236,7 @@ class fmtpRecvv3 {
      * @retval    `false`         FMTP message is not valid
      * @throw std::runtime_error  if the payload is too small.
      */
-    void BOPHandler(const FmtpHeader& header,
+    bool BOPHandler(const FmtpHeader& header,
                     const char* const payload);
     void checkPayloadLen(const FmtpHeader& header, const size_t nbytes);
     void clearEOPStatus(const uint32_t prodindex);
