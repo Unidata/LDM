@@ -1,3 +1,12 @@
+6.13.14.34
+    pqact(1):
+        * Changed the logging-level associated with the "-log" option of the
+          FILE and STDIOFILE actions from INFO to NOTE to ensure that such
+          messages are always logged regardless of the logging-level of the
+          pqact(1) process
+        * Removed or demoted to DEBUG some redundant ERROR messages related to
+          the inability to pipe to a decoder
+
 6.13.14.33      2021-06-30T10:00:25-0600
     Multicast:
         * FmtpRecvv3: Corrected declaration and use of BOPHandler()

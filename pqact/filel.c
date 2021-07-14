@@ -132,7 +132,7 @@ static const DeleteReason DR_TERMINATED = {"terminated",            LOG_LEVEL_DE
 static const DeleteReason DR_SIGNALED =   {"abnormally-terminated", LOG_LEVEL_WARNING};
 static const DeleteReason DR_CLOSED =     {"closed",                LOG_LEVEL_DEBUG};
 static const DeleteReason DR_LRU =        {"least-recently-used",   LOG_LEVEL_DEBUG};
-static const DeleteReason DR_FAILED =     {"failed",                LOG_LEVEL_ERROR};
+static const DeleteReason DR_FAILED =     {"failed",                LOG_LEVEL_DEBUG};
 static const DeleteReason DR_INACTIVE =   {"inactive",              LOG_LEVEL_DEBUG};
 
 union f_handle {
@@ -1369,7 +1369,7 @@ int unio_prodput(
                 }
                 else {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        log_info("Filed in \"%s\": %s", argv[argc - 1],
+                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
                                         log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
@@ -1614,7 +1614,7 @@ int stdio_prodput(
                 status = flushIfAppropriate(entry);
 
                 if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
-                    log_info("StdioFiled in \"%s\": %s", argv[argc - 1],
+                    log_notice("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info,
                                     log_is_enabled_debug));
             } /* data written */
@@ -1953,7 +1953,6 @@ static int pipe_put(
                     entry->path);
 
             if (status && status != EINTR) {
-                log_add("Couldn't write %zu-byte product to pipe", sz);
                 /* don't waste time syncing an errored entry */
                 entry_unsetFlag(entry, FL_NEEDS_SYNC);
             }
@@ -2137,8 +2136,6 @@ static int pipe_out(
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = pipe_put(entry, info->ident, data, sz);
-        if (status)
-            log_add("Couldn't write product data to pipe");
     }
 
     return status;
@@ -2200,8 +2197,6 @@ int pipe_prodput(
 
         if (0 == status) {
             status = pipe_out(entry, &prodp->info, data, sz);
-            if (status)
-                log_add("Couldn't pipe product to decoder \"%s\"", entry->path);
 
             if (EPIPE == status && !isNew) {
                 /*
