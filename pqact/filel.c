@@ -218,9 +218,6 @@ static struct fl {
 /// Maximum amount of time for an unused entry, in seconds
 static const unsigned long maxTime = 6 * 3600;
 
-#define TO_HEAD(entry) \
-        if(thefl->head != entry) fl_makeHead(entry)
-
 /**
  * Frees an open-file entry -- releasing all resources including flushing and
  * closing the associated output.
@@ -300,8 +297,8 @@ fl_remove(
 /**
  * Adds an entry to the head of the open-file list.
  *
- * @param[in] entry  The entry to be added.
  * @pre              {The entry is not in the list.}
+ * @param[in] entry  The entry to be added.
  */
 static void
 fl_addToHead(
@@ -312,7 +309,6 @@ fl_addToHead(
 
     entry->next = thefl->head;
     entry->prev = NULL;
-    entry->lastUse = time(NULL);
     thefl->head = entry;
 
     if (thefl->tail == NULL)
@@ -327,15 +323,14 @@ fl_addToHead(
  * @param[in] entry  The entry to be moved.
  * @pre              {The entry is in the list.}
  */
-static void
-fl_makeHead(
-        fl_entry *entry)
+static inline void
+fl_makeHead(fl_entry *entry)
 {
-    if (thefl->head == entry)
-        return;
-
-    fl_remove(entry);
-    fl_addToHead(entry);
+    entry->lastUse = time(NULL);
+    if (thefl->head != entry) {
+        fl_remove(entry);
+        fl_addToHead(entry);
+    }
 }
 
 #ifdef FL_DEBUG
@@ -514,7 +509,7 @@ fl_getEntry(
     fl_entry* entry = fl_find(type, argc, argv);
 
     if (NULL != entry) {
-        TO_HEAD(entry);
+        fl_makeHead(entry);
         #ifdef FL_DEBUG
             dump_fl();
         #endif
@@ -1074,7 +1069,7 @@ static int unio_put(
         size_t sz)
 {
     if (sz) {
-        TO_HEAD(entry);
+        fl_makeHead(entry);
         log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
 #if 0
@@ -1528,7 +1523,7 @@ static int stdio_put(
         size_t sz)
 {
     log_debug("%d", fileno(entry->handle.stream));
-    TO_HEAD(entry);
+    fl_makeHead(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
@@ -1938,7 +1933,7 @@ static int pipe_put(
 
     //log_debug("%d",
             //entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
-    TO_HEAD(entry);
+    fl_makeHead(entry);
 
     if (entry->handle.pbuf == NULL ) {
         log_add("NULL pipe-buffer");

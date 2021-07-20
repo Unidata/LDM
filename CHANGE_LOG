@@ -6,6 +6,11 @@
           pqact(1) process
         * Removed or demoted to DEBUG some redundant ERROR messages related to
           the inability to pipe to a decoder
+        * Fixed bug in which a pattern/action entry that stayed at the head of
+          the most-recently-used list wouldn't have its time of last use reset
+          resulting in that entry being removed from the list (and its file
+          descriptor closed) after 6 hours. This most likely would only occur if
+          the configuration-file only had one FILE or PIPE entry.
 
 6.13.14.33      2021-06-30T10:00:25-0600
     Multicast:
