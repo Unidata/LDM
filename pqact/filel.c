@@ -158,7 +158,7 @@ struct fl_entry {
     struct fl_ops*   ops;
     f_handle         handle;
     unsigned long    private;           // pid, hstat*, R/W flg
-    time_t           inserted;        // Time of last access
+    time_t           lastUse;        // Time of last access
     int              flags;
     ft_t             type;
     char             path[PATH_MAX];    // PATH_MAX includes NUL
@@ -312,7 +312,7 @@ fl_addToHead(
 
     entry->next = thefl->head;
     entry->prev = NULL;
-    entry->inserted = time(NULL);
+    entry->lastUse = time(NULL);
     thefl->head = entry;
 
     if (thefl->tail == NULL)
@@ -451,7 +451,7 @@ fl_sync(const int block)
                 entry = NULL;
             }
         }
-        if (entry && (now - entry->inserted > maxTime))
+        if (entry && (now - entry->lastUse > maxTime))
 			fl_removeAndFree(entry, &DR_INACTIVE);
     }
 }
@@ -2866,7 +2866,7 @@ entry_new(
             entry->prev = NULL;
             entry->path[0] = 0;
             entry->private = 0;
-            entry->inserted = time(NULL);
+            entry->lastUse = time(NULL);
 
             if (entry->ops->open(entry, argc, argv) == -1) {
                 free(entry);
