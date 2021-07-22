@@ -11,6 +11,9 @@
           resulting in that entry being removed from the list (and its file
           descriptor closed) after 6 hours. This most likely would only occur if
           the configuration-file only had one FILE or PIPE entry.
+        * Modified the "-strip" option: it no longer deletes characters whose
+          unsigned value is greater than 127. This allows textual products in an
+          extended ASCII character set (e.g., ISO 8859-1).
 
 6.13.14.33      2021-06-30T10:00:25-0600
     Multicast:

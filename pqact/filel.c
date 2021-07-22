@@ -633,7 +633,7 @@ dupstrip(
     }
 
     for (blen = len, ip = in, op = out, *outlenp = 0; blen != 0; blen--, ip++) {
-        if (((int) *ip) > 127 || (iscntrl(*ip) && *ip != '\n'))
+        if (iscntrl(*ip) && *ip != '\n')
             continue;
         /* else */
         *op++ = *ip;
