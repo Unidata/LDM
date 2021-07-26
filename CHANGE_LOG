@@ -1,4 +1,4 @@
-6.13.14.34
+6.13.14.34      2021-07-26T09:09:22-0600
     pqact(1):
         * Changed the logging-level associated with the "-log" option of the
           FILE and STDIOFILE actions from INFO to NOTE to ensure that such
@@ -6,11 +6,12 @@
           pqact(1) process
         * Removed or demoted to DEBUG some redundant ERROR messages related to
           the inability to pipe to a decoder
-        * Fixed bug in which a pattern/action entry that stayed at the head of
-          the most-recently-used list wouldn't have its time of last use reset
-          resulting in that entry being removed from the list (and its file
-          descriptor closed) after 6 hours. This most likely would only occur if
-          the configuration-file only had one FILE or PIPE entry.
+        * Fixed bug in which a pattern/action entry wouldn't have its time of
+          last-use reset if it was already at the head of the most-recently-used
+          list. If this situation persisted for 6 hours, then the entry would
+          be removed from the list and its file descriptor would be closed.
+          This latter situation could only occur if one entry monopolized its
+          pqact(1) process for 6 hours.
         * Modified the "-strip" option: it no longer deletes characters whose
           unsigned value is greater than 127. This allows textual products in an
           extended ASCII character set (e.g., ISO 8859-1).
