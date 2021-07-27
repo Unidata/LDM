@@ -1,5 +1,40 @@
-6.13.14.34      2021-07-26T09:09:22-0600
+6.13.14
+    configure(1):
+        * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems in order
+          to support the C compiler; otherwise, it's 700
+        * rpcgen(1):
+            * Require on MacOS system
+            * Use if possible; otherwise, use package-supplied rpcgen(1) output
+              files
+
+    ldmadmin(1):
+        * Changed match on "ESTABLISHED" in netstat(1) output to "ESTAB" just in
+          case some netstat(1)'s use that instead
+        * Corrected error-message in "addmetrics" command
+        * Added missing "}" to 'while ($_ = $ARGV[0]) {'
+        * Documented the two types of "pqactcheck" invocations in the
+          manual-page
+        * Made more(1) the default pager for "ldmadmin log". The environment
+          variable PAGER will override.
+        * Created "showsettings" command to print information on the LDM
+          installation to assist troubleshooting
+
+    logging:
+        * Added LOG_LEVEL_FATAL and associated functions/macros
+        * Merged logging levels ALERT, CRIT, & EMERG into just FATAL
+
+    pqcreate(1):
+        * Fixed manual-page regarding the computation of the default number of
+          product slots
+        * Corrected approximate mean product-size from 51 kB to 140 kB. This
+          value is used when the number of slots registry parameter is
+          "default".
+
     pqact(1):
+        * Enhanced log message about pqact(1) being at the oldest end of the
+          queue to include waking up to discover its position in the queue is
+          older than the oldest data-product. The word "oldest" still appears in
+          the warning -- so you can still search on it.
         * Changed the logging-level associated with the "-log" option of the
           FILE and STDIOFILE actions from INFO to NOTE to ensure that such
           messages are always logged regardless of the logging-level of the
@@ -16,322 +51,118 @@
           unsigned value is greater than 127. This allows textual products in an
           extended ASCII character set (e.g., ISO 8859-1).
 
-6.13.14.33      2021-06-30T10:00:25-0600
-    Multicast:
-        * FmtpRecvv3: Corrected declaration and use of BOPHandler()
-
-6.13.14.32      2021-06-29T17:57:21-0600
-    Misc:
-        * GEMPAK (GRIB2) Tables README: Modified the "clone" command to
-          work-around permission problems
-
-    Multicast:
-        * FmtpRecvv3: Made handling of retransmitted duplicate BOP more robust:
-            * retxBOPHandler() and BOPHandler(): Made return-value indicate if
-              BOP was invalid or a duplicate
-            * retxHandler():
-                * Modified to ignore an invalid BOP
-                * No longer relies on a positive product-size to indicate a
-                  tracker-map entry
-                * Exception throwing on no tracker-map entry replaced with
-                  logging a notice
-
-6.13.14.31      2021-06-28T12:42:57-0600
-    Multicast:
-        * FmtpRecvv3: Adapted to retrograde product-indexes
-            * Modified "LastProdIndex" to keep product-index iff it's
-              higher (modulo) than the prevous index
-            * Replaced throwing an exception in requestBops() with logging a
-              warning if the product-index gap is negative
-
-    Developer:
-        * configure.ac: Removed "pqcreate.1" and "regpar.tab" from
-          AC_CONFIG_FILES
-
-6.13.14.30      2021-06-23T10:53:55-0600
-    pqact(1):
-        * Enhanced log message about pqact(1) being at the oldest end of the
-          queue to include waking up to discover its position in the queue is
-          older than the oldest data-product. The word "oldest" still appears in
-          the warning -- so you can still search on it.
-
-    Documentation:
-        * Updated the instructions on using metrics to monitor the LDM
-        * Remove obsolete feedtype webpages
-
-6.13.14.29      2021-05-20T15:49:35-0600
-    scour(1) (C program):
-        * Squashed bug that would crash program when empty directory-deletion
-          was requested (-d option) and a directory didn't exist.
-
-6.13.14.28      2021-04-29T17:05:13-0600
-    configure(1):
-        * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems;
-          otherwise, it's 700
-        * rpcgen(1):
-            * Require on MacOS system
-            * Use if possible; otherwise, use package-supplied rpcgen(1) output
-              files
+    scour(1):
+        * Replaced scour(1) script with multi-threaded C program that scours
+          much faster than the script
+        * Added scour configuration-file to LDM registry
+        * Renamed "scour" script to "scour.sh" in case users still want to use
+          it
+        * Added "-d" option to scour(1) man-page
+        * Increased maximum size of pattern field to MAX_INPUT bytes
+        * Function replacements to accommodate SunOS 5:
+             * getline(3) -> mygetline(3)
+             * fstatat(2) -> lstat(2)
 
     rpc(3) library:
         * Replaced call to bindresvport() in clnttcp_create() with binding to an
-          ephemeral port
+          ephemeral port to eliminate the necessity for having root privileges
 
-    scour(1):
-        * Function replacements to accommodate SunOS 5:
-             * getline(3) with mygetline(3)
-             * fstatat(2) with lstat(2)
-        * Improved unit testing
+    LDM Registry:
+        * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories
+          to be excluded by scour(1)
 
     Misc:
-        * Made mygetline(3) stand-alone (SunOS doesn't have getline(3))
-          and more like the getline(3) declaration
-
-6.13.14.27      2021-04-22T09:37:22-0600
-    configure(1):
-        * Added "regpar.tab" to configured files
-        * Changed "388" to "@LDM_PORT@" in registry
-
-    ldmadmin(1):
-        * Created "showsettings" command to print information on the LDM
-          installation to assist troubleshooting
-
-    pqcreate(1):
-        * Fixed manual-page regarding the computation of the default number of
-          product slots
-        * Corrected approximate mean product-size from 51 kB to 140 kB. This
-          value is used when the number of slots registry parameter is
-          "default".
-
-    NOAAPort Ingest:
-        * Ensure that the NEXRAD feedtype is assigned to every product whose
-          parameter "product-specific type" in the product-specific header
-          identifies it as being NEXRAD
-        * Update GEMPAK tables with latest from GitHub
-
-6.13.14.26      2021-04-07T17:00:12-0600
-    noaaportIngester(1):
-        * Corrected handling of receive buffer size option
-
-6.13.14.25      2021-04-05T14:15:21-0600
-    ldmadmin(1):
-        * Made more(1) the default pager for "ldmadmin log"
-
-    scour(1):
-        * Changed absolute time-threshold from "int" to "time_t"
-        * Simplified ERE handling of days-old field
-
-    noaaportIngester(1):
-        * Changed receiver-buffer-size option from "S" to "R" (for "receive")
+        * Removed much lint identified by clang(1)
+        * Removed lint identified by Coverity Scan
 
     Documentation:
         * Removed reference to installing from an RPM because it doesn't exist
+        * Updated the instructions on using metrics to monitor the LDM
+        * Remove obsolete feedtype webpages
 
-    DevOps:
-        * Improved targets "clang-scan" and "coverity-scan"
+    NOAAPort:
+        * GRIB2 (GEMPAK) Tables:
+            * README: Modified the "clone" command to work-around permission
+              problems
+            * Added:
+                * Ice Thickness (ICETK, (10,2,1,0))
+                * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
+                * Total Water Level Accounting for Tide, Wind and Waves (TWLWAV)
+                  (10,3,205,0)
+                * Mean Increase in Water Level due to Waves (SETUP) (10,3,207,0)
+                * Time-varying Increase in Water Level due to Waves (SWASH)
+                  (10,3,208,0)
+                * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
+        * dvbs_multicast(1): Replaced non-standard usleep(3) with standard
+          nanosleep(3)
+        * noaaportIngester(1):
+            * Created "-R <buf_size>" option to set the size of the receive
+              buffer in order to reduce the number of missed packets.
+              (The operating system must allow the new size.)
+        * Ensure that the NEXRAD feedtype is assigned to every product whose
+          parameter "product-specific type" in the product-specific header
+          identifies it as being NEXRAD
 
     Multicast:
-        * Converted FMTP PDU size from a compile-time to a runtime parameter
-
-6.13.14.24      2021-03-24T17:10:21-0600
-    ldmadmin(1):
-        * Documented the two types of "pqactcheck" invocations in the
-          manual-page
-
-6.13.14.23      2021-03-24T11:20:31-0600
-    Multicast:
+        * fmtpRecvv3(3):
+            * Corrected logic bug in tracking last multicast product index
+            * Ignore FMTP PDU if header flag is unknown
+            * Log closing of retransmission socket and ensure set to -1 on error
+            * Made handling of retransmitted duplicate BOP more robust:
+                * retxBOPHandler() and BOPHandler(): Made return-value indicate
+                  if BOP was invalid or a duplicate
+                * retxHandler():
+                    * Modified to ignore an invalid BOP
+                    * No longer relies on a positive product-size to indicate a
+                      tracker-map entry
+                    * Exception throwing on no tracker-map entry replaced with
+                      logging a notice
+                * Created McastProdPar which encapsulates multicast
+                  product-index and sequence number object under mutex
+                  protection
+                * Improved log message, documentation, and internal commentary
+                * Improved handling of last product whose BOP needn't be
+                  requested
+                * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get
+                  PRIu32 macro
+        * Improved debug messages
+        * UdpRecv.cpp:
+            * Corrected reversed "expected" and "actual" values in error message
+              about a too-small payload message
+        * IperfFmtpPdu(1): Created to create invalid FMTP packet for malicious
+          testing by iperf(1)
+        * mldm_sender(1): Removed lint
+        * recv_test(1): Corrected documentation & simplified diagnostic
+          statement
+        * configure.ac & FmtpConfig.h.in: Added _XOPEN_SOURCE
+        * FmtpConfig.h{,.in}: Removed from repository
+        * UdpSend(3): Created private BlackHat class for sending invalid packets
+          based on the environment variable FMTP_INVALID_PACKET_RATIO
+        * Created three levels of message authentication of multicast packets
+              dependent on the value of environment variable FMTP_MAC_LEVEL:
+                - unset or "0": No MAC
+                - "1":          SHA256 HMAC
+                - "2":          Ed25519
+        * Up7Down7_test: Increased sleep after product insertions from 1 s to 2
+              s to give Ed25519 more time
         * Improved FMTP packet structures regarding I/O handling and padding:
             * Deleted RETX_REQ_LEN
             * Replaced flexible arrays with [1] to accomodate g++ 8.3
             * Improved BOPMsg structure
             * Eliminated use of sizeof(struct ...) where appropriate
-
-6.13.14.22      2021-03-23T17:39:37-0600
-    Multicast:
-        * FmtpPacket:
-            * fmtpBase.h: Defined FMTP packet with flexible array payload
-            * UdpSend & UdpRecv: Made use of new FMTP packet
-            * Made maximum payload depend on MAC
+            * Converted FMTP PDU size from a compile-time to a runtime parameter
 
     DevOps:
-        * Up7Down7_test: Increased sleep after product insertions from 1 s to 2
-          s to give EdDSA more time
-
-6.13.14.21      2021-03-22T10:56:12-0600
-    Multicast:
-        * Replaced "SessKeyCrypt" with "PubKeyCrypt"
-        * Removed "HmacImpl.h" references
-        * Improved NoMac::verify() documentation
-
-6.13.14.20      2021-03-21T13:20:55-0600
-    noaaportIngester(1):
-        * Made attempting to set the receive buffer size a command-line option.
-          (The operating system must allow the new size.)
-
-    Multicast:
-        * Created three levels of message authentication of multicast packets
-          dependent on the value of environment variable FMTP_MAC_LEVEL:
-            - unset or "0": No MAC
-            - "1":          SHA256 HMAC
-            - "2":          Ed25519
-
-6.13.14.19      2021-03-11T13:52:45-0700
-    scour(1):
-        * Improved function getExcludedDirsList() and its use
-        * Don't error exit if there's no entry in the registry for the
-          directory-exclusion file 
-
-6.13.14.18      2021-03-10T16:32:31-0700
-    scour(1):
-        * Increased maximum size of pattern field to MAX_INPUT bytes
-
-    Misc:
-        * Removed lint identified by Coverity Scan
-
-    Devops:
-        * dev-makefile:
-            * Added ".PHONY" target with dependencies
-            * Added "make clean" to start of target "clang-scan"
-
-6.13.14.17      2021-03-09T16:56:19-0700
-    ldmadmin(1):
-        * Added missing "}" to 'while ($_ = $ARGV[0]) {'
-
-6.13.14.16      2021-03-09T16:10:10-0700
-    logging:
-        * Merged logging levels ALERT, CRIT, & EMERG into just FATAL
-
-    scour(1):
-        * Renamed "scour" script to "scour.sh"
-        * Renamed "Cscour" to "scour"
-        * Added "-d" option to scour(1) man-page
-
-    Devops:
-        * Decreased time for "make check" in pqact/ subdirectory
-
-6.13.14.15      2021-03-08T11:54:09-0700
-    Cscour(1):
-        * Improved use of usage()
-        * Improved logic under which the program should terminate fatally
-        * Change working directory to that of pqact(1) processes as documented
-          in the scour(1) configuration-file
-
-6.13.14.14      2021-03-03T15:57:19-0700
-    Cscour(1):
-        * Added directory exclude-file option and default
-        * Added scour configuration-file to LDM registry
-
-    LDM Registry:
-        * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories
-          to be excluded by Cscour(1)
-
-    DevOps:
-        * config.h.in: Removed from repository
-        * Mapefile.am: Added CLEANFILES, DISTCLEANFILES, and
-          MAINTAINERCLEANFILES
-
-6.13.14.13      2021-02-25T12:30:40-0700
-    ldmadmin(1):
-        * Corrected error-message in "addmetrics" command
-
-    logging:
-        * Added LOG_LEVEL_FATAL and associated functions/macros
-
-    Cscour(1):
-        * Squashed bugs in previous distribution
-
-    DevOps:
-        * deployAll(1): Modified to use an associative array and to print 
-          asynchronous logs at the end
-        * pq/Makefile.am: Moved HAVE_CUNIT to before test_PROGRAMS to enable
-          "make check" on systems with no CUnit package installed
-        * scour/.gitignore: Deleted inappropriate slash prefix of "scour.conf"
-
-6.13.14.12      2021-02-13T17:15:10-0700
-    NOAAPort:
-        * Added to NCEP GRIB2 Table:
-            * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
-            * Total Water Level Accounting for Tide, Wind and Waves (TWLWAV)
-              (10,3,205,0)
-            * Mean Increase in Water Level due to Waves (SETUP) (10,3,207,0)
-            * Time-varying Increase in Water Level due to Waves (SWASH)
-              (10,3,208,0)
-            * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
-        * dvbs_multicast(1): Replaced non-standard usleep(3) with standard
-          nanosleep(3)
-
-    scour(1):
-        * Cscour(1): Multi-threaded C program that scours faster than the
-          scour(1) script
-	* scour(1): Modified to just invoke Cscour(1)
-    
-    Multicast:
-        * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get PRIu32
-          macro
-        * UdpSend: Created private BlackHat class for sending invalid packets
-          based on the environment variable FMTP_INVALID_PACKET_RATIO
-
-    DevOps:
-        * dev-makefile targets:
-            * scan: Moved coverity-scan before clang-scan
-            * clang-scan: Replaced "--view" with printing of URL so that ^C
-              doesn't stop "touch $@"
-        * deployAll(1): Added version argument
-        * scour/:
-            * testCscour.py(1): Tests Cscour(1) correctness
-            * aSpringTree(1): Builds a tree of depth and breadth for testing
-              Cscour(1)
-            * benchMarkIt.sh(1): Tests performance of Cscour(1)
-
-6.13.14.11      2021-01-28T10:18:40-0700
-    Misc:
-        * Removed lint found by Coverity Scan
-
-    Multicast:
-        * configure.ac & FmtpConfig.h.in: Added _XOPEN_SOURCE
-        * FmtpConfig.h{,.in}: Removed from repository
-        * FmtpRecvv3.c: Corrected use of PRIu32 macro
-
-6.13.14.10      2021-01-26T13:11:10-0700
-    NOAAPort GEMPAK Tables:
-        * Added Ice Thickness (ICETK, (10,2,1,0))
-
-    Multicast:
-        * recv_test(1): Corrected documentation & simplified diagnostic
-          statement
-        * fmtpRecvv3: Improved handling of last product whose BOP needn't be
-          requested
-
-6.13.14.9       2021-01-17T16:27:15-0700
-    Misc:
-        * Removed much lint identified by clang(1) and scan-build(1)
-
-    Multicast:
-        * FmtpRecvv3:
-            * Improved log message, documentation, and commentary
-            * Improved McastProdPar
-
-    DevOps:
-        * dev-makefile:
-            * Replaced "make maintainer-clean" with just "make clean"
-              in targets "check-cc" and "check-clang"
-            * Added "scan" target and modified scan(1) to use
-        * scan(1): Modified to use new "scan" target
-
-6.13.14.8       2021-01-14T10:47:30-0700
-    Multicast:
-        * FmtpRecvv3: Extract and encapsulate multicast product-index and
-          sequence number into separate object with mutex protection,
-          McastProdPar
-        * mldm_sender(1): Removed lint
-
-6.13.14.7       2021-01-07T16:38:46-0700
-    Multicast:
-        * IperfFmtpPdu(1): Created to create invalid FMTP packet for malicious
-          testing by iperf(1)
-        * Log closing of retransmission socket and ensure set to -1 on error
-
-    DevOps:
+        * Added "regpar.tab" to configured files
+        * Changed "388" to "@LDM_PORT@" in registry
+        * publish(1):
+            * Eliminated deletion of tarballs with the same major and minor
+              numbers but lower bug-fix numbers because some sites -- rather
+              than implementing their own repository -- depend on older versions
+              always being accessible upstream.
+            * Improved messages
+        * .travis.yml:
+            * Enabled "branch_pattern: devel"
         * push(1):
             * Tag the commit if and only if it's on the main branch
             * Execute autoreconf(1) after setting a new version identifier in
@@ -343,49 +174,25 @@
         * UXF diagrams: Improved and added to repository
         * dev-makefile(5): Created
         * check(1): Created
-        * publish(1): Improved messages
-        * configure.ac: Improved setting of CFLAGS, CXXFLAGS, AM_CFLAGS, &
-          AM_CXXFLAGS
-
-6.13.14.6	2020-11-23T10:41:39-0700
-    UdpRecv.cpp:
-        * Corrected "actual" value in too-small payload error message
-
-6.13.14.5	2020-11-20T14:00:02-0700
-    UdpRecv.cpp:
-        * Corrected reversed "expected" and "actual" values in error message
-          about a too-small message.
-
-6.13.14.4	2020-11-18T14:51:37-0700
-    Multicast:
-        * Disable HMAC usage if and only if environment variable DISABLE_HMAC is
-          "1", "yes", or "true" (case insensitive comparison).
-
-6.13.14.3	2020-11-12T13:51:23-0700
-    Multicast:
-        * fmtpRecvv3:
-            * Ignore FMTP PDU if header flag is unknown
-
-6.13.14.2	2020-11-09T16:16:02-0700
-    Developer:
-        * .travis.yml:
-            * Enabled "branch_pattern: devel"
-
-6.13.14.1	2020-11-09T12:55:28-0700
-    ldmadmin(1):
-        * Changed match on "ESTABLISHED" in netstat(1) output to "ESTAB" just in
-          case some netstat(1) use that instead
-
-    Multicast:
-        * fmtpRecvv3(3):
-            * Corrected logic bug in tracking last multicast product index
-            * Improved debug messages
-        * UdpRecv(3) & TcpRecv(3):
-            * Improved debug messages
-
-    Developer:
-        * publish.sh:
-            * Got to work
+        * scan(1): Created
+        * configure.ac:
+            * Improved setting of CFLAGS, CXXFLAGS, AM_CFLAGS, & AM_CXXFLAGS
+            * Removed "pqcreate.1" and "regpar.tab" from AC_CONFIG_FILES
+        * deployAll(1):
+            * Added version argument
+            * Modified to use an associative array and to print asynchronous
+              logs at the end
+        * scour/:
+            * testCscour.py(1): Tests scour(1) correctness
+            * aSpringTree(1): Builds a tree of depth and breadth for testing
+              scour(1)
+            * benchMarkIt.sh(1): Tests performance of scour(1)
+            * .gitignore: Deleted inappropriate slash prefix of "scour.conf"
+        * pq/Makefile.am: Moved HAVE_CUNIT to before test_PROGRAMS to enable
+          "make check" on systems with no CUnit package installed
+        * Makefile.am: Added CLEANFILES, DISTCLEANFILES, and
+          MAINTAINERCLEANFILES
+        * pqact/Makefile.am: Decreased time for "make check"
 
 6.13.13	2020-11-03T15:22:01-0700
     ldmadmin(1):
