@@ -75,7 +75,7 @@ main(void)
 		pthread_t tid;
 		status = pthread_create(&tid, NULL, thr_fn, 0);
 		if (status) {
-			fprintf(stderr, "can't create thread\n", strerror(status));
+			fprintf(stderr, "can't create thread: %s\n", strerror(status));
 		}
 		else {
 			sleep(1);
@@ -86,7 +86,7 @@ main(void)
 			pid_t pid = fork();
 			if (pid < 0) {
 				status = errno;
-				fprintf(stderr, "fork failed\n", strerror(status));
+				fprintf(stderr, "fork failed: %s\n", strerror(status));
 			}
 			else if (pid == 0) { /* child */
 				printf("child returned from fork\n");

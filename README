@@ -54,16 +54,8 @@ INFORMATION:
 LDM DECODERS:
 
     LDM-compatible decoders for local processing of received data products are
-    available seperately from the Unidata Program Center.  These include Unidata
-    decoders, GEMPAK decoders and MCIDAS decoders. See
+    available for the McIDAS package. See
 
-        Unidata Decoders:
-            http://www.unidata.ucar.edu/software/decoders/
-
-        GEMPAK Decoders:
-            http://www.unidata.ucar.edu/software/gempak/
-
-        McIDAS Decoders:
             http://www.unidata.ucar.edu/software/mcidas/mcidd/
 
 SUPPORT:

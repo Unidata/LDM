@@ -31,7 +31,12 @@ version=`awk 'NR==1{print $1; exit;}' CHANGE_LOG`
 tarball=ldm-$version.tar.gz
 ftpDir=/web/ftp/pub/ldm
 downloadDir=/web/content/downloads/ldm
+
+#Current destination for documentation
 webDir=/web/content/software/ldm
+#New destination for documentation (wait for Jen's and/or Doug's signal)
+#webDir=/web/docs/ldm
+
 versionWebDir=$webDir/ldm-$version
 
 copyToFtpDir()
@@ -198,38 +203,38 @@ if make install >&install.log; then
 
         # Purge the FTP directory of bug-fix versions that are older than the
         # latest corresponding minor release.
-        echo Purging $host:$ftpDir of bug-fixes older than $tarball
-        if purgeDir $ftpDir; then
+#       echo Purging $host:$ftpDir of bug-fixes older than $tarball
+#       if purgeDir $ftpDir; then
         
             # Ensure that the download directory has a link to the tarball
-            echo Creating symbolic link to $host:$ftpDir in $downloadDir
+            echo Creating symbolic link to $host:$ftpDir in $host:$downloadDir
             if linkToTarball; then
             
                 # Purge the download directory of symbolic links that are older
                 # than the latest corresponding minor release.
-                echo Purging $host:$downloadDir of bug-fixes older than $tarball
-                if purgeDir $downloadDir; then
+#               echo Purging $host:$downloadDir of bug-fixes older than $tarball
+#               if purgeDir $downloadDir; then
                 
                     # Modify the HTML file in the download directory to
                     # reference the tarball's symbolic link
-                    echo Modifying HTML file in download directory
+                    echo Modifying HTML file in $host:$downloadDir 
                     if adjustDownloadHtml; then
                     
                         # Copy the documentation to the package's website
-                        echo Copying documentation to $versionWebDir
+                        echo Copying documentation to $host:$versionWebDir
                         if copyDoc; then
                         
                             # Ensure that the package's home-page references the
                             # just-copied documentation.
-                            echo Modifying HTML file in home directory
+                            echo Modifying HTML file in $host:$webDir
                             if referenceDoc; then
                                 status=0
                             fi # New documentation referenced
                         fi # Documentation copied to website
                     fi # Download directory's HTML modified
-                fi # Download directory purged
+#               fi # Download directory purged
             fi # Link from download directory to FTP directory made
-        fi # FTP directory purged
+#       fi # FTP directory purged
     fi # Tarball copied to FTP directory
 fi # Package installed
 

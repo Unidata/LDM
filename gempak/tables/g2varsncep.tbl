@@ -581,6 +581,7 @@
 010 001 001 000 Current Speed                    m s**-1              SPC              0  -9999.00
 010 001 002 000 U-Component of Current           m s**-1              UOGRD            0  -9999.00
 010 001 003 000 V-Component of Current           m s**-1              VOGRD            0  -9999.00
+010 001 004 000 Rip Current Occurrence Prob.     %                    RIPCOP           0  -9999.00
 !
 010 001 192 000 Ocean Mixed Layer U Velocity     m s**-1              OLMU             0  -9999.00
 010 001 193 000 Ocean Mixed Layer V Velocity     m s**-1              OLMV             0  -9999.00
@@ -591,6 +592,7 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 010 002 000 000 Ice Cover                        Proportion           ICEC             0  -9999.00
+010 002 001 000 Ice Thickness                    m                    ICETK            0  -9999.00
 010 002 006 000 Ice Growth Rate                  m s**-1              ICEG             0  -9999.00
 
 !
@@ -614,6 +616,12 @@
 010 003 201 000 Kinetic Energy                   J kg-1               KENG             0  -9999.00
 010 003 202 000 Salt Flux                        kg m-2 s-1           SLTFL            0  -9999.00
 010 003 204 000 Freezing Spray                   -                    FRZSPR           0  -9999.00
+010 003 205 000 Total Water Level (everything)   m                    TWLWAV           0  -9999.00
+010 003 206 000 Total Water Level Incr. (Waves)  m                    RUNUP            0  -9999.00
+010 003 207 000 Mean Incr. Water Level (Waves)   m                    SETUP            0  -9999.00
+010 003 208 000 Incr. in Water Level from Waves  m                    SWASH            0  -9999.00
+010 003 209 000 Total Water Level Above Dune Toe m                    TWLDT            0  -9999.00
+010 003 210 000 Total Water Lvl Above Dune Crest m                    TWLDC            0  -9999.00
 010 003 242 000 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 242 010 20% Trop Cyclone Surge Exceed    m                    TCSRG20          0  -9999.00
 010 003 243 000 30% Trop Cyclone Surge Exceed    m                    TCSRG30          0  -9999.00
@@ -631,7 +639,8 @@
 010 003 250 008 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
 010 003 250 009 Extra Trop Storm Surge and Tide  m                    ETCWL            0  -9999.00
 010 003 251 000 Tide                             m                    TIDE             0  -9999.00
-
+010 003 252 000 Erosion Occurrence Probability   %                    EROSNP           0  -9999.00
+010 003 253 000 Overwash Occurrence Probability  %                    OWASHP           0  -9999.00
 !
 ! Category 4 - Sub-Surface properties
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING

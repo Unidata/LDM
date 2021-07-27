@@ -1,3 +1,199 @@
+6.13.14
+    configure(1):
+        * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems in order
+          to support the C compiler; otherwise, it's 700
+        * rpcgen(1):
+            * Require on MacOS system
+            * Use if possible; otherwise, use package-supplied rpcgen(1) output
+              files
+
+    ldmadmin(1):
+        * Changed match on "ESTABLISHED" in netstat(1) output to "ESTAB" just in
+          case some netstat(1)'s use that instead
+        * Corrected error-message in "addmetrics" command
+        * Added missing "}" to 'while ($_ = $ARGV[0]) {'
+        * Documented the two types of "pqactcheck" invocations in the
+          manual-page
+        * Made more(1) the default pager for "ldmadmin log". The environment
+          variable PAGER will override.
+        * Created "showsettings" command to print information on the LDM
+          installation to assist troubleshooting
+
+    logging:
+        * Added LOG_LEVEL_FATAL and associated functions/macros
+        * Merged logging levels ALERT, CRIT, & EMERG into just FATAL
+
+    pqcreate(1):
+        * Fixed manual-page regarding the computation of the default number of
+          product slots
+        * Corrected approximate mean product-size from 51 kB to 140 kB. This
+          value is used when the number of slots registry parameter is
+          "default".
+
+    pqact(1):
+        * Enhanced log message about pqact(1) being at the oldest end of the
+          queue to include waking up to discover its position in the queue is
+          older than the oldest data-product. The word "oldest" still appears in
+          the warning -- so you can still search on it.
+        * Changed the logging-level associated with the "-log" option of the
+          FILE and STDIOFILE actions from INFO to NOTE to ensure that such
+          messages are always logged regardless of the logging-level of the
+          pqact(1) process
+        * Removed or demoted to DEBUG some redundant ERROR messages related to
+          the inability to pipe to a decoder
+        * Fixed bug in which a pattern/action entry wouldn't have its time of
+          last-use reset if it was already at the head of the most-recently-used
+          list. If this situation persisted for 6 hours, then the entry would
+          be removed from the list and its file descriptor would be closed.
+          This latter situation could only occur if one entry monopolized its
+          pqact(1) process for 6 hours.
+        * Modified the "-strip" option: it no longer deletes characters whose
+          unsigned value is greater than 127. This allows textual products in an
+          extended ASCII character set (e.g., ISO 8859-1).
+
+    scour(1):
+        * Replaced scour(1) script with multi-threaded C program that scours
+          much faster than the script
+        * Added scour configuration-file to LDM registry
+        * Renamed "scour" script to "scour.sh" in case users still want to use
+          it
+        * Added "-d" option to scour(1) man-page
+        * Increased maximum size of pattern field to MAX_INPUT bytes
+        * Function replacements to accommodate SunOS 5:
+             * getline(3) -> mygetline(3)
+             * fstatat(2) -> lstat(2)
+
+    rpc(3) library:
+        * Replaced call to bindresvport() in clnttcp_create() with binding to an
+          ephemeral port to eliminate the necessity for having root privileges
+
+    LDM Registry:
+        * Added SCOUR_EXCLUDE_PATH for pathname of file that lists directories
+          to be excluded by scour(1)
+
+    Misc:
+        * Removed much lint identified by clang(1)
+        * Removed lint identified by Coverity Scan
+
+    Documentation:
+        * Removed reference to installing from an RPM because it doesn't exist
+        * Updated the instructions on using metrics to monitor the LDM
+        * Remove obsolete feedtype webpages
+
+    NOAAPort:
+        * GRIB2 (GEMPAK) Tables:
+            * README: Modified the "clone" command to work-around permission
+              problems
+            * Added:
+                * Ice Thickness (ICETK, (10,2,1,0))
+                * Rip Current Occurrence Probability (RIPCOP) (10,1,4,0)
+                * Total Water Level Accounting for Tide, Wind and Waves (TWLWAV)
+                  (10,3,205,0)
+                * Mean Increase in Water Level due to Waves (SETUP) (10,3,207,0)
+                * Time-varying Increase in Water Level due to Waves (SWASH)
+                  (10,3,208,0)
+                * Erosion Occurrence Probability (EROSNP) (10,3,252,0)
+        * dvbs_multicast(1): Replaced non-standard usleep(3) with standard
+          nanosleep(3)
+        * noaaportIngester(1):
+            * Created "-R <buf_size>" option to set the size of the receive
+              buffer in order to reduce the number of missed packets.
+              (The operating system must allow the new size.)
+        * Ensure that the NEXRAD feedtype is assigned to every product whose
+          parameter "product-specific type" in the product-specific header
+          identifies it as being NEXRAD
+
+    Multicast:
+        * fmtpRecvv3(3):
+            * Corrected logic bug in tracking last multicast product index
+            * Ignore FMTP PDU if header flag is unknown
+            * Log closing of retransmission socket and ensure set to -1 on error
+            * Made handling of retransmitted duplicate BOP more robust:
+                * retxBOPHandler() and BOPHandler(): Made return-value indicate
+                  if BOP was invalid or a duplicate
+                * retxHandler():
+                    * Modified to ignore an invalid BOP
+                    * No longer relies on a positive product-size to indicate a
+                      tracker-map entry
+                    * Exception throwing on no tracker-map entry replaced with
+                      logging a notice
+                * Created McastProdPar which encapsulates multicast
+                  product-index and sequence number object under mutex
+                  protection
+                * Improved log message, documentation, and internal commentary
+                * Improved handling of last product whose BOP needn't be
+                  requested
+                * fmtpRecvv3.cpp: Replaced <inttypes.h> with <cinttypes> to get
+                  PRIu32 macro
+        * Improved debug messages
+        * UdpRecv.cpp:
+            * Corrected reversed "expected" and "actual" values in error message
+              about a too-small payload message
+        * IperfFmtpPdu(1): Created to create invalid FMTP packet for malicious
+          testing by iperf(1)
+        * mldm_sender(1): Removed lint
+        * recv_test(1): Corrected documentation & simplified diagnostic
+          statement
+        * configure.ac & FmtpConfig.h.in: Added _XOPEN_SOURCE
+        * FmtpConfig.h{,.in}: Removed from repository
+        * UdpSend(3): Created private BlackHat class for sending invalid packets
+          based on the environment variable FMTP_INVALID_PACKET_RATIO
+        * Created three levels of message authentication of multicast packets
+              dependent on the value of environment variable FMTP_MAC_LEVEL:
+                - unset or "0": No MAC
+                - "1":          SHA256 HMAC
+                - "2":          Ed25519
+        * Up7Down7_test: Increased sleep after product insertions from 1 s to 2
+              s to give Ed25519 more time
+        * Improved FMTP packet structures regarding I/O handling and padding:
+            * Deleted RETX_REQ_LEN
+            * Replaced flexible arrays with [1] to accomodate g++ 8.3
+            * Improved BOPMsg structure
+            * Eliminated use of sizeof(struct ...) where appropriate
+            * Converted FMTP PDU size from a compile-time to a runtime parameter
+
+    DevOps:
+        * Added "regpar.tab" to configured files
+        * Changed "388" to "@LDM_PORT@" in registry
+        * publish(1):
+            * Eliminated deletion of tarballs with the same major and minor
+              numbers but lower bug-fix numbers because some sites -- rather
+              than implementing their own repository -- depend on older versions
+              always being accessible upstream.
+            * Improved messages
+        * .travis.yml:
+            * Enabled "branch_pattern: devel"
+        * push(1):
+            * Tag the commit if and only if it's on the main branch
+            * Execute autoreconf(1) after setting a new version identifier in
+              "configure.ac"
+        * Doxygen:
+            * Doxyfile.developer: Set output directory to "doxygen-output"
+            * Delete obsolete parameters
+        * .git/hooks: Created pre-commit(1) & pre-push(1)
+        * UXF diagrams: Improved and added to repository
+        * dev-makefile(5): Created
+        * check(1): Created
+        * scan(1): Created
+        * configure.ac:
+            * Improved setting of CFLAGS, CXXFLAGS, AM_CFLAGS, & AM_CXXFLAGS
+            * Removed "pqcreate.1" and "regpar.tab" from AC_CONFIG_FILES
+        * deployAll(1):
+            * Added version argument
+            * Modified to use an associative array and to print asynchronous
+              logs at the end
+        * scour/:
+            * testCscour.py(1): Tests scour(1) correctness
+            * aSpringTree(1): Builds a tree of depth and breadth for testing
+              scour(1)
+            * benchMarkIt.sh(1): Tests performance of scour(1)
+            * .gitignore: Deleted inappropriate slash prefix of "scour.conf"
+        * pq/Makefile.am: Moved HAVE_CUNIT to before test_PROGRAMS to enable
+          "make check" on systems with no CUnit package installed
+        * Makefile.am: Added CLEANFILES, DISTCLEANFILES, and
+          MAINTAINERCLEANFILES
+        * pqact/Makefile.am: Decreased time for "make check"
+
 6.13.13	2020-11-03T15:22:01-0700
     ldmadmin(1):
         Switched the order of the bin/ and util/ directories when setting PATH
@@ -37,7 +233,7 @@
                 209 002 004 000 Lightning Probability 0-30min    %                    LgtProb30min     0  -9999.00
               because it's not in NSSL's table and because it's long-name is too
               similar to and it's short-name is identical to (209,002,005) above
-         from NSSL.
+              from NSSL.
 
     pqact(1):
         * Hopefully closed a tiny window-of-vulnerability in which a SIGALRM
@@ -1511,7 +1707,7 @@
         crontab(1)-executed "ldmadmin newlog" command. See the installed HTML
         documentation "$HOME/share/doc/ldm/basics/logging-format.html" or the
         web page
-        <http://www.unidata.ucar.edu/software/ldm/ldm-current/basics/logging-format.html>
+        <https://docs.unidata.ucar.edu/ldm/ldm-current/basics/logging-format.html>
         for more information.
 
         A particular consequence is that logging, by default, will no longer

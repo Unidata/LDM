@@ -2635,6 +2635,7 @@ int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny) {
 void GDS_prt_thin_lon(unsigned char *gds) {
     int iy, i, col, pl;
 
+    // The following does nothing because `iy` is never used. Steve 2021-01-09
     iy = GDS_LatLon_ny(gds);
     iy = (iy + 1) / 2;
     iy = GDS_LatLon_ny(gds);
@@ -2742,7 +2743,8 @@ int setup_user_table(int center, int subcenter, int ptable) {
 	line[299] = 0;
 
 	/* find the colons and end-of-line */
-	for (c0 = 0; line[c0] != ':' && line[c0] != 0; c0++) ;
+	for (c0 = 0; line[c0] != ':' && line[c0] != 0; c0++)
+        ; // EMPTY
         if (line[c0] == 0) {
 	    fprintf(stderr,"illegal gribcap line:%s\n", line);
 	    continue;

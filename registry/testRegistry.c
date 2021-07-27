@@ -110,7 +110,7 @@ test_regBool(void)
     }
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getBool("/fooBool_key", &value);
+    status = reg_getBool("/fooBool_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regBool(): Couldn't get boolean");
     }
@@ -122,7 +122,7 @@ test_regBool(void)
     }
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getBool("/fooBool_key", &value);
+    status = reg_getBool("/fooBool_key", (unsigned int*)&value);
     if (status) {
         log_error_q("test_regBool(): Couldn't get boolean");
     }
@@ -134,7 +134,7 @@ test_regBool(void)
     }
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getBool("/fooBool_key", &value);
+    status = reg_getBool("/fooBool_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regBool(): Couldn't get boolean");
     }
@@ -146,13 +146,13 @@ test_regBool(void)
     }
     CU_ASSERT_EQUAL(status, 0);
 
-    status = reg_getBool("/fooBool_key", &value);
+    status = reg_getBool("/fooBool_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regBool(): Couldn't get boolean");
     }
     CU_ASSERT_EQUAL(value, 1);
 
-    status = reg_getBool("/barBool_key", &value);
+    status = reg_getBool("/barBool_key", (unsigned*)&value);
     if (status && ENOENT != status) {
         log_error_q("test_regBool(): Bad status getting non-existent boolean: %d",
                 status);
@@ -182,7 +182,7 @@ test_regInt(void)
         CU_ASSERT_EQUAL(status, 0);
     }
 
-    status = reg_getUint("/fooInt_key", &value);
+    status = reg_getUint("/fooInt_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regInt(): Couldn't get int");
     }
@@ -191,7 +191,7 @@ test_regInt(void)
         CU_ASSERT_EQUAL(value, 2);
     }
 
-    status = reg_getUint("/barInt_key", &value);
+    status = reg_getUint("/barInt_key", (unsigned*)&value);
     if (status && ENOENT != status) {
         log_error_q("test_regInt(): Couldn't put second int");
     }
@@ -381,7 +381,7 @@ test_regDelete(void)
         CU_ASSERT_EQUAL(status, 0);
     }
 
-    status = reg_getUint("/int_key", &value);
+    status = reg_getUint("/int_key", (unsigned*)&value);
     if (status) {
         log_error_q("test_regDelete(): Couldn't get int");
     }
@@ -398,7 +398,7 @@ test_regDelete(void)
         CU_ASSERT_EQUAL(status, 0);
     }
 
-    status = reg_getUint("/int_key", &value);
+    status = reg_getUint("/int_key", (unsigned*)&value);
     if (status && ENOENT != status) {
         log_error_q("test_regDelete(): Couldn't verify int deletion");
     }

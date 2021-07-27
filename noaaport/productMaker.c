@@ -410,7 +410,6 @@ int    nnnxxx_offset;
         log_debug("***********************************************");
         if (last_sbn_runno != sbn->runno) {
             last_sbn_runno = sbn->runno;
-            last_sbn_seqno = (sbn->seqno - 1) & MAX_SEQNO;
         }
         else {
 
@@ -526,7 +525,7 @@ int    nnnxxx_offset;
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
-            IOFF = IOFF + sbn->len + pdh->len;
+            // IOFF = IOFF + sbn->len + pdh->len; // `IOFF` value isn't used
             continue;
         }
 
@@ -567,8 +566,8 @@ int    nnnxxx_offset;
             log_debug("product header flag %d, version %d", psh->hflag, psh->version);
             log_debug("prodspecific data length %ld", psh->psdl);
             log_debug("bytes per record %ld", psh->bytes_per_record);
-            log_debug("Fragments = %ld category %d ptype %d code %d", psh->frags, psh->pcat,
-                    psh->ptype, psh->pcode);
+            log_debug("Fragments = %ld category %d ptype %d code %d",
+                    psh->frags, psh->pcat, psh->ptype, psh->pcode);
             if (psh->frags < 0)
                 log_error_q("check psh->frags %d", psh->frags);
             if (psh->origrunid != 0)
@@ -746,7 +745,7 @@ int    nnnxxx_offset;
                                 /* Request retrans when prod is partially received but before completion */
                                 /* if there is frame error and continue with different prod then, we need */
                                 /* to abort the old prod and clear retrans table. */
-                                if((retrans_xmit_enable == OPTION_ENABLE) /*&& (pdh->dbno != 0)*/){
+                                if(retrans_xmit_enable == OPTION_ENABLE /*&& (pdh->dbno != 0)*/){
                                  acq_tbl->proc_acqtab_prodseq_errs++;
                                  if(proc_orig_prod_seqno_last_save != acq_tbl->proc_orig_prod_seqno_last){
                                  /* Clear retrans table for the orig prod if the previous prod is retrans */
@@ -951,8 +950,8 @@ int    nnnxxx_offset;
                                         if(retrans_xmit_enable == OPTION_ENABLE){
                                           acq_tbl->proc_acqtab_prodseq_errs++;
                                           if((pfrag->seqno != prod.seqno) ||
-                                                  (pfrag->seqno == prod.seqno) &&
-                                                  (genRetransReq == 0)) {
+                                                  ((pfrag->seqno == prod.seqno) &&
+                                                  (genRetransReq == 0))) {
                                               do_prod_mismatch(acq_tbl,buff_hdr);
                                               genRetransReq = 1;
                                           }
@@ -1528,9 +1527,9 @@ int    nnnxxx_offset;
         if(unCompress || fillScan) {
             saved_sbn_struct = *sbn;
             saved_psh_struct = *psh;
-            saved_pdb_struct = *pdb;
-            saved_pdh_struct = *pdh;
-            saved_nfrags = prod.nfrag;
+            saved_pdb_struct = *pdb; // clang_sacn(1) says stored value isn't read
+            saved_pdh_struct = *pdh; // clang_sacn(1) says stored value isn't read
+            saved_nfrags = prod.nfrag; // clang_sacn(1) says stored value isn't read
         }
                 
 #ifdef RETRANS_SUPPORT
@@ -1687,7 +1686,6 @@ static int inflateData(
 
       i_zstrm.avail_out = CHUNK_SZ;
       i_zstrm.next_out = (Bytef*)out;
-      inflatedBytes = 0;
 
       while(ret != Z_STREAM_END) {
          ret  = inflate(&i_zstrm, Z_NO_FLUSH);
@@ -1805,8 +1803,6 @@ static int deflateData(
 
       totalBytesComp += compChunkSize;
       flush = (totalBytesComp >= inLen) ? Z_FINISH : Z_NO_FLUSH;
-
-      compressedBytes = 0;
 
        do  {
          ret  = deflate(&d_zstrm, flush);
@@ -1988,7 +1984,6 @@ static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
                                         && isspace(p_wmo[WMO_A2+1]) && isalpha(p_wmo[WMO_A2+2])
                                         && isalpha(p_wmo[WMO_A2+3]) && isalpha(p_wmo[WMO_A2+4])
                                         && isalpha(p_wmo[WMO_A2+5]) && isspace(p_wmo[WMO_A2+6])) {
-                                ttaaii_found = 1;
                                 wmo_offset = p_wmo - buf;
                                 p_wmo += WMO_A2 + 1;
                                 break;
@@ -2045,7 +2040,6 @@ static int prod_get_WMO_offset(char *buf, size_t buflen, size_t *p_wmolen)
                 if (spaces > 1 && isdigit(*p_wmo) && isdigit(*(p_wmo+1))
                                 && isdigit(*(p_wmo+2)) && isdigit(*(p_wmo+3))
                                 && isdigit(*(p_wmo+4))) {
-                        ddhhmm_found = 1;
                         p_wmo += 5;
                 } else {
                         return -1;

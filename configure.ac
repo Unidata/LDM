@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.13], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.13.14], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -17,20 +17,17 @@ AC_ARG_ENABLE([debug],
     [
 	case "$enableval" in
 	yes) enable_debug=true
-            case "$CFLAGS" in
-                *-g*);;
-                *) CFLAGS="${CFLAGS:+$CFLAGS }-g -O0";;
-            esac
-            case "$CXXFLAGS" in
-                *-g*);;
-                *) CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0";;
-            esac
+	     # The ": CFLAGS=..." form doesn't work. Bad colon!
+	     # CFLAGS and CXXFLAGS are automatically substituted
+	     CFLAGS="${CFLAGS:+$CFLAGS }-g -O0"
+	     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0"
             ;;
 	no) enable_debug=false
             AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
             ;;
 	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-debug]);;
+	    [bad value {$enableval} for --enable-debug])
+	    ;;
 	esac
     ],
     [
@@ -38,28 +35,33 @@ AC_ARG_ENABLE([debug],
         AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
     ])
 
-# NB: Solaris 10 doesn't support _XOPEN_SOURCE beyond 600
-AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
-if test "$GCC" = "yes"; then
-#    AC_SUBST([AM_CFLAGS], [-std=c99])   # needed by makefiles
-#    CFLAGS="$CFLAGS${CFLAGS+ }-std=c99" # needed by configure script
-##    AC_SUBST([AM_CPPFLAGS], [-std=c99]) # doesn't work
-     CPPFLAGS="$CPPFLAGS${CPPFLAGS+ }-std=c99"
-fi
-ccList='c99 gcc'
-test `uname` = Darwin && ccList=gcc
-AC_PROG_CC([$ccList])
-AC_PROG_CC_C99
-if test "$ac_cv_prog_cc_c99" = "no"; then
+AC_PROG_CC()
+if test "$ac_cv_prog_cc_c99" -a "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])
+fi
+if test "$GCC" = "yes"; then
+    AM_CFLAGS="${AM_CFLAGS:+$AM_CFLAGS }-std=c99"
+fi
+# "AM_CFLAGS" is not automatically substituted
+AC_SUBST([AM_CFLAGS])
+
+# NB: The Solaris 10 compiler might not support _XOPEN_SOURCE beyond 600
+if test `uname -s` = "SunOS"; then
+    AC_DEFINE([_XOPEN_SOURCE], [600], [Level of X/OPEN compliance])
+else
+    AC_DEFINE([_XOPEN_SOURCE], [700], [Level of X/OPEN compliance])
 fi
 # The following always defines _GNU_SOURCE which conflicts with _XOPEN_SOURCE=600
 #AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_CXX
+if test "$GXX" = "yes"; then
+    AM_CXXFLAGS="${AM_CXXFLAGS:+$AM_CXXFLAGS }-std=c++11"
+fi
+# "AM_CXXFLAGS" is not automatically substituted
+AC_SUBST([AM_CXXFLAGS])
 
 if test "$GXX" = "yes"; then
-    AC_SUBST([AM_CXXFLAGS], [-std=c++11])
     case `$CXX -dumpversion` in
         ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
         (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
@@ -487,32 +489,35 @@ test "$sysconfdir" = '${prefix}/etc' && sysconfdir="${LDMHOME}/etc"
 test "$localstatedir" = '${prefix}/var' && localstatedir="${LDMHOME}/var"
 
 AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
-    [Pathname of installed-programs directory])
+    [Default pathname of installed-programs directory])
 AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
 AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
-AC_SUBST([REGISTRY_DIR], ['$(sysconfdir)'/registry])
 AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$localstatedir/logs"],
-    [Pathname of LDM logging directory])
+    [Default pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$localstatedir/run"],
-    [Pathname of LDM var/run directory])
+    [Default pathname of LDM var/run directory])
 AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
-    [Pathname of LDM product-queue directory])
+    [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
-    [Pathname of LDM product-queue])
+    [Default pathname of LDM product-queue])
 AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
-    [Pathname of default pqact(1) configuration-file])
+    [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
-    [Pathname of default LDM configuration-file])
+    [Default pathname of LDM configuration-file])
+AC_DEFINE_UNQUOTED([SCOUR_CONFIG_PATH], ["$sysconfdir/scour.conf"],
+    [Default pathname of scour(1) configuration-file])
+AC_DEFINE_UNQUOTED([SCOUR_EXCLUDE_PATH], ["$sysconfdir/scour_excludes.conf"],
+    [Default pathname of file containing directories-to-be-excluded by scour(1)])
 AC_DEFINE_UNQUOTED([PQACT_DATA_DIR], ["$localstatedir/data"],
-    [Pathname of default pqact(1) data-directory])
+    [Default pathname of pqact(1) data-directory])
 AC_DEFINE_UNQUOTED([PQSURF_DATA_DIR], ["$localstatedir/data"],
-    [Pathname of default pqsurf(1) data-directory])
+    [Default pathname of pqsurf(1) data-directory])
 AC_DEFINE_UNQUOTED([PQSURF_QUEUE_PATH], [LDM_QUEUE_DIR "/pqsurf.pq"],
-    [Pathname of default pqsurf(1) product-queue])
+    [Default pathname of pqsurf(1) product-queue])
 AC_DEFINE_UNQUOTED([PQSURF_CONFIG_PATH], ["$sysconfdir/pqsurf.conf"],
-    [Pathname of default pqsurf(1) configuration-file])
+    [Default pathname of pqsurf(1) configuration-file])
 # The following accomodates pre-6.9 LDM installations:
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME
@@ -530,7 +535,22 @@ AC_PROG_AWK
 UD_PROG_SH
 AC_PROG_YACC
 AC_CHECK_PROGS([DOXYGEN], [doxygen /Volumes/storage/local/bin/doxygen], [])
-UD_PROG_RPCGEN
+
+# The following is necessary because
+#   * NOAA's RHEL-8 installations don't have rpcgen(1) and don't allow it to be
+#     installed; and
+#   * The LDM won't build on MacOS unless the native rpcgen(1) is used.
+AC_ARG_VAR([RPCGEN], [Pathname of rpcgen(1) utility])
+AC_CHECK_PROG([RPCGEN], [rpcgen], [rpcgen], [])
+if test -z "$RPCGEN"; then
+    if uname -s | grep Darwin >/dev/null; then
+        AC_MSG_ERROR([Couldn't find necessary rpcgen(1) utility])
+    else
+        AC_MSG_NOTICE([Will use rpcgen(1) output files supplied by package])
+    fi
+fi
+AM_CONDITIONAL([HAVE_RPCGEN], [test "$RPCGEN"])
+
 UD_PROG_NTPDATE
 UD_PROG_NETSTAT
 UD_PROG_TOP
@@ -772,7 +792,7 @@ AC_CONFIG_FILES([
     rpc/Makefile
     rtstats/Makefile
     scour/Makefile
-    scour/scour
+    scour/scour.sh
     scripts/ldmadmin.pl
     scripts/ldmfail
     scripts/Makefile

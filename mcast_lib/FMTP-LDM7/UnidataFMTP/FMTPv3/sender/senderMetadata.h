@@ -42,7 +42,7 @@
 #include <mutex>
 #include <set>
 
-#include "fmtpBase.h"
+#include "FmtpBase.h"
 #include "TcpSend.h"
 
 
@@ -105,7 +105,7 @@ public:
     ~senderMetadata();
 
     void addRetxMetadata(RetxMetadata* ptrMeta);
-    bool clearUnfinishedSet(uint32_t prodindex, int retxsockfd,
+    bool removeReceiver(uint32_t prodindex, int retxsockfd,
                             TcpSend* tcpsend);
     RetxMetadata* getMetadata(uint32_t prodindex);
     void notifyUnACKedRcvrs(uint32_t prodindex, FmtpHeader* header,

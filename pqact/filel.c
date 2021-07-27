@@ -132,7 +132,7 @@ static const DeleteReason DR_TERMINATED = {"terminated",            LOG_LEVEL_DE
 static const DeleteReason DR_SIGNALED =   {"abnormally-terminated", LOG_LEVEL_WARNING};
 static const DeleteReason DR_CLOSED =     {"closed",                LOG_LEVEL_DEBUG};
 static const DeleteReason DR_LRU =        {"least-recently-used",   LOG_LEVEL_DEBUG};
-static const DeleteReason DR_FAILED =     {"failed",                LOG_LEVEL_ERROR};
+static const DeleteReason DR_FAILED =     {"failed",                LOG_LEVEL_DEBUG};
 static const DeleteReason DR_INACTIVE =   {"inactive",              LOG_LEVEL_DEBUG};
 
 union f_handle {
@@ -158,7 +158,7 @@ struct fl_entry {
     struct fl_ops*   ops;
     f_handle         handle;
     unsigned long    private;           // pid, hstat*, R/W flg
-    time_t           inserted;        // Time of last access
+    time_t           lastUse;        // Time of last access
     int              flags;
     ft_t             type;
     char             path[PATH_MAX];    // PATH_MAX includes NUL
@@ -217,9 +217,6 @@ static struct fl {
 
 /// Maximum amount of time for an unused entry, in seconds
 static const unsigned long maxTime = 6 * 3600;
-
-#define TO_HEAD(entry) \
-        if(thefl->head != entry) fl_makeHead(entry)
 
 /**
  * Frees an open-file entry -- releasing all resources including flushing and
@@ -300,8 +297,8 @@ fl_remove(
 /**
  * Adds an entry to the head of the open-file list.
  *
- * @param[in] entry  The entry to be added.
  * @pre              {The entry is not in the list.}
+ * @param[in] entry  The entry to be added.
  */
 static void
 fl_addToHead(
@@ -312,7 +309,6 @@ fl_addToHead(
 
     entry->next = thefl->head;
     entry->prev = NULL;
-    entry->inserted = time(NULL);
     thefl->head = entry;
 
     if (thefl->tail == NULL)
@@ -327,15 +323,14 @@ fl_addToHead(
  * @param[in] entry  The entry to be moved.
  * @pre              {The entry is in the list.}
  */
-static void
-fl_makeHead(
-        fl_entry *entry)
+static inline void
+fl_makeHead(fl_entry *entry)
 {
-    if (thefl->head == entry)
-        return;
-
-    fl_remove(entry);
-    fl_addToHead(entry);
+    entry->lastUse = time(NULL);
+    if (thefl->head != entry) {
+        fl_remove(entry);
+        fl_addToHead(entry);
+    }
 }
 
 #ifdef FL_DEBUG
@@ -451,7 +446,7 @@ fl_sync(const int block)
                 entry = NULL;
             }
         }
-        if (entry && (now - entry->inserted > maxTime))
+        if (entry && (now - entry->lastUse > maxTime))
 			fl_removeAndFree(entry, &DR_INACTIVE);
     }
 }
@@ -514,7 +509,7 @@ fl_getEntry(
     fl_entry* entry = fl_find(type, argc, argv);
 
     if (NULL != entry) {
-        TO_HEAD(entry);
+        fl_makeHead(entry);
         #ifdef FL_DEBUG
             dump_fl();
         #endif
@@ -638,7 +633,7 @@ dupstrip(
     }
 
     for (blen = len, ip = in, op = out, *outlenp = 0; blen != 0; blen--, ip++) {
-        if (((int) *ip) > 127 || (iscntrl(*ip) && *ip != '\n'))
+        if (iscntrl(*ip) && *ip != '\n')
             continue;
         /* else */
         *op++ = *ip;
@@ -1074,7 +1069,7 @@ static int unio_put(
         size_t sz)
 {
     if (sz) {
-        TO_HEAD(entry);
+        fl_makeHead(entry);
         log_debug("handle: %d size: %d", entry->handle.fd, sz);
 
 #if 0
@@ -1369,7 +1364,7 @@ int unio_prodput(
                 }
                 else {
                     if (entry_isFlagSet(entry, FL_LOG))
-                        log_info("Filed in \"%s\": %s", argv[argc - 1],
+                        log_notice("Filed in \"%s\": %s", argv[argc - 1],
                                 s_prod_info(NULL, 0, &prodp->info,
                                         log_is_enabled_debug));
                     if (entry_isFlagSet(entry, FL_EDEX) && shared_id != -1) {
@@ -1528,7 +1523,7 @@ static int stdio_put(
         size_t sz)
 {
     log_debug("%d", fileno(entry->handle.stream));
-    TO_HEAD(entry);
+    fl_makeHead(entry);
 
     size_t nwrote = fwrite(data, 1, sz, entry->handle.stream);
 
@@ -1614,7 +1609,7 @@ int stdio_prodput(
                 status = flushIfAppropriate(entry);
 
                 if ((status == 0) && entry_isFlagSet(entry, FL_LOG))
-                    log_info("StdioFiled in \"%s\": %s", argv[argc - 1],
+                    log_notice("StdioFiled in \"%s\": %s", argv[argc - 1],
                             s_prod_info(NULL, 0, &prodp->info,
                                     log_is_enabled_debug));
             } /* data written */
@@ -1938,7 +1933,7 @@ static int pipe_put(
 
     //log_debug("%d",
             //entry->handle.pbuf ? entry->handle.pbuf->pfd : -1);
-    TO_HEAD(entry);
+    fl_makeHead(entry);
 
     if (entry->handle.pbuf == NULL ) {
         log_add("NULL pipe-buffer");
@@ -1953,7 +1948,6 @@ static int pipe_put(
                     entry->path);
 
             if (status && status != EINTR) {
-                log_add("Couldn't write %zu-byte product to pipe", sz);
                 /* don't waste time syncing an errored entry */
                 entry_unsetFlag(entry, FL_NEEDS_SYNC);
             }
@@ -2137,8 +2131,6 @@ static int pipe_out(
     }
     if (status == ENOERR && !entry_isFlagSet(entry, FL_NODATA)) {
         status = pipe_put(entry, info->ident, data, sz);
-        if (status)
-            log_add("Couldn't write product data to pipe");
     }
 
     return status;
@@ -2200,8 +2192,6 @@ int pipe_prodput(
 
         if (0 == status) {
             status = pipe_out(entry, &prodp->info, data, sz);
-            if (status)
-                log_add("Couldn't pipe product to decoder \"%s\"", entry->path);
 
             if (EPIPE == status && !isNew) {
                 /*
@@ -2871,7 +2861,7 @@ entry_new(
             entry->prev = NULL;
             entry->path[0] = 0;
             entry->private = 0;
-            entry->inserted = time(NULL);
+            entry->lastUse = time(NULL);
 
             if (entry->ops->open(entry, argc, argv) == -1) {
                 free(entry);

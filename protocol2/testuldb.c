@@ -48,7 +48,7 @@ static void clear(void)
         int         status;
         uldb_Iter*  iter;
 
-        if (status = uldb_getIterator(&iter)) {
+        if ((status = uldb_getIterator(&iter))) {
             log_error_q("Couldn't get iterator");
             CU_ASSERT_TRUE(0);
         }
@@ -59,7 +59,7 @@ static void clear(void)
             for (entry = uldb_iter_firstEntry(iter); NULL != entry; entry =
                     uldb_iter_nextEntry(iter)) {
                 const pid_t pid = uldb_entry_getPid(entry);
-                if (status = kill(pid, SIGTERM)) {
+                if ((status = kill(pid, SIGTERM))) {
                     log_add("Couldn't terminate process %d", pid);
                     CU_ASSERT_TRUE(0);
                 }

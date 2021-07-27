@@ -18,19 +18,19 @@
 #define RUN_REQUESTER          0
 #define REQUEST_RATE           0.1 // !RUN_REQUESTER => Ignored
 // Total number of products to insert
-#define NUM_PRODS              100
 //#define NUM_PRODS              1
+#define NUM_PRODS              100
 // Maximum size of a data-product in bytes
 #define MAX_PROD_SIZE          100000
-//#define MAX_PROD_SIZE          1000
+//#define MAX_PROD_SIZE          2000
 // Duration, in microseconds, before the next product is inserted (i.e., gap
 // duration)
 #define INTER_PRODUCT_GAP      10000 // 10 ms
 /*
- * Mean residence-time, in seconds, of a data-product. Also used to compute the
- * FMTP retransmission timeout.
+ * Mean residence-time, in seconds, of a data-product.
  */
 #define MEAN_RESIDENCE         30
+#define RETX_TIMEOUT           5 // FMTP retransmission timeout in seconds
 #define UP7_HOST               "127.0.0.1"
 #define UP7_PORT               3880
 #define UP7_PQ_PATHNAME        "up7_test.pq"

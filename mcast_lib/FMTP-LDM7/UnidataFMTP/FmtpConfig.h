@@ -39,6 +39,9 @@
    */
 #define LT_OBJDIR ".libs/"
 
+/* whether or not to disable assertions */
+/* #undef NDEBUG */
+
 /* Name of package */
 #define PACKAGE "fmtp"
 
@@ -97,3 +100,6 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 /* #undef _POSIX_SOURCE */
+
+/* Level of X/OPEN compliance */
+#define _XOPEN_SOURCE 600

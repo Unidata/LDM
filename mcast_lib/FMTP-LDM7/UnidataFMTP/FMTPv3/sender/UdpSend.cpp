@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      UdpSend.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 23, 2014
  *
@@ -35,11 +36,15 @@
     #include "log.h"
 #endif
 
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
 #include <errno.h>
 #include <netinet/in.h>
 #include <string>
 #include <string.h>
 #include <stdexcept>
+#include <stdlib.h>
 #include <system_error>
 
 
@@ -47,32 +52,84 @@
     #define NULL 0
 #endif
 
+const char UdpSend::BlackHat::ENV_NAME[] = "FMTP_INVALID_PACKET_RATIO";
 
-/**
- * Constructor, set the IP address and port of the receiver, TTL and default
- * multicast ingress interface.
- *
- * @param[in] recvAddr     IP address of the receiver.
- * @param[in] recvport     Port number of the receiver.
- * @param[in] ttl          Time to live.
- * @param[in] ifAddr       IP of interface to listen for multicast.
- */
-UdpSend::UdpSend(const std::string& recvaddr, const unsigned short recvport,
-                 const unsigned char ttl, const std::string& ifAddr)
-    : recvAddr(recvaddr), recvPort(recvport), ttl(ttl), ifAddr(ifAddr),
-      sock_fd(-1), recv_addr(), hmacImpl(), netHead{}, iov{}
+UdpSend::BlackHat::BlackHat(UdpSend& udpSend)
+    : udpSend(udpSend)
+    , validPacketIndex(-1)
+    , invalidRatio(0)
+    , indicator(0)
 {
-    iov[0].iov_base = &netHead;
-    iov[0].iov_len  = FMTP_HEADER_LEN;
-    iov[2].iov_base = mac;
-    iov[2].iov_len  = MAC_SIZE;
+    const auto ratioStr = ::getenv(ENV_NAME);
+    if (ratioStr == nullptr) {
+#       ifdef LDM_LOGGING
+            log_notice("Environment variable %s doesn't exist", ENV_NAME);
+#       endif
+    }
+    else {
+        invalidRatio = std::stof(ratioStr, nullptr);
+        if (invalidRatio < 0)
+            throw std::invalid_argument(std::string(
+                    "UdpSend::BlackHat::BlackHat(): Invalid ") + ENV_NAME +
+                    "value: " + ratioStr);
+
+#       ifdef LDM_LOGGING
+            log_notice("Invalid packet ratio set to %g from environment "
+                    "variable %s", invalidRatio, ENV_NAME);
+#       endif
+    }
+}
+
+void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
+{
+    ++validPacketIndex;
+    if (validPacketIndex != udpSend.packetIndex)
+        throw std::logic_error("UdpSend::BlackHat::maybeSend(): Valid packet "
+                "index didn't increase by 1");
+
+    indicator += invalidRatio;
+    if (indicator >= 1) {
+        udpSend.packet.bytes[udpSend.msgLen] ^= 1; // Flip one bit in MAC
+        for (; indicator >= 1; indicator -= 1)
+            udpSend.write(header);
+        udpSend.packet.bytes[udpSend.msgLen] ^= 1; // Restore MAC bit
+    }
 }
 
 
 /**
- * Destroys elements within the udpsend entity which need to be deleted.
+ * Constructor, set the IP address and port of the receiver, TTL, and default
+ * multicast egress interface.
  *
- * @param[in] none
+ * @param[in] recvAddr      IP address of the receiver.
+ * @param[in] recvport      Port number of the receiver.
+ * @param[in] ttl           Time to live.
+ * @param[in] ifAddr        IP of interface for multicast egress.
+ * @param[in] canonPduSize  Canonical size of protocol data unit in bytes
+ */
+UdpSend::UdpSend(const std::string&   recvaddr,
+                 const unsigned short recvport,
+                 const unsigned char  ttl,
+                 const std::string&   ifAddr,
+                 const unsigned       canonPduSize)
+    : recvAddr(recvaddr),
+      recvPort(recvport),
+      ttl(ttl),
+      ifAddr(ifAddr),
+      sock_fd(-1),
+      recv_addr(),
+      packetIndex(0),
+      signer{},
+      msgLen{0},
+      MAC_LEN{signer.getSize()},
+      sendBefore(false),
+      blackHat(*this),
+      maxPayload{canonPduSize - FMTP_HEADER_LEN - MAC_LEN}
+{}
+
+
+/**
+ * Destroys this instance.
  */
 UdpSend::~UdpSend()
 {}
@@ -145,39 +202,59 @@ void UdpSend::Init()
 
 }
 
-const std::string& UdpSend::getMacKey() const noexcept
+const std::string UdpSend::getMacKey() const noexcept
 {
-    return hmacImpl.getKey();
+    return signer.getKey();
+}
+
+void UdpSend::write(const FmtpHeader& header)
+{
+    #ifdef LDM_LOGGING
+        log_debug("Multicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+                "payloadlen=%s, MAC_LEN=%u", header.flags,
+                std::to_string(header.prodindex).data(),
+                std::to_string(header.seqnum).data(),
+                std::to_string(header.payloadlen).data(),
+                MAC_LEN);
+    #endif
+
+    const size_t totLen = msgLen + MAC_LEN;
+    const auto   nbytes = ::write(sock_fd, packet.bytes, totLen);
+    if (nbytes != totLen)
+    	throw std::system_error(errno, std::system_category(),
+                "UdpSend::send(): write() failure: nbytes=" +
+                std::to_string(nbytes));
 }
 
 void UdpSend::send(const FmtpHeader& header,
                    const void*       payload)
 {
-	if (header.payloadlen && payload == nullptr)
-		throw std::logic_error("Inconsistent header and payload");
+    if (header.payloadlen && payload == nullptr)
+        throw std::invalid_argument(
+                "Payload length is positive but payload is null");
+    if (header.payloadlen > maxPayload)
+        throw std::invalid_argument("FMTP payload is too large: nbytes=" +
+                std::to_string(header.payloadlen));
 
-	hmacImpl.getMac(header, payload, mac);
+    packet.header.flags      = htons(header.flags);
+    packet.header.payloadlen = htons(header.payloadlen);
+    packet.header.prodindex  = htonl(header.prodindex);
+    packet.header.seqnum     = htonl(header.seqnum);
 
-	netHead.flags      = htons(header.flags);
-	netHead.payloadlen = htons(header.payloadlen);
-	netHead.prodindex  = htonl(header.prodindex);
-	netHead.seqnum     = htonl(header.seqnum);
+    if (payload)
+        ::memcpy(packet.payload, payload, header.payloadlen);
 
-    iov[1].iov_base = const_cast<void*>(payload);
-    iov[1].iov_len  = header.payloadlen;
+    msgLen = FMTP_HEADER_LEN + header.payloadlen;
+    const auto macLen = signer.getMac(packet.bytes, msgLen, packet.bytes+msgLen,
+            MAC_LEN);
+    assert(macLen == MAC_LEN);
 
-    #ifdef LDM_LOGGING
-        log_debug("Multicasting header: flags=%#x, prodindex=%s, seqnum=%s, "
-                "payloadlen=%s, mac=%s", header.flags,
-                std::to_string(header.prodindex).data(),
-                std::to_string(header.seqnum).data(),
-                std::to_string(header.payloadlen).data(),
-				HmacImpl::to_string(mac).c_str());
-    #endif
+    if (MAC_LEN && sendBefore)
+        blackHat.maybeSend(header);
+    write(header);
+    if (MAC_LEN && !sendBefore)
+        blackHat.maybeSend(header);
 
-    const auto nbytes = ::writev(sock_fd, iov, sizeof(iov)/sizeof(iov[0]));
-    if (nbytes != sizeof(netHead) + header.payloadlen + sizeof(mac))
-    	throw std::system_error(errno, std::system_category(),
-    			"UdpSend::send(): writev() failure: nbytes=" +
-				std::to_string(nbytes));
+    sendBefore = !sendBefore;
+    ++packetIndex;
 }

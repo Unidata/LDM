@@ -231,7 +231,7 @@ MldmRpc_test_LDADD		= $(LDADD) @LIBS_CUNIT@
 check_PROGRAMS			+= MldmRpc_test
 TESTS				+= MldmRpc_test
 
-Down7_test_SOURCES		= Down7_test.c Up7Down7_lib.c
+Down7_test_SOURCES		= Down7_test.c Up7Down7_lib.c Up7Down7_lib.h
 Down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
@@ -242,6 +242,7 @@ Up7Down7_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 Up7Down7_test_LDADD		= $(top_builddir)/lib/libldm.la \
 				  @LIBS_CUNIT@
 check_PROGRAMS			+= Up7Down7_test
+
 AM_TESTS_ENVIRONMENT	= PATH=.:$(top_builddir)/mldm_sender:$$PATH;
 # "Up7Down7_test" can't be part of "make check" because it depends on an
 # *installed* mldm_sender(1).

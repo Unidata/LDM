@@ -1,8 +1,9 @@
 /**
- * Copyright (C) 2014 University of Virginia. All rights reserved.
+ * Copyright (C) 2021 University of Virginia. All rights reserved.
  *
  * @file      fmtpBase.h
  * @author    Shawn Chen <sc7cq@virginia.edu>
+ * @author    Steven R. Emmerson <emmerson@ucar.edu>
  * @version   1.0
  * @date      Oct 7, 2014
  *
@@ -50,7 +51,7 @@ typedef struct FmtpPacketHeader {
     uint16_t   payloadlen;      ///< Length of payload in bytes
     uint16_t   flags;
 } FmtpHeader;
-
+const int FMTP_HEADER_LEN = sizeof(FmtpHeader); // DANGER! sizeof() use!
 
 /**
  * struct of Fmtp retx-request-message
@@ -60,40 +61,44 @@ typedef struct FmtpRetxReqMessage {
     uint16_t length;
 } RetxReqMsg;
 
+///< Maximum possible UDP payload in bytes
+const int MAX_UDP_PAYLOAD      = 65507;
+/// Maximum possible FMTP PDU size in bytes (rounded down for alignment)
+const int MAX_FMTP_PACKET = ((MAX_UDP_PAYLOAD/8)*8);
 
-/* constants used by both sender and receiver */
-const int MIN_MTU         = 1500;
-const int FMTP_HEADER_LEN = sizeof(FmtpHeader);
-const int RETX_REQ_LEN    = sizeof(RetxReqMsg);
+const int MAX_ETHERNET_PAYLOAD = 1500;  ///< Maximum ethernet payload in bytes
+
+typedef union {
+    struct {
+        FmtpHeader header;     ///< FMTP header in network byte-order
+        char       payload[1]; ///< FMTP payload (excludes any MAC)
+    };
+    char bytes[MAX_FMTP_PACKET]; ///< Doubtless, more than sufficient
+} FmtpPacket;
 
 /// Most significant seconds, least significant seconds, nanoseconds
 typedef uint32_t StartTime[3];
-
-/* non-constants, could change with MTU */
-const int MTU                 = MIN_MTU;
-const int MAX_FMTP_PACKET     = (MTU - 20 - 20); /* exclude IP and TCP header */
-const int MAC_SIZE            = 32; ///<  Size of message authentication code
-// Maximum FmtpHeader.payloadlen:
-const int MAX_FMTP_PAYLOAD    = (MAX_FMTP_PACKET - FMTP_HEADER_LEN - MAC_SIZE);
-// Maximum BOPMsg.metadata length in bytes.
-const int MAX_BOP_METADATA       = (MAX_FMTP_PAYLOAD
-		- sizeof(StartTime)
-        - sizeof(uint32_t)   // BOPMsg.prodsize
-		- sizeof(uint16_t)); // BOPMsg.metasize
-
 
 /**
  * structure of Begin-Of-Product message
  */
 typedef struct FmtpBOPMessage {
-    StartTime startTime;    ///< Start of transmission of product
-    uint32_t  prodsize;     /*!< support 4GB maximum */
-    uint16_t  metasize;
-    char      metadata[MAX_BOP_METADATA];
-    /* Be aware this default constructor could implicitly create a new BOP */
-    FmtpBOPMessage() : prodsize(0), metasize(0), metadata() {}
-} BOPMsg;
+    union {
+        struct {
+            StartTime startTime;    ///< Start of transmission of product
+            uint32_t  prodsize;     /*!< supports maximum (2^32)-1 bytes */
+            uint16_t  metasize;
+            char      metadata[1];
+        };
+        char bytes[MAX_FMTP_PACKET]; ///< Doubtless, more than sufficient
+    };
 
+    static const unsigned HEADER_SIZE = sizeof(StartTime) + sizeof(uint32_t) +
+            sizeof(uint16_t);
+
+    /* Be aware this default constructor could implicitly create a new BOP */
+    FmtpBOPMessage() : prodsize(0), metasize(0) {}
+} BOPMsg;
 
 const uint16_t FMTP_BOP       = 0x0001;
 const uint16_t FMTP_EOP       = 0x0002;
@@ -131,12 +136,27 @@ typedef struct timerParameter {
 } timerParam;
 
 
-class fmtpBase {
-public:
-    fmtpBase();
-    ~fmtpBase();
+/**
+ * Class for holding runtime (i.e., not compile-time) constants.
+ */
+class FmtpBase {
+    /**
+     * Returns the size, in bytes, of a canonical FMTP protocol data unit (PDU).
+     * The canonical size is set at runtime and will, in general, be less than
+     * the maximum, possible PDU size.
+     *
+     * @return Size of a canonical FMTP PDU in bytes
+     */
+    static unsigned getCanonPduSize();
 
-private:
+public:
+    const unsigned CANON_PDU_SIZE;     ///< Maximum PDU in bytes
+    const unsigned MAC_SIZE;         ///< MAC size in bytes
+    const unsigned MAX_PAYLOAD;      ///< Maximum payload in bytes (excl. MAC)
+    const unsigned MAX_BOP_METADATA; ///< Maximum BOP metadata in bytes
+
+    FmtpBase();
+    ~FmtpBase();
 };
 
 

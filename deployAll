@@ -2,6 +2,8 @@
 
 set -e
 
+versOpt=${1:+-v $1}
+
 cd `dirname $0`
 
 # NOAAPort ingest test system (password required)
@@ -11,26 +13,39 @@ cd `dirname $0`
 # Tom's using uni14 for fanout testing
 #deploy uni17
 
-# Lead
+# Lead (for testing pqact(1))
 #deploy lead
 
 # LDM7 systems (no password required)
-./deploy -m              -u ldm7 ca >&ca.deplog &
-echo
-./deploy -m              -u ldm7 co >&co.deplog &
-echo
-./deploy -m -r centos -s -u ldm7 md >&md.deplog &
-echo
-./deploy -m                      mo >&mo.deplog &
-echo
-./deploy -m                      nj >&nj.deplog &
-echo
-./deploy -m           -s         ut >&ut.deplog &
-echo
-./deploy -m -r ldm7   -s -u ldm7 va >&va.deplog &
-echo
-./deploy -m           -s         wa >&wa.deplog &
-echo
-./deploy -m           -s         wi >&wi.deplog &
+declare -A deployOpts
+deployOpts+=([ca]='-m              -u ldm7')
+deployOpts+=([co]='-m              -u ldm7')
+deployOpts+=([md]='-m -r centos -s -u ldm7')
+deployOpts+=([mo]='-m                     ')
+deployOpts+=([nj]='-m                     ')
+deployOpts+=([ut]='-m           -s        ')
+deployOpts+=([va]='-m -r ldm7   -s -u ldm7')
+deployOpts+=([wa]='-m           -s        ')
+deployOpts+=([wi]='-m           -s        ')
+
+declare -a sites
+sites+=(ca)
+sites+=(co)
+sites+=(md)
+sites+=(mo)
+sites+=(nj)
+sites+=(ut)
+sites+=(va)
+sites+=(wa)
+sites+=(wi)
+
+for site in ${sites[*]}; do
+    ./deploy ${deployOpts[$site]} $versOpt $site >&$site.deplog &
+done
 
 wait
+
+for site in ${sites[*]}; do
+    cat $site.deplog
+    echo '****************************************************'
+done

@@ -18,6 +18,7 @@
 
 #include "ChildCmd.h"
 #include "log.h"
+#include "mygetline.h"
 #include "priv.h"
 
 #include <errno.h>
@@ -48,61 +49,6 @@ struct child_cmd {
 
 static const int MAGIC;
 
-// The getline() function isn't part of _XOPEN_SOURCE=600
-
-/**
- * Read up to (and including) a newline from a stream and null-terminate it.
- *
- * @param[in,out] lineptr  Input line buffer. `*lineptr` must be `NULL` or a
- *                         pointer returned by `malloc()` or `realloc()` that
- *                         points to `size` bytes of space. Will point to
- *                         allocated space on successful return. Caller should
- *                         free `*lineptr` when it's no longer needed.
- * @param[in,out] size     Number of bytes `*lineptr` points to if not NULL;
- *                         otherwise ignored. Will contain number of bytes
- *                         `*lineptr` points to on successful return.
- * @param[in]     stream   Stream from which to read a line of input
- * @retval        -1       Error. `log_add()` called
- * @retval         0       EOF
- * @return                 Number of bytes read -- excluding the terminating
- *                         NUL. `*lineptr` and `*size` are set.
- */
-
-static ssize_t
-getline(char** const restrict  lineptr,
-        size_t* const restrict size,
-        FILE* const restrict   stream)
-{
-    ssize_t nbytes = -1;
-
-    if (lineptr == NULL || size == NULL) {
-        log_add("Invalid argument: lineptr=%p, size=%p", lineptr, size);
-    }
-    else {
-        static const int SIZE = PIPE_BUF;
-        char*            line = log_realloc(*lineptr, SIZE, "getline() buffer");
-
-        if (line) {
-            if (fgets(line, SIZE, stream) == NULL) {
-                if (ferror(stream)) {
-                    log_add_syserr("fgets() failure");
-                }
-                else {
-                    nbytes = 0; // EOF
-                }
-            }
-            else {
-                *size = SIZE;
-                nbytes = strlen(line);
-            } // Line read
-
-			*lineptr = line;
-        } // `line` allocated
-    } // Valid arguments
-
-    return nbytes;
-}
-
 /**
  * Logs the standard error stream of a child command.
  *
@@ -117,7 +63,7 @@ childCmd_log(void* const arg)
     size_t          size = 0;
     ssize_t         nbytes;
 
-    while ((nbytes = getline(&line, &size, cmd->stdErr)) > 0) {
+    while ((nbytes = mygetline(&line, &size, cmd->stdErr)) > 0) {
         if (line[nbytes-1] == '\n')
             line[nbytes-1] = 0;
         log_add("%s", line);
@@ -637,11 +583,18 @@ childCmd_getline(
         status = -1;
     }
     else {
-        status = getline(line, size, cmd->stdOut);
+        status = mygetline(line, size, cmd->stdOut);
 
-        if (status == -1)
-            log_add("getline() failure on stdout of command \"%s\"",
-                    cmd->cmdStr);
+        if (status == -1) {
+            // Invalid arguments, EOF, or I/O error
+            if (ferror(cmd->stdOut)) {
+                log_add("mygetline() failure on stdout of command \"%s\"",
+                        cmd->cmdStr);
+            }
+            else {
+                status = 0; // EOF
+            }
+        }
     }
 
     return status;

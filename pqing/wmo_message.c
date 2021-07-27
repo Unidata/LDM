@@ -452,6 +452,11 @@ wmo_send_buf(
 	}
 #endif
 		
+	if (mess->len > UINT_MAX) {
+            log_error_q("WMO message is too long: len=%zu, msg=\"%s\"",
+                mess->len, wmo_err_ident(buf));
+            return;
+	}
 	completed++;
 	toClients(mess->arrival,
 		mess->start->seqno,

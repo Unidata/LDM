@@ -453,7 +453,7 @@ char* timeval_format_duration(
     nchar = snprintf(cp, size, "%ld", seconds);
     cp += nchar;
     size -= nchar;
-    nchar = snprintf(cp, size, ".%06ldS", (long)duration->tv_usec);
+    (void)snprintf(cp, size, ".%06ldS", (long)duration->tv_usec);
 
     buf[TIMEVAL_FORMAT_DURATION-1] = 0;
 

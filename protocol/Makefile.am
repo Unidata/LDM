@@ -6,17 +6,26 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		=  ldm_svc.c ldm.h ldm_clnt.c ldm_xdr.c
+RPCGEN_OUTPUT		= ldm.h ldm_svc.c ldm_clnt.c ldm_xdr.c
+BUILT_SOURCES		=  $(RPCGEN_OUTPUT)
+SUPPLIED_RPCGEN_OUTPUT	= supplied-ldm.h supplied-ldm_svc.c \
+			  supplied-ldm_clnt.c supplied-ldm_xdr.c
+
 CLEANFILES		= *.i $(BUILT_SOURCES)
-EXTRA_DIST		= ldm.x fix_clnt.pl
+EXTRA_DIST		= ldm.x fix_clnt.pl $(SUPPLIED_RPCGEN_OUTPUT)
+DISTCLEANFILES		= $(SUPPLIED_RPCGEN_OUTPUT)
+
 if WANT_MULTICAST
 RPCGEN_OPTS		= -DWANT_MULTICAST
 endif
 RPCGEN			= @RPCGEN@ -C
+
 PERL			= @PERL@
+
 noinst_LTLIBRARIES	= lib.la
 nodist_include_HEADERS	= ldm.h
 nodist_lib_la_SOURCES	= $(BUILT_SOURCES)
+
 lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_srcdir)/rpc \
 			  -I$(top_srcdir)/log \
@@ -25,6 +34,7 @@ lib_la_CPPFLAGS		= -I$(top_srcdir) \
 			  -I$(top_builddir)/mcast_lib/ldm7 -I$(top_srcdir)/mcast_lib/ldm7
 TAGS_FILES		= ../rpc/*.c ../rpc/*.h
 
+if HAVE_RPCGEN
 ldm.h:		ldm.x
 	$(RPCGEN) $(RPCGEN_OPTS) -h $(srcdir)/ldm.x | \
 	sed 's/typedef *char *signaturet/typedef unsigned char signaturet/' > $@
@@ -80,6 +90,25 @@ ldm_clnt.c:	ldm.x fix_clnt.pl
 	(echo '#include "config.h"'; $(RPCGEN) $(RPCGEN_OPTS) -l $(srcdir)/ldm.x) > $@.tmp || \
 	    rm $@.tmp
 	$(PERL) $(srcdir)/fix_clnt.pl < $@.tmp > $@ && rm $@.tmp # fix stuff
+
+supplied-ldm.h:		ldm.h
+	cp $? $@
+supplied-ldm_svc.c:	ldm_svc.c
+	cp $? $@
+supplied-ldm_clnt.c:	ldm_clnt.c
+	cp $? $@
+supplied-ldm_xdr.c:	ldm_xdr.c
+	cp $? $@
+else
+ldm.h:		supplied-ldm.h
+	cp $? $@
+ldm_svc.c:	supplied-ldm_svc.c
+	cp $? $@
+ldm_clnt.c:	supplied-ldm_clnt.c
+	cp $? $@
+ldm_xdr.c:	supplied-ldm_xdr.c
+	cp $? $@
+endif
 
 .c.i:
 	$(CPP) $(lib_la_CPPFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $< >$@

@@ -31,6 +31,9 @@
 
 
 #include "senderMetadata.h"
+#ifdef LDM_LOGGING
+    #include "log.h"
+#endif
 
 #include <algorithm>
 
@@ -81,7 +84,7 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
 
 /**
  * Remove the particular receiver identified by the retxsockfd from the
- * finished receiver set. And check if the set is empty after the operation.
+ * unfinished receiver set. And check if the set is empty after the operation.
  * If it is, then remove the whole entry from the map. Otherwise, just clear
  * that receiver.
  *
@@ -90,7 +93,7 @@ void senderMetadata::addRetxMetadata(RetxMetadata* ptrMeta)
  *                              connection.
  * @return    True if RetxMetadata is removed, otherwise false.
  */
-bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd,
+bool senderMetadata::removeReceiver(uint32_t prodindex, int retxsockfd,
                                         TcpSend* tcpsend)
 {
     bool                        prodRemoved;
@@ -101,14 +104,21 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd,
         auto  metaData = metaIter->second;
         auto& socks = metaData->unfinReceivers;
 
+        #if !defined(NDEBUG) && defined(LDM_LOGGING)
+            log_debug("Removing socket %d", retxsockfd);
+        #endif
          socks.erase(retxsockfd);
 
         /* find possible legacy offline receivers and erase from set */
         for (auto unfinSockIter = socks.begin(); unfinSockIter != socks.end();
                 ++unfinSockIter) {
             // Socket-list should not be empty */
-            if (!tcpsend->isMember(*unfinSockIter))
+            if (!tcpsend->isMember(*unfinSockIter)) {
+                #if !defined(NDEBUG) && defined(LDM_LOGGING)
+                    log_debug("Removing socket %d", *unfinSockIter);
+                #endif
                 socks.erase(unfinSockIter); // Conforming C++11:
+            }
         }
 
         if (socks.empty()) {
@@ -133,7 +143,8 @@ bool senderMetadata::clearUnfinishedSet(uint32_t prodindex, int retxsockfd,
                 }
             }
             else {
-                metaData->~RetxMetadata();
+                // metaData->~RetxMetadata();
+                delete metaData;
                 indexMetaMap.erase(metaIter);
                 prodRemoved = true;
             }

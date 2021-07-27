@@ -479,7 +479,7 @@ readPatFile(const char *path)
                 pal = othr;
             }
 
-            pal = paList = begin;
+            paList = begin;
 
             log_info_q("Successfully read configuration-file \"%s\"", path);
         }
@@ -694,8 +694,6 @@ date_sub(
     if (gmtime_r(&prodClock, &utcProdTime) == NULL)
         log_error_q("gmtime_r() returns NULL");
 
-    tdom = utcProdTime.tm_mday;         /* UTC-based day-of-month */
-
     for (is = istring; regexec(&prog, is, 3, pmatch, 0) == 0; is = e2 + 1) {
         /*
          * Process the next date indicator in "istring".
@@ -762,13 +760,7 @@ date_sub(
                 "jan","feb","mar","apr","may","jun",
                 "jul","aug","sep","oct","nov","dec"};
 
-            if (dom == 0) {
-                /*
-                 * Special date indicator.  Use day-of-month from product-time.
-                 */
-                dom = tdom;
-            }
-            else {
+            if (dom) {
                 /*
                  * The matched substring in the product-identifier is a valid
                  * day-of-month.  Adjust the product-time so that it falls on
@@ -1366,13 +1358,15 @@ processProduct(
             }
         }
     }
-    if (didMatch && queue_par->is_oldest && queue_par->is_full) {
+    if (didMatch && queue_par->is_full && queue_par->early_cursor) {
         char        buf[LDM_INFO_MAX];
         timestampt  now;
         (void)set_timestamp(&now);
-        log_warning("Processed oldest product in full queue: age=%g s, prod=%s",
+        log_warning("At oldest end of full queue: age=%g s, prod=%s",
             d_diff_timestamp(&now, &queue_par->inserted),
             s_prod_info(buf, sizeof(buf), infop, log_is_enabled_debug));
+        log_warning("Some desired products might not be processed! "
+                "Queue too small? System overloaded?");
     }
 
     if (!errorOccurred) {
@@ -1420,7 +1414,7 @@ dummyprod(char *ident)
         queue_par_t queue_par = {
                 .inserted = TS_NONE,
                 .offset = 0,
-                .is_oldest = false,
+                .early_cursor = false,
                 .is_full = false
         };
         bool        noError;

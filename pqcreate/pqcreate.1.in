@@ -59,8 +59,9 @@ size for performance reasons.
 .TP
 .BI \-S " nproducts"
 This option specifies the number of product slots available in the index
-section of the queue file. If unspecified, it defaults to \fIsize\fP/4096,
-eg, one slot for each 4096 bytes of data.
+section of the queue file. If unspecified, the number of slots will be 
+the option-argument of the \fB-s\fP option divided by an assumed
+average product size -- \fBwhich is guaranteed to be incorrect\fP.
 .TP
 .BI \-q " pqfname"
 The name of the product queue file.  The default is

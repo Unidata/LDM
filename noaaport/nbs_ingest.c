@@ -368,7 +368,7 @@ static bool init(void)
             log_add("Couldn't open product-queue");
         }
         else {
-            status = nportSock_init(&sock, mcast_ip_addr, iface_ip_addr);
+            status = nportSock_init(&sock, mcast_ip_addr, iface_ip_addr, -1);
             if (status) {
                 log_add("Couldn't create socket for NBS reception");
             }

@@ -107,7 +107,7 @@ get_afos_message(xbuf *buf, afos_message *mess)
 		if(isascii(ch))
 			unnextc(buf, ch);
 		else
-			ch = nextc(buf);
+			nextc(buf);
 	}
 	
 	{
@@ -177,6 +177,10 @@ afos_send_buf(xbuf *buf, int backoff)
 		return;
 	/* else, we got something */
 
+	if (mess->len > UINT_MAX) {
+            log_error_q("AFOS message is too long: len=%zu", mess->len);
+            return;
+	}
 	toClients(mess->arrival,
 		seqno,
 		mess->ident,

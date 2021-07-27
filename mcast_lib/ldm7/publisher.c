@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
 	size_t secret_len;
 	secret_len = EVP_PKEY_size(secret);
-	printf("HMAC key length: %d\n", secret_len);
+	printf("HMAC key length: %zu\n", secret_len);
 
 
 	/* Handle connections */
@@ -85,8 +85,8 @@ int main(int argc, char **argv)
 
 		/* Obtain subscriber's public key */
 		char buff[1500] = {};
-		size_t pubKeyLen = readMsg(client, buff);
-		printf("read %d bytes - subscriber's public key\n", pubKeyLen);
+		size_t pubKeyLen = readMsg(client, (unsigned char*)buff);
+		printf("read %zu bytes - subscriber's public key\n", pubKeyLen);
 		
 
 		/* Convert the subsriber's public key from C-string to RSA structure */
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 		for (ii = 0; ii < md_len; ii++) {
 			printf("%02X", md_value[ii]);
 		}
-		printf("\nHMAC code ends. Total Len: %d\n", md_len);
+		printf("\nHMAC code ends. Total Len: %zu\n", md_len);
 
 
 		/* Send the HMAC code to subscriber */	

@@ -41,20 +41,20 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib/ldm7
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
-BUILT_SOURCES		= regpar.tab substPaths
+BUILT_SOURCES		= regpar.tab substPaths registry.xml
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
 			  registry.xml
 
 # "regpar.tab" fields:
 #
-# id		Identifier in "regpath{id}" substitution expressions and 
-# 		suffix of "REG_" C macro names
-# path		Pathname of the parameter in the registry
-# desc		Description of the parameter
-# default	Default value
-# perl-id	Identifier of corresponding perl(1) variable in ldmadmin(1)
-# 		configuration-file, if it exists
+# id        Identifier in "regpath{id}" substitution expressions and 
+#           suffix of "REG_" C macro names
+# path      Pathname of the parameter in the registry
+# desc      Description of the parameter
+# default   Default value
+# perl-id   Identifier of corresponding perl(1) variable in ldmadmin(1)
+#           configuration-file, if it exists
 regpar.tab:	$(srcdir)/regpar.tab.in
 	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
 	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \

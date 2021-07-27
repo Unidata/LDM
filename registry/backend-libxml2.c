@@ -999,12 +999,11 @@ beRemove(
     RegStatus   status = getXmlFilePath(dir, &path);
 
     if (0 == status) {
-        File*   file;
+        File*   file = NULL; // Assignment quiets scan-build(1)
 
         if (0 == (status = fileNew(path, 1, &file))) {
-            if (0 == (status = fileLock(file))) {
+            if (0 == (status = fileLock(file)))
                 status = fileDelete(file);
-            }
 
             fileFree(file);
         }                                       /* "file" allocated */

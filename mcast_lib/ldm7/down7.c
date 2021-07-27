@@ -614,9 +614,10 @@ backstop_init(McastReceiverMemory* const mrm)
         backstop.prevLastMcastSet = mrm_getLastMcastProd(backstop.mrm,
                 backstop.prevLastMcast);
         backstop.state = TASK_INITIALIZED;
+        status = 0;
     } // Mutex is initialized
 
-    return 0;
+    return status;
 }
 
 /**
@@ -2111,7 +2112,7 @@ downlet_run()
     int status;
 
     // Sets `downlet.up7Proxy` and `downlet.sock`
-    status = downlet_initClient(downlet); // Potentially lengthy
+    status = downlet_initClient(); // Potentially lengthy
 
     if (status) {
         log_add("Couldn't create client for feed %s from server %s",

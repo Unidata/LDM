@@ -133,6 +133,7 @@ decodeHostSet(
         if (NULL == dup) {
             log_add("Couldn't clone string \"%s\": %s", string,
                 strerror(errno));
+            error = 1;
         }
         else {
             host_set*   hsp = lcf_newHostSet(HS_REGEXP, dup, regexp);
@@ -140,7 +141,6 @@ decodeHostSet(
             if (NULL == hsp) {
                 log_add("Couldn't create host-set for \"%s\": %s", dup,
                         strerror(errno));
-
                 error = 1;
             }
             else {
@@ -153,7 +153,7 @@ decodeHostSet(
             }
 
             if (error)
-                free(dup);
+                free(dup); // lcf_freeHostSet() frees `dup` on success
         }                               /* "dup" set */
 
         if (error)
@@ -235,7 +235,7 @@ decodeAllowEntry(
     int         errCode = decodeFeedtype(&ft, feedtypeSpec);
 
     if (!errCode) {
-        host_set*       hsp;
+        host_set*       hsp = NULL;
 
         errCode = decodeHostSet(&hsp, hostPattern);
 
@@ -411,7 +411,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                     int         error = decodeSelection(&ft, &regexp, $2, $3);
 
                     if (!error) {
-                        host_set*       hsp;
+                        host_set*       hsp = NULL;
 
                         error = decodeHostSet(&hsp, $4);
 
@@ -425,8 +425,7 @@ accept_entry:   ACCEPT_K STRING STRING STRING
                                 error = 1;
                             }
                             else {
-                                error =
-                                    lcf_addAccept(ft, patp, regexp, hsp, 1);
+                                error = lcf_addAccept(ft, patp, regexp, hsp, 1);
 
                                 if (!error) {
                                     patp = NULL;    /* abandon */

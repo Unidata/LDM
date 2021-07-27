@@ -1152,7 +1152,7 @@ static gini_status_t gini_scan_data_blocks(
         size_t         left = nbytes;
         unsigned       num_blocks;
         unsigned       num_uncomp_bytes_first_block = 0;
-        status = 0;
+
         for (num_blocks = 0; left; num_blocks++) {
             uint8_t uncomp_bytes[NBS_MAX_FRAME_SIZE];
             unsigned num_uncomp_bytes, num_comp_bytes_scanned;
@@ -2186,7 +2186,7 @@ gini_status_t gini_pack(
         const unsigned                out_size,
         unsigned* const restrict      out_nbytes)
 {
-    z_stream d_stream;
+    z_stream d_stream = {};
     d_stream.zalloc = (alloc_func)0;
     d_stream.zfree  = (free_func)0;
     d_stream.opaque = (voidpf)0;
@@ -2240,7 +2240,7 @@ gini_status_t gini_unpack(
         unsigned* const restrict      out_nbytes,
         unsigned* const restrict      nscanned)
 {
-    z_stream d_stream;
+    z_stream d_stream = {};
     d_stream.zalloc = (alloc_func)0;
     d_stream.zfree  = (free_func)0;
     d_stream.opaque = (voidpf)0;

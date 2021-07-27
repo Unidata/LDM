@@ -3005,7 +3005,8 @@ int setup_user_table(int center, int subcenter, int ptable) {
 	line[299] = 0;
 
 	/* find the colons and end-of-line */
-	for (c0 = 0; line[c0] != ':' && line[c0] != 0; c0++) ;
+	for (c0 = 0; line[c0] != ':' && line[c0] != 0; c0++)
+	    ; // EMPTY
         if (line[c0] == 0) {
 	    fprintf(stderr,"illegal gribcap line:%s\n", line);
 	    continue;

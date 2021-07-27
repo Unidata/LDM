@@ -106,11 +106,7 @@ pbuf_flush(
         CLR_ALARM();
 
     if (nwrote == -1) {
-        if ((tmpErrno == EAGAIN) && (!block)) {
-            // Couldn't execute non-blocking write just now
-            nwrote = 0;
-        }
-        else {
+        if (tmpErrno != EAGAIN || block) {
             log_add_errno(tmpErrno, "Couldn't write to pipe: fd=%d, len=%zu, "
                     "cmd=\"%s\"", buf->pfd, len, cmd);
         }
@@ -121,7 +117,6 @@ pbuf_flush(
             /* wrote the whole buffer */
             //log_debug("Wrote %d bytes", nwrote);
             buf->ptr = buf->base;
-            len = 0;
         }
         else if (nwrote > 0) {
             /* partial write, just shift the buffer by the amount written */

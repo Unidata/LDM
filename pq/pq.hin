@@ -67,7 +67,7 @@ typedef struct {
 typedef struct {
     timestampt inserted;
     off_t      offset;
-    bool       is_oldest;
+    bool       early_cursor;
     bool       is_full;
     bool       is_locked;
 } queue_par_t;

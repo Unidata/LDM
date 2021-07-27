@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #ifndef __USE_MISC
 #define __USE_MISC              /* To get "struct ip_mreq". Don't move! */
 #endif
@@ -602,7 +603,8 @@ int main(
             while (shmfifo_empty(shm)) {
                 if (log_is_enabled_info)
                     log_info_q("nothing in shmem, waiting...");
-                usleep(500);
+                struct timespec tspec = {.tv_sec=0, .tv_nsec=500000};
+                nanosleep(&tspec, NULL);
             }
 
             if (shmfifo_get(shm, msg, MAX_MSG, &n) != 0) {
@@ -641,8 +643,12 @@ int main(
                 memcpy(prod.info.signature, msg + 8, 4);
 
                 status = set_timestamp(&prod.info.arrival);
-                status = pq_insert(pq, &prod);
+                if (status) {
+                    log_add("Couldn't set timestamp");
+                    log_flush_error();
+                }
 
+                status = pq_insert(pq, &prod);
                 if (status != 0) {
                     if (status == PQUEUE_DUP) {
                         log_notice_q("SBN %u already in queue", prod.info.seqno);

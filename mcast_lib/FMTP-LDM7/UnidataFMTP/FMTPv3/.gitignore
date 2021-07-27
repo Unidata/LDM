@@ -8,3 +8,7 @@ size.txt-bak
 *.csv
 config.status
 .libs
+IperfFmtpPdu
+pdu
+mac_test
+Ed25519_test

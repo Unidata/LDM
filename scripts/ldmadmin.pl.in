@@ -238,7 +238,17 @@ elsif ($command eq "newlog") {	# rotate the log files
     $status = new_log();
 }
 elsif ($command eq "scour") {	# scour data directories
-    system("scour $scour_file");
+   while ($_ = $ARGV[0]) {
+        shift;
+        /^-d/ && $delete++;
+    }
+    
+    # Build the command line
+    $cmd_line = "scour ";
+    $cmd_line .= "-d " if ($delete);
+    $cmd_line .= $scour_file;
+
+    system($cmd_line);
     $status = $?;
 }
 elsif ($command eq "isrunning") { # check if the ldm is running
@@ -298,7 +308,11 @@ elsif ($command eq "config") {	# show the ldm configuration
     $status = ldm_config();
 }
 elsif ($command eq "log") {	# page the logfile
-    system("$ENV{'PAGER'}","$log_file");
+    my $pager = "$ENV{'PAGER'}";
+    if (!$pager) {
+        $pager = "more";
+    }
+    system("$pager","$log_file");
     $status = $?;
 }
 elsif ($command eq "tail") {	# do a "tail -f" on the logfile
@@ -335,7 +349,7 @@ elsif ($command eq "printmetrics") {
 }
 elsif ($command eq "addmetrics") {
     if (!open(METRICS_FILE,">>$metrics_file")) {
-        errmsg("getLock(): Cannot create/open metrics-file \"$metrics_file\"");
+        errmsg("addmetrics(): Cannot create/open metrics-file \"$metrics_file\"");
         $status = 1;
     }
     else {
@@ -369,6 +383,9 @@ elsif ($command eq "newmetrics") {
 }
 elsif ($command eq "updategempaktables") {
     $status = system("updateGempakTables");
+}
+elsif ($command eq "showsettings") {  
+    $status = system("showSettings");
 }
 elsif ($command eq "usage") {	# print usage message
     print_usage();
@@ -426,13 +443,26 @@ commands:
                                                  pqsurf(1)
     delsurfqueue [-q q_path ]                Deletes a pqsurf(1) product-queue
     newlog [-n numlogs] [-l logfile]         Rotates a log file
-    scour                                    Scours data directories
+    scour  [-d]                              Scours data directories
     isrunning                                Exits status 0 if LDM is running
                                                  else exit 1
     checkinsertion                           Checks for recent insertion of
                                                  data-product into product-queue
     vetqueuesize                             Vets the size of the product-queue
-    pqactcheck [-p pqact_conf] [conf_file]   Checks syntax of pqact(1) files
+    pqactcheck [ldmd_conf]                   Check the pqact(1) configuration files 
+                                                 that are referenced in the LDM
+                                                 configuration file, ldmd_conf, for 
+                                                 errors.
+                                                 Status messages are written to 
+                                                 the standard-output stream.
+                                                 This is the default if no argument 
+                                                 is specified.
+    pqactcheck [-p pqact_conf]               Check the pqact(1) configuration-file, 
+                                                 pqact_conf, for errors.
+                                                 Status messages are written to 
+                                                 the standard-output stream.
+                                                 If no option is specified, then 
+                                                 the previous form is used.
     pqactHUP                                 Sends HUP signal to pqact(1)
                                                  program
     queuecheck                               Checks for product-queue corruption
@@ -447,12 +477,14 @@ commands:
     addmetrics                               Accumulates LDM metrics
     plotmetrics [-b begin] [-e end]          Plots LDM metrics
     newmetrics                               Rotates the metrics files
+    showsettings                             Reveals current installation settings
     updategempaktables                       Updates the GEMPAK tables
     usage                                    Prints this message
 
 options:
     -b begin        Begin time as YYYYMMDD[.hh[mm[ss]]]
     -c              Clobber an exisiting product-queue
+    -d              Delete empty scoured directories
     -e end          End time as YYYYMMDD[.hh[mm[ss]]]
     -f              Create queue \"fast\"
     -f feedset      Feed-set to use with command. Default: $feedset
@@ -461,6 +493,10 @@ options:
     -M max_clients  Maximum number of active clients
     -n numlogs      Number of logs to rotate. Default: $numlogs
     -o offset       Unconditional data-request temporal-offset
+    -p pqact_conf   Specify a pqact config path. 
+                    Default: valid pqact path(s) in EXEC \"pqact\" line(s)
+                    in LDM config file,
+                    LDM default: $pqact_path
     -q q_path       Specify a product-queue path. LDM Default: $pq_path,
                     pqsurf(1) default: $surf_path
     -v              Turn on verbose mode
@@ -1757,7 +1793,7 @@ sub getPortCount
     my($totalCount) = 0;
     open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
     while (<FH>) {
-	if (/ESTABLISHED/ && /:$port\W/) {
+	if (/ESTAB/ && /:$port\W/) {
 	    $totalCount++;
 	}
     }

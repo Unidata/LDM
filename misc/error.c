@@ -51,6 +51,7 @@ err_new(
     if (NULL == err) {
         log_syserr("malloc(%lu) failure",
             (unsigned long)sizeof(ErrorObj));
+        abort();
     }
     else {
         err->line = line;

@@ -68,15 +68,19 @@ initNportSockAddr(
  * @param[in]  ifaceSpec  IPv4 address of interface on which to listen for
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
+ * @param[in]  rcvBufSize Receiver buffer size in bytes iff > 0. A warning
+ *                        will be logged if the buffer size can't be set.
  * @retval     0          Success. `*socket` is set.
  * @retval     1          Usage failure. `log_add()` called.
  * @retval     2          O/S failure. `log_add()` called.
+ * @retval     3          O/S failure. `log_add()` called.
  */
 int
 nportSock_init(
         int* const restrict        socket,
         const char* const restrict nportSpec,
-        const char* const restrict ifaceSpec)
+        const char* const restrict ifaceSpec,
+        int                        rcvBufSize)
 {
     struct sockaddr_in nportSockAddr;
     int                status = initNportSockAddr(&nportSockAddr, nportSpec);
@@ -93,10 +97,40 @@ nportSock_init(
         }
         else {
             status = mcastRecvSock_init(socket, &nportSockAddr, &ifaceAddr);
-            if (status)
+            if (status) {
                 log_add("Couldn't initialize socket for multicast reception");
-        }
-    }
+            }
+            else {
+                if (rcvBufSize <= 0) {
+                    socklen_t len = sizeof(rcvBufSize);
+                    status = getsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
+                            &rcvBufSize, &len);
+                    if (status) {
+                        log_add_syserr("Couldn't get default receive buffer "
+                                "size. Continuing.");
+                        log_flush_warning();
+                        status = 0;
+                    }
+                    else {
+                        log_notice("Using default receive buffer size of %d "
+                                "bytes", rcvBufSize);
+                    }
+                }
+                else {
+                    log_notice("Setting receive buffer size to %d bytes",
+                            rcvBufSize);
+                    status = setsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
+                            &rcvBufSize, sizeof(rcvBufSize));
+                    if (status) {
+                        log_add_syserr("Couldn't set receive buffer size to "
+                                "%d bytes. Continuing.", rcvBufSize);
+                        log_flush_warning();
+                        status = 0;
+                    }
+                } // Receiver buffer size needs to be set
+            } // '*socket' open
+        } // Interface address set
+    } // Socket address is set
 
     return status;
 }

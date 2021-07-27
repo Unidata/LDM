@@ -6,7 +6,7 @@ CHECK_TIME:/check-time/enabled:Whether or not the command "<tt><a href="glindex.
 CHECK_TIME_LIMIT:/check-time/limit:The maximum amount, in seconds, that the system clock can be off and still be acceptable.:10:check_time_limit
 WARN_IF_CHECK_TIME_DISABLED:/check-time/warn-if-disabled:Whether or not the command "<tt><a href="glindex.html#ldmadmin">ldmadmin</a> check</tt>" should print a warning message if checking the system clock is disabled.  Zero means no; non-zero means yes.:1:warn_if_check_time_disabled
 NTPDATE_COMMAND:/check-time/ntpdate/command:The pathname of the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility for checking the system clock.  The default is set by the <tt>configure(1)</tt> script.:@NTPDATE@:ntpdate
-NTPDATE_SERVERS:/check-time/ntpdate/servers:Time servers for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:ntp.ucsd.edu ntp1.cs.wisc.edu ntppub.tamu.edu otc1.psu.edu pool.ntp.org:time_servers
+NTPDATE_SERVERS:/check-time/ntpdate/servers:Time servers for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:ntp.ucsd.edu ntp1.cs.wisc.edu ntppub.tamu.edu pool.ntp.org:time_servers
 NTPDATE_TIMEOUT:/check-time/ntpdate/timeout:Timeout, in seconds, for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:5:ntpdate_timeout
 LOG_COUNT:/log/count:The number of LDM log files to keep around.:7:numlogs
 LOG_FILE:/log/file:The pathname of the LDM log file.  The default is set by the <tt>configure(1)</tt> script.:@LOG_FILE@
@@ -24,11 +24,12 @@ QUEUE_PATH:/queue/path:The pathname of the <a href="glindex.html#product-queue">
 QUEUE_SIZE:/queue/size:The size of the <a href="glindex.html#product-queue">product-queue</a> in bytes.  The suffixes <tt>K</tt>, <tt>M</tt>, and <tt>G</tt> may be used for multiplying by 1e3, 1e6, and 1e9, respectively.:500M:pq_size
 QUEUE_SLOTS:/queue/slots:The capacity of the <a href="glindex.html#product-queue">product-queue</a> in terms of the maximum number of data-products that it can hold.  Specified as a number or as the string <tt>default</tt> (in which case the number of slots is automatically computed based on an assumed mean size for the data-products).:default:pq_slots
 SCOUR_CONFIG_PATH:/scour/config-path:The pathname of the <tt>scour(1)</tt> configuration-file.  The default is set by the <tt>configure(1)</tt> script.:@ETC_DIR@/scour.conf:scour_file
+SCOUR_EXCLUDE_PATH:/scour/exclude-path:Pathname of file that lists directories to be ignored by <tt>scour(1)</stt>. Default is set by <tt>configure(1)</tt> script.:@ETC_DIR@/scour_excludes.conf
 LDMD_CONFIG_PATH:/server/config-path:The pathname of the LDM server configuration-file.  The default is set by the <tt>configure(1)</tt> script.:@ETC_DIR@/ldmd.conf:ldmd_conf
 IP_ADDR:/server/ip-addr:The IP address of the interface on which the LDM server should listen for incoming connections.  An address of <tt>0.0.0.0</tt> will cause the server to listen on all available interfaces.:0.0.0.0:ip_addr
 MAX_CLIENTS:/server/max-clients:The maximum number of remotely-initiated connections the LDM server should allow before ignoring additional remotely-initiated connection attempts.:256:max_clients
 MAX_LATENCY:/server/max-latency:The maximum acceptible <a href="glindex.html#data-product latency">data-product latency</a> in seconds.  Arriving data-products with greater latency will be discarded.  This also defines the <a href="glindex.html#minimum virtual residence time">minimum virtual residence time</a> for detecting duplicate data-products.:3600:max_latency
-PORT:/server/port:The number of the port on which the LDM server should listen for incoming connections.:388:port
+PORT:/server/port:The number of the port on which the LDM server should listen for incoming connections.:@LDM_PORT@:port
 TIME_OFFSET:/server/time-offset:A cold-started LDM server will request data from this many seconds ago.:3600:offset
 ANTI_DOS:/server/enable-anti-DOS:Whether or not to enable the anti-denial-of-service feature, which ensures non-overlapping feeds to each downstream host.:TRUE
 SURFQUEUE_PATH:/surf-queue/path:The pathname of the <tt>pqsurf(1)</tt> product-queue.  The default is set by the <tt>configure(1)</tt> script.:@QUEUE_DIR@/pqsurf.pq

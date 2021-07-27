@@ -1,0 +1,79 @@
+LDMHOME		= `cd .. && pwd`
+CONFIGURE_OPTS	= --disable-root-actions --enable-debug --with-noaaport --with-multicast --prefix=$(LDMHOME) LDMHOME=$(LDMHOME)
+
+.PHONY: check-cc check-clang check clang-scan coverity-scan scan
+
+# Check package using cc(1)
+check-cc:
+	$(MAKE) clean >/dev/null
+	./configure $(CONFIGURE_OPTS) CC=cc
+	$(MAKE) distcheck
+
+# Check package using clang(1)
+check-clang:
+	$(MAKE) clean >/dev/null
+	./configure $(CONFIGURE_OPTS) CC=clang
+	$(MAKE) distcheck
+
+# Check package
+check:  check-cc check-clang
+
+# Scan code using clang(1)
+clang-scan:
+	$(MAKE) clean
+	rm -rf /tmp/scan-build-*
+	scan-build $(MAKE)
+
+COVERITY_SCAN_FILE      = ldm.tgz
+
+# Create a submission file for Coverity Scan
+$(COVERITY_SCAN_FILE):
+	$(MAKE) clean
+	rm -rf cov-int
+	cov-build --dir cov-int $(MAKE)
+	tail cov-int/build-log.txt
+	tail cov-int/build-log.txt | \
+	       grep 'Compilation units (.*) are ready for analysis'
+	tail cov-int/build-log.txt | \
+	       grep -F 'The cov-build utility completed successfully'
+	tar czvf $(COVERITY_SCAN_FILE) cov-int
+	rm -rf cov-int
+
+# Scan code using Coverity Scan
+coverity-scan:  $(COVERITY_SCAN_FILE) 
+	curl --form token=`cat $$HOME/.ssh/ldm-coverity-scan-token` \
+	--form email=emmerson@ucar.edu \
+	--form file=@$(COVERITY_SCAN_FILE)  \
+	--form version=`awk '{print $$1; exit}' CHANGE_LOG` \
+	--form description="make scan" 
+	--silent --show-error \
+	https://scan.coverity.com/builds?project=Unidata%2FLDM \
+	   > $@.log # Redirection is necessary to avoid appearance of hanging
+	mv $@.log $@
+
+scan:	coverity-scan clang-scan
+
+configure.ac:  CHANGE_LOG
+	versionId=`awk '{print $$1;exit}' CHANGE_LOG`; \
+	if ! `echo "$$versionId" | egrep '^[0-9.]+$$' >/dev/null`; then \
+	    echo "First word in file CHANGE_LOG isn't a version ID"; \
+	    exit 1; \
+	fi; \
+	if test `sed -nr '/AC_INIT/{s/.*\[([0-9.]+)\].*/\1/p;q}' configure.ac` \!= \
+		$$versionId; then \
+	    sed -r '/^AC_INIT\(/s/\[[0-9][0-9.]+\]/['$$versionId']/' configure.ac \
+	            >configure.ac.tmp; \
+	    mv configure.ac.tmp configure.ac; \
+	else \
+	    touch $@; \
+	fi;
+
+configure:	configure.ac
+	autoreconf -fi
+
+Makefile:	configure
+	LDMHOME=`cd .. && pwd`; \
+	./configure --disable-root-actions --enable-debug --with-noaaport --with-multicast --prefix=$$LDMHOME LDMHOME=$$LDMHOME
+
+consistent:	configure
+	touch $@

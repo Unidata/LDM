@@ -242,6 +242,7 @@ static int msg_format(
             // EINTR, EILSEQ, ENOMEM, or EOVERFLOW
             logl_internal(LOG_LEVEL_ERROR, "vsnprintf() failure: "
                     "fmt=\"%s\", errno=\"%s\"", fmt, strerror(errno));
+            status = errno;
         }
         else {
             // The buffer is too small for the message. Expand it.
@@ -345,7 +346,7 @@ static void init_once(void)
 			unlock_or_abort);
 
 	if (status) {
-		logl_internal(LOG_LEVEL_CRIT, "pthread_atfork() failure: %s",
+		logl_internal(LOG_LEVEL_FATAL, "pthread_atfork() failure: %s",
 				strerror(status));
 		abort();
 	}
@@ -353,13 +354,13 @@ static void init_once(void)
 		int status = pthread_key_create(&queueKey, queue_free);
 
 		if (status != 0) {
-			logl_internal(LOG_LEVEL_CRIT, "pthread_key_create() failure: "
+			logl_internal(LOG_LEVEL_FATAL, "pthread_key_create() failure: "
 					"errno=\"%s\"", strerror(status));
 			abort();
 		}
 
 		if (atexit(queue_delete_key)) {
-			logl_internal(LOG_LEVEL_CRIT, "Couldn't register "
+			logl_internal(LOG_LEVEL_FATAL, "Couldn't register "
 					"queue_delete_key() with atexit()");
 			abort();
 		}
@@ -1073,11 +1074,11 @@ int log_set_destination(const char* const dest)
             status = -1;
         }
         else {
-			pthread_cleanup_push(unlock_cleanup, NULL);
+            pthread_cleanup_push(unlock_cleanup, NULL);
 
             status = logi_set_destination(dest);
 
-			pthread_cleanup_pop(true);
+            pthread_cleanup_pop(true);
         } // Module is locked
     }
 

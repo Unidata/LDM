@@ -56,6 +56,8 @@
     #define MAX(a,b) ((a) >= (b) ? (a) : (b))
 #endif
 
+#define FMTP_MAC_ENV_NAME "FMTP_MAC_LEVEL"
+
 typedef struct {
     SVCXPRT*              xprt;
 } MyUp7;
@@ -521,12 +523,8 @@ rcvr_term(const pid_t rcvrPid)
     CU_ASSERT_EQUAL(kill(rcvrPid, SIGTERM), 0);
     int status;
     pid_t pid = waitpid(rcvrPid, &status, 0);
-    if (pid == (pid_t)-1) {
+    if (pid == (pid_t)-1)
  	   log_syserr("waitpid(%ld) returned -1", (long)rcvrPid);
-    }
-    else {
- 	   log_debug("waitpid(%ld) returned %ld", (long)rcvrPid, (long)pid);
-    }
     CU_ASSERT_EQUAL(pid, rcvrPid);
 	CU_ASSERT_TRUE(WIFEXITED(status));
 	return WEXITSTATUS(status);
@@ -549,7 +547,7 @@ test_up7(
 }
 
 static void
-test_up7Down7(
+run_up7Down7(
         void)
 {
     Sender   sender;
@@ -567,7 +565,7 @@ test_up7Down7(
     blockSigCont(&oldSigSet);
     */
 
-    umm_setRetxTimeout(5); // SWAG
+    umm_setRetxTimeout(RETX_TIMEOUT);
 
     status = lcf_init(LDM_PORT, NULL);
     CU_ASSERT_EQUAL_FATAL(status, 0);
@@ -585,7 +583,7 @@ test_up7Down7(
 
     CU_ASSERT_EQUAL(sleep(1), 0);
     sndr_fillPq();
-    CU_ASSERT_EQUAL(sleep(1), 0);
+    CU_ASSERT_EQUAL(sleep(RETX_TIMEOUT+2), 0);
 
     log_notice("Stopping receiver");
     CU_ASSERT_EQUAL(rcvr_term(rcvrPid), 0); // Bad exit code if not all received
@@ -600,6 +598,27 @@ test_up7Down7(
     CU_ASSERT_EQUAL(status, 0);
 }
 
+static void
+test_up7Down7_0(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "0", 1);
+    run_up7Down7();
+}
+
+static void
+test_up7Down7_1(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "1", 1);
+    run_up7Down7();
+}
+
+static void
+test_up7Down7_2(void)
+{
+    setenv(FMTP_MAC_ENV_NAME, "2", 1);
+    run_up7Down7();
+}
+
 int main(
         const int    argc,
         char* const* argv)
@@ -610,7 +629,7 @@ int main(
         log_syserr("Couldn't initialize logging module");
         exit(1);
     }
-    log_set_level(LOG_LEVEL_NOTICE);
+    //log_set_level(LOG_LEVEL_INFO);
 
     opterr = 1; // Prevent getopt(3) from printing error messages
     for (int ch; (ch = getopt(argc, argv, "l:vx")) != EOF; ) {
@@ -644,7 +663,9 @@ int main(
 
         if (NULL != testSuite) {
             if (    CU_ADD_TEST(testSuite, test_up7) &&
-                    CU_ADD_TEST(testSuite, test_up7Down7)
+                    CU_ADD_TEST(testSuite, test_up7Down7_0) &&
+                    CU_ADD_TEST(testSuite, test_up7Down7_1) &&
+                    CU_ADD_TEST(testSuite, test_up7Down7_2)
                     ) {
                 CU_basic_set_mode(CU_BRM_VERBOSE);
                 (void) CU_basic_run_tests();

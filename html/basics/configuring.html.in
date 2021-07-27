@@ -355,14 +355,14 @@ as the <a href="glindex.html#LDM user">LDM-user</a>.  Then
        too-old files every
        three hours.  You might choose different times.
 
-    <li><p>Add an entry to accumulate performance metrics on the
-	<a href="glindex.html#LDM">LDM</a>
-	system if you wish and have the necessary utilities installed:
+    <li><p>We strongly recommend that you add an entry to accumulate performance
+        metrics on the <a href="glindex.html#LDM">LDM</a>
+	system if you have the necessary utilities installed:
        <blockquote><tt>
-           0,5,10,15,20,25,30,35,40,45,50,55 * * * * bash -l -c 'ldmadmin addmetrics'
+           * * * * * bash -l -c 'ldmadmin addmetrics'
        </tt></blockquote>
-       This entry will accumulate metrics every 5 minutes.  You might choose 
-       a different interval.  See
+       This entry will accumulate metrics every minute.
+       See
        <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
 
     <li><p>Add an entry to rotate the metrics data files
@@ -564,5 +564,6 @@ Workshop-specific instructions</a>.
 document.write(date_modified);
 </script>
 
-</BODY>
+<script src="/js/ldm_add_in.js" type="text/javascript"></script>
+</body>
 </HTML>

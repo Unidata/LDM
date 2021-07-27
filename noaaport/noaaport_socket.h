@@ -25,6 +25,7 @@
  * @param[in]  ifaceSpec  IPv4 address of interface on which to listen for
  *                        multicast UDP packets or NULL to listen on all
  *                        available interfaces.
+ * @param[in] setBufSize  Enable socket receiver buffer size increase.
  * @retval     0          Success. `*socket` is set.
  * @retval     1          Usage failure. \c log_add() called.
  * @retval     2          O/S failure. \c log_add() called.
@@ -33,7 +34,8 @@ int
 nportSock_init(
     int* const restrict        socket,
     const char* const restrict nportSpec,
-    const char* const restrict ifaceSpec);
+    const char* const restrict ifaceSpec,
+	int                        setBufSize);
 
 #ifdef __cplusplus
     }

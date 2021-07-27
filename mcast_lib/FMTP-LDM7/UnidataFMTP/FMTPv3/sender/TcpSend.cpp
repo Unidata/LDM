@@ -245,18 +245,6 @@ int TcpSend::sockListSize() const noexcept
 
 
 /**
- * Gets the min path MTU.
- *
- * @param[in] none
- * @return    pmtu    Up-to-date min path MTU.
- */
-int TcpSend::getMinPathMTU()
-{
-    return pmtu;
-}
-
-
-/**
  * Return the local port number.
  *
  * @return                   The local port number in host byte-order.
@@ -295,7 +283,6 @@ void TcpSend::Init()
     int alive = 1;
     //int aliveidle = 10; /* keep alive time = 10 sec */
     int aliveintvl = 30; /* keep alive interval = 30 sec */
-    pmtu = MIN_MTU; /* initialize pmtu with defined min MTU */
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -346,6 +333,7 @@ void TcpSend::Init()
     }
     catch (std::runtime_error& e) {
         close(sockfd);
+        sockfd = -1;
         /**
          * Let the sender make some noise instead of quietly sending a FIN
          * to the receiver. The exception caught in TcpSend will bubble up
@@ -411,9 +399,9 @@ void TcpSend::rmSockInList(int sockfd)
  * with error occurred.
  *
  * @param[in] retxsockfd    retransmission socket file descriptor.
- * @param[in] *sendheader   pointer of a FmtpHeader structure, whose fields
- *                          hold the information in network byte-order.
- * @param[in] *payload      pointer to the ready-to-send memory buffer which
+ * @param[in] sendheader    pointer of a FmtpHeader structure, whose fields
+ *                          hold the information in *network* byte-order.
+ * @param[in] payload       pointer to the ready-to-send memory buffer which
  *                          holds the packet payload.
  * @param[in] paylen        size to be sent (size of the payload)
  * @return    retval        return the total bytes sent.
@@ -422,11 +410,13 @@ int TcpSend::sendData(int retxsockfd, FmtpHeader* sendheader, char* payload,
                       size_t paylen)
 {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
-	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
-			"payloadlen=%s", ntohs(sendheader->flags),
+	log_debug("Unicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s, payload=%p",
+            ntohs(sendheader->flags),
 			std::to_string(ntohl(sendheader->prodindex)).data(),
 			std::to_string(ntohl(sendheader->seqnum)).data(),
-			std::to_string(ntohs(sendheader->payloadlen)).data());
+			std::to_string(ntohs(sendheader->payloadlen)).data(),
+			payload);
 #endif
     sendall(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendall(retxsockfd, payload, paylen);
@@ -453,51 +443,15 @@ int TcpSend::send(int retxsockfd, FmtpHeader* sendheader, char* payload,
                   size_t paylen)
 {
 #if !defined(NDEBUG) && defined(LDM_LOGGING)
-	log_debug("Sending header: flags=%#x, prodindex=%s, seqnum=%s, "
-			"payloadlen=%s", ntohs(sendheader->flags),
+	log_debug("Unicasting: flags=%#x, prodindex=%s, seqnum=%s, "
+			"payloadlen=%s, payload=%p", ntohs(sendheader->flags),
 			std::to_string(ntohl(sendheader->prodindex)).data(),
 			std::to_string(ntohl(sendheader->seqnum)).data(),
-			std::to_string(ntohs(sendheader->payloadlen)).data());
+			std::to_string(ntohs(sendheader->payloadlen)).data(),
+			payload);
 #endif
     sendallstatic(retxsockfd, sendheader, sizeof(FmtpHeader));
     sendallstatic(retxsockfd, payload, paylen);
 
     return (sizeof(FmtpHeader) + paylen);
-}
-
-
-/**
- * Reads the path MTU of a receiver connection, and updates the minimum path
- * MTU with the new obtained value (or remains unchanged).
- *
- * @param[in] sockfd    socket file descriptor of a receiver connection.
- *
- * @throw  std::system_error    if obtained MTU is invalid.
- */
-void TcpSend::updatePathMTU(int sockfd)
-{
-    int mtu = MIN_MTU;
-#ifdef IP_MTU
-    socklen_t mtulen = sizeof(mtu);
-    /*
-     * Coverity Scan #1: Fix #7: getsockopt has a return value of 0 if
-     * successful, -1 if unsuccessful. The fix simply handles the return value
-     * and throws a runtime error should the return value be -1
-     */
-    if (getsockopt(sockfd, IPPROTO_IP, IP_MTU, &mtu, &mtulen)){
-		throw std::system_error(errno, std::system_category(),
-				"fmtpRecvv3::updatePathMTU() getsockopt failed with return "
-				"value -1 in an attempt to obtain MTU.");
-    }
-    if (mtu <= 0) {
-        throw std::system_error(errno, std::system_category(),
-                "TcpSend::updatePathMTU() error obtaining MTU");
-    }
-    /* force mtu to be at least MIN_MTU, cannot afford mtu to be too small */
-    mtu = (mtu < MIN_MTU) ? MIN_MTU : mtu;
-#endif
-    /* update pmtu with the newly joined mtu */
-    if (mtu < pmtu) {
-         pmtu = mtu;
-    }
 }

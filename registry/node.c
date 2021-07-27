@@ -11,16 +11,15 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <log.h>
-#include <errno.h>
-#include <search.h>
-#include <string.h>
-
-#include <log.h>
+#include "log.h"
 #include "misc.h"
 #include "node.h"
 #include "registry.h"
 #include "stringBuf.h"
+
+#include <errno.h>
+#include <search.h>
+#include <string.h>
 
 struct regNode {
     char*       absPath;
@@ -462,28 +461,32 @@ static RegStatus freeNodes(
 }
 
 /*
- * Frees the child-nodes of a node and all their descendents.  Removes every
- * freed node from its parent node.
+ * Frees all the descendants of a node, but not the node itself.
  *
  * Arguments:
- *      node            Pointer to the node to have its child-nodes freed
- *                      along with all their descendents.  Shall not be NULL.
+ *      node            Pointer to the node to have its descendants freed.
+ *                      Shall not be NULL.
  * Returns:
  *      0               Success
  */
 static RegStatus freeChildren(
     RegNode* const      node)
 {
-    RegStatus   status = 0;
+    while (node->children != NULL) {
+        RegNode* const child = *(RegNode**)node->children; // Can't be NULL
+        void* const    ptr = tdelete(child, &node->children, compareNodes);
 
-    while (0 == status && NULL != node->children)
-        status = freeNodes(*(RegNode**)node->children);
+        log_assert(ptr != NULL); // Root node deletion => unspecified pointer
 
-    return status;
+        freeChildren(child);
+        freeNode(child);
+    }
+
+    return 0;
 }
 
 /*
- * Visits a node and all its descendents in the natural order of their path
+ * Visits a node and all its descendants in the natural order of their path
  * names.  Does nothing if "_status" is non-zero.  Marks the node as being
  * unmodified upon success.
  *
@@ -909,7 +912,7 @@ static RegStatus putValue(
 }
 
 /*
- * Clears a node.  The values of the node are freed and all descendents of
+ * Clears a node.  The values of the node are freed and all descendants of
  * the node are freed.
  *
  * Arguments:

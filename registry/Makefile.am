@@ -18,7 +18,7 @@ BUILT_SOURCES           = \
     node.h \
     registry.h \
     stringBuf.h
-include_HEADERS		= globals.h
+nodist_include_HEADERS	= globals.h
 DISTCLEANFILES          = $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES          = \

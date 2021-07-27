@@ -25,7 +25,7 @@ AM_CPPFLAGS		= \
 	-I$(top_srcdir)/ulog \
 	-I$(top_srcdir)/log \
 	-I$(top_srcdir)/misc \
-	-I$(top_srcdir)/registry
+	-I$(top_builddir)/registry -I$(top_srcdir)/registry
 
 bin_PROGRAMS		= fileIngester
 

@@ -154,6 +154,9 @@ process_prod(
             case PROD_TYPE_NWSTG:
                 prod.info.feedtype = NGRID;
                 break;
+            case PROD_TYPE_NEXRAD:
+                prod.info.feedtype = NEXRAD;
+                break;
             default:
                 prod.info.feedtype = NOTHER;
         }
@@ -208,8 +211,12 @@ process_prod(
                  psh->ptype, prod.info.sz, prod.info.seqno);
     }
 
-    status = set_timestamp (&prod.info.arrival);
-    log_info_q("timestamp %ld", prod.info.arrival);
+    if (set_timestamp (&prod.info.arrival)) {
+        log_error("Couldn't set timestamp");
+    }
+    else {
+        log_info_q("timestamp %ld", prod.info.arrival);
+    }
 
     status = lpqInsert(lpq, &prod);
     if (status == 0) {
