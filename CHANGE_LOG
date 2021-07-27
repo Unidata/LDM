@@ -1,4 +1,4 @@
-6.13.14
+6.13.14 2021-07-27T17:24:00-0600
     configure(1):
         * Defined _XOPEN_SOURCE to be 600 on and only on SunOS systems in order
           to support the C compiler; otherwise, it's 700
