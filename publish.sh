@@ -203,8 +203,8 @@ if make install >&install.log; then
 
         # Purge the FTP directory of bug-fix versions that are older than the
         # latest corresponding minor release.
-        echo Purging $host:$ftpDir of bug-fixes older than $tarball
-        if purgeDir $ftpDir; then
+#       echo Purging $host:$ftpDir of bug-fixes older than $tarball
+#       if purgeDir $ftpDir; then
         
             # Ensure that the download directory has a link to the tarball
             echo Creating symbolic link to $host:$ftpDir in $host:$downloadDir
@@ -212,8 +212,8 @@ if make install >&install.log; then
             
                 # Purge the download directory of symbolic links that are older
                 # than the latest corresponding minor release.
-                echo Purging $host:$downloadDir of bug-fixes older than $tarball
-                if purgeDir $downloadDir; then
+#               echo Purging $host:$downloadDir of bug-fixes older than $tarball
+#               if purgeDir $downloadDir; then
                 
                     # Modify the HTML file in the download directory to
                     # reference the tarball's symbolic link
@@ -232,9 +232,9 @@ if make install >&install.log; then
                             fi # New documentation referenced
                         fi # Documentation copied to website
                     fi # Download directory's HTML modified
-                fi # Download directory purged
+#               fi # Download directory purged
             fi # Link from download directory to FTP directory made
-        fi # FTP directory purged
+#       fi # FTP directory purged
     fi # Tarball copied to FTP directory
 fi # Package installed
 
