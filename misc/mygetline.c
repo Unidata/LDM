@@ -11,11 +11,12 @@
  */
 #include "config.h"
 
-#include "mygetline.h"
 #include "log.h"
+#include "mygetline.h"
 
 #include <limits.h>
 #include <string.h>
+#include <sys/types.h>
 
 // The getline() function isn't part of _XOPEN_SOURCE=600
 
@@ -31,7 +32,8 @@ mygetline(char** const restrict  lineptr,
     }
     else {
         static const int SIZE = PIPE_BUF;
-        char*            line = log_realloc(*lineptr, SIZE, "mygetline() buffer");
+        char*            line = log_realloc(*lineptr, SIZE,
+                "mygetline() buffer");
 
         if (line) {
             if (fgets(line, SIZE, stream) == NULL) {
