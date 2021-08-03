@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.15.1], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.13.15.2], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -35,6 +35,9 @@ AC_ARG_ENABLE([debug],
         AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
     ])
 
+if test -z "$CC" -a `uname -s` = "SunOS"; then
+    CC=c99
+fi
 AC_PROG_CC()
 if test "$ac_cv_prog_cc_c99" -a "$ac_cv_prog_cc_c99" = "no"; then
     AC_MSG_ERROR([No c99-conforming compiler found. Install one (e.g., gcc) and retry.])

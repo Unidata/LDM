@@ -6,7 +6,10 @@
         * Removed lint found by Coverity Scan
 
     DevOps:
-        * dev-makefile: Improve rules for "coverity-scan"
+        * dev-makefile:
+            * Improve rules for "coverity-scan"
+		* Ensure gcc(1) used
+		* Make more robust
 
 6.13.15.1       2021-07-30T17:02:11-0600
     configure(1):
