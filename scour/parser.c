@@ -68,7 +68,7 @@
  * Parses the scour configuration file and builds a linked list of only
  * vetted dictories
  *
- * @param[out]  directoriesCounter   number of valid dictory paths
+ * @param[out]  directoriesCounter   number of valid directory paths
  * @param[out]  listHead 		     list of valid directory paths
  * @retval      0                    all went well 
  * @retval      -1                   Fatal system error occurred
@@ -92,7 +92,8 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPa
         return -1;
     }
 
-    while ((getline(&line, &len, fp)) != -1) {
+    // The getline(3) function isn't part of _XOPEN_SOURCE=600
+    while ((mygetline(&line, &len, fp)) != -1) {
 		
 		if(line[0] == '#' || line[0] == '\n' ) continue;
     
