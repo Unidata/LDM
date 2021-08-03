@@ -1,5 +1,20 @@
-6.13.15.1       2021-07-29T18:04:19-0600
-    mygetline.c: Added "#include <sys/types.h>" to ensure "ssize_t"
+6.13.15.2
+    scour(1):
+        * Replaced getline(3) with mygetline(3) to accomodate Solaris
+
+    Misc:
+        * Removed lint found by Coverity Scan
+
+    DevOps:
+        * dev-makefile: Improve rules for "coverity-scan"
+
+6.13.15.1       2021-07-30T17:02:11-0600
+    configure(1):
+        * Made c99 the default compiler on SunOS systems because gcc(1) either
+          caused the configure(1) script to fail or failed to compile some files
+
+    Misc:
+        * mygetline.c: Added "#include <sys/types.h>" to ensure "ssize_t"
 
 6.13.14 2021-07-27T17:24:00-0600
     configure(1):
