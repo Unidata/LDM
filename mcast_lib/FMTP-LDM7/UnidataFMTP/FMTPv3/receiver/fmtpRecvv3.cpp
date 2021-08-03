@@ -441,13 +441,13 @@ bool fmtpRecvv3::addUnrqBOPinSet(uint32_t prodindex)
 void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
                                  const char*       payload)
 {
-    #ifdef MODBASE
-        uint32_t tmpidx = header.prodindex % MODBASE;
-    #else
-        uint32_t tmpidx = header.prodindex;
-    #endif
-
     #ifdef DEBUG2
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
+
         std::string debugmsg = "[MCAST BOP] Product #" +
             std::to_string(tmpidx);
         debugmsg += ": BOP received from multicast.";
@@ -478,13 +478,12 @@ void fmtpRecvv3::mcastBOPHandler(const FmtpHeader& header,
 bool fmtpRecvv3::retxBOPHandler(const FmtpHeader& header,
                                 const char* const FmtpPacketData)
 {
-    #ifdef MODBASE
-        uint32_t tmpidx = header.prodindex % MODBASE;
-    #else
-        uint32_t tmpidx = header.prodindex;
-    #endif
-
     #ifdef DEBUG2
+        #ifdef MODBASE
+            uint32_t tmpidx = header.prodindex % MODBASE;
+        #else
+            uint32_t tmpidx = header.prodindex;
+        #endif
         std::string debugmsg = "[RETX BOP] Product #" +
             std::to_string(tmpidx);
         debugmsg += ": BOP received from unicast.";
@@ -630,13 +629,12 @@ bool fmtpRecvv3::BOPHandler(const FmtpHeader& header,
                 #endif
             }
 
-            #ifdef MODBASE
-                uint32_t tmpidx = header.prodindex % MODBASE;
-            #else
-                uint32_t tmpidx = header.prodindex;
-            #endif
-
             #ifdef MEASURE
+                #ifdef MODBASE
+                    uint32_t tmpidx = header.prodindex % MODBASE;
+                #else
+                    uint32_t tmpidx = header.prodindex;
+                #endif
                 {
                     std::lock_guard<std::mutex> lock(trackermtx);
                     if (trackermap.count(header.prodindex)) {

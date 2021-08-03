@@ -5,6 +5,9 @@
     Misc:
         * Removed lint found by Coverity Scan
 
+    Multicast:
+        * fmtpRecvv3.c: Remove minor clang(1) lint
+
     DevOps:
         * dev-makefile:
             * Improve rules for "coverity-scan"
