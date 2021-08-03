@@ -54,7 +54,7 @@ echo "Deploying $pkgId to $ldmUser@$host"
 
 scp $tarball $ldmUser@$host:
 
-# ssh(1) is used thrice because some security policies doesn't allow
+# ssh(1) is used thrice because some security policies don't allow
 # ssh(1)ing to the remote host and then executing su(1) in a here-document.
 
 ssh -x -T $ldmUser@$host bash --login <<EOF
