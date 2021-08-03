@@ -1,4 +1,4 @@
-6.13.15.2
+6.13.15.2       2021-08-03T14:29:12-0600
     scour(1):
         * Replaced getline(3) with mygetline(3) to accomodate Solaris
 
