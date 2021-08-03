@@ -73,7 +73,8 @@ configure:	configure.ac
 
 Makefile:	configure
 	LDMHOME=`cd .. && pwd`; \
-	./configure --disable-root-actions --enable-debug --with-noaaport --with-multicast --prefix=$$LDMHOME LDMHOME=$$LDMHOME
+	./configure --disable-root-actions --enable-debug --with-noaaport \
+	    --with-multicast --prefix=$$LDMHOME LDMHOME=$$LDMHOME
 
 consistent:	configure
 	touch $@
