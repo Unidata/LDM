@@ -367,7 +367,7 @@ toClients(timestampt arrival,
         if(pq == NULL)          /* if we are "feedtest", do nothing else */
                 return;
 
-        set_timestamp(&prod.info.arrival);
+        (void)set_timestamp(&prod.info.arrival);
 
         status = pq_insert(pq, &prod);
         if(status == ENOERR)

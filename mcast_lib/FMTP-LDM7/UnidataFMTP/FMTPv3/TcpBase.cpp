@@ -26,6 +26,7 @@
  * Base class for the TcpRecv and TcpSend classes. It handles TCP connections.
  */
 
+#include "FmtpBase.h"
 #include "TcpBase.h"
 #ifdef LDM_LOGGING
     #include "log.h"
@@ -201,6 +202,10 @@ void TcpBase::read(const int    sd,
     if (!recvall(sd, &len, sizeof(len)))
     	throw std::runtime_error("TcpBase::read(): EOF");
     len = ntohl(len);
+
+    if (len > MAX_FMTP_PACKET)
+    	throw std::runtime_error("TcpBase::read(): Bad packet length: " +
+    	        std::to_string(len));
 
     #ifdef LDM_LOGGING
         log_debug("Receiving %u-byte string content on socket %d", len, sd);

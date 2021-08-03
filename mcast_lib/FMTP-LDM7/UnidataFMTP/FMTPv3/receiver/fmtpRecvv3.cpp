@@ -1185,7 +1185,7 @@ void fmtpRecvv3::retxHandler()
         }
 
         /* dynamically creates a buffer on stack based on payload size */
-        const int bufsize = header.payloadlen;
+        const int bufsize = header.payloadlen; // Limited to `UINT16_MAX`
         char      paytmp[bufsize];
         (void)memset(paytmp, 0, bufsize);
 

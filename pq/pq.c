@@ -6423,7 +6423,7 @@ pq_insertNoSig(pqueue *pq, const product *prod)
         }
 
         // log_debug_1("Setting timestamp");
-        set_timestamp(&pq->ctlp->mostRecent);
+        (void)set_timestamp(&pq->ctlp->mostRecent);
         // log_debug_1("Vetting creation time");
         vetCreationTime(&prod->info);
         /*FALLTHROUGH*/
@@ -6787,7 +6787,7 @@ pq_stats(
 
                 tqep = tqe_first(pq->tqp); /* get oldest */
                 if(tqep != NULL) {
-                  set_timestamp(&ts0);
+                  (void)set_timestamp(&ts0);
                   *age_oldestp = d_diff_timestamp(&ts0, &tqep->tv);
                 } else {
                   *age_oldestp = 0;

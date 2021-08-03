@@ -288,7 +288,7 @@ static int mySend(const prod_info* infop, const void* datap, void* xprod,
                         s_prod_info(NULL, 0, infop,
                                 log_is_enabled_debug));
 
-            set_timestamp(&now);
+            (void)set_timestamp(&now);
             latency = d_diff_timestamp(&now, &infop->arrival);
             stats.nprods++;
 

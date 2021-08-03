@@ -49,9 +49,6 @@ ldm_clnt_addr(const char* const name, struct sockaddr_in* addr)
         else if (status == ENOSYS) {
             msg = "unexpected server failure";
         }
-        else if (status == EAGAIN) {
-            msg = "try again later";
-        }
         else {
             msg = "unknown error";
         }
