@@ -214,8 +214,8 @@ int main()
 		    }
 
 		    frameRate = 0.2;
-		    printf("Sleeping for %f\n", frameRate);
-		    sleep(frameRate);
+		    // printf("Sleeping for %f\n", frameRate);
+		    //sleep(frameRate);
 		    const struct timespec t = {.tv_sec=frameRate, .tv_nsec=0};
 		    //nanosleep(&t, NULL);
 
