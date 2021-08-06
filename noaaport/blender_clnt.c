@@ -173,7 +173,7 @@ decodeCommandLine(
     }
 */
     while (0 == status &&
-           (ch = getopt(argc, argv, "vxI:l:m:R:r:s:t:")) != -1) 
+           (ch = getopt(argc, argv, "vxI:l:m:p:R:r:t:")) != -1) 
     {
         switch (ch) {
             case 'v':
@@ -518,8 +518,10 @@ frameConsumerRoutine()
             assert(status == 0 || status == ETIMEDOUT);
         }
 
-        if( hashTableIsFull_flag )  hashTableIsFull_flag = false;       
-
+        if( hashTableIsFull_flag )  
+        {
+            hashTableIsFull_flag = false;       
+        }
         
         printf("\n\n=================== ConsumeFrames Thread =======================\n");
 
@@ -528,7 +530,6 @@ frameConsumerRoutine()
         if(highWaterMark_reached)
         {
             highWaterMark_reached = false;
-            pthread_cond_signal(&cond);
         }
 
         // Run switch occurred: send out all frames from current table if any left
@@ -540,7 +541,6 @@ frameConsumerRoutine()
                 runSwitch_flag = false;
                 switchTables();
 
-                pthread_cond_signal(&cond);
             } // else runSwitch_flag is kept as SET
         } 
 
@@ -550,6 +550,8 @@ frameConsumerRoutine()
                   printf("\n\n\t(Timed-out)\n");
         
 
+        pthread_cond_signal(&cond);
+        
         status = pthread_mutex_unlock(&runMutex);
         assert(status == 0);
 
