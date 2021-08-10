@@ -5,7 +5,7 @@
 
 #define FIN                         0
 #define ONE_BILLION                 1000000000
-#define HIGH_WATER_MARK             30          // 30% of HASH_TABLE_SIZE
+#define HIGH_WATER_MARK             90          // 90% of HASH_TABLE_SIZE
 #define HASH_TABLE_SIZE             10 //15000    // CONDUIT frameRate (3500/s) * 2 * frameLatency input
 #define TABLE_NUM_1                 0
 #define TABLE_NUM_2                 1
@@ -25,13 +25,10 @@
 #define INITIAL_SEQ_NUM             0
 
 typedef struct sockaddr_in SOCK4ADDR;
-sem_t sem;
-
-pthread_t inputClientThread;
-pthread_t frameConsumerThread;
 
 typedef struct Frame {
     pthread_mutex_t aFrameMutex;
+    pthread_cond_t 	aFrameCond;
     bool            occupied;
     uint16_t        runNum;  
     uint32_t        seqNum;
