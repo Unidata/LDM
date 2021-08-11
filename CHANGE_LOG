@@ -1,9 +1,14 @@
 6.13.15         2021-08-11T14:52:31-0600
+    configure(1):
+        * Made c99 the default compiler on SunOS systems because gcc(1) either
+          caused the configure(1) script to fail or failed to compile some files
+
     scour(1):
         * Replaced getline(3) with mygetline(3) to accommodate Solaris
         * Eliminated defects found by Coverity Scan
 
     Misc:
+        * mygetline.c: Added "#include <sys/types.h>" to ensure "ssize_t"
         * Removed lint found by Coverity Scan
 
     Multicast:
@@ -15,14 +20,6 @@
 		* Ensure gcc(1) used
 		* Make more robust
             * Added "reset" target
-
-6.13.15.1       2021-07-30T17:02:11-0600
-    configure(1):
-        * Made c99 the default compiler on SunOS systems because gcc(1) either
-          caused the configure(1) script to fail or failed to compile some files
-
-    Misc:
-        * mygetline.c: Added "#include <sys/types.h>" to ensure "ssize_t"
 
 6.13.14 2021-07-27T17:24:00-0600
     configure(1):
