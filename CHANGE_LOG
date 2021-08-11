@@ -1,13 +1,7 @@
-6.13.15.3       2021-08-11T14:48:12-0600
-    scour(1):
-        * Eliminated defects found by Coverity Scan
-
-    DevOps:
-        * dev-makefile: Added "reset" target
-
-6.13.15.2       2021-08-03T14:29:12-0600
+6.13.15         2021-08-11T14:52:31-0600
     scour(1):
         * Replaced getline(3) with mygetline(3) to accommodate Solaris
+        * Eliminated defects found by Coverity Scan
 
     Misc:
         * Removed lint found by Coverity Scan
@@ -20,6 +14,7 @@
             * Improve rules for "coverity-scan"
 		* Ensure gcc(1) used
 		* Make more robust
+            * Added "reset" target
 
 6.13.15.1       2021-07-30T17:02:11-0600
     configure(1):
