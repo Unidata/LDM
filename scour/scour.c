@@ -281,6 +281,7 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
         if(isExcluded(basePath, excludedDirsList))
         {
             log_info("\nscourFilesAndDirs():  %s is EXLUDED!\n", basePath);
+            (void)closedir(dir);
             return 0;
         }
 
@@ -289,6 +290,7 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
         {
             log_add("lstat(\"%s\") failed: %s", absPath, strerror(errno));
             log_flush_error();
+            (void)closedir(dir);
             return -1;
         }
 
@@ -607,11 +609,13 @@ getExcludedDirsList(char (*list)[PATH_MAX], char *pathname)
     for (;;) {
         ssize_t nchar = mygetline(&lineptr, &bufsize, fp);
         if (nchar == 0) {   // EOF
+            (void)fclose(fp);
             return lineNo;
         }
         if (nchar == -1) {
             if (ferror(fp)) {
                 log_add_syserr("mygetline() failure");
+                (void)fclose(fp);
                 return -1;
             }
             break; // EOF encountered
@@ -619,6 +623,7 @@ getExcludedDirsList(char (*list)[PATH_MAX], char *pathname)
         if (lineNo >= MAX_EXCLUDED_DIRPATHS) {
             log_add("Number of entries exceeds limit of %d",
                     MAX_EXCLUDED_DIRPATHS);
+            (void)fclose(fp);
             return -1;
         }
         if (lineptr[nchar-1] == '\n') {
@@ -628,16 +633,18 @@ getExcludedDirsList(char (*list)[PATH_MAX], char *pathname)
         if (nchar >= sizeof(*list)) {
             log_add("Line %d in \"%s\" is too long: \"%s\"", lineNo+1,
                     pathname, lineptr);
+            (void)fclose(fp);
             return -1;
         }
-        (void)strncpy(list[lineNo++], lineptr, sizeof(*list));
+        strncpy(list[lineNo++], lineptr, sizeof(*list))[sizeof(*list)-1] = 0;
     }
+    (void)fclose(fp);
     free(lineptr);
     return lineNo; // EOF encountered
 }
 
 static void
-validateScourConfFile(char *argvPath, char *scourConfPath)
+validateScourConfFile(char *argvPath, char *scourConfPath, const size_t size)
 {
     log_add("User input argv: %s", argvPath);
     log_add("Default conf-file: %s", scourConfPath);
@@ -654,7 +661,7 @@ validateScourConfFile(char *argvPath, char *scourConfPath)
         log_add("User-supplied scour conf-file: %s", argvPath);    
         log_flush_info();
 
-        (void) memset(scourConfPath, 0, sizeof(scourConfPath));
+        (void) memset(scourConfPath, 0, size);
         (void) strncpy(scourConfPath, argvPath, PATH_MAX-1);
     }
     else {
@@ -842,7 +849,8 @@ main(int argc, char *argv[])
                         usage(progname, LOG_LEVEL_FATAL);
                         exit(EXIT_FAILURE);
                     }
-                    strcpy(logFilename, optarg);
+                    strncpy(logFilename, optarg, sizeof(logFilename));
+                    logFilename[sizeof(logFilename)-1] = 0;
                     log_info("logfilename: %s", logFilename);
                     break;
                 }
@@ -876,7 +884,8 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    (void) validateScourConfFile(argv[optind], scourConfPath);
+    (void) validateScourConfFile(argv[optind], scourConfPath,
+            sizeof(scourConfPath));
   
     // build the list of excluded directories
     excludedDirsCount = getExcludedDirsList(excludedDirsList, excludePath);

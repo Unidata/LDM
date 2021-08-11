@@ -59,6 +59,7 @@
 #include <limits.h>
 #include <libgen.h>
 
+#include "mygetline.h"
 #include "parser.h"
 #include "log.h"
 #include "globals.h"
@@ -136,12 +137,16 @@ parseConfig(int *directoriesCounter, IngestEntry_t** listHead, char *scourConfPa
         }
 
         if(itemsCounted == 2) {
-            if (!newEntryNode(listHead, dirName, daysOld, ALL_FILES))
+            if (!newEntryNode(listHead, dirName, daysOld, ALL_FILES)) {
+                (void)fclose(fp);
                 return -1; // DANGER! Assumes list will be freed by termination
+            }
         }
         if(itemsCounted == 3) {
-            if (!newEntryNode(listHead, dirName, daysOld, pattern))
+            if (!newEntryNode(listHead, dirName, daysOld, pattern)) {
+                (void)fclose(fp);
                 return -1; // DANGER! Assumes list will be freed by termination
+            }
         }
 
         entryCounter++;
@@ -371,15 +376,11 @@ vetThisDirectoryPath(char * dirName)
 bool
 isNotAccessible(char *dirPath) 
 {
-    int status = false;
     int fd = open(dirPath, O_RDONLY);
     if(fd == -1) 
-    {
-    	status = true;
-    }
-    
+        return true;
     close(fd);
-    return status;
+    return false;
 }
 
 /**
