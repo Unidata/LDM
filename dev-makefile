@@ -79,5 +79,11 @@ Makefile:	configure
 consistent:	configure
 	touch $@
 
+reset:
+	-$(MAKE) distclean
+	aclocal
+	autoreconf -fi
+	./configure $(CONFIGURE_OPTS)
+
 .PHONY: check-cc check-clang check clang-scan coverity-scan scan \
-        $(COVERITY_SCAN_FILE)
+        $(COVERITY_SCAN_FILE) reset
