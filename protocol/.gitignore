@@ -14,3 +14,7 @@ ldm_xdr.c
 timer.h
 .Tpo
 /uldb.h
+/supplied-ldm.h
+/supplied-ldm_clnt.c
+/supplied-ldm_svc.c
+/supplied-ldm_xdr.c
