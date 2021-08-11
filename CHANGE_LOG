@@ -1,6 +1,13 @@
+6.13.15.3       2021-08-11T14:48:12-0600
+    scour(1):
+        * Eliminated defects found by Coverity Scan
+
+    DevOps:
+        * dev-makefile: Added "reset" target
+
 6.13.15.2       2021-08-03T14:29:12-0600
     scour(1):
-        * Replaced getline(3) with mygetline(3) to accomodate Solaris
+        * Replaced getline(3) with mygetline(3) to accommodate Solaris
 
     Misc:
         * Removed lint found by Coverity Scan
@@ -171,7 +178,7 @@
               s to give Ed25519 more time
         * Improved FMTP packet structures regarding I/O handling and padding:
             * Deleted RETX_REQ_LEN
-            * Replaced flexible arrays with [1] to accomodate g++ 8.3
+            * Replaced flexible arrays with [1] to accommodate g++ 8.3
             * Improved BOPMsg structure
             * Eliminated use of sizeof(struct ...) where appropriate
             * Converted FMTP PDU size from a compile-time to a runtime parameter
@@ -301,7 +308,7 @@
 
 6.13.12	2020-09-30T10:25:12-0600
     Installation:
-        * Added EOF newline to regpar.tab.in to accomodate Solaris' sed(1)
+        * Added EOF newline to regpar.tab.in to accommodate Solaris' sed(1)
 
     ldmadmin(1):
         * plotmetrics:
@@ -675,7 +682,7 @@
                       it
                     * Added ignoring of SIGUSR2 before execvp()
                 * Eliminated memory-leak found by Coverity Scan
-            * Removed calls to open_on_dev_null_if_closed() to accomodate
+            * Removed calls to open_on_dev_null_if_closed() to accommodate
               replacement of log_is_stderr_valid() with log_stderr_is_open(),
               which returns true if stderr is legitimately redirected to
               /dev/null
@@ -1007,7 +1014,7 @@
 6.13.7	2019-02-01T15:19:00-0700
     Building and Installing:
         * Downgraded standard-compliance from _XOPEN_SOURCE=700 to 600 to
-          accomodate Solaris and eliminated reliance on non-standard GNU C
+          accommodate Solaris and eliminated reliance on non-standard GNU C
           functions. Lots of small changes as a result.
         * Made binary installation directory writable by LDM user only to
           obviate execution of malicious binary with root privileges.
@@ -1089,7 +1096,7 @@
     	  that don't have a version-specific subdirectory.
 
     plotMetrics(1) (used by "ldmadmin plotmetrics"):
-        * Added "eval" to pathname expansion to accomodate patterns that contain
+        * Added "eval" to pathname expansion to accommodate patterns that contain
           things like "metrics.txt{,.[1-4]}".
         * Added "-o  <template>" option to output PNG files.
 
@@ -1144,7 +1151,7 @@
             * g2vcrdncep.tbl:
                 * Added depth below sea level, (160,255)
                 * Added other missing vertical coordinates to GEMPAK's NCEP
-                  table to accomodate invalid GRIB2 messages (i.e., WMO version
+                  table to accommodate invalid GRIB2 messages (i.e., WMO version
                   number != 255 yet local version number != 0).
         * Added missing GRIB2 parameter 10.3.192.9 (storm surge).
         * Created a GEMPAK table for GRIB2 vertical coordinates from NSSL, 
@@ -1272,7 +1279,7 @@
                 * Prevent down7_halt() from sending SIGTERM to down7.thread if
                   same thread
                 * Error-return if poll() error-returns only if errno != EINTR to
-                  accomodate Linux's non-standard signaling when seteuid() is
+                  accommodate Linux's non-standard signaling when seteuid() is
                   called
                 * Don't error-return if pthread_kill(SIGTERM) fails with ESRCH
                   because completed threads can't be signaled
@@ -1307,7 +1314,7 @@
                 * Added upstream LDM7 to upstream LDM database.
                 * Improve logic of mldm_ensureRunning().
                 * Improve documentation
-                * Server-side changes to accomodate RPC assumption that calls to
+                * Server-side changes to accommodate RPC assumption that calls to
                   svc_getreqset() and svc_getreqsock() aren't nested
                     * Functions that call svc_getreqset() always destroys
                       transport
@@ -1594,9 +1601,9 @@
 
     refresh_logging(1):
         Modified makefile to create logging-specific script at build-time to
-        accomodate Solaris' broken sh(1) (`test -z "#"` fails).
+        accommodate Solaris' broken sh(1) (`test -z "#"` fails).
 
-        Changed "test -f <pid_file>" to "test -r <pid_file>" to accomodate the
+        Changed "test -f <pid_file>" to "test -r <pid_file>" to accommodate the
         non-standard test(1) built-in of Solaris' shell.
 
         Added quotes around variable substitutions.
@@ -1607,7 +1614,7 @@
 6.13.1	2016-06-02T15:29:28-0600
     Installation:
         Improved examination of system logging daemon by configure(1) script:
-            Removed check for running daemon to accomodate Docker
+            Removed check for running daemon to accommodate Docker
 
             Simplified tests for configuration and PID files.
 
@@ -3283,7 +3290,7 @@
 
         Feedtypes:
             Changed the primary name of the FT27 feedtype from "NNEXRAD"
-            to "NEXRAD3" to accomodate such data regardless of source.
+            to "NEXRAD3" to accommodate such data regardless of source.
             "NNEXRAD" is an understood alias for that feedtype.
 
         ldmadmin(1):
@@ -3304,7 +3311,7 @@
             script to use $bin_path and $PATH only.
 
             Added initialization of local variables to functions in the
-            ldmadmin(1) script to accomodate Perl interpreters that no
+            ldmadmin(1) script to accommodate Perl interpreters that no
             longer perform default initialization.
 
         rpc.ldmd(1) (LDM server): 
@@ -3610,7 +3617,7 @@
         Changed error-message "Terminating due to LDM failure..." to 
         "Disconnecting due to LDM failure..." to improve accuracy.
 
-        Moved initialization of autoshift module to accomodate incoming 
+        Moved initialization of autoshift module to accommodate incoming 
         HIYA connections that start sending data-products regardless of
         a RECLASS reply.  This solves a problem receiving data from WSI.
 
@@ -3838,7 +3845,7 @@
         Installation:
 
             Bracketed _XOPEN_SOURCE and _XOPEN_SOURCE_EXTENDED
-            in "config/ldmconfig.h" with "#ifndef" to accomodate
+            in "config/ldmconfig.h" with "#ifndef" to accommodate
             compilation environments that define those macros (contrary
             to the standard).
 
@@ -4073,7 +4080,7 @@
             should reduce problems caused by the sequential arrival of
             data-products with creation-times that are non-monotonic.
 
-            Modified down6_get_last_arrival() to accomodate Gilda's
+            Modified down6_get_last_arrival() to accommodate Gilda's
             c89(1).
 
             Improved error-messages when the LDM can't connect to an
@@ -4352,7 +4359,7 @@
         more timely manner.
 
         Eliminated use of the word "class" as a variable name to
-        accomodate C++.
+        accommodate C++.
 
         Modified LDM 6 product-sending code so that it checks the
         connection if it hasn't sent anything for 30 seconds.  This
