@@ -5,18 +5,19 @@
 
 #define FIN                         0
 #define ONE_BILLION                 1000000000
-#define HIGH_WATER_MARK             90          // 90% of HASH_TABLE_SIZE
-#define HASH_TABLE_SIZE             10 //15000    // CONDUIT frameRate (3500/s) * 2 * frameLatency input
+#define HIGH_WATER_MARK             100             // 90% of HASH_TABLE_SIZE
+#define LOW_WATER_MARK              50              // 50% of HASH_TABLE_SIZE
+#define HASH_TABLE_SIZE             10 //15000      // CONDUIT frameRate (3500/s) * 2 * frameLatency input
 #define TABLE_NUM_1                 0
 #define TABLE_NUM_2                 1
 #define NUMBER_OF_RUNS              2
 
-#define MAX_SEQ_NUM                 UINT32_MAX // (~(uint32_t)0)
+#define MAX_SEQ_NUM                 UINT32_MAX      // (~(uint32_t)0)
 
 #define PORT                        9127
 #define SBN_FRAME_SIZE              5000
 #define MIN_SOCK_TIMEOUT_MICROSEC   9000
-#define ACCEPTABLE_GAPS_COUNT       10      // number of frames missed before starting reporting
+#define ACCEPTABLE_GAPS_COUNT       10              // number of frames missed before starting reporting
 
 #define NOAAPORT_NAMEDPIPE          "/tmp/noaaportIngesterPipe"
 
@@ -28,7 +29,6 @@ typedef struct sockaddr_in SOCK4ADDR;
 
 typedef struct Frame {
     pthread_mutex_t aFrameMutex;
-    pthread_cond_t 	aFrameCond;
     bool            occupied;
     uint16_t        runNum;  
     uint32_t        seqNum;

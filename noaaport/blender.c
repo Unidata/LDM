@@ -31,12 +31,17 @@ const char* const PACKAGE_VERSION   = "0.1.0";
 
 // ============== globals ================================
 
-bool                hashTableIsFull_flag    = false;
-bool                highWaterMark_reached   = false;
+bool debug      = true;
 
-pthread_mutex_t     runMutex;
-pthread_mutex_t     aFrameMutex;
-pthread_cond_t      cond       = PTHREAD_COND_INITIALIZER;           
+bool            highWaterMark_reached       = false;
+bool            lowWaterMark_touched        = true;
+int             numberOfFramesReceivedRun1  = 0;
+int             numberOfFramesReceivedRun2  = 0;
+
+pthread_mutex_t runMutex;
+pthread_mutex_t aFrameMutex;
+pthread_cond_t  cond; 
+
 // ============== globals ================================
 
 // ==================== extern ========================================
@@ -49,21 +54,21 @@ extern bool             isHashTableEmpty(int);
 
 // ==================== extern ========================================
 
+
+static clockid_t    clockToUse = CLOCK_MONOTONIC;
+
 static pthread_t    inputClientThread;
 static pthread_t    frameConsumerThread;
 
-static char*    mcastSpec                   = NULL;
-static char*    interface                   = NULL; // Listen on all interfaces unless specified on argv
-static int      rcvBufSize                  = 0;
-static int      socketTimeOut               = MIN_SOCK_TIMEOUT_MICROSEC;
-static char     namedPipeFullName[PATH_MAX] = NOAAPORT_NAMEDPIPE;   // 
-static float    frameLatency                = 0;
-static int      fd;
+static char*        mcastSpec                   = NULL;
+static char*        interface                   = NULL; // Listen on all interfaces unless specified on argv
+static int          rcvBufSize                  = 0;
+static int          socketTimeOut               = MIN_SOCK_TIMEOUT_MICROSEC;
+static char         namedPipeFullName[PATH_MAX] = NOAAPORT_NAMEDPIPE;   // 
+static float        frameLatency                = 0;
+static int          fd;
 
-static  int     totalFramesReceived         = 0;
-static  int     numberOfFramesReceivedRun1  = 0;
-static  int     numberOfFramesReceivedRun2  = 0;
-static  int     maxFramesToKeep             = 10;    // max is 1000 (default), or input from user
+static  int         totalFramesReceived         = 0;
 
 // make it an option (CLI)
 static struct timespec max_wait = {
@@ -283,19 +288,23 @@ initFrameHashTable()
                 printf("pthread_mutex_init( frameHashTable[][] ) failure: %s\n", strerror(resp));
                 exit(EXIT_FAILURE);
             }
-            resp = pthread_cond_init(&frameHashTable[j][i].aFrameCond, NULL);
-            if(resp)
-            {
-                printf("pthread_cond_init( frameHashTable[][] ) failure: %s\n", strerror(resp));
-                exit(EXIT_FAILURE);
-            }
-
         }
     
     resp = pthread_mutex_init(&runMutex, NULL);
     if(resp)
     {
         printf("pthread_mutex_init( runMutex ) failure: %s - resp: %d\n", strerror(resp), resp);
+        exit(EXIT_FAILURE);
+    }
+
+
+    pthread_condattr_t attr;
+    int ret = pthread_condattr_setclock(&attr, clockToUse);
+    
+    resp = pthread_cond_init(&cond, &attr);
+    if(resp)
+    {
+        printf("pthread_cond_init( cond ) failure: %s\n", strerror(resp));
         exit(EXIT_FAILURE);
     }
 }
@@ -355,6 +364,7 @@ retrieveFrameHeaderFields(  unsigned char   *buffer,
         sum += (unsigned char) buffer[byteIndex];
     }
 
+    printf("Checksum: %lu, - sum: %lu\n", *pCheckSum, sum);
     if( *pCheckSum != sum) 
     {
         status = -2;
@@ -445,7 +455,8 @@ switchTables()
     oldestFrame.seqNum      = 0;
 }
 
-// mkfifo noaaportIngesterPipe
+// mkfifo noaaportIngesterPipe is performed in the Python script
+// Opening this pipe is performed once in main()
 static void 
 openNoaaportNamedPipe()
 {
@@ -461,7 +472,9 @@ openNoaaportNamedPipe()
     }
 }
 
-// send this frame to the noaaportIngester on its standard output through a pipe
+// Send this frame to the noaaportIngester on its standard output through a pipe
+//  pre-condition:  runMutex is  unLOCKED
+//  post-condition: runMutex is  unLOCKED
 static int 
 writeFrameToNamedPipe(unsigned char *data)
 {
@@ -471,17 +484,19 @@ writeFrameToNamedPipe(unsigned char *data)
   
     // DEBUG: Remove this Hello placeholder message
     char *data2 = "\n\n\t\tHello!\n\n";
+    //printf("%s\n", data2);
     write(fd, data2, strlen(data2) + 1);
 
     //write(fd, data, strlen(data) + 1);
-    //    close(fd); // closed in frameConsumeRoutine
+    
+    //    close(fd); // <-- will be closed in frameConsumeRoutine
 
     return status;
 }
 
 
-// pre-condition:  runMutex is       unLOCKED
-// post-condition: runMutex is STILL unLOCKED
+// pre-condition:  runMutex is  LOCKED
+// post-condition: runMutex is  LOCKED
 
 void consumeFrames()
 {
@@ -489,23 +504,25 @@ void consumeFrames()
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
     // popFrame will return the data in the oldest frame in either hash tables
-
-    int resp = pthread_mutex_lock(&runMutex);
-    assert( resp == 0 );
-
     unsigned char *frameData    = popFrame();   // popFrame locks aFrame Mutex
     
-    resp = pthread_mutex_unlock(&runMutex);
+    ++totalFramesReceived;  // <-- for stats
+
+    int resp = pthread_mutex_unlock(&runMutex);
     assert( resp ==  0);
 
     if(frameData != NULL)
         writeFrameToNamedPipe( frameData );
 
-    // unlock the slot just written
+    // unlock the slot just written out
     resp = pthread_mutex_unlock(&aFrameMutex);
     assert(resp == 0);
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+
+    // lock it before exiting to accommodate the calling for loop
+    resp = pthread_mutex_lock(&runMutex);
+    assert( resp == 0 );
 }
 
 static void*
@@ -525,65 +542,50 @@ frameConsumerRoutine()
         struct timespec abs_time;  
 
         // pthread cond_timedwait() expects an absolute time to wait until 
-        clock_gettime(CLOCK_REALTIME, &abs_time);
+        clock_gettime(clockToUse, &abs_time);
+
         abs_time.tv_sec     += max_wait.tv_sec;
         abs_time.tv_nsec    += max_wait.tv_nsec;
 
-        // while hashTable NOT full AND no frame is sitting in the table after a while
+        // while high water mark NOT attained AND no time out
         status = 0;
-        while ( !hashTableIsFull_flag && !highWaterMark_reached )
+        while ( !highWaterMark_reached && status != ETIMEDOUT)
         {
             // fail safe.... 
-
             status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
-
-            // runMutex is locked at this point!
-            if( status == ETIMEDOUT) 
-                break;
 
             assert(status == 0 || status == ETIMEDOUT);
         }
 
-        if( hashTableIsFull_flag )  
+        // Switch tables only if current table has become empty
+        if( runSwitch_flag && isHashTableEmpty(oldestFrame.tableNum) )
         {
-            hashTableIsFull_flag = false;       
+            // Run switch occurred:
+            // Only then switch the oldest frame to point to the other table (new run table)
+            runSwitch_flag = false;
+            switchTables(); 
+        } // else runSwitch_flag is kept as 'true'
+
+        // Either the tables have been switched at this point OR we are still on the current table
+        if( ! isHashTableEmpty(oldestFrame.tableNum) )
+        {           
+            debug && printf("\n\n=> => => => => => => ConsumeFrames Thread => => => => => => => =>\n");
+            
+            if(highWaterMark_reached ) // add this condition: && isHashTableEmpty(oldestFrame.tableNum) 
+            {                                 // to flush the table in a batch mode
+                highWaterMark_reached = false;
+            }
+
+            pthread_cond_broadcast(&cond);
+
+            // enter consumeFrame() function in locked mode for runMutex
+            consumeFrames();
+            // and exit consumeFrame() function in locked mode for runMutex
         }
         
-        printf("\n\n=> => => => => => => ConsumeFrames Thread => => => => => => => =>\n");
-        // Run switch occurred: send out oldest frames from current table if any left, 
-        // one at a time to allow the ingester AND the socat to keep up
-        if(highWaterMark_reached)
-        {
-            highWaterMark_reached = false;
-        }
-
-        // Run switch occurred: send out all frames from current table if any left
-        // Only then switch the oldest frame to point to the other table (new run table)
-        if(runSwitch_flag )
-        {
-            if( isHashTableEmpty(oldestFrame.tableNum) )
-            {
-                runSwitch_flag = false;
-                switchTables();
-
-            } // else runSwitch_flag is kept as SET
-        } 
-
-        // informative only:
-        // DEBUG
-        if( status == ETIMEDOUT)
-                  printf("\n\n\t(Timed-out)\n");
-        
-
-        pthread_cond_signal(&cond);
-
-    
         status = pthread_mutex_unlock(&runMutex);        
         assert(status == 0);
-
-        // enter consumeFrame() function in unlocked mode for runMutex
-        consumeFrames();
-
+        
     } // for
     close(fd);
 
@@ -763,7 +765,7 @@ inputBuildFrameRoutine(void *clntSocket)
         }
 
         // Before reading and inserting a new frame, consume the existing ones
-        pthread_cond_signal(&cond);
+        pthread_cond_broadcast(&cond);
         
         resp = pthread_mutex_unlock(&runMutex);
         assert( resp ==  0);
@@ -783,8 +785,9 @@ inputBuildFrameRoutine(void *clntSocket)
         // setcancelstate??? remove?
         pthread_setcancelstate(cancelState, &cancelState);
 
+        //sleep(0.2);
         // DEBUG: 
-        printf("\nContinue receiving..\n\n");
+        debug && printf("\nContinue receiving..\n\n");
         
     } //for    
 }

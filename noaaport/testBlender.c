@@ -11,6 +11,7 @@
 #include <time.h>
 #include <assert.h>
 
+#define NUMBER_FRAMES_TO_SEND 50
 #define PORT            9127
 #define MAXLINE 		1024
 #define	SAMPLE_SIZE 	1000
@@ -19,6 +20,10 @@
 
 #define MAX_FRAMES_PER_SEC	3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 		1
+
+static void
+sendFramesToBlender(int, uint32_t);
+
 
 // Build the i-th frame
 // i is used to set the sequence number and can be any positive integer 
@@ -151,34 +156,49 @@ int main()
 
 
     // Compute frame rate:
-    
-    float frameRate 	= 1 / MAX_FRAMES_PER_SEC;
+    float 		frameRate 					= 1 / MAX_FRAMES_PER_SEC;
+	uint32_t 	sequenceNum 				= 0;
+	int 		numberOfFramesSent 			= 0;
+    int 		max_connections_to_receive 	= 0;
+    printf("\ttestBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
+    printf("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
 
-	int numberOfFramesSent = 0;
-    int max_connections_to_receive = 0;
-    printf("\nTCPServer: simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
-    printf("\nTCPServer: \t Build the frames here and send them to listening client (the blender_clnt)' ...\n\n");
-
-    unsigned char frame[SBN_FRAME_SIZE] = {};
-    uint32_t sequenceNum = 0;
     while(1)
     {
-    	uint16_t run = 435;
-    	
-
    	   	printf("accept(): blocking on incoming client requests");
         clientSocket = accept(serverSockfd, (struct sockaddr *)&cliaddr, (socklen_t *) &c);
         if(clientSocket < 0) 
         {
+        	printf("\t-> testBlender (socat): Client connection NOT accepted!\n");
+        	sleep(1);
             continue;
         }
         
-        printf("\t-> TCPServer: Client connection (from blender_clnt) accepted!\n");
+        printf("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
+        
+        (void) sendFramesToBlender(clientSocket, sequenceNum);
 
+		printf("\t-> testBlender (socat): Waiting 10 seconds....\n");
+        sleep(10);
 
-	    //for (int s=0; s< SAMPLE_SIZE; s++)
-	    //for (int s=0; ; s++)
-	    for (int s=0; s < 31; s++)
+        (void) sendFramesToBlender(clientSocket, sequenceNum + NUMBER_FRAMES_TO_SEND + 1);
+
+		close(clientSocket);
+
+	} //while(1)
+	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
+	return 0;
+}
+// ==================================================
+
+static void
+sendFramesToBlender(int clientSocket, uint32_t sequenceNum)
+{
+
+    	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
+		uint16_t 		run 					= 435;
+
+	    for (int s=0; s < NUMBER_FRAMES_TO_SEND; s++)
 	    {
 
 	        // We simulate a socat server sending frames to the blender which acts as a client
@@ -200,10 +220,11 @@ int main()
 	    	// build the s-th frame
 	    	(void) buildFrameI(sequenceNum, frame, run);
 
-	    	uint16_t chksum = *(uint16_t*)(frame+14);
-		    printf("\n --> TCPServer sent %d-th frame: seqNum: %u, run: %u) to blender_clnt.\n", 
-		    	s, sequenceNum, run) ;
+	    	if(s % 100 == 0)
+		    printf("\n --> testBlender (socat) sent %d-th frame: seqNum: %u, run: %u) to blender.\n", 
+		    		s, sequenceNum, run) ;
 
+		    
 
 			int written = write(clientSocket, (const char *)frame, sizeof(frame));
 			if(written != sizeof(frame))
@@ -213,28 +234,21 @@ int main()
 		    	exit(0);
 		    }
 
-		    frameRate = 0.2;
+		    
+		    float frameRate = 0.4;
 		    // printf("Sleeping for %f\n", frameRate);
 		    //sleep(frameRate);
 		    const struct timespec t = {.tv_sec=frameRate, .tv_nsec=0};
 		    //nanosleep(&t, NULL);
 
-			printf("Continuing...\n");
+			if(s % 20000 == 0)
+				printf("Continuing... %d\n", s);
 			
-			numberOfFramesSent++;
+	//		numberOfFramesSent++;
 		    ++sequenceNum;
 
 		} // for
-
-		close(clientSocket);
-
-	} //while(1)
-	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
-	return 0;
 }
-// ==================================================
-
-
 
 
 
