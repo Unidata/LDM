@@ -173,8 +173,8 @@ isHashTableEmpty(int whichRun)
 // post-conditions: 
 //      - runMutex is still LOCKED
 //      - aFrameMutex is LOCKED (will get unlocked AFTER sending out the frame)
-unsigned char* 
-popFrame()
+Frame_t *
+popFrameSlot()
 {
     // Assumption:  if oldest frame belongs to table A and for some incongruous reason the slot is invalid
     //              then, looking for the next oldest frame should be performed in the same table A, up to
@@ -182,13 +182,6 @@ popFrame()
     // However, not finding the oldest frame should never occur - by construction
     int resp = pthread_mutex_trylock(&runMutex);
     assert( resp );
-
-    
-    unsigned char* frameData;
-
-    // bring visibility on these 2 values!! mutex
-    // use runMutex
-    // pthread_mutex_lock(&runMutex);
 
     if( isHashTableEmpty(TABLE_NUM_1) && isHashTableEmpty(TABLE_NUM_2)) 
     {
@@ -200,7 +193,7 @@ popFrame()
     int indexOfOldestSeq    = oldestFrame.index;        // oldestFrame and oldest sequence are interchangeable as far as the concept.
     int whichTable          = oldestFrame.tableNum;
 
-    // DEBUG:printf("\n   => PopFrame( oldestFrame ): currentTable: %d,  Sequence# : %lu (%d)\n", 
+    // DEBUG:printf("\n   => popFrameSlot( oldestFrame ): currentTable: %d,  Sequence# : %lu (%d)\n", 
     //    whichTable,  frameHashTable[whichTable][oldestFrame.index].seqNum, 
     //    oldestFrame.index);
 
@@ -216,7 +209,7 @@ popFrame()
         if (framesMissedCount > ACCEPTABLE_GAPS_COUNT)
         {
             printf("\n\tMissed number of frames: %d\n", framesMissedCount);
-            exit(EXIT_FAILURE);
+            return NULL;
         }
 
         // ...
@@ -228,14 +221,18 @@ popFrame()
         printf("\n\t(Trying next oldest index: %d)\n", indexOfOldestSeq);
         
     }
-    aFrameMutex = frameHashTable[whichTable][indexOfOldestSeq].aFrameMutex;
-    pthread_mutex_lock(&aFrameMutex);
-
-    resp = pthread_mutex_trylock(&aFrameMutex);
-    assert( resp );
-
-    frameData = frameHashTable[whichTable][indexOfOldestSeq].frameData; 
-    frameHashTable[whichTable][indexOfOldestSeq].occupied = false;
+    
+    /* Does not seem to work: it blocks the input thread!
+    
+    // lock the frame slot: 
+    resp = pthread_mutex_lock(&frameHashTable[whichTable][indexOfOldestSeq].aFrameMutex);
+    assert( resp == 0 );
+    
+    */
+ 
+    frameHashTable[whichTable][indexOfOldestSeq].occupied   = false;
+    frameHashTable[whichTable][indexOfOldestSeq].tableNum   = whichTable;
+    frameHashTable[whichTable][indexOfOldestSeq].frameIndex = indexOfOldestSeq;
 
     printf("   => Frame Out: currentTable: %d,  Sequence# : %lu (@ %d) \n", 
                 whichTable,  
@@ -246,28 +243,24 @@ popFrame()
     ++indexOfOldestSeq;
     indexOfOldestSeq %= HASH_TABLE_SIZE;
 
-
     (void) decrementFramesReceived(whichTable);
 
     // set the next oldest frame in this table to the next slot
     // i.e. assign the next index to oldestFrame's index attribute
     // (hashTable IS NOT full cause just decremented its entries index)
     oldestFrame.index       = indexOfOldestSeq; // <- Note: after index increase
-
-    // 
-    if( isLowWaterMarkReached(whichTable) ) 
-    {
-        lowWaterMark_touched   = true;  
-        printf("\t- low Water Mark reached: YES\n");
-    }
-    else
-    {
-        printf("\t- low Water Mark reached: NO\n");   
-    }
+    // oldestFrame.tableNum has not changed
+ 
+    // if( isLowWaterMarkReached(whichTable) ) lowWaterMark_touched   = true;  
 
     pthread_cond_broadcast(&cond);
 
-    return frameData; // this returned frameData is still protected.
+    // this returned frame slot is still protected.
+    /*Frame_t *aFrameSlot = malloc(sizeof(frameSlot)); 
+    memcpy(aFrameSlot, frameHashTable[whichTable][indexOfOldestSeq], 
+        sizeof(frameHashTable[whichTable][indexOfOldestSeq]));
+    */
+    return &frameHashTable[whichTable][indexOfOldestSeq]; 
 }
 
 static bool
@@ -302,21 +295,22 @@ slotHasOlderFrame(uint32_t aFrameSeqNum,
 
 static void
 insertFrame(int         currentTable, 
-            Frame_t*    aFrame, 
             uint32_t    sequenceNumber, 
-            unsigned char* buffer, 
+            unsigned char* buffer,     //<- buffer is the entire SBN frame (not just data)
             int         frameBytes, 
-            int         index)
+            int         index, 
+            int         frameSocketId)
 {
     //debug && 
-    printf("   -> Frame In: currentTable: %d, Sequence# : %u (@ %d) \n", 
-        currentTable, sequenceNumber, index);
+    printf("   -> Frame In: socketId: %d, table: %d, Seq# : %u (@ %d), \n", 
+        frameSocketId, currentTable, sequenceNumber, index);
 
-    memcpy(aFrame->frameData, 
+    memcpy(frameHashTable[currentTable][index].sbnFrame, 
             buffer, new_max(frameBytes, SBN_FRAME_SIZE - 1));
     
-    aFrame->seqNum          = sequenceNumber;
-    aFrame->occupied        = true;
+    frameHashTable[currentTable][index].seqNum          = sequenceNumber;
+    frameHashTable[currentTable][index].occupied        = true;
+    frameHashTable[currentTable][index].socketId        = frameSocketId;
 
     // Set the first oldest Frame to initialize the oldestFrame object
     if( theVeryFirstFrame_flag ) 
@@ -332,23 +326,33 @@ insertFrame(int         currentTable,
 }
 
 // pre-cond: entering this function with UNLOCKED runMutex.
+
+
+// pre-condition: runMutex      is LOCKED 
+// pre-condition: aFrameMutex   is unLOCKED
+
+// post-condition: runMutex      is LOCKED 
+// post-condition: aFrameMutex   is unLOCKED
 static void
 tryInsertFrame( int         currentTable, 
             uint32_t        sequenceNumber, 
             uint32_t        runNumber, 
             unsigned char*  buffer, 
-            uint16_t        frameBytes) 
+            uint16_t        frameBytes, 
+            int             frameSocketId) 
 {
-    int index = hashMe(sequenceNumber);
+
+    int index           = hashMe(sequenceNumber);
     Frame_t * aFrame    = &frameHashTable[currentTable][index];
 
-    int resp = pthread_mutex_lock(&aFrame->aFrameMutex);
+    int resp            = pthread_mutex_lock(&frameHashTable[currentTable][index].aFrameMutex);
     assert( resp == 0 );
     
     // not occupied
     if( ! isSlotOccupied(aFrame->seqNum, sequenceNumber, aFrame->runNum, runNumber) )
     {
-        insertFrame(currentTable, aFrame, sequenceNumber, buffer, frameBytes, index);
+        
+        insertFrame(currentTable, sequenceNumber, buffer, frameBytes, index, frameSocketId);
     }
     else if( slotHasOlderFrame(aFrame->seqNum, sequenceNumber, aFrame->runNum, runNumber) )
     {
@@ -359,7 +363,7 @@ tryInsertFrame( int         currentTable,
         printf("Found newer frame in slot. Buffer is likely too small or timeout is too large\n");
     }
 
-    resp = pthread_mutex_unlock(&aFrame->aFrameMutex);
+    resp = pthread_mutex_unlock(&frameHashTable[currentTable][index].aFrameMutex);
     assert( resp == 0);
 }
 
@@ -370,8 +374,9 @@ pushFrame(
         int             currentRunTable, 
         uint32_t        sequenceNumber, 
         uint16_t        runNumber, 
-        unsigned char*  dataBlockStart, 
-        uint16_t        dataBlockSize) 
+        unsigned char*  frameBuffer, 
+        uint16_t        frameSize,
+        int             frameSocketId) 
 {
     int cancelState;
     int status = pthread_mutex_lock(&runMutex);
@@ -384,13 +389,14 @@ pushFrame(
     (void) tryInsertFrame(   currentRunTable, 
                             sequenceNumber, 
                             runNumber, 
-                            dataBlockStart, 
-                            dataBlockSize);
+                            frameBuffer, 
+                            frameSize,
+                            frameSocketId);
    
     if( isHighWaterMarkReached(TABLE_NUM_1) || isHighWaterMarkReached(TABLE_NUM_2) ) 
     {
         highWaterMark_reached   = true;  // holds for both hashTable!
-        printf("\t- high Water Mark reached: YES\n");
+        //printf("\t- high Water Mark reached: YES\n");
     }
 
     pthread_cond_broadcast(&cond);

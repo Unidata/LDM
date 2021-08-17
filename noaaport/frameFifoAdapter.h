@@ -32,14 +32,16 @@ typedef struct Frame {
     bool            occupied;
     uint16_t        runNum;  
     uint32_t        seqNum;
-    unsigned char   frameData[SBN_FRAME_SIZE];   
-    time_t 			frameArrival; 
+    unsigned char   sbnFrame[SBN_FRAME_SIZE];   
+    int             socketId;
+    int             frameIndex;
+    int             tableNum;
 } Frame_t;
 
 typedef struct FrameState {
     uint32_t        seqNum;
     int             tableNum;
-    int 			index;
+    int             index;
 } FrameState_t;
 
 #endif

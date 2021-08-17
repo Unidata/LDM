@@ -48,8 +48,14 @@ pthread_cond_t  cond;
 // A hashtable of sequence numbers and frame data
 extern Frame_t          frameHashTable[NUMBER_OF_RUNS][HASH_TABLE_SIZE];
 extern FrameState_t     oldestFrame;
-extern int              pushFrame(uint16_t, uint32_t, uint16_t, unsigned char*, uint16_t);
-extern unsigned char *  popFrame();
+extern int              pushFrame(
+                            uint16_t, 
+                            uint32_t, 
+                            uint16_t, 
+                            unsigned char*, 
+                            uint16_t, 
+                            int);
+extern Frame_t*         popFrameSlot();
 extern bool             isHashTableEmpty(int);
 
 // ==================== extern ========================================
@@ -327,6 +333,38 @@ getBytes(int fd, char* buf, int nbytes)
 } 
 
 static int 
+extractSeqNumRunCheckSum(unsigned char*  buffer,
+    uint32_t *pSequenceNumber, uint16_t *pRun, uint16_t *pCheckSum)
+{
+    int status = 1; // success
+
+    // receiving: SBN 'sequence': [8-11]
+    *pSequenceNumber = (uint32_t) ntohl(*(uint32_t*)(buffer+8)); 
+
+    // receiving SBN 'run': [12-13]
+    *pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));   
+
+    // receiving SBN 'checksum': [14-15]
+    *pCheckSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));  
+
+    // Compute SBN checksum on 2 bytes as an unsigned sum of bytes 0 to 13
+    uint16_t sum = 0;
+    for (int byteIndex = 0; byteIndex<14; ++byteIndex)
+    {
+        sum += (unsigned char) buffer[byteIndex];
+    }
+
+    //printf("Checksum: %lu, - sum: %lu\n", *pCheckSum, sum);
+    if( *pCheckSum != sum) 
+    {
+        status = -2;
+    }
+
+//    printf("sum: %u - checksum: %u  - runningSum: %u\n", sum, *pCheckSum, runningSum);
+    return status;
+}
+
+static int 
 retrieveFrameHeaderFields(  unsigned char   *buffer, 
                                 int             clientSock,
                                 uint32_t        *pSequenceNumber, 
@@ -348,31 +386,7 @@ retrieveFrameHeaderFields(  unsigned char   *buffer,
         return totalBytesRead;
     }
 
-    // receiving: SBN 'sequence': [8-11]
-    *pSequenceNumber = (uint32_t) ntohl(*(uint32_t*)(buffer+8)); 
-
-    // receiving SBN 'run': [12-13]
-    *pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));   
-
-    // receiving SBN 'checksum': [14-15]
-    *pCheckSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));  
-
-    // Compute SBN checksum on 2 bytes as an unsigned sum of bytes 0 to 13
-    uint16_t sum = 0;
-    for (int byteIndex = 0; byteIndex<14; ++byteIndex)
-    {
-        sum += (unsigned char) buffer[byteIndex];
-    }
-
-    printf("Checksum: %lu, - sum: %lu\n", *pCheckSum, sum);
-    if( *pCheckSum != sum) 
-    {
-        status = -2;
-    }
-
-//    printf("sum: %u - checksum: %u  - runningSum: %u\n", sum, *pCheckSum, runningSum);
-    return status;
-
+    return extractSeqNumRunCheckSum(buffer, pSequenceNumber, pRun, pCheckSum);
 }
     
 static int
@@ -397,6 +411,7 @@ retrieveProductHeaderFields( unsigned char* buffer, int clientSock,
 
     // header length: [18-19]
     *pHeaderLength      = (uint16_t) ntohs(*(uint16_t*)(buffer+18)); 
+
     //printf("header length: %lu\n", *pHeaderLength);
 
     // skip bytes: [20-21] --> block number
@@ -412,7 +427,7 @@ retrieveProductHeaderFields( unsigned char* buffer, int clientSock,
 
     
 static int
-extractFrameDataFromBuffer( unsigned char* buffer, int clientSock,
+readFrameDataFromSocket( unsigned char* buffer, int clientSock,
                     uint16_t readByteStart, 
                     uint16_t dataBlockSize)
 {
@@ -473,22 +488,47 @@ openNoaaportNamedPipe()
 }
 
 // Send this frame to the noaaportIngester on its standard output through a pipe
-//  pre-condition:  runMutex is  unLOCKED
-//  post-condition: runMutex is  unLOCKED
+//  pre-condition:  runMutex is     unLOCKED
+//  pre-condition:  aFrameMutex is  LOCKED
+
+//  post-condition: runMutex is     unLOCKED
+//  post-condition:  aFrameMutex is  unLOCKED
 static int 
-writeFrameToNamedPipe(unsigned char *data)
+writeFrameToNamedPipe(Frame_t *frameSlot)
 {
-    int status = 0;
+    int             status      = 0;
+    char            frameElements[PATH_MAX];
+    
+    uint32_t        seqNum      = frameSlot->seqNum;
+    uint16_t        runNum      = frameSlot->runNum;
+    
+    unsigned char * sbnFrame    = frameSlot->sbnFrame;   
+    int             socketId    = frameSlot->socketId;
+    int             frameIndex  = frameSlot->frameIndex;
+    int             tableNum    = frameSlot->tableNum;
 
     // DEBUG: printf("\t=> Sending the data to the named pipe....!\n");
+    // We could call extractSeqNumRunCheckSum() to get seqNum, etc.
   
-    // DEBUG: Remove this Hello placeholder message
-    char *data2 = "\n\n\t\tHello!\n\n";
-    //printf("%s\n", data2);
-    write(fd, data2, strlen(data2) + 1);
-
-    //write(fd, data, strlen(data) + 1);
+    sprintf(frameElements, "\n\tSocketId: %d - HashTable: %d,  SeqNum: %d, (@ %d) run: %d \n",
+        socketId, tableNum, seqNum, frameIndex, runNum);
     
+    // unComment the next line to send real data: sbnFrame
+    //int resp = write(fd, sbnFrame, strlen(sbnFrame) + 1);
+    int resp = write(fd, frameElements, strlen(frameElements) + 1);
+    if( resp < 0 )
+    {
+        printf("Write frame to pipe failure. (%s)\n", strerror(resp) );
+        status = -1;
+    }
+
+    /* Locking the slot does not seem to work
+    
+    // unlock the slot just written out
+    resp = pthread_mutex_unlock(&frameHashTable[tableNum][frameIndex].aFrameMutex);
+    assert(resp == 0);
+    
+    */
     //    close(fd); // <-- will be closed in frameConsumeRoutine
 
     return status;
@@ -503,26 +543,34 @@ void consumeFrames()
     int cancelState;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
-    // popFrame will return the data in the oldest frame in either hash tables
-    unsigned char *frameData    = popFrame();   // popFrame locks aFrame Mutex
+    // popFrameSlot will return the frame slot that has the data in 
+    // the oldest frame in either hash tables
+    Frame_t* frameSlot;
+    frameSlot = popFrameSlot();   // popFrameSlot locks aFrame Mutex
+
     
+    int frameIndex  = frameSlot->frameIndex;
+    int tableNum    = frameSlot->tableNum;
+
     ++totalFramesReceived;  // <-- for stats
 
+/*
     int resp = pthread_mutex_unlock(&runMutex);
     assert( resp ==  0);
+*/
 
-    if(frameData != NULL)
-        writeFrameToNamedPipe( frameData );
+    if(frameSlot != NULL)
+        writeFrameToNamedPipe( frameSlot );
 
-    // unlock the slot just written out
-    resp = pthread_mutex_unlock(&aFrameMutex);
-    assert(resp == 0);
+    pthread_cond_broadcast(&cond);
 
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
-
+/*
     // lock it before exiting to accommodate the calling for loop
     resp = pthread_mutex_lock(&runMutex);
     assert( resp == 0 );
+*/
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
+
 }
 
 static void*
@@ -693,7 +741,8 @@ inputBuildFrameRoutine(void *clntSocket)
         
         // totalBytesRead may be > 15 bytes. buffer is guaranteed to contain at least 16 bytes
         int ret = retrieveFrameHeaderFields(  buffer, clientSockFd, 
-                                              &sequenceNumber, &currentRun, &checkSum);
+                                              &sequenceNumber, &currentRun, 
+                                              &checkSum);
         if(ret == FIN || ret == -1)
         {
             close(clientSockFd);
@@ -734,7 +783,7 @@ inputBuildFrameRoutine(void *clntSocket)
         //        dataBlockStart, dataBlockEnd);
 
         // Read frame data
-        ret = extractFrameDataFromBuffer( buffer, clientSockFd, dataBlockStart, dataBlockSize);
+        ret = readFrameDataFromSocket( buffer, clientSockFd, dataBlockStart, dataBlockSize);
         if(ret == FIN || ret == -1)
         {
             close(clientSockFd);
@@ -773,10 +822,11 @@ inputBuildFrameRoutine(void *clntSocket)
         // Store the relevant frame data in its proper hashTable for this Run#:
         // pre-cond: runMutex is UNLOCKED
         if ( pushFrame( sessionTable, 
-                    sequenceNumber, 
-                    currentRun, 
-                    buffer + dataBlockStart, 
-                    dataBlockSize) == -1 )  
+                        sequenceNumber, 
+                        currentRun, 
+                        buffer, 
+                        dataBlockEnd,
+                        clientSockFd) == -1 )  
         {
             printf("Unable to push frame to queue adapter\n");
             // gap collection here

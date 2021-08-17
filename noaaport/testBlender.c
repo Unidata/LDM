@@ -1,6 +1,7 @@
 // server program for TCP connection
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -9,25 +10,31 @@
 #include <netinet/in.h>
 #include <inttypes.h>
 #include <time.h>
+#include <pthread.h>
 #include <assert.h>
 
-#define NUMBER_FRAMES_TO_SEND 50
-#define PORT            9127
-#define MAXLINE 		1024
-#define	SAMPLE_SIZE 	1000
-#define	SBN_FRAME_SIZE 	4000
+#define NUMBER_FRAMES_TO_SEND 	50
+#define TEST_MAX_THREADS 		10
+#define PORT            		9127
+#define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
+#define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
+#define MAX_CLIENTS 			1
 
-#define MAX_FRAMES_PER_SEC	3500	// This comes from plot in rstat on oliver for CONDUIT
-#define MAX_CLIENTS 		1
+typedef struct SocketAndSeqNum {
+    uint32_t        seqNum;
+    int             socketId;
+    pthread_t 		threadId;
+} SocketAndSeqNum_t;
+
 
 static void
-sendFramesToBlender(int, uint32_t);
+sendFramesToBlender(int, uint32_t, int);
 
 
 // Build the i-th frame
 // i is used to set the sequence number and can be any positive integer 
-void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run)
+void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clientSocket)
 {
 
 	// Build the frame: Frame Header and Product Header
@@ -111,9 +118,23 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run)
     int begin 	= 16 + headerLength + dataBlockOffset;
   
     // init to a dummy data: (0xBD is 189, 0x64 is 100)
-    memset(frame+begin, 0x64, dataBlockSize);	
+    memset(frame+begin, 0x64, dataBlockSize);
 
 }
+
+
+static void *
+sendFramesToBlenderRoutine(void *clntSocketAndSeqNum)
+{
+	SocketAndSeqNum_t *ssNum = (SocketAndSeqNum_t *) clntSocketAndSeqNum;
+
+    int 		clientSock 		= (ptrdiff_t) ssNum->socketId;
+    uint32_t 	sequenceNumber 	= (uint32_t)  ssNum->seqNum;
+    pthread_t   threadId 		= (pthread_t) ssNum->threadId;
+
+	sendFramesToBlender(clientSock, sequenceNumber, (int)threadId); 
+}
+
 // Driver code
 int main()
 {
@@ -125,10 +146,10 @@ int main()
 //======================================
 
 	struct sockaddr_in 
-	  			servaddr= { .sin_family       = AF_INET, 
-                          .sin_addr.s_addr  = htonl(INADDR_ANY),  //INADDR_LOOPBACK), 
-                          .sin_port         = htons(PORT)
-                        }, 
+	  			servaddr= { .sin_family      = AF_INET, 
+                            .sin_addr.s_addr = htonl(INADDR_ANY),  //INADDR_LOOPBACK), 
+                            .sin_port        = htons(PORT)
+                          }, 
                         cliaddr;
     
     // Creating socket file descriptor
@@ -163,6 +184,9 @@ int main()
     printf("\ttestBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
     printf("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
 
+	pthread_t frameSenderThreadArray[TEST_MAX_THREADS], aThreadId;
+	SocketAndSeqNum_t socketIdAndSeqNum = { .socketId = 0, .seqNum = 0};
+    
     while(1)
     {
    	   	printf("accept(): blocking on incoming client requests");
@@ -175,15 +199,39 @@ int main()
         }
         
         printf("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
-        
-        (void) sendFramesToBlender(clientSocket, sequenceNum);
 
-		printf("\t-> testBlender (socat): Waiting 10 seconds....\n");
-        sleep(10);
+		for (int threadIndex = 0; threadIndex < TEST_MAX_THREADS; threadIndex++)
+		{
+			socketIdAndSeqNum.seqNum 	= threadIndex * NUMBER_FRAMES_TO_SEND;
+			socketIdAndSeqNum.socketId 	= clientSocket;
+	    	socketIdAndSeqNum.threadId 	= threadIndex;
 
-        (void) sendFramesToBlender(clientSocket, sequenceNum + NUMBER_FRAMES_TO_SEND + 1);
+	    	aThreadId = frameSenderThreadArray[threadIndex];
+		    if(pthread_create(&aThreadId, 
+		    	NULL, 
+		    	sendFramesToBlenderRoutine, 
+		    	(void *) &socketIdAndSeqNum) < 0) 
+		    {
+		        printf("Could not create a thread!\n");
+		        close(clientSocket);
+		        
+		        exit(EXIT_FAILURE);
+		    }
 
-		close(clientSocket);
+
+		    pthread_join(aThreadId, NULL);
+
+		    // OR 
+/*
+			if( pthread_detach(aThreadId) )
+	    	{
+	        	perror("Could not detach a newly created thread!\n");
+	        	close(clientSocket);
+	        
+	        	exit(EXIT_FAILURE);            
+	    	}
+*/
+	    } // for
 
 	} //while(1)
 	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
@@ -192,11 +240,14 @@ int main()
 // ==================================================
 
 static void
-sendFramesToBlender(int clientSocket, uint32_t sequenceNum)
+sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 {
 
     	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
 		uint16_t 		run 					= 435;
+
+    	srandom(0);
+    	int lowerLimit = 0, upperLimit = 50;   
 
 	    for (int s=0; s < NUMBER_FRAMES_TO_SEND; s++)
 	    {
@@ -204,7 +255,7 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum)
 	        // We simulate a socat server sending frames to the blender which acts as a client
 			// frames are constructed here for testing purposes      
 
-	//=================================== the frame data is simulated here ========================
+	//================== the frame data is simulated here =======
 
 	    	// simulate a run# change every 10 frames:
 	    	/*
@@ -218,13 +269,16 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum)
 			*/
 
 	    	// build the s-th frame
-	    	(void) buildFrameI(sequenceNum, frame, run);
+	    	(void) buildFrameI(sequenceNum, frame, run, clientSocket);
 
-	    	if(s % 100 == 0)
-		    printf("\n --> testBlender (socat) sent %d-th frame: seqNum: %u, run: %u) to blender.\n", 
-		    		s, sequenceNum, run) ;
+	    	// send it after x sec:
+	    	float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
+	    	sleep(snooze / 100);
+	//================== the frame data is simulated here =======
 
-		    
+	    	//if(s % 100 == 0)
+		    printf("\n --> testBlender (thread# %d) sent %d-th frame: seqNum: %u, run: %u) to blender after snoozing for %f (/100)\n", 
+		    		threadId, s, sequenceNum, run, snooze) ;
 
 			int written = write(clientSocket, (const char *)frame, sizeof(frame));
 			if(written != sizeof(frame))
