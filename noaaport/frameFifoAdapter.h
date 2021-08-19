@@ -5,9 +5,9 @@
 
 #define FIN                         0
 #define ONE_BILLION                 1000000000
-#define HIGH_WATER_MARK             100             // 90% of HASH_TABLE_SIZE
-#define LOW_WATER_MARK              50              // 50% of HASH_TABLE_SIZE
-#define HASH_TABLE_SIZE             10 //15000      // CONDUIT frameRate (3500/s) * 2 * frameLatency input
+#define HIGH_WATER_MARK             50             // % of HASH_TABLE_SIZE
+//#define LOW_WATER_MARK            0              // % of HASH_TABLE_SIZE
+#define HASH_TABLE_SIZE             100 //15000    // CONDUIT frameRate (3500/s) * 2 * frameLatency input
 #define TABLE_NUM_1                 0
 #define TABLE_NUM_2                 1
 #define NUMBER_OF_RUNS              2
@@ -40,6 +40,7 @@ typedef struct Frame {
 
 typedef struct FrameState {
     uint32_t        seqNum;
+    uint16_t        runNum;
     int             tableNum;
     int             index;
 } FrameState_t;

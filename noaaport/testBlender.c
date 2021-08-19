@@ -20,6 +20,7 @@
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 			1
+#define RUN_THREASHOLD          20
 
 typedef struct SocketAndSeqNum {
     uint32_t        seqNum;
@@ -258,15 +259,13 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 	//================== the frame data is simulated here =======
 
 	    	// simulate a run# change every 10 frames:
-	    	/*
-	    	if( !( (s) %3) ) 
+	    	if( !( (s) % RUN_THREASHOLD) )
 			{
 				run++;
 				sequenceNum = 0;	// reset after run# change
 				printf("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
 				sleep(1);
 			}
-			*/
 
 	    	// build the s-th frame
 	    	(void) buildFrameI(sequenceNum, frame, run, clientSocket);
@@ -287,13 +286,6 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 		    	perror("Error");
 		    	exit(0);
 		    }
-
-		    
-		    float frameRate = 0.4;
-		    // printf("Sleeping for %f\n", frameRate);
-		    //sleep(frameRate);
-		    const struct timespec t = {.tv_sec=frameRate, .tv_nsec=0};
-		    //nanosleep(&t, NULL);
 
 			if(s % 20000 == 0)
 				printf("Continuing... %d\n", s);

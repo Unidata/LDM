@@ -39,7 +39,7 @@ int             numberOfFramesReceivedRun1  = 0;
 int             numberOfFramesReceivedRun2  = 0;
 
 pthread_mutex_t runMutex;
-pthread_mutex_t aFrameMutex;
+//pthread_mutex_t aFrameMutex;
 pthread_cond_t  cond; 
 
 // ============== globals ================================
@@ -48,7 +48,7 @@ pthread_cond_t  cond;
 // A hashtable of sequence numbers and frame data
 extern Frame_t          frameHashTable[NUMBER_OF_RUNS][HASH_TABLE_SIZE];
 extern FrameState_t     oldestFrame;
-extern int              pushFrame(
+extern void              pushFrame(
                             uint16_t, 
                             uint32_t, 
                             uint16_t, 
@@ -58,6 +58,7 @@ extern int              pushFrame(
 extern Frame_t*         popFrameSlot();
 extern bool             isHashTableEmpty(int);
 
+extern bool             isHighWaterMarkReached(int);
 // ==================== extern ========================================
 
 
@@ -75,6 +76,8 @@ static float        frameLatency                = 0;
 static int          fd;
 
 static  int         totalFramesReceived         = 0;
+
+static  int highWaterMark                   = (int) HIGH_WATER_MARK * HASH_TABLE_SIZE / 100;
 
 // make it an option (CLI)
 static struct timespec max_wait = {
@@ -249,7 +252,7 @@ setFIFOPolicySetPriority(pthread_t pThread, char *threadName, int newPriority)
         printf("Could not set a new priority to frameConsumer thread! \n");
         printf("Current priority: %d, Max priority: %d\n",  
             param.sched_priority, thisPolicyMaxPrio);
-        exit(EXIT_FAILURE);
+       // exit(EXIT_FAILURE);
     }
 
 
@@ -257,14 +260,15 @@ setFIFOPolicySetPriority(pthread_t pThread, char *threadName, int newPriority)
     resp = pthread_setschedparam(pThread, newPolicy, &param);
     if( resp )
     {
-        printf("setFIFOPolicySetPriority() : pthread_getschedparam() failure: %s\n", strerror(resp));
-        exit(EXIT_FAILURE);
+        printf("setFIFOPolicySetPriority() : pthread_setschedparam() failure: %s\n", strerror(resp));
+        //exit(EXIT_FAILURE);
     }
-
-    newPrio = param.sched_priority;
-    printf("Thread: %s \tpriority: %d, policy: %s\n", 
-       threadName, newPrio, newPolicy == 1? "SCHED_FIFO": newPolicy == 2? "SCHED_RR" : "SCHED_OTHER");
-
+    else
+    {
+    	newPrio = param.sched_priority;
+    	printf("Thread: %s \tpriority: %d, policy: %s\n",
+    	        threadName, newPrio, newPolicy == 1? "SCHED_FIFO": newPolicy == 2? "SCHED_RR" : "SCHED_OTHER");
+    }
 }
 
 
@@ -423,6 +427,8 @@ retrieveProductHeaderFields( unsigned char* buffer, int clientSock,
     // Data Block Size: [24-25]
     *pDataBlockSize     = (uint16_t) ntohs(*(uint16_t*)(buffer+24)); 
     //printf("Data Block Size: %lu\n", *pDataBlockSize);
+
+    return totalBytesRead;
 }
 
     
@@ -439,11 +445,12 @@ readFrameDataFromSocket( unsigned char* buffer, int clientSock,
         if( totalBytesRead <  0) perror("read() failure");
     
         close(clientSock);
-        return totalBytesRead;
     }
+    return totalBytesRead;
 }
 
 // Not used
+/*
 static void 
 setTimerOnSocket(int *pSockFd, int microSec)
 {
@@ -452,8 +459,8 @@ setTimerOnSocket(int *pSockFd, int microSec)
     read_timeout.tv_sec = 0;
     read_timeout.tv_usec = microSec;
     setsockopt(*pSockFd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof(read_timeout));
-
 }
+*/
 
 static void 
 switchTables()
@@ -521,54 +528,46 @@ writeFrameToNamedPipe(Frame_t *frameSlot)
         printf("Write frame to pipe failure. (%s)\n", strerror(resp) );
         status = -1;
     }
-
-    /* Locking the slot does not seem to work
-    
-    // unlock the slot just written out
-    resp = pthread_mutex_unlock(&frameHashTable[tableNum][frameIndex].aFrameMutex);
-    assert(resp == 0);
-    
-    */
     //    close(fd); // <-- will be closed in frameConsumeRoutine
 
     return status;
 }
 
 
-// pre-condition:  runMutex is  LOCKED
+// pre-condition:  	- runMutex  is  LOCKED
+//					- hashtable is NOT empty
 // post-condition: runMutex is  LOCKED
 
 void consumeFrames()
 {
+  //  assert(pthread_mutex_trylock(&runMutex));
+  //  assert(!isHashTableEmpty(oldestFrame.tableNum));
+
     int cancelState;
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cancelState);
 
     // popFrameSlot will return the frame slot that has the data in 
     // the oldest frame in either hash tables
-    Frame_t* frameSlot;
-    frameSlot = popFrameSlot();   // popFrameSlot locks aFrame Mutex
-
-    
-    int frameIndex  = frameSlot->frameIndex;
-    int tableNum    = frameSlot->tableNum;
+    Frame_t* frameSlot = popFrameSlot();   // popFrameSlot locks aFrame Mutex
 
     ++totalFramesReceived;  // <-- for stats
 
-/*
+
     int resp = pthread_mutex_unlock(&runMutex);
     assert( resp ==  0);
-*/
 
-    if(frameSlot != NULL)
-        writeFrameToNamedPipe( frameSlot );
 
-    pthread_cond_broadcast(&cond);
+       writeFrameToNamedPipe( frameSlot );
 
-/*
-    // lock it before exiting to accommodate the calling for loop
+    // unlock the slot just written out
+    resp = pthread_mutex_unlock(&frameSlot->aFrameMutex);
+    assert(resp == 0);
+
+
+    // lock it before exiting to accommodate the calling 'for' loop
     resp = pthread_mutex_lock(&runMutex);
     assert( resp == 0 );
-*/
+
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &cancelState);
 
 }
@@ -597,7 +596,9 @@ frameConsumerRoutine()
 
         // while high water mark NOT attained AND no time out
         status = 0;
-        while ( !highWaterMark_reached && status != ETIMEDOUT)
+
+        while ( ( status == 0 && ! highWaterMark_reached) ||
+        		(isHashTableEmpty(oldestFrame.tableNum) && status == ETIMEDOUT))
         {
             // fail safe.... 
             status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
@@ -614,22 +615,15 @@ frameConsumerRoutine()
             switchTables(); 
         } // else runSwitch_flag is kept as 'true'
 
-        // Either the tables have been switched at this point OR we are still on the current table
-        if( ! isHashTableEmpty(oldestFrame.tableNum) )
-        {           
-            debug && printf("\n\n=> => => => => => => ConsumeFrames Thread => => => => => => => =>\n");
-            
-            if(highWaterMark_reached ) // add this condition: && isHashTableEmpty(oldestFrame.tableNum) 
-            {                                 // to flush the table in a batch mode
-                highWaterMark_reached = false;
-            }
+        printf("\n\n=> => => => => => => ConsumeFrames Thread => => => => => => => =>\n");
 
-            pthread_cond_broadcast(&cond);
+        // enter consumeFrame() function in locked mode for runMutex
+        consumeFrames();
+        // and exit consumeFrame() function in locked mode for runMutex
 
-            // enter consumeFrame() function in locked mode for runMutex
-            consumeFrames();
-            // and exit consumeFrame() function in locked mode for runMutex
-        }
+        int tableNum = oldestFrame.tableNum == TABLE_NUM_1? numberOfFramesReceivedRun1: numberOfFramesReceivedRun2;
+        if( highWaterMark_reached && ! isHighWaterMarkReached(oldestFrame.tableNum) )
+        	highWaterMark_reached = false;
         
         status = pthread_mutex_unlock(&runMutex);        
         assert(status == 0);
@@ -690,7 +684,7 @@ set_sigactions(void)
     (void)sigaction(SIGTERM, &sigact, NULL);
 
     /* Restart the following */
-    
+
     sigset_t sigset;
     sigact.sa_flags |= SA_RESTART;
 
@@ -725,7 +719,7 @@ inputBuildFrameRoutine(void *clntSocket)
     // loop until byte 255 is detected. And then process next 15 bytes
     for(;;)
     {
-             
+
         int n = read(clientSockFd, (char *)buffer,  1 ) ;
         if( n <= 0 )
         {
@@ -768,7 +762,7 @@ inputBuildFrameRoutine(void *clntSocket)
         }
 
 
-        //printf("headerLength: %u, dataBlockOffset: %u, dataBlockSize: %u\n", 
+        //printf("headerLength: %u, dataBlockOffset: %u, dataBlockSize: %u\n",
         //        headerLength, dataBlockOffset, dataBlockSize);
        
         // Where does the data start?
@@ -821,16 +815,12 @@ inputBuildFrameRoutine(void *clntSocket)
 
         // Store the relevant frame data in its proper hashTable for this Run#:
         // pre-cond: runMutex is UNLOCKED
-        if ( pushFrame( sessionTable, 
+        pushFrame( sessionTable,
                         sequenceNumber, 
                         currentRun, 
                         buffer, 
                         dataBlockEnd,
-                        clientSockFd) == -1 )  
-        {
-            printf("Unable to push frame to queue adapter\n");
-            // gap collection here
-        }
+                        clientSockFd);
 
         // setcancelstate??? remove?
         pthread_setcancelstate(cancelState, &cancelState);
@@ -840,6 +830,8 @@ inputBuildFrameRoutine(void *clntSocket)
         debug && printf("\nContinue receiving..\n\n");
         
     } //for    
+
+    return NULL;
 }
 
 
@@ -921,6 +913,7 @@ inputClientRoutine()
     printf("Processing TCP client...received %d connection so far\n", 
         totalTCPconnectionReceived);
 
+    return NULL;
 }
 
 // Thread creation: frame consumer, thread with a higher priority than the input clients
