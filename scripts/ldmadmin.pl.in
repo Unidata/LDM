@@ -1193,7 +1193,7 @@ sub vetQueueSize
             if (!$isFull || $minVirtResTime < 0 
                     || $minVirtResTime >= $max_latency
                     || $mvrtSize <= 0 || $mvrtSlots <= 0) {
-                $status = 0;            # reconciliation not yet needed
+                $status = 0;            # reconciliation not needed
             }
             else {
                 my $increaseQueue = "increase queue";
