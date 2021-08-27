@@ -1157,15 +1157,22 @@ sub computeNewQueueSize
 
 # Returns
 #       0       Success. Nothing wrong or it's too soon to tell.
-#       1       The queue is too small or the maximum-latency parameter is
+#       1       The LDM isn't running
+#       2       The queue is too small or the maximum-latency parameter is
 #               too large.
-#       2       Major failure.
+#       3       Major failure.
 sub vetQueueSize
 {
-    my $status = 2;                     # default major failure
+    my $status = 3;                     # default major failure
     my $etime = getElapsedTimeOfServer();
 
-    if ($etime < $max_latency) {
+    if ($etime < 0) {
+        errmsg("vetQueueSize(): The LDM isn't running");
+        $status = 1;
+    }
+    elsif ($etime < $max_latency) {
+        errmsg("vetQueueSize(): The LDM must run for at least $max_latency ".
+                "seconds");
         $status = 0;                    # too soon to tell
     }
     else {
@@ -1173,7 +1180,7 @@ sub vetQueueSize
 
         if ($?) {
             errmsg("vetQueueSize(): pqmon(1) failure");
-            $status = 2;                # major failure
+            $status = 3;                # major failure
         }
         else {
             my @params = split(/\s+/, $line);
@@ -1219,7 +1226,7 @@ sub vetQueueSize
                             "-q $newQueuePath")) {
                         errmsg("vetQueueSize(): Couldn't create new queue: ".
                             "$newQueuePath");
-                        $status = 2;            # major failure
+                        $status = 3;            # major failure
                     }
                     else {
                         my $restartNeeded;
@@ -1231,7 +1238,7 @@ sub vetQueueSize
                         }
                         else {
                             if (stop_ldm()) {
-                                $status = 2;        # major failure
+                                $status = 3;        # major failure
                             }
                             else {
                                 $restartNeeded = 1;
@@ -1239,13 +1246,13 @@ sub vetQueueSize
                         }
                         if (0 == $status) {
                             if (grow($pq_path, $newQueuePath)) {
-                                $status = 2;        # major failure
+                                $status = 3;        # major failure
                             }
                             else {
                                 print "Saving new queue parameters...\n";
                                 if (saveQueuePar($newByteCount,
                                             $newSlotCount)) {
-                                    $status = 2;    # major failure
+                                    $status = 3;    # major failure
                                 }
                             }
 
@@ -1254,7 +1261,7 @@ sub vetQueueSize
                                 if (start_ldm()) {
                                     errmsg("vetQueueSize(): ".
                                         "Couldn't restart the LDM");
-                                    $status = 2;    # major failure
+                                    $status = 3;    # major failure
                                 }
                             }
                         }               # LDM stopped
@@ -1279,7 +1286,7 @@ sub vetQueueSize
 
                     print "Saving new time parameters...\n";
                     if (saveTimePar($newTimeOffset, $newMaxLatency)) {
-                        $status = 2;    # major failure
+                        $status = 3;    # major failure
                     }
                     else {
                         if (!isRunning($pid_file, $ip_addr)) {
@@ -1289,13 +1296,13 @@ sub vetQueueSize
                             print "Restarting the LDM...\n";
                             if (stop_ldm()) {
                                 errmsg("vetQueueSize(): Couldn't stop LDM");
-                                $status = 2;        # major failure
+                                $status = 3;        # major failure
                             }
                             else {
                                 if (start_ldm()) {
                                     errmsg("vetQueueSize(): ".
                                             "Couldn't start LDM");
-                                    $status = 2;    # major failure
+                                    $status = 3;    # major failure
                                 }
                                 else {
                                     $status = 0     # success
@@ -1319,11 +1326,11 @@ sub vetQueueSize
                         "to \"$increaseQueue\" or \"$decreaseMaxLatency\" or ".
                         "manually adjust the relevant registry parameters and ".
                         "recreate the queue.");
-                    $status = 1;        # small queue or big max-latency
+                    $status = 2;        # small queue or big max-latency
                 }
                 else {
                     errmsg("Unknown reconciliation mode: \"$reconMode\"");
-                    $status = 2;        # major failure
+                    $status = 3;        # major failure
                 }
             }                           # reconciliation needed
         }                               # pqmon(1) success
