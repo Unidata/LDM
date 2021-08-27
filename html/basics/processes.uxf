@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="14.3.0">
-  <zoom_level>10</zoom_level>
+  <zoom_level>14</zoom_level>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>380</x>
-      <y>0</y>
-      <w>230</w>
-      <h>30</h>
+      <x>574</x>
+      <y>154</y>
+      <w>322</w>
+      <h>42</h>
     </coordinates>
     <panel_attributes>LDM - Processes
 style=wordwrap
@@ -18,88 +18,88 @@ fontsize=18</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>550</x>
-      <y>290</y>
-      <w>230</w>
-      <h>100</h>
+      <x>826</x>
+      <y>378</y>
+      <w>588</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-Subscription
+FEEDME or
+NOTIFYME
 m2=0..n</panel_attributes>
-    <additional_attributes>10.0;80.0;210.0;10.0</additional_attributes>
+    <additional_attributes>10.0;20.0;400.0;20.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>480</x>
-      <y>240</y>
-      <w>70</w>
-      <h>120</h>
+      <x>826</x>
+      <y>462</y>
+      <w>266</w>
+      <h>154</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-fork()
+ALLOW
 m1=0..n</panel_attributes>
-    <additional_attributes>10.0;10.0;10.0;100.0</additional_attributes>
+    <additional_attributes>170.0;90.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>550</x>
-      <y>210</y>
-      <w>230</w>
-      <h>80</h>
+      <x>1260</x>
+      <y>434</y>
+      <w>266</w>
+      <h>182</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-Products/
+Products or
 Notifications</panel_attributes>
-    <additional_attributes>210.0;60.0;10.0;10.0</additional_attributes>
+    <additional_attributes>170.0;10.0;10.0;110.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>480</x>
-      <y>380</y>
-      <w>130</w>
-      <h>130</h>
+      <x>728</x>
+      <y>462</y>
+      <w>182</w>
+      <h>252</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-fork()
+REQUEST
 m1=0..n</panel_attributes>
-    <additional_attributes>90.0;110.0;10.0;10.0</additional_attributes>
+    <additional_attributes>80.0;160.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>510</y>
-      <w>150</w>
-      <h>50</h>
+      <x>994</x>
+      <y>714</y>
+      <w>420</w>
+      <h>56</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-Products/
-Notifications</panel_attributes>
-    <additional_attributes>10.0;20.0;130.0;20.0</additional_attributes>
+Products</panel_attributes>
+    <additional_attributes>10.0;20.0;280.0;20.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>270</x>
-      <y>380</y>
-      <w>180</w>
-      <h>280</h>
+      <x>462</x>
+      <y>462</y>
+      <w>210</w>
+      <h>462</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-exec()
+EXEC
 m1=0..n</panel_attributes>
-    <additional_attributes>10.0;260.0;160.0;10.0</additional_attributes>
+    <additional_attributes>10.0;310.0;130.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>390</x>
-      <y>780</y>
-      <w>100</w>
-      <h>80</h>
+      <x>616</x>
+      <y>1092</y>
+      <w>140</w>
+      <h>112</h>
     </coordinates>
     <panel_attributes>customelement=
 // Text Elemnt
@@ -117,24 +117,24 @@ drawArc(0,height*3/5,width,height*2/5,180,180,true) fg=black bg=#222222 //Parame
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>310</x>
-      <y>680</y>
-      <w>100</w>
-      <h>130</h>
+      <x>490</x>
+      <y>952</y>
+      <w>154</w>
+      <h>182</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-uses
+FILE
 // Due to a FILE or STDIOFILE actions in 
 // the pqact(1) configuration-file</panel_attributes>
-    <additional_attributes>80.0;110.0;10.0;10.0</additional_attributes>
+    <additional_attributes>90.0;110.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLActor</id>
     <coordinates>
-      <x>0</x>
-      <y>410</y>
-      <w>60</w>
-      <h>120</h>
+      <x>56</x>
+      <y>532</y>
+      <w>84</w>
+      <h>168</h>
     </coordinates>
     <panel_attributes>LDM
 User</panel_attributes>
@@ -143,59 +143,58 @@ User</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>50</x>
-      <y>350</y>
-      <w>150</w>
-      <h>110</h>
+      <x>126</x>
+      <y>420</y>
+      <w>210</w>
+      <h>182</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
 uses</panel_attributes>
-    <additional_attributes>130.0;10.0;10.0;90.0</additional_attributes>
+    <additional_attributes>130.0;10.0;10.0;110.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>50</x>
-      <y>430</y>
-      <w>150</w>
-      <h>100</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;.
-uses
-m1=n</panel_attributes>
-    <additional_attributes>130.0;80.0;10.0;10.0</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>240</x>
-      <y>380</y>
-      <w>60</w>
-      <h>130</h>
+      <x>126</x>
+      <y>560</y>
+      <w>210</w>
+      <h>182</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
 uses</panel_attributes>
-    <additional_attributes>10.0;110.0;10.0;10.0</additional_attributes>
+    <additional_attributes>130.0;110.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>310</x>
-      <y>510</y>
-      <w>140</w>
-      <h>290</h>
+      <x>392</x>
+      <y>462</y>
+      <w>84</w>
+      <h>252</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
 uses</panel_attributes>
-    <additional_attributes>120.0;270.0;10.0;10.0</additional_attributes>
+    <additional_attributes>10.0;160.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>310</x>
-      <y>340</y>
-      <w>130</w>
-      <h>40</h>
+      <x>490</x>
+      <y>742</y>
+      <w>196</w>
+      <h>378</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+reads</panel_attributes>
+    <additional_attributes>120.0;250.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>490</x>
+      <y>406</y>
+      <w>182</w>
+      <h>56</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
 starts/stops</panel_attributes>
@@ -204,10 +203,10 @@ starts/stops</panel_attributes>
   <element>
     <id>UMLDeployment</id>
     <coordinates>
-      <x>150</x>
-      <y>110</y>
-      <w>560</w>
-      <h>640</h>
+      <x>266</x>
+      <y>294</y>
+      <w>1036</w>
+      <h>756</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Software System&gt;&gt;
 LDM</panel_attributes>
@@ -216,70 +215,74 @@ LDM</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>760</x>
-      <y>260</y>
-      <w>140</w>
-      <h>50</h>
+      <x>1386</x>
+      <y>364</y>
+      <w>266</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Receiving ldmd</panel_attributes>
+style=wordwrap
+Downstream/Receiving ldmd or notifyme</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>420</x>
-      <y>200</y>
-      <w>140</w>
-      <h>50</h>
+      <x>1064</x>
+      <y>560</y>
+      <w>210</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Sending ldmd</panel_attributes>
+style=wordwrap
+Upstream/Sending ldmd</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>420</x>
-      <y>340</y>
-      <w>140</w>
-      <h>50</h>
+      <x>644</x>
+      <y>406</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-ldmd(1) Server</panel_attributes>
+ldmd Server</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>760</x>
-      <y>490</y>
-      <w>140</w>
-      <h>50</h>
+      <x>1386</x>
+      <y>686</y>
+      <w>252</w>
+      <h>84</h>
     </coordinates>
-    <panel_attributes>&lt;&lt;Process&gt;&gt;
-Sending ldmd</panel_attributes>
+    <panel_attributes>&lt;&lt;Software System&gt;&gt;
+style=wordwrap
+ldmd</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>500</x>
-      <y>490</y>
-      <w>140</w>
-      <h>50</h>
+      <x>742</x>
+      <y>686</y>
+      <w>266</w>
+      <h>84</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Receiving ldmd</panel_attributes>
+style=wordwrap
+Downstream/Receiving ldmd</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>180</x>
-      <y>640</y>
-      <w>140</w>
-      <h>50</h>
+      <x>308</x>
+      <y>896</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 pqact</panel_attributes>
@@ -288,10 +291,10 @@ pqact</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>180</x>
-      <y>340</y>
-      <w>140</w>
-      <h>50</h>
+      <x>308</x>
+      <y>406</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 ldmadmin</panel_attributes>
@@ -300,46 +303,46 @@ ldmadmin</panel_attributes>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>180</x>
-      <y>490</y>
-      <w>140</w>
-      <h>50</h>
+      <x>308</x>
+      <y>686</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-pqmon(1) Utility</panel_attributes>
+pqmon</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>630</x>
-      <y>480</y>
-      <w>150</w>
-      <h>40</h>
+      <x>994</x>
+      <y>672</y>
+      <w>420</w>
+      <h>56</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-Subscription</panel_attributes>
-    <additional_attributes>130.0;20.0;10.0;20.0</additional_attributes>
+FEEDME</panel_attributes>
+    <additional_attributes>280.0;20.0;10.0;20.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>460</x>
-      <y>530</y>
-      <w>130</w>
-      <h>270</h>
+      <x>700</x>
+      <y>756</y>
+      <w>168</w>
+      <h>364</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>10.0;250.0;110.0;10.0</additional_attributes>
+writes</panel_attributes>
+    <additional_attributes>10.0;240.0;100.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>180</x>
-      <y>790</y>
-      <w>140</w>
-      <h>50</h>
+      <x>308</x>
+      <y>1106</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 Decoder</panel_attributes>
@@ -348,13 +351,13 @@ Decoder</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>240</x>
-      <y>680</y>
-      <w>80</w>
-      <h>130</h>
+      <x>392</x>
+      <y>952</y>
+      <w>84</w>
+      <h>182</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-popen()
+PIPE
 m1=0..n
 // Due to a PIPE action in the pqact(1)
 // configuration-file</panel_attributes>
@@ -363,22 +366,22 @@ m1=0..n
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>310</x>
-      <y>800</y>
-      <w>100</w>
-      <h>40</h>
+      <x>490</x>
+      <y>1120</y>
+      <w>154</w>
+      <h>56</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-uses</panel_attributes>
-    <additional_attributes>80.0;20.0;10.0;20.0</additional_attributes>
+writes</panel_attributes>
+    <additional_attributes>90.0;20.0;10.0;20.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>380</x>
-      <y>570</y>
-      <w>140</w>
-      <h>50</h>
+      <x>588</x>
+      <y>798</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
 Ingester</panel_attributes>
@@ -387,35 +390,35 @@ Ingester</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>440</x>
-      <y>380</y>
-      <w>70</w>
-      <h>210</h>
+      <x>672</x>
+      <y>462</y>
+      <w>98</w>
+      <h>364</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-exec()
+EXEC
 m1=0..n</panel_attributes>
-    <additional_attributes>10.0;190.0;10.0;10.0</additional_attributes>
+    <additional_attributes>10.0;240.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>440</x>
-      <y>610</y>
-      <w>60</w>
-      <h>190</h>
+      <x>672</x>
+      <y>854</y>
+      <w>98</w>
+      <h>266</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-uses</panel_attributes>
+writes</panel_attributes>
     <additional_attributes>10.0;170.0;10.0;10.0</additional_attributes>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
-      <x>750</x>
-      <y>570</y>
-      <w>140</w>
-      <h>50</h>
+      <x>0</x>
+      <y>798</y>
+      <w>196</w>
+      <h>70</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Data Source&gt;&gt;</panel_attributes>
     <additional_attributes/>
@@ -423,13 +426,101 @@ uses</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>510</x>
-      <y>570</y>
-      <w>260</w>
-      <h>40</h>
+      <x>182</x>
+      <y>798</y>
+      <w>434</w>
+      <h>56</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
 uses</panel_attributes>
-    <additional_attributes>240.0;20.0;10.0;20.0</additional_attributes>
+    <additional_attributes>10.0;20.0;290.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>742</x>
+      <y>630</y>
+      <w>448</w>
+      <h>504</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+reads</panel_attributes>
+    <additional_attributes>10.0;340.0;300.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>1386</x>
+      <y>924</y>
+      <w>252</w>
+      <h>84</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Process&gt;&gt;
+style=wordwrap
+rtstats or ldmsend</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>770</x>
+      <y>462</y>
+      <w>644</w>
+      <h>490</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+m1=HEREIS
+m2=0..n</panel_attributes>
+    <additional_attributes>10.0;10.0;440.0;330.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>952</x>
+      <y>924</y>
+      <w>266</w>
+      <h>84</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Process&gt;&gt;
+style=wordwrap
+Downstream/Receiving ldmd</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>742</x>
+      <y>994</y>
+      <w>238</w>
+      <h>182</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+writes</panel_attributes>
+    <additional_attributes>10.0;110.0;150.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1204</x>
+      <y>938</y>
+      <w>210</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+Products</panel_attributes>
+    <additional_attributes>10.0;20.0;130.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>826</x>
+      <y>420</y>
+      <w>280</w>
+      <h>532</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.
+m2=ACCEPT
+m1=0..n</panel_attributes>
+    <additional_attributes>150.0;360.0;150.0;10.0;10.0;10.0</additional_attributes>
   </element>
 </diagram>

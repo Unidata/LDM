@@ -455,7 +455,7 @@ uses</panel_attributes>
       <h>48</h>
     </coordinates>
     <panel_attributes>&lt;&lt;Process&gt;&gt;
-Downstream
+Upstream
 LDM-6 Sender
 // E.g., rtstats(1), ldmsend(1), pqsend(1)</panel_attributes>
     <additional_attributes/>
