@@ -1,7 +1,12 @@
 6.13.16.1
     ldmadmin(1):
         * Made vetQueueSize() message on error and only on error
-        
+
+    DevOps:
+        * Documentation:
+            * Removed configure(1) variables from "html/basics/index.html.in"
+              and renamed it "index.html"
+
 6.13.15         2021-08-11T14:52:31-0600
     configure(1):
         * Made c99 the default compiler on SunOS systems because gcc(1) either
