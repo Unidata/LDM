@@ -1,4 +1,7 @@
 6.13.16.1
+    build:
+        * Delete supplied rpcgen(1) output if and only if rpcgen(1) is available
+
     ldmadmin(1):
         * Made vetQueueSize() message on error and only on error
 
