@@ -1,9 +1,10 @@
 6.13.16.1       2021-09-13T14:57:42-0600
     build:
-        * Delete supplied rpcgen(1) output if and only if rpcgen(1) is available
+        * Improved handling of supplied rpcgen(1) output files on systems that
+          don't have rpcgen(1) installed 
 
     ldmadmin(1):
-        * Made vetQueueSize() message on error and only on error
+        * Made vetQueueSize() print a message only when necessary
 
     DevOps:
         * Documentation:
