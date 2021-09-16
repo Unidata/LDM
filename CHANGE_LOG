@@ -1,3 +1,9 @@
+6.13.16.1
+    ldmadmin(1):
+        * Improved:
+            * Waiting for the LDM to start
+            * Determining if the LDM is running
+
 6.13.16 2021-09-14T09:18:55-0600
     build:
         * Improved handling of supplied rpcgen(1) output files on systems that

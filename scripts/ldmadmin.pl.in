@@ -729,8 +729,7 @@ sub start
     $line_prefix .= "    ";
     ( @output ) = `$cmd_line -nvl- $ldmd_conf 2>&1` ;
     if ($?) {
-        print "start(): Problem with LDM configuration-file:\n".
-            "@output";
+        print "start(): Problem with LDM configuration-file:\n @output";
         $status = 1;
     }
     else {
@@ -745,8 +744,10 @@ sub start
         }
         else {
             # Check to make sure the LDM is running
+            sleep(2);
             while(!isRunning($pid_file, $ip_addr)) {
-                sleep(1);
+                print "LDM didn't start (check log file?). Sleeping...\n";
+                sleep(2);
             }
         }
     }
@@ -947,7 +948,7 @@ sub isRunning
     my($pid) = getPid($pid_file);
 
     if ($pid != -1) {
-	system("ps -p $pid > /dev/null 2>&1");
+        system("ps -p $pid | grep -w ldmd >/dev/null");
 	$running = !$?;
     }
 
@@ -1580,8 +1581,8 @@ sub getQueueStatus
 
     if (1 == $status) {
 	errmsg(
-	    "The self-consistency of the $name-queue couldn't be " .
-	    "determined.  See the logfile for details.");
+	    "Couldn't check queue $name-queue. " .
+	    "See the logfile for details.");
     }
     elsif (2 == $status) {
 	errmsg(
