@@ -67,6 +67,7 @@ regpar.tab:	$(srcdir)/regpar.tab.in
 	    -e 's;@''NETSTAT@;$(NETSTAT);g' \
 	    -e 's;@''TOP@;$(TOP);g' \
 	    -e 's;@''ETC_DIR@;$(ETC_DIR);g' \
+	    -e 's;@''LDM_PORT@;$(LDM_PORT);g' \
 	    $(srcdir)/regpar.tab.in >$@.tmp
 	mv $@.tmp $@
 

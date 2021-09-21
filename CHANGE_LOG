@@ -1,4 +1,7 @@
-6.13.16.1
+6.13.17.1
+    Installation:
+        * Restored setting of LDM_PORT in distribution's registry
+
     ldmadmin(1):
         * Improved:
             * Waiting for the LDM to start
