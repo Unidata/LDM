@@ -759,65 +759,73 @@ sub start_ldm
 {
     my $status = 0;     # default success
 
-    # Make sure there is no other server running
-    #print "start_ldm(): Checking for running LDM\n";
-    if (isRunning($pid_file, $ip_addr)) {
-        errmsg("start_ldm(): There is another server running, ".
-            "start aborted");
+    if (!correctInstall()) {
         $status = 1;
     }
     else {
-        #print "start_ldm(): Checking for PID-file\n";
-        if (-e $pid_file) {
-            errmsg("start_ldm(): PID-file \"$pid_file\" exists.  ".
-                "Verify that all is well and then execute ".
-                "\"ldmadmin clean\" to clean up.");
+        # Make sure there is no other server running
+        #print "start_ldm(): Checking for running LDM\n";
+        if (isRunning($pid_file, $ip_addr)) {
+            errmsg("start_ldm(): There is another server running, ".
+                "start aborted");
             $status = 1;
         }
         else {
-            # Check the queues
-            #print "start_ldm(): Checking queues\n";
-            if (!areQueuesOk())  {
-                errmsg("LDM not started");
+            #print "start_ldm(): Checking for PID-file\n";
+            if (-e $pid_file) {
+                errmsg("start_ldm(): PID-file \"$pid_file\" exists.  ".
+                    "Verify that all is well and then execute ".
+                    "\"ldmadmin clean\" to clean up.");
                 $status = 1;
             }
             else {
-                # Ensure that the upstream LDM database doesn't exist
-                #print "Attempting to delete upstream LDM database...\n";
-                system("uldbutil -d");
-                    
-                # Check the pqact(1) configuration-file(s)
-                print "Checking pqact(1) configuration-file(s)...\n";
-                my $prev_line_prefix = $line_prefix;
-                $line_prefix .= "    ";
-                if (!are_pqact_confs_ok()) {
-                    errmsg("");
+                # Check the queues
+                #print "start_ldm(): Checking queues\n";
+                if (!areQueuesOk())  {
                     $status = 1;
                 }
                 else {
-                    $line_prefix = $prev_line_prefix;
+                    # Ensure that the upstream LDM database doesn't exist
+                    #print "Attempting to delete upstream LDM database...\n";
+                    system("uldbutil -d");
+                        
+                    # Check the pqact(1) configuration-file(s)
+                    print "Checking pqact(1) configuration-file(s)...\n";
+                    my $prev_line_prefix = $line_prefix;
+                    $line_prefix .= "    ";
+                    if (!are_pqact_confs_ok()) {
+                        errmsg("");
+                        $status = 1;
+                    }
+                    else {
+                        $line_prefix = $prev_line_prefix;
 
-                    # Rotate the ldm log files if appropriate
-                    system("mkdir -p `dirname $log_file`");
-                    if ($log_rotate) {
-                        #print "start_ldm(): Rotating log files\n";
-                        if (new_log()) {
-                            errmsg("start_ldm(): ".
-                                "Couldn't rotate log files");
-                            $status = 1;
+                        # Rotate the ldm log files if appropriate
+                        system("mkdir -p `dirname $log_file`");
+                        if ($log_rotate) {
+                            #print "start_ldm(): Rotating log files\n";
+                            if (new_log()) {
+                                errmsg("start_ldm(): ".
+                                    "Couldn't rotate log files");
+                                $status = 1;
+                            }
                         }
-                    }
 
-                    if (0 == $status) {
-                        # Reset queue metrics
-                        system("pqutil -C");
+                        if (0 == $status) {
+                            # Reset queue metrics
+                            system("pqutil -C");
 
-                        $status = start();
-                    }
-                }                   # pqact(1) config-files OK
-            }                       # product-queue OK
-        }                           # PID-file doesn't exist
-    }                               # LDM not running
+                            $status = start();
+                        }
+                    }                   # pqact(1) config-files OK
+                }                       # product-queue OK
+            }                           # PID-file doesn't exist
+        }                               # LDM not running
+    }                                   # LDM not installed correctly
+
+    if ($status) {
+        errmsg("LDM not started");
+    }
 
     return $status;
 }
@@ -934,6 +942,44 @@ sub ldm_config
     print "\n";
 
     return 0;
+}
+
+###############################################################################
+# check that the LDM was installed correctly.
+# return 1 if yes, 0 if no
+###############################################################################
+
+sub correctInstall
+{
+    my $success = 0;
+    my $pathname = $ldmhome."/bin/ldmd";
+
+    if (!-e $pathname) {
+        errmsg("LDM program $pathname doesn't exist!");
+    }
+    else {
+        chomp(my($line) = `ls -l $pathname`);
+
+        if ($?) {
+            errmsg("correctInstall(): ls(1) failure");
+        }
+        else {
+            my @fields = split(/\s+/, $line);
+            if ($fields[2] !~ /^root$/) {
+                errmsg("correctInstall(): $pathname is owned by $fields[2]; ".
+                    "not root. Was \"make root-actions\" executed?");
+            }
+            elsif ($fields[0] !~ /^-rws.*/) {
+                errmsg("correctInstall(): $pathname isn't SETUID. ".
+                    "Was \"make root-actions\" executed?");
+            }
+            else {
+                $success = 1;
+            }
+        }
+    }
+
+    return $success;
 }
 
 ###############################################################################

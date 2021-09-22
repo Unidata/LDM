@@ -6,7 +6,9 @@
         * Improved:
             * Waiting for the LDM to start
             * Determining if the LDM is running
-            * Determining if the product-queue exists
+        * "ldmadmin start" verifies that
+            * The product-queue exists
+            * ldmd(1) owned by root and setuid
 
 6.13.16 2021-09-14T09:18:55-0600
     build:
