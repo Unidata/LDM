@@ -1,6 +1,7 @@
 6.13.17.1
     Installation:
         * Restored setting of LDM_PORT in distribution's registry
+        * Added support for use of chronyd(8) instead of ntpdate(8)
 
     ldmadmin(1):
         * Improved:
@@ -9,6 +10,7 @@
         * "ldmadmin start" verifies that
             * The product-queue exists
             * ldmd(1) owned by root and setuid
+        * Added support for use of chronyd(8) instead of ntpdate(8)
 
 6.13.16 2021-09-14T09:18:55-0600
     build:

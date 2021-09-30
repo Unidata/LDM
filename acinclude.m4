@@ -198,9 +198,9 @@ AC_DEFUN([UD_PROG_RPCGEN], [dnl
 dnl Find the ntpdate(8) program.
 dnl
 AC_DEFUN([UD_PROG_NTPDATE], [dnl
-    AC_ARG_VAR([NTPDATE], [ntpdate(8) utility])
+    AC_ARG_VAR([NTPDATE], [time utility (e.g., ntpdate, chronyd)])
     AC_CACHE_VAL([ac_cv_path_NTPDATE],
-	[AC_PATH_PROG([NTPDATE], [ntpdate], [ntpdate],
+	[AC_PATH_PROGS([NTPDATE], [chronyd ntpdate], [ntpdate],
 	    [$PATH$PATH_SEPARATOR/usr/sbin$PATH_SEPARATOR/sbin])])
 ])dnl
 

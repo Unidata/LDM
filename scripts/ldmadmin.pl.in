@@ -1773,20 +1773,34 @@ sub checkTime
 		my $i = int(rand(scalar(@hosts)));
 		my $timeServer = $hosts[$i];
 		@hosts = (@hosts[0 .. ($i-1)], @hosts[($i+1) .. $#hosts]);
-		# ALTERNATIVE?: chronyd -Q 'pool pool.ntp.org iburst'
-		if (!open(NTPDATE,
-		    "$ntpdate -q -t $ntpdate_timeout $timeServer 2>&1 |")) {
+		my $timeCmd = $ntpdate;
+		if ($timeCmd =~ /ntpdate/) {
+		    $timeCmd .= " -q -t $ntpdate_timeout $timeServer";
+		}
+		elsif ($timeCmd =~ /chronyd/) {
+		    $timeCmd .= " -Q 'server $timeServer iburst'";
+		}
+		else {
 		    errmsg("\n".
-			"Couldn't execute the command \"$ntpdate\": $!.  ".
-                        "Execute the command \"regutil -s path ".
+		        "Time utility \"$ntpdate\" isn't supported. ".
+                        "Execute the command \"regutil -s <path> ".
                         "regpath{NTPDATE_COMMAND}\" to set the pathname of ".
-                        "the ntpdate(1) utility to \"path\".");
+                        "the time utility to \"ntpdate\" or \"chronyd\".");
+		    last;
+		}
+		if (!open(NTPDATE, "$timeCmd 2>&1 |")) {
+		    errmsg("\n".
+			"Couldn't execute the time utility \"$ntpdate\": $!.  ".
+                        "Execute the command \"regutil -s <path> ".
+                        "regpath{NTPDATE_COMMAND}\" to set the pathname of ".
+                        "the time utility to <path>.");
 		    last;
 		}
 		else {
 		    my $offset;
 		    while (<NTPDATE>) {
-			if (/offset\s+([+-]?\d*\.\d*)/) {
+			if (/ [+-]?(\d*\.\d*) sec/) {
+#			if (/offset\s+([+-]?\d*\.\d*)/) {
 			    $offset = $1;
 			    last;
 			}
@@ -1795,7 +1809,7 @@ sub checkTime
 		    if (length($offset) == 0) {
 			errmsg("\n".
 			    "Couldn't get time from time-server at ".
-			    "$timeServer using the ntpdate(1) utility, ".
+			    "$timeServer using utility, ".
 			    "\"$ntpdate\".  ".
 			    "If the utility is valid and this happens often, ".
 			    "then remove $timeServer ".
