@@ -1,4 +1,4 @@
-6.13.17.1
+6.13.17.1       2021-10-11T09:18:16-0600
     Installation:
         * Restored setting of LDM_PORT in distribution's registry
         * Added support for use of chronyd(8) instead of ntpdate(8)
