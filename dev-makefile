@@ -1,5 +1,5 @@
 LDMHOME		= `cd .. && pwd`
-CONFIGURE_OPTS	= --disable-root-actions --enable-debug --with-noaaport --with-multicast --prefix=$(LDMHOME) LDMHOME=$(LDMHOME)
+CONFIGURE_OPTS	= --disable-root-actions --enable-debug --with-noaaport --prefix=$(LDMHOME) LDMHOME=$(LDMHOME)
 
 # Check package using cc(1)
 check-cc:
