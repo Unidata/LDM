@@ -74,6 +74,93 @@ static int      doSomething = 1; ///< Do something or just check config-file?
 static unsigned maxClients = 256;
 static int      exit_status = 0;
 
+#define MAXFD 64
+
+static void
+Signal(int sig, void(*action)(int))
+{
+    struct sigaction sigact;
+
+    (void)sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = action;
+    (void)sigaction(SIGHUP, &sigact, NULL);
+}
+
+static void
+redirectStdIo()
+{
+    /*
+     * Redirect stdin, stdout, and stderr to /dev/null so that their accidental
+     * use -- by a library function, for example -- doesn't cause an error.
+     */
+    (void)open("/dev/null", O_RDONLY);
+    (void)open("/dev/null", O_RDWR);
+    (void)open("/dev/null", O_RDWR);
+}
+
+/**
+ * Converts the current process into a daemon. Taken from section 13.4 of "Unix
+ * Network Programming" Volume 1, Third Edition, by Richard Stevens.
+ *
+ * @retval true   Success
+ * @retval false  Failure
+ */
+static bool
+daemonize()
+{
+    pid_t pid = fork();
+    if (pid < 0) {
+        log_add_syserr("fork() failure");
+        return false;
+    }
+
+    if (pid > 0) {
+        // Parent
+        _exit(0);
+    }
+
+    // Child 1 continues...
+    // Become session leader
+    if (setsid() < 0) {
+        log_add_syserr("setsid() failure");
+        return false;
+    }
+
+    /*
+     * Ignore the SIGHUP that the second child process will receive when the
+     * session leader terminates.
+     */
+    Signal(SIGHUP, SIG_IGN);
+
+    /*
+     * Fork a second time to guarantee that the daemon isn't a session leader
+     * and, consequently, cannot acquire a controlling terminal by opening a
+     * terminal device in the future.
+     *
+     * "Paranoia strikes deep. Into your life it will creep. ..."
+     */
+    if ((pid = fork()) < 0) {
+        log_add_syserr("fork() failure");
+        return false;
+    }
+
+    if (pid) {
+        // Parent
+        (void)printf("%ld\n", (long)pid);
+        _exit(0); // Child 1 terminates
+    }
+
+    // Child 2 continues...
+    // Close most file descriptors
+    for (int i = 0; i < MAXFD; ++i)
+        close(i);
+
+    redirectStdIo();
+
+    return true;
+}
+
 static pid_t reap(
         pid_t pid,
         int options)
