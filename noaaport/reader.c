@@ -160,13 +160,13 @@ readerStart(
                 status = 1;
             }
             else {
-                log_debug("fifo_readFd() failure");
+                log_warning("fifo_readFd() failure");
                 status = 2;
             }
             break;
         }
         if (0 == nbytes) {
-            log_debug("FIFO EOF");
+            log_notice("FIFO EOF");
             break; // EOF
         }
 
