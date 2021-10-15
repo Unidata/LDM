@@ -106,7 +106,7 @@ daemonize()
 
     if (pid > 0) {
         // Parent
-        _exit(0);
+        exit(0);
     }
 
     // Child 1 continues...
@@ -137,7 +137,7 @@ daemonize()
     if (pid) {
         // Parent
         (void)printf("%ld\n", (long)pid);
-        _exit(0); // Child 1 terminates
+        exit(0); // Child 1 terminates
     }
 
     // Child 2 continues...
@@ -1034,16 +1034,8 @@ int main(
         exit(1);
     }
 
-    if (!becomeDaemon) {
-        /*
-         * Make this process a process group leader so that all child processes
-         * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
-         * `cleanup()`.
-         */
-        (void)setpgid(0, 0); // can't fail
-    }
 #ifndef DONTFORK
-    else {
+    if (becomeDaemon) {
         if (reg_close()) {
             log_add("reg_close() failure");
             log_flush_error();
@@ -1060,6 +1052,12 @@ int main(
         log_avoid_stderr(); // Because this process is now a daemon
     }
 #endif
+    /*
+     * Make this process a process group leader so that all child processes
+     * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
+     * `cleanup()`.
+     */
+    (void)setpgid(0, 0); // can't fail
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
