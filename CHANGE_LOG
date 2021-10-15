@@ -1,4 +1,4 @@
-6.13.17.2
+6.13.17.2       2021-10-15T13:58:42-0600
     noaaportIngester(1): Now logs reason for termination of reader
 
 6.13.17.1       2021-10-11T09:18:16-0600
