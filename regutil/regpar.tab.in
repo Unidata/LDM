@@ -6,7 +6,7 @@ CHECK_TIME:/check-time/enabled:Whether or not the command "<tt><a href="glindex.
 CHECK_TIME_LIMIT:/check-time/limit:The maximum amount, in seconds, that the system clock can be off and still be acceptable.:10:check_time_limit
 WARN_IF_CHECK_TIME_DISABLED:/check-time/warn-if-disabled:Whether or not the command "<tt><a href="glindex.html#ldmadmin">ldmadmin</a> check</tt>" should print a warning message if checking the system clock is disabled.  Zero means no; non-zero means yes.:1:warn_if_check_time_disabled
 NTPDATE_COMMAND:/check-time/ntpdate/command:The pathname of the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility for checking the system clock.  The default is set by the <tt>configure(1)</tt> script.:@NTPDATE@:ntpdate
-NTPDATE_SERVERS:/check-time/ntpdate/servers:Time servers for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:ntp.ucsd.edu ntp1.cs.wisc.edu ntppub.tamu.edu pool.ntp.org:time_servers
+NTPDATE_SERVERS:/check-time/ntpdate/servers:Time servers for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:us.pool.ntp.org:time_servers
 NTPDATE_TIMEOUT:/check-time/ntpdate/timeout:Timeout, in seconds, for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:5:ntpdate_timeout
 LOG_COUNT:/log/count:The number of LDM log files to keep around.:7:numlogs
 LOG_FILE:/log/file:The pathname of the LDM log file.  The default is set by the <tt>configure(1)</tt> script.:@LOG_FILE@
