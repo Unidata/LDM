@@ -1,4 +1,4 @@
-6.13.17.3
+6.13.17.3       2021-10-20T11:42:16-0600
     ldmd(1):
         * Ensure printing of process ID in daemonize()
         * Always make final process a group leader
