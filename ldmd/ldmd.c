@@ -88,8 +88,8 @@ Signal(int sig, void(*action)(int))
 }
 
 /**
- * Converts the current process into a daemon. Taken from section 13.4 of "Unix
- * Network Programming" Volume 1, Third Edition, by Richard Stevens.
+ * Converts the current process into a daemon. Adapted from section 13.4 of
+ * "Unix Network Programming" Volume 1, Third Edition, by Richard Stevens.
  *
  * @retval 0      Success
  * @retval 1      fork(2) failure
