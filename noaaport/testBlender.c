@@ -4,23 +4,19 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
-#include <inttypes.h>
-#include <time.h>
 #include <pthread.h>
 #include <assert.h>
 
-#define NUMBER_FRAMES_TO_SEND 	50
-#define TEST_MAX_THREADS 		10
+#define NUMBER_FRAMES_TO_SEND 	135
+#define TEST_MAX_THREADS 		2
 #define PORT            		9127
 #define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 			1
-#define RUN_THREASHOLD          20
+#define RUN_THRESHOLD           60
 
 typedef struct SocketAndSeqNum {
     uint32_t        seqNum;
@@ -245,7 +241,7 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 {
 
     	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
-		uint16_t 		run 					= 435;
+		uint16_t 		run 					= 0;
 
     	srandom(0);
     	int lowerLimit = 0, upperLimit = 50;   
@@ -258,8 +254,8 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 
 	//================== the frame data is simulated here =======
 
-	    	// simulate a run# change every 10 frames:
-	    	if( !( (s) % RUN_THREASHOLD) )
+	    	// simulate a run# change every RUN_THRESHOLD (i.e. 60) frames:
+	    	if( !( (s) % RUN_THRESHOLD) )
 			{
 				run++;
 				sequenceNum = 0;	// reset after run# change
@@ -272,17 +268,17 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 
 	    	// send it after x sec:
 	    	float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
-	    	sleep(snooze / 100);
+	    	usleep( ( snooze / 100 ) * 1000000 );
 	//================== the frame data is simulated here =======
 
 	    	//if(s % 100 == 0)
-		    printf("\n --> testBlender (thread# %d) sent %d-th frame: seqNum: %u, run: %u) to blender after snoozing for %f (/100)\n", 
-		    		threadId, s, sequenceNum, run, snooze) ;
+		    printf("\n --> testBlender (thread# %d) sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
+		    		threadId, s, sequenceNum, run) ;
 
 			int written = write(clientSocket, (const char *)frame, sizeof(frame));
 			if(written != sizeof(frame))
 		    {
-		    	printf("Write failed...\n");
+			printf("Write failed...\n");
 		    	perror("Error");
 		    	exit(0);
 		    }
@@ -296,21 +292,10 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 		} // for
 }
 
-
-
-
-
-
-
-
-
 /*
-
         ++totalTCPconnectionReceived;
         printf("Processing TCP client...received %d connection so far\n", 
             totalTCPconnectionReceived);
-    
     } // for
 }
-
 */
