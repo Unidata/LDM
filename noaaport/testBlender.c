@@ -9,14 +9,14 @@
 #include <pthread.h>
 #include <assert.h>
 
-#define NUMBER_FRAMES_TO_SEND 	135
+#define NUMBER_FRAMES_TO_SEND 	15
 #define TEST_MAX_THREADS 		2
 #define PORT            		9127
 #define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 			1
-#define RUN_THRESHOLD           60
+#define RUN_THRESHOLD           4
 
 typedef struct SocketAndSeqNum {
     uint32_t        seqNum;
@@ -260,7 +260,7 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 				run++;
 				sequenceNum = 0;	// reset after run# change
 				printf("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
-				sleep(1);
+				sleep(3);
 			}
 
 	    	// build the s-th frame

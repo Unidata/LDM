@@ -32,16 +32,16 @@ static pthread_mutex_t mutex;
 //  ========================================================================
 
 // Define the 2 hash table structures
-typedef struct {
+typedef struct hts {
     int            		runNum;
     HashTableStruct_t* 	impl;
 } HashTableInfo_t;
 
 HashTableInfo_t hashTableInfos[2];
 
-static HashTableInfo_t* 	pCurr;       // Hash table currently being filled
+static HashTableInfo_t* 	pNext;       // Hash table currently being filled
 static HashTableInfo_t* 	pPrev;       // Hash table previously being filled
-static HashTableInfo_t* 	pLastOutput; // Hash table of last output frame
+static HashTableInfo_t* 	pOut; // Hash table of last output frame
 
 void
 htm_init()
@@ -67,11 +67,11 @@ htm_init()
 
     }
 
-    pCurr 		= hashTableInfos;	// 0
-    printf("Initial pCurr->runNum: %u\n", pCurr->runNum);
-    pPrev 		= hashTableInfos + 1;
+    pNext 		= hashTableInfos;	// 0
+    printf("Initial pCurr->runNum: %u\n", pNext->runNum);
+    pPrev 		= hashTableInfos+1;
     printf("Initial pPrev->runNum: %u\n", pPrev->runNum);
-    pLastOutput = pCurr;
+    pOut = pPrev;
 
     if( pthread_mutex_init(&mutex, NULL) )
     {
@@ -92,38 +92,47 @@ htm_tryInsert(uint16_t runNum,
 	lockIt( &mutex );
 
 	// Debug:
-	printf("\n============ Inserting seqNum %u in runNum: %u =========\n", seqNum, runNum);
+	printf("\n============ Inserting seqNum %u in runNum: %u =========\n",
+			seqNum, runNum);
 
-    if (pCurr->runNum == -1)
-        pCurr->runNum = runNum; // Handles startup
+    if (pNext->runNum == -1)
+        pNext->runNum = runNum; // Handles startup
 
-    if (runNum != pCurr->runNum && runNum != pPrev->runNum )
+    // if incoming frame's runNum has changed from current one
+    // AND is also different from the previous one
+    // THEN proceed to switching the tables if the previous table is empty
+    if (runNum != pNext->runNum && runNum != pPrev->runNum )
     {
 
-		printf("if (runNum != pCurr->runNum && runNum != pPrev->runNum )...runNum: %u, pCurr: %u, pPrev: %u\n",
-				runNum, pCurr->runNum, pPrev->runNum);
+		printf("if (runNum !=   pCurr->runNum && runNum != pPrev->runNum )...\
+				\n  runNum: %u, pCurr: %u,                 pPrev: %u\n",
+				runNum, pNext->runNum, pPrev->runNum);
 
     	if( hti_isEmpty( pPrev->impl ) )
     	{
-    		printf("pPrev->impl is empty: count: %u (pPrev->runNum: %u)!\n", pPrev->impl->frameCounter, pPrev->runNum);
+    		printf("pPrev->impl is empty (count: %u, pPrev->runNum: %u)!\n",
+    				pPrev->impl->frameCounter, pPrev->runNum);
     		printf("Swapping pPrev and pCurr...\n");
-    		// Swap tables (previous table is available)
-			HashTableInfo_t* pTmp = pCurr;
-			pCurr = pPrev;
+    		// Swap tables ('cause previous table is available)
+			HashTableInfo_t* pTmp = pNext;
+			pNext = pPrev;
 			pPrev = pTmp;
-			pCurr->runNum = runNum;
+			pNext->runNum = runNum;
     	}
     	else
     	{
     		// too bad!
-    		printf("Adjust sleep and wait time until it works!...\n");
+    		printf("\n\nAdjust sleep and wait time until it works!...\n\n");
+    		printf("pPrev->impl is NOT empty: count: %u (pPrev->runNum: %u)!\n",
+    				pPrev->impl->frameCounter, pPrev->runNum);
+
     	}
     }
 
     printf("Which table to use to insert? %s\n",
-    				(runNum == pCurr->runNum)? "pCurr":"pPrev");
-    HashTableStruct_t* impl = (runNum == pCurr->runNum)
-            ? pCurr->impl
+    				(runNum == pNext->runNum)? "pCurr":"pPrev");
+    HashTableStruct_t* impl = (runNum == pNext->runNum)
+            ? pNext->impl
             : pPrev->impl; // Insert older frame into previous table
 
     int status = hti_tryInsert(impl, seqNum, runNum, data, nbytes); // could fail: duplicate, too old, success
@@ -158,21 +167,19 @@ htm_getOldestFrame(Frame_t* oldestFrame )
 	// mutex lock HTMan mutex
 	lockIt(&mutex);
 
-    if (hti_isEmpty(pLastOutput->impl) && pCurr != pLastOutput)
+    if (hti_isEmpty(pOut->impl) && pNext != pOut)
     {
     	printf("getOldestFrame(): pCurr: %u, pLastOutput: %u \n",
-    			pCurr->runNum, pLastOutput->runNum);
+    			pNext->runNum, pOut->runNum);
 
-    	printf("reset(): %u \n",  pLastOutput->runNum);
-    	(void) hti_reset( pLastOutput->impl );
+    	printf("reset(): %u \n",  pOut->runNum);
+    	(void) hti_reset( pOut->impl );
 
     	printf("pLastOutput <- pCurr\n");
-        pLastOutput = pCurr;
+        pOut = pNext;
     }
 
-    bool success = hti_getOldestFrame(pLastOutput->impl, oldestFrame );
-    if( success )
-    	oldestFrame->runNum = pLastOutput->runNum;
+    bool success = hti_getOldestFrame(pOut->impl, oldestFrame );
 
 	// mutex unlock HTMan mutex
     unlockIt( &mutex);
@@ -198,7 +205,7 @@ htm_releaseOldestFrame( Frame_t* oldestFrame )
 	// Check that it is consistent
 	// assert( oldestFrame->seqNum == pLastOutput->impl->lastOutputSeqNum);
 
-	(void) hti_releaseOldest( pLastOutput->impl, oldestFrame );
+	(void) hti_releaseOldest( pOut->impl, oldestFrame );
 
 }
 

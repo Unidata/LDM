@@ -18,6 +18,7 @@
 #define DUPLICATE_FRAME				-1
 #define TABLE_TOO_SMALL				-2
 #define FRAME_TOO_LARGE				-3
+#define FRAME_TOO_LATE				-4
 
 #define INITIAL_SEQ_NUM             0
 #define INITIAL_RUN_NUM             0

@@ -116,17 +116,11 @@ hti_init(HashTableStruct_t* table)
 
 // Compares frame sitting in table with incoming frame using their seqNum value
 static bool
-hti_isThisBeforeThat(uint32_t this, uint32_t that)
+isThisBeforeThat(uint32_t this, uint32_t that)
 {
 	// if sequence number has changed then frame in slot is older
 	// unsigned arithmetic applies:
 	return ( that - this ) > UINT32_MAX/2 ;
-}
-
-static bool
-hti_areEqual(uint32_t this, uint32_t that)
-{
-	return !hti_isThisBeforeThat( this , that ) && !hti_isThisBeforeThat( that , this );
 }
 
 static bool
@@ -172,26 +166,16 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	Frame_t* 		aFrame 			= &aTable->aHashTable[ index ].aFrame;
 
 	int64_t lastOutputFrameSeqNum 	= aTable->lastOutputSeqNum;
-
-	// Set the index of the very first frame received in this table
-	/*if(  lastOutputFrameSeqNum == -1) // invalid oldest seqNumber: set oldest to this seqNum
+	if( lastOutputFrameSeqNum >= 0 && isThisBeforeThat( sequenceNumber, lastOutputFrameSeqNum ))
 	{
-		aTable->lastOutputSeqNum = sequenceNumber;
+		printf("\nNotice: Frame arrived too late  (%u). Decrease time-out? \
+				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
+		(void) unlockIt( &aTable->aHashTableMutex );
+		return FRAME_TOO_LATE;
 	}
-*/
-	//if not empty, return it.
+
 	if( aSlot->occupied )
 	{
-		// input frame is too late to arrive
-		// (its sequenceNumber is smaller than the current oldest frame's seqNum): ignore
-		if ( hti_isThisBeforeThat(aSlot->aFrame.seqNum, sequenceNumber ) )
-		{
-			printf("Warning: frame (%ul) arrived too late (last seqNum: %ul): \
-				table or timeout too small...\n", sequenceNumber, aSlot->aFrame.seqNum);
-			unlockIt( &aTable->aHashTableMutex );
-			return TABLE_TOO_SMALL;
-		}
-
 		// Check if occupied with the same frame: ignore
 		if( hti_isDuplicateFrame(aSlot->aFrame.seqNum, sequenceNumber ) )
 		{
@@ -199,21 +183,19 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 			unlockIt( &aTable->aHashTableMutex );
 			return DUPLICATE_FRAME;
 		}
-	}
 
-
-/*
-	// input frame is too late to arrive (its sequenceNumber is smaller than the current oldest frame's seqNum): ignore
-	// this is to be checked regardless of its slot being 'occupied' or not.
-	if ( lastOutputFrameSeqNum == -1 && lastOutputFrameSeqNum != sequenceNumber
-			&& lastOutputFrameSeqNum - sequenceNumber <  UINT32_MAX/2 )
-	{
-		printf("Warning: frame (%ul) arrived too late (last seqNum: %u): table is too small or small timeout\n",
-				sequenceNumber, lastOutputFrameSeqNum);
+		// slot occupied but frame seqNum is greater than that of occupied:
+		//
+		// input frame is too late or too early to arrive
+		// (its sequenceNumber is smaller than the current oldest frame's seqNum): ignore
+		// OR (its sequenceNumber is bigger than the current oldest frame's seqNum): ignore
+		printf("\nWarning: The slot is already occupied by different frame (%ul) \
+				 (last seqNum: %ul): table too small...\n\n", sequenceNumber, aSlot->aFrame.seqNum);
+		unlockIt( &aTable->aHashTableMutex );
 		return TABLE_TOO_SMALL;
 	}
 
-*/
+	// slot IS empty: insert in it
 
 	printf("   -> Frame In: Seq# : %u (@ %d) \n", sequenceNumber, index);
 
@@ -221,11 +203,13 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	memcpy(aSlot->aFrame.data, buffer, frameBytes);
 	aSlot->aFrame.seqNum 		= sequenceNumber;
 	aSlot->aFrame.runNum 		= runNumber;
+
 	// AND mark it as occupied
 	aSlot->occupied 			= true;
 
-
+	// consequently decrease the frameCounter for this table
 	++(aTable->frameCounter);
+
 	++totalFramesReceived;
 
 	printf("      (Total frames received so far: %u)\n", totalFramesReceived);

@@ -171,7 +171,7 @@ decodeCommandLine(
                 }
                 break; 
             case 't':
-                if (sscanf(optarg, "%f", frameLatency) != 1 || *frameLatency < 0) {
+                if (sscanf(optarg, "%lf", frameLatency) != 1 || *frameLatency < 0) {
                        printf("Invalid frame latency time-out value (max_wait): \"%s\"", optarg);
                        //log_add("Invalid receive buffer size: \"%s\"", optarg);
                        status = EINVAL;
