@@ -185,6 +185,11 @@ Such programs have the following characteristics:
 	in the process's
 	<a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>.
 
+    <li>Their standard input is a read-only pipe with the parent
+	<a href="glindex.html#pqact">pqact</a> process but their standard
+	output and standard error do not exist (but see below).
+         
+
     <li>They self-terminate if no data has been received
 	within a certain period of time (<i>e.g.</i>, 10 minutes)
 	or upon reception of a
@@ -215,6 +220,28 @@ Such programs have the following characteristics:
 	    <tt>pqact</tt> configuration-file</a>.
 
 	</ul>
+
+Because a decoder doesn't have a useful standard output or standard error, a
+decoder that depends them will not function correctly. An easy workaround
+exists, however: wrap the decoder in a simple script that redirects such
+output into files. The following script is an example:
+<blockquote><pre><tt>
+#!/bin/sh
+exec 1&gt;&lt;stdout&gt;
+exec 2&gt;&lt;stderr&gt;
+&lt;decoder&gt; "$@"
+</tt></pre></blockquote>
+where:
+<dl>
+  <dt> &lt;stdout&gt;
+  <dd> Is the pathname of the file to contain standard output
+
+  <dt> &lt;stderr&gt;
+  <dd> Is the pathname of the file to contain standard error
+
+  <dt> &lt;decoder&gt;
+  <dd> Is the pathname of the actual decoder
+<\dl>
 
 </ul>
 
