@@ -11,7 +11,9 @@
 #include <limits.h>
 
 #define NOAAPORT_NAMEDPIPE          "/tmp/noaaportIngesterPipe"
-
+#ifndef PATH_MAX
+#define	PATH_MAX					200
+#endif
 typedef struct frameWriter {
     int 		frameSize;
     char		namedPipe[PATH_MAX];

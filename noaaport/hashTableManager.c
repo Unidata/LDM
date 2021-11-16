@@ -13,6 +13,9 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <log.h>
+#include "globals.h"
+
 #include "misc.h"
 #include "hashTableManager.h"
 
@@ -40,7 +43,7 @@ typedef struct hts {
 HashTableInfo_t hashTableInfos[2];
 
 static HashTableInfo_t* 	pNext;       // Hash table currently being filled
-static HashTableInfo_t* 	pPrev;       // Hash table previously being filled
+#define POTHER 				(pNext == hashTableInfos? hashTableInfos + 1:  hashTableInfos )
 static HashTableInfo_t* 	pOut; // Hash table of last output frame
 
 void
@@ -69,9 +72,8 @@ htm_init()
 
     pNext 		= hashTableInfos;	// 0
     printf("Initial pCurr->runNum: %u\n", pNext->runNum);
-    pPrev 		= hashTableInfos+1;
-    printf("Initial pPrev->runNum: %u\n", pPrev->runNum);
-    pOut = pPrev;
+    printf("Initial POTHER->runNum: %u\n", POTHER->runNum);
+    pOut = pNext;
 
     if( pthread_mutex_init(&mutex, NULL) )
     {
@@ -101,60 +103,30 @@ htm_tryInsert(uint16_t runNum,
     // if incoming frame's runNum has changed from current one
     // AND is also different from the previous one
     // THEN proceed to switching the tables if the previous table is empty
-    if (runNum != pNext->runNum && runNum != pPrev->runNum )
+    if (runNum != pNext->runNum && pNext == pOut )
     {
 
-		printf("if (runNum !=   pCurr->runNum && runNum != pPrev->runNum )...\
-				\n  runNum: %u, pCurr: %u,                 pPrev: %u\n",
-				runNum, pNext->runNum, pPrev->runNum);
+		printf("if (runNum !=   pCurr->runNum && runNum != POTHER->runNum )...\
+				\n  runNum: %u, pCurr: %u,                 POTHER: %u\n",
+				runNum, pNext->runNum, POTHER->runNum);
 
-    	if( hti_isEmpty( pPrev->impl ) )
-    	{
-    		printf("pPrev->impl is empty (count: %u, pPrev->runNum: %u)!\n",
-    				pPrev->impl->frameCounter, pPrev->runNum);
-    		printf("Swapping pPrev and pCurr...\n");
+    		printf("POTHER->impl is empty (count: %u, POTHER->runNum: %u)!\n",
+    				POTHER->impl->frameCounter, POTHER->runNum);
+    		printf("Swapping POTHER and pCurr...\n");
     		// Swap tables ('cause previous table is available)
-			HashTableInfo_t* pTmp = pNext;
-			pNext = pPrev;
-			pPrev = pTmp;
-			pNext->runNum = runNum;
-    	}
-    	else
-    	{
-    		// too bad!
-    		printf("\n\nAdjust sleep and wait time until it works!...\n\n");
-    		printf("pPrev->impl is NOT empty: count: %u (pPrev->runNum: %u)!\n",
-    				pPrev->impl->frameCounter, pPrev->runNum);
+			pNext = POTHER;
 
-    	}
+			hti_reset( pNext->impl );
+			pNext->runNum = runNum;
     }
 
     printf("Which table to use to insert? %s\n",
-    				(runNum == pNext->runNum)? "pCurr":"pPrev");
+    				(runNum == pNext->runNum)? "pNext":"POTHER");
     HashTableStruct_t* impl = (runNum == pNext->runNum)
             ? pNext->impl
-            : pPrev->impl; // Insert older frame into previous table
+            : POTHER->impl; // Insert older frame into previous table
 
     int status = hti_tryInsert(impl, seqNum, runNum, data, nbytes); // could fail: duplicate, too old, success
-
-    if( status == DUPLICATE )
-    {
-    	// msg:
-		unlockIt( &mutex );
-    }
-    else
-    if( status == TOO_OLD )
-    {
-    	// mutex unlock
-		unlockIt( &mutex );
-    }
-    else
-    if( status == FRAME_TOO_LARGE )
-    {
-    	// msg:
-    	// mutex unlock
-		unlockIt( &mutex );
-    }
 
     // mutex unlock
 	unlockIt( &mutex );
@@ -167,19 +139,8 @@ htm_getOldestFrame(Frame_t* oldestFrame )
 	// mutex lock HTMan mutex
 	lockIt(&mutex);
 
-    if (hti_isEmpty(pOut->impl) && pNext != pOut)
-    {
-    	printf("getOldestFrame(): pCurr: %u, pLastOutput: %u \n",
-    			pNext->runNum, pOut->runNum);
-
-    	printf("reset(): %u \n",  pOut->runNum);
-    	(void) hti_reset( pOut->impl );
-
-    	printf("pLastOutput <- pCurr\n");
-        pOut = pNext;
-    }
-
     bool success = hti_getOldestFrame(pOut->impl, oldestFrame );
+
 
 	// mutex unlock HTMan mutex
     unlockIt( &mutex);
@@ -206,6 +167,18 @@ htm_releaseOldestFrame( Frame_t* oldestFrame )
 	// assert( oldestFrame->seqNum == pLastOutput->impl->lastOutputSeqNum);
 
 	(void) hti_releaseOldest( pOut->impl, oldestFrame );
+
+    if ( hti_isEmpty(pOut->impl ) && pNext != pOut )
+    {
+    	printf("htm_releaseOldestFrame(): pCurr: %u, pOut: %u \n",
+    			pNext->runNum, pOut->runNum);
+
+    	printf("reset(): %u \n",  pOut->runNum);
+    	(void) hti_reset( pOut->impl );
+
+    	printf("pOut = pNext;\n");
+        pOut = pNext;
+    }
 
 }
 

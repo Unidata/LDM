@@ -12,13 +12,13 @@
 
 #define FIN                         0
 #define MAX_SEQ_NUM                 UINT32_MAX      // (~(uint32_t)0)  // not used
+#define MAX_SERVERS					20				// hosts to connect to
 
 typedef struct sockaddr_in SOCK4ADDR;
 typedef struct frameReader {
 	int 		policy;
-    in_addr_t 	ipAddress;		// passed in network byte order
-    in_port_t 	ipPort;  		// in host byte order
-    int 		sd;  			// socket descriptor
+    char** 		serverAddresses;	// host:port list
+    int 		serverCount;		// hosts count
     int 		frameSize;
 
 } FrameReaderConf_t;

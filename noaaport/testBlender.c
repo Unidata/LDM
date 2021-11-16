@@ -1,3 +1,5 @@
+#include "config.h"
+
 // server program for TCP connection
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +10,11 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <assert.h>
+#include <time.h>
+#include <math.h>
+
+#include <log.h>
+#include "globals.h"
 
 #define NUMBER_FRAMES_TO_SEND 	15
 #define TEST_MAX_THREADS 		2
@@ -183,43 +190,42 @@ int main()
 
 	pthread_t frameSenderThreadArray[TEST_MAX_THREADS], aThreadId;
 	SocketAndSeqNum_t socketIdAndSeqNum = { .socketId = 0, .seqNum = 0};
-    
-    while(1)
-    {
-   	   	printf("accept(): blocking on incoming client requests");
-        clientSocket = accept(serverSockfd, (struct sockaddr *)&cliaddr, (socklen_t *) &c);
-        if(clientSocket < 0) 
-        {
-        	printf("\t-> testBlender (socat): Client connection NOT accepted!\n");
-        	sleep(1);
-            continue;
-        }
-        
-        printf("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
 
-		for (int threadIndex = 0; threadIndex < TEST_MAX_THREADS; threadIndex++)
+
+	for (int threadIndex = 0; threadIndex < TEST_MAX_THREADS; threadIndex++)
+	{
+		printf("accept(): blocking on incoming client requests");
+		clientSocket = accept(serverSockfd, (struct sockaddr *)&cliaddr, (socklen_t *) &c);
+		if(clientSocket < 0)
 		{
-			socketIdAndSeqNum.seqNum 	= threadIndex * NUMBER_FRAMES_TO_SEND;
-			socketIdAndSeqNum.socketId 	= clientSocket;
-	    	socketIdAndSeqNum.threadId 	= threadIndex;
+			printf("\t-> testBlender (socat): Client connection NOT accepted!\n");
+			sleep(1);
+			continue;
+		}
 
-	    	aThreadId = frameSenderThreadArray[threadIndex];
-		    if(pthread_create(&aThreadId, 
-		    	NULL, 
-		    	sendFramesToBlenderRoutine, 
-		    	(void *) &socketIdAndSeqNum) < 0) 
-		    {
-		        printf("Could not create a thread!\n");
-		        close(clientSocket);
-		        
-		        exit(EXIT_FAILURE);
-		    }
+		printf("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
 
 
-		    pthread_join(aThreadId, NULL);
+		socketIdAndSeqNum.seqNum 	= threadIndex * NUMBER_FRAMES_TO_SEND;
+		socketIdAndSeqNum.socketId 	= clientSocket;
+		socketIdAndSeqNum.threadId 	= threadIndex;
+
+		aThreadId = frameSenderThreadArray[threadIndex];
+		if(pthread_create(&aThreadId,
+			NULL,
+			sendFramesToBlenderRoutine,
+			(void *) &socketIdAndSeqNum) < 0)
+		{
+			printf("Could not create a thread!\n");
+			close(clientSocket);
+
+			exit(EXIT_FAILURE);
+		}
+
+		pthread_join(aThreadId, NULL);
 
 		    // OR 
-/*
+		/*
 			if( pthread_detach(aThreadId) )
 	    	{
 	        	perror("Could not detach a newly created thread!\n");
@@ -227,10 +233,10 @@ int main()
 	        
 	        	exit(EXIT_FAILURE);            
 	    	}
-*/
-	    } // for
+		 */
+    } // for
 
-	} //while(1)
+
 	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
 	return 0;
 }
@@ -268,7 +274,15 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 
 	    	// send it after x sec:
 	    	float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
-	    	usleep( ( snooze / 100 ) * 1000000 );
+
+	    	//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
+	    	double frac;
+	    	double sec = modf(snooze, &frac);
+	    	struct timespec duration = {
+	    			.tv_sec 	= (time_t) sec,
+	    			.tv_nsec 	= (long) (frac * 1000000000)
+	    	};
+	    	nanosleep( &duration, NULL); // [0 - 1/10sec]
 	//================== the frame data is simulated here =======
 
 	    	//if(s % 100 == 0)

@@ -9,6 +9,7 @@
 #define HASHTABLEIMPL_H_
 
 #include <stdint.h>
+#include <pthread.h>
 #include <limits.h>
 
 #define HASH_TABLE_SIZE             15000    // CONDUIT frameRate (3500/s) * 2 * frameLatency input

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -9,6 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <log.h>
+#include "globals.h"
 
 #include <assert.h>
 
@@ -16,16 +20,16 @@
 #include "frameReader.h"
 #include "frameWriter.h"
 #include "blender.h"
+#include "InetSockAddr.h"
 
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
-const char* const PACKAGE_VERSION   = "0.1.0";
 
 bool 	debug = false;
 // =====================================================================
 
-extern FrameWriterConf_t* fw_setConfig(int, char*);
-extern FrameReaderConf_t* setFrameReaderConf(int, in_addr_t, in_port_t, int);
+extern FrameWriterConf_t* fw_setConfig(int, const char*);
+extern FrameReaderConf_t* fr_setReaderConf(int, char**, int, int);
 extern QueueConf_t*   setQueueConf(double, int);
 
 extern void 		  fw_init(FrameWriterConf_t*);
@@ -33,13 +37,13 @@ extern void 		  queue_init(QueueConf_t*);
 extern void 		  reader_init(FrameReaderConf_t*);
 
 // =====================================================================
+static 	const char* const*  serverAddresses;	///< list of servers to connect to
+static InetSockAddr* srvrSockAddrs[MAX_HOSTS];
 
-static char*          mcastSpec 		= NULL;
-static char*          interface 		= NULL; // Listen on all interfaces unless specified on argv
-static int            rcvBufSize 		= 0;
-static int            socketTimeOut		= MIN_SOCK_TIMEOUT_MICROSEC;
-static double         frameLatency 		= 0;
-static int            hashTableSize		= HASH_TABLE_SIZE;
+static double         waitTime 		= 1.0;		///< max time between output frames
+static int            hashTableSize	= HASH_TABLE_SIZE; ///< hash table capacity in frames
+static const char*	  namedPipe 	= NULL;		///< pathname of output FIFO
+static const char*	  logfile		= "/tmp/blender.out";		///< pathname of output messages
 static  sem_t   	  sem;
 
 // =====================================================================
@@ -55,36 +59,24 @@ usage(
     const char* const          progName,
     const char* const restrict copyright)
 {
-    /*
-    int level = log_get_level();
-    (void)log_set_level(LOG_LEVEL_NOTICE);
-
-    log_notice_q(
-    */
-    printf(
+    log_notice(
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [v|x] [-h tbleSize] [-l log] [-m addr] [-I ip_addr] [-R bufSize] [-s suffix] [-t sec]\n"
+"Usage: %s [-v|-x] [-h tbleSize] [-l log] [-t sec] pipe host:port ... \n"
 "where:\n"
-"   -I ip_addr  Listen for multicast packets on interface \"ip_addr\".\n"
-"               Default is system's default multicast interface.\n"
 "   -h tblSize  Hash table capacity. Default is 1500.\n"
-"   -l dest     Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"               (standard error), or file `dest`. Default is \"%s\"\n"
-"   -m addr     Read data from IPv4 dotted-quad multicast address \"addr\".\n"
-"               Default is to read from the standard input stream.\n"
-"   -p pipe     named pipe per channel. Default is '/tmp/noaaportIngesterPipe'.\n"
-"   -R bufSize  Receiver buffer size in bytes. Default is system dependent.\n"
-"   -t sec 		Timeout in seconds. Default is '1.0'.\n"
+"   -l log     Log to `log`. One of: \"\" (system logging daemon), \"-\"\n"
+"               (standard error), or file `log`. Default is \"%s\"\n"
+"   -t sec 		Timeout in (decimal) seconds. Default is '1.0'.\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
+"    pipe       Named pipe per channel. Example '/tmp/noaaportIngesterPipe'.\n"
+"    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
 "\n",
-        progName, PACKAGE_VERSION, copyright, progName);
+        progName, PACKAGE_VERSION, copyright, progName, logfile);
 
-//    (void)log_set_level(level);
-
-    exit(0);
+    exit(1);
 }
 
 /**
@@ -92,26 +84,11 @@ usage(
  *
  * @param[in]  argc           Number of arguments.
  * @param[in]  argv           Arguments.
-
- * @param[out] mcastSpec      Specification of multicast group.
- * @param[out] interface      Specification of interface on which to listen.
- * @param[out] rcvBufSize     Receiver buffer size in bytes
- * @param[out] namedPipe      Name of namedPipe the noaaportIngester is listening to     
- *                            (Default is /tmp/noaaportIngester)
- * @retval     0              Success.
- * @retval     EINVAL         Error. `log_add()` called.
  */
 static int 
 decodeCommandLine(
-        int                    argc,
-        char**  const restrict argv,
-        char**  const restrict mcastSpec,
-        char**  const restrict imr_interface,
-        int*    const restrict sockTimeOut,
-        int*    const restrict rcvBufSize,
-        char**  const restrict namedPipe,
-        double*  const restrict frameLatency,
-		int*    const restrict hashTableSize
+        int     const          argc,
+        char* const*  const restrict argv
         )
 {
     int                 status = 0;
@@ -120,18 +97,12 @@ decodeCommandLine(
     extern char*        optarg;
     extern int          optopt;
     
-    
     int ch;
     
     opterr = 0;                         /* no error messages from getopt(3) */
-    /* Initialize the logger. */
-/*    if (log_init(argv[0])) {
-        log_syserr("Couldn't initialize logging module");
-        exit(1);
-    }
-*/
+
     while (0 == status &&
-           (ch = getopt(argc, argv, "vxI:h:l:m:p:R:r:t:")) != -1)
+           (ch = getopt(argc, argv, "vxh:l:t:")) != -1)
     {
         switch (ch) {
             case 'v':
@@ -140,54 +111,144 @@ decodeCommandLine(
             case 'x':
                     printf("set debug mode");
                 break;
-            case 'I':
-                    *imr_interface = optarg;
-                break;
             case 'h':
-					if (sscanf(optarg, "%d", hashTableSize) != 1 || *hashTableSize < 0) {
+				if (sscanf(optarg, "%d", &hashTableSize) != 1 || hashTableSize < 0) {
 					   printf("Invalid hash table size value: \"%s\"", optarg);
 					   status = EINVAL;
-					}
-					break;
+				}
+				break;
             case 'l':
-                    printf("logger spec");
-                break;
-            case 'm':
-                    *mcastSpec = optarg;
-                break;
-            case 'p':
-                    *namedPipe = optarg;
-                break;
-            case 'R':
-                if (sscanf(optarg, "%lf", rcvBufSize) != 1 || *rcvBufSize <= 0) {
-                       printf("Invalid receive buffer size: \"%s\"", optarg);
-                       //log_add("Invalid receive buffer size: \"%s\"", optarg);
+            	if (sscanf(optarg, "%s", &logfile) != 1 ) {
+                       printf("Invalid log file name: \"%s\"", optarg);
                        status = EINVAL;
-                }
+            	}
                 break;
-            case 'r':
-                if (sscanf(optarg, "%d", sockTimeOut) != 1 || *sockTimeOut < 0) {
-                       printf("Invalid socket time-out value: \"%s\"", optarg);
-                }
-                break; 
             case 't':
-                if (sscanf(optarg, "%lf", frameLatency) != 1 || *frameLatency < 0) {
+                if (sscanf(optarg, "%lf", &waitTime) != 1 || waitTime < 0) {
                        printf("Invalid frame latency time-out value (max_wait): \"%s\"", optarg);
-                       //log_add("Invalid receive buffer size: \"%s\"", optarg);
                        status = EINVAL;
-                   }
+                }
                 break;
             default:
                 break;        
         }
     }
 
-    if (argc - optind != 0)
-        usage(argv[0], COPYRIGHT_NOTICE);
+
+    if(optind >= argc)
+    	usage(argv[0], COPYRIGHT_NOTICE);
+
+	namedPipe = argv[optind++];
+
+	if(optind >= argc)
+    	usage(argv[0], COPYRIGHT_NOTICE);
+
+	const int serverCount = argc - optind;
+
+	serverAddresses = (const char* const *)( argv	+ optind); ///< list of servers to connect to
 
     return status;
 }
 
+static bool
+validateHostsInput( char * const* hostsList, int serverCount)
+{
+	// argv has host:port list
+	char *hostAndPort, *ptr;
+
+	int resp, exactCount=0;
+	bool isHostname = false;
+
+    for(int i=0; i< serverCount; i++)
+    {
+    	hostAndPort = *(hostsList + i);
+
+    	char tmp[20];
+    	char *ipV6 = tmp, *pTemp;
+    	pTemp = ipV6;
+    	int i = 0;
+    	// check if IPv6
+    	if( hostAndPort[0] == '[' )
+    	{
+			printf("'%s'\n", ptr);
+			++exactCount;
+			continue;
+
+    	/*	while ( *(++hostAndPort)  )
+    		{
+    			i++;
+    			if(*hostAndPort != ']')
+    			{
+    				 *ipV6++ = *hostAndPort;
+    			}
+    		}
+    		tmp[i]='\0';
+    		*ipV6='\0';
+    		ipV6 = tmp;
+    		if( (resp = isHostValid( (ipV6) , &isHostname )) == 1)
+    		{
+    			printf("IPv6: %s is VALID\n", ipV6);
+    		}
+    		else
+    			printf("IPv6: %s is INVALID\n", ipV6);
+    	*/
+    	}
+    	else
+    	{
+			if( (ptr = strtok(hostAndPort, ":" )) != NULL )//<-- won't work with IPv6 strings fdfg:dfgdfg:4534:
+			{
+				resp = isHostValid( ptr , &isHostname );
+				if( resp == 0 && !isHostname )
+				{
+					printf("Warning: Incorrect host:port specification. Skipping entry: '%s' ...\n", hostAndPort);
+					continue;
+				}
+
+				if( (ptr = strtok(NULL, ":" )) != NULL)
+				{
+					++exactCount;
+					continue;
+				}
+				else
+				{
+					printf("Warning: Incorrect host:port specification. "
+							"Skipping entry: '%s' ...\n", hostAndPort);
+					continue;
+				}
+			} // if IPv4
+    	} // if IPv6
+    } // for
+    return (exactCount == serverCount);
+}
+
+/**
+ * Validate host - whether IP address or a hostname
+ *
+ * @param[in]  hostOrIP    	IP address / hostname of server
+ * @param[out] isHostname  	Set to true if hostOrIP is a hostname
+ * @retval 		1			hostOrIP is an IP address (v4 or v6)
+ * @retval		0			hostOrIP is hostname if isHostname is true
+ */
+static int
+isHostValid( char* hostOrIP, bool* isHostname )
+{
+    int status = 0;
+	*isHostname = false;
+
+    struct in_addr inaddr;
+    struct in6_addr in6addr;
+
+	if ( inet_pton(AF_INET, hostOrIP, &in6addr) == 1
+	|| ( inet_pton(AF_INET, hostOrIP, &inaddr)  == 1))
+	{
+		status = 1;
+	}
+	else
+	{
+		*isHostname = true;
+	}
+	return status;
+}
 
 void
 setFIFOPolicySetPriority(pthread_t pThread, char *threadName, int newPriority)
@@ -295,16 +356,18 @@ set_sigactions(void)
 
 int main(
     const int argc,           /**< [in] Number of arguments */
-    char*     argv[])         /**< [in] Arguments */
+    char* const    argv[])         /**< [in] Arguments */
 {
     int status;
-    char *namedPipe = NULL;
     /*
      * Initialize logging. Done first in case something happens that needs to
      * be reported.
      */
     const char* const progname = basename(argv[0]);
-/*    
+
+    char** serverAddresses;
+    int serverCount;
+
     if (log_init(progname)) 
     {
         log_syserr("Couldn't initialize logging module");
@@ -314,31 +377,20 @@ int main(
     {
         (void)log_set_level(LOG_LEVEL_WARNING);
 
-*/         
-        status = decodeCommandLine(argc, argv, 
-                    &mcastSpec, 
-                    &interface, 
-                    &socketTimeOut, 
-                    &rcvBufSize, 
-                    &namedPipe,
-                    &frameLatency,
-					&hashTableSize);
+        status = decodeCommandLine(argc, argv);
         
         if (status) 
         {
-            printf("Couldn't decode command-line\n");
-/*          log_add("Couldn't decode command-line");
+        	log_add("Couldn't decode command-line");
             log_flush_fatal();
-*/                
+
             usage(progname, COPYRIGHT_NOTICE);
         }
         else 
         {
-            printf("\n\tStarted (v%s)\n", PACKAGE_VERSION);
-            printf("\n\t%s\n\n", COPYRIGHT_NOTICE);
-/*          log_notice("Starting up %s", PACKAGE_VERSION);
+            log_notice("Starting up %s", PACKAGE_VERSION);
             log_notice("%s", COPYRIGHT_NOTICE);
-*/
+
             // Ensures client and server file descriptors are closed cleanly,
             // so that read(s) and accept(s) shall return error to exit the threads.
             set_sigactions();
@@ -346,47 +398,44 @@ int main(
             // These values can/will change from one reader to another (ipAddress in socat)
             int policy 			= SCHED_RR;
             in_addr_t ipAddress = htonl(INADDR_ANY);	// to be passed in as plain host address
-            in_port_t ipPort  	= PORT;			// to be passed in as ns
+            in_port_t ipPort  	= PORT;					// to be passed in as ns
             int frameSize 		= SBN_FRAME_SIZE;
-            FrameReaderConf_t* 	aFrameReaderConfig 	= setFrameReaderConf(policy,
-            											ipAddress,
-														PORT,
+            FrameReaderConf_t* 	readerConfig 	= fr_setReaderConf(policy,
+														serverAddresses,
+														serverCount,
 														frameSize);
 
-            QueueConf_t* aQueueConfig 				= setQueueConf(frameLatency, hashTableSize);
+            QueueConf_t* queueConfig 				= setQueueConf(waitTime, hashTableSize);
 
-            FrameWriterConf_t* 	aFrameWriterConfig 	= fw_setConfig(frameSize, namedPipe);
+            FrameWriterConf_t* 	writerConfig 	= fw_setConfig(frameSize, namedPipe);
 
             // Init all modules
-            fw_init( 		aFrameWriterConfig );
-            queue_init(  	aQueueConfig 		);
-            reader_init( 	aFrameReaderConfig );
+            fw_init( 		writerConfig );
+            queue_init(  	queueConfig 		);
+            reader_init( 	readerConfig );
 
             // 
             int ret;
             if( (ret = sem_init(&sem,0,0))  != 0)
             {
-                printf("sem_init() failure: errno: %d\n", ret);
-                exit(EXIT_FAILURE);
+                log_add("sem_init() failure: errno: %d\n", ret);
+                log_flush_fatal();
             }
             
             if( sem_wait(&sem) == -1 )
             {
-                printf("sem_wait() failure: errno: %d\n", errno);
-                exit(EXIT_FAILURE);
+                log_add("sem_init() failure: errno: %d\n", ret);
+                log_flush_fatal();
             }            
-
         }   /* command line decoded */
 
         if (status) 
         {
-            printf("Couldn't ingest NOAAPort data");
-/*                  log_add("Couldn't ingest NOAAPort data");
+            log_add("Couldn't ingest NOAAPort data");
             log_flush_error();
-*/              
         }
         
-  //}   // log_fini();
+  }  // log_fini();
     
         return status ? 1 : 0;
 }

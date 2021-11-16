@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -10,10 +12,17 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <log.h>
+#include "globals.h"
+
 #include "hashTableImpl.h"
 #include "frameWriter.h"
+
+#ifndef PATH_MAX
+#define PATH_MAX	120
+#endif
 //  ========================================================================
-static char	namedPipeFullName[PATH_MAX] = NOAAPORT_NAMEDPIPE;   //
+static char	namedPipeFullName[PATH_MAX] = "";   //
 static int 	fd;
 static int 	fw_openPipe(void);
 //  ========================================================================
@@ -22,7 +31,7 @@ static int 	fw_openPipe(void);
 // aFrameWriterConfig's memory allocation is made in this function but freed in another
 // function: "writer thread?", executed by a thread.
 
-FrameWriterConf_t* fw_setConfig(int frameSize, char* namedPipe)
+FrameWriterConf_t* fw_setConfig(int frameSize, const char* namedPipe)
 {
 	FrameWriterConf_t* aFrameWriterConfig = (FrameWriterConf_t*) malloc(sizeof(FrameWriterConf_t) );
 	strncpy(aFrameWriterConfig->namedPipe, namedPipe, strlen(namedPipe));

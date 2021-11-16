@@ -32,7 +32,8 @@ EXTRA_DIST              = \
         nwstgdump.data \
         productMaker.hin \
         reader.hin \
-	shmfifo.hin \
+		shmfifo.hin \
+		blender.conf.in blender.1.in \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 BUILT_SOURCES		= \
@@ -41,17 +42,17 @@ BUILT_SOURCES		= \
 	ldmProductQueue.h \
 	productMaker.h \
 	reader.h \
-	shmfifo.h
+	shmfifo.h 
 
 DISTCLEANFILES          = $(BUILT_SOURCES)
-CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini
+CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini blender.1 
 
 AM_CPPFLAGS             = \
         -I$(top_srcdir) \
         -I$(top_srcdir)/grib2 \
         -I$(top_srcdir)/gempak \
         -I$(top_srcdir)/zlib \
-        -I$(top_srcdir)/log \
+        -I$(top_builddir)/log      -I$(top_srcdir)/log \
         -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
         -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
         -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -65,7 +66,7 @@ if WANT_RETRANS
 endif 
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
-                          nbs_ingest
+                          nbs_ingest blender testBlender
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
@@ -118,6 +119,12 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
+blender_SOURCES		= blender.c $(COMMON_SOURCES) \
+ 					frameWriter.c queueManager.c frameReader.c hashTableManager.c \
+ 					hashTableImpl.c  misc.c 
+ 	
+testBlender_SOURCES	= testBlender.c 
+
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
   LDADD 	+= retrans/lib.la
@@ -134,7 +141,8 @@ TAGS_FILES		= \
         $(top_srcdir)/log/*.c $(top_srcdir)/log/*.h \
         $(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
         $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-        $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
+        $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
+        $(blender_SOURCES) ../log/*.c ../log/*.h 
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif

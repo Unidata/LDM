@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <log.h>
+#include "globals.h"
 
 #include "misc.h"
 #include "hashTableImpl.h"
@@ -40,13 +42,13 @@ extern int hashTableSize;
 static int 		framesMissedCount 		= 0;
 static uint32_t	totalFramesReceived 	= 0;
 
-static int 		hti_hashMe(uint32_t seqNum);
+static int 		hashMe(uint32_t seqNum);
 //  ========================================================================
 
 
 // key is the sequenceNumber
 static int
-hti_hashMe(uint32_t seqNumKey)
+hashMe(uint32_t seqNumKey)
 {
 	int hash_value = 0;
 	hash_value = seqNumKey % hashTableSize;	//HASH_TABLE_SIZE;
@@ -102,13 +104,13 @@ hti_reset( HashTableStruct_t* table )
 void
 hti_init(HashTableStruct_t* table)
 {
-
+    //(void)log_set_level(LOG_LEVEL_WARNING);
 	// Initialize this table's mutex:
 	int resp = pthread_mutex_init(&table->aHashTableMutex, NULL);
 	if(resp)
 	{
-		printf("pthread_mutex_init( aHashTable ) failure: %s\n", strerror(resp));
-		exit(EXIT_FAILURE);
+    	log_add("pthread_mutex_init( aHashTable ) failure: %s\n", strerror(resp));
+        log_flush_fatal();
 	}
 	(void) reset( table );
 }
@@ -154,23 +156,25 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 {
 	if( frameBytes > SBN_FRAME_SIZE )
 	{
-		printf("Frame too large!\n");
+    	log_add("Frame too large!\n");
+        log_flush(LOG_LEVEL_WARNING);
 		return FRAME_TOO_LARGE;
 	}
 
 	// lock table
 	(void) lockIt( &aTable->aHashTableMutex );
 
-	int 			index			= hti_hashMe( sequenceNumber );
+	int 			index			= hashMe( sequenceNumber );
 	FrameSlot_t* 	aSlot 			= &aTable->aHashTable[ index ];
 	Frame_t* 		aFrame 			= &aTable->aHashTable[ index ].aFrame;
 
 	int64_t lastOutputFrameSeqNum 	= aTable->lastOutputSeqNum;
 	if( lastOutputFrameSeqNum >= 0 && isThisBeforeThat( sequenceNumber, lastOutputFrameSeqNum ))
 	{
-		printf("\nNotice: Frame arrived too late  (%u). Decrease time-out? \
+		log_add("\nNotice: Frame arrived too late  (%u). Decrease time-out? \
 				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
 		(void) unlockIt( &aTable->aHashTableMutex );
+        log_flush(LOG_LEVEL_WARNING);
 		return FRAME_TOO_LATE;
 	}
 
@@ -179,8 +183,9 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 		// Check if occupied with the same frame: ignore
 		if( hti_isDuplicateFrame(aSlot->aFrame.seqNum, sequenceNumber ) )
 		{
-			printf("Warning: Duplicate frame... %u\n", sequenceNumber);
+			log_add("Warning: Duplicate frame... %u\n", sequenceNumber);
 			unlockIt( &aTable->aHashTableMutex );
+			log_flush(LOG_LEVEL_WARNING);
 			return DUPLICATE_FRAME;
 		}
 
@@ -189,15 +194,16 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 		// input frame is too late or too early to arrive
 		// (its sequenceNumber is smaller than the current oldest frame's seqNum): ignore
 		// OR (its sequenceNumber is bigger than the current oldest frame's seqNum): ignore
-		printf("\nWarning: The slot is already occupied by different frame (%ul) \
+		log_add("\nWarning: The slot is already occupied by different frame (%ul) \
 				 (last seqNum: %ul): table too small...\n\n", sequenceNumber, aSlot->aFrame.seqNum);
 		unlockIt( &aTable->aHashTableMutex );
+        log_flush(LOG_LEVEL_WARNING);
 		return TABLE_TOO_SMALL;
 	}
 
 	// slot IS empty: insert in it
 
-	printf("   -> Frame In: Seq# : %u (@ %d) \n", sequenceNumber, index);
+	log_add("   -> Frame In: Seq# : %u (@ %d) \n", sequenceNumber, index);
 
 	// fill in the attributes in this slot
 	memcpy(aSlot->aFrame.data, buffer, frameBytes);
@@ -212,11 +218,12 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 
 	++totalFramesReceived;
 
-	printf("      (Total frames received so far: %u)\n", totalFramesReceived);
+	log_add("      (Total frames received so far: %u)\n", totalFramesReceived);
 
 	// unlock table
 	unlockIt( &aTable->aHashTableMutex );
 
+	log_flush_warning();
 	return FRAME_INSERTED;
 
 }
@@ -229,7 +236,7 @@ hti_releaseOldest( HashTableStruct_t* impl, Frame_t* oldestFrame )
 {
 	lockIt( &impl->aHashTableMutex );
 
-	int indexOfLastOutputFrame = hti_hashMe( oldestFrame->seqNum );
+	int indexOfLastOutputFrame = hashMe( oldestFrame->seqNum );
 
 	impl->aHashTable[ indexOfLastOutputFrame ].occupied = false;
 	--(impl->frameCounter);
@@ -265,7 +272,7 @@ hti_getOldestFrame(HashTableStruct_t* table, Frame_t* oldestFrame)
 	int indexOfOldestFrame = -1;
 	if( lastOutputSeqNum >=0 )
 	{
-		indexOfOldestFrame = hti_hashMe( lastOutputSeqNum );
+		indexOfOldestFrame = hashMe( lastOutputSeqNum );
 	}
 
 	++indexOfOldestFrame;	// <- start from the next slot

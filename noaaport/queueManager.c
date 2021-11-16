@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -64,10 +66,9 @@ setMaxWait(double frameLatency)
 {
     double integral;
     double fractional = modf(frameLatency, &integral);
-    double nanoFractional = fractional * ONE_BILLION;
 
-    max_wait.tv_sec     = (int) integral;
-    max_wait.tv_nsec    = (int) fractional * ONE_BILLION;
+    max_wait.tv_sec     = integral;
+    max_wait.tv_nsec    = fractional * ONE_BILLION;
 }
 
 static void
@@ -131,24 +132,37 @@ flowDirectorRoutine()
 {
 	struct timespec abs_time;
 	int numFrames;
+
+
 	for (;;)
 	{
 		int status = 0;
 		lockIt(&runMutex);
 
+		clock_gettime(CLOCK_REALTIME, &abs_time);
+		// pthread cond_timedwait() expects an absolute time to wait until
+		//abs_time.tv_sec     += max_wait.tv_sec;
+		//abs_time.tv_nsec    += max_wait.tv_nsec;
+
+		abs_time.tv_sec     += 1;
+		abs_time.tv_nsec    = 0;
+	/*
+		if( abs_time.tv_nsec > ONE_BILLION)
+		{
+			abs_time.tv_nsec -= ONE_BILLION;
+			++abs_time.tv_sec;
+		}
+	*/
+
 		for( numFrames = htm_numberOfFrames();
 				numFrames == 0 || (status == 0 && numFrames < hashTableSize/2);
 			    numFrames = htm_numberOfFrames() )
 		{
-			clock_gettime(CLOCK_REALTIME, &abs_time);
-			// pthread cond_timedwait() expects an absolute time to wait until
-			abs_time.tv_sec     += max_wait.tv_sec;
-			abs_time.tv_nsec    += max_wait.tv_nsec;
 
 			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
+			printf("status: %d\n", status);
 			assert(status == 0 || status == ETIMEDOUT);
 		}
-		unlockIt(&runMutex);
 
 		printf("\n\n=> => => => => => => ConsumeFrames Thread (flowDirectorRoutine)=> => => => => => => =>\n\n");
 
@@ -169,6 +183,7 @@ flowDirectorRoutine()
 
 			(void) htm_releaseOldestFrame( &oldestFrame );
 		}
+		unlockIt(&runMutex);
     } // for
 
     // log_free();
