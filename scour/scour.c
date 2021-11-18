@@ -288,8 +288,7 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
         //if (fstatat(dfd, dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) == -1)
         if (lstat(absPath, &sb) == -1)
         {
-            log_add("lstat(\"%s\") failed: %s", absPath, strerror(errno));
-            log_flush_error();
+            log_info("lstat(\"%s\") failed: %s", absPath, strerror(errno));
             (void)closedir(dir);
             return -1;
         }
