@@ -29,7 +29,7 @@ bool 	debug = false;
 // =====================================================================
 
 extern FrameWriterConf_t* fw_setConfig(int, const char*);
-extern FrameReaderConf_t* fr_setReaderConf(int, char**, int, int);
+extern FrameReaderConf_t* fr_setReaderConf( char**, int );
 extern QueueConf_t*   setQueueConf(double, int);
 
 extern void 		  fw_init(FrameWriterConf_t*);
@@ -377,6 +377,8 @@ int main(
     {
         (void)log_set_level(LOG_LEVEL_WARNING);
 
+        log_warning("Hello!\n");
+
         status = decodeCommandLine(argc, argv);
         
         if (status) 
@@ -396,23 +398,20 @@ int main(
             set_sigactions();
 
             // These values can/will change from one reader to another (ipAddress in socat)
+            // No longer used:
             int policy 			= SCHED_RR;
             in_addr_t ipAddress = htonl(INADDR_ANY);	// to be passed in as plain host address
             in_port_t ipPort  	= PORT;					// to be passed in as ns
             int frameSize 		= SBN_FRAME_SIZE;
-            FrameReaderConf_t* 	readerConfig 	= fr_setReaderConf(policy,
-														serverAddresses,
-														serverCount,
-														frameSize);
 
-            QueueConf_t* queueConfig 				= setQueueConf(waitTime, hashTableSize);
-
+            FrameReaderConf_t* 	readerConfig 	= fr_setReaderConf(serverAddresses, serverCount );
+            QueueConf_t* queueConfig 			= setQueueConf(waitTime, hashTableSize);
             FrameWriterConf_t* 	writerConfig 	= fw_setConfig(frameSize, namedPipe);
 
             // Init all modules
-            fw_init( 		writerConfig );
-            queue_init(  	queueConfig 		);
-            reader_init( 	readerConfig );
+            fw_init( 	writerConfig );
+            queue_init( queueConfig );
+            reader_init(readerConfig );
 
             // 
             int ret;
@@ -420,12 +419,14 @@ int main(
             {
                 log_add("sem_init() failure: errno: %d\n", ret);
                 log_flush_fatal();
+                exit(EXIT_FAILURE);
             }
             
             if( sem_wait(&sem) == -1 )
             {
                 log_add("sem_init() failure: errno: %d\n", ret);
                 log_flush_fatal();
+                exit(EXIT_FAILURE);
             }            
         }   /* command line decoded */
 
@@ -433,6 +434,7 @@ int main(
         {
             log_add("Couldn't ingest NOAAPort data");
             log_flush_error();
+            exit(EXIT_FAILURE);
         }
         
   }  // log_fini();

@@ -18,16 +18,13 @@
 #include "frameReader.h"
 #include "hashTableImpl.h"
 
-//  ========================================================================
 
 //  ========================================================================
 extern void	 		setFIFOPolicySetPriority(pthread_t, char*, int);
 extern int   		tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
 
 //  ========================================================================
-static pthread_t	inputClientThread;
-static void* 		inputClientRoutine(void*);
-static void* 		buildFrameRoutine(void*);
+static pthread_t	inputClientThread[MAX_SERVERS];
 
 static int 	 		retrieveFrameHeaderFields(unsigned char*, int, uint32_t*, uint16_t*, uint16_t*);
 static int 	 		readFrameDataFromSocket(unsigned char*, int, uint16_t, uint16_t);
@@ -35,129 +32,6 @@ static int 	 		retrieveProductHeaderFields(unsigned char*, int, uint16_t*, uint1
 
 //  ========================================================================
 
-
-void
-reader_init(FrameReaderConf_t* readerConfig )
-{
-	if(pthread_create(  &inputClientThread,
-	                        NULL,
-	                        inputClientRoutine,
-	                        (void*) readerConfig)
-	        < 0)
-	    {
-	        printf("Could not create a thread!\n");
-	    }
-	    setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
-}
-
-void
-readerDestroy()
-{
-
-}
-
-/*
- *
- in_addr_t 	ipAddress,	// in network byte order
- in_port_t 	ipPort,		// in host byte order
-
-	aReaderConfig->ipAddress 	= ipAddress;
-	aReaderConfig->ipPort 		= ipPort;
-i*/
-
-
-FrameReaderConf_t* fr_setReaderConf(
-								int 		policy,
-								char**		serverAddresses,
-								int			serverCount,
-								int 		frameSize)
-{
-	FrameReaderConf_t* 	aReaderConfig 	= (FrameReaderConf_t*) malloc(sizeof(FrameReaderConf_t));
-
-	aReaderConfig->policy 				= policy;
-	aReaderConfig->serverAddresses 		= serverAddresses;
-	aReaderConfig->serverCount 			= serverCount;
-	aReaderConfig->frameSize 			= frameSize;
-
-	return aReaderConfig;
-}
-
-
-
-/**
- * Threaded function to initiate the frameReader running in its own thread
- *
- * @param[in]  frameReaderStruct  structure pointer that holds all
- *                                information for a given frameReader
- */
-static void*
-inputClientRoutine(void *frameReaderStruct) // aFrameReaderConfig
-{
-
-	const FrameReaderConf_t* aReader = (FrameReaderConf_t*) frameReaderStruct;
-
-	int policy 		= aReader->policy;
-    struct sched_param param;
-    int resp = pthread_getschedparam(pthread_self(), &policy, &param);
-    if( resp )
-    {
-        printf("get in inputClientRoutine()  : pthread_getschedparam() failure: %s\n", strerror(resp));
-        exit(EXIT_FAILURE);
-    }
-
-    in_addr_t 	ipAddress;		// passed in network byte order
-    in_port_t 	ipPort;  		// in host byte order
-
-    int socketClientFd;
-	// Creating socket file descriptor for the blender/frameReader(s) client
-	if ( (socketClientFd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
-	{
-		printf("socket creation failed\n");
-		exit(EXIT_FAILURE);
-	}
-	InetSockAddr* isa;
-	for(int serverCount = aReader->serverCount; serverCount; --serverCount)
-	{
-		const char* id = aReader->serverAddresses[serverCount]; // host+port
-		isa = isa_newFromId( id, 0 );
-		struct sockaddr* const restrict    servaddr;
-		int resp = isa_initSockAddr( isa, AF_INET, NULL, servaddr );
-
-	    printf("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n\n");
-//    		inet_ntop(AF_INET, aReader.ipAddress, &ipAddr));
-
-		// accept new client connection in its own thread
-		resp = connect(socketClientFd, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-		if( resp )
-		{
-			printf("Error connecting to server...(resp: %d) - (%s)\n", resp, strerror(resp));
-			exit(EXIT_FAILURE);
-		}
-
-		// inputBuildFrameRoutine thread shall read one frame at a time from the server
-		// and pushes it to the frameFifoAdapter function for proper handling
-		pthread_t inputFrameThread;
-		if(pthread_create(&inputFrameThread, NULL,
-				buildFrameRoutine, &socketClientFd) < 0)
-		{
-			printf("Could not create a thread!\n");
-			close(socketClientFd);
-
-			exit(EXIT_FAILURE);
-		}
-
-		if( pthread_detach(inputFrameThread) )
-		{
-			perror("Could not detach a newly created thread!\n");
-			close(socketClientFd);
-
-			exit(EXIT_FAILURE);
-		}
-
-		(void) isa_free(isa);
-	} // serverCount
-    return NULL;
-}
 
 // to read a complete frame with its data.
 static void *
@@ -180,8 +54,6 @@ buildFrameRoutine(void *clntSocket)
     // loop until byte 255 is detected. And then process next 15 bytes
     for(;;)
     {
-
-
         int n = read(clientSockFd, (char *)buffer,  1 ) ;
         if( n <= 0 )
         {
@@ -207,7 +79,7 @@ buildFrameRoutine(void *clntSocket)
 
         if(ret == -2)
         {
-            printf("retrieveFrameHeaderFields(): Checksum failed! (continue...)\n");
+            log_notice("retrieveFrameHeaderFields(): Checksum failed! (continue...)\n");
             continue;   // checksum failed
         }
 
@@ -220,6 +92,8 @@ buildFrameRoutine(void *clntSocket)
 
         if(ret == FIN || ret == -1)
         {
+            log_add("Error in retrieving product header. Closing socket...\n");
+            log_flush_warning();
             close(clientSockFd);
             pthread_exit(NULL);
         }
@@ -236,6 +110,8 @@ buildFrameRoutine(void *clntSocket)
         ret = readFrameDataFromSocket( buffer, clientSockFd, dataBlockStart, dataBlockSize);
         if(ret == FIN || ret == -1)
         {
+            log_add("Error in reading data from socket. Closing socket...\n");
+            log_flush_warning();
             close(clientSockFd);
             pthread_exit(NULL);
         }
@@ -247,13 +123,84 @@ buildFrameRoutine(void *clntSocket)
 
         // setcancelstate??? remove?
         pthread_setcancelstate(cancelState, &cancelState);
-        printf("\nContinue receiving..\n\n");
+        //printf("\nContinue receiving..\n\n");
 
     } //for
 
     return NULL;
 }
 
+
+
+/**
+ * Threaded function to initiate the frameReader running in its own thread
+ *
+ * @param[in]  frameReaderStruct  structure pointer that holds all
+ *                                information for a given frameReader
+ */
+static void*
+inputClientRoutine(void* id)
+{
+	const char* host = (char*) id;
+
+    struct sched_param param;
+	int policy	= SCHED_RR;
+    int response 	= pthread_getschedparam(pthread_self(), &policy, &param);
+    if( response )
+    {
+        log_add("get in inputClientRoutine()  : pthread_getschedparam() failure: %s\n", strerror(response));
+        log_flush_fatal();
+    }
+
+	// Create a socket file descriptor for the blender/frameReader(s) client
+    int socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
+    if(socketClientFd < 0)
+	{
+		log_add("socket creation failed\n");
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+
+	// id is host+port
+	InetSockAddr* isa = isa_newFromId( host, 0 );
+	struct sockaddr* const restrict    servaddr;
+	socklen_t* socklen = (socklen_t*) sizeof(servaddr);
+	int resp = isa_getSockAddr( isa, servaddr, socklen);
+
+	log_add("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n\n");
+	log_flush_info();
+
+	// accept new client connection in its own thread
+	resp = connect(socketClientFd, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+	if( resp )
+	{
+		log_add("Error connecting to server...(resp: %d) - (%s)\n", resp, strerror(resp));
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+
+	// inputBuildFrameRoutine thread shall read one frame at a time from the server
+	// and pushes it to the frameFifoAdapter function for proper handling
+	pthread_t inputFrameThread;
+	if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, &socketClientFd) < 0)
+	{
+		log_add("Could not create a thread!\n");
+		close(socketClientFd);
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+
+	if( pthread_detach(inputFrameThread) )
+	{
+		log_add("Could not detach a newly created thread!\n");
+		close(socketClientFd);
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+	(void) isa_free(isa);
+
+    return NULL;
+}
 static ssize_t
 getBytes(int fd, char* buf, int nbytes)
 {
@@ -336,11 +283,12 @@ retrieveProductHeaderFields(unsigned char* buffer,
                             uint16_t *pDataBlockOffset,
                             uint16_t *pDataBlockSize)
 {
-    int totalBytesRead;
-    if( (totalBytesRead = getBytes(clientSock, buffer+16, 10)) <= 0 )
+    int totalBytesRead = getBytes(clientSock, buffer+16, 10);
+    if( totalBytesRead <= 0)
     {
-        if( totalBytesRead == 0) printf("Client  disconnected!");
-        if( totalBytesRead <  0) perror("read() failure");
+        if( totalBytesRead == 0) log_add("Client  disconnected!");
+        if( totalBytesRead <  0) log_add("read() failure");
+        log_flush_warning();
 
         // clientSock gets closed in calling function
         return totalBytesRead;
@@ -373,16 +321,60 @@ readFrameDataFromSocket(unsigned char* buffer,
 						uint16_t readByteStart,
 						uint16_t dataBlockSize)
 {
-    int totalBytesRead;
+    int totalBytesRead = getBytes(clientSock, buffer+readByteStart, dataBlockSize);
 
-    if( (totalBytesRead = getBytes(clientSock, buffer+readByteStart, dataBlockSize)) <= 0 )
+    if( totalBytesRead  <= 0 )
     {
-        if( totalBytesRead == 0) printf("Client  disconnected!");
-        if( totalBytesRead <  0) perror("read() failure");
+        if( totalBytesRead == 0) log_add("Client  disconnected!");
+        if( totalBytesRead <  0) log_add("read() failure");
+        log_flush_warning();
 
         close(clientSock);
     }
     return totalBytesRead;
+}
+
+
+void
+reader_init(FrameReaderConf_t* readerConfig )
+{
+	char** serverAddresses 	= readerConfig->serverAddresses;
+	for(int serverCount = readerConfig->serverCount; serverCount && serverCount < MAX_SERVERS; --serverCount)
+	{
+		const char* id = readerConfig->serverAddresses[serverCount]; // host+port
+		if(pthread_create(  &inputClientThread[serverCount], NULL, inputClientRoutine, (void*) id) < 0)
+	    {
+	        log_add("Could not create a thread!\n");
+	        log_flush_error();
+	    }
+	    setFIFOPolicySetPriority(inputClientThread[serverCount], "inputClientThread", 1);
+	}
+}
+
+void
+readerDestroy()
+{
+
+}
+
+/*
+ *
+ in_addr_t 	ipAddress,	// in network byte order
+ in_port_t 	ipPort,		// in host byte order
+
+	aReaderConfig->ipAddress 	= ipAddress;
+	aReaderConfig->ipPort 		= ipPort;
+i*/
+
+
+FrameReaderConf_t* fr_setReaderConf( char**	serverAddresses, int serverCount)
+{
+	FrameReaderConf_t* 	aReaderConfig 	= (FrameReaderConf_t*) malloc(sizeof(FrameReaderConf_t));
+
+	aReaderConfig->serverAddresses 		= serverAddresses;
+	aReaderConfig->serverCount 			= serverCount;
+
+	return aReaderConfig;
 }
 
 

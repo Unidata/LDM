@@ -111,6 +111,7 @@ hti_init(HashTableStruct_t* table)
 	{
     	log_add("pthread_mutex_init( aHashTable ) failure: %s\n", strerror(resp));
         log_flush_fatal();
+        exit(EXIT_FAILURE);
 	}
 	(void) reset( table );
 }
@@ -157,6 +158,7 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	if( frameBytes > SBN_FRAME_SIZE )
 	{
     	log_add("Frame too large!\n");
+    	log_warning("Frame too large!\n");
         log_flush(LOG_LEVEL_WARNING);
 		return FRAME_TOO_LARGE;
 	}
@@ -173,7 +175,9 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	{
 		log_add("\nNotice: Frame arrived too late  (%u). Decrease time-out? \
 				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
+
 		(void) unlockIt( &aTable->aHashTableMutex );
+
         log_flush(LOG_LEVEL_WARNING);
 		return FRAME_TOO_LATE;
 	}
@@ -184,7 +188,9 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 		if( hti_isDuplicateFrame(aSlot->aFrame.seqNum, sequenceNumber ) )
 		{
 			log_add("Warning: Duplicate frame... %u\n", sequenceNumber);
+
 			unlockIt( &aTable->aHashTableMutex );
+
 			log_flush(LOG_LEVEL_WARNING);
 			return DUPLICATE_FRAME;
 		}
@@ -196,8 +202,10 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 		// OR (its sequenceNumber is bigger than the current oldest frame's seqNum): ignore
 		log_add("\nWarning: The slot is already occupied by different frame (%ul) \
 				 (last seqNum: %ul): table too small...\n\n", sequenceNumber, aSlot->aFrame.seqNum);
+
 		unlockIt( &aTable->aHashTableMutex );
-        log_flush(LOG_LEVEL_WARNING);
+
+		log_flush_warning();
 		return TABLE_TOO_SMALL;
 	}
 
@@ -223,13 +231,10 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	// unlock table
 	unlockIt( &aTable->aHashTableMutex );
 
-	log_flush_warning();
+	log_flush_info();
 	return FRAME_INSERTED;
 
 }
-
-
-
 
 void
 hti_releaseOldest( HashTableStruct_t* impl, Frame_t* oldestFrame )
@@ -244,7 +249,6 @@ hti_releaseOldest( HashTableStruct_t* impl, Frame_t* oldestFrame )
 	unlockIt( &impl->aHashTableMutex );
 }
 
-
 /*
  * Populate oldestFrame and set the next lastOutput Frame's seqNum
  * param out:	oldestFrame
@@ -258,11 +262,11 @@ hti_getOldestFrame(HashTableStruct_t* table, Frame_t* oldestFrame)
 
 	// table mutex
 	lockIt( &table->aHashTableMutex);
-
 	if( isEmpty( table ) )
 	{
 		// debug:
-		printf("table is empty (last seqNum: %u) \n", table->lastOutputSeqNum);
+		log_add("table is empty (last seqNum: %u) \n", table->lastOutputSeqNum);
+		log_flush_warning();
 
 		unlockIt( &table->aHashTableMutex);
 		return false;

@@ -24,6 +24,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <log.h>
 
 #include "misc.h"
 #include "queueManager.h"
@@ -105,7 +106,8 @@ initMutexAndCond()
     int resp = pthread_mutex_init(&runMutex, NULL);
     if(resp)
     {
-        printf("pthread_mutex_init( runMutex ) failure: %s - resp: %d\n", strerror(resp), resp);
+        log_add("pthread_mutex_init( runMutex ) failure: %s - resp: %d\n", strerror(resp), resp);
+		log_flush_error();
         exit(EXIT_FAILURE);
     }
 
@@ -115,7 +117,8 @@ initMutexAndCond()
     resp = pthread_cond_init(&cond, &attr);
     if(resp)
     {
-        printf("pthread_cond_init( cond ) failure: %s\n", strerror(resp));
+        log_add("pthreag_cond_init( cond ) failure: %s\n", strerror(resp));
+		log_flush_error();
         exit(EXIT_FAILURE);
     }
 }
@@ -160,11 +163,13 @@ flowDirectorRoutine()
 		{
 
 			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
-			printf("status: %d\n", status);
+			log_add("status: %d\n", status);
+			log_flush_info();
 			assert(status == 0 || status == ETIMEDOUT);
 		}
 
-		printf("\n\n=> => => => => => => ConsumeFrames Thread (flowDirectorRoutine)=> => => => => => => =>\n\n");
+		log_add("\n\n=> => => => => => => ConsumeFrames Thread (flowDirectorRoutine)=> => => => => => => =>\n\n");
+		log_flush_info();
 
 		// Call into the hashTableManager to provide a frame to consume.
 		// It will NOT block:
@@ -177,7 +182,8 @@ flowDirectorRoutine()
 			// also fix 'fr_writeFrame()' signature
 			if( fw_writeFrame( oldestFrame ) == -1 )
 			{
-				printf("\nError writing to pipeline\n");
+				log_add("\nError writing to pipeline\n");
+				log_flush_error();
 				exit(EXIT_FAILURE);
 			}
 
@@ -197,7 +203,8 @@ flowDirector()
 {
     if(pthread_create(  &flowDirectorThread, NULL, flowDirectorRoutine, NULL ) < 0)
     {
-        printf("Could not create a thread!\n");
+        log_add("Could not create a thread!\n");
+		log_flush_error();
         exit(EXIT_FAILURE);
     }
     setFIFOPolicySetPriority(flowDirectorThread, "flowDirectorThread", 2);

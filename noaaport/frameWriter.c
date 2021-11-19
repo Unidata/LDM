@@ -56,7 +56,8 @@ fw_init(FrameWriterConf_t* aFrameWriterConfig)
 static void
 fw_closePipe()
 {
-    printf("Closing NOAAport pipeline...\n");
+    log_add("Closing NOAAport pipeline...\n");
+	log_flush_info();
     close(fd);
 }
 
@@ -77,12 +78,14 @@ fw_openPipe()
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     int status = 0;
 
-    printf("Opening NOAAport pipeline...\n");
+    log_add("Opening NOAAport pipeline...\n");
+	log_flush_info();
 
     // Open pipe for write only
     if( (fd = open(namedPipeFullName, O_CREAT | O_WRONLY, mode ) )  == -1)
     {
-        printf("Cannot open named pipe! (%s)\n", namedPipeFullName);
+        log_add("Cannot open named pipe! (%s)\n", namedPipeFullName);
+        log_flush_warning();
         status = 1;
     }
     return status;
@@ -107,7 +110,8 @@ fw_writeFrame(Frame_t aFrame)
     uint32_t  seqNum = aFrame.seqNum;
     uint16_t  runNum = aFrame.runNum;
     sprintf(frameElements, "SeqNum: %lu - runNum: %lu \n", seqNum, runNum);
-    printf("   => Frame Out: %s\n\n", frameElements);
+    log_add("   => Frame Out: %s\n\n", frameElements);
+    log_flush_info();
     // We could call extractSeqNumRunCheckSum() to get seqNum, etc.
 
     const unsigned char * sbnFrame    = aFrame.data;
@@ -115,7 +119,8 @@ fw_writeFrame(Frame_t aFrame)
     int resp = write(fd, frameElements, strlen(frameElements) + 1); // <---   comment out to start sending real SBN data
     if( resp < 0 )
     {
-        printf("Write frame to pipe failure. (%s)\n", strerror(resp) );
+        log_add("Write frame to pipe failure. (%s)\n", strerror(resp) );
+        log_flush_warning();
         status = -1;
     }
 

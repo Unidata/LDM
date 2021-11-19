@@ -123,7 +123,7 @@ blender_SOURCES		= blender.c $(COMMON_SOURCES) \
  					frameWriter.c queueManager.c frameReader.c hashTableManager.c \
  					hashTableImpl.c  misc.c 
  	
-testBlender_SOURCES	= testBlender.c 
+testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
@@ -142,7 +142,9 @@ TAGS_FILES		= \
         $(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
         $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
         $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
-        $(blender_SOURCES) ../log/*.c ../log/*.h 
+        $(blender_SOURCES) ../log/*.c ../log/*.h \
+        $(testBlender_SOURCES) ../log/*.c ../log/*.h 
+
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif

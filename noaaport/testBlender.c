@@ -3,6 +3,7 @@
 // server program for TCP connection
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
@@ -57,12 +58,12 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 
 	// SBN sequence number: byte [8-11]
 	// sequence: 1000, 1001, 1002, ...
-	// printf("Sequence Number: %lu\n",  sequence);
+	// log_add("Sequence Number: %lu\n",  sequence);
 	*(uint32_t*)(frame+8) = (uint32_t) htonl(sequence); 
 
 	
 	//sequence = (uint32_t) ntohl(*(uint32_t*)(frame+8)); 
-	//printf("---------->received Sequence: %lu\n",  sequence);
+	//log_add("---------->received Sequence: %lu\n",  sequence);
 	
 	// SBN run number: byte [12-13]
 	*(uint16_t*)(frame+12) = (uint16_t) htons(run); 
@@ -74,7 +75,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 		sum += (unsigned char) frame[byteIndex];
 	}
 
-	//printf("checksum: %u \n", sum);
+	//log_add("checksum: %u \n", sum);
 	*(uint16_t*)(frame+14) = (uint16_t) htons(sum); 
 	
 
@@ -91,7 +92,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 	// header length: [18-19]
 	// total length of product header in bytes for this frame, including options
 	uint16_t headerLength = 16;  // 16 bytes, when NO options exist 
-	//printf("Product Header Length: %lu\n",  headerLength);
+	//log_add("Product Header Length: %lu\n",  headerLength);
 	*(uint16_t*)(frame+18) = (uint16_t) htons(headerLength); 
 
 	// dummy block number: [20-21]
@@ -101,7 +102,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 
 	// Data  Block Offset: [22-23]
 	uint16_t dataBlockOffset = 0;
-	//printf("Data Block Offset: %lu\n",  dataBlockOffset);
+	//log_add("Data Block Offset: %lu\n",  dataBlockOffset);
 	*(uint16_t*)(frame+22) = (uint16_t) htons(dataBlockOffset); 
 
 
@@ -110,7 +111,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 	// If block size > 4000 ==> scream (assert!)
 	assert(dataBlockSize < SBN_DATA_BLOCK_SIZE);
 
-	//printf("Data Block Size: %lu\n",  dataBlockSize);
+	//log_add("Data Block Size: %lu\n",  dataBlockSize);
 	*(uint16_t*)(frame+24) = (uint16_t) htons(dataBlockSize);
 
 	// beginning of data block: start at product-defi header: 
@@ -140,15 +141,27 @@ sendFramesToBlenderRoutine(void *clntSocketAndSeqNum)
 }
 
 // Driver code
-int main()
+int main(int argc, char** argv)
 {
 	char buffer[100];
 
 	int len;
 	int serverSockfd, clientSocket;
 
-//======================================
+    /*
+     * Initialize logging. Done first in case something happens that needs to
+     * be reported.
+     */
+    const char* const progname = basename(argv[0]);
 
+    if (log_init(progname))
+    {
+        log_syserr("Couldn't initialize logging module");
+        exit(EXIT_FAILURE);
+    }//======================================
+
+	printf("Hello\n");
+	log_notice("Hello\n");
 	struct sockaddr_in 
 	  			servaddr= { .sin_family      = AF_INET, 
                             .sin_addr.s_addr = htonl(INADDR_ANY),  //INADDR_LOOPBACK), 
@@ -158,7 +171,8 @@ int main()
     
     // Creating socket file descriptor
     if ( (serverSockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-        perror("socket creation failed!");
+		log_add("socket creation failed!\n");
+		log_flush_error();
         exit(EXIT_FAILURE);
     }
 
@@ -167,7 +181,8 @@ int main()
     if (bind(serverSockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) )
     {
         close(serverSockfd);
-        perror("socket bind failed!");
+		log_add("socket bind failed!\n");
+		log_flush_error();
         exit(EXIT_FAILURE);
     }
 
@@ -185,26 +200,28 @@ int main()
 	uint32_t 	sequenceNum 				= 0;
 	int 		numberOfFramesSent 			= 0;
     int 		max_connections_to_receive 	= 0;
-    printf("\ttestBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
-    printf("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
+    log_add("testBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
+    log_add("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
+    log_flush_info();
 
 	pthread_t frameSenderThreadArray[TEST_MAX_THREADS], aThreadId;
 	SocketAndSeqNum_t socketIdAndSeqNum = { .socketId = 0, .seqNum = 0};
 
-
 	for (int threadIndex = 0; threadIndex < TEST_MAX_THREADS; threadIndex++)
 	{
-		printf("accept(): blocking on incoming client requests");
+		log_add("accept(thread: %d): blocking on incoming client requests", threadIndex);
+		log_flush_info();
 		clientSocket = accept(serverSockfd, (struct sockaddr *)&cliaddr, (socklen_t *) &c);
 		if(clientSocket < 0)
 		{
-			printf("\t-> testBlender (socat): Client connection NOT accepted!\n");
+			log_add("\t-> testBlender (socat): Client connection NOT accepted!\n");
+			log_flush_warning();
 			sleep(1);
 			continue;
 		}
 
-		printf("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
-
+		log_add("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
+		log_flush_info();
 
 		socketIdAndSeqNum.seqNum 	= threadIndex * NUMBER_FRAMES_TO_SEND;
 		socketIdAndSeqNum.socketId 	= clientSocket;
@@ -216,7 +233,8 @@ int main()
 			sendFramesToBlenderRoutine,
 			(void *) &socketIdAndSeqNum) < 0)
 		{
-			printf("Could not create a thread!\n");
+			log_add("Could not create a thread!\n");
+			log_flush_error();
 			close(clientSocket);
 
 			exit(EXIT_FAILURE);
@@ -237,7 +255,9 @@ int main()
     } // for
 
 
-	printf("numberOfFramesSent: %d\n", numberOfFramesSent);
+	log_add("numberOfFramesSent: %d\n", numberOfFramesSent);
+	log_flush_info();
+
 	return 0;
 }
 // ==================================================
@@ -265,7 +285,8 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 			{
 				run++;
 				sequenceNum = 0;	// reset after run# change
-				printf("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
+				log_add("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
+				log_flush_info();
 				sleep(3);
 			}
 
@@ -286,19 +307,23 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 	//================== the frame data is simulated here =======
 
 	    	//if(s % 100 == 0)
-		    printf("\n --> testBlender (thread# %d) sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
+		    log_add("\n --> testBlender (thread# %d) sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
 		    		threadId, s, sequenceNum, run) ;
+			log_flush_info();
 
 			int written = write(clientSocket, (const char *)frame, sizeof(frame));
 			if(written != sizeof(frame))
 		    {
-			printf("Write failed...\n");
-		    	perror("Error");
-		    	exit(0);
+				log_add("Write failed...\n");
+				log_flush_error();
+		    	exit(EXIT_FAILURE);
 		    }
 
 			if(s % 20000 == 0)
-				printf("Continuing... %d\n", s);
+			{
+				log_add("Continuing... %d\n", s);
+				log_flush_info();
+			}
 			
 	//		numberOfFramesSent++;
 		    ++sequenceNum;
@@ -308,7 +333,7 @@ sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
 
 /*
         ++totalTCPconnectionReceived;
-        printf("Processing TCP client...received %d connection so far\n", 
+        log_add("Processing TCP client...received %d connection so far\n",
             totalTCPconnectionReceived);
     } // for
 }
