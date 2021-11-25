@@ -41,7 +41,7 @@ FrameWriterConf_t* fw_setConfig(int frameSize, const char* namedPipe)
 }
 
 void
-fw_init(FrameWriterConf_t* aFrameWriterConfig)
+fw_start(FrameWriterConf_t* aFrameWriterConfig)
 {
 
 	// named pipe full name: if NULL take the default

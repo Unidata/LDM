@@ -5,6 +5,7 @@
  *      Author: Mustapha Iles
  */
 
+#include "config.h"
 #include <stdbool.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -49,7 +50,7 @@ static HashTableInfo_t* 	pOut; // Hash table of last output frame
 void
 htm_init()
 {
-
+    log_notice("htm_init()\n");
 	bool firstIter = true;
 	// initialize mutex new in HTMan
     for (int i = 0; i < 2; ++i) {
@@ -57,10 +58,11 @@ htm_init()
 
         if( !(hashTableInfos[i].impl = malloc(sizeof(HashTableStruct_t))))
         {
-        	printf("Could not allocate a HashTableStruct_t");
+        	log_info("Could not allocate a HashTableStruct_t");
         	if(!firstIter)
         		free(hashTableInfos[i-1].impl);
 
+        	log_flush_info();
         	exit(EXIT_FAILURE);
         }
         firstIter = false;
@@ -71,13 +73,13 @@ htm_init()
     }
 
     pNext 		= hashTableInfos;	// 0
-    printf("Initial pCurr->runNum: %u\n", pNext->runNum);
-    printf("Initial POTHER->runNum: %u\n", POTHER->runNum);
+    log_info("Initial pCurr->runNum: %u\n", pNext->runNum);
+    log_info("Initial POTHER->runNum: %u\n", POTHER->runNum);
     pOut = pNext;
 
     if( pthread_mutex_init(&mutex, NULL) )
     {
-    	printf("pthread_mutex_init() failure\n");
+    	log_info("pthread_mutex_init() failure\n");
     	exit(EXIT_FAILURE);
     }
 }
@@ -94,7 +96,7 @@ htm_tryInsert(uint16_t runNum,
 	lockIt( &mutex );
 
 	// Debug:
-	printf("\n============ Inserting seqNum %u in runNum: %u =========\n",
+	log_info("\n============ Inserting seqNum %u in runNum: %u =========\n",
 			seqNum, runNum);
 
     if (pNext->runNum == -1)
@@ -106,13 +108,13 @@ htm_tryInsert(uint16_t runNum,
     if (runNum != pNext->runNum && pNext == pOut )
     {
 
-		printf("if (runNum !=   pCurr->runNum && runNum != POTHER->runNum )...\
+		log_info("if (runNum !=   pCurr->runNum && runNum != POTHER->runNum )...\
 				\n  runNum: %u, pCurr: %u,                 POTHER: %u\n",
 				runNum, pNext->runNum, POTHER->runNum);
 
-    		printf("POTHER->impl is empty (count: %u, POTHER->runNum: %u)!\n",
+    		log_info("POTHER->impl is empty (count: %u, POTHER->runNum: %u)!\n",
     				POTHER->impl->frameCounter, POTHER->runNum);
-    		printf("Swapping POTHER and pCurr...\n");
+    		log_info("Swapping POTHER and pCurr...\n");
     		// Swap tables ('cause previous table is available)
 			pNext = POTHER;
 
@@ -120,7 +122,7 @@ htm_tryInsert(uint16_t runNum,
 			pNext->runNum = runNum;
     }
 
-    printf("Which table to use to insert? %s\n",
+    log_info("Which table to use to insert? %s\n",
     				(runNum == pNext->runNum)? "pNext":"POTHER");
     HashTableStruct_t* impl = (runNum == pNext->runNum)
             ? pNext->impl
@@ -140,7 +142,6 @@ htm_getOldestFrame(Frame_t* oldestFrame )
 	lockIt(&mutex);
 
     bool success = hti_getOldestFrame(pOut->impl, oldestFrame );
-
 
 	// mutex unlock HTMan mutex
     unlockIt( &mutex);
@@ -170,14 +171,16 @@ htm_releaseOldestFrame( Frame_t* oldestFrame )
 
     if ( hti_isEmpty(pOut->impl ) && pNext != pOut )
     {
-    	printf("htm_releaseOldestFrame(): pCurr: %u, pOut: %u \n",
+    	log_info("htm_releaseOldestFrame(): pCurr: %u, pOut: %u \n",
     			pNext->runNum, pOut->runNum);
 
-    	printf("reset(): %u \n",  pOut->runNum);
+    	log_info("reset(): %u \n",  pOut->runNum);
     	(void) hti_reset( pOut->impl );
 
-    	printf("pOut = pNext;\n");
+    	log_info("pOut = pNext;\n");
         pOut = pNext;
+
+        log_flush_info();
     }
 
 }

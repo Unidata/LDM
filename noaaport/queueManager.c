@@ -62,6 +62,7 @@ QueueConf_t* setQueueConf(double frameLatency, int hashTableSize)
 
 	return aQueueConfig;
 }
+
 static void
 setMaxWait(double frameLatency)
 {
@@ -78,9 +79,8 @@ setHashTableSize(int tSize)
 	hashTableSize = tSize;
 }
 
-
 void
-queue_init(QueueConf_t* aQueueConf)
+queue_start(QueueConf_t* aQueueConf)
 {
 	// QueueConf elements:
 	(void)  htm_init();
@@ -100,6 +100,7 @@ queueDestroy()
 {
 
 }
+
 static void
 initMutexAndCond()
 {
@@ -123,19 +124,16 @@ initMutexAndCond()
     }
 }
 
-
 /**
  * Threaded function to initiate the flowDirector running in its own thread
  *
  */
-
 //pre-condition:	runMutex NOT locked
 void*
 flowDirectorRoutine()
 {
 	struct timespec abs_time;
 	int numFrames;
-
 
 	for (;;)
 	{
@@ -192,7 +190,7 @@ flowDirectorRoutine()
 		unlockIt(&runMutex);
     } // for
 
-    // log_free();
+    log_free();
     return NULL;
 
 }

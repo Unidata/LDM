@@ -262,8 +262,6 @@ insertFrame(int currentTable,
 	(void) incrementFramesReceived(currentTable);
 }
 
-// pre-cond: entering this function with UNLOCKED runMutex.
-
 // pre-condition: runMutex      is LOCKED 
 // pre-condition: aFrameMutex   is unLOCKED
 

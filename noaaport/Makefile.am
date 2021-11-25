@@ -238,6 +238,10 @@ check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
+valgrind-blender:	blender	
+	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
+	    blender -t 1.0 -h 100 /tmp/noaaportIngesterPipe  localhost:9127 
+
 valgrind-readnoaaport:		readnoaaport
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
