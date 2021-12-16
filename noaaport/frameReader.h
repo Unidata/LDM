@@ -13,6 +13,7 @@
 #define FIN                         0
 #define MAX_SEQ_NUM                 UINT32_MAX      // (~(uint32_t)0)  // not used
 #define MAX_SERVERS					20				// hosts to connect to
+#define MAX_HOST_LEN				40				// hosts length
 
 typedef struct sockaddr_in SOCK4ADDR;
 typedef struct frameReader {

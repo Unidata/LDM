@@ -1,7 +1,9 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <stdlib.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -158,9 +160,9 @@ readFrameDataFromSocket(unsigned char* buffer,
 
 // to read a complete frame with its data.
 static void *
-buildFrameRoutine(void *clntSocket)
+buildFrameRoutine(void *arg)
 {
-    int clientSockFd    = *(int*) clntSocket;
+    int clientSockFd    = (int) arg;
 
     unsigned char buffer[SBN_FRAME_SIZE] = {};
 
@@ -180,8 +182,8 @@ buildFrameRoutine(void *clntSocket)
         int n = read(clientSockFd, (char *)buffer,  1 ) ;
         if( n <= 0 )
         {
-            if( n <  0 ) printf("InputClient thread: inputBuildFrameRoutine(): thread should die!");
-            if( n == 0 ) printf("InputClient thread: inputBuildFrameRoutine(): Client  disconnected!");
+            if( n <  0 ) log_syserr("InputClient thread: inputBuildFrameRoutine(): thread should die!");
+            if( n == 0 ) log_syserr("InputClient thread: inputBuildFrameRoutine(): Client  disconnected!");
             close(clientSockFd);
             pthread_exit(NULL);
         }
@@ -262,9 +264,9 @@ buildFrameRoutine(void *clntSocket)
 static void*
 inputClientRoutine(void* id)
 {
-	const char* host = (char*) id;
+	const char* serverId = (char*) id;
 
-	log_notice("HOST: %s", host);
+	log_notice("Server: %s", serverId);
     struct sched_param param;
 	int policy	= SCHED_RR;
     int response 	= pthread_getschedparam(pthread_self(), &policy, &param);
@@ -284,27 +286,69 @@ inputClientRoutine(void* id)
 	}
 
 	// id is host+port
-	InetSockAddr* isa = isa_newFromId( host, 0 );
-	struct sockaddr* const restrict    servaddr;
-	socklen_t* socklen = (socklen_t*) sizeof(servaddr);
-	int resp = isa_getSockAddr( isa, servaddr, socklen);
+    char *hostId;
+    in_port_t port;
 
-	log_add("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n\n");
-	log_flush_info();
+    if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
+    {
+    	log_add("Invalid server specification %s\n", serverId);
+    	log_flush_fatal();
+    	exit(EXIT_FAILURE);
+    }
 
-	// accept new client connection in its own thread
-	resp = connect(socketClientFd, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-	if( resp )
+	// The address family must be compatible with the local host
+
+	struct addrinfo hints = { .ai_flags = AI_ADDRCONFIG, .ai_family = AF_INET };
+	struct addrinfo* addrInfo;
+
+	// We consider dealing with an IP v4 or an IP v6 remote server.
+	// argument 'ipV6Target' on command line sets the selection (hard coded for now)
+	bool ipV6Target = false;
+	if( ipV6Target )
 	{
-		log_add("Error connecting to server...(resp: %d) - (%s)\n", resp, strerror(resp));
+		hints.ai_family = AF_INET6;
+	}
+
+	if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
+	{
+		log_add_syserr("getaddrinfo() failure on %s", hostId);
 		log_flush_fatal();
 		exit(EXIT_FAILURE);
 	}
+    struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * ) (addrInfo->ai_addr);
+	sockaddr.sin_port 				= htons(port);
+	//struct sockaddr_in6 sockaddr_v6 = *(struct sockaddr_in6 * ) (addrInfo->ai_addr);
+	//sockaddr_v6.sin6_port 			= htons(port);
+
+    freeaddrinfo(addrInfo);
+    free(hostId);
+
+    log_add("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n\n");
+    log_flush_warning();
+
+	// accept new client connection in its own thread
+	/*if( ipV6Target )
+	{
+		if( connect(socketClientFd, (const struct sockaddr *) &sockaddr_v6, sizeof(sockaddr_v6)) )
+		{
+			log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
+	}*/
+	if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
+	{
+		log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+	log_add("\nInputClientRoutine: CONNECTED!\n\n");
+	log_flush_warning();
 
 	// inputBuildFrameRoutine thread shall read one frame at a time from the server
 	// and pushes it to the frameFifoAdapter function for proper handling
 	pthread_t inputFrameThread;
-	if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, &socketClientFd) < 0)
+	if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, (void *) socketClientFd) < 0)
 	{
 		log_add("Could not create a thread!\n");
 		close(socketClientFd);
@@ -314,26 +358,26 @@ inputClientRoutine(void* id)
 
 	if( pthread_detach(inputFrameThread) )
 	{
-		log_add("Could not detach a newly created thread!\n");
+		log_add("Could not detach the created thread!\n");
 		close(socketClientFd);
 		log_flush_fatal();
 		exit(EXIT_FAILURE);
 	}
-	(void) isa_free(isa);
-
-    return NULL;
 }
 
-void
-reader_start(FrameReaderConf_t* readerConfig )
+int
+reader_start( char* const* serverAddresses, int serverCount )
 {
-	int serverCount = readerConfig->serverCount;
-	for(int i=0; serverCount && serverCount < MAX_SERVERS && i < MAX_SERVERS; i++)
+	if(serverCount > MAX_SERVERS || !serverCount)
 	{
-		char* svr = readerConfig->serverAddresses[i]; // host+port
-		//log_notice("server: %s\n", readerConfig->serverAddresses[i]);
-		//log_notice("server: %s\n", svr);
-		const char* id = readerConfig->serverAddresses[i]; // host+port
+		log_error("Too many servers");
+		return -1;
+	}
+	for(int i=0; i< serverCount; ++i)
+	{
+		log_notice("server: %s\n", serverAddresses[i]);
+
+		const char* id = serverAddresses[i]; // host+port
 		if(pthread_create(  &inputClientThread[i], NULL, inputClientRoutine, (void*) id) < 0)
 	    {
 	        log_add("Could not create a thread!\n");
@@ -341,13 +385,9 @@ reader_start(FrameReaderConf_t* readerConfig )
 	    }
 	    setFIFOPolicySetPriority(inputClientThread[i], "inputClientThread", 1);
 	}
+	return 0;
 }
 
-void
-readerDestroy()
-{
-
-}
 
 /*
  *
@@ -358,19 +398,3 @@ readerDestroy()
 	aReaderConfig->ipPort 		= ipPort;
 i*/
 
-
-FrameReaderConf_t* fr_setReaderConf( char**	serverAddresses, int serverCount)
-{
-	FrameReaderConf_t* 	aReaderConfig 	= (FrameReaderConf_t*) malloc(sizeof(FrameReaderConf_t));
-	aReaderConfig->serverAddresses 		= malloc(serverCount * sizeof(char*));
-
-	for(int i=0; i<serverCount; i++)
-	{
-		aReaderConfig->serverAddresses[i] = malloc(30 * sizeof(char));
-		strcpy(aReaderConfig->serverAddresses[i], serverAddresses[i]);
-	}
-	//aReaderConfig->serverAddresses 		= serverAddresses;
-	aReaderConfig->serverCount 			= serverCount;
-
-	return aReaderConfig;
-}

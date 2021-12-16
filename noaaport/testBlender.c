@@ -18,20 +18,55 @@
 #include "globals.h"
 
 #define NUMBER_FRAMES_TO_SEND 	15
-#define TEST_MAX_THREADS 		2
+#define TEST_MAX_THREADS 		200
 #define PORT1            		9127
 #define PORT2            		9128
 #define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 			1
-#define RUN_THRESHOLD           4
+#define RUN_THRESHOLD               1
+
+const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
+            "University Corporation for Atmospheric Research";
 
 typedef struct SocketAndSeqNum {
     uint32_t        seqNum;
     int             socketId;
     pthread_t 		threadId;
 } SocketAndSeqNum_t;
+
+static 		pthread_t 	frameSenderThreadArray[TEST_MAX_THREADS];
+static		char*		serverAddress;
+
+
+/**
+ * Unconditionally logs a usage message.
+ *
+ * @param[in] progName   Name of the program.
+ * @param[in] copyright  Copyright notice.
+ */
+static void
+usage(
+    const char* const          progName,
+    const char* const restrict copyright)
+{
+    log_notice(
+"\n\t%s - version %s\n"
+"\n\t%s\n"
+"\n"
+"Usage: %s [-v|-x] [-p port] host:port ... \n"
+"where:\n"
+"   -v          Log through level INFO.\n"
+"   -x          Log through level DEBUG. Too much information.\n"
+"   -p			port number.\n"
+"    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
+"\n",
+        progName, PACKAGE_VERSION, copyright, progName);
+
+    exit(1);
+}
+
 
 
 /**
@@ -76,20 +111,11 @@ decodeCommandLine(
                 break;
         }
     }
-
-/*
     if(optind >= argc)
     	usage(argv[0], COPYRIGHT_NOTICE);
 
-	namedPipe = argv[optind++];
+	serverAddress = argv[optind];	//  &argv[optind]; ///< server to connect to
 
-	if(optind >= argc)
-    	usage(argv[0], COPYRIGHT_NOTICE);
-
-	const int serverCount = argc - optind;
-
-	serverAddresses = (const char* const *)( argv	+ optind); ///< list of servers to connect to
-*/
     return status;
 }
 
@@ -185,7 +211,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 
 }
 
-// NOT used
+
 static void *
 sendFramesToBlenderRoutine(void *clntSocketAndSeqNum)
 {
@@ -198,70 +224,93 @@ sendFramesToBlenderRoutine(void *clntSocketAndSeqNum)
 	//sendFramesToBlender(clientSock, sequenceNumber, (int)threadId);
 }
 
-static void
-// sendFramesToBlender(int clientSocket, uint32_t sequenceNum, int threadId)
-sendFramesToBlender(int clientSocket)
+
+
+static void*
+sendFramesToBlender(void* arg)
 {
+	int clientSocket = (int) arg;
+	log_notice("ClientSocket: %d", clientSocket);
 
-		uint32_t sequenceNum = 0;	// reset after run# change
-    	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
-		uint16_t 		run 					= 0;
+	uint32_t 		sequenceNum 			= 0;	// reset after run# change
+	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
+	uint16_t 		run 					= 0;
 
-    	srandom(0);
-    	int lowerLimit = 0, upperLimit = 50;
+	srandom(0);
+	int lowerLimit = 0, upperLimit = 50;
 
-	    for (int s=0; s < NUMBER_FRAMES_TO_SEND; s++)
-	    {
-	        // We simulate a socat server sending frames to the blender which acts as a client
-			// frames are constructed here for testing purposes
+	for (int s=0; s < NUMBER_FRAMES_TO_SEND; s++)
+	{
+		// We simulate a socat server sending frames to the blender which acts as a client
+		// frames are constructed here for testing purposes
 
-	    	// simulate a run# change every RUN_THRESHOLD (i.e. 60) frames:
-	    	if( !( (s) % RUN_THRESHOLD) )
-			{
-				run++;
-				sequenceNum = 0;	// reset after run# change
-				log_add("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
-				log_flush_info();
-				sleep(3);
-			}
-
-	    	// build the s-th frame
-	    	(void) buildFrameI(sequenceNum, frame, run, clientSocket);
-
-	    	// send it after x sec:
-	    	float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
-
-	    	//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
-	    	double frac;
-	    	double sec = modf(snooze, &frac);
-	    	struct timespec duration = {
-	    			.tv_sec 	= (time_t) sec,
-	    			.tv_nsec 	= (long) (frac * 1000000000)
-	    	};
-	    	nanosleep( &duration, NULL); // [0 - 1/10sec]
-
-		    log_add("\n --> testBlender sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
-		    		s, sequenceNum, run) ;
+		// simulate a run# change every RUN_THRESHOLD (i.e. 60) frames:
+		if( !( (s) % RUN_THRESHOLD) )
+		{
+			run++;
+			sequenceNum = 0;	// reset after run# change
+			log_add("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
 			log_flush_info();
+			sleep(3);
+		}
 
-			int written = write(clientSocket, (const char *)frame, sizeof(frame));
-			if(written != sizeof(frame))
-		    {
-				log_add("Write failed...\n");
-				log_flush_error();
-		    	exit(EXIT_FAILURE);
-		    }
+		// build the s-th frame
+		(void) buildFrameI(sequenceNum, frame, run, clientSocket);
 
-			if(s % 20000 == 0)
-			{
-				log_add("Continuing... %d\n", s);
-				log_flush_info();
-			}
+		// send it after x sec:
+		float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
 
-	//		numberOfFramesSent++;
-		    ++sequenceNum;
+		//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
+		double frac;
+		double sec = modf(snooze, &frac);
+		struct timespec duration = {
+				.tv_sec 	= (time_t) sec,
+				.tv_nsec 	= (long) (frac * 1000000000)
+		};
+		nanosleep( &duration, NULL); // [0 - 1/10sec]
 
-		} // for
+		log_add("\n --> testBlender sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
+				s, sequenceNum, run) ;
+		log_flush_info();
+
+		int written = write(clientSocket, (const char *)frame, sizeof(frame));
+		if(written != sizeof(frame))
+		{
+			log_add("Write failed...\n");
+			log_flush_error();
+			exit(EXIT_FAILURE);
+		}
+
+		if(s % 20000 == 0)
+		{
+			log_add("Continuing... %d\n", s);
+			log_flush_info();
+		}
+
+//		numberOfFramesSent++;
+		++sequenceNum;
+
+	} // for
+}
+
+static void
+start_newThread(int threadNum, int clientSocket)
+{
+	// create a thread
+	if(pthread_create(  &frameSenderThreadArray[threadNum],
+			NULL, sendFramesToBlender, (void*) clientSocket) < 0)
+	{
+		log_add("testBlender(): Could not create a thread!\n");
+		log_flush_error();
+	}
+
+	if( pthread_detach(frameSenderThreadArray[threadNum]) )
+	{
+		log_add("Could not detach the created thread!\n");
+		close(clientSocket);
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
 }
 
 /*
@@ -306,10 +355,11 @@ int main(int argc, char** argv)
     }
 
     log_notice("Executing testBlender -p %d\n", port);
+    log_notice("ServerAddress: %s\n", serverAddress);
 
 	struct sockaddr_in 
 	  			servaddr= { .sin_family      = AF_INET, 
-                            .sin_addr.s_addr = htonl(INADDR_ANY),  //INADDR_LOOPBACK), 
+                            .sin_addr.s_addr = htonl(INADDR_ANY),	//htonl(serverAddress), // htonl(INADDR_ANY),  //INADDR_LOOPBACK),
                             .sin_port        = htons(port)
                           }, 
                         cliaddr;
@@ -349,9 +399,9 @@ int main(int argc, char** argv)
     log_add("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
     log_flush_info();
 
-	pthread_t frameSenderThreadArray[TEST_MAX_THREADS], aThreadId;
 	SocketAndSeqNum_t socketIdAndSeqNum = { .socketId = 0, .seqNum = 0};
 
+	int accepted = 0;
 	for (;;)
 	{
 		log_add("accept(): blocking on incoming client requests\n");
@@ -367,8 +417,9 @@ int main(int argc, char** argv)
 		}
 
 		log_add("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
+		log_add("\t   (Each connection will be served from its own thread)\n");
 		log_flush_info();
-		sendFramesToBlender(clientSocket);
+		start_newThread(accepted++, clientSocket);
 
     } // for
 

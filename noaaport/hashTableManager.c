@@ -122,7 +122,7 @@ htm_tryInsert(uint16_t runNum,
 			pNext->runNum = runNum;
     }
 
-    log_info("Which table to use to insert? %s\n",
+    log_info("\t -> Using hashTable: %s\n",
     				(runNum == pNext->runNum)? "pNext":"POTHER");
     HashTableStruct_t* impl = (runNum == pNext->runNum)
             ? pNext->impl

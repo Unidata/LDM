@@ -140,7 +140,7 @@ flowDirectorRoutine()
 		int status = 0;
 		lockIt(&runMutex);
 
-		clock_gettime(CLOCK_REALTIME, &abs_time);
+		clock_gettime(clockToUse, &abs_time);
 		// pthread cond_timedwait() expects an absolute time to wait until
 		//abs_time.tv_sec     += max_wait.tv_sec;
 		//abs_time.tv_nsec    += max_wait.tv_nsec;
@@ -161,8 +161,8 @@ flowDirectorRoutine()
 		{
 
 			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
-			log_add("status: %d\n", status);
-			log_flush_info();
+			log_add("\n\nWAIT: (flowDirectorRoutine)...\n\n");
+			log_flush_debug();
 			assert(status == 0 || status == ETIMEDOUT);
 		}
 
