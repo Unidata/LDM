@@ -25,16 +25,17 @@
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
-bool 	debug = false;
+bool 		debug = false;
+static		int							serverCount;
+static		char*	const*		serverAddresses;
 // =====================================================================
 
 extern FrameWriterConf_t* fw_setConfig(int, const char*);
-extern FrameReaderConf_t* fr_setReaderConf( char**, int );
 extern QueueConf_t*   setQueueConf(double, int);
 
-extern void 		  fw_start(FrameWriterConf_t*);
-extern void 		  queue_start(QueueConf_t*);
-extern void 		  reader_start(FrameReaderConf_t*);
+extern void 		fw_start(FrameWriterConf_t*);
+extern void 		queue_start(QueueConf_t*);
+extern int 		  	reader_start( const char* const*, int);
 
 // =====================================================================
 
@@ -84,10 +85,8 @@ usage(
  */
 static int 
 decodeCommandLine(
-        int     const          argc,
-        char* const*  const restrict argv,
-		int*					pServerCount,
-		char***					pServerAddresses
+        int     const  			argc,
+        char* const*  const 	argv
         )
 {
     int                 status = 0;
@@ -140,8 +139,8 @@ decodeCommandLine(
 	if(optind >= argc)
     	usage(argv[0], COPYRIGHT_NOTICE);
 
-	*pServerCount = argc - optind;
-	*pServerAddresses = (const char* const *)( argv	+ optind); ///< list of servers to connect to
+	serverCount = argc - optind;
+	serverAddresses = &argv[optind]; ///< list of servers to connect to
 
     return status;
 }
@@ -205,10 +204,6 @@ int main(
      */
     const char* const progname = basename(argv[0]);
 
-    //char** serverAddresses;
-    const char* const*  serverAddresses;	///< list of servers to connect to
-	int					serverCount;
-
     if (log_init(progname)) 
     {
         log_syserr("Couldn't initialize logging module");
@@ -218,7 +213,7 @@ int main(
     {
         (void)log_set_level(LOG_LEVEL_INFO);
 
-        status = decodeCommandLine(argc, argv, &serverCount, &serverAddresses);
+        status = decodeCommandLine(argc, argv);
         if (status) 
         {
         	log_add("Couldn't decode command-line");
@@ -243,14 +238,16 @@ int main(
             in_port_t ipPort  	= PORT;					// to be passed in as ns
             int frameSize 		= SBN_FRAME_SIZE;
 
-            FrameReaderConf_t* 	readerConfig 	= fr_setReaderConf(serverAddresses, serverCount );
             QueueConf_t* queueConfig 			= setQueueConf(waitTime, hashTableSize);
             FrameWriterConf_t* 	writerConfig 	= fw_setConfig(frameSize, namedPipe);
 
             // Start all modules
             fw_start( 	writerConfig );
             queue_start( queueConfig );
-            reader_start(readerConfig );
+            if( reader_start(serverAddresses, serverCount ) )
+            {
+            	exit(EXIT_FAILURE);
+            }
 
             for(;;)
             	pause();

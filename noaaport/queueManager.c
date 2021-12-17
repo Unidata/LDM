@@ -166,8 +166,7 @@ flowDirectorRoutine()
 			assert(status == 0 || status == ETIMEDOUT);
 		}
 
-		log_add("\n\n=> => => => => => => ConsumeFrames Thread (flowDirectorRoutine)=> => => => => => => =>\n\n");
-		log_flush_info();
+		log_info("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
 
 		// Call into the hashTableManager to provide a frame to consume.
 		// It will NOT block:

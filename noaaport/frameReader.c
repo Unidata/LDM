@@ -266,7 +266,6 @@ inputClientRoutine(void* id)
 {
 	const char* serverId = (char*) id;
 
-	log_notice("Server: %s", serverId);
     struct sched_param param;
 	int policy	= SCHED_RR;
     int response 	= pthread_getschedparam(pthread_self(), &policy, &param);
@@ -323,8 +322,7 @@ inputClientRoutine(void* id)
     freeaddrinfo(addrInfo);
     free(hostId);
 
-    log_add("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n\n");
-    log_flush_warning();
+    log_info("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n");
 
 	// accept new client connection in its own thread
 	/*if( ipV6Target )
@@ -342,8 +340,7 @@ inputClientRoutine(void* id)
 		log_flush_fatal();
 		exit(EXIT_FAILURE);
 	}
-	log_add("\nInputClientRoutine: CONNECTED!\n\n");
-	log_flush_warning();
+	log_debug("\nInputClientRoutine: CONNECTED!\n");
 
 	// inputBuildFrameRoutine thread shall read one frame at a time from the server
 	// and pushes it to the frameFifoAdapter function for proper handling
@@ -375,7 +372,7 @@ reader_start( char* const* serverAddresses, int serverCount )
 	}
 	for(int i=0; i< serverCount; ++i)
 	{
-		log_notice("server: %s\n", serverAddresses[i]);
+		log_notice("Server to connect to: %s\n", serverAddresses[i]);
 
 		const char* id = serverAddresses[i]; // host+port
 		if(pthread_create(  &inputClientThread[i], NULL, inputClientRoutine, (void*) id) < 0)

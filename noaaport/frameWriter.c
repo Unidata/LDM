@@ -110,8 +110,8 @@ fw_writeFrame(Frame_t aFrame)
     uint32_t  seqNum = aFrame.seqNum;
     uint16_t  runNum = aFrame.runNum;
     sprintf(frameElements, "SeqNum: %lu - runNum: %lu \n", seqNum, runNum);
-    log_add("   => Frame Out: %s\n\n", frameElements);
-    log_flush_info();
+    log_info("   => Frame Out: %s", frameElements);
+
     // We could call extractSeqNumRunCheckSum() to get seqNum, etc.
 
     const unsigned char * sbnFrame    = aFrame.data;

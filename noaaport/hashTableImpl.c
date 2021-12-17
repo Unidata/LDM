@@ -173,12 +173,10 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	int64_t lastOutputFrameSeqNum 	= aTable->lastOutputSeqNum;
 	if( lastOutputFrameSeqNum >= 0 && isThisBeforeThat( sequenceNumber, lastOutputFrameSeqNum ))
 	{
-		log_add("\nNotice: Frame arrived too late  (%u). Decrease time-out? \
+		log_notice("\nFrame (seqNum: %u) arrived too late. Decrease time-out? \
 				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
-
 		(void) unlockIt( &aTable->aHashTableMutex );
-
-        log_flush(LOG_LEVEL_WARNING);
+//        log_flush(LOG_LEVEL_WARNING);
 		return FRAME_TOO_LATE;
 	}
 
@@ -187,10 +185,8 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 		// Check if occupied with the same frame: ignore
 		if( hti_isDuplicateFrame(aSlot->aFrame.seqNum, sequenceNumber ) )
 		{
-			log_add("Warning: Duplicate frame... %u\n", sequenceNumber);
-
+			log_add("Duplicate frame... %u\n", sequenceNumber);
 			unlockIt( &aTable->aHashTableMutex );
-
 			log_flush(LOG_LEVEL_WARNING);
 			return DUPLICATE_FRAME;
 		}
@@ -211,7 +207,7 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 
 	// slot IS empty: insert in it
 
-	log_add("   -> Frame In: Seq# : %u (@ %d) \n", sequenceNumber, index);
+	log_add("   -> Frame In: Seq# : %u \n", sequenceNumber);
 
 	// fill in the attributes in this slot
 	memcpy(aSlot->aFrame.data, buffer, frameBytes);
@@ -226,7 +222,7 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 
 	++totalFramesReceived;
 
-	log_add("      (Total frames received so far: %u)\n", totalFramesReceived);
+	log_debug("      (Total frames received so far: %u)\n", totalFramesReceived);
 
 	// unlock table
 	unlockIt( &aTable->aHashTableMutex );
@@ -265,8 +261,8 @@ hti_getOldestFrame(HashTableStruct_t* table, Frame_t* oldestFrame)
 	if( isEmpty( table ) )
 	{
 		// debug:
-		log_add("table is empty (last seqNum: %u) \n", table->lastOutputSeqNum);
-		log_flush_warning();
+		log_info("\t (table is empty. Last seqNum: %u) \n", table->lastOutputSeqNum);
+		// log_flush_warning();
 
 		unlockIt( &table->aHashTableMutex);
 		return false;

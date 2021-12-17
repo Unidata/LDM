@@ -3,6 +3,7 @@
 // server program for TCP connection
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <libgen.h>
 #include <stddef.h>
 #include <unistd.h>
@@ -17,15 +18,17 @@
 #include <log.h>
 #include "globals.h"
 
-#define NUMBER_FRAMES_TO_SEND 	15
+#define NUMBER_FRAMES_TO_SEND 	3
 #define TEST_MAX_THREADS 		200
 #define PORT1            		9127
 #define PORT2            		9128
 #define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
-#define MAX_CLIENTS 			1
-#define RUN_THRESHOLD               1
+#define MAX_CLIENTS 			10
+#define NUMBER_OF_RUNS           5
+
+static int nbrFrames, nbrRuns, snoozeTime;
 
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
@@ -38,7 +41,7 @@ typedef struct SocketAndSeqNum {
 
 static 		pthread_t 	frameSenderThreadArray[TEST_MAX_THREADS];
 static		char*		serverAddress;
-
+static 		in_port_t	port;
 
 /**
  * Unconditionally logs a usage message.
@@ -55,12 +58,14 @@ usage(
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] [-p port] host:port ... \n"
+"Usage: %s [-v|-x] nbrFrames nbrRuns snooze port \n"
 "where:\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
-"   -p			port number.\n"
-"    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
+"   nbrFrames	Number of frames to send per run.\n"
+"   nbrRuns		Number of runs.\n"
+"   snooze		Snooze time between 2 frames sent.\n"
+"   port  		Server's port <port> that the blender uses to connect.\n"
 "\n",
         progName, PACKAGE_VERSION, copyright, progName);
 
@@ -74,24 +79,20 @@ usage(
  *
  * @param[in]  argc           Number of arguments.
  * @param[in]  argv           Arguments.
- * @param[out] port           port to listen to connections from blender client
  */
-static int
+static void
 decodeCommandLine(
         int     const          			argc,
-        char* const*  const restrict 	argv,
-		int*							port
+        char* const*  const restrict 	argv
         )
 {
-    int                 status = 0;
     extern int          optind;
     extern int          opterr;
     extern char*        optarg;
     extern int          optopt;
     int ch;
     opterr = 0;                         /* no error messages from getopt(3) */
-    while (0 == status &&
-           (ch = getopt(argc, argv, "vxp:")) != -1)
+    while ((ch = getopt(argc, argv, "vx")) != -1)
     {
         switch (ch) {
             case 'v':
@@ -99,12 +100,6 @@ decodeCommandLine(
                 break;
             case 'x':
                     printf("set debug mode");
-                break;
-           case 'p':
-            	if (sscanf(optarg, "%d", &port) != 1 ) {
-                       printf("Invalid port number: \"%s\"", optarg);
-                       status = EINVAL;
-            	}
                 break;
 
             default:
@@ -114,9 +109,30 @@ decodeCommandLine(
     if(optind >= argc)
     	usage(argv[0], COPYRIGHT_NOTICE);
 
-	serverAddress = argv[optind];	//  &argv[optind]; ///< server to connect to
+	// nbrFrames
+    if( sscanf(argv[optind++], "%" SCNu16, &nbrFrames) != 1)
+		usage(argv[0], COPYRIGHT_NOTICE);
 
-    return status;
+	if(optind >= argc)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	// nbrRuns
+    if( sscanf(argv[optind++], "%" SCNu16, &nbrRuns) != 1)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	if(optind >= argc)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	// snoozeTime
+	if( sscanf(argv[optind++], "%" SCNu16, &snoozeTime) != 1)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	if(optind >= argc)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	// port
+	if( sscanf(argv[optind], "%" SCNu16, &port) != 1)
+		usage(argv[0], COPYRIGHT_NOTICE);
 }
 
 
@@ -230,67 +246,47 @@ static void*
 sendFramesToBlender(void* arg)
 {
 	int clientSocket = (int) arg;
-	log_notice("ClientSocket: %d", clientSocket);
 
-	uint32_t 		sequenceNum 			= 0;	// reset after run# change
 	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
-	uint16_t 		run 					= 0;
 
 	srandom(0);
 	int lowerLimit = 0, upperLimit = 50;
-
-	for (int s=0; s < NUMBER_FRAMES_TO_SEND; s++)
+	// make these as arguments from CLI alongside NUMBER_OF_FRAMES, NUMBER_OF_RUNS, snooze time before, on blender side: hashTable capacity
+	/*
+	 int nbrFrames, nbrRuns, snoozeTime (upperLimit)
+	 */
+	for (int r=0; r < nbrRuns; r++)
 	{
 		// We simulate a socat server sending frames to the blender which acts as a client
 		// frames are constructed here for testing purposes
-
-		// simulate a run# change every RUN_THRESHOLD (i.e. 60) frames:
-		if( !( (s) % RUN_THRESHOLD) )
+		for (int s=0; s < nbrFrames; s++)
 		{
-			run++;
-			sequenceNum = 0;	// reset after run# change
-			log_add("\nNew run#: %d   -- resetting seq Num to %d\n", run, sequenceNum);
-			log_flush_info();
-			sleep(3);
-		}
+			// build the s-th frame
+			(void) buildFrameI(s, frame, r, clientSocket);
 
-		// build the s-th frame
-		(void) buildFrameI(sequenceNum, frame, run, clientSocket);
+			// send it after x sec:
+			float snooze =  lowerLimit + random() % (snoozeTime - lowerLimit);
 
-		// send it after x sec:
-		float snooze =  lowerLimit + random() % (upperLimit - lowerLimit);
+			//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
+			double frac;
+			double sec = modf(snooze, &frac);
+			struct timespec duration = {
+					.tv_sec 	= (time_t) sec,
+					.tv_nsec 	= (long) (frac * 1000000000)
+			};
+			nanosleep( &duration, NULL); // [0 - 1/10sec]
 
-		//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
-		double frac;
-		double sec = modf(snooze, &frac);
-		struct timespec duration = {
-				.tv_sec 	= (time_t) sec,
-				.tv_nsec 	= (long) (frac * 1000000000)
-		};
-		nanosleep( &duration, NULL); // [0 - 1/10sec]
+			log_info(" --> testBlender sent frame: seqNum: %u, run: %u) to blender. \n", s, r) ;
 
-		log_add("\n --> testBlender sent %d-th frame: seqNum: %u, run: %u) to blender. \n",
-				s, sequenceNum, run) ;
-		log_flush_info();
-
-		int written = write(clientSocket, (const char *)frame, sizeof(frame));
-		if(written != sizeof(frame))
-		{
-			log_add("Write failed...\n");
-			log_flush_error();
-			exit(EXIT_FAILURE);
-		}
-
-		if(s % 20000 == 0)
-		{
-			log_add("Continuing... %d\n", s);
-			log_flush_info();
-		}
-
-//		numberOfFramesSent++;
-		++sequenceNum;
-
-	} // for
+			int written = write(clientSocket, (const char *)frame, sizeof(frame));
+			if(written != sizeof(frame))
+			{
+				log_add("Write failed...\n");
+				log_flush_error();
+				exit(EXIT_FAILURE);
+			}
+		} // for frames
+	} // for runs
 }
 
 static void
@@ -328,7 +324,6 @@ int main(int argc, char** argv)
 
 	int len, status;
 	int serverSockfd, clientSocket;
-	int port = PORT1;
 
     /*
      * Initialize logging. Done first in case something happens that needs to
@@ -346,24 +341,18 @@ int main(int argc, char** argv)
     (void)log_set_level(LOG_LEVEL_INFO);
 
 
-    status = decodeCommandLine(argc, argv, &port);
-    if (status)
-    {
-      	log_add("Couldn't decode command-line");
-        log_flush_fatal();
-        exit(EXIT_FAILURE);
-    }
+    (void) decodeCommandLine(argc, argv);
 
-    log_notice("Executing testBlender -p %d\n", port);
-    log_notice("ServerAddress: %s\n", serverAddress);
-
+    log_info("NB_FRAMES_PER_RUN: %d, NB_RUNS: %d, snoozeTime: %u sec", nbrFrames, nbrRuns, snoozeTime);
 	struct sockaddr_in 
 	  			servaddr= { .sin_family      = AF_INET, 
-                            .sin_addr.s_addr = htonl(INADDR_ANY),	//htonl(serverAddress), // htonl(INADDR_ANY),  //INADDR_LOOPBACK),
+                            .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
                             .sin_port        = htons(port)
                           }, 
-                        cliaddr;
+                cliaddr;
     
+//	servaddr.sin_addr.s_addr = inet_pton(hostId);
+
     // Creating socket file descriptor
     if ( (serverSockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
 		log_add("socket creation failed!\n");
@@ -371,6 +360,14 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    int on = 1;
+    if( setsockopt(serverSockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)))
+    {
+        close(serverSockfd);
+   		log_add("setsockopt() failed!\n");
+   		log_flush_error();
+           exit(EXIT_FAILURE);
+    }
 
 	// bind server address to socket descriptor
     if (bind(serverSockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) )
@@ -381,25 +378,19 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    //  listen to All blender clients: 1 for now
+    //  listen to All blender clients
     listen(serverSockfd, MAX_CLIENTS);
 
-
-/* Infinite server loop */  
     // accept new client connection in its own thread
     int c = sizeof(struct sockaddr_in);
-
 
     // Compute frame rate:
     float 		frameRate 					= 1 / MAX_FRAMES_PER_SEC;
 	uint32_t 	sequenceNum 				= 0;
 	int 		numberOfFramesSent 			= 0;
     int 		max_connections_to_receive 	= 0;
-    log_add("testBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...\n\n");
-    log_add("\ntestBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n\n");
-    log_flush_info();
-
-	SocketAndSeqNum_t socketIdAndSeqNum = { .socketId = 0, .seqNum = 0};
+    log_info("testBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...");
+    log_info("testBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n");
 
 	int accepted = 0;
 	for (;;)
@@ -417,7 +408,7 @@ int main(int argc, char** argv)
 		}
 
 		log_add("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
-		log_add("\t   (Each connection will be served from its own thread)\n");
+		log_add("\t   (Each connection will be used in its own thread)\n");
 		log_flush_info();
 		start_newThread(accepted++, clientSocket);
 
@@ -429,4 +420,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-// ==================================================
