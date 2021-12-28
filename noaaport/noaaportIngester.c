@@ -304,11 +304,17 @@ static void usage(
 "%s version %s\n"
 "%s\n"
 "\n"
-"Usage: %s [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
-"          [-r <1|0>] [-S bufSize] [-t] [-s channel-name]\n"
+"Usage: %s [-cf] [-n|v|x] [-l log] [-u n] [-m addr] [-q queue] [-b npages] [-I ip_addr]\n"
+"          [-R bufSize]"
+#ifdef RETRANS_SUPPORT
+" [-r <1|0>] [-t] [-s channel-name]"
+#endif
+"\n"
 "where:\n"
 "   -b npages   Allocate \"npages\" pages of memory for the internal buffer.\n"
 "               Default is %lu pages. \"getconf PAGESIZE\" reveals page-size.\n"
+"   -c          Enable Frame Decompression [Default => Disabled ]. \n"
+"   -f          Fill blank scanlines for missing Satellite Imagery  [Default => Disabled ]. \n"
 "   -I ip_addr  Listen for multicast packets on interface \"ip_addr\".\n"
 "               Default is system's default multicast interface.\n"
 "   -l dest     Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
@@ -327,8 +333,6 @@ static void usage(
 "   -t          Transfer mechanism [Default = MHS]. \n"
 "   -s          Channel Name [Default = NMC]. \n"
 #endif
-"   -c          Enable Frame Decompression [Default => Disabled ]. \n"
-"   -f          Fill blank scanlines for missing Satellite Imagery  [Default => Disabled ]. \n"
 "\n"
 "If neither \"-n\", \"-v\", nor \"-x\" is specified, then only levels ERROR\n"
 "and WARN are logged.\n"
