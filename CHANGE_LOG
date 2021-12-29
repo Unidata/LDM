@@ -1,3 +1,11 @@
+6.13.17.4
+    noaaportIngester(1):
+        Corrected usage message. "-S <bufsize>" should have been "-R <bufsize>"
+
+    Multicast:
+        Modified to omit sending valid multicast packet if environment variable
+        FMTP_INVALID_PACKET_RATIO is negative.
+
 6.13.17.3       2021-10-20T11:42:16-0600
     ldmd(1):
         * Ensure printing of process ID in daemonize()
@@ -9,10 +17,6 @@
           contained defunct time-servers. The new value will automatically take
           effect *only* when the LDM is installed for the *first* time: upgrades
           to existing installations should set this parameter manually.
-
-    Multicast:
-        Modified to omit sending valid multicast packet if environment variable
-        FMTP_INVALID_PACKET_RATIO is negative.
 
 6.13.17.2       2021-10-15T13:58:42-0600
     noaaportIngester(1): Now logs reason for termination of reader

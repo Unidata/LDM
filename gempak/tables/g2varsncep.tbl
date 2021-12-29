@@ -137,11 +137,11 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 000 002 000 000 Wind Direction (from)            deg true             WDIR             0  -9999.00
-000 002 001 000 Wind Speed                       m s**-1              WDIR             0  -9999.00
-000 002 001 002 Wind Speed                       m s**-1              WDIR             0  -9999.00
-000 002 001 005 Wind Speed                       m s**-1              WDIR             0  -9999.00
-000 002 001 008 Wind Speed                       m s**-1              WDIR             0  -9999.00
-000 002 001 009 Wind Speed                       m s**-1              WDIR             0  -9999.00
+000 002 001 000 Wind Speed                       m s**-1              WIND             0  -9999.00
+000 002 001 002 Wind Speed                       m s**-1              WIND             0  -9999.00
+000 002 001 005 Wind Speed                       m s**-1              WIND             0  -9999.00
+000 002 001 008 Wind Speed                       m s**-1              WIND             0  -9999.00
+000 002 001 009 Wind Speed                       m s**-1              WIND             0  -9999.00
 000 002 002 000 U-Component of Wind              m s**-1              UGRD             0  -9999.00
 000 002 002 002 U-Component of Wind              m s**-1              UGRD             0  -9999.00
 000 002 003 000 V-Component of Wind              m s**-1              VGRD             0  -9999.00
