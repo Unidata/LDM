@@ -24,7 +24,11 @@
  *
  *
  */
+#include "config.h"
 #include <stdbool.h>
+#include <time.h>
+#include <sys/types.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,12 +41,14 @@
 //  ========================================================================
 
 extern int hashTableSize;
+extern pthread_cond_t  cond;
 //  ========================================================================
 
 static int 		framesMissedCount 		= 0;
 static uint32_t	totalFramesReceived 	= 0;
 
 static int 		hashMe(uint32_t seqNum);
+static clockid_t    	clockToUse = CLOCK_MONOTONIC;
 //  ========================================================================
 
 
@@ -113,6 +119,15 @@ hti_init(HashTableStruct_t* table)
         log_flush_fatal();
         exit(EXIT_FAILURE);
 	}
+
+	resp = pthread_cond_init(&table->aHashTableCond, NULL);
+	if(resp)
+	{
+		log_add("pthread_cond_init( aHashTable ) failure: %s\n", strerror(resp));
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+
 	(void) reset( table );
 }
 
@@ -170,66 +185,81 @@ hti_tryInsert(HashTableStruct_t* 	aTable,
 	FrameSlot_t* 	aSlot 			= &aTable->aHashTable[ index ];
 	Frame_t* 		aFrame 			= &aTable->aHashTable[ index ].aFrame;
 
-	int64_t lastOutputFrameSeqNum 	= aTable->lastOutputSeqNum;
-	if( lastOutputFrameSeqNum >= 0 && isThisBeforeThat( sequenceNumber, lastOutputFrameSeqNum ))
+	// Frame is valid to insert if slot is UNoccupied
+
+
+	// Wait while all of these conditions are true
+	int status = 0;
+	while( aSlot->occupied  && aFrame->runNum == runNumber && sequenceNumber != aFrame->seqNum && 					// i.e. seq are different
+		 (aTable->lastOutputSeqNum < 0 || ! isThisBeforeThat( sequenceNumber, aTable->lastOutputSeqNum )) )
+
 	{
-		log_notice("\nFrame (seqNum: %u) arrived too late. Decrease time-out? \
-				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
-		(void) unlockIt( &aTable->aHashTableMutex );
-//        log_flush(LOG_LEVEL_WARNING);
-		return FRAME_TOO_LATE;
+		pthread_cond_wait( &aTable->aHashTableCond, &aTable->aHashTableMutex);
 	}
 
-	if( aSlot->occupied )
+	log_info("Now out  of the WHILE loop... (sequenceNumber: % "PRIu32", lastOutputFrameSeqNum: % "PRId64" )", sequenceNumber, aTable->lastOutputSeqNum );
+
+	log_info("Now out  of the WHILE loop...1");
+	// slot is UNoccupied: Can insert
+	if( !aSlot->occupied )
 	{
-		// Check if occupied with the same frame: ignore
-		if( hti_isDuplicateFrame(aSlot->aFrame.seqNum, sequenceNumber ) )
-		{
-			log_add("Duplicate frame... %u\n", sequenceNumber);
-			unlockIt( &aTable->aHashTableMutex );
-			log_flush(LOG_LEVEL_WARNING);
-			return DUPLICATE_FRAME;
-		}
+		// slot IS empty: insert in it
+		log_add("   -> Frame In: Seq# : %u \n", sequenceNumber);
 
-		// slot occupied but frame seqNum is greater than that of occupied:
-		//
-		// input frame is too late or too early to arrive
-		// (its sequenceNumber is smaller than the current oldest frame's seqNum): ignore
-		// OR (its sequenceNumber is bigger than the current oldest frame's seqNum): ignore
-		log_add("\nWarning: The slot is already occupied by different frame (%ul) \
-				 (last seqNum: %ul): table too small...\n\n", sequenceNumber, aSlot->aFrame.seqNum);
+		// fill in the attributes in this slot
+		memcpy(aSlot->aFrame.data, buffer, frameBytes);
+		aSlot->aFrame.seqNum 		= sequenceNumber;
+		aSlot->aFrame.runNum 		= runNumber;
 
+		// AND mark it as occupied
+		aSlot->occupied 			= true;
+
+		// consequently decrease the frameCounter for this table
+		++(aTable->frameCounter);
+
+		++totalFramesReceived;
+
+		log_debug("      (Total frames received so far: %u)\n", totalFramesReceived);
+
+		pthread_cond_broadcast(&aTable->aHashTableCond);
+
+		// unlock table
 		unlockIt( &aTable->aHashTableMutex );
 
-		log_flush_warning();
-		return TABLE_TOO_SMALL;
+		log_flush_info();
+		return FRAME_INSERTED;
 	}
 
-	// slot IS empty: insert in it
+	log_info("Now out  of the WHILE loop...2");
+	if( aSlot->aFrame.runNum != runNumber )
+	{
+		log_error("Logic error: Incoming runNumber (%u) differs from hashTable's runNumber (%u)\n",
+				runNumber, aSlot->aFrame.runNum);
+		unlockIt( &aTable->aHashTableMutex );
+		return DUPLICATE_FRAME;
+	}
 
-	log_add("   -> Frame In: Seq# : %u \n", sequenceNumber);
+	log_info("Now out  of the WHILE loop...3");
+	// Check if occupied with the same frame: ignore
+	log_info("Duplicate: %s (s:%u:r%u) ", (aSlot->aFrame.seqNum == sequenceNumber)? "YES": "NO", sequenceNumber, runNumber);
+	if(  sequenceNumber == aFrame->seqNum   )
+	{
+		log_info("Duplicate frame in the same run (r: %lu, s: %u) found! (skipping...)\n", runNumber, sequenceNumber);
+		unlockIt( &aTable->aHashTableMutex );
+		return DUPLICATE_FRAME;
+	}
 
-	// fill in the attributes in this slot
-	memcpy(aSlot->aFrame.data, buffer, frameBytes);
-	aSlot->aFrame.seqNum 		= sequenceNumber;
-	aSlot->aFrame.runNum 		= runNumber;
-
-	// AND mark it as occupied
-	aSlot->occupied 			= true;
-
-	// consequently decrease the frameCounter for this table
-	++(aTable->frameCounter);
-
-	++totalFramesReceived;
-
-	log_debug("      (Total frames received so far: %u)\n", totalFramesReceived);
-
-	// unlock table
-	unlockIt( &aTable->aHashTableMutex );
-
-	log_flush_info();
-	return FRAME_INSERTED;
-
+	// Frame came too late
+	int64_t lastOutputFrameSeqNum 	= aTable->lastOutputSeqNum;
+	if(  lastOutputFrameSeqNum >= 0 && isThisBeforeThat( sequenceNumber, lastOutputFrameSeqNum ))
+	{
+		log_notice("\nFrame (seqNum: %u) arrived too late. Increase blender's time-out? \
+				 \n       (last seqNum: %u).\n\n", sequenceNumber, lastOutputFrameSeqNum);
+		(void) unlockIt( &aTable->aHashTableMutex );
+		// log_flush(LOG_LEVEL_WARNING);
+		return FRAME_TOO_LATE;
+	}
+	log_info("Now out  of the WHILE loop...EXITing!");
 }
 
 void
@@ -242,6 +272,7 @@ hti_releaseOldest( HashTableStruct_t* impl, Frame_t* oldestFrame )
 	impl->aHashTable[ indexOfLastOutputFrame ].occupied = false;
 	--(impl->frameCounter);
 
+	pthread_cond_broadcast(&impl->aHashTableCond);
 	unlockIt( &impl->aHashTableMutex );
 }
 
@@ -261,7 +292,7 @@ hti_getOldestFrame(HashTableStruct_t* table, Frame_t* oldestFrame)
 	if( isEmpty( table ) )
 	{
 		// debug:
-		log_info("\t (table is empty. Last seqNum: %u) \n", table->lastOutputSeqNum);
+		log_debug("\t (table is empty. Last seqNum: %u) \n", table->lastOutputSeqNum);
 		// log_flush_warning();
 
 		unlockIt( &table->aHashTableMutex);

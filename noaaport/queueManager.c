@@ -45,13 +45,13 @@ extern void 		lockIt(		pthread_mutex_t* );
 extern void 		unlockIt( 	pthread_mutex_t* );
 
 //  ========================================================================
-struct timespec 	max_wait = {						// <- may not be used
+struct timespec 	timeOut = {						// <- may not be used
     .tv_sec = 1,    // default value
     .tv_nsec = 0
 };
 int hashTableSize;
 //  ========================================================================
-static clockid_t    	clockToUse = CLOCK_MONOTONIC;	// <- may not be used
+static clockid_t    	clockToUse = CLOCK_MONOTONIC;
 
 //  ========================================================================
 QueueConf_t* setQueueConf(double frameLatency, int hashTableSize)
@@ -69,8 +69,8 @@ setMaxWait(double frameLatency)
     double integral;
     double fractional = modf(frameLatency, &integral);
 
-    max_wait.tv_sec     = integral;
-    max_wait.tv_nsec    = fractional * ONE_BILLION;
+    timeOut.tv_sec     = integral;
+    timeOut.tv_nsec    = fractional * ONE_BILLION;
 }
 
 static void
@@ -115,10 +115,12 @@ initMutexAndCond()
     // Code not needed as it does not make a difference: clockToUse
     pthread_condattr_t attr;
     int ret = pthread_condattr_setclock(&attr, clockToUse);
+
+    // init cond
     resp = pthread_cond_init(&cond, &attr);
     if(resp)
     {
-        log_add("pthreag_cond_init( cond ) failure: %s\n", strerror(resp));
+        log_add("pthread_cond_init( cond ) failure: %s\n", strerror(resp));
 		log_flush_error();
         exit(EXIT_FAILURE);
     }
@@ -145,28 +147,33 @@ flowDirectorRoutine()
 		//abs_time.tv_sec     += max_wait.tv_sec;
 		//abs_time.tv_nsec    += max_wait.tv_nsec;
 
-		abs_time.tv_sec     += 1;
-		abs_time.tv_nsec    = 0;
-	/*
-		if( abs_time.tv_nsec > ONE_BILLION)
+		//abs_time.tv_sec     += 1;
+		//abs_time.tv_nsec    = 0;
+		abs_time.tv_sec     += timeOut.tv_sec; // .10
+		abs_time.tv_nsec    += timeOut.tv_nsec;
+		if(abs_time.tv_nsec > ONE_BILLION )
 		{
 			abs_time.tv_nsec -= ONE_BILLION;
 			++abs_time.tv_sec;
 		}
-	*/
 
 		for( numFrames = htm_numberOfFrames();
 				numFrames == 0 || (status == 0 && numFrames < hashTableSize/2);
 			    numFrames = htm_numberOfFrames() )
 		{
-
 			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
-			log_add("\n\nWAIT: (flowDirectorRoutine)...\n\n");
+			log_add("\n\nWAIT: (flowDirectorRoutine).. .\n\n");
 			log_flush_debug();
-			assert(status == 0 || status == ETIMEDOUT);
+			if( status && status != ETIMEDOUT)
+			{
+				log_fatal("\n\n status: %d.\n\n", status);
+				abort();
+			}
+			//assert(status == 0 || status == ETIMEDOUT);
 		}
 
-		log_info("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
+		if( numFrames > 0 && status )
+			log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
 
 		// Call into the hashTableManager to provide a frame to consume.
 		// It will NOT block:
@@ -187,6 +194,7 @@ flowDirectorRoutine()
 			(void) htm_releaseOldestFrame( &oldestFrame );
 		}
 		unlockIt(&runMutex);
+
     } // for
 
     log_free();

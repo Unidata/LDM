@@ -93,41 +93,46 @@ htm_tryInsert(uint16_t runNum,
 	lockIt( &mutex );
 
 	// Debug:
-	log_info("\n==== Inserting seqNum %u within run#: %u =====\n",seqNum, runNum);
+	log_info("\n==== Inserting seqNum %u within run#: %u (pNext->runNum: %d)=====\n",seqNum, runNum, pNext->runNum);
 
     if (pNext->runNum == -1)
-        pNext->runNum = runNum; // Handles startup
-
-    // if incoming frame's runNum has changed from current one
-    // AND is also different from the previous one
-    // THEN proceed to switching the tables if the previous table is empty
-    if (runNum != pNext->runNum && pNext == pOut )
     {
-
+    	log_info("Setting runNumber to runNum");
+        pNext->runNum = runNum; // Handles startup
+        pOut->runNum = runNum; // Handles startup
+    }
+    // if incoming frame's runNum has changed from current one
+    // THEN proceed to switching the tables
+    if ( runNum != pNext->runNum )
+    {
 		log_debug("if (runNum !=   pCurr->runNum && runNum != POTHER->runNum )...\
 				\n  runNum: %u, pCurr: %u,                 POTHER: %u\n",
 				runNum, pNext->runNum, POTHER->runNum);
 
-    		log_debug("\t -> POTHER->impl is empty (count: %u, POTHER->runNum: %u)!\n",
+    	log_debug("\t -> POTHER->impl is empty (count: %u, POTHER->runNum: %u)!\n",
     				POTHER->impl->frameCounter, POTHER->runNum);
-    		log_debug("\t -> Swapping POTHER and pCurr...\n");
-    		// Swap tables ('cause previous table is available)
-			pNext = POTHER;
+    	log_debug("\t -> Swapping POTHER and pCurr...\n");
 
-			hti_reset( pNext->impl );
-			pNext->runNum = runNum;
+    	if(! hti_isEmpty( POTHER->impl ))
+    	{
+    		log_fatal("Can't switch to non-empty hashTable!");
+    		exit(EXIT_FAILURE);
+    	}
+    	// Swap tables ('cause previous table is available)
+		pNext = POTHER;
+		hti_reset( pNext->impl );
+		pNext->runNum = runNum;
+
+
     }
-
-    log_debug("\t -> Using hashTable: %s\n",
-    				(runNum == pNext->runNum)? "pNext":"POTHER");
-    HashTableStruct_t* impl = (runNum == pNext->runNum)
-            ? pNext->impl
-            : POTHER->impl; // Insert older frame into previous table
-
-    int status = hti_tryInsert(impl, seqNum, runNum, data, nbytes); // could fail: duplicate, too old, success
 
     // mutex unlock
 	unlockIt( &mutex );
+    log_info("\t -> Using hashTable (pNext): %d\n", (pNext == hashTableInfos)? 0 : 1);
+    log_info("\t -> Using hashTable (pOut): %d\n",  (pOut == hashTableInfos)? 0 : 1);
+
+    int status = hti_tryInsert(pNext->impl, seqNum, runNum, data, nbytes); // could fail: duplicate, too old, success
+
     return FRAME_INSERTED;
 }
 
@@ -136,6 +141,13 @@ htm_getOldestFrame(Frame_t* oldestFrame )
 {
 	// mutex lock HTMan mutex
 	lockIt(&mutex);
+
+	if( pOut->impl->frameCounter > 0 || pNext->impl->frameCounter )
+		log_info("================ getOldestFrame(): pOut: (r:%lu, nb:%d), pNext: (r:%lu, nb:%d)\n",
+			pOut->runNum,
+			pOut->impl->frameCounter,
+			pNext->runNum,
+			pNext->impl->frameCounter);
 
     bool success = hti_getOldestFrame(pOut->impl, oldestFrame );
 
@@ -161,24 +173,29 @@ htm_releaseOldestFrame( Frame_t* oldestFrame )
 {
 	// oldestFrame is not used here but it could be:
 	// Check that it is consistent
-	// assert( oldestFrame->seqNum == pLastOutput->impl->lastOutputSeqNum);
-
+	// assert( oldestFrame->seqNum == pOut->impl->lastOutputSeqNum);
+	lockIt(&mutex);
 	(void) hti_releaseOldest( pOut->impl, oldestFrame );
 
-    if ( hti_isEmpty(pOut->impl ) && pNext != pOut )
-    {
-    	log_debug("htm_releaseOldestFrame(): pCurr: %u, pOut: %u \n",
-    			pNext->runNum, pOut->runNum);
+	if (! hti_isEmpty(pOut->impl ) || pNext == pOut )
+	{
+		log_info("Not switching pOut: \n");
+	}
+	else
+	//if ( hti_isEmpty(pOut->impl ) && pNext != pOut )
+	{
+		log_notice("hashTable is EMPTY: htm_releaseOldestFrame(): pCurr: %u, pOut: %u \n",
+				pNext->runNum, pOut->runNum);
 
-    	log_debug("reset(): %u \n",  pOut->runNum);
-    	(void) hti_reset( pOut->impl );
+		log_debug("reset(): %u \n",  pOut->runNum);
+		(void) hti_reset( pOut->impl );
 
-    	log_debug("pOut = pNext;\n");
-        pOut = pNext;
+		log_debug("pOut = pNext;\n");
+		pOut = pNext;
 
-        log_flush_info();
-    }
-
+		log_flush_info();
+	}
+	unlockIt(&mutex);
 }
 
 //============================== add this comment somewhere in the documentation ====================================================================================//

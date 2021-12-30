@@ -41,6 +41,7 @@ typedef struct aFrameSlot {
 typedef struct aHashTableStruct {
 
 	pthread_mutex_t aHashTableMutex;
+	pthread_cond_t	aHashTableCond;
 	uint32_t		frameCounter;
 	uint32_t 		totalFramesReceived;
 	int64_t			lastOutputSeqNum;

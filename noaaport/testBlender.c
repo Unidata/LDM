@@ -20,15 +20,16 @@
 
 #define NUMBER_FRAMES_TO_SEND 	3
 #define TEST_MAX_THREADS 		200
-#define PORT1            		9127
-#define PORT2            		9128
 #define	SBN_FRAME_SIZE 			4000
 #define	SBN_DATA_BLOCK_SIZE 	5000
 #define MAX_FRAMES_PER_SEC		3500	// This comes from plot in rstat on oliver for CONDUIT
 #define MAX_CLIENTS 			10
 #define NUMBER_OF_RUNS           5
+#define ONE_BILLION				1000000000
 
-static int nbrFrames, nbrRuns, snoozeTime;
+static int nbrFrames, nbrRuns;
+static uint32_t framesCadence;
+static uint32_t waitBetweenRuns;
 
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
@@ -40,7 +41,6 @@ typedef struct SocketAndSeqNum {
 } SocketAndSeqNum_t;
 
 static 		pthread_t 	frameSenderThreadArray[TEST_MAX_THREADS];
-static		char*		serverAddress;
 static 		in_port_t	port;
 
 /**
@@ -64,6 +64,7 @@ usage(
 "   -x          Log through level DEBUG. Too much information.\n"
 "   nbrFrames	Number of frames to send per run.\n"
 "   nbrRuns		Number of runs.\n"
+"   runAndWait	Snooze time between 2 runs.\n"
 "   snooze		Snooze time between 2 frames sent.\n"
 "   port  		Server's port <port> that the blender uses to connect.\n"
 "\n",
@@ -123,8 +124,15 @@ decodeCommandLine(
 	if(optind >= argc)
 		usage(argv[0], COPYRIGHT_NOTICE);
 
+	// runAndWait
+    if( sscanf(argv[optind++], "%" SCNu32, &waitBetweenRuns) != 1)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
+	if(optind >= argc)
+		usage(argv[0], COPYRIGHT_NOTICE);
+
 	// snoozeTime
-	if( sscanf(argv[optind++], "%" SCNu16, &snoozeTime) != 1)
+	if( sscanf(argv[optind++], "%" SCNu32 , &framesCadence) != 1)
 		usage(argv[0], COPYRIGHT_NOTICE);
 
 	if(optind >= argc)
@@ -228,20 +236,6 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 }
 
 
-static void *
-sendFramesToBlenderRoutine(void *clntSocketAndSeqNum)
-{
-	SocketAndSeqNum_t *ssNum = (SocketAndSeqNum_t *) clntSocketAndSeqNum;
-
-    int 		clientSock 		= (ptrdiff_t) ssNum->socketId;
-    uint32_t 	sequenceNumber 	= (uint32_t)  ssNum->seqNum;
-    pthread_t   threadId 		= (pthread_t) ssNum->threadId;
-
-	//sendFramesToBlender(clientSock, sequenceNumber, (int)threadId);
-}
-
-
-
 static void*
 sendFramesToBlender(void* arg)
 {
@@ -264,17 +258,12 @@ sendFramesToBlender(void* arg)
 			// build the s-th frame
 			(void) buildFrameI(s, frame, r, clientSocket);
 
-			// send it after x sec:
-			float snooze =  lowerLimit + random() % (snoozeTime - lowerLimit);
-
-			//usleep( ( snooze / 100 ) * 1000000 );  // from 0 to 1/2 sec
-			double frac;
-			double sec = modf(snooze, &frac);
+			// sleep between frames sent
 			struct timespec duration = {
-					.tv_sec 	= (time_t) sec,
-					.tv_nsec 	= (long) (frac * 1000000000)
+					.tv_sec 	= framesCadence / 1000000,	// e.g. 1 uSec.
+					.tv_nsec 	= (framesCadence % 1000000) * 1000		// nSec
 			};
-			nanosleep( &duration, NULL); // [0 - 1/10sec]
+			nanosleep( &duration, NULL);
 
 			log_info(" --> testBlender sent frame: seqNum: %u, run: %u) to blender. \n", s, r) ;
 
@@ -286,6 +275,14 @@ sendFramesToBlender(void* arg)
 				exit(EXIT_FAILURE);
 			}
 		} // for frames
+
+		// sleep between run switches
+		struct timespec duration = {
+				.tv_sec 	= waitBetweenRuns / 1000000,
+				.tv_nsec 	= (waitBetweenRuns % 1000000) * 1000
+		};
+		nanosleep( &duration, NULL);
+
 	} // for runs
 }
 
@@ -343,7 +340,7 @@ int main(int argc, char** argv)
 
     (void) decodeCommandLine(argc, argv);
 
-    log_info("NB_FRAMES_PER_RUN: %d, NB_RUNS: %d, snoozeTime: %u sec", nbrFrames, nbrRuns, snoozeTime);
+    log_info("NB_FRAMES_PER_RUN: %d, NB_RUNS: %d, TimeWaitBetRuns: % "PRIu32", snoozeTime: % "PRIu32" usec", nbrFrames, nbrRuns, waitBetweenRuns, framesCadence);
 	struct sockaddr_in 
 	  			servaddr= { .sin_family      = AF_INET, 
                             .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
