@@ -10,16 +10,21 @@
 
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <vector>
 
 class FrameCircBuf
 {
+    using Mutex = std::mutex;
+    using Guard = std::lock_guard<Mutex>;
+
     /**
      * Frame run number and sequence number pair.
      */
     struct Key {
         unsigned runNum;
         unsigned seqNum;
+
     };
     /**
      * A slot for a frame.
@@ -30,6 +35,7 @@ class FrameCircBuf
         unsigned    numBytes; ///< Number of bytes of data in the frame
     };
 
+    Mutex              mutex;   ///< Supports concurrent access
     std::map<Key, int> indexes; ///< Indexes of frames in sorted order
     std::vector<Slot>  slots;   ///< Slots for frames
     Key                head;    ///< Key of oldest frame

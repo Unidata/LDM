@@ -26,6 +26,11 @@
  *
  */
 FrameCircBuf::FrameCircBuf(unsigned numFrames)
+    : mutex()
+    , indexes()
+    , slots(numFrames)
+    , head()
+    , tail()
 {
 }
 
@@ -35,8 +40,15 @@ FrameCircBuf::FrameCircBuf(unsigned numFrames)
   * @param[out] data      Frame data.
   * @param[out] numBytes  Number of bytes in the frame
   */
-void FrameCircBuf::add(unsigned numFrames)
+void FrameCircBuf::add(
+        const unsigned runNum,
+        const unsigned seqNum,
+        const char*    data,
+        const unsigned numBytes)
 {
+    Guard guard{mutex};
+    Key   key{runNum, seqNum};
+    indexes.insert(Key)
 }
 
  /*
