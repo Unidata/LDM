@@ -120,9 +120,10 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	reader.c reader.h
 
 blender_SOURCES		= blender.c $(COMMON_SOURCES) \
- 					frameWriter.c queueManager.c frameReader.c hashTableManager.c \
- 					hashTableImpl.c  misc.c 
- 	
+                         frameWriter.c queueManager.c frameReader.c \
+                         hashTableManager.c \
+                         hashTableImpl.c  misc.c 
+         
 testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2

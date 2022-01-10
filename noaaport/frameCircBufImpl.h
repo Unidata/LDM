@@ -8,6 +8,8 @@
 #ifndef NOAAPORT_FRAMECIRCBUFIMPL_H_
 #define NOAAPORT_FRAMECIRCBUFIMPL_H_
 
+#ifdef __cplusplus
+
 #include <condition_variable>
 #include <cstring>
 #include <cstdint>
@@ -35,8 +37,8 @@ class FrameCircBuf
      * A slot for a frame.
      *           */
     struct Slot {
-        const char  data[5000]; ///< Frame data
-        unsigned    numBytes;   ///< Number of bytes of data in the frame
+        char     data[5000]; ///< Frame data
+        unsigned numBytes;   ///< Number of bytes of data in the frame
 
         Slot(const char* data, unsigned numBytes)
             : data()
@@ -99,10 +101,10 @@ public:
      * @see                  `releaseFrame()`
      */
     void getOldestFrame(
-            const unsigned& runNum,
-            const unsigned& seqNum,
-            const char*&    data,
-            const unsigned& numBytes);
+            unsigned&     runNum,
+            unsigned&     seqNum,
+            const char*&  data,
+            unsigned&     numBytes);
 
     /**
      * Releases the resources of the frame returned by `getOldestFrame()`.
@@ -112,5 +114,24 @@ public:
      */
     void releaseFrame();
 };
+
+#elif // !__cplusplus
+
+void* cfb_new(unsigned numFrames);
+void  cfb_add(
+        void*          cfb,
+        const unsigned runNum,
+        const unsigned seqNum,
+        const char*    data,
+        const unsigned numBytes);
+void cfb_getOldestFrame(
+        void*        cfb,
+        unsigned*    runNum,
+        unsigned*    seqNum,
+        const char** data,
+        unsigned*    numBytes);
+void cfb_delete(void* cfb);
+
+#endif // __cplusplus
 
 #endif /* NOAAPORT_FRAMECIRCBUFIMPL_H_ */

@@ -6,6 +6,7 @@
  */
 
 #include "frameCircBufImpl.h"
+#include "log.h"
 
 
 /*
@@ -30,8 +31,7 @@ FrameCircBuf::FrameCircBuf(unsigned numFrames)
     , cond()
     , indexes()
     , slots(numFrames)
-{
-}
+{}
 
  /* Adds a frame.
   * @param[in] runNum    Frame run number
@@ -47,9 +47,8 @@ void FrameCircBuf::add(
 {
     Guard guard{mutex}; /// RAII!
     Key   key{runNum, seqNum};
-    Slot  slot{data, numBytes};
     indexes.insert({key, nextIndex});
-    slots.insert({nextIndex, slot});
+    slots.emplace(nextIndex, Slot{data, numBytes});
     ++nextIndex;
     cond.notify_one();
 }
@@ -63,29 +62,71 @@ void FrameCircBuf::add(
   * @param[out] numBytes  Number of bytes in the frame
   */
 void FrameCircBuf::getOldestFrame(
-        const unsigned& runNum,
-        const unsigned& seqNum,
-        const char*&    data,
-        const unsigned& numBytes)
+        unsigned&    runNum,
+        unsigned&    seqNum,
+        const char*& data,
+        unsigned&    numBytes)
 {
     Lock  lock{mutex}; /// RAII!
     cond.wait(lock, []{return !indexes.empty();});
+
     auto head = indexes.begin();
     auto key = head->first;
     auto index = head->second;
     auto slot = slots[index];
+
     runNum = key.runNum;
     seqNum = key.seqNum;
     data   = slot.data;
     numBytes = slot.numBytes;
+
     slots.erase(index);
     indexes.erase(head);
 }
 
-/*
- * Releases the resources of the frame returned by `getOldestFrame()`.
- */
-void FrameCircBuf::releaseFrame()
-{
+extern "C" {
+
+void* cfb_new(unsigned numFrames) {
+    void* cfb = nullptr;
+    try {
+        cfb = new FrameCircBuf(numFrames);
+    }
+    catch (const std::exception& ex) {
+        log_error("Couldn't allocate new circular frame buffer: %s", ex.what());
+    }
+    return cfb;
 }
 
+void  cfb_add(
+        void*          cfb,
+        const unsigned runNum,
+        const unsigned seqNum,
+        const char*    data,
+        const unsigned numBytes) {
+    try {
+        static_cast<FrameCircBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
+    }
+    catch (const std::exception& ex) {
+        log_error("Couldn't add new frame: %s", ex.what());
+    }
+}
+void cfb_getOldestFrame(
+        void*        cfb,
+        unsigned&    runNum,
+        unsigned&    seqNum,
+        const char*& data,
+        unsigned&    numBytes) {
+    try {
+        static_cast<FrameCircBuf*>(cfb)->getOldestFrame(runNum, seqNum, data,
+                numBytes);
+    }
+    catch (const std::exception& ex) {
+        log_error("Couldn't get oldest frame: %s", ex.what());
+    }
+}
+
+void cfb_delete(void* cfb) {
+    delete static_cast<FrameCircBuf*>(cfb);
+}
+
+}
