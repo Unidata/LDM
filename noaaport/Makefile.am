@@ -119,10 +119,10 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-blender_SOURCES		= newBlender.c $(COMMON_SOURCES) \
- 					frameWriter.c queueManager.c frameReader.c frameCircBufManager.c \
- 					frameCircBufImpl.c  misc.c 
- 	
+blender_SOURCES		= newBlender.c frameWriter.c queueManager.c \
+			  frameReader.c frameCircBufManager.c \
+			  CircFrameBuf.cpp  CircFrameBuf.h  misc.c 
+
 testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2

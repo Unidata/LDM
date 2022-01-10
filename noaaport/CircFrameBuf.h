@@ -5,8 +5,8 @@
  *      Author: miles
  */
 
-#ifndef NOAAPORT_FRAMECIRCBUFIMPL_H_
-#define NOAAPORT_FRAMECIRCBUFIMPL_H_
+#ifndef NOAAPORT_CIRCFRAMEBUF_H_
+#define NOAAPORT_CIRCFRAMEBUF_H_
 
 #ifdef __cplusplus
 
@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-class FrameCircBuf
+class CircFrameBuf
 {
     /**
      * Frame run number and sequence number pair.
@@ -27,10 +27,23 @@ class FrameCircBuf
         unsigned runNum;
         unsigned seqNum;
 
+        Key()
+            : runNum(0)
+            , seqNum(0)
+        {}
+
         Key(unsigned runNum, unsigned seqNum)
             : runNum(runNum)
             , seqNum(seqNum)
         {}
+
+        bool operator<(const Key& rhs) const noexcept {
+            return (runNum < rhs.runNum)
+                    ? true
+                    : (runNum > rhs.runNum)
+                          ? false
+                          : seqNum < rhs.seqNum;
+        }
     };
 
     /**
@@ -63,6 +76,8 @@ class FrameCircBuf
     Index    nextIndex;
     Indexes  indexes; ///< Indexes of frames in sorted order
     Slots    slots;   ///< Slots for frames
+    Key      lastOldestKey;
+    bool     getOldestCalled;
 
 public:
     /**
@@ -70,10 +85,10 @@ public:
      *
      * @param[in] numFrames  Number of frames to hold
      */
-    FrameCircBuf(unsigned numFrames);
+    CircFrameBuf(unsigned numFrames);
 
-    FrameCircBuf(const FrameCircBuf& other) =delete;
-    FrameCircBuf& operator=(const FrameCircBuf& rhs) =delete;
+    CircFrameBuf(const CircFrameBuf& other) =delete;
+    CircFrameBuf& operator=(const CircFrameBuf& rhs) =delete;
 
     /**
      * Adds a frame.
@@ -82,9 +97,11 @@ public:
      * @param[in] seqNum    Frame sequence number
      * @param[in] data      Frame data
      * @param[in] numBytes  Number of bytes in the frame
+     * @retval    `true`    Success
+     * @retval    `false`   Frame is earlier than next output frame
      * @threadsafety        Safe
      */
-    void add(
+    bool add(
             const unsigned runNum,
             const unsigned seqNum,
             const char*    data,
@@ -115,16 +132,16 @@ public:
     void releaseFrame();
 };
 
-#elif // !__cplusplus
+#else // !__cplusplus
 
 void* cfb_new(unsigned numFrames);
-void  cfb_add(
+bool  cfb_add(
         void*          cfb,
         const unsigned runNum,
         const unsigned seqNum,
         const char*    data,
         const unsigned numBytes);
-void cfb_getOldestFrame(
+bool cfb_getOldestFrame(
         void*        cfb,
         unsigned*    runNum,
         unsigned*    seqNum,
@@ -134,4 +151,4 @@ void cfb_delete(void* cfb);
 
 #endif // __cplusplus
 
-#endif /* NOAAPORT_FRAMECIRCBUFIMPL_H_ */
+#endif /* NOAAPORT_CIRCFRAMEBUF_H_ */
