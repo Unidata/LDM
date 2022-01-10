@@ -27,10 +27,9 @@
  */
 FrameCircBuf::FrameCircBuf(unsigned numFrames)
     : mutex()
+    , cond()
     , indexes()
     , slots(numFrames)
-    , head()
-    , tail()
 {
 }
 
@@ -46,12 +45,16 @@ void FrameCircBuf::add(
         const char*    data,
         const unsigned numBytes)
 {
-    Guard guard{mutex};
+    Guard guard{mutex}; /// RAII!
     Key   key{runNum, seqNum};
-    indexes.insert(Key)
+    Slot  slot{data, numBytes};
+    indexes.insert({key, nextIndex});
+    slots.insert({nextIndex, slot});
+    ++nextIndex;
+    cond.notify_one();
 }
 
- /*
+ /**
   * Returns the oldest frame. Blocks until it's available.
   *
   * @param[out] runNum    Frame run number
@@ -60,21 +63,29 @@ void FrameCircBuf::add(
   * @param[out] numBytes  Number of bytes in the frame
   */
 void FrameCircBuf::getOldestFrame(
-            const unsigned& runNum,
-            const unsigned& seqNum,
-            const char*&    data,
-            const unsigned& numBytes)
+        const unsigned& runNum,
+        const unsigned& seqNum,
+        const char*&    data,
+        const unsigned& numBytes)
 {
+    Lock  lock{mutex}; /// RAII!
+    cond.wait(lock, []{return !indexes.empty();});
+    auto head = indexes.begin();
+    auto key = head->first;
+    auto index = head->second;
+    auto slot = slots[index];
+    runNum = key.runNum;
+    seqNum = key.seqNum;
+    data   = slot.data;
+    numBytes = slot.numBytes;
+    slots.erase(index);
+    indexes.erase(head);
 }
 
 /*
  * Releases the resources of the frame returned by `getOldestFrame()`.
  */
 void FrameCircBuf::releaseFrame()
-{
-}
-
-int main()
 {
 }
 

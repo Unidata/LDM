@@ -8,16 +8,16 @@
 #ifndef NOAAPORT_FRAMECIRCBUFIMPL_H_
 #define NOAAPORT_FRAMECIRCBUFIMPL_H_
 
+#include <condition_variable>
+#include <cstring>
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 class FrameCircBuf
 {
-    using Mutex = std::mutex;
-    using Guard = std::lock_guard<Mutex>;
-
     /**
      * Frame run number and sequence number pair.
      */
@@ -25,21 +25,42 @@ class FrameCircBuf
         unsigned runNum;
         unsigned seqNum;
 
+        Key(unsigned runNum, unsigned seqNum)
+            : runNum(runNum)
+            , seqNum(seqNum)
+        {}
     };
+
     /**
      * A slot for a frame.
      *           */
     struct Slot {
-        Key         key;      ///< Key for this slot
-        const char* data;     ///< Frame data
-        unsigned    numBytes; ///< Number of bytes of data in the frame
+        const char  data[5000]; ///< Frame data
+        unsigned    numBytes;   ///< Number of bytes of data in the frame
+
+        Slot(const char* data, unsigned numBytes)
+            : data()
+            , numBytes(numBytes)
+        {
+            if (numBytes > sizeof(this->data))
+                throw std::runtime_error("Too many bytes");
+            ::memcpy(this->data, data, numBytes);
+        }
     };
 
-    Mutex              mutex;   ///< Supports concurrent access
-    std::map<Key, int> indexes; ///< Indexes of frames in sorted order
-    std::vector<Slot>  slots;   ///< Slots for frames
-    Key                head;    ///< Key of oldest frame
-    Key                tail;    ///< Key of newest frame
+    using Mutex   = std::mutex;
+    using Cond    = std::condition_variable;
+    using Index   = unsigned;
+    using Guard   = std::lock_guard<Mutex>;
+    using Lock    = std::unique_lock<Mutex>;
+    using Indexes = std::map<Key, Index>;
+    using Slots   = std::unordered_map<Index, Slot>;
+
+    Mutex    mutex;   ///< Supports concurrent access
+    Cond     cond;
+    Index    nextIndex;
+    Indexes  indexes; ///< Indexes of frames in sorted order
+    Slots    slots;   ///< Slots for frames
 
 public:
     /**
