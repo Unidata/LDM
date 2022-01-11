@@ -142,21 +142,62 @@ extern "C" {
 
 #endif // __cplusplus
 
+/**
+ * Returns a new circular frame buffer.
+ *
+ * @param[in] numFrames  Initial number of frames
+ * @param[in] timeout    Timeout, in seconds, before the next frame must be
+ *                       returned if it exists
+ * @retval    NULL       Fatal error. `log_add()` called.
+ * @return               Pointer to a new circular frame buffer
+ * @see                  `cfb_getOldestFrame()`
+ * @see                  `cfb_delete()`
+ */
 void* cfb_new(
         const unsigned numFrames,
         const double   timeout);
-void  cfb_add(
+
+/**
+ * Adds a new frame.
+ *
+ * @param[in] cfb       Pointer to circular frame buffer
+ * @param[in] runNum    NOAAPort run number
+ * @param[in] seqNum    NOAAPort sequence number
+ * @param[in] data      Frame data
+ * @param[in] numBytes  Number of bytes of data
+ * @retval    `true`    Success
+ * @retval    `false`   Fatal error. `log_add()` called.
+ */
+bool  cfb_add(
         void*          cfb,
         const unsigned runNum,
         const unsigned seqNum,
         const char*    data,
         const unsigned numBytes);
-void cfb_getOldestFrame(
+
+/**
+ * Returns the next, oldest frame if it exists. Blocks until it does.
+ *
+ * @param[in]  cfb       Pointer to circular frame buffer
+ * @param[out] runNum    NOAAPort run number
+ * @param[out] seqNum    NOAAPort sequence number
+ * @param[out] data      Frame data
+ * @param[out] numBytes  Number of bytes of data
+ * @retval    `true`     Success
+ * @retval    `false`    Fatal error. `log_add()` called.
+ */
+bool cfb_getOldestFrame(
         void*        cfb,
         unsigned*    runNum,
         unsigned*    seqNum,
         const char** data,
         unsigned*    numBytes);
+
+/**
+ * Deletes a circular frame buffer.
+ *
+ * @param[in]  cfb       Pointer to circular frame buffer
+ */
 void cfb_delete(void* cfb);
 
 #ifdef __cplusplus

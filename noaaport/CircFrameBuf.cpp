@@ -89,33 +89,39 @@ void* cfb_new(
     return cfb;
 }
 
-void cfb_add(
+bool cfb_add(
         void*          cfb,
         const unsigned runNum,
         const unsigned seqNum,
         const char*    data,
         const unsigned numBytes) {
+    bool success = false;
     try {
         static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
+        success = true;
     }
     catch (const std::exception& ex) {
         log_add("Couldn't add new frame: %s", ex.what());
     }
+    return success;
 }
 
-void cfb_getOldestFrame(
+bool cfb_getOldestFrame(
         void*        cfb,
         unsigned*    runNum,
         unsigned*    seqNum,
         const char** data,
         unsigned*    numBytes) {
+    bool success = false;
     try {
         static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum, data,
                 numBytes);
+        success = true;
     }
     catch (const std::exception& ex) {
         log_add("Couldn't get oldest frame: %s", ex.what());
     }
+    return success;
 }
 
 void cfb_delete(void* cfb) {
