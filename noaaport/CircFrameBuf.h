@@ -69,21 +69,21 @@ class CircFrameBuf
 
     using Mutex   = std::mutex;
     using Cond    = std::condition_variable;
-    using Index   = unsigned;
     using Guard   = std::lock_guard<Mutex>;
     using Lock    = std::unique_lock<Mutex>;
+    using Index   = unsigned;
     using Indexes = std::map<Key, Index>;
     using Slots   = std::unordered_map<Index, Slot>;
     using Dur     = std::chrono::milliseconds;
 
-    Mutex    mutex;           ///< Supports concurrent access
-    Cond     cond;            ///< Supports concurrent access
-    Index    nextIndex;       ///< Index for next, incoming frame
-    Indexes  indexes;         ///< Indexes of frames in sorted order
-    Slots    slots;           ///< Slots for frames
-    Key      lastOldestKey;   ///< Key of last, returned frame
-    bool     frameReturned; ///< Oldest frame returned?
-    Dur      timeout;         ///< Timeout for returning next frame
+    mutable Mutex mutex;           ///< Supports thread safety
+    mutable Cond  cond;            ///< Supports concurrent access
+    Index         nextIndex;       ///< Index for next, incoming frame
+    Indexes       indexes;         ///< Indexes of frames in sorted order
+    Slots         slots;           ///< Slots for frames
+    Key           lastOldestKey;   ///< Key of last, returned frame
+    bool          frameReturned;   ///< Oldest frame returned?
+    Dur           timeout;         ///< Timeout for returning next frame
 
 public:
     /**
