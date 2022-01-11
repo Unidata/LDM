@@ -22,7 +22,7 @@
 class CircFrameBuf
 {
     /**
-     * Frame run number and sequence number pair.
+     * NOAAPort frame run number and sequence number pair.
      */
     struct Key {
         unsigned runNum;
@@ -45,6 +45,15 @@ class CircFrameBuf
                           : seqNum < rhs.seqNum;
         }
 
+        /**
+         * Indicates if this instance comes immediately after a given instance.
+         *
+         * @param[in] key      The given instance
+         * @retval    `true`   This instance comes immediately after the given
+         *                     instance
+         * @retval    `false`  This instance doesn't come immediately after the
+         *                     given instance
+         */
         bool isNextAfter(const Key& key) const {
             return (runNum == key.runNum) && (seqNum == key.seqNum + 1);
         }
@@ -52,7 +61,7 @@ class CircFrameBuf
 
     /**
      * A slot for a frame.
-     *           */
+     */
     struct Slot {
         char     data[5000]; ///< Frame data
         unsigned numBytes;   ///< Number of bytes of data in the frame
