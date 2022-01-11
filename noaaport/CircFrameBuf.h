@@ -95,8 +95,8 @@ public:
      * @see                  `getOldestFrame()`
      */
     CircFrameBuf(
-            unsigned numFrames,
-            double   timeout);
+            const unsigned numFrames,
+            const double   timeout);
 
     CircFrameBuf(const CircFrameBuf& other) =delete;
     CircFrameBuf& operator=(const CircFrameBuf& rhs) =delete;
@@ -143,8 +143,8 @@ extern "C" {
 #endif // __cplusplus
 
 void* cfb_new(
-        unsigned     numFrames,
-        const double timeout);
+        const unsigned numFrames,
+        const double   timeout);
 void  cfb_add(
         void*          cfb,
         const unsigned runNum,

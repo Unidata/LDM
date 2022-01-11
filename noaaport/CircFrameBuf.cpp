@@ -11,8 +11,8 @@
 #include "log.h"
 
 CircFrameBuf::CircFrameBuf(
-        unsigned     numFrames,
-        const double timeout)
+        const unsigned numFrames,
+        const double   timeout)
     : mutex()
     , cond()
     , nextIndex(0)
@@ -77,8 +77,8 @@ void CircFrameBuf::getOldestFrame(
 extern "C" {
 
 void* cfb_new(
-        unsigned     numFrames,
-        const double timeout) {
+        const unsigned numFrames,
+        const double   timeout) {
     void* cfb = nullptr;
     try {
         cfb = new CircFrameBuf(numFrames, timeout);
