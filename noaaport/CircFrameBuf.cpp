@@ -1,5 +1,5 @@
 /*
- * frameCircBufImpl.c
+ * CirFramecBuf.cpp
  *
  *  Created on: Jan 10, 2022
  *      Author: miles
@@ -7,8 +7,10 @@
 
 #include "config.h"
 
+#include <stdint.h>
 #include "CircFrameBuf.h"
 #include "log.h"
+#include <unordered_map>
 
 CircFrameBuf::CircFrameBuf(
         const unsigned numFrames,
@@ -43,6 +45,14 @@ void CircFrameBuf::add(
     cond.notify_one();
 }
 
+void CircFrameBuf::getNumberOfFrames(unsigned* numFrames)
+{
+
+    Lock  lock{mutex}; /// RAII!
+    *numFrames = slots.size();
+    Lock  unlock{mutex}; /// RAII!
+
+}
 void CircFrameBuf::getOldestFrame(
         unsigned*    runNum,
         unsigned*    seqNum,
@@ -76,56 +86,73 @@ void CircFrameBuf::getOldestFrame(
 
 extern "C" {
 
-void* cfb_new(
-        const unsigned numFrames,
-        const double   timeout) {
-    void* cfb = nullptr;
-    try {
-        cfb = new CircFrameBuf(numFrames, timeout);
-    }
-    catch (const std::exception& ex) {
-        log_add("Couldn't allocate new circular frame buffer: %s", ex.what());
-    }
-    return cfb;
-}
+	//------------------------- C code ----------------------------------
+	void* cfb_new(
+			const unsigned numFrames,
+			const double   timeout) {
+		void* cfb = nullptr;
+		try {
+			cfb = new CircFrameBuf(numFrames, timeout);
+		}
+		catch (const std::exception& ex) {
+			log_add("Couldn't allocate new circular frame buffer: %s", ex.what());
+		}
+		return cfb;
+	}
 
-bool cfb_add(
-        void*          cfb,
-        const unsigned runNum,
-        const unsigned seqNum,
-        const char*    data,
-        const unsigned numBytes) {
-    bool success = false;
-    try {
-        static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
-        success = true;
-    }
-    catch (const std::exception& ex) {
-        log_add("Couldn't add new frame: %s", ex.what());
-    }
-    return success;
-}
+	//------------------------- C code ----------------------------------
+	bool cfb_add(
+			void*          cfb,
+			const unsigned runNum,
+			const unsigned seqNum,
+			const char*    data,
+			const unsigned numBytes) {
+		bool success = false;
+		try {
+			static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
+			success = true;
+		}
+		catch (const std::exception& ex) {
+			log_add("Couldn't add new frame: %s", ex.what());
+		}
+		return success;
+	}
 
-bool cfb_getOldestFrame(
-        void*        cfb,
-        unsigned*    runNum,
-        unsigned*    seqNum,
-        const char** data,
-        unsigned*    numBytes) {
-    bool success = false;
-    try {
-        static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum, data,
-                numBytes);
-        success = true;
-    }
-    catch (const std::exception& ex) {
-        log_add("Couldn't get oldest frame: %s", ex.what());
-    }
-    return success;
-}
+	//------------------------- C code ----------------------------------
+	bool cfb_getOldestFrame(
+			void*        cfb,
+			unsigned*    runNum,
+			unsigned*    seqNum,
+			const char** data,
+			unsigned*    numBytes) {
+		bool success = false;
+		try {
+			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum, data, numBytes);
+			success = true;
+		}
+		catch (const std::exception& ex) {
+			log_add("Couldn't get oldest frame: %s", ex.what());
+		}
+		return success;
+	}
 
-void cfb_delete(void* cfb) {
-    delete static_cast<CircFrameBuf*>(cfb);
-}
+	//------------------------- C code ----------------------------------
+	void cfb_delete(void* cfb) {
+		delete static_cast<CircFrameBuf*>(cfb);
+	}
+
+	//------------------------- C code ----------------------------------
+	unsigned cfb_numberOfFrames(void* cfb)
+	{
+		unsigned* nbf;
+		try {
+			static_cast<CircFrameBuf*>(cfb)->getNumberOfFrames(nbf);
+		}
+		catch (const std::exception& ex) {
+			log_add("Couldn't get number of frames: %s", ex.what());
+		}
+		return *nbf;
+
+	}
 
 }

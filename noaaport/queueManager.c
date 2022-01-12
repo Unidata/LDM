@@ -28,21 +28,20 @@
 
 #include "misc.h"
 #include "queueManager.h"
+#include "noaaportFrame.h"
+#include "CircFrameBuf.h"
+
 //  ========================================================================
 pthread_mutex_t runMutex;
 pthread_cond_t  cond;
 //  ========================================================================
 
 extern int 			fw_writeFrame( Frame_t );
-extern void 		htm_releaseOldestFrame( Frame_t* );
-extern int			htm_numberOfFrames( void );
-
-extern int 			htm_tryInsert( uint16_t, uint32_t, char*, int );
-extern bool 		htm_getOldestFrame( Frame_t* );
-extern void  		htm_init( void );
-
 extern void 		lockIt(		pthread_mutex_t* );
 extern void 		unlockIt( 	pthread_mutex_t* );
+
+extern unsigned 	cfb_numberOfFrames(void*);
+extern bool 		cfb_getOldestFrame( void*, unsigned*, unsigned*, const char**, unsigned*);
 
 //  ========================================================================
 struct timespec 	timeOut = {						// <- may not be used
@@ -53,6 +52,7 @@ int hashTableSize;
 //  ========================================================================
 static clockid_t    	clockToUse = CLOCK_MONOTONIC;
 
+static void* cfb;
 //  ========================================================================
 QueueConf_t* setQueueConf(double frameLatency, int hashTableSize)
 {
@@ -60,6 +60,8 @@ QueueConf_t* setQueueConf(double frameLatency, int hashTableSize)
 	aQueueConfig->frameLatency 	= frameLatency;
 	aQueueConfig->hashTableSize = hashTableSize;
 
+	// Create and initialize the CircFrameBuf class here
+	cfb = (void*) cfb_new( hashTableSize, frameLatency);
 	return aQueueConfig;
 }
 
@@ -83,7 +85,7 @@ void
 queue_start(QueueConf_t* aQueueConf)
 {
 	// QueueConf elements:
-	(void)  htm_init();
+
 
 	(void) initMutexAndCond();
 
@@ -157,9 +159,9 @@ flowDirectorRoutine()
 			++abs_time.tv_sec;
 		}
 
-		for( numFrames = htm_numberOfFrames();
+		for( numFrames = cfb_numberOfFrames( cfb );
 				numFrames == 0 || (status == 0 && numFrames < hashTableSize/2);
-			    numFrames = htm_numberOfFrames() )
+			    numFrames = cfb_numberOfFrames( cfb ) )
 		{
 			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
 			log_add("\n\nWAIT: (flowDirectorRoutine).. .\n\n");
@@ -177,21 +179,25 @@ flowDirectorRoutine()
 
 		// Call into the hashTableManager to provide a frame to consume.
 		// It will NOT block:
-		Frame_t oldestFrame;
-		bool resp = htm_getOldestFrame( &oldestFrame );
+		Frame_t* oldestFrame;
+
+		bool resp = cfb_getOldestFrame(cfb,
+										oldestFrame->runNum,
+										oldestFrame->seqNum,
+										oldestFrame->data,
+										&oldestFrame->nbytes);
 
 		if( resp )
 		{
 			// if( writeFrame( oldestFrame->sbnFrame ) == -1 )  // <- comment-out this when ready and remove next line
 			// also fix 'fr_writeFrame()' signature
-			if( fw_writeFrame( oldestFrame ) == -1 )
+			if( fw_writeFrame( *oldestFrame ) == -1 )
 			{
 				log_add("\nError writing to pipeline\n");
 				log_flush_error();
 				exit(EXIT_FAILURE);
 			}
 
-			(void) htm_releaseOldestFrame( &oldestFrame );
 		}
 		unlockIt(&runMutex);
 
@@ -202,7 +208,7 @@ flowDirectorRoutine()
 
 }
 
-// Thread creation: flow director, thread with a highest priority
+// flowDirector thread creation: thread with a highest priority
 static void
 flowDirector()
 {
@@ -224,23 +230,21 @@ flowDirector()
  * post-condition: 	runMutex is unLOCKed
  */
 int
-tryInsertInQueue(  uint32_t 		sequenceNumber,
-		       	   uint16_t 		runNumber,
+tryInsertInQueue(  unsigned 		sequenceNumber,
+		       	   unsigned 		runNumber,
 				   unsigned char 	*buffer,
-				   uint16_t 		frameBytes)
+				   unsigned 		frameBytes)
 {
 
 	// runMutex is unLOCKed: lock it!
 	lockIt(&runMutex);
 
-	// call in hashTableManager:
-	int status = 	htm_tryInsert(runNumber, sequenceNumber, buffer, frameBytes);
-
-	if( status == FRAME_INSERTED )
+	// call in CircFrameBuf:
+	bool status = cfb_add( cfb, runNumber, sequenceNumber, buffer, frameBytes);
+	if( !status )
 	{
-		pthread_cond_signal(&cond);
+		log_error("Inserting frame in queue failed.");
 	}
-	unlockIt(&runMutex);
 
 	return status;
 }

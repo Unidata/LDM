@@ -89,7 +89,7 @@ class CircFrameBuf
     mutable Cond  cond;            ///< Supports concurrent access
     Index         nextIndex;       ///< Index for next, incoming frame
     Indexes       indexes;         ///< Indexes of frames in sorted order
-    Slots         slots;           ///< Slots for frames
+    Slots         slots;           ///< Slots of frames in unsorted order
     Key           lastOldestKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
     Dur           timeout;         ///< Timeout for returning next frame
@@ -145,6 +145,8 @@ public:
             unsigned*     seqNum,
             const char**  data,
             unsigned*     numBytes);
+
+    void getNumberOfFrames(unsigned* numFrames);
 };
 
 extern "C" {
@@ -208,6 +210,15 @@ bool cfb_getOldestFrame(
  * @param[in]  cfb       Pointer to circular frame buffer
  */
 void cfb_delete(void* cfb);
+
+/**
+ * Return numbre of frames in a circular frame buffer.
+ *
+ * @param[in]  cfb       Pointer to circular frame buffer
+ * @param[out] numBytes  Number of bytes of data
+ */
+void cfb_getNumberOfFrames(void* cfb, unsigned* nbf);
+
 
 #ifdef __cplusplus
 }

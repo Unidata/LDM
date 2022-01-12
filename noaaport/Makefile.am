@@ -66,7 +66,7 @@ if WANT_RETRANS
 endif 
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
-                          nbs_ingest newBlender testBlender
+                          nbs_ingest blender testBlender
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
@@ -119,10 +119,10 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-blender_SOURCES		= newBlender.c frameWriter.c queueManager.c \
-			  frameReader.c frameCircBufManager.c \
-			  CircFrameBuf.cpp  CircFrameBuf.h  misc.c 
-
+blender_SOURCES		= blender.c $(COMMON_SOURCES) \
+ 	frameWriter.c queueManager.c frameReader.c CircFrameBuf.c \
+ 	misc.c
+ 	
 testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
@@ -238,7 +238,7 @@ check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
-valgrind-blender:	newBlender	
+valgrind-blender:	blender	
 	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
 	    blender -t 1.0 -h 100 /tmp/noaaportIngesterPipe  localhost:9127 
 

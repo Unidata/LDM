@@ -244,7 +244,7 @@ buildFrameRoutine(void *arg)
         // Store the relevant entire frame into its proper hashTable for this Run#:
         // Queue handles this task but hands it to the hashTableManager module
 
-        (void) tryInsertInQueue(sequenceNumber, runNumber, buffer, dataBlockEnd);
+        tryInsertInQueue(sequenceNumber, runNumber, buffer, dataBlockEnd);
 
         // setcancelstate??? remove?
         pthread_setcancelstate(cancelState, &cancelState);
