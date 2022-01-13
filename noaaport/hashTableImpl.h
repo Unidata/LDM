@@ -8,6 +8,8 @@
 #ifndef HASHTABLEIMPL_H_
 #define HASHTABLEIMPL_H_
 
+#include "noaaportFrame.h"
+
 #include <stdint.h>
 #include <pthread.h>
 #include <limits.h>
@@ -25,10 +27,10 @@
 #define INITIAL_RUN_NUM             0
 
 typedef struct aFrame {
-    uint32_t        seqNum;
-    uint16_t        runNum;
+    SeqNum_t        seqNum;
+    RunNum_t        runNum;
     char   			data[SBN_FRAME_SIZE];	// change
-    size_t			nbytes;
+    FrameSize_t     nbytes;
 } Frame_t;
 
 typedef struct aFrameSlot {

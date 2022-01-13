@@ -26,10 +26,10 @@ CircFrameBuf::CircFrameBuf(
 {}
 
 void CircFrameBuf::add(
-        const unsigned runNum,
-        const unsigned seqNum,
-        const char*    data,
-        const unsigned numBytes)
+        const RunNum_t    runNum,
+        const SeqNum_t    seqNum,
+        const char*       data,
+        const FrameSize_t numBytes)
 {
     Guard guard{mutex}; /// RAII!
     Key   key{runNum, seqNum};
@@ -53,10 +53,10 @@ void CircFrameBuf::getNumberOfFrames(unsigned* numFrames)
 
 }
 void CircFrameBuf::getOldestFrame(
-        unsigned*    runNum,
-        unsigned*    seqNum,
-        const char** data,
-        unsigned*    numBytes)
+        RunNum_t*    runNum,
+        SeqNum_t*    seqNum,
+        char*        data,
+        FrameSize_t* numBytes)
 {
     Lock  lock{mutex}; /// RAII!
     cond.wait(lock, [&]{return !indexes.empty();});
@@ -73,7 +73,7 @@ void CircFrameBuf::getOldestFrame(
 
     *runNum   = key.runNum;
     *seqNum   = key.seqNum;
-    *data     = slot.data;
+    ::memcpy(data, slot.data, slot.numBytes);
     *numBytes = slot.numBytes;
 
     slots.erase(index);
@@ -101,11 +101,11 @@ extern "C" {
 
 	//------------------------- C code ----------------------------------
 	bool cfb_add(
-			void*          cfb,
-			const unsigned runNum,
-			const unsigned seqNum,
-			const char*    data,
-			const unsigned numBytes) {
+			void*             cfb,
+			const RunNum_t    runNum,
+			const SeqNum_t    seqNum,
+			const char*       data,
+			const FrameSize_t numBytes) {
 		bool success = false;
 		try {
 			static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
@@ -120,13 +120,14 @@ extern "C" {
 	//------------------------- C code ----------------------------------
 	bool cfb_getOldestFrame(
 			void*        cfb,
-			unsigned*    runNum,
-			unsigned*    seqNum,
-			const char** data,
-			unsigned*    numBytes) {
+			RunNum_t*    runNum,
+			SeqNum_t*    seqNum,
+			char*        data,
+			FrameSize_t* numBytes) {
 		bool success = false;
 		try {
-			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum, data, numBytes);
+			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum,
+			        data, numBytes);
 			success = true;
 		}
 		catch (const std::exception& ex) {
@@ -141,7 +142,7 @@ extern "C" {
 	}
 
 	//------------------------- C code ----------------------------------
-	unsigned cfb_numberOfFrames(void* cfb)
+	unsigned cfb_numberOfFrames(void* cfb) noexcept
 	{
 		unsigned* nbf;
 		try {

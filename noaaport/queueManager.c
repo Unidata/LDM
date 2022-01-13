@@ -41,7 +41,6 @@ extern void 		lockIt(		pthread_mutex_t* );
 extern void 		unlockIt( 	pthread_mutex_t* );
 
 extern unsigned 	cfb_numberOfFrames(void*);
-extern bool 		cfb_getOldestFrame( void*, unsigned*, unsigned*, const char**, unsigned*);
 
 //  ========================================================================
 struct timespec 	timeOut = {						// <- may not be used
@@ -182,8 +181,8 @@ flowDirectorRoutine()
 		Frame_t* oldestFrame;
 
 		bool resp = cfb_getOldestFrame(cfb,
-										oldestFrame->runNum,
-										oldestFrame->seqNum,
+										&oldestFrame->runNum,
+										&oldestFrame->seqNum,
 										oldestFrame->data,
 										&oldestFrame->nbytes);
 

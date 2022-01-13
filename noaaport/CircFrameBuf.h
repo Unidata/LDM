@@ -8,6 +8,8 @@
 #ifndef NOAAPORT_CIRCFRAMEBUF_H_
 #define NOAAPORT_CIRCFRAMEBUF_H_
 
+#include "noaaportFrame.h"
+
 #ifdef __cplusplus
 
 #include <chrono>
@@ -25,10 +27,10 @@ class CircFrameBuf
      * NOAAPort frame run number and sequence number pair.
      */
     struct Key {
-        unsigned runNum;
-        unsigned seqNum;
+        RunNum_t runNum;
+        SeqNum_t seqNum;
 
-        Key(unsigned runNum, unsigned seqNum)
+        Key(RunNum_t runNum, SeqNum_t seqNum)
             : runNum(runNum)
             , seqNum(seqNum)
         {}
@@ -63,10 +65,10 @@ class CircFrameBuf
      * A slot for a frame.
      */
     struct Slot {
-        char     data[5000]; ///< Frame data
-        unsigned numBytes;   ///< Number of bytes of data in the frame
+        char        data[5000]; ///< Frame data
+        FrameSize_t numBytes;   ///< Number of bytes of data in the frame
 
-        Slot(const char* data, unsigned numBytes)
+        Slot(const char* data, FrameSize_t numBytes)
             : data()
             , numBytes(numBytes)
         {
@@ -123,10 +125,10 @@ public:
      * @see                 `getOldestFrame()`
      */
     void add(
-            const unsigned runNum,
-            const unsigned seqNum,
-            const char*    data,
-            const unsigned numBytes);
+            const RunNum_t    runNum,
+            const SeqNum_t    seqNum,
+            const char*       data,
+            const FrameSize_t numBytes);
 
     /**
      * Returns the oldest frame. Returns immediately if the next frame is the
@@ -135,16 +137,16 @@ public:
      *
      * @param[out] runNum    Frame run number
      * @param[out] seqNum    Frame sequence number
-     * @param[out] data      Frame data.
+     * @param[out] data      Buffer to hold frame data.
      * @param[out] numBytes  Number of bytes in the frame
      * @threadsafety         Safe
      * @see                  `CircFrameBuf()`
      */
     void getOldestFrame(
-            unsigned*     runNum,
-            unsigned*     seqNum,
-            const char**  data,
-            unsigned*     numBytes);
+            RunNum_t*    runNum,
+            SeqNum_t*    seqNum,
+            char*        data,
+            FrameSize_t* numBytes);
 
     void getNumberOfFrames(unsigned* numFrames);
 };
@@ -180,11 +182,11 @@ void* cfb_new(
  * @retval    `false`   Fatal error. `log_add()` called.
  */
 bool  cfb_add(
-        void*          cfb,
-        const unsigned runNum,
-        const unsigned seqNum,
-        const char*    data,
-        const unsigned numBytes);
+        void*             cfb,
+        const RunNum_t    runNum,
+        const SeqNum_t    seqNum,
+        const char*       data,
+        const FrameSize_t numBytes);
 
 /**
  * Returns the next, oldest frame if it exists. Blocks until it does.
@@ -199,10 +201,10 @@ bool  cfb_add(
  */
 bool cfb_getOldestFrame(
         void*        cfb,
-        unsigned*    runNum,
-        unsigned*    seqNum,
-        const char** data,
-        unsigned*    numBytes);
+        RunNum_t*    runNum,
+        SeqNum_t*    seqNum,
+        char*        data,
+        FrameSize_t* numBytes);
 
 /**
  * Deletes a circular frame buffer.
@@ -212,10 +214,10 @@ bool cfb_getOldestFrame(
 void cfb_delete(void* cfb);
 
 /**
- * Return numbre of frames in a circular frame buffer.
+ * Return number of frames in a circular frame buffer.
  *
  * @param[in]  cfb       Pointer to circular frame buffer
- * @param[out] numBytes  Number of bytes of data
+ * @param[out] nbf       Number of frames
  */
 void cfb_getNumberOfFrames(void* cfb, unsigned* nbf);
 
