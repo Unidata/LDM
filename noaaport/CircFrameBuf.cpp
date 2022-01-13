@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include "CircFrameBuf.h"
 #include "log.h"
-#include <unordered_map>
 
 CircFrameBuf::CircFrameBuf(
         const unsigned numFrames,
