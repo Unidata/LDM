@@ -32,8 +32,8 @@ EXTRA_DIST              = \
         nwstgdump.data \
         productMaker.hin \
         reader.hin \
-		shmfifo.hin \
-		blender.conf.in blender.1.in \
+	shmfifo.hin \
+	blender.conf.in blender.1.in \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 BUILT_SOURCES		= \

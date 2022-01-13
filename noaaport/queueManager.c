@@ -30,17 +30,18 @@
 #include "queueManager.h"
 //#include "noaaportFrame.h"
 #include "CircFrameBuf.h"
+#include "frameWriter.h"
+
+static void flowDirector(void);
+static void initMutexAndCond(void);
 
 //  ========================================================================
 pthread_mutex_t runMutex;
 pthread_cond_t  cond;
 //  ========================================================================
 
-extern int 			fw_writeFrame( Frame_t );
 extern void 		lockIt(		pthread_mutex_t* );
 extern void 		unlockIt( 	pthread_mutex_t* );
-
-extern unsigned 	cfb_numberOfFrames(void*);
 
 //  ========================================================================
 struct timespec 	timeOut = {						// <- may not be used
@@ -53,14 +54,13 @@ static clockid_t    	clockToUse = CLOCK_MONOTONIC;
 
 static void* cfb;
 //  ========================================================================
-QueueConf_t* setQueueConf(double frameLatency, int hashTableSize)
+QueueConf_t* setQueueConf(double frameLatency)
 {
 	QueueConf_t* aQueueConfig 	= (QueueConf_t*) malloc(sizeof(QueueConf_t) );
 	aQueueConfig->frameLatency 	= frameLatency;
-	aQueueConfig->hashTableSize = hashTableSize;
 
 	// Create and initialize the CircFrameBuf class here
-	cfb = (void*) cfb_new( hashTableSize, frameLatency);
+	cfb = (void*) cfb_new(frameLatency);
 	return aQueueConfig;
 }
 
@@ -74,32 +74,16 @@ setMaxWait(double frameLatency)
     timeOut.tv_nsec    = fractional * ONE_BILLION;
 }
 
-static void
-setHashTableSize(int tSize)
-{
-	hashTableSize = tSize;
-}
-
 void
-queue_start(QueueConf_t* aQueueConf)
+queue_start(const double frameLatency)
 {
 	// QueueConf elements:
 
-
 	(void) initMutexAndCond();
 
-	(void) setMaxWait(aQueueConf->frameLatency);
-	(void) setHashTableSize(aQueueConf->hashTableSize);
-
-	free(aQueueConf);
+	(void) setMaxWait(frameLatency);
 
 	flowDirector();
-}
-
-void
-queueDestroy()
-{
-
 }
 
 static void
@@ -140,57 +124,18 @@ flowDirectorRoutine()
 
 	for (;;)
 	{
-		int status = 0;
 		lockIt(&runMutex);
-
-		clock_gettime(clockToUse, &abs_time);
-		// pthread cond_timedwait() expects an absolute time to wait until
-		//abs_time.tv_sec     += max_wait.tv_sec;
-		//abs_time.tv_nsec    += max_wait.tv_nsec;
-
-		//abs_time.tv_sec     += 1;
-		//abs_time.tv_nsec    = 0;
-		abs_time.tv_sec     += timeOut.tv_sec; // .10
-		abs_time.tv_nsec    += timeOut.tv_nsec;
-		if(abs_time.tv_nsec > ONE_BILLION )
-		{
-			abs_time.tv_nsec -= ONE_BILLION;
-			++abs_time.tv_sec;
-		}
-
-		for( numFrames = cfb_numberOfFrames( cfb );
-				numFrames == 0 || (status == 0 && numFrames < hashTableSize/2);
-			    numFrames = cfb_numberOfFrames( cfb ) )
-		{
-			status = pthread_cond_timedwait(&cond, &runMutex, &abs_time);
-			log_add("\n\nWAIT: (flowDirectorRoutine).. .\n\n");
-			log_flush_debug();
-			if( status && status != ETIMEDOUT)
-			{
-				log_fatal("\n\n status: %d.\n\n", status);
-				abort();
-			}
-			//assert(status == 0 || status == ETIMEDOUT);
-		}
-
-		if( numFrames > 0 && status )
-			log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
 
 		// Call into the hashTableManager to provide a frame to consume.
 		// It will NOT block:
-		Frame_t* oldestFrame;
+		Frame_t oldestFrame;
 
-		bool resp = cfb_getOldestFrame(cfb,
-										&oldestFrame->runNum,
-										&oldestFrame->seqNum,
-										oldestFrame->data,
-										&oldestFrame->nbytes);
+		if (cfb_getOldestFrame(cfb, &oldestFrame)) {
+            log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
 
-		if( resp )
-		{
 			// if( writeFrame( oldestFrame->sbnFrame ) == -1 )  // <- comment-out this when ready and remove next line
 			// also fix 'fr_writeFrame()' signature
-			if( fw_writeFrame( *oldestFrame ) == -1 )
+			if( fw_writeFrame( &oldestFrame ) == -1 )
 			{
 				log_add("\nError writing to pipeline\n");
 				log_flush_error();

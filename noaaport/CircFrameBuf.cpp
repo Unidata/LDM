@@ -11,14 +11,12 @@
 #include "CircFrameBuf.h"
 #include "log.h"
 
-CircFrameBuf::CircFrameBuf(
-        const unsigned numFrames,
-        const double   timeout)
+CircFrameBuf::CircFrameBuf(const double timeout)
     : mutex()
     , cond()
     , nextIndex(0)
     , indexes()
-    , slots(numFrames)
+    , slots()
     , lastOldestKey()
     , frameReturned(false)
     , timeout(std::chrono::duration_cast<Dur>(
@@ -44,19 +42,7 @@ void CircFrameBuf::add(
     cond.notify_one();
 }
 
-void CircFrameBuf::getNumberOfFrames(unsigned* numFrames)
-{
-
-    Lock  lock{mutex}; /// RAII!
-    *numFrames = slots.size();
-    Lock  unlock{mutex}; /// RAII!
-
-}
-void CircFrameBuf::getOldestFrame(
-        RunNum_t*    runNum,
-        SeqNum_t*    seqNum,
-        char*        data,
-        FrameSize_t* numBytes)
+void CircFrameBuf::getOldestFrame(Frame_t* frame)
 {
     Lock  lock{mutex}; /// RAII!
     cond.wait(lock, [&]{return !indexes.empty();});
@@ -71,10 +57,10 @@ void CircFrameBuf::getOldestFrame(
     auto  index = head->second;
     auto& slot = slots.at(index);
 
-    *runNum   = key.runNum;
-    *seqNum   = key.seqNum;
-    ::memcpy(data, slot.data, slot.numBytes);
-    *numBytes = slot.numBytes;
+    frame->runNum   = key.runNum;
+    frame->seqNum   = key.seqNum;
+    ::memcpy(frame->data, slot.data, slot.numBytes);
+    frame->nbytes = slot.numBytes;
 
     slots.erase(index);
     indexes.erase(head);
@@ -86,12 +72,10 @@ void CircFrameBuf::getOldestFrame(
 extern "C" {
 
 	//------------------------- C code ----------------------------------
-	void* cfb_new(
-			const unsigned numFrames,
-			const double   timeout) {
+	void* cfb_new(const double timeout) {
 		void* cfb = nullptr;
 		try {
-			cfb = new CircFrameBuf(numFrames, timeout);
+			cfb = new CircFrameBuf(timeout);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't allocate new circular frame buffer: %s", ex.what());
@@ -120,14 +104,10 @@ extern "C" {
 	//------------------------- C code ----------------------------------
 	bool cfb_getOldestFrame(
 			void*        cfb,
-			RunNum_t*    runNum,
-			SeqNum_t*    seqNum,
-			char*        data,
-			FrameSize_t* numBytes) {
+			Frame_t*     frame) {
 		bool success = false;
 		try {
-			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(runNum, seqNum,
-			        data, numBytes);
+			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(frame);
 			success = true;
 		}
 		catch (const std::exception& ex) {
@@ -139,20 +119,6 @@ extern "C" {
 	//------------------------- C code ----------------------------------
 	void cfb_delete(void* cfb) {
 		delete static_cast<CircFrameBuf*>(cfb);
-	}
-
-	//------------------------- C code ----------------------------------
-	unsigned cfb_numberOfFrames(void* cfb) noexcept
-	{
-		unsigned* nbf;
-		try {
-			static_cast<CircFrameBuf*>(cfb)->getNumberOfFrames(nbf);
-		}
-		catch (const std::exception& ex) {
-			log_add("Couldn't get number of frames: %s", ex.what());
-		}
-		return *nbf;
-
 	}
 
 }

@@ -8,6 +8,8 @@
 #ifndef BLENDER_DOT_H
 #define BLENDER_DOT_H
 
+#include <stdbool.h>
+
 #define PORT                        9127
 #define MIN_SOCK_TIMEOUT_MICROSEC   9000
 

@@ -1,5 +1,9 @@
 #include "config.h"
 
+#include "globals.h"
+#include "noaaportFrame.h"
+#include "frameWriter.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -13,10 +17,6 @@
 #include <fcntl.h>
 
 #include <log.h>
-#include "globals.h"
-
-#include "hashTableImpl.h"
-#include "frameWriter.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX	120
@@ -99,7 +99,7 @@ fw_openPipe()
 //  post-condition: runMutex is     unLOCKED
 //  post-condition:  aFrameMutex is  unLOCKED
 int
-fw_writeFrame(Frame_t aFrame)
+fw_writeFrame(const Frame_t* aFrame)
 {
     int             status      = 0;
     char            frameElements[PATH_MAX];
@@ -107,14 +107,14 @@ fw_writeFrame(Frame_t aFrame)
 	//openNoaaportNamedPipe();	// review : atomic  O_CREAT
 
     // for printout purposes
-    uint32_t  seqNum = aFrame.seqNum;
-    uint16_t  runNum = aFrame.runNum;
+    SeqNum_t  seqNum = aFrame->seqNum;
+    RunNum_t  runNum = aFrame->runNum;
     sprintf(frameElements, "SeqNum: %lu - runNum: %lu \n", seqNum, runNum);
     log_info("   => Frame Out: %s", frameElements);
 
     // We could call extractSeqNumRunCheckSum() to get seqNum, etc.
 
-    const unsigned char * sbnFrame    = aFrame.data;
+    const unsigned char * sbnFrame    = aFrame->data;
     //int resp = write(fd, sbnFrame, strlen(sbnFrame) + 1); // <----------- uncomment to start sending real SBN data
     int resp = write(fd, frameElements, strlen(frameElements) + 1); // <---   comment out to start sending real SBN data
     if( resp < 0 )

@@ -26,13 +26,6 @@
 #define INITIAL_SEQ_NUM             0
 #define INITIAL_RUN_NUM             0
 
-typedef struct aFrame {
-    SeqNum_t        seqNum;
-    RunNum_t        runNum;
-    char   			data[SBN_FRAME_SIZE];	// change
-    FrameSize_t     nbytes;
-} Frame_t;
-
 typedef struct aFrameSlot {
 
 	bool      occupied;

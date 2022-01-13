@@ -100,14 +100,11 @@ public:
     /**
      * Constructs.
      *
-     * @param[in] numFrames  Initial number of frames to hold
      * @param[in] timeout    Timeout value, in seconds, for returning oldest
      *                       frame
      * @see                  `getOldestFrame()`
      */
-    CircFrameBuf(
-            const unsigned numFrames,
-            const double   timeout);
+    CircFrameBuf(const double timeout);
 
     CircFrameBuf(const CircFrameBuf& other) =delete;
     CircFrameBuf& operator=(const CircFrameBuf& rhs) =delete;
@@ -135,20 +132,11 @@ public:
      * immediate successor to the previously-returned frame; otherwise, blocks
      * until a frame is available and the timeout occurs.
      *
-     * @param[out] runNum    Frame run number
-     * @param[out] seqNum    Frame sequence number
-     * @param[out] data      Buffer to hold frame data.
-     * @param[out] numBytes  Number of bytes in the frame
+     * @param[out] frame     Buffer for the frame
      * @threadsafety         Safe
      * @see                  `CircFrameBuf()`
      */
-    void getOldestFrame(
-            RunNum_t*    runNum,
-            SeqNum_t*    seqNum,
-            char*        data,
-            FrameSize_t* numBytes);
-
-    void getNumberOfFrames(unsigned* numFrames);
+    void getOldestFrame(Frame_t* frame);
 };
 
 extern "C" {
@@ -158,7 +146,6 @@ extern "C" {
 /**
  * Returns a new circular frame buffer.
  *
- * @param[in] numFrames  Initial number of frames
  * @param[in] timeout    Timeout, in seconds, before the next frame must be
  *                       returned if it exists
  * @retval    NULL       Fatal error. `log_add()` called.
@@ -166,9 +153,7 @@ extern "C" {
  * @see                  `cfb_getOldestFrame()`
  * @see                  `cfb_delete()`
  */
-void* cfb_new(
-        const unsigned numFrames,
-        const double   timeout);
+void* cfb_new(const double timeout);
 
 /**
  * Adds a new frame.
@@ -192,19 +177,12 @@ bool  cfb_add(
  * Returns the next, oldest frame if it exists. Blocks until it does.
  *
  * @param[in]  cfb       Pointer to circular frame buffer
- * @param[out] runNum    NOAAPort run number
- * @param[out] seqNum    NOAAPort sequence number
- * @param[out] data      Frame data
- * @param[out] numBytes  Number of bytes of data
- * @retval    `true`     Success
+ * @param[out] frame     Buffer to hold the oldest frame
  * @retval    `false`    Fatal error. `log_add()` called.
  */
 bool cfb_getOldestFrame(
         void*        cfb,
-        RunNum_t*    runNum,
-        SeqNum_t*    seqNum,
-        char*        data,
-        FrameSize_t* numBytes);
+        Frame_t*     frame);
 
 /**
  * Deletes a circular frame buffer.

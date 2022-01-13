@@ -1,5 +1,11 @@
 #include "config.h"
 
+#include "blender.h"
+#include "frameReader.h"
+#include "noaaportFrame.h"
+#include "InetSockAddr.h"
+#include "globals.h"
+
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -11,13 +17,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <assert.h>
-#include "InetSockAddr.h"
 #include <log.h>
-#include "globals.h"
-
-#include "blender.h"
-#include "frameReader.h"
-#include "hashTableImpl.h"
 
 //  ========================================================================
 extern void	 		setFIFOPolicySetPriority(pthread_t, char*, int);

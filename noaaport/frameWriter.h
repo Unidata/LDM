@@ -8,6 +8,8 @@
 #ifndef FRAMEWRITER_H_
 #define FRAMEWRITER_H_
 
+#include "noaaportFrame.h"
+
 #include <limits.h>
 
 #define NOAAPORT_NAMEDPIPE          "/tmp/noaaportIngesterPipe"
@@ -19,5 +21,6 @@ typedef struct frameWriter {
     char		namedPipe[PATH_MAX];
 } FrameWriterConf_t;
 
+int fw_writeFrame( const Frame_t* );
 
 #endif /* FRAMEWRITER_H_ */

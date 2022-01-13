@@ -1,5 +1,12 @@
 #include "config.h"
 
+#include "noaaportFrame.h"
+#include "queueManager.h"
+#include "frameReader.h"
+#include "frameWriter.h"
+#include "blender.h"
+#include "InetSockAddr.h"
+
 #include <stdio.h>
 #include <semaphore.h>
 #include <errno.h>
@@ -16,12 +23,6 @@
 
 #include <assert.h>
 
-#include "queueManager.h"
-#include "frameReader.h"
-#include "frameWriter.h"
-#include "blender.h"
-#include "InetSockAddr.h"
-
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
@@ -31,16 +32,15 @@ static		char*	const*		serverAddresses;
 // =====================================================================
 
 extern FrameWriterConf_t* fw_setConfig(int, const char*);
-extern QueueConf_t*   setQueueConf(double, int);
+extern QueueConf_t*   setQueueConf(double);
 
 extern void 		fw_start(FrameWriterConf_t*);
-extern void 		queue_start(QueueConf_t*);
+extern void 		queue_start(const double frameLatency);
 extern int 		  	reader_start( char* const*, int);
 
 // =====================================================================
 
 static double         waitTime 		= 1.0;		///< max time between output frames
-static int            hashTableSize	= HASH_TABLE_SIZE; ///< hash table capacity in frames
 static const char*	  namedPipe 	= NULL;		///< pathname of output FIFO
 static const char*	  logfile		= "/tmp/blender.out";		///< pathname of output messages
 
@@ -61,9 +61,8 @@ usage(
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] [-h tbleSize] [-l log] [-t sec] pipe host:port ... \n"
+"Usage: %s [-v|-x] [-l log] [-t sec] pipe host:port ... \n"
 "where:\n"
-"   -h tblSize  Hash table capacity. Default is 1500.\n"
 "   -l log     Log to `log`. One of: \"\" (system logging daemon), \"-\"\n"
 "               (standard error), or file `log`. Default is \"%s\"\n"
 "   -t sec 		Timeout in (decimal) seconds. Default is '1.0'.\n"
@@ -97,7 +96,7 @@ decodeCommandLine(
     int ch;
     opterr = 0;                         /* no error messages from getopt(3) */
     while (0 == status &&
-           (ch = getopt(argc, argv, "vxh:l:t:")) != -1)
+           (ch = getopt(argc, argv, "vxl:t:")) != -1)
     {
         switch (ch) {
             case 'v':
@@ -106,12 +105,6 @@ decodeCommandLine(
             case 'x':
             	log_add("set debug mode");
                 break;
-            case 'h':
-				if (sscanf(optarg, "%d", &hashTableSize) != 1 || hashTableSize < 0) {
-					log_add("Invalid hash table size value: \"%s\"", optarg);
-					status = EINVAL;
-				}
-				break;
             case 'l':
             	if (sscanf(optarg, "%s", &logfile) != 1 ) {
             		log_add("Invalid log file name: \"%s\"", optarg);
@@ -238,12 +231,11 @@ int main(
             in_port_t ipPort  	= PORT;					// to be passed in as ns
             int frameSize 		= SBN_FRAME_SIZE;
 
-            QueueConf_t* queueConfig 			= setQueueConf(waitTime, hashTableSize);
             FrameWriterConf_t* 	writerConfig 	= fw_setConfig(frameSize, namedPipe);
 
             // Start all modules
             fw_start( 	writerConfig );
-            queue_start( queueConfig );
+            queue_start( waitTime );
             if( reader_start(serverAddresses, serverCount ) )
             {
             	exit(EXIT_FAILURE);
