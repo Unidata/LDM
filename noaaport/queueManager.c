@@ -28,7 +28,7 @@
 
 #include "misc.h"
 #include "queueManager.h"
-#include "noaaportFrame.h"
+//#include "noaaportFrame.h"
 #include "CircFrameBuf.h"
 
 //  ========================================================================
