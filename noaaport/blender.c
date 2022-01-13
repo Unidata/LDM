@@ -96,7 +96,7 @@ decodeCommandLine(
     int ch;
     opterr = 0;                         /* no error messages from getopt(3) */
     while (0 == status &&
-           (ch = getopt(argc, argv, "vxl:t:")) != -1)
+           (ch = getopt(argc, argv, ":vxl:t:")) != -1)
     {
         switch (ch) {
             case 'v':
@@ -117,8 +117,16 @@ decodeCommandLine(
                     status = EINVAL;
                 }
                 break;
-            default:
-                break;        
+            case '?': {
+                log_add("Unknown option: \"%c\"", ch);
+                usage(argv[0], COPYRIGHT_NOTICE);
+                break;
+            }
+            case ':': {
+                log_add("Option \"%c\" is missing its argument", ch);
+                usage(argv[0], COPYRIGHT_NOTICE);
+                break;
+            }
         }
         log_flush_warning();
     }
