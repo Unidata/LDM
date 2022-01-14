@@ -175,6 +175,8 @@ buildFrameRoutine(void *arg)
 
     bool initialFrameRun_flag       = true;
 
+    log_notice("In buildFrameRoutine()...\n");
+
     // TCP/IP receiver
     // loop until byte 255 is detected. And then process next 15 bytes
     for(;;)
@@ -340,7 +342,7 @@ inputClientRoutine(void* id)
 		log_flush_fatal();
 		exit(EXIT_FAILURE);
 	}
-	log_debug("\nInputClientRoutine: CONNECTED!\n");
+	log_notice("InputClientRoutine: CONNECTED!");
 
 	// inputBuildFrameRoutine thread shall read one frame at a time from the server
 	// and pushes it to the frameFifoAdapter function for proper handling

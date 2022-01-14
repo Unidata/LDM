@@ -31,10 +31,7 @@ static		int							serverCount;
 static		char*	const*		serverAddresses;
 // =====================================================================
 
-extern FrameWriterConf_t* fw_setConfig(int, const char*);
-extern QueueConf_t*   setQueueConf(double);
-
-extern void 		fw_start(FrameWriterConf_t*);
+extern void 		fw_start(const char *pipe);
 extern void 		queue_start(const double frameLatency);
 extern int 		  	reader_start( char* const*, int);
 
@@ -239,11 +236,10 @@ int main(
             in_port_t ipPort  	= PORT;					// to be passed in as ns
             int frameSize 		= SBN_FRAME_SIZE;
 
-            FrameWriterConf_t* 	writerConfig 	= fw_setConfig(frameSize, namedPipe);
-
             // Start all modules
-            fw_start( 	writerConfig );
+            fw_start( namedPipe );
             queue_start( waitTime );
+
             if( reader_start(serverAddresses, serverCount ) )
             {
             	exit(EXIT_FAILURE);

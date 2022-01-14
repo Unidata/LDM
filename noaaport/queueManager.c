@@ -52,17 +52,8 @@ int hashTableSize;
 //  ========================================================================
 static clockid_t    	clockToUse = CLOCK_MONOTONIC;
 
-static void* cfb;
+void* cfb;
 //  ========================================================================
-QueueConf_t* setQueueConf(double frameLatency)
-{
-	QueueConf_t* aQueueConfig 	= (QueueConf_t*) malloc(sizeof(QueueConf_t) );
-	aQueueConfig->frameLatency 	= frameLatency;
-
-	// Create and initialize the CircFrameBuf class here
-	cfb = (void*) cfb_new(frameLatency);
-	return aQueueConfig;
-}
 
 static void
 setMaxWait(double frameLatency)
@@ -82,6 +73,9 @@ queue_start(const double frameLatency)
 	(void) initMutexAndCond();
 
 	(void) setMaxWait(frameLatency);
+
+	// Create and initialize the CircFrameBuf class here
+	cfb = (void*) cfb_new(frameLatency);
 
 	flowDirector();
 }

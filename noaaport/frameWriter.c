@@ -27,30 +27,15 @@ static int 	fd;
 static int 	fw_openPipe(void);
 //  ========================================================================
 
-
-// aFrameWriterConfig's memory allocation is made in this function but freed in another
-// function: "writer thread?", executed by a thread.
-
-FrameWriterConf_t* fw_setConfig(int frameSize, const char* namedPipe)
-{
-	FrameWriterConf_t* aFrameWriterConfig = (FrameWriterConf_t*) malloc(sizeof(FrameWriterConf_t) );
-	strncpy(aFrameWriterConfig->namedPipe, namedPipe, strlen(namedPipe));
-	aFrameWriterConfig->frameSize = frameSize;
-
-	return aFrameWriterConfig;
-}
-
 void
-fw_start(FrameWriterConf_t* aFrameWriterConfig)
+fw_start(const char * namedPipe)
 {
 
 	// named pipe full name: if NULL take the default
-	if( aFrameWriterConfig->namedPipe )
-		strncpy(namedPipeFullName, aFrameWriterConfig->namedPipe, strlen(aFrameWriterConfig->namedPipe));
+	if( namedPipe )
+		strncpy(namedPipeFullName, namedPipe, strlen(namedPipe));
 
 	fw_openPipe();	// review : atomic  O_CREAT
-
-	free(aFrameWriterConfig);
 }
 
 static void
