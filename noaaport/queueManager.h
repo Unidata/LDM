@@ -12,21 +12,10 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-#define ONE_BILLION                 1000000000
-
-
-
 pthread_t		flowDirectorThread;
-
-
-typedef struct QueueConf {
-    double 		frameLatency;
-} QueueConf_t;
-
 //  ========================================================================
 
 void setFIFOPolicySetPriority(pthread_t, char *, int);
-void initFrameHashTable(void);
 void queue_start(const double frameLatency);
 
 //  ========================================================================

@@ -1,5 +1,10 @@
 #include "config.h"
 
+#include "misc.h"
+#include "queueManager.h"
+#include "CircFrameBuf.h"
+#include "frameWriter.h"
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -26,84 +31,13 @@
 #include <assert.h>
 #include <log.h>
 
-#include "misc.h"
-#include "queueManager.h"
-//#include "noaaportFrame.h"
-#include "CircFrameBuf.h"
-#include "frameWriter.h"
-
-static void flowDirector(void);
-static void initMutexAndCond(void);
-
-//  ========================================================================
-pthread_mutex_t runMutex;
-pthread_cond_t  cond;
-//  ========================================================================
-
 extern void 		lockIt(		pthread_mutex_t* );
 extern void 		unlockIt( 	pthread_mutex_t* );
 
 //  ========================================================================
-struct timespec 	timeOut = {						// <- may not be used
-    .tv_sec = 1,    // default value
-    .tv_nsec = 0
-};
-int hashTableSize;
-//  ========================================================================
-static clockid_t    	clockToUse = CLOCK_MONOTONIC;
-
+static pthread_mutex_t runMutex;
 void* cfb;
 //  ========================================================================
-
-static void
-setMaxWait(double frameLatency)
-{
-    double integral;
-    double fractional = modf(frameLatency, &integral);
-
-    timeOut.tv_sec     = integral;
-    timeOut.tv_nsec    = fractional * ONE_BILLION;
-}
-
-void
-queue_start(const double frameLatency)
-{
-	// QueueConf elements:
-
-	(void) initMutexAndCond();
-
-	(void) setMaxWait(frameLatency);
-
-	// Create and initialize the CircFrameBuf class here
-	cfb = (void*) cfb_new(frameLatency);
-
-	flowDirector();
-}
-
-static void
-initMutexAndCond()
-{
-    int resp = pthread_mutex_init(&runMutex, NULL);
-    if(resp)
-    {
-        log_add("pthread_mutex_init( runMutex ) failure: %s - resp: %d\n", strerror(resp), resp);
-		log_flush_error();
-        exit(EXIT_FAILURE);
-    }
-
-    // Code not needed as it does not make a difference: clockToUse
-    pthread_condattr_t attr;
-    int ret = pthread_condattr_setclock(&attr, clockToUse);
-
-    // init cond
-    resp = pthread_cond_init(&cond, &attr);
-    if(resp)
-    {
-        log_add("pthread_cond_init( cond ) failure: %s\n", strerror(resp));
-		log_flush_error();
-        exit(EXIT_FAILURE);
-    }
-}
 
 /**
  * Threaded function to initiate the flowDirector running in its own thread
@@ -135,10 +69,8 @@ flowDirectorRoutine()
 				log_flush_error();
 				exit(EXIT_FAILURE);
 			}
-
 		}
 		unlockIt(&runMutex);
-
     } // for
 
     log_free();
@@ -158,14 +90,37 @@ flowDirector()
     }
     setFIFOPolicySetPriority(flowDirectorThread, "flowDirectorThread", 2);
 }
-//======================================================
 
+static void
+initMutex()
+{
+    int resp = pthread_mutex_init(&runMutex, NULL);
+    if(resp)
+    {
+        log_add("pthread_mutex_init( runMutex ) failure: %s - resp: %d\n", strerror(resp), resp);
+		log_flush_error();
+        exit(EXIT_FAILURE);
+    }
+}
+
+void
+queue_start(const double frameLatency)
+{
+	// Initialize runMutex
+	(void) initMutex();
+
+	// Create and initialize the CircFrameBuf class
+	cfb = (void*) cfb_new(frameLatency);
+
+	// create and launch flowDirector thread (to insert frames in map)
+	flowDirector();
+}
 
 /*
- * tryInsertInQueue():	Try insert a frame in ... queue (one of 2 hash tables)
+ * tryInsertInQueue():	Try insert a frame
  *
- * pre-condition: 	runMutex is unLOCKed
- * post-condition: 	runMutex is unLOCKed
+ * pre-condition: 	runMutex is LOCKed
+ * post-condition: 	runMutex is LOCKed
  */
 int
 tryInsertInQueue(  unsigned 		sequenceNumber,
@@ -173,9 +128,7 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 				   unsigned char 	*buffer,
 				   unsigned 		frameBytes)
 {
-
-	// runMutex is unLOCKed: lock it!
-	//lockIt(&runMutex);
+	// runMutex is already LOCKed!
 	assert( pthread_mutex_trylock(&runMutex) );
 
 	// call in CircFrameBuf:
@@ -184,11 +137,5 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 	{
 		log_error("Inserting frame in queue failed.");
 	}
-	//unlockIt(&runMutex);
-
 	return status;
 }
-
-
-
-

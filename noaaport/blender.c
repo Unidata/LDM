@@ -5,7 +5,6 @@
 #include "frameReader.h"
 #include "frameWriter.h"
 #include "blender.h"
-#include "InetSockAddr.h"
 
 #include <stdio.h>
 #include <semaphore.h>
@@ -26,9 +25,8 @@
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
-bool 		debug = false;
-static		int							serverCount;
-static		char*	const*		serverAddresses;
+static		int				serverCount;
+static		char*	const*	serverAddresses;
 // =====================================================================
 
 extern void 		fw_start(const char *pipe);
@@ -39,7 +37,7 @@ extern int 		  	reader_start( char* const*, int);
 
 static double         waitTime 		= 1.0;		///< max time between output frames
 static const char*	  namedPipe 	= NULL;		///< pathname of output FIFO
-static const char*	  logfile		= "/tmp/blender.out";		///< pathname of output messages
+static const char*	  logfile		= "/tmp/blender.log";		///< pathname of output messages
 
 // =====================================================================
 
@@ -50,9 +48,8 @@ static const char*	  logfile		= "/tmp/blender.out";		///< pathname of output mes
  * @param[in] copyright  Copyright notice.
  */
 static void 
-usage(
-    const char* const          progName,
-    const char* const restrict copyright)
+usage( const char* const          progName,
+       const char* const restrict copyright)
 {
     log_notice(
 "\n\t%s - version %s\n"
@@ -128,7 +125,6 @@ decodeCommandLine(
         log_flush_warning();
     }
 
-
     if(optind >= argc)
     	usage(argv[0], COPYRIGHT_NOTICE);
 
@@ -156,12 +152,10 @@ signal_handler( const int sig)
         case SIGUSR1:
             // .. add as needed
             break;
-
         case SIGUSR2:
             // (void)log_roll_level();
             break;
     }
-
     return;
 }
 
@@ -193,7 +187,7 @@ set_sigactions(void)
 
 int main(
     const int argc,           /**< [in] Number of arguments */
-    char* const    argv[])         /**< [in] Arguments */
+    char* const    argv[])    /**< [in] Arguments */
 {
     int status;
     /*
@@ -229,13 +223,6 @@ int main(
             // so that read(s) and accept(s) shall return error to exit the threads.
             set_sigactions();
 
-            // These values can/will change from one reader to another (ipAddress in socat)
-            // No longer used:
-            int policy 			= SCHED_RR;
-            in_addr_t ipAddress = htonl(INADDR_ANY);	// to be passed in as plain host address
-            in_port_t ipPort  	= PORT;					// to be passed in as ns
-            int frameSize 		= SBN_FRAME_SIZE;
-
             // Start all modules
             fw_start( namedPipe );
             queue_start( waitTime );
@@ -249,23 +236,7 @@ int main(
             	pause();
             // 
         }   /* command line decoded */
-        
   }  // log_fini();
     
         return status ? 1 : 0;
 }
-
-//-----------------------------------------------------------------
-// 										Beyond, not used
-/*
-static void
-setTimerOnSocket(int *pSockFd, int microSec)
-{
-    // set a timeout on the receiving socket
-    struct timeval read_timeout;
-    read_timeout.tv_sec = 0;
-    read_timeout.tv_usec = microSec;
-    setsockopt(*pSockFd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof(read_timeout));
-}
-*/
-

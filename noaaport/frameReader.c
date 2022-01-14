@@ -3,7 +3,6 @@
 #include "blender.h"
 #include "frameReader.h"
 #include "noaaportFrame.h"
-#include "InetSockAddr.h"
 #include "globals.h"
 
 #include <stdio.h>
@@ -25,7 +24,6 @@ extern int   		tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
 //  ========================================================================
 static pthread_t	inputClientThread[MAX_SERVERS];
 //  ========================================================================
-
 
 static ssize_t
 getBytes(int fd, char* buf, int nbytes)
@@ -175,7 +173,8 @@ buildFrameRoutine(void *arg)
 
     bool initialFrameRun_flag       = true;
 
-    log_notice("In buildFrameRoutine()...\n");
+    log_notice("In buildFrameRoutine() waiting to read from "
+    		"server socket (socat)...\n");
 
     // TCP/IP receiver
     // loop until byte 255 is detected. And then process next 15 bytes
@@ -184,8 +183,12 @@ buildFrameRoutine(void *arg)
         int n = read(clientSockFd, (char *)buffer,  1 ) ;
         if( n <= 0 )
         {
-            if( n <  0 ) log_syserr("InputClient thread: inputBuildFrameRoutine(): thread should die!");
-            if( n == 0 ) log_syserr("InputClient thread: inputBuildFrameRoutine(): Client  disconnected!");
+            if( n <  0 )
+            	log_syserr("InputClient thread: inputBuildFrameRoutine(): "
+            			"thread should die!");
+            if( n == 0 )
+            	log_syserr("InputClient thread: inputBuildFrameRoutine():"
+            			"Client  disconnected!");
             close(clientSockFd);
             pthread_exit(NULL);
         }
@@ -215,7 +218,8 @@ buildFrameRoutine(void *arg)
         uint16_t headerLength, totalBytesRead;
         uint16_t dataBlockOffset, dataBlockSize;
         ret = retrieveProductHeaderFields( buffer, clientSockFd,
-                                            &headerLength, &dataBlockOffset, &dataBlockSize);
+                                            &headerLength, &dataBlockOffset,
+											&dataBlockSize);
 
         if(ret == FIN || ret == -1)
         {
@@ -234,7 +238,8 @@ buildFrameRoutine(void *arg)
         uint16_t dataBlockEnd   = dataBlockStart + dataBlockSize;
 
         // Read frame data from entire 'buffer'
-        ret = readFrameDataFromSocket( buffer, clientSockFd, dataBlockStart, dataBlockSize);
+        ret = readFrameDataFromSocket( buffer, clientSockFd,
+        								dataBlockStart, dataBlockSize);
         if(ret == FIN || ret == -1)
         {
             log_add("Error in reading data from socket. Closing socket...\n");
@@ -275,6 +280,7 @@ inputClientRoutine(void* id)
     {
         log_add("get in inputClientRoutine()  : pthread_getschedparam() failure: %s\n", strerror(response));
         log_flush_fatal();
+		exit(EXIT_FAILURE);
     }
 
 	// Create a socket file descriptor for the blender/frameReader(s) client
@@ -362,6 +368,7 @@ inputClientRoutine(void* id)
 		log_flush_fatal();
 		exit(EXIT_FAILURE);
 	}
+	return 0;
 }
 
 int
@@ -369,7 +376,7 @@ reader_start( char* const* serverAddresses, int serverCount )
 {
 	if(serverCount > MAX_SERVERS || !serverCount)
 	{
-		log_error("Too many servers");
+		log_error("Too many servers (max. handled: %d)", MAX_SERVERS);
 		return -1;
 	}
 	for(int i=0; i< serverCount; ++i)
@@ -379,21 +386,10 @@ reader_start( char* const* serverAddresses, int serverCount )
 		const char* id = serverAddresses[i]; // host+port
 		if(pthread_create(  &inputClientThread[i], NULL, inputClientRoutine, (void*) id) < 0)
 	    {
-	        log_add("Could not create a thread!\n");
+	        log_add("Could not create a thread for inputClient()!\n");
 	        log_flush_error();
 	    }
 	    setFIFOPolicySetPriority(inputClientThread[i], "inputClientThread", 1);
 	}
 	return 0;
 }
-
-
-/*
- *
- in_addr_t 	ipAddress,	// in network byte order
- in_port_t 	ipPort,		// in host byte order
-
-	aReaderConfig->ipAddress 	= ipAddress;
-	aReaderConfig->ipPort 		= ipPort;
-i*/
-
