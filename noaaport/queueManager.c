@@ -183,6 +183,7 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 	{
 		log_error("Inserting frame in queue failed.");
 	}
+	unlockIt(&runMutex);
 
 	return status;
 }
