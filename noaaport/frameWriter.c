@@ -26,8 +26,7 @@ fw_writeFrame(const Frame_t* aFrame)
     log_info("   => Frame Out: %s", frameElements);
     // ------------------------------------ to here -------------------------------------------->
 
-    const unsigned char * sbnFrame    = aFrame->data;
-    // ssize_t ret =  write(STDOUT_FILENO, sbnFrame, strlen(sbnFrame));	// <--- uncomment to start sending real SBN data
+    //ssize_t ret =  write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);	// <--- uncomment to start sending real SBN data
     // instead of this:
     ssize_t ret =  write(STDOUT_FILENO, frameElements, strlen(frameElements));
 
