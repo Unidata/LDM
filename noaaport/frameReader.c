@@ -259,25 +259,17 @@ buildFrameRoutine(int clientSockFd)
 }
 
 /**
- * Threaded function to initiate the frameReader running in its own thread
+ * Threaded function to initiate the frameReader running in its own thread.
+ * Never returns. Will terminate the process if a fatal error occurs.
  *
- * @param[in]  frameReaderStruct  structure pointer that holds all
- *                                information for a given frameReader
+ * @param[in]  id  String identifier of server's address and port number. E.g.,
+ *                     <hostname>:<port>
+ *                     <nnn.nnn.nnn.nnn>:<port>
  */
 static void*
 inputClientRoutine(void* id)
 {
 	const char* serverId = (char*) id;
-
-    struct sched_param param;
-	int policy	= SCHED_RR;
-    int response 	= pthread_getschedparam(pthread_self(), &policy, &param);
-    if( response )
-    {
-        log_add("get in inputClientRoutine()  : pthread_getschedparam() failure: %s\n", strerror(response));
-        log_flush_fatal();
-		exit(EXIT_FAILURE);
-    }
 
     for(;;)
     {
@@ -291,7 +283,7 @@ inputClientRoutine(void* id)
 		}
 
 		// id is host+port
-		char *hostId;
+		char*     hostId;
 		in_port_t port;
 
 		if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
@@ -303,77 +295,45 @@ inputClientRoutine(void* id)
 
 		// The address family must be compatible with the local host
 
-		struct addrinfo hints = { .ai_flags = AI_ADDRCONFIG, .ai_family = AF_INET };
+		struct addrinfo hints = {
+		        .ai_flags = AI_ADDRCONFIG,
+		        .ai_family = AF_INET };
 		struct addrinfo* addrInfo;
-
-		// We consider dealing with an IP v4 or an IP v6 remote server.
-		// argument 'ipV6Target' on command line sets the selection (hard coded for now)
-		bool ipV6Target = false;
-		if( ipV6Target )
-		{
-			hints.ai_family = AF_INET6;
-		}
 
 		if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
 		{
 			log_add_syserr("getaddrinfo() failure on %s", hostId);
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
+			log_flush_warning();
 		}
-		struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * ) (addrInfo->ai_addr);
-		sockaddr.sin_port 				= htons(port);
-		//struct sockaddr_in6 sockaddr_v6 = *(struct sockaddr_in6 * ) (addrInfo->ai_addr);
-		//sockaddr_v6.sin6_port 			= htons(port);
+		else {
+            struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * )
+                    (addrInfo->ai_addr);
+            sockaddr.sin_port 				= htons(port);
 
-		freeaddrinfo(addrInfo);
-		free(hostId);
+            freeaddrinfo(addrInfo);
+            free(hostId);
 
-		log_info("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n");
+            log_info("\nInputClientRoutine: connecting to TCPServer server to "
+                    "read frames...(PORT: , address: )\n");
 
-		// accept new client connection in its own thread
-		/*if( ipV6Target )
-		{
-			if( connect(socketClientFd, (const struct sockaddr *) &sockaddr_v6, sizeof(sockaddr_v6)) )
-			{
-				log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
-				log_flush_fatal();
-				exit(EXIT_FAILURE);
-			}
-		}*/
-		if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
-		{
-			log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
-		}
-		log_notice("InputClientRoutine: CONNECTED!");
+            if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
+                    sizeof(sockaddr)) )
+            {
+                log_add("Error connecting to server %s: %s\n", serverId,
+                        strerror(errno));
+                log_flush_warning();
+            }
+            else {
+                log_notice("InputClientRoutine: CONNECTED!");
 
-		// replace with
-		buildFrameRoutine(socketClientFd);
-		log_info("Lost connection with socat. Will retry after 60sec.");
-		close(socketClientFd);
-		sleep(60);
-	/*
-		// inputBuildFrameRoutine thread shall read one frame at a time from the server
-		// and pushes it to the frameFifoAdapter function for proper handling
-		pthread_t inputFrameThread;
-		if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, (void *) socketClientFd) < 0)
-		{
-			log_add("Could not create a thread!\n");
-			close(socketClientFd);
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
-		}
+                // replace with
+                buildFrameRoutine(socketClientFd);
+                log_info("Lost connection with socat. Will retry after 60sec.");
+            } // Connected
+		} // Got address information
 
-		if( pthread_detach(inputFrameThread) )
-		{
-			log_add("Could not detach the created thread!\n");
-			close(socketClientFd);
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
-		}
-		*/
-
+        close(socketClientFd);
+        sleep(60);
     } // for
 
 	return 0;
