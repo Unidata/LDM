@@ -22,8 +22,6 @@
 extern void	 		setFIFOPolicySetPriority(pthread_t, char*, int);
 extern int   		tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
 //  ========================================================================
-static pthread_t	inputClientThread[MAX_SERVERS];
-//  ========================================================================
 
 static ssize_t
 getBytes(int fd, char* buf, int nbytes)
@@ -158,10 +156,8 @@ readFrameDataFromSocket(unsigned char* buffer,
 
 // to read a complete frame with its data.
 static void *
-buildFrameRoutine(void *arg)
+buildFrameRoutine(int clientSockFd)
 {
-    int clientSockFd    = (int) arg;
-
     unsigned char buffer[SBN_FRAME_SIZE] = {};
 
     uint16_t    checkSum;
@@ -283,91 +279,103 @@ inputClientRoutine(void* id)
 		exit(EXIT_FAILURE);
     }
 
-	// Create a socket file descriptor for the blender/frameReader(s) client
-    int socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
-    if(socketClientFd < 0)
-	{
-		log_add("socket creation failed\n");
-		log_flush_fatal();
-		exit(EXIT_FAILURE);
-	}
-
-	// id is host+port
-    char *hostId;
-    in_port_t port;
-
-    if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
+    for(;;)
     {
-    	log_add("Invalid server specification %s\n", serverId);
-    	log_flush_fatal();
-    	exit(EXIT_FAILURE);
-    }
+		// Create a socket file descriptor for the blender/frameReader(s) client
+		int socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
+		if(socketClientFd < 0)
+		{
+			log_add("socket creation failed\n");
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
 
-	// The address family must be compatible with the local host
+		// id is host+port
+		char *hostId;
+		in_port_t port;
 
-	struct addrinfo hints = { .ai_flags = AI_ADDRCONFIG, .ai_family = AF_INET };
-	struct addrinfo* addrInfo;
+		if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
+		{
+			log_add("Invalid server specification %s\n", serverId);
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
 
-	// We consider dealing with an IP v4 or an IP v6 remote server.
-	// argument 'ipV6Target' on command line sets the selection (hard coded for now)
-	bool ipV6Target = false;
-	if( ipV6Target )
-	{
-		hints.ai_family = AF_INET6;
-	}
+		// The address family must be compatible with the local host
 
-	if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
-	{
-		log_add_syserr("getaddrinfo() failure on %s", hostId);
-		log_flush_fatal();
-		exit(EXIT_FAILURE);
-	}
-    struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * ) (addrInfo->ai_addr);
-	sockaddr.sin_port 				= htons(port);
-	//struct sockaddr_in6 sockaddr_v6 = *(struct sockaddr_in6 * ) (addrInfo->ai_addr);
-	//sockaddr_v6.sin6_port 			= htons(port);
+		struct addrinfo hints = { .ai_flags = AI_ADDRCONFIG, .ai_family = AF_INET };
+		struct addrinfo* addrInfo;
 
-    freeaddrinfo(addrInfo);
-    free(hostId);
+		// We consider dealing with an IP v4 or an IP v6 remote server.
+		// argument 'ipV6Target' on command line sets the selection (hard coded for now)
+		bool ipV6Target = false;
+		if( ipV6Target )
+		{
+			hints.ai_family = AF_INET6;
+		}
 
-    log_info("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n");
+		if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
+		{
+			log_add_syserr("getaddrinfo() failure on %s", hostId);
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
+		struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * ) (addrInfo->ai_addr);
+		sockaddr.sin_port 				= htons(port);
+		//struct sockaddr_in6 sockaddr_v6 = *(struct sockaddr_in6 * ) (addrInfo->ai_addr);
+		//sockaddr_v6.sin6_port 			= htons(port);
 
-	// accept new client connection in its own thread
-	/*if( ipV6Target )
-	{
-		if( connect(socketClientFd, (const struct sockaddr *) &sockaddr_v6, sizeof(sockaddr_v6)) )
+		freeaddrinfo(addrInfo);
+		free(hostId);
+
+		log_info("\nInputClientRoutine: connecting to TCPServer server to read frames...(PORT: , address: )\n");
+
+		// accept new client connection in its own thread
+		/*if( ipV6Target )
+		{
+			if( connect(socketClientFd, (const struct sockaddr *) &sockaddr_v6, sizeof(sockaddr_v6)) )
+			{
+				log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
+				log_flush_fatal();
+				exit(EXIT_FAILURE);
+			}
+		}*/
+		if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
 		{
 			log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
 			log_flush_fatal();
 			exit(EXIT_FAILURE);
 		}
-	}*/
-	if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
-	{
-		log_add("Error connecting to server %s: %s\n", serverId, strerror(errno));
-		log_flush_fatal();
-		exit(EXIT_FAILURE);
-	}
-	log_notice("InputClientRoutine: CONNECTED!");
+		log_notice("InputClientRoutine: CONNECTED!");
 
-	// inputBuildFrameRoutine thread shall read one frame at a time from the server
-	// and pushes it to the frameFifoAdapter function for proper handling
-	pthread_t inputFrameThread;
-	if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, (void *) socketClientFd) < 0)
-	{
-		log_add("Could not create a thread!\n");
+		// replace with
+		buildFrameRoutine(socketClientFd);
+		log_info("Lost connection with socat. Will retry after 60sec.");
 		close(socketClientFd);
-		log_flush_fatal();
-		exit(EXIT_FAILURE);
-	}
+		sleep(60);
+	/*
+		// inputBuildFrameRoutine thread shall read one frame at a time from the server
+		// and pushes it to the frameFifoAdapter function for proper handling
+		pthread_t inputFrameThread;
+		if(pthread_create(&inputFrameThread, NULL, buildFrameRoutine, (void *) socketClientFd) < 0)
+		{
+			log_add("Could not create a thread!\n");
+			close(socketClientFd);
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
 
-	if( pthread_detach(inputFrameThread) )
-	{
-		log_add("Could not detach the created thread!\n");
-		close(socketClientFd);
-		log_flush_fatal();
-		exit(EXIT_FAILURE);
-	}
+		if( pthread_detach(inputFrameThread) )
+		{
+			log_add("Could not detach the created thread!\n");
+			close(socketClientFd);
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
+		*/
+
+    } // for
+
 	return 0;
 }
 
@@ -376,20 +384,28 @@ reader_start( char* const* serverAddresses, int serverCount )
 {
 	if(serverCount > MAX_SERVERS || !serverCount)
 	{
-		log_error("Too many servers (max. handled: %d)", MAX_SERVERS);
+		log_error("Too many servers (max. handled: %d) OR none provided (serverCount: %d).", MAX_SERVERS, serverCount);
 		return -1;
 	}
 	for(int i=0; i< serverCount; ++i)
 	{
+		pthread_t inputClientThread;
 		log_notice("Server to connect to: %s\n", serverAddresses[i]);
 
 		const char* id = serverAddresses[i]; // host+port
-		if(pthread_create(  &inputClientThread[i], NULL, inputClientRoutine, (void*) id) < 0)
+		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine, (void*) id) < 0)
 	    {
 	        log_add("Could not create a thread for inputClient()!\n");
 	        log_flush_error();
 	    }
-	    setFIFOPolicySetPriority(inputClientThread[i], "inputClientThread", 1);
+	    setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
+
+		if( pthread_detach(inputClientThread) )
+		{
+			log_add("Could not detach the created thread!\n");
+			log_flush_fatal();
+			exit(EXIT_FAILURE);
+		}
 	}
 	return 0;
 }

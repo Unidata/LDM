@@ -1,44 +1,24 @@
 #include "config.h"
 
-#include "noaaportFrame.h"
 #include "queueManager.h"
 #include "frameReader.h"
-#include "frameWriter.h"
 #include "blender.h"
 
 #include <stdio.h>
-#include <semaphore.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
 #include <log.h>
-#include "globals.h"
-
-#include <assert.h>
 
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
-static		int				serverCount;
-static		char*	const*	serverAddresses;
 // =====================================================================
+static	int		serverCount;
+static	char*	const*	serverAddresses;
 
-extern void 		fw_start(const char *pipe);
-extern void 		queue_start(const double frameLatency);
-extern int 		  	reader_start( char* const*, int);
-
-// =====================================================================
-
-static double         waitTime 		= 1.0;		///< max time between output frames
-static const char*	  namedPipe 	= NULL;		///< pathname of output FIFO
-static const char*	  logfile		= "/tmp/blender.log";		///< pathname of output messages
-
+static double	waitTime 	= 1.0;					///< max time between output frames
+static char*	logfile		= "/tmp/blender.log";	///< pathname of output messages
 // =====================================================================
 
 /**
@@ -55,14 +35,13 @@ usage( const char* const          progName,
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] [-l log] [-t sec] pipe host:port ... \n"
+"Usage: %s [-v|-x] [-l log] [-t sec] host:port ... \n"
 "where:\n"
 "   -l log     Log to `log`. One of: \"\" (system logging daemon), \"-\"\n"
 "               (standard error), or file `log`. Default is \"%s\"\n"
 "   -t sec 		Timeout in (decimal) seconds. Default is '1.0'.\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
-"    pipe       Named pipe per channel. Example '/tmp/noaaportIngesterPipe'.\n"
 "    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
 "\n",
         progName, PACKAGE_VERSION, copyright, progName, logfile);
@@ -100,10 +79,7 @@ decodeCommandLine(
             	log_add("set debug mode");
                 break;
             case 'l':
-            	if (sscanf(optarg, "%s", &logfile) != 1 ) {
-            		log_add("Invalid log file name: \"%s\"", optarg);
-                    status = EINVAL;
-            	}
+            	log_set_destination(optarg);
                 break;
             case 't':
                 if (sscanf(optarg, "%lf", &waitTime) != 1 || waitTime < 0) {
@@ -128,12 +104,9 @@ decodeCommandLine(
     if(optind >= argc)
     	usage(argv[0], COPYRIGHT_NOTICE);
 
-	namedPipe = argv[optind++];
+	// RIP: namedPipe = argv[optind++];
 
-	if(optind >= argc)
-    	usage(argv[0], COPYRIGHT_NOTICE);
-
-	serverCount = argc - optind;
+	serverCount 	= argc - optind;
 	serverAddresses = &argv[optind]; ///< list of servers to connect to
 
     return status;
@@ -205,6 +178,7 @@ int main(
     {
         (void)log_set_level(LOG_LEVEL_INFO);
 
+
         status = decodeCommandLine(argc, argv);
         if (status) 
         {
@@ -217,14 +191,14 @@ int main(
         {
             log_notice("Starting up %s", PACKAGE_VERSION );
             log_notice("%s", COPYRIGHT_NOTICE);
-            log_notice("ServerCount: %d  - serverAddresses[0]: %s\n", serverCount, serverAddresses[0]);
+            for(int i = 0; i<serverCount; ++i)
+            	log_notice("ServerCount: %d  - serverAddresses[i]: %s\n", serverCount, serverAddresses[0]);
 
             // Ensures client and server file descriptors are closed cleanly,
             // so that read(s) and accept(s) shall return error to exit the threads.
             set_sigactions();
 
             // Start all modules
-            fw_start( namedPipe );
             queue_start( waitTime );
 
             if( reader_start(serverAddresses, serverCount ) )

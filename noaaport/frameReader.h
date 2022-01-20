@@ -11,4 +11,6 @@
 #define FIN                         0
 #define MAX_SERVERS					20				// hosts to connect to
 
+int 		  	reader_start( char* const*, int);
+
 #endif /* FRAMEREADER_H_ */

@@ -12,15 +12,6 @@
 
 #include <limits.h>
 
-#define NOAAPORT_NAMEDPIPE          "/tmp/noaaportIngesterPipe"
-#ifndef PATH_MAX
-#define	PATH_MAX					200
-#endif
-typedef struct frameWriter {
-    int 		frameSize;
-    char		namedPipe[PATH_MAX];
-} FrameWriterConf_t;
-
 int fw_writeFrame( const Frame_t* );
 
 #endif /* FRAMEWRITER_H_ */

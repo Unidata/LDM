@@ -7,32 +7,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <libgen.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <errno.h>
-#include <math.h>
-#include <string.h>
-#include <time.h>
-#include <stdbool.h>
-#include <sys/time.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <stddef.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <assert.h>
 #include <log.h>
 
-extern void 		lockIt(		pthread_mutex_t* );
-extern void 		unlockIt( 	pthread_mutex_t* );
 
 //  ========================================================================
 static pthread_mutex_t runMutex;
@@ -42,8 +19,9 @@ void* cfb;
 /**
  * Threaded function to initiate the flowDirector running in its own thread
  *
+ * pre-condition:	runMutex is UNlocked
+ * post-condition: 	runMutex is UNlOCKed
  */
-//pre-condition:	runMutex NOT locked
 void*
 flowDirectorRoutine()
 {

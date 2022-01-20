@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include "globals.h"
+
 // server program for TCP connection
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +18,6 @@
 #include <math.h>
 
 #include <log.h>
-#include "globals.h"
 
 #define NUMBER_FRAMES_TO_SEND 	3
 #define TEST_MAX_THREADS 		200
@@ -58,7 +59,7 @@ usage(
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] nbrFrames nbrRuns snooze port \n"
+"Usage: %s [-v|-x] nbrFrames nbrRuns runAndWait snooze port \n"
 "where:\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
@@ -243,6 +244,12 @@ sendFramesToBlender(void* arg)
 
 	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
 
+    // Compute frame rate:
+    float 		frameRate 					= 1 / MAX_FRAMES_PER_SEC;
+	uint32_t 	sequenceNum 				= 0;
+	int 		numberOfFramesSent 			= 0;
+    int 		max_connections_to_receive 	= 0;
+
 	srandom(0);
 	int lowerLimit = 0, upperLimit = 50;
 	// make these as arguments from CLI alongside NUMBER_OF_FRAMES, NUMBER_OF_RUNS, snooze time before, on blender side: hashTable capacity
@@ -274,6 +281,10 @@ sendFramesToBlender(void* arg)
 				log_flush_error();
 				exit(EXIT_FAILURE);
 			}
+
+
+			log_add("Number of frames Sent: %d, Run#: %" SCNu16 "\n", ++numberOfFramesSent, r);
+			log_flush_info();
 		} // for frames
 
 		// sleep between run switches
@@ -381,15 +392,10 @@ int main(int argc, char** argv)
     // accept new client connection in its own thread
     int c = sizeof(struct sockaddr_in);
 
-    // Compute frame rate:
-    float 		frameRate 					= 1 / MAX_FRAMES_PER_SEC;
-	uint32_t 	sequenceNum 				= 0;
-	int 		numberOfFramesSent 			= 0;
-    int 		max_connections_to_receive 	= 0;
     log_info("testBlender (socat): simulating 'listening to incoming TCP connections from NOAAPORT socat' ...");
     log_info("testBlender (socat): \t Build the frames here and send them to listening client (the blender)' ...\n");
 
-	int accepted = 0;
+	int connectionsAccepted = 0;
 	for (;;)
 	{
 		log_add("accept(): blocking on incoming client requests\n");
@@ -407,13 +413,11 @@ int main(int argc, char** argv)
 		log_add("\t-> testBlender (socat): Client connection (from blender) accepted!\n");
 		log_add("\t   (Each connection will be used in its own thread)\n");
 		log_flush_info();
-		start_newThread(accepted++, clientSocket);
+		start_newThread(connectionsAccepted++, clientSocket);
 
     } // for
 
 
-	log_add("numberOfFramesSent: %d\n", numberOfFramesSent);
-	log_flush_info();
 
 	return 0;
 }
