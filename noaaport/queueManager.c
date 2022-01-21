@@ -43,8 +43,8 @@ flowDirectorRoutine()
 			// also fix 'fr_writeFrame()' signature
 			if( fw_writeFrame( &oldestFrame ) == -1 )
 			{
-				log_add("\nError writing to pipeline\n");
-				log_flush_error();
+				log_add("Error writing to standard output");
+				log_flush_fatal();
 				exit(EXIT_FAILURE);
 			}
 		}

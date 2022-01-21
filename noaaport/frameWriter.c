@@ -6,8 +6,7 @@
 #include <unistd.h>
 #include <log.h>
 #include <errno.h>
-
-extern bool testMode;
+#include <inttypes.h>
 
 // Write this frame to standard output.
 
@@ -17,30 +16,17 @@ extern bool testMode;
 int
 fw_writeFrame(const Frame_t* aFrame)
 {
-    int  status      = 0;
-    char frameElements[PATH_MAX];
-    ssize_t ret;
-    // for printout purposes only:
-    if(testMode)
-    {
-    	// Only send (seq, run#) pairs with option -s on the command line
-		SeqNum_t  seqNum = aFrame->seqNum;
-		RunNum_t  runNum = aFrame->runNum;
-		sprintf(frameElements, "SeqNum: %lu - runNum: %lu \n", seqNum, runNum);
-		// log_info("   => Frame Out: %s", frameElements);
+    int status = 0;
 
-		ret =  write(STDOUT_FILENO, frameElements, strlen(frameElements));
-    }
-    else
-    {
-    	ret =  write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);	// <--- start sending real SBN data
-    }
+	log_debug("SeqNum: %" PRI_SEQ_NUM " - RunNum: %" PRI_RUN_NUM,
+	        aFrame->seqNum, aFrame->runNum);
 
+   	// FOR INTERACTIVE TESTING, BE SURE TO REDIRECT stdout TO "/dev/null"
+   	ssize_t ret =  write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);
     if( ret <= 0 )
     {
-        log_info("Write frame data to standard output failure. (%s)\n", strerror(errno) );
-        log_add("Write frame data to standard output failure. (%s)\n", strerror(errno) );
-        log_flush_warning();
+        log_add("Write frame data to standard output failure. (%s)",
+                strerror(errno) );
         status = -1;
     }
 
