@@ -8,17 +8,19 @@
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <limits.h>
 #include <log.h>
 
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
+bool testMode = false;
 // =====================================================================
 static	int		serverCount;
 static	char*	const*	serverAddresses;
 
-static double	waitTime 	= 1.0;					///< max time between output frames
-static char*	logfile		= "/tmp/blender.log";	///< pathname of output messages
+static double	waitTime 		= 1.0;					///< max time between output frames
+static char	logfile[PATH_MAX]	= "/tmp/blender.log";	///< pathname of output messages
 // =====================================================================
 
 /**
@@ -35,11 +37,12 @@ usage( const char* const          progName,
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] [-l log] [-t sec] host:port ... \n"
+"Usage: %s [-v|-x] [-s] [-l log] [-t sec] host:port ... \n"
 "where:\n"
 "   -l log     Log to `log`. One of: \"\" (system logging daemon), \"-\"\n"
 "               (standard error), or file `log`. Default is \"%s\"\n"
 "   -t sec 		Timeout in (decimal) seconds. Default is '1.0'.\n"
+"   -s          Skip outputting SBN frame data. Only (SeqNum, RunNum) pairs\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
 "    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
@@ -69,17 +72,25 @@ decodeCommandLine(
     int ch;
     opterr = 0;                         /* no error messages from getopt(3) */
     while (0 == status &&
-           (ch = getopt(argc, argv, ":vxl:t:")) != -1)
+           (ch = getopt(argc, argv, ":svxl:t:")) != -1)
     {
         switch (ch) {
-            case 'v':
-                log_add("set verbose mode");
+            case 's':
+            	testMode = true;
                 break;
-            case 'x':
-            	log_add("set debug mode");
+            case 'v':
+                (void)log_set_level(LOG_LEVEL_INFO);
+                break;
+           case 'x':
+        	   	(void)log_set_level(LOG_LEVEL_DEBUG);
                 break;
             case 'l':
-            	log_set_destination(optarg);
+              	if (sscanf(optarg, "%s", &logfile) != 1 ) {
+              		log_add("Invalid log file name: \"%s\"", optarg);
+                    status = EINVAL;
+                    break;
+                }
+              	log_set_destination(logfile);
                 break;
             case 't':
                 if (sscanf(optarg, "%lf", &waitTime) != 1 || waitTime < 0) {
@@ -176,8 +187,9 @@ int main(
     }
     else 
     {
-        (void)log_set_level(LOG_LEVEL_INFO);
-
+    	// Set log level to WARNING unless otherwise set
+    	// as option (-v or -x for INFO or DEBUG, resp.)
+        (void)log_set_level(LOG_LEVEL_WARNING);
 
         status = decodeCommandLine(argc, argv);
         if (status) 
@@ -191,8 +203,6 @@ int main(
         {
             log_notice("Starting up %s", PACKAGE_VERSION );
             log_notice("%s", COPYRIGHT_NOTICE);
-            for(int i = 0; i<serverCount; ++i)
-            	log_notice("ServerCount: %d  - serverAddresses[i]: %s\n", serverCount, serverAddresses[0]);
 
             // Ensures client and server file descriptors are closed cleanly,
             // so that read(s) and accept(s) shall return error to exit the threads.

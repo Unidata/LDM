@@ -317,14 +317,6 @@ start_newThread(int threadNum, int clientSocket)
 	}
 }
 
-/*
-        ++totalTCPconnectionReceived;
-        log_add("Processing TCP client...received %d connection so far\n",
-            totalTCPconnectionReceived);
-    } // for
-}
-*/
-
 // Driver code
 int main(int argc, char** argv)
 {
@@ -346,7 +338,7 @@ int main(int argc, char** argv)
     }//======================================
 
     (void)log_set_level(LOG_LEVEL_WARNING);
-    (void)log_set_level(LOG_LEVEL_INFO);
+    //(void)log_set_level(LOG_LEVEL_INFO);
 
 
     (void) decodeCommandLine(argc, argv);
