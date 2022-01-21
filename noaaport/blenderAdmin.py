@@ -32,12 +32,9 @@
 ###############################################################################
 
 import 	os
-from 	os       import environ, system
 import 	sys
-import 	readline
-
-from signal import signal, SIGINT
-from time 	import sleep
+import 	subprocess
+from 	os       import environ, system
 
 testing = True
 
@@ -89,6 +86,9 @@ class TestBlender():
 
 	def execute(self):
 
+		# 0. Check if program(s) are running. If so, kill them
+		#self.checkRunning()
+
 		# 1. Start the socat(s)
 		for socatIdx in range(len(self.socatServers)):
 			socatLaunch = f"{self.noaaportPath}/{self.socatLaunchers[ socatIdx ]} > {self.logFile}  &"
@@ -100,6 +100,29 @@ class TestBlender():
 		# (Use subprogram to control the status instead of os.system)
 		print(f'About to execute blender: {self.blenderLauncher}')
 		os.system(self.blenderLauncher )
+
+	def checkRunning(self):		
+
+		testBlender_ps = f"ps -ef | grep -v grep | grep  testBlender"
+	    
+		print(testBlender_ps)
+
+		try:
+			proc = subprocess.check_output(testBlender_ps, shell=True )
+			print(proc.splitlines()[0])
+			print(proc.splitlines()[1])
+			exit()
+
+			if "testBlender" in proc:
+				print(proc)
+
+		except Exception as e:
+			self.errmsg(f"'testBlender' command: {testBlender_ps} could not be found! ")
+			return -1
+
+
+	def errmsg(self, msg):
+		print(f"\n\tERROR: {msg}")
 
 class Blender(TestBlender):
 
