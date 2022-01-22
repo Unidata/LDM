@@ -94,6 +94,7 @@ from ~ldm/etc/ldmd.conf on leno:
 	timeOut 		= "0.01"
 	logFile 		= "/tmp/blender.log"
 	debugMode 		= " -x "
+	toDevNull		= " >/dev/null "	# remove this in production to output to standard output
 	blenderArgs 	= f" {debugMode} -t {timeOut} -l {logFile} "
 	
 	#blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_2.log localhost:9127 localhost:9128"
@@ -115,7 +116,7 @@ from ~ldm/etc/ldmd.conf on leno:
 			socatList += hostId + " "
 
 		# Build the blender command ------------------------------------
-		self.blenderLauncher = f"{self.noaaportPath}/blender {self.blenderArgs} {socatList} >/dev/null &"
+		self.blenderLauncher = f"{self.noaaportPath}/blender {self.blenderArgs} {socatList} {self.toDevNull} &"
 
 		# Check if program(s) are running. If so, kill them
 		self.checkRunning()
