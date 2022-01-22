@@ -37,7 +37,7 @@ flowDirectorRoutine()
 		Frame_t oldestFrame;
 
 		if (cfb_getOldestFrame(cfb, &oldestFrame)) {
-            log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
+            //log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
 
 			// if( writeFrame( oldestFrame->sbnFrame ) == -1 )  // <- comment-out this when ready and remove next line
 			// also fix 'fr_writeFrame()' signature
