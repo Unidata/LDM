@@ -90,14 +90,14 @@ from ~ldm/etc/ldmd.conf on leno:
 						   is used to launch the blender that requests SBN data from fanout servers.
 						''',
 			usage='''\n\n\t%(prog)s [-l logFile][-x][-r][--test] <port> <hostId> ...  \n
-			port	Unique port number for all hosts
-			hostIds One or more hosts specified as hostnames or hosts
-			-l 	Log file (default: /tmp/blender.log)
-			-r 	Redirect blender standard output to /dev/null
-			--test 	Test mode. Specify: 
-				- 'localhost' as a <hostIds>
-				-  any port number as <port>
-			-x 	Debug mode
+			port		Unique port number for all hosts
+			hostId 		One or more hosts specified as hostnames or hosts
+			-l <log>	Log file (default: /tmp/blender.log)
+			-r 		Redirect blender standard output to /dev/null
+			--test 		Test mode. Specify: 
+					- 'localhost' as a <hostIds>
+					-  any port number as <port>
+			-x 		Debug mode
 			''',
 			epilog='''
 				Thank you for using %(prog)s...
