@@ -1,6 +1,7 @@
 #include "config.h"
 /*
  * misc.c
+ * Utility functions to lock/unlock a mutex and set policy
  *
  *  Created on: Oct 25, 2021
  *      Author: Mustapha Iles

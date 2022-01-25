@@ -19,28 +19,23 @@ void* cfb;
 /**
  * Threaded function to initiate the flowDirector running in its own thread
  *
+ *
+ * Function to continuously check for oldest frame in queue and write to stdout
+ *
+ * Never returns.
+ *
  * pre-condition:	runMutex is UNlocked
  * post-condition: 	runMutex is UNlOCKed
  */
 void*
 flowDirectorRoutine()
 {
-	struct timespec abs_time;
-	int numFrames;
-
 	for (;;)
 	{
 		lockIt(&runMutex);
 
-		// Call into the hashTableManager to provide a frame to consume.
-		// It will NOT block:
 		Frame_t oldestFrame;
-
 		if (cfb_getOldestFrame(cfb, &oldestFrame)) {
-            //log_debug("\n=> => => ConsumeFrames Thread (flowDirectorRoutine) => => => =>");
-
-			// if( writeFrame( oldestFrame->sbnFrame ) == -1 )  // <- comment-out this when ready and remove next line
-			// also fix 'fr_writeFrame()' signature
 			if( fw_writeFrame( &oldestFrame ) == -1 )
 			{
 				log_add("Error writing to standard output");
@@ -49,6 +44,7 @@ flowDirectorRoutine()
 			}
 		}
 		unlockIt(&runMutex);
+
     } // for
 
     log_free();
@@ -81,6 +77,17 @@ initMutex()
     }
 }
 
+/*
+ * Function to
+ * 	1- initialize mutex
+ * 	2- create the C++ class instance: CircFrameBuf
+ * 	3- launch the flowDirector thread
+ *
+ * @param[in]  frameLatency		Time to wait for more incoming frames when queue is empty
+ * 								Used in CircFrameBuf class
+ *
+ * Never returns.
+ */
 void
 queue_start(const double frameLatency)
 {
@@ -88,14 +95,22 @@ queue_start(const double frameLatency)
 	(void) initMutex();
 
 	// Create and initialize the CircFrameBuf class
-	cfb = (void*) cfb_new(frameLatency);
+	cfb = (void*) cfb(frameLatency);
 
 	// create and launch flowDirector thread (to insert frames in map)
 	flowDirector();
 }
 
 /*
- * tryInsertInQueue():	Try insert a frame
+ * tryInsertInQueue():	Try insert a frame in a queue
+ *
+ * @param[in]  sequenceNumber	Sequence number of this frame
+ * @param[in]  runNumber  		Run number of this frame
+ * @param[in]  buffer 			SBN data of this frame
+ * @param[out] frameBytes  		Number of data bytes in this frame
+
+ * @retval     0  				Success
+ * @retval     !0      		  	Error
  *
  * pre-condition: 	runMutex is LOCKed
  * post-condition: 	runMutex is LOCKed
@@ -109,7 +124,7 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 	// runMutex is already LOCKed!
 	assert( pthread_mutex_trylock(&runMutex) );
 
-	// call in CircFrameBuf:
+	// call in CircFrameBuf: (C++ class)
 	bool status = cfb_add( cfb, runNumber, sequenceNumber, buffer, frameBytes);
 	if( !status )
 	{

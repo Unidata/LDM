@@ -95,21 +95,31 @@ from ~ldm/etc/ldmd.conf on leno:
 			-l <log>	Log file (default: /tmp/blender.log)
 			-r 		Redirect blender standard output to /dev/null
 			--test 		Test mode. Specify: 
-					- 'localhost' as a <hostIds>
+					- 'localhost' as a <hostId>
 					-  any port number as <port>
 			-x 		Debug mode
+
+			Examples:
+			1-  To mimic a fanout server on localhost at port 9127 (--test), in debug mode (-x), 
+			    logging to /tmp/blender.log, and redirecting (-r) the standard output to /dev/null
+				$ blenderAdmin.py 9127 localhost  -x -l /tmp/blender.log -r --test     
+
+			2-  To connect the blender to chico on port 1201, standard output not redirected
+				$ blenderAdmin.py 1201 chico.unidata.ucar.edu  -x -l /tmp/blender.log
+				$ blenderAdmin.py 1201 128.117.140.37  -x -l /tmp/blender.log -r        (<-- using chico's IP)
+
+
 			''',
 			epilog='''
 				Thank you for using %(prog)s...
 					'''
 			)
 
-
-
 		# Check if program(s) are running. If so, kill them
 		self.checkRunning()
 		system('clear')
 
+	# Build the blender's command line arguments
 	def prepareCmd(self, cliArg):
 
 		blenderArgs 	= f" -t {self.timeOut} "
@@ -131,6 +141,8 @@ from ~ldm/etc/ldmd.conf on leno:
 		return f"{self.noaaportPath}/blender {blenderArgs} &"
 
 
+	# Execute the testBlender if in test mode
+	# Execute the blender with arguments gleaned from user
 	def execute(self, cliArg):
 		
 		# Launch testBlender locally:
@@ -138,13 +150,13 @@ from ~ldm/etc/ldmd.conf on leno:
 			self.testBlenderArgs += f' { cliArg["singlePort"][0] }'
 			# 5   6  2000000   1       9127
 			cmd = f"{self.noaaportPath}/testBlender {self.testBlenderArgs} &"
-			print(cmd)
+
 			system( cmd )
 		
 
 		# 2. Start the blender
 		cmd = self.prepareCmd(cliArg)
-		print(cmd)
+		
 		system( cmd )
 
 
@@ -156,6 +168,7 @@ from ~ldm/etc/ldmd.conf on leno:
 		self.checkProcessAndKill(blender_ps, "blender")
 
 
+	# Clean up previous runs of the blender
 	def checkProcessAndKill(self, cmd_proc, cmd):
 
 		try:
@@ -169,7 +182,7 @@ from ~ldm/etc/ldmd.conf on leno:
 		except Exception as e:
 			self.errmsg(f"{cmd} is currently NOT running! ")
 			
-
+	# Parse this script's command line
 	def cliParser(self):
 
 		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)

@@ -8,10 +8,14 @@
 #include <errno.h>
 #include <inttypes.h>
 
-// Write this frame to standard output.
-
-// Pipe it to noaaportIngester.
-// $ blender <> <> <> | noaaportIngester
+/**
+ * Function to write the SBN frame data to standard output.
+ *
+ * @param[in]  aFrame			An SBN frame
+ *
+ * @retval     0  				Success
+ * @retval    <0       		  	Error
+ */
 
 int
 fw_writeFrame(const Frame_t* aFrame)

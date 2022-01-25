@@ -39,6 +39,16 @@ getBytes(int fd, char* buf, int nbytes)
     return nbytes;
 }
 
+/**
+ * Function to retrieve metadata from the SBN structure buffer.
+ *
+ * @param[in]  buffer			Incoming bytes
+ * @param[out] pSequenceNumber  Sequence number of this frame
+ * @param[out] pRun  			Run number of this frame
+ * @param[out] pSequenceNumber  Check sum of this frame
+ * @retval     1  				Success
+ * @retval    <0       		  	Error
+ */
 static int
 extractSeqNumRunCheckSum(unsigned char*  buffer,
 						 uint32_t *pSequenceNumber,
@@ -63,12 +73,11 @@ extractSeqNumRunCheckSum(unsigned char*  buffer,
         sum += (unsigned char) buffer[byteIndex];
     }
 
-    //printf("Checksum: %lu, - sum: %lu\n", *pCheckSum, sum);
     if( *pCheckSum != sum)
     {
         status = -2;
     }
-//    printf("sum: %u - checksum: %u  - runningSum: %u\n", sum, *pCheckSum, runningSum);
+    log_debug("sum: %u - checksum: %u \n", sum, *pCheckSum);
     return status;
 }
 
@@ -96,6 +105,18 @@ retrieveFrameHeaderFields(unsigned char   *buffer,
     return extractSeqNumRunCheckSum(buffer, pSequenceNumber, pRun, pCheckSum);
 }
 
+
+/**
+ * Utility function to read SBN actual data bytes from the connection
+ *
+ * @param[in]  clientSock	  Socket Id for this client reader
+ * @param[in]  readByteStart  Offset of SBN data
+ * @param[in]  dataBlockSize  Size of block of SBN data
+ * @param[out] buffer  		  Buffer to contain SBN data read in
+ *
+ * @retval    totalBytesRead  Total bytes read
+ * @retval    -1       		  Error
+ */
 static int
 retrieveProductHeaderFields(unsigned char* buffer,
 							int clientSock,
@@ -135,6 +156,17 @@ retrieveProductHeaderFields(unsigned char* buffer,
     return totalBytesRead;
 }
 
+/**
+ * Utility function to read SBN actual data bytes from the connection
+ *
+ * @param[in]  clientSock	  Socket Id for this client reader
+ * @param[in]  readByteStart  Offset of SBN data
+ * @param[in]  dataBlockSize  Size of block of SBN data
+ * @param[out] buffer  		  Buffer to contain SBN data read in
+
+ * @retval    totalBytesRead  Total bytes read
+ * @retval    -1       		  Error
+ */
 static int
 readFrameDataFromSocket(unsigned char* buffer,
 						int clientSock,
@@ -154,7 +186,13 @@ readFrameDataFromSocket(unsigned char* buffer,
     return totalBytesRead;
 }
 
-// to read a complete frame with its data.
+/**
+ * Function to read data bytes from the connection, rebuild the SBN frame,
+ * and insert the data in a queue.
+ * Never returns. Will terminate the process if a fatal error occurs.
+ *
+ * @param[in]  clientSockId  Socket Id for this client reader thread
+ */
 static void *
 buildFrameRoutine(int clientSockFd)
 {
@@ -170,7 +208,7 @@ buildFrameRoutine(int clientSockFd)
     bool initialFrameRun_flag       = true;
 
     log_notice("In buildFrameRoutine() waiting to read from "
-    		"server socket (socat)...\n");
+    		"(fanout) server socket...\n");
 
     // TCP/IP receiver
     // loop until byte 255 is detected. And then process next 15 bytes
@@ -194,9 +232,8 @@ buildFrameRoutine(int clientSockFd)
         }
 
         // totalBytesRead may be > 15 bytes. buffer is guaranteed to contain at least 16 bytes
-        int ret = retrieveFrameHeaderFields(  buffer, clientSockFd,
-                                              &sequenceNumber, &runNumber,
-                                              &checkSum);
+        int ret = retrieveFrameHeaderFields(  buffer, clientSockFd, &sequenceNumber,
+        									  &runNumber, &checkSum);
         if(ret == FIN || ret == -1)
         {
             close(clientSockFd);
@@ -206,17 +243,15 @@ buildFrameRoutine(int clientSockFd)
         if(ret == -2)
         {
             log_notice("retrieveFrameHeaderFields(): Checksum failed! (continue...)\n");
-            continue;   // checksum failed
+            continue;
         }
 
         // Get product-header fields from (buffer+16 and on):
         // ===============================================
         uint16_t headerLength, totalBytesRead;
         uint16_t dataBlockOffset, dataBlockSize;
-        ret = retrieveProductHeaderFields( buffer, clientSockFd,
-                                            &headerLength, &dataBlockOffset,
-											&dataBlockSize);
-
+        ret = retrieveProductHeaderFields(  buffer, clientSockFd, &headerLength,
+        									&dataBlockOffset, &dataBlockSize);
         if(ret == FIN || ret == -1)
         {
             log_add("Error in retrieving product header. Closing socket...\n");
@@ -226,14 +261,14 @@ buildFrameRoutine(int clientSockFd)
         }
 
         // Where does the data start?
-        // dataBlockOffset (2bytes) is offset in bytes where the data for this block
+        // dataBlockOffset (2 bytes) is offset in bytes where the data for this block
         //                           can be found relative to beginning of data block area.
-        // headerLength (2bytes)    is total length of product header in bytes for this frame,
+        // headerLength (2 bytes)    is total length of product header in bytes for this frame,
         //                           including options
         uint16_t dataBlockStart = 16 + headerLength + dataBlockOffset;
         uint16_t dataBlockEnd   = dataBlockStart + dataBlockSize;
 
-        // Read frame data from entire 'buffer'
+        // Read SBN frame data from entire 'buffer'
         ret = readFrameDataFromSocket( buffer, clientSockFd,
         								dataBlockStart, dataBlockSize);
         if(ret == FIN || ret == -1)
@@ -244,14 +279,11 @@ buildFrameRoutine(int clientSockFd)
             pthread_exit(NULL);
         }
 
-        // Store the relevant entire frame into its proper hashTable for this Run#:
-        // Queue handles this task but hands it to the hashTableManager module
-
+        // Insert in queue
         tryInsertInQueue(sequenceNumber, runNumber, buffer, dataBlockEnd);
 
         // setcancelstate??? remove?
         pthread_setcancelstate(cancelState, &cancelState);
-        //printf("\nContinue receiving..\n\n");
 
     } //for
 
@@ -310,11 +342,11 @@ inputClientRoutine(void* id)
                     (addrInfo->ai_addr);
             sockaddr.sin_port 				= htons(port);
 
+            log_info("\nInputClientRoutine: connecting to TCPServer server to "
+                    "read frames at server: %s:%" PRIu16 "\n", hostId, port);
+
             freeaddrinfo(addrInfo);
             free(hostId);
-
-            log_info("\nInputClientRoutine: connecting to TCPServer server to "
-                    "read frames...(PORT: , address: )\n");
 
             if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
                     sizeof(sockaddr)) )
@@ -328,7 +360,7 @@ inputClientRoutine(void* id)
 
                 // replace with
                 buildFrameRoutine(socketClientFd);
-                log_info("Lost connection with socat. Will retry after 60sec.");
+                log_info("Lost connection with fanout server. Will retry after 60sec.");
             } // Connected
 		} // Got address information
 
@@ -339,12 +371,24 @@ inputClientRoutine(void* id)
 	return 0;
 }
 
+
+/**
+ * Function to create client reader threads. As many threads as there are hosts.
+ *
+ * @param[in]  serverAddresses	List of hosts
+ * @param[in]  serverCount  	Number of hosts
+ *
+ * @retval    0  				Success
+ * @retval    -1       		  	Error
+ */
+
 int
 reader_start( char* const* serverAddresses, int serverCount )
 {
 	if(serverCount > MAX_SERVERS || !serverCount)
 	{
-		log_error("Too many servers (max. handled: %d) OR none provided (serverCount: %d).", MAX_SERVERS, serverCount);
+		log_error("Too many servers (max. handled: %d) OR "
+				"none provided (serverCount: %d).", MAX_SERVERS, serverCount);
 		return -1;
 	}
 	for(int i=0; i< serverCount; ++i)
@@ -353,7 +397,8 @@ reader_start( char* const* serverAddresses, int serverCount )
 		log_notice("Server to connect to: %s\n", serverAddresses[i]);
 
 		const char* id = serverAddresses[i]; // host+port
-		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine, (void*) id) < 0)
+		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
+							(void*) id) < 0)
 	    {
 	        log_add("Could not create a thread for inputClient()!\n");
 	        log_flush_error();
