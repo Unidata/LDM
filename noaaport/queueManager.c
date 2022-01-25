@@ -13,7 +13,7 @@
 
 //  ========================================================================
 static pthread_mutex_t runMutex;
-void* cfb;
+static void* cfbInst;
 //  ========================================================================
 
 /**
@@ -35,7 +35,7 @@ flowDirectorRoutine()
 		lockIt(&runMutex);
 
 		Frame_t oldestFrame;
-		if (cfb_getOldestFrame(cfb, &oldestFrame)) {
+		if (cfb_getOldestFrame(cfbInst, &oldestFrame)) {
 			if( fw_writeFrame( &oldestFrame ) == -1 )
 			{
 				log_add("Error writing to standard output");
@@ -95,7 +95,7 @@ queue_start(const double frameLatency)
 	(void) initMutex();
 
 	// Create and initialize the CircFrameBuf class
-	cfb = (void*) cfb(frameLatency);
+	cfbInst = cfb_new(frameLatency);
 
 	// create and launch flowDirector thread (to insert frames in map)
 	flowDirector();
@@ -122,10 +122,10 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 				   unsigned 		frameBytes)
 {
 	// runMutex is already LOCKed!
-	assert( pthread_mutex_trylock(&runMutex) );
+	log_assert( pthread_mutex_trylock(&runMutex) );
 
 	// call in CircFrameBuf: (C++ class)
-	bool status = cfb_add( cfb, runNumber, sequenceNumber, buffer, frameBytes);
+	bool status = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
 	if( !status )
 	{
 		log_error("Inserting frame in queue failed.");

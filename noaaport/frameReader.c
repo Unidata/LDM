@@ -75,9 +75,9 @@ extractSeqNumRunCheckSum(unsigned char*  buffer,
 
     if( *pCheckSum != sum)
     {
+    	log_debug("sum: %u - checksum: %u", sum, *pCheckSum);
         status = -2;
     }
-    log_debug("sum: %u - checksum: %u \n", sum, *pCheckSum);
     return status;
 }
 
