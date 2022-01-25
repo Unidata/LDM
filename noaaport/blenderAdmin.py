@@ -37,6 +37,8 @@ import 	subprocess
 import 	psutil
 import 	time
 from 	os 	import environ, system
+import  argparse
+
 
 class Blender():
 	"""
@@ -62,79 +64,88 @@ from ~ldm/etc/ldmd.conf on leno:
 #            NWWS    201     224.1.1.1     1201 Weather Wire
 
 	"""
-	# socat(s) ----------------------------------------
-	localhostServers = {
-		"socat_1": 				"localhost:9127",	
-		"socat_2": 				"localhost:9128"
-	}
-	socatServers = {
-		"socat_1": 				"128.117.140.37:1201",
-		"socat_2": 				"128.117.140.37:1202",
-		"socat_3": 				"128.117.140.37:1203",
-		"socat_4": 				"128.117.140.37:1204",
-		"socat_5": 				"128.117.140.37:1205",
-		"socat_6": 				"128.117.140.37:1206",
-		"socat_7": 				"128.117.140.37:1207",
-		"socat_8": 				"128.117.140.37:1208",
-		"socat_9": 				"128.117.140.37:1209",
-		"socat_10":				"128.117.140.37:1210"
-	}
 
-	whichServers = localhostServers
+	# testBlender args
 	nbrFrames	= 5
 	nbrRuns		= 6
 	runAndWait	= 2000000
 	snoozeTime	= 1
-
 	#5   6  2000000   1       9127"
-	socatArgs 		= f" {nbrFrames} {nbrRuns} {runAndWait} {snoozeTime} " 
-	socatLaunchers  = []
+	testBlenderArgs	= f" {nbrFrames} {nbrRuns} {runAndWait} {snoozeTime} " 
 
-	# blender -------------------------------------------
+	# blender  args
+	#blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_out.log 9127 localhost, chico"
 	timeOut 		= "0.01"
-	logFile 		= "/tmp/blender.log"
-	debugMode 		= " -x "
-	toDevNull		= " >/dev/null "	# remove this in production to output to standard output
-	blenderArgs 	= f" {debugMode} -t {timeOut} -l {logFile} "
 	
-	#blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_2.log localhost:9127 localhost:9128"
-	blenderLauncher	= ""
-	socatCmd		= "testBlender"
 
 	def __init__(self):	
 		
 		ldmHome     		= environ.get("LDMHOME", "/home/miles/projects/ldm")	# remove 'miles' path
 		self.noaaportPath	= f"{ldmHome}/src/noaaport"
-		socatList 			= ""
 
-		# Build testBlender commands for each socat --------------------
-		#for socat, hostId in self.socatServers.items():
-		for socat, hostId in self.whichServers.items():
-			port = hostId.split(":")[1]			
+		# Check CLI options:
+		self.cliParserInit = argparse.ArgumentParser(
+			prog='blenderAdmin',
+			description='''This file is the blenderAdmin script that 
+						   is used to launch the blender that requests SBN data from fanout servers.
+						''',
+			usage='''\n\n\t%(prog)s [-l logFile][-x][-r][--test] <port> <hostId> ...  \n
+			port	Unique port number for all hosts
+			hostIds One or more hosts specified as hostnames or hosts
+			-l 	Log file (default: /tmp/blender.log)
+			-r 	Redirect blender standard output to /dev/null
+			--test 	Test mode. Specify: 
+				- 'localhost' as a <hostIds>
+				-  any port number as <port>
+			-x 	Debug mode
+			''',
+			epilog='''
+				Thank you for using %(prog)s...
+					'''
+			)
 
-			self.socatLaunchers.append( f"testBlender {self.socatArgs} {port}"   )
-			socatList += hostId + " "
 
-		# Build the blender command ------------------------------------
-		self.blenderLauncher = f"{self.noaaportPath}/blender {self.blenderArgs} {socatList} {self.toDevNull} &"
 
 		# Check if program(s) are running. If so, kill them
 		self.checkRunning()
 		system('clear')
 
+	def prepareCmd(self, cliArg):
 
-	def execute(self):
+		blenderArgs 	= f" -t {self.timeOut} "
+		if cliArg["debugMode"] == True:
+			blenderArgs 	+= " -x "
 
-		# 1. Start the socat(s)
-		#for socatIdx in range(len(self.socatServers)):
-		for socatIdx in range(len(self.whichServers)):
-			socatLaunch = f"{self.noaaportPath}/{self.socatLaunchers[ socatIdx ]} > {self.logFile}  &"
+		if cliArg["logFile"] != None:
+			blenderArgs 	+= f' -l {cliArg["logFile"]}'
 
-			system( socatLaunch )
-	
+		for hostId in cliArg["hostIds"]:
+			blenderArgs += f" {hostId}:{cliArg['singlePort'][0]} "
+
+		# This should be last in the blenderArgs variable
+		if cliArg["redirectOutput"] == True:
+			blenderArgs 	+= " >/dev/null"
+
+		
+		# Build the blender command ------------------------------------
+		return f"{self.noaaportPath}/blender {blenderArgs} &"
+
+
+	def execute(self, cliArg):
+		
+		# Launch testBlender locally:
+		if cliArg["testMode"] == True:
+			self.testBlenderArgs += f' { cliArg["singlePort"][0] }'
+			# 5   6  2000000   1       9127
+			cmd = f"{self.noaaportPath}/testBlender {self.testBlenderArgs} &"
+			print(cmd)
+			system( cmd )
+		
+
 		# 2. Start the blender
-		# (Use subprogram to control the status instead of os.system)
-		system(self.blenderLauncher )
+		cmd = self.prepareCmd(cliArg)
+		print(cmd)
+		system( cmd )
 
 
 	# Check if testBlender or blender processes are still running: kill them
@@ -159,6 +170,20 @@ from ~ldm/etc/ldmd.conf on leno:
 			self.errmsg(f"{cmd} is currently NOT running! ")
 			
 
+	def cliParser(self):
+
+		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
+		self.cliParserInit.add_argument('-r', dest='redirectOutput', action='store_true', help='', required=False)
+		self.cliParserInit.add_argument('-l', dest='logFile', action="store", help='', required=False)
+		self.cliParserInit.add_argument('singlePort', nargs=1, type=int, default='9127', help='<Required>', metavar='port')
+		self.cliParserInit.add_argument('hostIds', nargs='+', type=str, action="store", help='<Required>', metavar='hostId')
+		self.cliParserInit.add_argument('--test', dest='testMode', action='store_true', help='', required=False)
+		args, other = self.cliParserInit.parse_known_args()
+		
+		return vars(args)     # vars(): converts namespace to dict
+		
+
+
 	def errmsg(self, msg):
 		print(f"\n\tNote: {msg}")
 
@@ -169,7 +194,8 @@ def main():
 	
 	# Production
 	blenderInst = Blender()	
-	blenderInst.execute()
+	cliDico = blenderInst.cliParser()
+	blenderInst.execute(cliDico)
 
 
 if __name__ == '__main__':
