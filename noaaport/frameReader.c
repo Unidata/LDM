@@ -52,8 +52,7 @@ getBytes(int fd, char* buf, int nbytes)
 static int
 extractSeqNumRunCheckSum(unsigned char*  buffer,
 						 uint32_t *pSequenceNumber,
-						 uint16_t *pRun,
-						 uint16_t *pCheckSum)
+						 uint16_t *pRun)
 {
     int status = 1; // success
 
@@ -64,18 +63,19 @@ extractSeqNumRunCheckSum(unsigned char*  buffer,
     *pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));
 
     // receiving SBN 'checksum': [14-15]
-    *pCheckSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));
+    unsigned long checkSum =  (buffer[14] << 8) + buffer[15];
+    //unsigned long checkSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));
 
     // Compute SBN checksum on 2 bytes as an unsigned sum of bytes 0 to 13
-    uint16_t sum = 0;
+    unsigned long sum = 0;
     for (int byteIndex = 0; byteIndex<14; ++byteIndex)
     {
-        sum += (unsigned char) buffer[byteIndex];
+        sum += buffer[byteIndex];
     }
 
-    if( *pCheckSum != sum)
+    if( checkSum != sum)
     {
-    	log_debug("sum: %u - checksum: %u", sum, *pCheckSum);
+    	log_debug("sum: %lu - checksum: %lu", sum, checkSum);
         status = -2;
     }
     return status;
@@ -85,8 +85,7 @@ static int
 retrieveFrameHeaderFields(unsigned char   *buffer,
                           int             clientSock,
                           uint32_t        *pSequenceNumber,
-                          uint16_t        *pRun,
-                          uint16_t        *pCheckSum)
+                          uint16_t        *pRun)
 {
     int status = 1;     // success
    	uint16_t runningSum = 255;
@@ -102,7 +101,7 @@ retrieveFrameHeaderFields(unsigned char   *buffer,
         return totalBytesRead;
     }
 
-    return extractSeqNumRunCheckSum(buffer, pSequenceNumber, pRun, pCheckSum);
+    return extractSeqNumRunCheckSum(buffer, pSequenceNumber, pRun);
 }
 
 
@@ -198,7 +197,6 @@ buildFrameRoutine(int clientSockFd)
 {
     unsigned char buffer[SBN_FRAME_SIZE] = {};
 
-    uint16_t    checkSum;
     uint32_t    sequenceNumber;
     uint16_t    runNumber;
     time_t      epoch;
@@ -233,7 +231,7 @@ buildFrameRoutine(int clientSockFd)
 
         // totalBytesRead may be > 15 bytes. buffer is guaranteed to contain at least 16 bytes
         int ret = retrieveFrameHeaderFields(  buffer, clientSockFd, &sequenceNumber,
-        									  &runNumber, &checkSum);
+        									  &runNumber);
         if(ret == FIN || ret == -1)
         {
             close(clientSockFd);
