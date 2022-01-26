@@ -192,6 +192,53 @@ readFrameDataFromSocket(unsigned char* buffer,
     return totalBytesRead;
 }
 
+static bool
+badCheckSum(unsigned char* buffer)
+{
+	bool status = false;
+
+	uint32_t *pSequenceNumber;
+	uint16_t *pRun;
+
+	// receiving: SBN 'sequence': [8-11]
+	*pSequenceNumber = (uint32_t) ntohl(*(uint32_t*)(buffer+8));
+
+	// receiving SBN 'run': [12-13]
+	*pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));
+
+	// receiving SBN 'checksum': [14-15]
+	unsigned long checkSum =  (buffer[14] << 8) + buffer[15];
+	//unsigned long checkSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));
+
+	// Compute SBN checksum on 2 bytes as an unsigned sum of bytes 0 to 13
+	unsigned long sum = 0;
+	for (int byteIndex = 0; byteIndex<14; ++byteIndex)
+	{
+		sum += buffer[byteIndex];
+		log_debug("Buffer[%d] %lu, current sum: %lu (checkSum: %lu)",
+				byteIndex, buffer[byteIndex], sum, checkSum);
+	}
+
+	if( checkSum != sum)
+	{
+		log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
+		status = true;
+	}
+	log_debug("----------------------");
+	return status;
+
+}
+
+static int
+processRestOfFrame(int clientSockFd, unsigned char* buffer)
+{
+	int status = 0;
+
+
+	return status;
+
+}
+
 /**
  * Function to read data bytes from the connection, rebuild the SBN frame,
  * and insert the data in a queue.
@@ -208,7 +255,7 @@ buildFrameRoutine(int clientSockFd)
     unsigned char buffer[SBN_FRAME_SIZE] = {};
     ssize_t       n, expect = 16;
     for (n = read(clientSockFd, buffer, expect); n == expect;) {
-        if (buffer[0] != 255 || /*TODO:*/ badCheckSum(buffer)) {
+        if (buffer[0] != 255 || badCheckSum(buffer)) {
             memmove(buffer, buffer+1, 15); // Shift buffer by one byte
             expect = 1;
             n = read(clientSockFd, buffer+15, expect);
