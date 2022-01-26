@@ -199,21 +199,35 @@ readFrameDataFromSocket(unsigned char* buffer,
  *
  * @param[in]  clientSockId  Socket Id for this client reader thread
  */
-static void *
+static void
 buildFrameRoutine(int clientSockFd)
 {
-    unsigned char buffer[SBN_FRAME_SIZE] = {};
-
-    uint32_t    sequenceNumber;
-    uint16_t    runNumber;
-    time_t      epoch;
-
-    int cancelState = PTHREAD_CANCEL_DISABLE;
-
-    bool initialFrameRun_flag       = true;
-
     log_notice("In buildFrameRoutine() waiting to read from "
     		"(fanout) server socket...\n");
+
+    unsigned char buffer[SBN_FRAME_SIZE] = {};
+    ssize_t       n, expect = 16;
+    for (n = read(clientSockFd, buffer, expect); n == expect;) {
+        if (buffer[0] != 255 || /*TODO:*/ badCheckSum(buffer)) {
+            memmove(buffer, buffer+1, 15); // Shift buffer by one byte
+            expect = 1;
+            n = read(clientSockFd, buffer+15, expect);
+        }
+        else {
+            // TODO: Process the rest of the frame
+            if (!processRestOfFrame(clientSockFd, buffer))
+                break;
+
+            expect = 16;
+            n = read(clientSockFd, buffer, expect);
+        }
+    }
+
+#if 0
+    uint32_t      sequenceNumber;
+    uint16_t      runNumber;
+    int           cancelState = PTHREAD_CANCEL_DISABLE;
+    bool          initialFrameRun_flag = true;
 
     // TCP/IP receiver
     // loop until byte 255 is detected. And then process next 15 bytes
@@ -293,6 +307,7 @@ buildFrameRoutine(int clientSockFd)
     } //for
 
     return NULL;
+#endif
 }
 
 /**
