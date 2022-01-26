@@ -71,13 +71,20 @@ extractSeqNumRunCheckSum(unsigned char*  buffer,
     for (int byteIndex = 0; byteIndex<14; ++byteIndex)
     {
         sum += buffer[byteIndex];
+       	log_debug("Buffer[%d] %lu, current sum: %lu (checkSum: %lu)",
+       			byteIndex, buffer[byteIndex], sum, checkSum);
     }
 
     if( checkSum != sum)
     {
-    	log_debug("sum: %lu - checksum: %lu", sum, checkSum);
+    	log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
+    	/*for(int byteIndex = 0; byteIndex<14; ++byteIndex)
+    	{
+        	log_debug("Buffer[%d] %lu", byteIndex, buffer[byteIndex]);
+    	}*/
         status = -2;
     }
+    log_debug("----------------------");
     return status;
 }
 
