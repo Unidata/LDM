@@ -124,11 +124,14 @@ tryInsertInQueue(  unsigned 		sequenceNumber,
 	// runMutex is already LOCKed!
 	log_assert( pthread_mutex_trylock(&runMutex) );
 
+	int status = 0;
+
 	// call in CircFrameBuf: (C++ class)
-	bool status = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
-	if( !status )
+	bool cfbStatus = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
+	if( !cfbStatus )
 	{
 		log_error("Inserting frame in queue failed.");
+		status = -1;
 	}
 	return status;
 }

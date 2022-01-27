@@ -40,79 +40,6 @@ getBytes(int fd, char* buf, int nbytes)
 }
 
 /**
- * Function to retrieve metadata from the SBN structure buffer.
- *
- * @param[in]  buffer			Incoming bytes
- * @param[out] pSequenceNumber  Sequence number of this frame
- * @param[out] pRun  			Run number of this frame
- * @param[out] pSequenceNumber  Check sum of this frame
- * @retval     1  				Success
- * @retval    <0       		  	Error
- */
-static int
-extractSeqNumRunCheckSum(unsigned char*  buffer,
-						 uint32_t *pSequenceNumber,
-						 uint16_t *pRun)
-{
-    int status = 1; // success
-
-    // receiving: SBN 'sequence': [8-11]
-    *pSequenceNumber = (uint32_t) ntohl(*(uint32_t*)(buffer+8));
-
-    // receiving SBN 'run': [12-13]
-    *pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));
-
-    // receiving SBN 'checksum': [14-15]
-    unsigned long checkSum =  (buffer[14] << 8) + buffer[15];
-    //unsigned long checkSum =  (uint16_t) ntohs(*(uint16_t*) (buffer+14));
-
-    // Compute SBN checksum on 2 bytes as an unsigned sum of bytes 0 to 13
-    unsigned long sum = 0;
-    for (int byteIndex = 0; byteIndex<14; ++byteIndex)
-    {
-        sum += buffer[byteIndex];
-       	log_debug("Buffer[%d] %lu, current sum: %lu (checkSum: %lu)",
-       			byteIndex, buffer[byteIndex], sum, checkSum);
-    }
-
-    if( checkSum != sum)
-    {
-    	log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
-    	/*for(int byteIndex = 0; byteIndex<14; ++byteIndex)
-    	{
-        	log_debug("Buffer[%d] %lu", byteIndex, buffer[byteIndex]);
-    	}*/
-        status = -2;
-    }
-    log_debug("----------------------");
-    return status;
-}
-
-static int
-retrieveFrameHeaderFields(unsigned char   *buffer,
-                          int             clientSock,
-                          uint32_t        *pSequenceNumber,
-                          uint16_t        *pRun)
-{
-    int status = 1;     // success
-   	uint16_t runningSum = 255;
-
-    // check on 255
-    int totalBytesRead;
-    if( (totalBytesRead = getBytes(clientSock, buffer+1, 15)) <= 0 )
-    {
-        if( totalBytesRead == 0) printf("Client  disconnected!");
-        if( totalBytesRead <  0) perror("read() failure");
-
-        // clientSock gets closed in calling function
-        return totalBytesRead;
-    }
-
-    return extractSeqNumRunCheckSum(buffer, pSequenceNumber, pRun);
-}
-
-
-/**
  * Utility function to read SBN actual data bytes from the connection
  *
  * @param[in]  clientSock	  Socket Id for this client reader
@@ -123,8 +50,9 @@ retrieveFrameHeaderFields(unsigned char   *buffer,
  * @retval    totalBytesRead  Total bytes read
  * @retval    -1       		  Error
  */
+
 static int
-retrieveProductHeaderFields(unsigned char* buffer,
+getProductHeaders(unsigned char* buffer,
 							int clientSock,
                             uint16_t *pHeaderLength,
                             uint16_t *pDataBlockOffset,
@@ -174,7 +102,7 @@ retrieveProductHeaderFields(unsigned char* buffer,
  * @retval    -1       		  Error
  */
 static int
-readFrameDataFromSocket(unsigned char* buffer,
+readData(unsigned char* buffer,
 						int clientSock,
 						uint16_t readByteStart,
 						uint16_t dataBlockSize)
@@ -192,19 +120,37 @@ readFrameDataFromSocket(unsigned char* buffer,
     return totalBytesRead;
 }
 
+/**
+ * Function to retrieve sequence number and the run number from the SBN structure buffer.
+ * Does not return
+ *
+ * @param[in]  buffer		Incoming bytes
+ * @param[out] pSeqNum  	Sequence number of this frame
+ * @param[out] pRunNum 		Run number of this frame
+ */
+static void
+getSeqNumRunNum( unsigned char* 	buffer,
+				 uint32_t*      	pSeqNum,
+				 uint16_t*      	pRunNum)
+{
+	// receiving: SBN 'sequence': [8-11]
+	*pSeqNum = (uint32_t) ntohl(*(uint32_t*)(buffer+8));
+
+	// receiving SBN 'run': [12-13]
+	*pRunNum = (uint16_t) ntohs(*(uint16_t*) (buffer+12));
+}
+
+/**
+ * Function to check the checksum in this SBN frame
+ *
+ * @param[in]  buffer			Incoming bytes
+ * @retval     true  			CheckSum is invalid
+ * @retval     false   		  	CheckSum is valid
+ */
 static bool
 badCheckSum(unsigned char* buffer)
 {
-	bool status = false;
-
-	uint32_t *pSequenceNumber;
-	uint16_t *pRun;
-
-	// receiving: SBN 'sequence': [8-11]
-	*pSequenceNumber = (uint32_t) ntohl(*(uint32_t*)(buffer+8));
-
-	// receiving SBN 'run': [12-13]
-	*pRun = (uint16_t) ntohs(*(uint16_t*) (buffer+12));
+	bool status;
 
 	// receiving SBN 'checksum': [14-15]
 	unsigned long checkSum =  (buffer[14] << 8) + buffer[15];
@@ -215,28 +161,86 @@ badCheckSum(unsigned char* buffer)
 	for (int byteIndex = 0; byteIndex<14; ++byteIndex)
 	{
 		sum += buffer[byteIndex];
+		/*
 		log_debug("Buffer[%d] %lu, current sum: %lu (checkSum: %lu)",
 				byteIndex, buffer[byteIndex], sum, checkSum);
+		*/
 	}
 
-	if( checkSum != sum)
-	{
-		log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
-		status = true;
-	}
-	log_debug("----------------------");
+	log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
+	status = (checkSum != sum);
+	if(status)
+		log_debug("CHECKSUM FAILURE: Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
+
 	return status;
 
 }
 
 static int
+readFrameData(
+		int clientSockFd,
+		unsigned char* buffer,
+		uint16_t*	pDataBlockSize)
+{
+	int 		status = SUCCESS;
+    uint16_t 	headerLength;
+	uint16_t	totalBytesRead;
+    uint16_t 	dataBlockOffset;
+    uint16_t 	dataBlockSize;
+
+
+    // Get product-header fields from (buffer+16 and on):
+    // ===============================================
+    int ret = getProductHeaders(  buffer, clientSockFd, &headerLength,
+    							  &dataBlockOffset, &dataBlockSize);
+    if(ret == FIN || ret == -1)
+    {
+        log_add("Error in retrieving product header. Closing socket...\n");
+        log_flush_warning();
+        return -1;
+    }
+    *pDataBlockSize = dataBlockSize;
+
+    // Where does the data start?
+    // dataBlockOffset (2 bytes) is offset in bytes where the data for this block
+    //                           can be found relative to beginning of data block area.
+    // headerLength (2 bytes)    is total length of product header in bytes for this frame,
+    //                           including options
+    uint16_t dataBlockStart = 16 + headerLength + dataBlockOffset;
+    uint16_t dataBlockEnd   = dataBlockStart + dataBlockSize;
+
+    // Read SBN frame data from entire 'buffer'
+    ret = readData( buffer, clientSockFd,
+    				dataBlockStart, dataBlockSize);
+    if(ret == FIN || ret == -1)
+    {
+        log_add("Error in reading data from socket. Closing socket...\n");
+        log_flush_warning();
+        return -1;
+    }
+
+    return status;
+}
+static int
 processRestOfFrame(int clientSockFd, unsigned char* buffer)
 {
-	int status = 0;
+	int 		status = SUCCESS;
+	uint32_t 	sequenceNumber;
+    uint16_t	runNumber;
+    uint16_t 	frameDataSize;
+
+    // Retrieve seqNum and runNum from buffer (already filled with 16bytes)
+	(void) getSeqNumRunNum( buffer, &sequenceNumber, &runNumber );
 
 
+	status = readFrameData( clientSockFd, buffer, &frameDataSize );
+	if(status == SUCCESS)
+	{
+		// buffer now contains frame data of size frameDataSize at offset 0
+		// Insert in queue
+		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameDataSize);
+	}
 	return status;
-
 }
 
 /**
@@ -261,100 +265,16 @@ buildFrameRoutine(int clientSockFd)
             n = read(clientSockFd, buffer+15, expect);
         }
         else {
-            // TODO: Process the rest of the frame
-            if (!processRestOfFrame(clientSockFd, buffer))
+            // Process the rest of the frame with buffer already
+        	// filled with 16 bytes
+            if ( processRestOfFrame(clientSockFd, buffer) == SUCCESS)
                 break;
 
+            // read the next frame
             expect = 16;
             n = read(clientSockFd, buffer, expect);
         }
     }
-
-#if 0
-    uint32_t      sequenceNumber;
-    uint16_t      runNumber;
-    int           cancelState = PTHREAD_CANCEL_DISABLE;
-    bool          initialFrameRun_flag = true;
-
-    // TCP/IP receiver
-    // loop until byte 255 is detected. And then process next 15 bytes
-    for(;;)
-    {
-        int n = read(clientSockFd, (char *)buffer,  1 ) ;
-        if( n <= 0 )
-        {
-            if( n <  0 )
-            	log_syserr("InputClient thread: inputBuildFrameRoutine(): "
-            			"thread should die!");
-            if( n == 0 )
-            	log_syserr("InputClient thread: inputBuildFrameRoutine():"
-            			"Client  disconnected!");
-            close(clientSockFd);
-            pthread_exit(NULL);
-        }
-        if(buffer[0] != 255)
-        {
-            continue;
-        }
-
-        // totalBytesRead may be > 15 bytes. buffer is guaranteed to contain at least 16 bytes
-        int ret = retrieveFrameHeaderFields(  buffer, clientSockFd, &sequenceNumber,
-        									  &runNumber);
-        if(ret == FIN || ret == -1)
-        {
-            close(clientSockFd);
-            pthread_exit(NULL);
-        }
-
-        if(ret == -2)
-        {
-            log_notice("retrieveFrameHeaderFields(): Checksum failed! (continue...)\n");
-            continue;
-        }
-
-        // Get product-header fields from (buffer+16 and on):
-        // ===============================================
-        uint16_t headerLength, totalBytesRead;
-        uint16_t dataBlockOffset, dataBlockSize;
-        ret = retrieveProductHeaderFields(  buffer, clientSockFd, &headerLength,
-        									&dataBlockOffset, &dataBlockSize);
-        if(ret == FIN || ret == -1)
-        {
-            log_add("Error in retrieving product header. Closing socket...\n");
-            log_flush_warning();
-            close(clientSockFd);
-            pthread_exit(NULL);
-        }
-
-        // Where does the data start?
-        // dataBlockOffset (2 bytes) is offset in bytes where the data for this block
-        //                           can be found relative to beginning of data block area.
-        // headerLength (2 bytes)    is total length of product header in bytes for this frame,
-        //                           including options
-        uint16_t dataBlockStart = 16 + headerLength + dataBlockOffset;
-        uint16_t dataBlockEnd   = dataBlockStart + dataBlockSize;
-
-        // Read SBN frame data from entire 'buffer'
-        ret = readFrameDataFromSocket( buffer, clientSockFd,
-        								dataBlockStart, dataBlockSize);
-        if(ret == FIN || ret == -1)
-        {
-            log_add("Error in reading data from socket. Closing socket...\n");
-            log_flush_warning();
-            close(clientSockFd);
-            pthread_exit(NULL);
-        }
-
-        // Insert in queue
-        tryInsertInQueue(sequenceNumber, runNumber, buffer, dataBlockEnd);
-
-        // setcancelstate??? remove?
-        pthread_setcancelstate(cancelState, &cancelState);
-
-    } //for
-
-    return NULL;
-#endif
 }
 
 /**
