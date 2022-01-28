@@ -118,17 +118,21 @@ queue_start(const double frameLatency)
 int
 tryInsertInQueue(  unsigned 		sequenceNumber,
 		       	   unsigned 		runNumber,
-				   unsigned char 	*buffer,
+				   unsigned char*	buffer,
 				   unsigned 		frameBytes)
 {
 	// runMutex is already LOCKed!
 	log_assert( pthread_mutex_trylock(&runMutex) );
 
+	int status = 0;
+
+	log_debug("Inserting frame in queue : (%lu, %lu)", sequenceNumber, runNumber);
 	// call in CircFrameBuf: (C++ class)
-	bool status = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
-	if( !status )
+	bool cfbStatus = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
+	if( !cfbStatus )
 	{
 		log_error("Inserting frame in queue failed.");
+		status = -1;
 	}
 	return status;
 }
