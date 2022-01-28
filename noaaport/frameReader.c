@@ -42,52 +42,70 @@ getBytes(int fd, char* buf, size_t nbytes)
 /**
  * Utility function to read SBN actual data bytes from the connection
  *
+ * @param[in]  buffer         Destination buffer for headers
  * @param[in]  clientSock	  Socket Id for this client reader
  * @param[in]  readByteStart  Offset of SBN data
  * @param[in]  dataBlockSize  Size of block of SBN data
  * @param[out] buffer  		  Buffer to contain SBN data read in
  *
  * @retval    totalBytesRead  Total bytes read
+ * @retval    0        		  EOF
  * @retval    -1       		  Error
  */
 
-static int
-getProductHeaders(  unsigned char* 	buffer,
+static ssize_t
+getProductHeaders(  uint8_t* const 	buffer,
 					int 			clientSock,
-                    uint16_t *		pHeaderLength,
-                    uint16_t *		pDataBlockOffset,
                     uint16_t *		pDataBlockSize)
 {
-    int totalBytesRead = getBytes(clientSock, buffer+16, 10);
-    if( totalBytesRead <= 0)
+    uint8_t* cp = buffer;
+    ssize_t  status = getBytes(clientSock, cp, 1);
+    if (status != 1)
+        return status;
+
+    // Length of product-definition header in bytes
+    const unsigned pdhLen = (*cp++ & 0xf) * 4;
+
+    status = getBytes(clientSock, cp, pdhLen-1);
+    if( status <= 0)
     {
-        if( totalBytesRead == 0) log_add("Client  disconnected!");
-        if( totalBytesRead <  0) log_add("read() failure");
+        if( status == 0) log_add("Client  disconnected!");
+        if( status <  0) log_add("read() failure");
         log_flush_warning();
 
         // clientSock gets closed in calling function
-        return totalBytesRead;
+        return status;
     }
+    cp += status;
 
     // skip byte: 16  --> version number
     // skip byte: 17  --> transfer type
 
-    // header length: [18-19]
-    *pHeaderLength      = (uint16_t) ntohs(*(uint16_t*)(buffer+18));
+    // Process-specific header length in bytes: [2-3]
+    uint16_t pshLen = ntohs(*(uint16_t*)(buffer+2));
 
     //printf("header length: %lu\n", *pHeaderLength);
 
-    // skip bytes: [20-21] --> block number
-
-    // data block offset: [22-23]
-    *pDataBlockOffset   = (uint16_t) ntohs(*(uint16_t*)(buffer+22));
-    //printf("Data Block Offset: %lu\n", *pDataBlockOffset);
-
     // Data Block Size: [24-25]
-    *pDataBlockSize     = (uint16_t) ntohs(*(uint16_t*)(buffer+24));
+    *pDataBlockSize     = ntohs(*(uint16_t*)(buffer+8));
     //printf("Data Block Size: %lu\n", *pDataBlockSize);
 
-    return totalBytesRead;
+    if (pshLen) {
+        // Read product-specific header
+        status = getBytes(clientSock, cp, pshLen);
+        if( status <= 0)
+        {
+            if( status == 0) log_add("Client  disconnected!");
+            if( status <  0) log_add("read() failure");
+            log_flush_warning();
+
+            // clientSock gets closed in calling function
+            return status;
+        }
+        cp += status;
+    }
+
+    return cp - buffer;
 }
 
 /**
@@ -102,12 +120,11 @@ getProductHeaders(  unsigned char* 	buffer,
  * @retval    -1       		  Error
  */
 static int
-readData(unsigned char* buffer,
+readData(uint8_t* const buffer,
 		 int 			clientSock,
-		 uint16_t 		readByteStart,
 		 uint16_t 		dataBlockSize)
 {
-    int totalBytesRead = getBytes(clientSock, buffer+readByteStart, dataBlockSize);
+    int totalBytesRead = getBytes(clientSock, buffer, dataBlockSize);
 
     if( totalBytesRead  <= 0 )
     {
@@ -175,40 +192,32 @@ badCheckSum(unsigned char* buffer, int* invalidChkCounter)
 }
 
 static int
-readFrameData( 	int 			clientSockFd,
-				unsigned char* 	buffer,
-				uint16_t*		pDataBlockSize)
+readFrame( 	int 			clientSockFd,
+			uint8_t* const  buffer,
+			const size_t    bufSize,
+			uint16_t* const pFrameSize)
 {
-	int 		status = SUCCESS;
-    uint16_t 	headerLength;
-	uint16_t	totalBytesRead;
-    uint16_t 	dataBlockOffset;
-    uint16_t 	dataBlockSize;
+	uint8_t* cp = buffer + 16; // Skip frame header
+	uint16_t dataBlockSize;
+    int      ret = getProductHeaders(  cp, clientSockFd, &dataBlockSize);
 
-
-    // Get product-header fields from (buffer+16 and on):
-    // ===============================================
-    int ret = getProductHeaders(  buffer, clientSockFd, &headerLength,
-    							  &dataBlockOffset, &dataBlockSize);
-    if(ret == FIN || ret == -1)
+    if(ret <= 0)
     {
         log_add("Error in retrieving product header.\n");
         log_flush_warning();
         return -1;
     }
-    *pDataBlockSize = dataBlockSize;
+    cp += ret;
 
-    // Where does the data start?
-    // dataBlockOffset (2 bytes) is offset in bytes where the data for this block
-    //                           can be found relative to beginning of data block area.
-    // headerLength (2 bytes)    is total length of product header in bytes for this frame,
-    //                           including options
-    uint16_t dataBlockStart = 16 + headerLength + dataBlockOffset;
-    uint16_t dataBlockEnd   = dataBlockStart + dataBlockSize;
+    // Ensure that reading the data block will not overrun the buffer
+    size_t nbytes = cp + dataBlockSize - buffer;
+    if (nbytes > bufSize) {
+        log_add("Frame is too large: %zu bytes", nbytes);
+        return -1;
+    }
 
-    // Read SBN frame data from entire 'buffer'
-    ret = readData( buffer, clientSockFd,
-    				dataBlockStart, dataBlockSize);
+    // Read the actual SBN frame data into 'buffer'
+    ret = readData( cp, clientSockFd, dataBlockSize);
     if(ret == FIN || ret == -1)
     {
         log_debug("Error in reading data from socket. Closing socket...\n");
@@ -216,25 +225,28 @@ readFrameData( 	int 			clientSockFd,
         log_flush_warning();
         return -1;
     }
+    cp += ret;
+    *pFrameSize = cp - buffer;
 
-    return status;
+    return SUCCESS;
 }
+
 static int
-processRestOfFrame(int clientSockFd, unsigned char* buffer)
+processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 {
 	int 		status = SUCCESS;
 	uint32_t 	sequenceNumber;
     uint16_t	runNumber;
-    uint16_t 	frameDataSize;
+    uint16_t 	frameSize; // Size of frame in bytes
 
     // Retrieve seqNum and runNum from buffer (already filled with 16bytes)
 	(void) getSeqNumRunNum( buffer, &sequenceNumber, &runNumber );
 
 
-	status = readFrameData( clientSockFd, buffer, &frameDataSize );
+	status = readFrame( clientSockFd, buffer, bufSize, &frameSize );
 	if(status != SUCCESS)
 	{
-       	log_debug("readFrameData() Failed!.");
+       	log_debug("readFrame() Failed!.");
 		return status;
 	}
 	if(status == SUCCESS)
@@ -242,7 +254,7 @@ processRestOfFrame(int clientSockFd, unsigned char* buffer)
 		// buffer now contains frame data of size frameDataSize at offset 0
 		// Insert in queue
        	log_debug("processRestOfFrame() inserting.");
-		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameDataSize);
+		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
 
 	}
 	return status;
@@ -277,10 +289,11 @@ buildFrameRoutine(int clientSockFd)
         		log_debug("Number of invalid check sum occurrences: %lu", invalidChkSumCounter);
         		invalidChkSumCounter = 0;
         	}
-            // Process the rest of the frame with buffer already
-        	// filled with 16 bytes
+            // Process the frame with buffer already
+        	// filled with 16-byte frame header
         	int ret;
-            if ( (ret = processRestOfFrame(clientSockFd, buffer)) != SUCCESS)
+            if ( (ret = processFrame(clientSockFd, buffer, sizeof(buffer)))
+                    != SUCCESS)
             {
             	log_add("processRestOfFrame() FAILED: %d.", ret);
                 break;
