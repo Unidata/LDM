@@ -274,11 +274,12 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
        	log_debug("readFrame() Failed!.");
 		return status;
 	}
-	if(status == SUCCESS)
-	{
+	if(status != SUCCESS) {
+        log_add("Data block not read");
+	}
+	else {
 		// buffer now contains frame data of size frameSize at offset 0
 		// Insert in queue
-       	log_debug("processRestOfFrame() inserting.");
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
 	}
 	return status;
@@ -320,6 +321,10 @@ buildFrameRoutine(int clientSockFd)
             {
             	log_add("processFrame() FAILED: %d.", ret);
                 break;
+            }
+            if (ret == -2) {
+                log_add("Re-synchronizing");
+                log_flush_warning();
             }
             // read the next frame
             expect = 16;
