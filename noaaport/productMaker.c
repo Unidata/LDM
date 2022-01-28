@@ -489,8 +489,8 @@ int    nnnxxx_offset;
             log_error_q("problem with pdh, PUNT");
             continue;
         }
+        // Read excess of product-definition header if it exists
         if (pdh->len > 16) {
-            // Read the product-specific header if it exists
             if (fifo_getBytes(fifo, buf + sbn->len + 16, pdh->len - 16) != 0)
                 continue;
         }
