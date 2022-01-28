@@ -24,7 +24,7 @@ extern int   		tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
 //  ========================================================================
 
 static ssize_t
-getBytes(int fd, char* buf, int nbytes)
+getBytes(int fd, char* buf, size_t nbytes)
 {
     int nleft = nbytes;
     while (nleft > 0)
@@ -52,11 +52,11 @@ getBytes(int fd, char* buf, int nbytes)
  */
 
 static int
-getProductHeaders(unsigned char* buffer,
-							int clientSock,
-                            uint16_t *pHeaderLength,
-                            uint16_t *pDataBlockOffset,
-                            uint16_t *pDataBlockSize)
+getProductHeaders(  unsigned char* 	buffer,
+					int 			clientSock,
+                    uint16_t *		pHeaderLength,
+                    uint16_t *		pDataBlockOffset,
+                    uint16_t *		pDataBlockSize)
 {
     int totalBytesRead = getBytes(clientSock, buffer+16, 10);
     if( totalBytesRead <= 0)
@@ -103,9 +103,9 @@ getProductHeaders(unsigned char* buffer,
  */
 static int
 readData(unsigned char* buffer,
-						int clientSock,
-						uint16_t readByteStart,
-						uint16_t dataBlockSize)
+		 int 			clientSock,
+		 uint16_t 		readByteStart,
+		 uint16_t 		dataBlockSize)
 {
     int totalBytesRead = getBytes(clientSock, buffer+readByteStart, dataBlockSize);
 
@@ -114,8 +114,8 @@ readData(unsigned char* buffer,
         if( totalBytesRead == 0) log_add("Client  disconnected!");
         if( totalBytesRead <  0) log_add("read() failure");
         log_flush_warning();
-
-        close(clientSock);
+        totalBytesRead = -1;
+        //close(clientSock);
     }
     return totalBytesRead;
 }
@@ -148,7 +148,7 @@ getSeqNumRunNum( unsigned char* 	buffer,
  * @retval     false   		  	CheckSum is valid
  */
 static bool
-badCheckSum(unsigned char* buffer)
+badCheckSum(unsigned char* buffer, int* invalidChkCounter)
 {
 	bool status;
 
@@ -167,20 +167,17 @@ badCheckSum(unsigned char* buffer)
 		*/
 	}
 
-	log_debug("Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
 	status = (checkSum != sum);
-	if(status)
-		log_debug("CHECKSUM FAILURE: Computed checksum: %lu - frame checksum: %lu", sum, checkSum);
+	if( status ) ++(*invalidChkCounter);
 
 	return status;
 
 }
 
 static int
-readFrameData(
-		int clientSockFd,
-		unsigned char* buffer,
-		uint16_t*	pDataBlockSize)
+readFrameData( 	int 			clientSockFd,
+				unsigned char* 	buffer,
+				uint16_t*		pDataBlockSize)
 {
 	int 		status = SUCCESS;
     uint16_t 	headerLength;
@@ -195,7 +192,7 @@ readFrameData(
     							  &dataBlockOffset, &dataBlockSize);
     if(ret == FIN || ret == -1)
     {
-        log_add("Error in retrieving product header. Closing socket...\n");
+        log_add("Error in retrieving product header.\n");
         log_flush_warning();
         return -1;
     }
@@ -214,6 +211,7 @@ readFrameData(
     				dataBlockStart, dataBlockSize);
     if(ret == FIN || ret == -1)
     {
+        log_debug("Error in reading data from socket. Closing socket...\n");
         log_add("Error in reading data from socket. Closing socket...\n");
         log_flush_warning();
         return -1;
@@ -234,11 +232,18 @@ processRestOfFrame(int clientSockFd, unsigned char* buffer)
 
 
 	status = readFrameData( clientSockFd, buffer, &frameDataSize );
+	if(status != SUCCESS)
+	{
+       	log_debug("readFrameData() Failed!.");
+		return status;
+	}
 	if(status == SUCCESS)
 	{
 		// buffer now contains frame data of size frameDataSize at offset 0
 		// Insert in queue
+       	log_debug("processRestOfFrame() inserting.");
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameDataSize);
+
 	}
 	return status;
 }
@@ -256,24 +261,44 @@ buildFrameRoutine(int clientSockFd)
     log_notice("In buildFrameRoutine() waiting to read from "
     		"(fanout) server socket...\n");
 
+    int invalidChkSumCounter = 0;
     unsigned char buffer[SBN_FRAME_SIZE] = {};
     ssize_t       n, expect = 16;
-    for (n = read(clientSockFd, buffer, expect); n == expect;) {
-        if (buffer[0] != 255 || badCheckSum(buffer)) {
+    for (n = getBytes(clientSockFd, buffer, expect); n == expect;) {
+        if (buffer[0] != 255 || badCheckSum(buffer, &invalidChkSumCounter)) {
             memmove(buffer, buffer+1, 15); // Shift buffer by one byte
             expect = 1;
-            n = read(clientSockFd, buffer+15, expect);
+            n = getBytes(clientSockFd, buffer+15, expect);
         }
         else {
+
+        	if(invalidChkSumCounter > 0)
+        	{
+        		log_debug("Number of invalid check sum occurrences: %lu", invalidChkSumCounter);
+        		invalidChkSumCounter = 0;
+        	}
             // Process the rest of the frame with buffer already
         	// filled with 16 bytes
-            if ( processRestOfFrame(clientSockFd, buffer) == SUCCESS)
+        	int ret;
+            if ( (ret = processRestOfFrame(clientSockFd, buffer)) != SUCCESS)
+            {
+            	log_add("processRestOfFrame() FAILED: %d.", ret);
                 break;
-
+            }
             // read the next frame
             expect = 16;
-            n = read(clientSockFd, buffer, expect);
+            n = getBytes(clientSockFd, buffer, expect);
         }
+
+    }
+    if( n == -1 )
+    {
+    	log_add_syserr("Read failure");
+    	// n == -1 ==> read error
+    }
+    else if (n != expect)
+    {
+    	log_add("Read %zd bytes; expected: %zd", n, expect);
     }
 }
 
@@ -329,8 +354,7 @@ inputClientRoutine(void* id)
                     (addrInfo->ai_addr);
             sockaddr.sin_port 				= htons(port);
 
-            log_info("\nInputClientRoutine: connecting to TCPServer server to "
-                    "read frames at server: %s:%" PRIu16 "\n", hostId, port);
+            log_info("Connecting to TCPServer server:  %s:%" PRIu16 "\n", hostId, port);
 
             freeaddrinfo(addrInfo);
             free(hostId);
@@ -343,16 +367,16 @@ inputClientRoutine(void* id)
                 log_flush_warning();
             }
             else {
-                log_notice("InputClientRoutine: CONNECTED!");
+                log_notice("CONNECTED!");
 
-                // replace with
                 buildFrameRoutine(socketClientFd);
-                log_info("Lost connection with fanout server. Will retry after 60sec.");
+                log_add("Lost connection with fanout server. Will retry after 60sec. (%s:%" PRIu16 ")", hostId, port);
+                log_flush_warning();
             } // Connected
 		} // Got address information
 
         close(socketClientFd);
-        sleep(60);
+        sleep(5);
     } // for
 
 	return 0;

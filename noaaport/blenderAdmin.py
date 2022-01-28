@@ -102,11 +102,11 @@ from ~ldm/etc/ldmd.conf on leno:
 			Examples:
 			1-  To mimic a fanout server on localhost at port 9127 (--test), in debug mode (-x), 
 			    logging to /tmp/blender.log, and redirecting (-r) the standard output to /dev/null
-				$ blenderAdmin.py 9127 localhost  -x -l /tmp/blender.log -r --test     
+				$ blenderAdmin.py 9127 localhost               -x -l /tmp/blender.log -r --test     
 
 			2-  To connect the blender to chico on port 1201, standard output not redirected
 				$ blenderAdmin.py 1201 chico.unidata.ucar.edu  -x -l /tmp/blender.log
-				$ blenderAdmin.py 1201 128.117.140.37  -x -l /tmp/blender.log -r        (<-- using chico's IP)
+				$ blenderAdmin.py 1201 128.117.140.37          -x -l /tmp/blender.log         (<-- using chico's IP)
 
 
 			''',
@@ -117,7 +117,7 @@ from ~ldm/etc/ldmd.conf on leno:
 
 		# Check if program(s) are running. If so, kill them
 		self.checkRunning()
-		system('clear')
+		#system('clear')
 
 	# Build the blender's command line arguments
 	def prepareCmd(self, cliArg):
@@ -150,7 +150,7 @@ from ~ldm/etc/ldmd.conf on leno:
 			self.testBlenderArgs += f' { cliArg["singlePort"][0] }'
 			# 5   6  2000000   1       9127
 			cmd = f"{self.noaaportPath}/testBlender {self.testBlenderArgs} &"
-
+			print(cmd)
 			system( cmd )
 		
 
@@ -174,10 +174,14 @@ from ~ldm/etc/ldmd.conf on leno:
 		try:
 			proc = subprocess.check_output(cmd_proc, shell=True )
 			for line in proc.decode().splitlines():
-				
+				print(line)
 				procId = line.split()[1]
 				p = psutil.Process(int(procId))
-				p.kill()
+
+				go = input("Kill process? (Y/n)")
+				if 'Y' == go.rstrip():
+					p.kill()
+			
 
 		except Exception as e:
 			self.errmsg(f"{cmd} is currently NOT running! ")

@@ -73,7 +73,7 @@ class CircFrameBuf
             , numBytes(numBytes)
         {
             if (numBytes > sizeof(this->data))
-                throw std::runtime_error("Too many bytes: " + std::to_string(numBytes));
+                throw std::runtime_error("Frame is too large: " + std::to_string(numBytes) + " bytes.");
             ::memcpy(this->data, data, numBytes);
         }
     };
