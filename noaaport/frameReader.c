@@ -51,7 +51,7 @@ getBytes(int fd, char* buf, size_t nbytes)
  * @retval    totalBytesRead  Total bytes read
  * @retval    0        		  EOF
  * @retval    -1       		  Error
- * @retval    -2              Product-definition header is too small
+ * @retval    -2              Invalid frame
  */
 static ssize_t
 getProductHeaders(  uint8_t* const 	buffer,
@@ -88,7 +88,14 @@ getProductHeaders(  uint8_t* const 	buffer,
     cp += status;
 
     // Process-specific header length in bytes: [2-3]
-    uint16_t pshLen = ntohs(*(uint16_t*)(buffer+2)) - pdhLen;
+    const unsigned pdhPshLen = ntohs(*(uint16_t*)(buffer+2));
+    if (pdhPshLen < pdhLen) {
+        log_add("Product definition header (%u bytes) is larger than itself "
+                "plus product-specific header (%u bytes). "
+                "Rest of frame wasn't read", pdhLen, pdhPshLen);
+        return -2;
+    }
+    uint16_t pshLen = pdhPshLen - pdhLen;
 
     /*
      * Transfer type:
