@@ -190,6 +190,17 @@ badCheckSum(unsigned char* buffer, int* invalidChkCounter)
 
 }
 
+/**
+ * Reads a NOAAPort frame into a buffer.
+ *
+ * @param[in]  clientSockFd  Socket descriptor
+ * @param[in]  buffer        Frame buffer
+ * @param[in]  bufSize       Size of frame buffer in bytes
+ * @param[out] pFrameSize    Size of frame in bytes
+ * @retval     0             Success
+ * @retval     -1            System failure
+ * @retval     -2            Frame is too large. Data wasn't read.
+ */
 static int
 readFrame( 	int 			clientSockFd,
 			uint8_t* const  buffer,
@@ -212,7 +223,7 @@ readFrame( 	int 			clientSockFd,
     size_t nbytes = cp + dataBlockSize - buffer;
     if (nbytes > bufSize) {
         log_add("Frame is too large: %zu bytes", nbytes);
-        return -1;
+        return -2;
     }
 
     // Read the actual SBN frame data into 'buffer'
@@ -230,6 +241,17 @@ readFrame( 	int 			clientSockFd,
     return SUCCESS;
 }
 
+/**
+ * Processes a NOAAPort frame. Reads frames in and tries to insert them into the
+ * queue.
+ *
+ * @param[in] clientSockFd  Socket descriptor
+ * @param[in] buffer        Frame buffer
+ * @param[in] bufSize       Size of frame buffer in bytes
+ * @retval    0             Success
+ * @retval    -1            System failure
+ * @retval    -2            Frame is too large. Data wasn't read.
+ */
 static int
 processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 {
@@ -247,7 +269,7 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 
 	// Read the rest of the frame into the buffer
 	status = readFrame( clientSockFd, buffer, bufSize, &frameSize );
-	if(status != SUCCESS)
+	if(status == -1)
 	{
        	log_debug("readFrame() Failed!.");
 		return status;
@@ -258,7 +280,6 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 		// Insert in queue
        	log_debug("processRestOfFrame() inserting.");
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
-
 	}
 	return status;
 }
@@ -295,9 +316,9 @@ buildFrameRoutine(int clientSockFd)
         	// filled with 16-byte frame header
         	int ret;
             if ( (ret = processFrame(clientSockFd, buffer, sizeof(buffer)))
-                    != SUCCESS)
+                    == -1)
             {
-            	log_add("processRestOfFrame() FAILED: %d.", ret);
+            	log_add("processFrame() FAILED: %d.", ret);
                 break;
             }
             // read the next frame
