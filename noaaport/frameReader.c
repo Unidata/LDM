@@ -62,9 +62,9 @@ getProductHeaders(  uint8_t* const 	buffer,
     ssize_t  status = getBytes(clientSock, cp, 1);
     if (status != 1)
         return status;
-
     // Length of product-definition header in bytes
-    const unsigned pdhLen = (*cp++ & 0xf) * 4;
+    const unsigned pdhLen = (*cp & 0xf) * 4;
+    ++cp;
 
     status = getBytes(clientSock, cp, pdhLen-1);
     if( status <= 0)
@@ -78,11 +78,10 @@ getProductHeaders(  uint8_t* const 	buffer,
     }
     cp += status;
 
-    // skip byte: 16  --> version number
-    // skip byte: 17  --> transfer type
+    // skip buffer[1]  --> transfer type
 
     // Process-specific header length in bytes: [2-3]
-    uint16_t pshLen = ntohs(*(uint16_t*)(buffer+2));
+    uint16_t pshLen = ntohs(*(uint16_t*)(buffer+2)) - pdhLen;
 
     //printf("header length: %lu\n", *pHeaderLength);
 
@@ -239,10 +238,14 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
     uint16_t	runNumber;
     uint16_t 	frameSize; // Size of frame in bytes
 
-    // Retrieve seqNum and runNum from buffer (already filled with 16bytes)
+    /*
+     * Retrieve seqNum and runNum from buffer (already filled with 16-byte
+     * frame header)
+     */
 	(void) getSeqNumRunNum( buffer, &sequenceNumber, &runNumber );
 
 
+	// Read the rest of the frame into the buffer
 	status = readFrame( clientSockFd, buffer, bufSize, &frameSize );
 	if(status != SUCCESS)
 	{
@@ -251,7 +254,7 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 	}
 	if(status == SUCCESS)
 	{
-		// buffer now contains frame data of size frameDataSize at offset 0
+		// buffer now contains frame data of size frameSize at offset 0
 		// Insert in queue
        	log_debug("processRestOfFrame() inserting.");
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
@@ -283,7 +286,6 @@ buildFrameRoutine(int clientSockFd)
             n = getBytes(clientSockFd, buffer+15, expect);
         }
         else {
-
         	if(invalidChkSumCounter > 0)
         	{
         		log_debug("Number of invalid check sum occurrences: %lu", invalidChkSumCounter);
@@ -309,7 +311,7 @@ buildFrameRoutine(int clientSockFd)
     	log_add_syserr("Read failure");
     	// n == -1 ==> read error
     }
-    else if (n != expect)
+    else
     {
     	log_add("Read %zd bytes; expected: %zd", n, expect);
     }
