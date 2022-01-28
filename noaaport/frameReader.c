@@ -222,7 +222,8 @@ readFrame( 	int 			clientSockFd,
     // Ensure that reading the data block will not overrun the buffer
     size_t nbytes = cp + dataBlockSize - buffer;
     if (nbytes > bufSize) {
-        log_add("Frame is too large: %zu bytes", nbytes);
+        log_add("Frame is too large: %zu bytes. Data block won't be read",
+                nbytes);
         return -2;
     }
 
@@ -274,10 +275,8 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
        	log_debug("readFrame() Failed!.");
 		return status;
 	}
-	if(status != SUCCESS) {
-        log_add("Data block not read");
-	}
-	else {
+	if(status == SUCCESS)
+	{
 		// buffer now contains frame data of size frameSize at offset 0
 		// Insert in queue
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
