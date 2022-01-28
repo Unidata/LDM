@@ -51,8 +51,8 @@ getBytes(int fd, char* buf, size_t nbytes)
  * @retval    totalBytesRead  Total bytes read
  * @retval    0        		  EOF
  * @retval    -1       		  Error
+ * @retval    -2              Product-definition header is too small
  */
-
 static ssize_t
 getProductHeaders(  uint8_t* const 	buffer,
 					int 			clientSock,
@@ -63,13 +63,22 @@ getProductHeaders(  uint8_t* const 	buffer,
     if (status != 1)
         return status;
     // Length of product-definition header in bytes
-    const unsigned pdhLen = (*cp & 0xf) * 4;
+    const unsigned pdhLen = (buffer[0] & 0xf) * 4;
     ++cp;
+
+    if (pdhLen < 16) {
+        log_add("Product definition header is too small: %u bytes. "
+                "Rest of frame wasn't read", pdhLen);
+        return -2;
+    }
+    if (pdhLen > 16) {
+        log_warning("Large product definition header: %u bytes", pdhLen);
+    }
 
     status = getBytes(clientSock, cp, pdhLen-1);
     if( status <= 0)
     {
-        if( status == 0) log_add("Client  disconnected!");
+        if( status == 0) log_add("Client disconnected!");
         if( status <  0) log_add("read() failure");
         log_flush_warning();
 
@@ -78,14 +87,26 @@ getProductHeaders(  uint8_t* const 	buffer,
     }
     cp += status;
 
-    // skip buffer[1]  --> transfer type
-
     // Process-specific header length in bytes: [2-3]
     uint16_t pshLen = ntohs(*(uint16_t*)(buffer+2)) - pdhLen;
 
+    /*
+     * Transfer type:
+     *    1 = Start of a new product
+     *    2 = Product transfer still in progress
+     *    4 = End (last packet) of this product
+     *    8 = Product error
+     *   32 = Product Abort
+     *   64 = Option headers follow; e. g., product-specific header
+     */
+    const unsigned transferType = buffer[1];
+    if (pshLen && ((transferType & 64) == 0))
+        log_warning("Positive product-specific header length but transfer "
+                "type's option bit is 0");
+
     //printf("header length: %lu\n", *pHeaderLength);
 
-    // Data Block Size: [24-25]
+    // Data Block Size: [8-9]
     *pDataBlockSize     = ntohs(*(uint16_t*)(buffer+8));
     //printf("Data Block Size: %lu\n", *pDataBlockSize);
 
