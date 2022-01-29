@@ -97,6 +97,8 @@ getProductHeaders(  uint8_t* const 	buffer,
     }
     // Product-specific header length in bytes
     uint16_t pshLen = pdhPshLen - pdhLen;
+    if (pdhLen > 16)
+        log_notice("Product-specific header length is %u bytes");
 
     // Data Block Size: [8-9]
     *pDataBlockSize     = ntohs(*(uint16_t*)(buffer+8));
