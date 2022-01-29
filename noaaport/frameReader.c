@@ -87,7 +87,7 @@ getProductHeaders(  uint8_t* const 	buffer,
     }
     cp += status;
 
-    // Process-specific header length in bytes: [2-3]
+    // Sum of product-definition and product-specific header lengths in bytes
     const unsigned pdhPshLen = ntohs(*(uint16_t*)(buffer+2));
     if (pdhPshLen < pdhLen) {
         log_add("Product definition header (%u bytes) is larger than itself "
@@ -95,7 +95,11 @@ getProductHeaders(  uint8_t* const 	buffer,
                 "Rest of frame wasn't read", pdhLen, pdhPshLen);
         return -2;
     }
+    // Product-specific header length in bytes
     uint16_t pshLen = pdhPshLen - pdhLen;
+
+    // Data Block Size: [8-9]
+    *pDataBlockSize     = ntohs(*(uint16_t*)(buffer+8));
 
     /*
      * Transfer type:
@@ -107,17 +111,11 @@ getProductHeaders(  uint8_t* const 	buffer,
      *   64 = Option headers follow; e. g., product-specific header
      */
     const unsigned transferType = buffer[1];
-    if (pshLen && ((transferType & 64) == 0))
-        log_warning("Positive product-specific header length but transfer "
-                "type's option bit is 0");
-
-    //printf("header length: %lu\n", *pHeaderLength);
-
-    // Data Block Size: [8-9]
-    *pDataBlockSize     = ntohs(*(uint16_t*)(buffer+8));
-    //printf("Data Block Size: %lu\n", *pDataBlockSize);
-
-    if (pshLen) {
+    if (pshLen && ((transferType & 64) == 0)) {
+        log_warning("Ignoring %u-byte product-specific header "
+                "because associated transfer type bit is 0", pshLen);
+    }
+    else if (pshLen) {
         // Read product-specific header
         status = getBytes(clientSock, cp, pshLen);
         if( status <= 0)
