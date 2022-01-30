@@ -34,30 +34,35 @@ int nbs_decodeFrameHeader(
         status = EBADMSG;
 
         fh->hdlcAddress = buf[0];
-        fh->hdlcControl = buf[1];
-        fh->version = buf[2] >> 4;
-        fh->size = (buf[2] & 0xf) * 4;
-        if (fh->size != 16) {
-            log_add("Frame header size (%u bytes) != 16 bytes");
+        if (fh->hdlcAddress != 255) {
+            log_add("255 sentinel isn't present");
         }
         else {
-            fh->control = buf[3];
-            fh->command = buf[4];
-            fh->datastream = buf[5];
-            fh->source = buf[6];
-            fh->destination = buf[7];
-            fh->seqno = ntohl(*(uint32_t*)(buf+8));
-            fh->runno = ntohs(*(uint16_t*)(buf+12));
-            fh->checksum = ntohs(*(uint16_t*)(buf+14));
-
-            unsigned sum = 0;
-            for (int i = 0; i < 14; ++i)
-                sum += buf[i];
-            if (sum != fh->checksum) {
-                log_add("Frame sum (%u) != checksum (%u)", sum, fh->checksum);
+            fh->hdlcControl = buf[1];
+            fh->version = buf[2] >> 4;
+            fh->size = (buf[2] & 0xf) * 4;
+            if (fh->size != 16) {
+                log_add("Frame header size (%u bytes) != 16 bytes");
             }
             else {
-                status = 0;
+                fh->control = buf[3];
+                fh->command = buf[4];
+                fh->datastream = buf[5];
+                fh->source = buf[6];
+                fh->destination = buf[7];
+                fh->seqno = ntohl(*(uint32_t*)(buf+8));
+                fh->runno = ntohs(*(uint16_t*)(buf+12));
+                fh->checksum = ntohs(*(uint16_t*)(buf+14));
+
+                unsigned sum = 0;
+                for (int i = 0; i < 14; ++i)
+                    sum += buf[i];
+                if (sum != fh->checksum) {
+                    log_add("Frame sum (%u) != checksum (%u)", sum, fh->checksum);
+                }
+                else {
+                    status = 0;
+                }
             }
         }
     }
