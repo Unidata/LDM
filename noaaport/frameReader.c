@@ -19,8 +19,9 @@
 #include <log.h>
 
 //  ========================================================================
-extern void	 		setFIFOPolicySetPriority(pthread_t, char*, int);
-extern int   		tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
+extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
+extern int   	tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
+extern int 		nbs_logHeaders( const uint8_t* buf, size_t nbytes);
 //  ========================================================================
 
 static ssize_t
@@ -305,6 +306,8 @@ processFrame(int clientSockFd, unsigned char* buffer, const size_t bufSize)
 	}
 	if(status == SUCCESS)
 	{
+		int status = nbs_logHeaders( buffer, frameSize);
+
 		// buffer now contains frame data of size frameSize at offset 0
 		// Insert in queue
 		status = tryInsertInQueue(sequenceNumber, runNumber, buffer, frameSize);
