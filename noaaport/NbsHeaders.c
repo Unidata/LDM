@@ -129,7 +129,7 @@ int nbs_decodeProdDefHeader(
                         totalSize, pdh->size);
             }
             else {
-                pdh->pshSize -= totalSize;
+                pdh->pshSize = totalSize - pdh->size;
                 if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
                     log_add("Product-specific header not indicated but PSH "
                             "size is %u bytes", pdh->pshSize);
