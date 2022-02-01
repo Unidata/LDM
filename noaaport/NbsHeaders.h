@@ -199,7 +199,7 @@ int nbs_decodeFrameHeader(
  *
  * @param[in] fh  Frame header
  */
-void nbs_log_FrameHeader(const NbsFrameHeader* fh);
+void nbs_logFrameHeader(const NbsFrameHeader* fh);
 
 /**
  * Decodes an NBS product-definition header
