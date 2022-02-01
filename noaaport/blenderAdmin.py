@@ -41,27 +41,26 @@ import  argparse
 
 
 class Blender():
+
 	"""
 		Unidata NOAAPort fanout server:
 		chico.unidata.ucar.edu <-> 128.117.140.37
 		Ports: 1201 - 1210, inclusive
 
-Here, for instance is the listing
-from ~ldm/etc/ldmd.conf on leno:
+Here is, for instance, the listing from ~ldm/etc/ldmd.conf on leno:
 
-# 20170313 - changed set of noaaportIngester instances to match:
-# http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
-#            CHANNEL PID MULTICAST ADDRESS Port DETAILS
-#            NMC     101     224.0.1.1     1201 NCEP / NWSTG
-#            GOES    102     224.0.1.2     1202 GOES / NESDIS
-#            NMC2    103     224.0.1.3     1203 NCEP / NWSTG2
-#            NOPT    104     224.0.1.4     1204 Optional Data - OCONUS Imagery / Model
-#            NPP     105     224.0.1.5     1205 National Polar-Orbiting Partnership / POLARSAT
-#            ???     ???     224.0.1.6     1206 National Blend of Models
-#            EXP     106     224.0.1.8     1208 Experimental
-#            GRW     107     224.0.1.9     1209 GOES-R Series West
-#            GRE     108     224.0.1.10    1210 GOES-R Series East
-#            NWWS    201     224.1.1.1     1201 Weather Wire
+http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
+            CHANNEL PID MULTICAST ADDRESS Port DETAILS
+            NMC     101     224.0.1.1     1201 NCEP / NWSTG
+            GOES    102     224.0.1.2     1202 GOES / NESDIS
+            NMC2    103     224.0.1.3     1203 NCEP / NWSTG2
+            NOPT    104     224.0.1.4     1204 Optional Data - OCONUS Imagery / Model
+            NPP     105     224.0.1.5     1205 National Polar-Orbiting Partnership / POLARSAT
+            ???     ???     224.0.1.6     1206 National Blend of Models
+            EXP     106     224.0.1.8     1208 Experimental
+            GRW     107     224.0.1.9     1209 GOES-R Series West
+            GRE     108     224.0.1.10    1210 GOES-R Series East
+            NWWS    201     224.1.1.1     1201 Weather Wire
 
 	"""
 
@@ -174,17 +173,19 @@ from ~ldm/etc/ldmd.conf on leno:
 		try:
 			proc = subprocess.check_output(cmd_proc, shell=True )
 			for line in proc.decode().splitlines():
-				print(line)
+				
 				procId = line.split()[1]
 				p = psutil.Process(int(procId))
 
-				go = input("Kill process? (Y/n)")
+				go = input(f"Kill process this process? \n{line}\n(Y/n)")
 				if 'Y' == go.rstrip():
 					p.kill()
 			
 
 		except Exception as e:
-			self.errmsg(f"{cmd} is currently NOT running! ")
+			# PRINT NOTHING
+			# self.errmsg(f"{cmd} is currently NOT running! ")
+			pass
 			
 	# Parse this script's command line
 	def cliParser(self):
