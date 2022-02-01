@@ -427,9 +427,6 @@ inputClientRoutine(void* id)
 
             log_info("Connecting to TCPServer server:  %s:%" PRIu16 "\n", hostId, port);
 
-            freeaddrinfo(addrInfo);
-            free(hostId);
-
             if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
                     sizeof(sockaddr)) )
             {
@@ -444,6 +441,9 @@ inputClientRoutine(void* id)
                 log_add("Lost connection with fanout server. Will retry after 60 sec. (%s:%" PRIu16 ")", hostId, port);
                 log_flush_warning();
             } // Connected
+
+            freeaddrinfo(addrInfo);
+            free(hostId);
 		} // Got address information
 
         close(socketClientFd);
