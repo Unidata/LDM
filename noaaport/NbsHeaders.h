@@ -194,6 +194,11 @@ int nbs_decodeFrameHeader(
         const size_t          size,
         NbsFrameHeader* const fh);
 
+/**
+ * logs frame header by calling `log_add()`.
+ *
+ * @param[in] fh  Frame header
+ */
 void nbs_log_FrameHeader(const NbsFrameHeader* fh);
 
 /**
@@ -212,6 +217,11 @@ int nbs_decodeProdDefHeader(
         const size_t            size,
         NbsProdDefHeader* const pdh);
 
+/**
+ * logs product-definition header by calling `log_add()`.
+ *
+ * @param[in] pdh  Product-definition header
+ */
 void nbs_logProdDefHeader(const NbsProdDefHeader* pdh);
 
 /**
@@ -232,6 +242,11 @@ int nbs_decodeProdSpecHeader(
         const NbsProdDefHeader*  pdh,
         NbsProdSpecHeader* const psh);
 
+/**
+ * logs product-specific header by calling `log_add()`.
+ *
+ * @param[in] psh  Product-specific header
+ */
 void nbs_logProdSpecHeader(const NbsProdSpecHeader* psh);
 
 /**

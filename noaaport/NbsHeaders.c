@@ -72,19 +72,19 @@ int nbs_decodeFrameHeader(
 
 void nbs_logFrameHeader(const NbsFrameHeader* fh)
 {
-    log_debug("Frame Header:\n"
-"hdlcAddress = %#x\n"
-"hdlcControl = %#x\n"
-"    version = %u\n"
-"       size = %u bytes\n"
-"    control = %#x\n"
-"    command = %u\n"
-" datastream = %u\n"
-"     source = %u\n"
-"destination = %u\n"
-"      seqno = %u\n"
-"      runno = %u\n"
-"   checksum = %u",
+    log_add("Frame Header:\n"
+"  hdlcAddress = %#x\n"
+"  hdlcControl = %#x\n"
+"      version = %u\n"
+"         size = %u bytes\n"
+"      control = %#x\n"
+"      command = %u\n"
+"   datastream = %u\n"
+"       source = %u\n"
+"  destination = %u\n"
+"        seqno = %u\n"
+"        runno = %u\n"
+"     checksum = %u",
            fh->hdlcAddress,
            fh->hdlcControl,
            fh->version,
@@ -130,6 +130,10 @@ int nbs_decodeProdDefHeader(
             }
             else {
                 pdh->pshSize = totalSize - pdh->size;
+                if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
+                    log_add("Frame isn't start-of-product but PSH "
+                            "size is %u bytes", pdh->pshSize);
+                }
                 if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
                     log_add("Product-specific header not indicated but PSH "
                             "size is %u bytes", pdh->pshSize);
@@ -152,17 +156,17 @@ int nbs_decodeProdDefHeader(
 
 void nbs_logProdDefHeader(const NbsProdDefHeader* const pdh)
 {
-    log_debug("Product-Description Header:\n"
-"        version = %u\n"
-"           size = %u bytes\n"
-"   transferType = %#x\n"
-"       PSH size = %u bytes\n"
-"       blockNum = %u\n"
-"dataBlockOffset = %u bytes\n"
-"  dataBlockSize = %u bytes\n"
-"   recsPerBlock = %u\n"
-"   blocksPerRec = %u\n"
-"     prodSeqNum = %u\n",
+    log_add("Product-Description Header:\n"
+"          version = %u\n"
+"             size = %u bytes\n"
+"     transferType = %#x\n"
+"         PSH size = %u bytes\n"
+"         blockNum = %u\n"
+"  dataBlockOffset = %u bytes\n"
+"    dataBlockSize = %u bytes\n"
+"     recsPerBlock = %u\n"
+"     blocksPerRec = %u\n"
+"       prodSeqNum = %u\n",
             pdh->version,
             pdh->size,
             pdh->transferType,
@@ -226,26 +230,26 @@ int nbs_decodeProdSpecHeader(
 
 void nbs_logProdSpecHeader(const NbsProdSpecHeader* psh)
 {
-    log_debug("Product-Specific Header:\n"
-" optFieldNum = %u\n"
-"optFieldType = %u\n"
-"        size = %u bytes\n"
-"     version = %u\n"
-"        flag = %#x\n"
-"   awipsSize = %u bytes\n"
-" bytesPerRec = %u\n"
-"        type = %u\n"
-"    category = %u\n"
-"    prodCode = %u\n"
-"    numFrags = %u\n"
-" nextHeadOff = %u\n"
-"    reserved = %u\n"
-"      source = %u\n"
-"      seqNum = %u\n"
-" ncfRecvTime = %u\n"
-" ncfSendTime = %u\n"
-"   currRunId = %u\n"
-"   origRunId = %u\n",
+    log_add("Product-Specific Header:\n"
+"   optFieldNum = %u\n"
+"  optFieldType = %u\n"
+"          size = %u bytes\n"
+"       version = %u\n"
+"          flag = %#x\n"
+"     awipsSize = %u bytes\n"
+"   bytesPerRec = %u\n"
+"          type = %u\n"
+"      category = %u\n"
+"      prodCode = %u\n"
+"      numFrags = %u\n"
+"   nextHeadOff = %u\n"
+"      reserved = %u\n"
+"        source = %u\n"
+"        seqNum = %u\n"
+"   ncfRecvTime = %u\n"
+"   ncfSendTime = %u\n"
+"     currRunId = %u\n"
+"     origRunId = %u\n",
             psh->optFieldNum,
             psh->optFieldType,
             psh->size,
@@ -291,7 +295,7 @@ int nbs_logHeaders(
             NbsProdDefHeader pdh;
             status = nbs_decodeProdDefHeader(buf, nbytes, &pdh);
             if (status) {
-                log_add("Invalid decode product-definition header");
+                log_add("Invalid product-definition header");
             }
             else {
                 buf += pdh.size;
