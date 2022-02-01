@@ -441,13 +441,13 @@ inputClientRoutine(void* id)
                 log_notice("CONNECTED!");
 
                 buildFrameRoutine(socketClientFd);
-                log_add("Lost connection with fanout server. Will retry after 60sec. (%s:%" PRIu16 ")", hostId, port);
+                log_add("Lost connection with fanout server. Will retry after 60 sec. (%s:%" PRIu16 ")", hostId, port);
                 log_flush_warning();
             } // Connected
 		} // Got address information
 
         close(socketClientFd);
-        sleep(5);
+        sleep(60);
     } // for
 
 	return 0;

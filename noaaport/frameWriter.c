@@ -26,7 +26,7 @@ fw_writeFrame(const Frame_t* aFrame)
 	        aFrame->seqNum, aFrame->runNum);
 
    	// FOR INTERACTIVE TESTING, BE SURE TO REDIRECT stdout TO "/dev/null"
-   	ssize_t ret = 1; // write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);
+   	ssize_t ret = write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);
     if( ret <= 0 )
     {
         log_add("Write frame data to standard output failure. (%s)",
