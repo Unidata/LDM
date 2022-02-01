@@ -146,6 +146,7 @@ int nbs_getFrame(
             // Decode and verify product-definition header
             if (nbs_decodeProdDefHeader(reader->buf+reader->fh.size,
                     reader->have, &reader->pdh) != 0) {
+                nbs_logFrameHeader(&reader->fh);
                 nbs_logProdDefHeader(&reader->pdh);
                 log_add("Invalid product-definition header");
             }
@@ -176,6 +177,8 @@ int nbs_getFrame(
                     if (nbs_decodeProdSpecHeader(
                             reader->buf+reader->fh.size+reader->pdh.size,
                             reader->have, &reader->pdh, &reader->psh) != 0) {
+                        nbs_logFrameHeader(&reader->fh);
+                        nbs_logProdDefHeader(&reader->pdh);
                         nbs_logProdSpecHeader(&reader->psh);
                         log_add("Invalid product-specific header");
                     }
@@ -222,7 +225,10 @@ int nbs_getFrame(
             break;
         }
 
-        if (reader->logSync) {
+        if (!reader->logSync) {
+            log_clear();
+        }
+        else {
             log_flush_debug(); // Logs headers
             log_warning("Synchronizing");
             reader->logSync = false;
