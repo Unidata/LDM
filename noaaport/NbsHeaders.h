@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <stdint.h>
 
+#define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame
+
 typedef struct NbsFrameHeader {
    unsigned hdlcAddress; ///< All ones
    unsigned hdlcControl; ///< Unused
@@ -206,6 +208,7 @@ void nbs_logFrameHeader(const NbsFrameHeader* fh);
  *
  * @param[in]  buf      Start of product-definition header
  * @param[in]  size     Size of buffer in bytes
+ * @param[in]  fh       Frame header
  * @param[out] pdh      Product-definition header
  * @retval     0        Success. `pdh` is set.
  * @retval     EINVAL   `buf == NULL || pdh == NULL` or `size` is too small.
@@ -215,6 +218,7 @@ void nbs_logFrameHeader(const NbsFrameHeader* fh);
 int nbs_decodeProdDefHeader(
         const uint8_t*          buf,
         const size_t            size,
+        const NbsFrameHeader*   fh,
         NbsProdDefHeader* const pdh);
 
 /**

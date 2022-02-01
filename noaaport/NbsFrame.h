@@ -17,7 +17,6 @@
 
 #define NBS_FH_SIZE  16    ///< Canonical frame header size in bytes
 #define NBS_PDH_SIZE 16    ///< Canonical product-definition header size in bytes
-#define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame
 
 enum {
     NBS_SUCCESS, ///< Success

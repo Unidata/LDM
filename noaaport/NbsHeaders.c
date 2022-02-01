@@ -102,6 +102,7 @@ void nbs_logFrameHeader(const NbsFrameHeader* fh)
 int nbs_decodeProdDefHeader(
         const uint8_t*          buf,
         const size_t            nbytes,
+        const NbsFrameHeader*   fh,
         NbsProdDefHeader* const pdh)
 {
     int status = EINVAL;
@@ -134,7 +135,7 @@ int nbs_decodeProdDefHeader(
                     log_add("Frame isn't start-of-product but PSH "
                             "size is %u bytes", pdh->pshSize);
                 }
-                if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
+                else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
                     log_add("Product-specific header not indicated but PSH "
                             "size is %u bytes", pdh->pshSize);
                 }
@@ -145,7 +146,16 @@ int nbs_decodeProdDefHeader(
                     pdh->recsPerBlock = buf[10];
                     pdh->blocksPerRec = buf[11];
                     pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
-                    status = 0;
+
+                    const unsigned long frameSize = fh->size + pdh->size +
+                            pdh->pshSize + pdh->dataBlockSize;
+                    if (frameSize > NBS_MAX_FRAME) {
+                        log_add("Total specified frame size is too large: %u",
+                                frameSize);
+                    }
+                    else {
+                        status = 0;
+                    }
                 }
             }
         }
@@ -293,7 +303,7 @@ int nbs_logHeaders(
             nbs_logFrameHeader(&fh);
 
             NbsProdDefHeader pdh;
-            status = nbs_decodeProdDefHeader(buf, nbytes, &pdh);
+            status = nbs_decodeProdDefHeader(buf, nbytes, &fh, &pdh);
             if (status) {
                 log_add("Invalid product-definition header");
             }
