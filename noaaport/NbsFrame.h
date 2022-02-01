@@ -27,9 +27,6 @@ enum {
 };
 
 typedef struct NbsReader  NbsReader;
-typedef NbsFrameHeader    NbsFH;
-typedef NbsProdDefHeader  NbsPDH;
-typedef NbsProdSpecHeader NbsPSH;
 
 #ifdef __cplusplus
 extern "C" {

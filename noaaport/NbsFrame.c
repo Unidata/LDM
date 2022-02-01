@@ -114,14 +114,13 @@ int nbs_getFrame(
         if ((status = ensureBytes(reader->fd, reader->buf, sizeof(reader->buf),
                 need, &reader->have)) != NBS_SUCCESS) {
             log_add("Couldn't read frame header");
-            if (status != NBS_SPACE)
-                break;
+            break;
         }
 
         // Decode and verify frame header
-        if (nbs_decodeFrameHeader(reader->buf, reader->have, &reader->fh)
+        if (nbs_decodeFH(reader->buf, reader->have, &reader->fh)
                 != 0) {
-            nbs_logFrameHeader(&reader->fh);
+            nbs_logFH(&reader->fh);
             log_add("Invalid frame header");
         }
         else {
@@ -142,10 +141,10 @@ int nbs_getFrame(
             }
 
             // Decode and verify product-definition header
-            if (nbs_decodeProdDefHeader(reader->buf+reader->fh.size,
+            if (nbs_decodePDH(reader->buf+reader->fh.size,
                     reader->have, &reader->fh, &reader->pdh) != 0) {
-                nbs_logFrameHeader(&reader->fh);
-                nbs_logProdDefHeader(&reader->pdh);
+                nbs_logFH(&reader->fh);
+                nbs_logPDH(&reader->pdh);
                 log_add("Invalid product-definition header");
             }
             else {
@@ -170,18 +169,19 @@ int nbs_getFrame(
                     }
 
                     // Decode and verify product-specific header
-                    if (nbs_decodeProdSpecHeader(
+                    if (nbs_decodePSH(
                             reader->buf+reader->fh.size+reader->pdh.size,
                             reader->have, &reader->pdh, &reader->psh) != 0) {
-                        nbs_logFrameHeader(&reader->fh);
-                        nbs_logProdDefHeader(&reader->pdh);
-                        nbs_logProdSpecHeader(&reader->psh);
+                        nbs_logFH(&reader->fh);
+                        nbs_logPDH(&reader->pdh);
+                        nbs_logPSH(&reader->psh);
                         log_add("Invalid product-specific header");
                         status = NBS_INVAL;
                     }
                 } // Entire PDH read and verified and PSH exists
 
                 if (status == 0) {
+                    // Read data block
                     need += reader->pdh.dataBlockSize;
                     if ((status = ensureBytes(reader->fd, reader->buf,
                             sizeof(reader->buf), need, &reader->have)) !=
@@ -207,7 +207,7 @@ int nbs_getFrame(
                     reader->logSync = true;
 
                     return NBS_SUCCESS;
-                } // All heads read and verified
+                } // All headers read and verified
             } // Valid PDH
         } // Valid FH
 
@@ -260,8 +260,8 @@ int nbs_getFrame(
 
         // Decode and verify frame header
         NbsFrameHeader fh;
-        if (nbs_decodeFrameHeader(buf, have, &fh) != 0) {
-            nbs_logFrameHeader(&fh);
+        if (nbs_decodeFH(buf, have, &fh) != 0) {
+            nbs_logFH(&fh);
             log_add("Invalid frame header");
         }
         else {
@@ -285,8 +285,8 @@ int nbs_getFrame(
 
             // Decode and verify product-definition header
             NbsProdDefHeader pdh;
-            if (nbs_decodeProdDefHeader(buf+fh.size, have, &pdh) != 0) {
-                nbs_logProdDefHeader(&pdh);
+            if (nbs_decodePDH(buf+fh.size, have, &pdh) != 0) {
+                nbs_logPDH(&pdh);
                 log_add("Invalid product-definition header");
             }
             else {
@@ -311,9 +311,9 @@ int nbs_getFrame(
 
                     // Decode and verify product-specific header
                     NbsProdSpecHeader psh;
-                    if (nbs_decodeProdSpecHeader(buf+fh.size+pdh.size, have,
+                    if (nbs_decodePSH(buf+fh.size+pdh.size, have,
                             &pdh, &psh) != 0) {
-                        nbs_logProdSpecHeader(&psh);
+                        nbs_logPSH(&psh);
                         log_add("Invalid product-specific header");
                     }
                     else {

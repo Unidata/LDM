@@ -17,10 +17,10 @@
 #include <netinet/in.h>
 #include <stddef.h>
 
-int nbs_decodeFrameHeader(
+int nbs_decodeFH(
         const uint8_t*        buf,
         const size_t          nbytes,
-        NbsFrameHeader* const fh)
+        NbsFH* const fh)
 {
     int status = EINVAL;
 
@@ -70,7 +70,7 @@ int nbs_decodeFrameHeader(
     return status;
 }
 
-void nbs_logFrameHeader(const NbsFrameHeader* fh)
+void nbs_logFH(const NbsFH* fh)
 {
     log_add("Frame Header:\n"
 "  hdlcAddress = %#x\n"
@@ -99,11 +99,11 @@ void nbs_logFrameHeader(const NbsFrameHeader* fh)
            fh->checksum);
 }
 
-int nbs_decodeProdDefHeader(
+int nbs_decodePDH(
         const uint8_t*          buf,
         const size_t            nbytes,
-        const NbsFrameHeader*   fh,
-        NbsProdDefHeader* const pdh)
+        const NbsFH*   fh,
+        NbsPDH* const pdh)
 {
     int status = EINVAL;
 
@@ -164,7 +164,7 @@ int nbs_decodeProdDefHeader(
     return status;
 }
 
-void nbs_logProdDefHeader(const NbsProdDefHeader* const pdh)
+void nbs_logPDH(const NbsPDH* const pdh)
 {
     log_add("Product-Description Header:\n"
 "          version = %u\n"
@@ -189,11 +189,11 @@ void nbs_logProdDefHeader(const NbsProdDefHeader* const pdh)
             pdh->prodSeqNum);
 }
 
-int nbs_decodeProdSpecHeader(
+int nbs_decodePSH(
         const uint8_t*           buf,
         const size_t             nbytes,
-        const NbsProdDefHeader*  pdh,
-        NbsProdSpecHeader* const psh)
+        const NbsPDH*  pdh,
+        NbsPSH* const psh)
 {
     int status = EINVAL;
 
@@ -238,7 +238,7 @@ int nbs_decodeProdSpecHeader(
     return status;
 }
 
-void nbs_logProdSpecHeader(const NbsProdSpecHeader* psh)
+void nbs_logPSH(const NbsPSH* psh)
 {
     log_add("Product-Specific Header:\n"
 "   optFieldNum = %u\n"
@@ -291,35 +291,35 @@ int nbs_logHeaders(
         log_add("NULL argument");
     }
     else {
-        NbsFrameHeader fh;
+        NbsFH fh;
 
-        status = nbs_decodeFrameHeader(buf, nbytes, &fh);
+        status = nbs_decodeFH(buf, nbytes, &fh);
         if (status) {
             log_add("Invalid frame header");
         }
         else {
             buf += fh.size;
             nbytes -= fh.size;
-            nbs_logFrameHeader(&fh);
+            nbs_logFH(&fh);
 
-            NbsProdDefHeader pdh;
-            status = nbs_decodeProdDefHeader(buf, nbytes, &fh, &pdh);
+            NbsPDH pdh;
+            status = nbs_decodePDH(buf, nbytes, &fh, &pdh);
             if (status) {
                 log_add("Invalid product-definition header");
             }
             else {
                 buf += pdh.size;
                 nbytes -= pdh.size;
-                nbs_logProdDefHeader(&pdh);
+                nbs_logPDH(&pdh);
 
                 if (pdh.pshSize) {
-                    NbsProdSpecHeader psh;
-                    status = nbs_decodeProdSpecHeader(buf, nbytes, &pdh, &psh);
+                    NbsPSH psh;
+                    status = nbs_decodePSH(buf, nbytes, &pdh, &psh);
                     if (status) {
                         log_add("Invalid product-specific header");
                     }
                     else {
-                        nbs_logProdSpecHeader(&psh);
+                        nbs_logPSH(&psh);
                     }
                 }
             }

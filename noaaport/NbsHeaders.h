@@ -16,9 +16,9 @@
 #include <stdint.h>
 #include <stdint.h>
 
-#define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame
+#define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame in bytes
 
-typedef struct NbsFrameHeader {
+typedef struct NbsFH {
    unsigned hdlcAddress; ///< All ones
    unsigned hdlcControl; ///< Unused
    unsigned version;     ///< SBN version
@@ -64,9 +64,9 @@ typedef struct NbsFrameHeader {
     * level header (except this field of 2 bytes).
     */
    unsigned checksum;
-} NbsFrameHeader;
+} NbsFH;
 
-typedef struct NbsProdDefHeader {
+typedef struct NbsPDH {
     unsigned version; ///< Version
     unsigned size;    ///< Header length in bytes
     /**
@@ -107,9 +107,9 @@ typedef struct NbsProdDefHeader {
      * verify that blocks belong to the same product.
      */
     unsigned prodSeqNum;
-} NbsProdDefHeader;
+} NbsPDH;
 
-typedef struct NbsProdSpecHeader {
+typedef struct NbsPSH {
     unsigned optFieldNum;
     unsigned optFieldType;
     unsigned size;    ///< Size of product-specific header in bytes
@@ -174,7 +174,7 @@ typedef struct NbsProdSpecHeader {
      * Original run ID for product (used during retransmit only)
      */
     unsigned origRunId;
-} NbsProdSpecHeader;
+} NbsPSH;
 
 #ifdef __cplusplus
 extern "C" {
@@ -191,17 +191,17 @@ extern "C" {
  *                      `log_add()` called.
  * @retval     EBADMSG  Invalid frame header. `log_add()` called.
  */
-int nbs_decodeFrameHeader(
+int nbs_decodeFH(
         const uint8_t*        buf,
         const size_t          size,
-        NbsFrameHeader* const fh);
+        NbsFH* const fh);
 
 /**
  * logs frame header by calling `log_add()`.
  *
  * @param[in] fh  Frame header
  */
-void nbs_logFrameHeader(const NbsFrameHeader* fh);
+void nbs_logFH(const NbsFH* fh);
 
 /**
  * Decodes an NBS product-definition header
@@ -215,18 +215,18 @@ void nbs_logFrameHeader(const NbsFrameHeader* fh);
  *                      `log_add()` called.
  * @retval     EBADMSG  Invalid product-definition header. `log_add()` called.
  */
-int nbs_decodeProdDefHeader(
+int nbs_decodePDH(
         const uint8_t*          buf,
         const size_t            size,
-        const NbsFrameHeader*   fh,
-        NbsProdDefHeader* const pdh);
+        const NbsFH*   fh,
+        NbsPDH* const pdh);
 
 /**
  * logs product-definition header by calling `log_add()`.
  *
  * @param[in] pdh  Product-definition header
  */
-void nbs_logProdDefHeader(const NbsProdDefHeader* pdh);
+void nbs_logPDH(const NbsPDH* pdh);
 
 /**
  * Decodes an NBS product-specific header
@@ -240,18 +240,18 @@ void nbs_logProdDefHeader(const NbsProdDefHeader* pdh);
  *                      too small. `log_add()` called.
  * @retval     EBADMSG  Invalid product-specific header. `log_add()` called.
  */
-int nbs_decodeProdSpecHeader(
+int nbs_decodePSH(
         const uint8_t*           buf,
         const size_t             size,
-        const NbsProdDefHeader*  pdh,
-        NbsProdSpecHeader* const psh);
+        const NbsPDH*  pdh,
+        NbsPSH* const psh);
 
 /**
  * logs product-specific header by calling `log_add()`.
  *
  * @param[in] psh  Product-specific header
  */
-void nbs_logProdSpecHeader(const NbsProdSpecHeader* psh);
+void nbs_logPSH(const NbsPSH* psh);
 
 /**
  * Logs all, undecoded NBS headers.
