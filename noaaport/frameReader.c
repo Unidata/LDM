@@ -2,6 +2,7 @@
 
 #include "blender.h"
 #include "frameReader.h"
+#include "NbsFrame.h"
 #include "noaaportFrame.h"
 #include "globals.h"
 
@@ -23,22 +24,6 @@ extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
 extern int   	tryInsertInQueue( uint32_t, uint16_t, unsigned char*, uint16_t);
 extern int 		nbs_logHeaders( const uint8_t* buf, size_t nbytes);
 //  ========================================================================
-
-static ssize_t
-getBytes(int fd, char* buf, size_t nbytes)
-{
-    int nleft = nbytes;
-    while (nleft > 0)
-    {
-        ssize_t n = read(fd, buf, nleft);
-        //int n = recv(fd, (char *)buf,  nbytes , 0) ;
-        if (n < 0 || n == 0)
-            return n;
-        buf += n;
-        nleft -= n;
-    }
-    return nbytes;
-}
 
 /**
  * Utility function to read SBN actual data bytes from the connection

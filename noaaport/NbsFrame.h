@@ -36,6 +36,8 @@ typedef NbsProdSpecHeader NbsPSH;
 extern "C" {
 #endif
 
+ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
+
 /**
  * Returns a new NBS frame reader.
  *

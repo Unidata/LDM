@@ -121,7 +121,7 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 
 blender_SOURCES		= blender.c $(COMMON_SOURCES) \
  	frameWriter.c queueManager.c frameReader.c CircFrameBuf.cpp \
- 	misc.c NbsHeaders.c NbsHeaders.h
+ 	misc.c NbsHeaders.c NbsHeaders.h NbsFrame.c NbsFrame.h
  	
 testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 

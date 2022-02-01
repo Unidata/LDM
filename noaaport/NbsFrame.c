@@ -14,8 +14,23 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#include <unistd.h>
 
-int getBytes(int fd, uint8_t* buf, size_t nbytes);
+ssize_t
+getBytes(int fd, uint8_t* buf, size_t nbytes)
+{
+    int nleft = nbytes;
+    while (nleft > 0)
+    {
+        ssize_t n = read(fd, buf, nleft);
+        //int n = recv(fd, (char *)buf,  nbytes , 0) ;
+        if (n < 0 || n == 0)
+            return n;
+        buf += n;
+        nleft -= n;
+    }
+    return nbytes;
+}
 
 /**
  * Ensures that the frame buffer contains a given number of bytes. Reads more
