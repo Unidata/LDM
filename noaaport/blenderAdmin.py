@@ -177,7 +177,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 				procId = line.split()[1]
 				p = psutil.Process(int(procId))
 
-				go = input(f"Kill process this process? \n{line}\n(Y/n)")
+				go = input(f"\n\t\tKill process this process? \n\n\t\t---> {line}\n\n\t\t\t\tYes/No (Y/n)\n\t\t\t\t")
 				if 'Y' == go.rstrip():
 					p.kill()
 			

@@ -327,8 +327,8 @@ buildFrameRoutine(int clientSockFd)
 		if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
 				== NBS_SUCCESS)
 		{
-			status = nbs_logHeaders( buf, size); // This just calls `log_add()`
-			log_flush_debug();
+			//status = nbs_logHeaders( buf, size); // This just calls `log_add()`
+			//log_flush_debug();
 
 			// buffer now contains frame data of size frameSize at offset 0
 			// Insert in queue
