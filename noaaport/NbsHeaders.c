@@ -100,10 +100,10 @@ void nbs_logFH(const NbsFH* fh)
 }
 
 int nbs_decodePDH(
-        const uint8_t*          buf,
-        const size_t            nbytes,
+        const uint8_t* buf,
+        const size_t   nbytes,
         const NbsFH*   fh,
-        NbsPDH* const pdh)
+        NbsPDH* const  pdh)
 {
     int status = EINVAL;
 
@@ -149,7 +149,8 @@ int nbs_decodePDH(
 
                     const unsigned long frameSize = fh->size + pdh->size +
                             pdh->pshSize + pdh->dataBlockSize;
-                    if (frameSize > NBS_MAX_FRAME) {
+                    // Ignore garbage frame size in synchronizing frames
+                    if (frameSize > NBS_MAX_FRAME && fh->command != 5) {
                         log_add("Total specified frame size is too large: %u",
                                 frameSize);
                     }

@@ -195,6 +195,9 @@ int nbs_getFrame(
                     }
                 } // Entire PDH read and verified and PSH exists
 
+                if (reader->fh.command == 5)
+                    continue; // Ignore synchronizing frames
+
                 if (status == 0) {
                     // Read data block
                     need += reader->pdh.dataBlockSize;
