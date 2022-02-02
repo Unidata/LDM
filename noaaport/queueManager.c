@@ -116,10 +116,10 @@ queue_start(const double frameLatency)
  * post-condition: 	runMutex is unLOCKed
  */
 int
-tryInsertInQueue(  unsigned 		sequenceNumber,
-		       	   unsigned 		runNumber,
-				   unsigned char*	buffer,
-				   size_t 			frameBytes)
+tryInsertInQueue(  unsigned 		    sequenceNumber,
+		       	   unsigned 		    runNumber,
+				   const unsigned char*	buffer,
+				   size_t 			    frameBytes)
 {
 	int status = 0;
 

@@ -242,7 +242,8 @@ int nbs_decodeFH(
         NbsFH* const fh);
 
 /**
- * logs frame header by calling `log_add()`.
+ * Adds log messages for a frame header by calling `log_add()`. Doesn't call
+ * `log_flush()`.
  *
  * @param[in] fh  Frame header
  */
@@ -267,7 +268,8 @@ int nbs_decodePDH(
         NbsPDH* const pdh);
 
 /**
- * logs product-definition header by calling `log_add()`.
+ * Adds log messages for a product-definition header by calling `log_add()`.
+ * Doesn't call `log_flush()`.
  *
  * @param[in] pdh  Product-definition header
  */
@@ -292,14 +294,16 @@ int nbs_decodePSH(
         NbsPSH* const psh);
 
 /**
- * logs product-specific header by calling `log_add()`.
+ * Adds log messages for a product-specific header by calling `log_add()`.
+ * Doesn't call `log_flush()`.
  *
  * @param[in] psh  Product-specific header
  */
 void nbs_logPSH(const NbsPSH* psh);
 
 /**
- * Logs all, undecoded NBS headers.
+ * Adds log messages for all, undecoded NBS headers by calling `log_add()`.
+ * Doesn't call `log_flush()`.
  *
  * @param[in]  buf      Start of frame header
  * @param[in]  size     Size of buffer in bytes

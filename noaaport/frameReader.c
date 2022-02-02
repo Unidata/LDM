@@ -315,21 +315,19 @@ buildFrameRoutine(int clientSockFd)
 
     NbsReader* nbsReader = nbs_newReader(clientSockFd);
 
-    const uint8_t** const buf;
-    size_t               size;
-    const NbsFH** const   fh;
-    const NbsPDH** const  pdh;
-    const NbsPSH** const  psh;
+    const uint8_t* buf;
+    size_t         size;
+    const NbsFH*   fh;
+    const NbsPDH*  pdh;
+    const NbsPSH*  psh;
 
 
     int status  = NBS_SUCCESS;
-    //unsigned char buf[SBN_FRAME_SIZE] = {};
-    // Set `buf`, `size`, `fh`, `pdh`, and `psh`
-//    if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
-    if( (status = nbs_getFrame( nbsReader, buf, &size, fh, pdh, psh ) )
+    if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
     		== NBS_SUCCESS)
     {
-		status = nbs_logHeaders( *buf, size);
+		status = nbs_logHeaders( buf, size); // This just calls `log_add()`
+		log_flush_debug();
 
 		// buffer now contains frame data of size frameSize at offset 0
 		// Insert in queue
