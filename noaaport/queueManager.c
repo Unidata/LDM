@@ -119,7 +119,7 @@ int
 tryInsertInQueue(  unsigned 		sequenceNumber,
 		       	   unsigned 		runNumber,
 				   unsigned char*	buffer,
-				   unsigned 		frameBytes)
+				   size_t 			frameBytes)
 {
 	int status = 0;
 

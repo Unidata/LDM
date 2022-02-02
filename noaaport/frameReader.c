@@ -313,49 +313,40 @@ buildFrameRoutine(int clientSockFd)
     log_notice("In buildFrameRoutine() waiting to read from "
     		"(fanout) server socket...\n");
 
-    int invalidChkSumCounter = 0;
-    unsigned char buffer[SBN_FRAME_SIZE] = {};
-    ssize_t       n, expect = 16;
-    for (n = getBytes(clientSockFd, buffer, expect); n == expect;) {
-        if (buffer[0] != 255 || badCheckSum(buffer, &invalidChkSumCounter)) {
-            memmove(buffer, buffer+1, 15); // Shift buffer by one byte
-            expect = 1;
-            n = getBytes(clientSockFd, buffer+15, expect);
-        }
-        else {
-        	if(invalidChkSumCounter > 0)
-        	{
-        		log_debug("Number of invalid check sum occurrences: %lu", invalidChkSumCounter);
-        		invalidChkSumCounter = 0;
-        	}
-            // Process the frame with buffer already
-        	// filled with 16-byte frame header
-        	int ret;
-            if ( (ret = processFrame(clientSockFd, buffer, sizeof(buffer)))
-                    == -1)
-            {
-            	log_add("processFrame() FAILED: %d.", ret);
-                break;
-            }
-            if (ret == -2) {
-                log_add("Re-synchronizing");
-                log_flush_warning();
-            }
-            // read the next frame
-            expect = 16;
-            n = getBytes(clientSockFd, buffer, expect);
-        }
+    NbsReader* nbsReader = nbs_newReader(clientSockFd);
 
-    }
-    if( n == -1 )
+    const uint8_t** const buf;
+    size_t               size;
+    const NbsFH** const   fh;
+    const NbsPDH** const  pdh;
+    const NbsPSH** const  psh;
+
+
+    int status  = NBS_SUCCESS;
+    //unsigned char buf[SBN_FRAME_SIZE] = {};
+    // Set `buf`, `size`, `fh`, `pdh`, and `psh`
+//    if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
+    if( (status = nbs_getFrame( nbsReader, buf, &size, fh, pdh, psh ) )
+    		== NBS_SUCCESS)
     {
-    	log_add_syserr("Read failure");
-    	// n == -1 ==> read error
+		status = nbs_logHeaders( *buf, size);
+
+		// buffer now contains frame data of size frameSize at offset 0
+		// Insert in queue
+		status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
     }
-    else
+
+    if( status == NBS_IO)
     {
-    	log_add("Read %zd bytes; expected: %zd", n, expect);
+        log_add_syserr("Read failure");
+        // n == -1 ==> read error
     }
+    if( status == NBS_EOF)
+    {
+    	log_add("End of file");
+    }
+
+    nbs_freeReader(nbsReader);
 }
 
 /**

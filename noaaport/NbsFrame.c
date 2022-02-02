@@ -98,6 +98,19 @@ NbsReader* nbs_newReader(int fd)
     reader->logSync = true;
 }
 
+/**
+ * Frees the resources associated with an NBS frame reader. Closes the
+ * file descriptor given to `nbs_newReader()`.
+ *
+ * @param[in] reader  NBS reader
+ * @see `nbs_newReader()`
+ */
+void nbs_freeReader(NbsReader* reader)
+{
+	close(reader->fd);
+	free(reader);
+}
+
 int nbs_getFrame(
         NbsReader* const      reader,
         const uint8_t** const buf,
