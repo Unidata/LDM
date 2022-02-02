@@ -18,7 +18,9 @@
 
 #define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame in bytes
 
-typedef struct NbsFH {
+/// NBS Frame Header
+typedef struct NbsFH
+{
    unsigned hdlcAddress; ///< All ones
    unsigned hdlcControl; ///< Unused
    unsigned version;     ///< SBN version
@@ -66,7 +68,9 @@ typedef struct NbsFH {
    unsigned checksum;
 } NbsFH;
 
-typedef struct NbsPDH {
+/// NBS Product-Definition Header
+typedef struct NbsPDH
+{
     unsigned version; ///< Version
     unsigned size;    ///< Header length in bytes
     /**
@@ -109,7 +113,9 @@ typedef struct NbsPDH {
     unsigned prodSeqNum;
 } NbsPDH;
 
-typedef struct NbsPSH {
+/// NBS Product-Specific Header
+typedef struct NbsPSH
+{
     unsigned optFieldNum;
     unsigned optFieldType;
     unsigned size;    ///< Size of product-specific header in bytes
@@ -119,7 +125,13 @@ typedef struct NbsPSH {
       *     1 = Start of a new product
       *     2 = Product transfer still in progress
       *     4 = End (last packet) of this product
+      *     8 = Product error
       *    16 = Product Retransmit
+      *    32 = Product Abort
+      *
+      *    Unpublished Information:
+      *     - Transfer Type is a bit mask of possible values
+      *     - Value 0x40 is defined as “XFR_MORE_HDR”
       */
     unsigned flag;
     unsigned awipsSize;   ///< Length of AWIPS product-specific header in bytes
@@ -154,6 +166,16 @@ typedef struct NbsPSH {
      * the next product-specific header. Reserved for future consideration.
      */
     unsigned nextHeadOff;
+#if 1
+    /*
+     * The following is from
+     *   NOAAPORT Broadcast System Document
+     *   1 October 1997
+     *   Contract No. 50-SPNA-3-00001
+     *   SOW C.3.1.2.5.8.1
+     *   CDRL A010A
+     *   Doc. ID No. AWP.DSN.NPBRD-04.00
+     */
     unsigned reserved; ///< Reserved
     /**
      * Product original source at central interface (e. g., NWSTG PVC, etc).
@@ -174,6 +196,29 @@ typedef struct NbsPSH {
      * Original run ID for product (used during retransmit only)
      */
     unsigned origRunId;
+#else
+    /*
+     * The following is from
+     *   NOAA Weather Wire Service
+     *   (NWWS) Project
+     *   NWWS Interface Information Document
+     *   Version 0.3
+     *   August 26, 2014
+     */
+    unsigned baseProdSeqNum; ///< Product sequence number as sent by NCF
+    unsigned baseProdSrc:    ///< Product source identification
+    unsigned prodStartTime;  ///< Time that product started being processed
+    unsigned ncfRecvTime;    ///< Time that product started being received at NCF
+    unsigned ncfSendTime;    ///< Time that product started transmit from NCF
+    unsigned procCntrlFlag;  ///< Control Flag: 0=OK 1=Abort receive list 2=Discard
+    unsigned lastBuf;        ///< Last Buffer to put on list
+    unsigned firstBufOnList; ///< Buffer number currently at head of list
+    unsigned expectBufNum;   ///< Total Buffers expected for the product
+    /**
+     * Unique product-specific run identifier
+     */
+    unsigned currRunId;
+#endif
 } NbsPSH;
 
 #ifdef __cplusplus
