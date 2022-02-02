@@ -96,6 +96,8 @@ NbsReader* nbs_newReader(int fd)
     reader->fd = fd;
     reader->have = 0;
     reader->logSync = true;
+
+    return reader;
 }
 
 /**

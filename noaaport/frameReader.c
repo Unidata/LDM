@@ -321,30 +321,34 @@ buildFrameRoutine(int clientSockFd)
     const NbsPDH*  pdh;
     const NbsPSH*  psh;
 
-
-    int status  = NBS_SUCCESS;
-    if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
-    		== NBS_SUCCESS)
+    for(;;)
     {
-		status = nbs_logHeaders( buf, size); // This just calls `log_add()`
-		log_flush_debug();
+		int status  = NBS_SUCCESS;
+		if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
+				== NBS_SUCCESS)
+		{
+			status = nbs_logHeaders( buf, size); // This just calls `log_add()`
+			log_flush_debug();
 
-		// buffer now contains frame data of size frameSize at offset 0
-		// Insert in queue
-		status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
-    }
+			// buffer now contains frame data of size frameSize at offset 0
+			// Insert in queue
+			status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
+		}
 
-    if( status == NBS_IO)
-    {
-        log_add_syserr("Read failure");
-        // n == -1 ==> read error
-    }
-    if( status == NBS_EOF)
-    {
-    	log_add("End of file");
-    }
+		if( status == NBS_IO)
+		{
+			log_add_syserr("Read failure");
+			// n == -1 ==> read error
+		}
+		if( status == NBS_EOF)
+		{
+			log_add("End of file");
+		}
+
+    } // for
 
     nbs_freeReader(nbsReader);
+
 }
 
 /**
