@@ -172,8 +172,15 @@ int nbs_getFrame(
                     break;
                 }
 
-                if (reader->pdh.pshSize) {
-                    // Ensure buffer contains possible product-specific header
+                if (reader->pdh.pshSize == 0) {
+                    if (reader->pdh.transferType == 0 ||
+                            reader->fh.command == NBS_FH_CMD_SYNC) {
+                        // Ignore frame with bogus PDH
+                        status = NBS_INVAL;
+                    }
+                }
+                else {
+                    // Ensure buffer contains product-specific header
                     need = reader->fh.size + reader->pdh.size +
                             reader->pdh.pshSize;
                     if ((status = ensureBytes(reader->fd, reader->buf,
@@ -193,10 +200,7 @@ int nbs_getFrame(
                         log_add("Invalid product-specific header");
                         status = NBS_INVAL;
                     }
-                } // Entire PDH read and verified and PSH exists
-
-                if (reader->fh.command == 5)
-                    continue; // Ignore synchronizing frames
+                }
 
                 if (status == 0) {
                     // Read data block
@@ -213,7 +217,8 @@ int nbs_getFrame(
                         *buf = reader->buf;
                     if (size)
                         *size = reader->fh.size + reader->pdh.size +
-                                reader->pdh.pshSize + reader->pdh.dataBlockSize;
+                                reader->pdh.pshSize +
+                                reader->pdh.dataBlockSize;
                     if (fh)
                         *fh = &reader->fh;
                     if (pdh)

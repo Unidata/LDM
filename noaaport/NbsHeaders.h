@@ -18,6 +18,11 @@
 
 #define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame in bytes
 
+/// Frame header command values:
+enum {
+    NBS_FH_CMD_SYNC = 5
+};
+
 /// NBS Frame Header
 typedef struct NbsFH
 {

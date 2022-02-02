@@ -131,36 +131,42 @@ int nbs_decodePDH(
             }
             else {
                 pdh->pshSize = totalSize - pdh->size;
-                if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
-                    log_add("Frame isn't start-of-product but PSH "
-                            "size is %u bytes", pdh->pshSize);
-                }
-                else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
-                    log_add("Product-specific header not indicated but PSH "
-                            "size is %u bytes", pdh->pshSize);
+                pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+                pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+                pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
+                pdh->recsPerBlock = buf[10];
+                pdh->blocksPerRec = buf[11];
+                pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+
+                // Test for a PDH with values that shouldn't be checked
+                if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_SYNC ||
+                        pdh->transferType == 0)) {
+                    status = 0;
                 }
                 else {
-                    pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
-                    pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
-                    pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
-                    pdh->recsPerBlock = buf[10];
-                    pdh->blocksPerRec = buf[11];
-                    pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
-
-                    const unsigned long frameSize = fh->size + pdh->size +
-                            pdh->pshSize + pdh->dataBlockSize;
-                    // Ignore garbage frame size in synchronizing frames
-                    if (frameSize > NBS_MAX_FRAME && fh->command != 5) {
-                        log_add("Total specified frame size is too large: %u",
-                                frameSize);
+                    if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
+                        log_add("Frame isn't start-of-product but PSH "
+                                "size is %u bytes", pdh->pshSize);
+                    }
+                    else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
+                        log_add("Product-specific header not indicated but PSH "
+                                "size is %u bytes", pdh->pshSize);
                     }
                     else {
-                        status = 0;
-                    }
-                }
-            }
-        }
-    }
+                        const unsigned long frameSize = fh->size + pdh->size +
+                                pdh->pshSize + pdh->dataBlockSize;
+                        if (frameSize > NBS_MAX_FRAME) {
+                            log_add("Total specified frame size is too large: "
+                                    "%u bytes", frameSize);
+                        }
+                        else {
+                            status = 0;
+                        }
+                    } // Finite PSH that should exist
+                } // PDH with values that should be checked
+            } // PDH size + PSH size >= PDH size
+        } // PDH size > 16 bytes
+    } // Have sufficient bytes for PDH
 
     return status;
 }

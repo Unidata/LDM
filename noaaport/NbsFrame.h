@@ -18,6 +18,7 @@
 #define NBS_FH_SIZE  16    ///< Canonical frame header size in bytes
 #define NBS_PDH_SIZE 16    ///< Canonical product-definition header size in bytes
 
+/// NBS return codes:
 enum {
     NBS_SUCCESS, ///< Success
     NBS_SPACE,   ///< Insufficient space for frame
