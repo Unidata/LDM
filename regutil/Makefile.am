@@ -41,7 +41,7 @@ AM_CPPFLAGS		= \
     -I$(top_srcdir)/mcast_lib/ldm7
 regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
-BUILT_SOURCES		= regpar.tab substPaths registry.xml
+BUILT_SOURCES		= substPaths registry.xml
 dist_man1_MANS		= regutil.1
 CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
 			  registry.xml
@@ -55,20 +55,6 @@ CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
 # default   Default value
 # perl-id   Identifier of corresponding perl(1) variable in ldmadmin(1)
 #           configuration-file, if it exists
-regpar.tab:	$(srcdir)/regpar.tab.in
-	sed -e 's;@''LDMHOME@;$(LDMHOME);g' \
-	    -e 's;@''LOGS_DIR@;$(LOGS_DIR);g' \
-	    -e 's;@''QUEUE_DIR@;$(QUEUE_DIR);g' \
-	    -e 's;@''DATA_DIR@;$(DATA_DIR);g' \
-	    -e 's;@''HOSTNAME@;$(HOSTNAME);g' \
-	    -e 's;@''NTPDATE@;$(NTPDATE);g' \
-	    -e 's;@''LOG_FILE@;$(LOG_FILE);g' \
-	    -e 's;@''METRICS_FILE@;$(METRICS_FILE);g' \
-	    -e 's;@''NETSTAT@;$(NETSTAT);g' \
-	    -e 's;@''TOP@;$(TOP);g' \
-	    -e 's;@''ETC_DIR@;$(ETC_DIR);g' \
-	    $(srcdir)/regpar.tab.in >$@.tmp
-	mv $@.tmp $@
 
 substPaths:	$(srcdir)/regpar.tab.in
 	$(AWK) -F : 'BEGIN {print "sed \\"} \

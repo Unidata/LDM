@@ -486,6 +486,7 @@ AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
 # because an LDM installation has both version-dependent and version-independent
 # installation directories.
 test "$sysconfdir" = '${prefix}/etc' && sysconfdir="${LDMHOME}/etc"
+AC_SUBST([ETC_DIR], ["$sysconfdir"])
 test "$localstatedir" = '${prefix}/var' && localstatedir="${LDMHOME}/var"
 
 AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
@@ -552,6 +553,7 @@ fi
 AM_CONDITIONAL([HAVE_RPCGEN], [test "$RPCGEN"])
 
 UD_PROG_NTPDATE
+AC_SUBST([NTPDATE], ["$NTPDATE"])
 UD_PROG_NETSTAT
 UD_PROG_TOP
 UD_LIB_YACC
