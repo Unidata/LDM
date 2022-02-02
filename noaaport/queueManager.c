@@ -118,7 +118,6 @@ queue_start(const double frameLatency)
 int
 tryInsertInQueue(  unsigned 		    sequenceNumber,
 		       	   unsigned 		    runNumber,
-				   //const unsigned char*	buffer,
 				   const uint8_t* const buffer,
 				   size_t 			    frameBytes)
 {
