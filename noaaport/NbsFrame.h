@@ -57,17 +57,18 @@ void nbs_freeReader(NbsReader* reader);
 /**
  * Returns the next NBS frame.
  *
- * @param[in]  reader  NBS reader
- * @param[out] buf     Pointer to NBS frame. May be NULL.
- * @param[out] size    Size of NBS frame. May be NULL.
- * @param[out] fh      Pointer to decoded frame header. May be NULL.
- * @param[out] pdh     Pointer to decoded product-definition header. May be
- *                     NULL.
- * @param[out] psh     Pointer to decoded product-specific header. May be NULL.
- * @retval NBS_SUCCESS  Success. `buf`, `size`, `fh`, `pdh`, and `psh` are set
- *                      if non-NULL.
- * @retval NBS_EOF  End-of-file read
- * @retval NBS_IO   I/O failure
+ * @param[in]  reade r  NBS reader
+ * @param[out] buf      Pointer to NBS frame. May be NULL.
+ * @param[out] size     Size of NBS frame. May be NULL.
+ * @param[out] fh       Pointer to decoded frame header. May be NULL.
+ * @param[out] pdh      Pointer to decoded product-definition header. May be
+ *                      NULL.
+ * @param[out] psh      Pointer to decoded product-specific header. May be NULL.
+ * @retval NBS_SUCCESS  Success. `buf`, `size`, `fh`, `pdh` are set if non-NULL.
+ *                      If non-NULL, `psh` is set if the PSH exists and to NULL
+ *                      if it doesn't.
+ * @retval NBS_EOF      End-of-file read
+ * @retval NBS_IO       I/O failure
  */
 int nbs_getFrame(
         NbsReader* const      reader,

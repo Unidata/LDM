@@ -139,6 +139,9 @@ int nbs_getFrame(
             log_add("Invalid frame header");
         }
         else {
+            if (fh)
+                *fh = &reader->fh;
+
             // Read rest of frame header
             need = reader->fh.size;
             if ((status = ensureBytes(reader->fd, reader->buf,
@@ -163,6 +166,9 @@ int nbs_getFrame(
                 log_add("Invalid product-definition header");
             }
             else {
+                if (pdh)
+                    *pdh = &reader->pdh;
+
                 // Read rest of product-definition header
                 need = reader->fh.size + reader->pdh.size;
                 if ((status = ensureBytes(reader->fd, reader->buf,
@@ -175,9 +181,11 @@ int nbs_getFrame(
                 if (reader->pdh.pshSize == 0) {
                     if (reader->pdh.transferType == 0 ||
                             reader->fh.command == NBS_FH_CMD_SYNC) {
-                        // Ignore frame with bogus PDH
-                        status = NBS_INVAL;
+                        // Such frames have no data block. Ensure it's ignored
+                        reader->pdh.dataBlockSize = 0;
                     }
+                    if (psh)
+                        *psh = NULL;
                 }
                 else {
                     // Ensure buffer contains product-specific header
@@ -200,17 +208,23 @@ int nbs_getFrame(
                         log_add("Invalid product-specific header");
                         status = NBS_INVAL;
                     }
+                    else {
+                        if (psh)
+                            *psh = &reader->psh;
+                    }
                 }
 
                 if (status == 0) {
-                    // Read data block
-                    need += reader->pdh.dataBlockSize;
-                    if ((status = ensureBytes(reader->fd, reader->buf,
-                            sizeof(reader->buf), need, &reader->have)) !=
-                            NBS_SUCCESS) {
-                        log_add("Couldn't read data block");
-                        if (status != NBS_SPACE)
-                            break;
+                    if (reader->pdh.dataBlockSize) {
+                        // Read data block
+                        need += reader->pdh.dataBlockSize;
+                        if ((status = ensureBytes(reader->fd, reader->buf,
+                                sizeof(reader->buf), need, &reader->have)) !=
+                                NBS_SUCCESS) {
+                            log_add("Couldn't read data block");
+                            if (status != NBS_SPACE)
+                                break;
+                        }
                     }
 
                     if (buf)
@@ -219,12 +233,6 @@ int nbs_getFrame(
                         *size = reader->fh.size + reader->pdh.size +
                                 reader->pdh.pshSize +
                                 reader->pdh.dataBlockSize;
-                    if (fh)
-                        *fh = &reader->fh;
-                    if (pdh)
-                        *pdh = &reader->pdh;
-                    if (psh)
-                        *psh = &reader->psh;
 
                     reader->have = 0;
                     reader->logSync = true;
