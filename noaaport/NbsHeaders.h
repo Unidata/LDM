@@ -267,10 +267,10 @@ void nbs_logFH(const NbsFH* fh);
  * @retval     EBADMSG  Invalid product-definition header. `log_add()` called.
  */
 int nbs_decodePDH(
-        const uint8_t*          buf,
-        const size_t            size,
+        const uint8_t* buf,
+        const size_t   size,
         const NbsFH*   fh,
-        NbsPDH* const pdh);
+        NbsPDH* const  pdh);
 
 /**
  * Adds log messages for a product-definition header by calling `log_add()`.
@@ -293,10 +293,10 @@ void nbs_logPDH(const NbsPDH* pdh);
  * @retval     EBADMSG  Invalid product-specific header. `log_add()` called.
  */
 int nbs_decodePSH(
-        const uint8_t*           buf,
-        const size_t             size,
+        const uint8_t* buf,
+        const size_t   size,
         const NbsPDH*  pdh,
-        NbsPSH* const psh);
+        NbsPSH* const  psh);
 
 /**
  * Adds log messages for a product-specific header by calling `log_add()`.
