@@ -133,7 +133,7 @@ signal_handler( const int sig)
             // .. add as needed
             break;
         case SIGUSR2:
-            // (void)log_roll_level();
+            (void)log_roll_level();
             break;
     }
     return;
