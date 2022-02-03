@@ -18,9 +18,9 @@
 #include <stddef.h>
 
 int nbs_decodeFH(
-        const uint8_t*        buf,
-        const size_t          nbytes,
-        NbsFH* const fh)
+        const uint8_t* buf,
+        const size_t   nbytes,
+        NbsFH* const   fh)
 {
     int status = EINVAL;
 
@@ -131,39 +131,44 @@ int nbs_decodePDH(
             }
             else {
                 pdh->pshSize = totalSize - pdh->size;
-                pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
-                pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
-                pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
-                pdh->recsPerBlock = buf[10];
-                pdh->blocksPerRec = buf[11];
-                pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
 
-                // Test for a PDH with values that shouldn't be checked
                 if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_SYNC ||
                         pdh->transferType == 0)) {
-                    status = 0;
+                    // Ensure proper values in these PDH-s
+                    pdh->blockNum = 0;
+                    pdh->dataBlockOffset = 0;
+                    pdh->dataBlockSize = 0;
+                    pdh->recsPerBlock = 0;
+                    pdh->blocksPerRec = 0;
                 }
                 else {
-                    if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
-                        log_add("Frame isn't start-of-product but PSH "
-                                "size is %u bytes", pdh->pshSize);
-                    }
-                    else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
-                        log_add("Product-specific header not indicated but PSH "
-                                "size is %u bytes", pdh->pshSize);
+                    pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+                    pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+                    pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
+                    pdh->recsPerBlock = buf[10];
+                    pdh->blocksPerRec = buf[11];
+                }
+                pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+
+                if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
+                    log_add("Frame isn't start-of-product but PSH "
+                            "size is %u bytes", pdh->pshSize);
+                }
+                else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
+                    log_add("Product-specific header not specified but PSH "
+                            "size is %u bytes", pdh->pshSize);
+                }
+                else {
+                    const unsigned long frameSize = fh->size + pdh->size +
+                            pdh->pshSize + pdh->dataBlockSize;
+                    if (frameSize > NBS_MAX_FRAME) {
+                        log_add("Total specified frame size is too large: "
+                                "%u bytes", frameSize);
                     }
                     else {
-                        const unsigned long frameSize = fh->size + pdh->size +
-                                pdh->pshSize + pdh->dataBlockSize;
-                        if (frameSize > NBS_MAX_FRAME) {
-                            log_add("Total specified frame size is too large: "
-                                    "%u bytes", frameSize);
-                        }
-                        else {
-                            status = 0;
-                        }
-                    } // Finite PSH that should exist
-                } // PDH with values that should be checked
+                        status = 0;
+                    }
+                } // PSH size is consistent with transfer type
             } // PDH size + PSH size >= PDH size
         } // PDH size > 16 bytes
     } // Have sufficient bytes for PDH
@@ -197,10 +202,10 @@ void nbs_logPDH(const NbsPDH* const pdh)
 }
 
 int nbs_decodePSH(
-        const uint8_t*           buf,
-        const size_t             nbytes,
+        const uint8_t* buf,
+        const size_t   nbytes,
         const NbsPDH*  pdh,
-        NbsPSH* const psh)
+        NbsPSH* const  psh)
 {
     int status = EINVAL;
 
@@ -208,7 +213,7 @@ int nbs_decodePSH(
         log_add("NULL argument");
     }
     else if (nbytes < 36) {
-        log_add("Product-definition header is too small: %zu bytes", nbytes);
+        log_add("Product-specific header is too small: %zu bytes", nbytes);
     }
     else {
         status = EBADMSG;

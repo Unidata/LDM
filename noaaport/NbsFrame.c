@@ -179,11 +179,6 @@ int nbs_getFrame(
                 }
 
                 if (reader->pdh.pshSize == 0) {
-                    if (reader->pdh.transferType == 0 ||
-                            reader->fh.command == NBS_FH_CMD_SYNC) {
-                        // Such frames have no data block. Ensure it's ignored
-                        reader->pdh.dataBlockSize = 0;
-                    }
                     if (psh)
                         *psh = NULL;
                 }
