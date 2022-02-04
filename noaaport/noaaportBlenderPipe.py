@@ -79,22 +79,36 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	"""
 
+	# 1. for testing purposes. Enabled below feedType when ready
 	noaaportExecLines = {
-		"nwstg":		"/var/logs/nwstg.log",
-		"goes": 		"/var/logs/goes.log",
- 		"nwstg2": 		"/var/logs/nwstg2.log",
- 		"oconus": 		"/var/logs/oconus.log",
-		"nother": 		"/var/logs/nother.log",
+		"nwstg":		"/tmp/nwstg.log"	
+	}
+	"""
+		"nwstg":		"/var/logs/nwstg.log"
+		,
+		"goes": 		"/var/logs/goes.log"
+		,
+ 		"nwstg2": 		"/var/logs/nwstg2.log"
+ 		,
+ 		"oconus": 		"/var/logs/oconus.log"
+ 		,
+		"nother": 		"/var/logs/nother.log"
+		,
  		"wxwire":		"/var/logs/wxwire.log"
+ 		
  	}
+	"""
 	
+	# 2. for testing purposes. Enabled below fanout server multicast IP (chico only?) when ready
+	# multicast IP address
+	multicastIP = "localhost:1201" 	#chico.unidata.ucar.edu:1201"	# <-> 128.117.140.37"
+
+	# 3. for testing purposes. Replace destination with desired FIFO destination directory.
+	DESTINATION = "/tmp"
+
 	# blender  args
 	# blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_out.log 1201 leno, chico"
 	timeOut 		= "0.01"
-
-	# multicast IP address
-	multicastIP = "chico.unidata.ucar.edu"	# <-> 128.117.140.37"
-	DESTINATION = "/tmp"
 
 	def __init__(self):	
 		
@@ -105,7 +119,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		self.cliParserInit = argparse.ArgumentParser(
 			prog='blenderAdmin',
 			description='''This file is the noaaportBlenderPipe script that 
-						   is launches both noaaportIngester and the blender 
+						   launches both noaaportIngester and the blender 
 						   communicating through a pipe created here
 						   for each type of feed.
 						''',
@@ -135,10 +149,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1206
 
 			samePipeline 	= f"{self.DESTINATION}/{feedType}"
-			blenderArgs    += f" -l {logFile} > {samePipeline}"
+			blenderArgs    += f" -l {logFile} {self.multicastIP} > {samePipeline}"
 		
 			blenderCmd 		= f"{self.noaaportPath}/blender {blenderArgs} &"
-			print(blenderCmd)
 
 			blenderCmdsList.append(blenderCmd)
 
@@ -160,7 +173,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 				exit()
 
 			noaaportArgs 	= f" -l {logFile} < {pipeline}"
-			noaaportCmd 	= f"  {self.noaaportPath}/noaaportIngester  {noaaportArgs} &"
+			noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester     {noaaportArgs} &"
 
 			noaaportCmdsList.append(noaaportCmd)
 
@@ -177,7 +190,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			try:
 				proc = subprocess.check_output(cmd_proc, shell=True )
 				#for line in proc.decode().splitlines():
-				#	print(line)			
+				print(f"FIFO: {pipeName} created.")			
 
 				return pipeName
 
@@ -258,13 +271,15 @@ def main():
 	noaaBPInst 		= NoaaportBlender()	
 	ingestCmdList 	= noaaBPInst.prepareNoaaportCmdsList()
 
-	cliArg 			= noaaBPInst.cliParser()
+	cliArg 			= noaaBPInst.cliParser()	# for this script
 	blendCmdList 	= noaaBPInst.prepareBlenderCmdsList(cliArg)
 	
 	for entry in range(0, len(noaaBPInst.noaaportExecLines)):
-		print("---------------------------")
+		
 		noaaBPInst.executeNoaaportIngester( ingestCmdList[entry] )	
 		noaaBPInst.executeBlender(blendCmdList[entry])
+
+
 
 if __name__ == '__main__':
 
