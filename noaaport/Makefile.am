@@ -66,13 +66,14 @@ if WANT_RETRANS
 endif 
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
-                          nbs_ingest blender testBlender
+                          nbs_ingest blender testBlender  
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
-	nplog_rotate
+	nplog_rotate \
+	noaaportBlender.py
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \

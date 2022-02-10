@@ -124,7 +124,6 @@ tryInsertInQueue(  unsigned 		    sequenceNumber,
 	int status = 0;
 
     //lockIt(&runMutex);
-	log_debug("Inserting frame in queue : (%lu, %lu)", sequenceNumber, runNumber);
 	// call in CircFrameBuf: (C++ class)
 	bool cfbStatus = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
 	if( !cfbStatus )
