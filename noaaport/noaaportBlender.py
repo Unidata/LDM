@@ -32,24 +32,19 @@
 ###############################################################################
 
 """
-Generic script: -f <FIFO_name> use default [/tmp/blender_1201] - overwritten by an option -f <FIFO_name>
-----------------  (log default: LDM's)
-noaaportBlenderLauncher.py -b <log_blender> -n <log_noaaport>  <fanoutAddress_1:1201> <fanoutAddress_2:1201> <fanoutAddress_3:1201>
+Generic script: 
+---------------
 
-noaaportBlenderLauncher.py -b <log_blender> -n <log_noaaport>  <fanoutAddress_4:1202> <fanoutAddress_5:1202> <fanoutAddress_6:1202>
+-f <FIFO_name> use default [/tmp/blender_1201] - overwritten by an option -f <FIFO_name>
+ (log default: LDM's)
+
+noaaportBlender.py -b <log_blender> -n <log_noaaport> -f /tmp/myFIFO --fanout <fanoutAddress_1:1201> <fanoutAddress_2:1201> <fanoutAddress_3:1201>
+
+noaaportBlender.py -b <log_blender> -n <log_noaaport>  --fanout  <fanoutAddress_4:1202> <fanoutAddress_5:1202> <fanoutAddress_6:1202>
 
 Inside the script, create a loop to wait for the current pipelined processes to die and then resurrect them.
 
-
-
-Test script:
-------------
-noaaportBlenderLauncher.py 		(all arguments are embedded in the script itself for the user to change)
-
-
 """
-
-
 
 import 	os, signal, os.path
 import 	sys
@@ -123,11 +118,8 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
  	}
 	"""
 	
-	# 2. for testing purposes. Enabled below fanout server multicast IP (chico only?) when ready
-	# multicast IP address
-	fanoutServerAddress = "localhost:1201" 	#chico.unidata.ucar.edu:1201"	# <-> 128.117.140.37"
 
-	# 3. for testing purposes. Replace destination with desired FIFO destination directory.
+	# Replace destination with desired FIFO destination directory.
 	FIFO_name = "/tmp/blender_"
 
 	# blender  args
@@ -150,6 +142,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			usage='''\n\n\t%(prog)s [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
 			-x 			Debug mode
 			-b <log>	Log file for blender, default: LDM logfile
+			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-n <log>	Log file for noaaportIngester, default: LDM logfile
 			-p <port>	fanout server port number
 			--fanout 	one or more fanoutServerAddresses with syntax: 
@@ -177,7 +170,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			blenderArgs    += f" {hostId} "
 
 		blenderArgs    += f"  > {self.FIFO_name}"
-		blenderCmd 		= f"{self.noaaportPath}/blender {blenderArgs} &"
+		blenderCmd 		= f"{self.noaaportPath}/blender {blenderArgs} "
 
 		# Build the blender command ------------------------------------
 		return blenderCmd
@@ -206,136 +199,41 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			self.blenderLogFile += f"{self.port}.log"
 
 		# FIFO
-		self.FIFO_name = self.makePipe(self.port)
+		self.FIFO_name = self.makePipe(self.port, cliArgs)
 
 
-	# Build the blender's command line arguments
-	def prepareNoaaportCmd(self, cliArgs):
+	def makePipe(self, feedTypePort, cliArgs):
 
-		noaaportArgs 	= f" -l {self.noaaportLogFile} < {self.FIFO_name}"
-		noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester     {noaaportArgs} &"
+		pipeName = cliArgs["fifoName"] 	# <- use option
+		if pipeName == None:			# <- use default
+			pipeName	= f"{self.FIFO_name}{feedTypePort}.fifo"
 
-		return noaaportCmd
-
-
-	# Build the blender's command line arguments
-	# For testing
-	def prepareTestNoaaportCmdsList(self, cliArgs):
-
-
-		noaaportCmdsList = []
-
-
-		for feedType, logFile in self.noaaportExecLines.items():
-
-			# Make the pipeline:
-			pipeline 	= self.makePipe(feedType)
-			if pipeline == None:
-				print(f"ERROR: makePipe(feedType={feedType}) FAILED! ")
-				exit()
-
-			noaaportArgs 	= f" -l {logFile} < {pipeline}"
-			noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester     {noaaportArgs} &"
-
-			noaaportCmdsList.append(noaaportCmd)
-
-		return noaaportCmdsList;
-
-
-
-	def prepareTestBlenderCmdsList(self, cliArg):
-
-		blenderCmdsList = []
-
-		for feedType, logFile in self.noaaportExecLines.items():
-
-			blenderArgs = f" -t {self.timeOut} "
-			if cliArg["debugMode"] == True:
-				blenderArgs += " -x "
-
-		# "blender -t 0.01  -l /var/logs/wxwire.log  chico:1201"
-		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1205  chico:1205
-		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1206
-
-			samePipeline 	= f"{self.FIFO_name}/{feedType}"
-			blenderArgs    += f" -l {logFile} {self.fanoutServerAddress} > {samePipeline}"
-		
-			blenderCmd 		= f"{self.noaaportPath}/blender {blenderArgs} &"
-
-			blenderCmdsList.append(blenderCmd)
-
-		# Build the blender command ------------------------------------
-		return blenderCmdsList
-
-
-
-
-	def makePipe(self, feedTypePort):
-
-		pipeName	= f"{self.FIFO_name}{feedTypePort}.fifo"
-		pipePath = Path(pipeName)
+		pipePath 	= Path(pipeName)
 		if not os.path.exists(pipeName):
 			
-			cmd_proc	= f"mkfifo {pipeName}"
+			cmd_proc= f"mkfifo {pipeName}"
 			try:
-				proc = subprocess.check_output(cmd_proc, shell=True )
+				proc= subprocess.check_output(cmd_proc, shell=True )
 				#for line in proc.decode().splitlines():
 				print(f"FIFO: {pipeName} created.")			
 
 				return pipeName
 
 			except Exception as e:
-				# PRINT NOTHING
 				# self.errmsg(f"{cmd} is currently NOT running! ")
 				pass
 
 		return pipeName
+
+
+	# Build the blender's command line arguments
+	def prepareNoaaportCmd(self, cliArgs):
+
+		noaaportArgs 	= f" -l {self.noaaportLogFile} < {self.FIFO_name}"
+		noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester     {noaaportArgs} "
+
+		return noaaportCmd
 	
-	
-	def executeNoaaportIngester(self, cmd):
-
-		print(cmd)		
-#		system( cmd )
-
-
-	# Execute the blender with arguments gleaned from user
-	def executeBlender(self, cmd):
-		# Check if program(s) are running. If so, kill them
-		#self.checkRunning()
-
-		print(cmd)
-
-		#system( cmd )
-
-
-	# Check if testBlender or blender processes are still running: kill them
-	def checkRunning(self):		
-
-		# remove *blender process
-		blender_ps = f"ps -ef | grep -v grep | grep -i blender | grep -v blenderAdmin"
-		self.checkProcessAndKill(blender_ps, "blender")
-
-
-	# Clean up previous runs of the blender
-	def checkProcessAndKill(self, cmd_proc, cmd):
-
-		try:
-			proc = subprocess.check_output(cmd_proc, shell=True )
-			for line in proc.decode().splitlines():
-				
-				procId = line.split()[1]
-				p = psutil.Process(int(procId))
-
-				go = input(f"\n\t\tKill process this process? \n\n\t\t---> {line}\n\n\t\t\t\tYes/No (Y/n)\n\t\t\t\t")
-				if 'Y' == go.rstrip():
-					pass #p.kill()
-			
-
-		except Exception as e:
-			# PRINT NOTHING
-			# self.errmsg(f"{cmd} is currently NOT running! ")
-			pass
-				
 
 	def runProc(self, cmd):
 
@@ -354,20 +252,8 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			print("Exiting runProc")
 
 			return procId
-			"""
-
-			for line in proc.decode().splitlines():
-				
-				procId = line.split()[1]
-				p = psutil.Process(int(procId))
-
-				go = input(f"\n\t\tKill process this process? \n\n\t\t---> {line}\n\n\t\t\t\tYes/No (Y/n)\n\t\t\t\t")
-				if 'Y' == go.rstrip():
-					pass #p.kill()
-			"""
 
 		except Exception as e:
-			# PRINT NOTHING
 			# self.errmsg(f"{cmd} is currently NOT running! ")
 
 			print("Exiting runProc")
@@ -379,6 +265,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
 		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='default: /tmp/blender_1201.fifo', required=False)
 		self.cliParserInit.add_argument('-n', dest='noaaportLogFile', action="store",help='default: LDM logfile', required=False)
 		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
 		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
@@ -404,19 +291,19 @@ def main():
 	noaaportCmd 	= noaaBPInst.prepareNoaaportCmd(cliArg)
 	blenderCmd 		= noaaBPInst.prepareBlenderCmd(cliArg)
 	
-	while true:
+	while True:
 
 		print(noaaportCmd)
-		print(blenderCmd)
+		print(blenderCmd) 
 
-		nooaProc 	= subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
-		blenderProc = subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
+		noaaProc 	= subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
+		blenderProc 	= subprocess.Popen(blenderCmd,  stdout=subprocess.PIPE, shell=True)
 		
 		noaaProc.wait()
 		blenderProc.wait()
 
 		print(f"Re-running... (loop) ")
-	
+		time.sleep(5)	
 
 
 if __name__ == '__main__':
