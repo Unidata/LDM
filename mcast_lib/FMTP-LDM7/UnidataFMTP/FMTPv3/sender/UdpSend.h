@@ -53,9 +53,20 @@ class UdpSend
     class BlackHat
     {
         UdpSend&  udpSend;          ///< Containing UDP sender instance
-        IndexType validPacketIndex; ///< Index of current, valid packet
         float     invalidRatio;     ///< Ratio of invalid to valid packets
         float     indicator;        ///< Send-invalid-packet indicator
+        bool      omitValid;        ///< Omit valid packet if invalid one sent?
+        bool      sendBefore;       ///< Send invalid packet(s) before valid?
+
+        /**
+         * Maybe sends invalid packets based on the output vector in the
+         * containing `UdpSend` instance.
+         *
+         * @param[in] header        FMTP header in host byte order
+         * @retval    `true`        At least 1 invalid packet was sent
+         * @retval    `false`       No invalid packets were sent
+         */
+        bool maybeSend(const FmtpHeader& header);
 
     public:
         static const char ENV_NAME[]; ///< Name of relevant environment variable
@@ -77,14 +88,13 @@ class UdpSend
         BlackHat& operator=(BlackHat& rhs) =delete;
 
         /**
-         * Maybe sends invalid packets based on the output vector in the
-         * containing `UdpSend` instance.
+         * Attacks the protocol. Depending on the value of `ENV_NAME`, sends
+         * zero or more invalid packets and might or might not send the valid
+         * packet.
          *
          * @param[in] header        FMTP header in host byte order
-         * @throw std::logic_error  Packet index in containing UDP sender didn't
-         *                          increase by 1
          */
-        void maybeSend(const FmtpHeader& header);
+        void attack(const FmtpHeader& header);
     };
 
     int                   sock_fd;
@@ -94,11 +104,9 @@ class UdpSend
     const unsigned short  ttl;
     const std::string     ifAddr;
     FmtpPacket            packet;      ///< Buffer for FMTP packet
-    IndexType             packetIndex; ///< Index of current, valid packet
     Mac                   signer;      ///< Message authentication code signer
     unsigned              msgLen;      ///< Non-MAC packet length in bytes
     const unsigned        MAC_LEN;     ///< MAC length in bytes
-    bool                  sendBefore;  ///< Send invalid packet(s) after valid?
     BlackHat              blackHat;    ///< Sends invalid packets
 
     /**

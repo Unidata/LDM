@@ -2,7 +2,7 @@ dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
 AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.17.1], [support-ldm@unidata.ucar.edu],,
+AC_INIT([LDM], [6.13.17.4], [support-ldm@unidata.ucar.edu],,
     [http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
@@ -489,18 +489,19 @@ AC_DEFINE_UNQUOTED([LDMHOME], ["$LDMHOME"],
 # because an LDM installation has both version-dependent and version-independent
 # installation directories.
 test "$sysconfdir" = '${prefix}/etc' && sysconfdir="${LDMHOME}/etc"
+AC_SUBST([ETC_DIR], ["$sysconfdir"])
 test "$localstatedir" = '${prefix}/var' && localstatedir="${LDMHOME}/var"
 
 AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
     [Default pathname of installed-programs directory])
 AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
 AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
-AC_SUBST([LOGS_DIR], ['$(localstatedir)'/logs])
+AC_SUBST([LOGS_DIR], $localstatedir/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$localstatedir/logs"],
     [Default pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$localstatedir/run"],
     [Default pathname of LDM var/run directory])
-AC_SUBST([QUEUE_DIR], ['$(localstatedir)'/queues])
+AC_SUBST([QUEUE_DIR], $localstatedir/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
     [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
@@ -525,7 +526,7 @@ AC_DEFINE_UNQUOTED([PQSURF_CONFIG_PATH], ["$sysconfdir/pqsurf.conf"],
 if test -d $LDMHOME/data -a ! -h $LDMHOME/data; then
     DATA_DIR=$LDMHOME
 else
-    DATA_DIR='$(localstatedir)'/data
+    DATA_DIR=$localstatedir/data
 fi
 AC_SUBST([DATA_DIR])
 
@@ -555,6 +556,7 @@ fi
 AM_CONDITIONAL([HAVE_RPCGEN], [test "$RPCGEN"])
 
 UD_PROG_NTPDATE
+AC_SUBST([NTPDATE], ["$NTPDATE"])
 UD_PROG_NETSTAT
 UD_PROG_TOP
 UD_LIB_YACC
@@ -661,14 +663,6 @@ AC_SEARCH_LIBS([setsockopt], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
 AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
     [AC_MSG_ERROR([Library not found])])
-    
-## Ensure references to the Log4C package, if necessary.
-#AM_COND_IF([WANT_LOG4C], [
-#        AC_CHECK_HEADER([log4c.h], , [AC_MSG_ERROR([Header-file not found])])
-#        AC_SEARCH_LIBS([log4c_init], [log4c], ,
-#            [AC_MSG_ERROR([Library not found])])
-#    ]
-#)
 
 # Ensure references to the ZLIB package, which is used by the PNG library and
 # by the XML2 library.

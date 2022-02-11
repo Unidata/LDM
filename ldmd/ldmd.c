@@ -74,6 +74,89 @@ static int      doSomething = 1; ///< Do something or just check config-file?
 static unsigned maxClients = 256;
 static int      exit_status = 0;
 
+#define MAXFD 64
+
+static void
+Signal(int sig, void(*action)(int))
+{
+    struct sigaction sigact;
+
+    (void)sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = action;
+    (void)sigaction(SIGHUP, &sigact, NULL);
+}
+
+/**
+ * Converts the current process into a daemon. Adapted from section 13.4 of
+ * "Unix Network Programming" Volume 1, Third Edition, by Richard Stevens.
+ *
+ * @retval 0      Success
+ * @retval 1      fork(2) failure
+ * @retval 2      setsid(2) failure
+ */
+static int
+daemonize()
+{
+    pid_t pid = fork();
+    if (pid < 0) {
+        log_add_syserr("fork() failure");
+        return 1;
+    }
+
+    if (pid > 0) {
+        // Parent
+        exit(0);
+    }
+
+    // Child 1 continues...
+    // Become session leader
+    if (setsid() < 0) {
+        log_add_syserr("setsid() failure");
+        return 2;
+    }
+
+    /*
+     * Ignore the SIGHUP that the second child process will receive when the
+     * session leader terminates.
+     */
+    Signal(SIGHUP, SIG_IGN);
+
+    /*
+     * Fork a second time to guarantee that the daemon isn't a session leader
+     * and, consequently, cannot acquire a controlling terminal by opening a
+     * terminal device in the future.
+     *
+     * "Paranoia strikes deep. Into your life it will creep."
+     */
+    if ((pid = fork()) < 0) {
+        log_add_syserr("fork() failure");
+        return 1;
+    }
+
+    if (pid) {
+        // Parent
+        (void)printf("%ld\n", (long)pid);
+        exit(0); // Child 1 terminates
+    }
+
+    // Child 2 continues...
+    // Close most file descriptors
+    for (int i = 0; i < MAXFD; ++i)
+        close(i);
+
+    /*
+     * Open the standard input, output, and error streams on "/dev/null" so that
+     * their accidental use -- by a library function, for example -- doesn't
+     * cause an error. Assume the associated file-descriptors are closed.
+     */
+    (void)open("/dev/null", O_RDONLY); // File-descriptor 0 (stdin)
+    (void)open("/dev/null", O_RDWR);   // File-descriptor 1 (stdout)
+    (void)open("/dev/null", O_RDWR);   // File-descriptor 2 (stderr)
+
+    return 0;
+}
+
 static pid_t reap(
         pid_t pid,
         int options)
@@ -107,11 +190,12 @@ static pid_t reap(
 
 #if defined(WIFSTOPPED)
         if (WIFSTOPPED(status)) {
-            log_notice_q(
+            log_add(
                     nbytes <= 0
                         ? "child %ld stopped by signal %d"
                         : "child %ld stopped by signal %d: %*s",
                     (long)wpid, WSTOPSIG(status), nbytes, command);
+            log_flush_notice();
         }
         else
 #endif /*WIFSTOPPED*/
@@ -124,11 +208,12 @@ static pid_t reap(
                 log_clear();
 #endif
 
-            log_notice_q(
+            log_add(
                     nbytes <= 0
                         ? "child %ld terminated by signal %d"
                         : "child %ld terminated by signal %d: %*s",
                     (long)wpid, WTERMSIG(status), nbytes, command);
+            log_flush_notice();
 
             /* DEBUG */
             switch (WTERMSIG(status)) {
@@ -154,7 +239,8 @@ static pid_t reap(
 #ifdef SIGXFSZ
             case SIGXFSZ:
 #endif
-                log_notice_q("Killing (SIGTERM) process group");
+                log_add("Killing (SIGTERM) process group");
+                log_flush_notice();
                 exit_status = 3;
                 (void) kill(0, SIGTERM);
                 break;
@@ -194,7 +280,8 @@ static pid_t reap(
 static void cleanup(
         void)
 {
-    log_notice_q("Exiting");
+    log_add("Exiting");
+    log_flush_notice();
 
     lcf_savePreviousProdInfo();
 
@@ -253,7 +340,8 @@ static void cleanup(
         /*
          * Signal my process group.
          */
-        log_notice_q("Terminating process group");
+        log_add("Terminating process group");
+        log_flush_notice();
         (void) kill(0, SIGTERM);
 
         while (reap(-1, 0) > 0)
@@ -496,8 +584,9 @@ static int create_ldm_tcp_svc(
                 else {
                     port = (short) ntohs((short) addr.sin_port);
 
-                    log_notice_q("Using local address %s:%u",
+                    log_add("Using local address %s:%u",
                             inet_ntoa(addr.sin_addr), (unsigned) port);
+                    log_flush_notice();
 
                     log_debug("Calling listen()");
                     if (listen(sock, 1024) != 0) {
@@ -715,15 +804,17 @@ handle_connection(const int sock)
      */
     if (cps_count() >= maxClients) {
         setremote(&raddr, xp_sock);
-        log_notice_q("Denying connection from [%s] because too many clients",
+        log_add("Denying connection from [%s] because too many clients",
                 remote->astr);
+        log_flush_notice();
         (void) close(xp_sock);
         return;
     }
 
     pid = ldmfork();
     if (pid == -1) {
-        log_error_q("Couldn't fork process to handle incoming connection");
+        log_add("Couldn't fork process to handle incoming connection");
+        log_flush_error();
         /* TODO: try again?*/
         (void) close(xp_sock);
         return;
@@ -937,62 +1028,47 @@ int main(
         exit(1);
     }
     if (!lcf_haveSomethingToDo()) {
-        log_error_q("The LDM configuration-file \"%s\" is effectively empty",
+        log_add("The LDM configuration-file \"%s\" is effectively empty",
                 getLdmdConfigPath());
+        log_flush_error();
         exit(1);
     }
 
-    if (!becomeDaemon) {
-        /*
-         * Make this process a process group leader so that all child processes
-         * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
-         * `cleanup()`.
-         */
-        (void)setpgid(0, 0); // can't fail
-    }
 #ifndef DONTFORK
-    else {
-        /*
-         * Make this process a daemon.
-         */
-        pid_t pid;
-        pid = ldmfork();
-        if (pid == -1) {
-            log_error("Couldn't fork LDM daemon");
+    if (becomeDaemon) {
+        if (reg_close()) {
+            log_add("reg_close() failure");
             log_flush_error();
-            exit(2);
+            exit(1);
         }
 
-        if (pid > 0) {
-            /* parent */
-            (void)printf("%ld\n", (long)pid);
-            exit(0);
+        if (daemonize()) { // Bwa-ha-ha!
+            log_add("daemonize() failure");
+            log_flush_error();
+            exit(1);
         }
 
-        /*
-         * Make the child a session leader so that it is no longer affected by
-         * the parent's process group.
-         */
-        (void)setsid(); // also makes this process a process group leader
+        log_clear();        // So no queued messages
         log_avoid_stderr(); // Because this process is now a daemon
-        (void)close(STDERR_FILENO);
     }
 #endif
-    /* Set up fd 0,1 */
-    (void)close(STDIN_FILENO);
-    (void)close(STDOUT_FILENO);
+    /*
+     * Make this process a process group leader so that all child processes
+     * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
+     * `cleanup()`.
+     */
+    (void)setpgid(0, 0); // can't fail
 
-    logfname = log_get_destination();
-
-    log_notice_q("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
+    log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
 
     /*
      * register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit");
-        log_notice_q("Exiting");
+        log_syserr("atexit() failure");
+        log_add("Exiting");
+        log_flush_notice();
         exit(1);
     }
 
@@ -1022,10 +1098,12 @@ int main(
         log_debug("Opening product-queue");
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
-                log_error_q("The product-queue \"%s\" is inconsistent", pqfname);
+                log_add("The product-queue \"%s\" is inconsistent", pqfname);
+                log_flush_error();
             }
             else {
-                log_error_q("pq_open failed: %s: %s", pqfname, strerror(status));
+                log_add("pq_open failed: %s: %s", pqfname, strerror(status));
+                log_flush_error();
             }
             exit(1);
         }
@@ -1041,13 +1119,14 @@ int main(
                 log_clear();
             }
             else {
-                log_error_q(
-                        "Couldn't delete existing shared upstream LDM database");
+                log_add("Couldn't delete existing shared upstream LDM database");
+                log_flush_error();
                 exit(1);
             }
         }
         if (uldb_create(NULL, maxClients * 1024)) {
-            log_error_q("Couldn't create shared upstream LDM database");
+            log_add("Couldn't create shared upstream LDM database");
+            log_flush_error();
             exit(1);
         }
 
@@ -1076,5 +1155,5 @@ int main(
         }
     }   // configuration-file will be executed
 
-    return (exit_status);
+    return exit_status;
 }

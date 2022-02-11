@@ -56,9 +56,10 @@ const char UdpSend::BlackHat::ENV_NAME[] = "FMTP_INVALID_PACKET_RATIO";
 
 UdpSend::BlackHat::BlackHat(UdpSend& udpSend)
     : udpSend(udpSend)
-    , validPacketIndex(-1)
     , invalidRatio(0)
     , indicator(0)
+    , omitValid(false)
+    , sendBefore(false)
 {
     const auto ratioStr = ::getenv(ENV_NAME);
     if (ratioStr == nullptr) {
@@ -68,24 +69,23 @@ UdpSend::BlackHat::BlackHat(UdpSend& udpSend)
     }
     else {
         invalidRatio = std::stof(ratioStr, nullptr);
-        if (invalidRatio < 0)
-            throw std::invalid_argument(std::string(
-                    "UdpSend::BlackHat::BlackHat(): Invalid ") + ENV_NAME +
-                    "value: " + ratioStr);
+        if (invalidRatio < 0) {
+            invalidRatio = -invalidRatio;
+            omitValid = true;
+        }
 
 #       ifdef LDM_LOGGING
             log_notice("Invalid packet ratio set to %g from environment "
                     "variable %s", invalidRatio, ENV_NAME);
+            log_notice("Omit valid packet set to %d from environment "
+                    "variable %s", omitValid, ENV_NAME);
 #       endif
     }
 }
 
-void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
+bool UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
 {
-    ++validPacketIndex;
-    if (validPacketIndex != udpSend.packetIndex)
-        throw std::logic_error("UdpSend::BlackHat::maybeSend(): Valid packet "
-                "index didn't increase by 1");
+    bool invalidSent = false;
 
     indicator += invalidRatio;
     if (indicator >= 1) {
@@ -93,6 +93,25 @@ void UdpSend::BlackHat::maybeSend(const FmtpHeader& header)
         for (; indicator >= 1; indicator -= 1)
             udpSend.write(header);
         udpSend.packet.bytes[udpSend.msgLen] ^= 1; // Restore MAC bit
+        invalidSent = true;
+    }
+
+    return invalidSent;
+}
+
+void UdpSend::BlackHat::attack(const FmtpHeader& header) {
+    // `header` is used in the following because it's in host byte-order
+    if (omitValid) {
+        if (!maybeSend(header))
+            udpSend.write(header);
+    }
+    else {
+        if (sendBefore)
+            maybeSend(header);
+        udpSend.write(header);
+        if (!sendBefore)
+            maybeSend(header);
+        sendBefore = !sendBefore;
     }
 }
 
@@ -118,11 +137,9 @@ UdpSend::UdpSend(const std::string&   recvaddr,
       ifAddr(ifAddr),
       sock_fd(-1),
       recv_addr(),
-      packetIndex(0),
       signer{},
       msgLen{0},
       MAC_LEN{signer.getSize()},
-      sendBefore(false),
       blackHat(*this),
       maxPayload{canonPduSize - FMTP_HEADER_LEN - MAC_LEN}
 {}
@@ -249,12 +266,11 @@ void UdpSend::send(const FmtpHeader& header,
             MAC_LEN);
     assert(macLen == MAC_LEN);
 
-    if (MAC_LEN && sendBefore)
-        blackHat.maybeSend(header);
-    write(header);
-    if (MAC_LEN && !sendBefore)
-        blackHat.maybeSend(header);
-
-    sendBefore = !sendBefore;
-    ++packetIndex;
+    // `header` is used in the following because it's in host byte-order
+    if (MAC_LEN) {
+        blackHat.attack(header);
+    }
+    else {
+        write(header);
+    }
 }

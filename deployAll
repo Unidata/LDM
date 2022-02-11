@@ -16,6 +16,8 @@ cd `dirname $0`
 # Lead (for testing pqact(1))
 #deploy lead
 
+#exit
+
 # LDM7 systems (no password required)
 declare -A deployOpts
 deployOpts+=([ca]='-m              -u ldm7')

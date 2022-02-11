@@ -128,7 +128,7 @@ int readccb(
     ccb->len = 2 * (int)(((b1 & 63) << 8) + b2);
 
     if (ccb->len > blen) {
-        // A rouge product missing its CCB, reported to NWS DM 3/10/05 by Chiz
+        // A rogue product missing its CCB, reported to NWS DM 3/10/05 by Chiz
         log_add("Invalid ccb length = %d %d %d, blen %d", ccb->len, b1, b2,
                 blen);
 
