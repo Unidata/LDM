@@ -1,6 +1,13 @@
 6.13.17.4
-    noaaportIngester(1):
-        Corrected usage message. "-S <bufsize>" should have been "-R <bufsize>"
+    NOAAPort:
+        * noaaportIngester(1):
+            * Corrected usage message. "-S <bufsize>" should have been "-R
+              <bufsize>"
+        * blender(1): Created this program to blend together TCP streams of
+          the same NOAAPort channel from "fanout" servers at multiple sites to
+          create a more-perfect stream.
+        * noaaportBlender.py: Created this program to execute (and keep running)
+          a blender(1) and noaaportIngester(1) pair.
 
     Multicast:
         Modified to omit sending valid multicast packet if environment variable
