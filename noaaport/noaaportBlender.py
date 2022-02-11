@@ -140,10 +140,12 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 						   for each type of feed.
 						''',
 			usage='''\n\n\t%(prog)s [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
-			-x 			Debug mode
+			-x 			Debug mode for `blender`
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
-			-n <log>	Log file for noaaportIngester, default: LDM logfile
+			-i <log>	Log file for noaaportIngester, default: LDM logfile
+			-n 			Debug   mode for `noaaportIngester`
+			-v 			Verbose mode for `noaaportIngester`
 			-p <port>	fanout server port number
 			--fanout 	one or more fanoutServerAddresses with syntax: 
 							<server:port> ...
@@ -182,6 +184,10 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		if cliArgs["feedTypePort"] != None:
 			self.port = cliArgs["feedTypePort"]
 		else: # extract it from fanout server address
+			if len(cliArgs["fanoutServerAddresses"][0].split(':')) != 2:
+				errorMsg = "port number is missing"
+				print(errorMsg)
+				exit(0)
 			self.port = cliArgs["fanoutServerAddresses"][0].split(':')[1]
 
 
@@ -229,8 +235,14 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	# Build the blender's command line arguments
 	def prepareNoaaportCmd(self, cliArgs):
 
-		noaaportArgs 	= f" -l {self.noaaportLogFile} < {self.FIFO_name}"
-		noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester     {noaaportArgs} "
+		if cliArgs["noaaportVerbose"] != None:	
+			noaaportArgs 	= " -v "
+
+		if cliArgs["noaaportMoreInfo"] != None:	
+			noaaportArgs 	+= " -n "
+
+		noaaportArgs 	+= f" -l {self.noaaportLogFile} "
+		noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester  {noaaportArgs} < {self.FIFO_name} "
 
 		return noaaportCmd
 	
@@ -264,10 +276,12 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	def cliParser(self):
 
 		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
-		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='default: LDM logfile', required=False)
-		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='default: /tmp/blender_1201.fifo', required=False)
-		self.cliParserInit.add_argument('-n', dest='noaaportLogFile', action="store",help='default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
+		self.cliParserInit.add_argument('-i', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
 		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
+		self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
 		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
 			action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
 
