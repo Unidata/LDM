@@ -9,11 +9,11 @@ NTPDATE_COMMAND:/check-time/ntpdate/command:The pathname of the <a href="glindex
 NTPDATE_SERVERS:/check-time/ntpdate/servers:Time servers for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:us.pool.ntp.org:time_servers
 NTPDATE_TIMEOUT:/check-time/ntpdate/timeout:Timeout, in seconds, for the <a href="glindex.html#ntpdate"><tt>ntpdate</tt></a> utility.:5:ntpdate_timeout
 LOG_COUNT:/log/count:The number of LDM log files to keep around.:7:numlogs
-LOG_FILE:/log/file:The pathname of the LDM log file.  The default is set by the <tt>configure(1)</tt> script.:@LOG_FILE@
+LOG_FILE:/log/file:The pathname of the LDM log file.  The default is set by the <tt>configure(1)</tt> script.:@LOGS_DIR@/ldmd.log
 LOG_ROTATE:/log/rotate:Whether or not the command "<tt>ldmadmin start</tt>" should start a new log file.  Zero means no; non-zero means yes.:1:log_rotate
 METRICS_COUNT:/metrics/count:The number of LDM metrics files to keep around.:4:num_metrics
-METRICS_FILE:/metrics/file:Pathname of the LDM metrics file.:@METRICS_FILE@:metrics_file
-METRICS_FILES:/metrics/files:Filename pattern for the metrics files to plot.:@METRICS_FILE@*:metrics_files
+METRICS_FILE:/metrics/file:Pathname of the LDM metrics file.:@LOGS_DIR@/metrics.txt:metrics_file
+METRICS_FILES:/metrics/files:Filename pattern for the metrics files to plot.:@LOGS_DIR@/metrics.txt*:metrics_files
 NETSTAT_COMMAND:/metrics/netstat-command:The <tt><a href="glindex.html#netstat utility">netstat</a></tt> command for obtaining performance metrics.  The default is set by the <tt>configure(1)</tt> script.:@NETSTAT@:netstat
 TOP_COMMAND:/metrics/top-command:The <tt><a href="glindex.html#top utility">top</a></tt> command for obtaining performance metrics.  The default is set by the <tt>configure(1)</tt> script.:@TOP@:top
 PQACT_CONFIG_PATH:/pqact/config-path:The pathname of the default <tt>pqact(1)</tt> configuration-file.  The default is set by the <tt>configure(1)</tt> script.:@ETC_DIR@/pqact.conf:pqact_conf

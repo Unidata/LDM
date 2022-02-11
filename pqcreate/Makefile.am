@@ -31,9 +31,9 @@ TAGS_FILES	= \
 nodist_man1_MANS	= pqcreate.1
 CLEANFILES	= pqcreate.1 *.i
 
-pqcreate.1:	$(srcdir)/pqcreate.1.in
-	../regutil/substPaths <$? >$@.tmp
-	mv $@.tmp $@
+#pqcreate.1:	$(srcdir)/pqcreate.1.in
+#	../regutil/substPaths <$? >$@.tmp
+#	mv $@.tmp $@
 
 .c.i:
 	$(COMPILE) $(AM_CPPFLAGS) $(CPPFLAGS) -E $< >$@

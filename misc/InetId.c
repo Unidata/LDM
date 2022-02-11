@@ -100,11 +100,11 @@ inetId_setAddr(InetId* const inetId)
     // The address family must be compatible with the local host
     hints.ai_flags = AI_ADDRCONFIG;
 
-    hints.ai_family = AF_INET6; // Use IPv6 if possible
+    hints.ai_family = AF_INET;
     status = getaddrinfo(inetId->id, NULL, &hints, &addrInfo);
 
     if (status) {
-        hints.ai_family = AF_INET;
+        hints.ai_family = AF_INET6; // Use IPv6 as a second choice
         status = getaddrinfo(inetId->id, NULL, &hints, &addrInfo);
     }
 

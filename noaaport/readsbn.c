@@ -17,7 +17,7 @@ int readsbn(char *buf, sbn_struct *sbn)
     b2 = (unsigned char)buf[15];
     lval = (b1 << 8) + b2;
     /* validate the checksum */
-    for (i=0; i<14; i++)
+    for (i=0; i<14; ++i)
         csum = csum + (unsigned char)buf[i];
 
     if (csum != lval) {

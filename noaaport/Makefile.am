@@ -33,6 +33,7 @@ EXTRA_DIST              = \
         productMaker.hin \
         reader.hin \
 	shmfifo.hin \
+	blender.conf.in blender.1.in \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 BUILT_SOURCES		= \
@@ -41,17 +42,17 @@ BUILT_SOURCES		= \
 	ldmProductQueue.h \
 	productMaker.h \
 	reader.h \
-	shmfifo.h
+	shmfifo.h 
 
 DISTCLEANFILES          = $(BUILT_SOURCES)
-CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini
+CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini blender.1 
 
 AM_CPPFLAGS             = \
         -I$(top_srcdir) \
         -I$(top_srcdir)/grib2 \
         -I$(top_srcdir)/gempak \
         -I$(top_srcdir)/zlib \
-        -I$(top_srcdir)/log \
+        -I$(top_builddir)/log      -I$(top_srcdir)/log \
         -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
         -I$(top_builddir)/protocol2 -I$(top_srcdir)/protocol2 \
         -I$(top_builddir)/registry -I$(top_srcdir)/registry \
@@ -65,13 +66,14 @@ if WANT_RETRANS
 endif 
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
-                          nbs_ingest
+                          nbs_ingest blender testBlender  
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
-	nplog_rotate
+	nplog_rotate \
+	noaaportBlender.py
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \
@@ -118,6 +120,12 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
+blender_SOURCES		= blender.c $(COMMON_SOURCES) \
+ 	frameWriter.c queueManager.c frameReader.c CircFrameBuf.cpp \
+ 	misc.c NbsHeaders.c NbsHeaders.h NbsFrame.c NbsFrame.h
+ 	
+testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
+
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
   LDADD 	+= retrans/lib.la
@@ -134,7 +142,10 @@ TAGS_FILES		= \
         $(top_srcdir)/log/*.c $(top_srcdir)/log/*.h \
         $(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
         $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
-        $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h
+        $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
+        $(blender_SOURCES) ../log/*.c ../log/*.h \
+        $(testBlender_SOURCES) ../log/*.c ../log/*.h 
+
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
 endif
@@ -227,6 +238,10 @@ check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
+
+valgrind-blender:	blender	
+	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
+	    blender -t 1.0 localhost:9127 localhost:9128
 
 valgrind-readnoaaport:		readnoaaport
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq

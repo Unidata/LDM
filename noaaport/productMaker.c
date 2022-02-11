@@ -484,10 +484,12 @@ int    nnnxxx_offset;
 
         /* End of SBN version low 4 bits */
 
+        // Parse the product definition header into `pdh`
         if (readpdh((char*)buf + IOFF + sbn->len, pdh) == -1) {
             log_error_q("problem with pdh, PUNT");
             continue;
         }
+        // Read excess of product-definition header if it exists
         if (pdh->len > 16) {
             if (fifo_getBytes(fifo, buf + sbn->len + 16, pdh->len - 16) != 0)
                 continue;
@@ -553,6 +555,7 @@ int    nnnxxx_offset;
                 continue;
             }
 
+            // Parse the product-specific header
             if (readpsh((char*)buf + IOFF + sbn->len + pdh->len, psh) == -1) {
                 log_error_q("problem with readpsh");
                 continue;

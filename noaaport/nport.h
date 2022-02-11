@@ -110,7 +110,7 @@
 
 typedef struct sbn_struct {
    int version;
-   int len;
+   int len; // Length of frame header in bytes
    int datastream;
    unsigned long seqno;
    int runno;
@@ -119,13 +119,30 @@ typedef struct sbn_struct {
    } sbn_struct;
 
 typedef struct pdh_struct {
-   int version;
-   int len;
+   int version; // Version of product definition header
+   int len; // Length of product-definition in bytes
+   /**
+    * Indicates the status of a product transfer:
+    *    1 = Start of a new product
+    *    2 = Product transfer still in progress
+    *    4 = End (last packet) of this product
+    *    8 = Product error
+    *    32 = Product Abort
+    *    64 = Option headers follow; e. g., product-specific header
+    */
    int transtype;
-   int pshlen;
+   int pshlen; // Length of product-specific header in bytes
+   /**
+    * Used during fragmentation and reassembly to identify the sequence
+    * of the fragmented blocks. Blocks are number o to n.
+    */
    int dbno;
+   /**
+    * Offset in bytes where the data for this block can be found relative
+    * to beginning of data block area.
+    */
    int dboff;
-   int dbsize;
+   int dbsize; // Number of data bytes in the data block
    int records_per_block;
    int blocks_per_record;
    long int seqno;
@@ -135,7 +152,7 @@ typedef struct psh_struct {
    int version;
    int onum,otype,olen;
    int hflag;
-   int psdl;
+   int psdl; // Length of AWIPS product-specific header (in bytes)
    int bytes_per_record;
    int ptype;
    int pcat;
