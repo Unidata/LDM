@@ -54,6 +54,7 @@ import 	time
 from 	os 	import environ, system
 from 	pathlib import Path
 import  argparse
+import 	getopt
 
 
 class NoaaportBlender():
@@ -126,35 +127,55 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	# blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_out.log 1201 leno, chico"
 	timeOut 		= "0.01"
 
-	def __init__(self):	
-		
-		ldmHome     		= environ.get("LDMHOME", "/home/miles/projects/ldm")	# remove 'miles' path
-		self.noaaportPath	= f"{ldmHome}/src/noaaport"
-
-		# Check CLI options:
-		self.cliParserInit = argparse.ArgumentParser(
-			prog='noaaportBlender',
-			description='''This file is the noaaportBlender script that 
-						   launches both noaaportIngester and the blender 
-						   communicating through a FIFO. The latter is created here
-						   for each type of feed.
-						''',
-			usage='''\n\n\t%(prog)s [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
-			-x 			Debug mode for `blender`
+	progUsage = {
+		"progName": "noaaportBlender.py",
+		"description":'''This file is the noaaportBlender script that 
+					   launches both noaaportIngester and the blender 
+					   communicating through a FIFO. The latter is created here
+					   for each type of feed.''',
+		"usage": '''\n\n\tnoaaportBlender.py [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
+			-x 		Debug mode for `blender`
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-i <log>	Log file for noaaportIngester, default: LDM logfile
-			-n 			Debug   mode for `noaaportIngester`
-			-v 			Verbose mode for `noaaportIngester`
+			-v 		Debug   mode for `noaaportIngester`
+			-n 		Verbose mode for `noaaportIngester`
 			-p <port>	fanout server port number
 			--fanout 	one or more fanoutServerAddresses with syntax: 
-							<server:port> ...
+						<server:port> ...
 			''',
-			epilog='''
-				Thank you for using %(prog)s...
-					'''
+		"epilog":'''
+		Thank you for using noaaportBlender.py...
+				'''
+		
+
+						
+	}
+	def __init__(self):	
+		
+		ldmHome     		= environ.get("LDMHOME", "/home/miles/projects/ldm")	# remove 'miles' path
+
+		# Check CLI options:
+		self.cliParserInit = argparse.ArgumentParser(
+			prog 		= self.progUsage["progName"],
+			description = self.progUsage["description"],
+			usage 		= self.progUsage["usage"],
+			epilog 		= self.progUsage["epilog"]
 			)
 
+
+	def usage(self):
+		program		= self.progUsage["progName"]
+		description = self.progUsage["description"]
+		usage 		= self.progUsage["usage"]
+		epilog 		= self.progUsage["epilog"]
+
+		#print(program)
+		#print(description)
+		print(usage)
+		print(epilog)
+
+		sys.exit(2)
 
 	def prepareBlenderCmd(self, cliArg):
 
@@ -172,7 +193,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			blenderArgs    += f" {hostId} "
 
 		blenderArgs    += f"  > {self.FIFO_name}"
-		blenderCmd 		= f"{self.noaaportPath}/blender {blenderArgs} "
+		blenderCmd 		= f"blender {blenderArgs} "
 
 		# Build the blender command ------------------------------------
 		return blenderCmd
@@ -185,9 +206,10 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			self.port = cliArgs["feedTypePort"]
 		else: # extract it from fanout server address
 			if len(cliArgs["fanoutServerAddresses"][0].split(':')) != 2:
-				errorMsg = "port number is missing"
+				errorMsg = "\n\n\t\t<port> is missing\n\n"
 				print(errorMsg)
-				exit(0)
+				self.usage()
+
 			self.port = cliArgs["fanoutServerAddresses"][0].split(':')[1]
 
 
@@ -242,7 +264,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			noaaportArgs 	+= " -n "
 
 		noaaportArgs 	+= f" -l {self.noaaportLogFile} "
-		noaaportCmd 	= f"{self.noaaportPath}/noaaportIngester  {noaaportArgs} < {self.FIFO_name} "
+		noaaportCmd 	= f"noaaportIngester  {noaaportArgs} < {self.FIFO_name} "
 
 		return noaaportCmd
 	
@@ -275,18 +297,24 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	# Parse this script's command line
 	def cliParser(self):
 
-		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
-		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
-		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
-		self.cliParserInit.add_argument('-i', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
-		self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
-		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
-		self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
-		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
-			action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
+		try:
 
-		args, other = self.cliParserInit.parse_known_args()
-		
+			self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
+			self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
+			self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
+			self.cliParserInit.add_argument('-i', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
+			self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
+			self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
+			self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
+			self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
+				action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
+
+			args, other = self.cliParserInit.parse_known_args()
+		except getopt.GetoptError as e:
+			print(e)
+			self.usage()
+			sys.exit(2)
+
 		return vars(args)     # vars(): converts namespace to dict
 		
 
