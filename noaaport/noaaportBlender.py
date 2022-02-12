@@ -95,29 +95,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	"""
 
-	noaaportLogFile = "/tmp/noaaport_"
-	blenderLogFile  = "/tmp/blender_"
-	port 	= ""	# nwstg = 1201, etc.
-
-	# 1. for testing purposes. Enabled below feedType when ready
-	noaaportExecLines = {
-		"nwstg":		"/tmp/nwstg.log"	
-	}
-	"""
-		"nwstg":		"/var/logs/nwstg.log"
-		,
-		"goes": 		"/var/logs/goes.log"
-		,
- 		"nwstg2": 		"/var/logs/nwstg2.log"
- 		,
- 		"oconus": 		"/var/logs/oconus.log"
- 		,
-		"nother": 		"/var/logs/nother.log"
-		,
- 		"wxwire":		"/var/logs/wxwire.log"
- 		
- 	}
-	"""
+	noaaportLogFile = None	#"/tmp/noaaport_"
+	blenderLogFile  = None	#"/tmp/blender_"
+	port 			= ""	# nwstg = 1201, etc.
 	
 
 	# Replace destination with desired FIFO destination directory.
@@ -153,7 +133,11 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	}
 	def __init__(self):	
 		
-		ldmHome     		= environ.get("LDMHOME", "/home/miles/projects/ldm")	# remove 'miles' path
+		ldmHome     		= environ.get("LDMHOME", "nowhere")
+		ldmPath 	= Path(ldmHome)
+		if ldmHome == "nowhere" or not os.path.isdir(ldmPath):
+			print(f"\n\n\t\tThe LDMHOME environment variable is NOT set. Bailing out.\n\n")
+			exit(2)
 
 		# Check CLI options:
 		self.cliParserInit = argparse.ArgumentParser(
@@ -187,7 +171,8 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1205  chico:1205
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1206
 
-		blenderArgs    += f" -l {self.blenderLogFile} "
+		if self.blenderLogFile != None:
+			blenderArgs    += f" -l {self.blenderLogFile} "
 
 		for hostId in cliArg["fanoutServerAddresses"]:
 			blenderArgs    += f" {hostId} "
@@ -216,16 +201,12 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		noaaportLogFile = cliArgs["noaaportLogFile"]
 		if noaaportLogFile != None:
 			self.noaaportLogFile = noaaportLogFile
-		else:
-			self.noaaportLogFile += f"{ self.port}.log"
 		
 		# If blender logfile not provided, use default? or LDM's?
 		blenderLogFile = cliArgs["blenderLogFile"]
 		if cliArgs["blenderLogFile"] != None:	
 			self.blenderLogFile = blenderLogFile
-		else:
-			self.blenderLogFile += f"{self.port}.log"
-
+		
 		# FIFO
 		self.FIFO_name = self.makePipe(self.port, cliArgs)
 
@@ -235,21 +216,19 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		pipeName = cliArgs["fifoName"] 	# <- use option
 		if pipeName == None:			# <- use default
 			pipeName	= f"{self.FIFO_name}{feedTypePort}.fifo"
-
 		pipePath 	= Path(pipeName)
 		if not os.path.exists(pipeName):
-			
 			cmd_proc= f"mkfifo {pipeName}"
 			try:
 				proc= subprocess.check_output(cmd_proc, shell=True )
-				#for line in proc.decode().splitlines():
 				print(f"FIFO: {pipeName} created.")			
 
 				return pipeName
 
 			except Exception as e:
 				# self.errmsg(f"{cmd} is currently NOT running! ")
-				pass
+				print(f"Could not create FIFO with this path name: {pipeName}")
+				sys.exit(2)
 
 		return pipeName
 
@@ -263,38 +242,14 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		if cliArgs["noaaportMoreInfo"] != None:	
 			noaaportArgs 	+= " -n "
 
-		noaaportArgs 	+= f" -l {self.noaaportLogFile} "
+		if self.noaaportLogFile != None:
+			noaaportArgs 	+= f" -l {self.noaaportLogFile} "
+
 		noaaportCmd 	= f"noaaportIngester  {noaaportArgs} < {self.FIFO_name} "
 
 		return noaaportCmd
 	
 
-	def runProc(self, cmd):
-
-		print("Entering runProc")
-		try:
-			proc = subprocess.check_call(cmd, shell=True )
-			
-			print(proc)
-			for line in proc.decode().splitlines():
-				print(line)
-				procId = line.split()[1]
-				p = psutil.Process(int(procId))
-				
-				print(procId)
-
-			print("Exiting runProc")
-
-			return procId
-
-		except Exception as e:
-			# self.errmsg(f"{cmd} is currently NOT running! ")
-
-			print("Exiting runProc")
-
-
-
-	# Parse this script's command line
 	def cliParser(self):
 
 		try:
@@ -310,8 +265,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 				action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
 
 			args, other = self.cliParserInit.parse_known_args()
+
 		except getopt.GetoptError as e:
-			print(e)
+			self.errmsg(e)
 			self.usage()
 			sys.exit(2)
 
@@ -332,20 +288,20 @@ def main():
 	noaaBPInst.buildLogFilesAndFifo(cliArg)
 	noaaportCmd 	= noaaBPInst.prepareNoaaportCmd(cliArg)
 	blenderCmd 		= noaaBPInst.prepareBlenderCmd(cliArg)
-	
+
 	while True:
 
 		print(noaaportCmd)
 		print(blenderCmd) 
 
 		noaaProc 	= subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
-		blenderProc 	= subprocess.Popen(blenderCmd,  stdout=subprocess.PIPE, shell=True)
+		blenderProc = subprocess.Popen(blenderCmd,  stdout=subprocess.PIPE, shell=True)
 		
 		noaaProc.wait()
 		blenderProc.wait()
 
-		print(f"Re-running... (loop) ")
-		time.sleep(5)	
+		print(f"One or both processes stopped. Re-running them...")
+		time.sleep(2)	
 
 
 if __name__ == '__main__':
