@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#define	SBN_FRAME_SIZE	5000
+#define SBN_FRAME_SIZE 5000
 
 typedef uint_fast16_t RunNum_t;
 #define PRI_RUN_NUM PRIuFAST16
@@ -24,8 +24,8 @@ typedef uint_fast16_t FrameSize_t;
 typedef struct aFrame {
     SeqNum_t        seqNum;
     RunNum_t        runNum;
-    char   			data[SBN_FRAME_SIZE];
-    FrameSize_t		nbytes;
+    char            data[SBN_FRAME_SIZE];
+    FrameSize_t     nbytes;
 } Frame_t;
 
 #endif /* NOAAPORT_NOAAPORTFRAME_H_ */

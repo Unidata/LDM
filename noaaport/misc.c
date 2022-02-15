@@ -8,23 +8,23 @@
  */
 
 #include "misc.h"
+#include "log.h"
+
 #include <pthread.h>
 #include <string.h>
-#include <log.h>
-
 
 void
 lockIt(pthread_mutex_t* thisMutex)
 {
 	int resp = pthread_mutex_lock(thisMutex);
-	assert( resp == 0);
+	log_assert( resp == 0);
 }
 
 void
 unlockIt(pthread_mutex_t* thisMutex)
 {
 	int resp = pthread_mutex_unlock(thisMutex);
-	assert( resp == 0);
+	log_assert( resp == 0);
 }
 
 void

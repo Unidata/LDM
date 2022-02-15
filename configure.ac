@@ -506,6 +506,7 @@ AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
     [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
     [Default pathname of LDM product-queue])
+AC_SUBST([LDM_QUEUE_PATH], $localstatedir/queues/ldm.pq])
 AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
     [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
@@ -771,6 +772,7 @@ AC_CONFIG_FILES([
     pqcheck/Makefile
     pqcopy/Makefile
     pqcreate/Makefile
+    pqcreate/pqcreate.1
     pqexpire/Makefile
     pqinglib/Makefile
     pqing/Makefile
@@ -785,6 +787,7 @@ AC_CONFIG_FILES([
     regex/Makefile
     registry/Makefile
     regutil/Makefile
+    regutil/regpar.tab
     rpc/Makefile
     rtstats/Makefile
     scour/Makefile

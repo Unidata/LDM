@@ -33,7 +33,6 @@ EXTRA_DIST              = \
         productMaker.hin \
         reader.hin \
 	shmfifo.hin \
-	blender.conf.in blender.1.in \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 BUILT_SOURCES		= \
@@ -120,9 +119,10 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-blender_SOURCES		= blender.c $(COMMON_SOURCES) \
- 	frameWriter.c queueManager.c frameReader.c CircFrameBuf.cpp \
- 	misc.c NbsHeaders.c NbsHeaders.h NbsFrame.c NbsFrame.h
+blender_SOURCES		= blender.c blender.h $(COMMON_SOURCES) \
+	frameWriter.c frameWriter.h noaaportFrame.h queueManager.c \
+	queueManager.h frameReader.c frameReader.h CircFrameBuf.cpp \
+	CircFrameBuf.h misc.c NbsHeaders.c NbsHeaders.h NbsFrame.c NbsFrame.h
  	
 testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
 

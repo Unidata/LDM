@@ -66,7 +66,7 @@ average product size -- \fBwhich is guaranteed to be incorrect\fP.
 .BI \-q " pqfname"
 The name of the product queue file.  The default is
 .nh
-\fB$(regutil regpath{QUEUE_PATH})\fP.
+\fB@LDM_QUEUE_PATH@\fP.
 .hy
 This should specify a local file, not a remotely mounted file.
 .TP
