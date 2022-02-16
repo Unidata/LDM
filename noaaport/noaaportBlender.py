@@ -7,7 +7,7 @@
 #  				the blender program. It is invoked as an executabe script.
 #
 #
-#   @file:  noaaportBlenderPipe
+#   @file:  noaaportBlender.py
 # @author:  Mustapha Iles
 #
 #    Copyright 2021 University Corporation for Atmospheric Research
@@ -51,10 +51,12 @@ import 	sys
 import 	subprocess
 import 	psutil
 import 	time
-from 	os 	import environ, system
+from 	os 		import environ, system
 from 	pathlib import Path
 import  argparse
 import 	getopt
+import 	logging
+
 
 
 class NoaaportBlender():
@@ -114,10 +116,11 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 					   communicating through a FIFO. The latter is created here
 					   for each type of feed.''',
 		"usage": '''\n\n\tnoaaportBlender.py [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
-			-x 		Debug mode for `blender`
+			-x 		DEBUG mode for `blender`
+			-i 		INFO  mode for `blender`
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
-			-i <log>	Log file for noaaportIngester, default: LDM logfile
+			-l <log>	Log file for noaaportIngester, default: LDM logfile
 			-v 		Debug   mode for `noaaportIngester`
 			-n 		Verbose mode for `noaaportIngester`
 			-p <port>	fanout server port number
@@ -126,17 +129,26 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			''',
 		"epilog":'''
 		Thank you for using noaaportBlender.py...
-				'''
-		
-
-						
+				'''	
 	}
+
+
+	def ulogIt(self, msg, funcName, lineNum):
+
+		cmd = f'ulogger "noaaportBlender.py:{funcName}:{lineNum}  {msg}"'
+		self.runProc(cmd) 
+
+
+
 	def __init__(self):	
-		
-		ldmHome     		= environ.get("LDMHOME", "nowhere")
+
+
+		ldmHome     = environ.get("LDMHOME", "nowhere")
 		ldmPath 	= Path(ldmHome)
 		if ldmHome == "nowhere" or not os.path.isdir(ldmPath):
-			print(f"\n\n\t\tThe LDMHOME environment variable is NOT set. Bailing out.\n\n")
+
+			msg = "The LDMHOME environment variable is NOT set. Bailing out."
+			self.ulogIt(msg, "__init__", 151)
 			exit(2)
 
 		# Check CLI options:
@@ -148,24 +160,26 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			)
 
 
+
 	def usage(self):
 		program		= self.progUsage["progName"]
 		description = self.progUsage["description"]
 		usage 		= self.progUsage["usage"]
 		epilog 		= self.progUsage["epilog"]
 
-		#print(program)
-		#print(description)
-		print(usage)
-		print(epilog)
+		self.ulogIt(usage, "usage", 171)
+		self.ulogIt(epilog, "usage", 172)
 
 		sys.exit(2)
 
-	def prepareBlenderCmd(self, cliArg):
+	def prepareBlenderCmd(self, cliArgs):
 
 		blenderArgs = f" -t {self.timeOut} "
-		if cliArg["debugMode"] == True:
+		if cliArgs["debugMode"] == True:
 			blenderArgs += " -x "
+
+		if cliArgs["blenderInfoMode"] != None:	
+			blenderArgs += " -v "
 
 		# "blender -t 0.01  -l /var/logs/wxwire.log  chico:1201"
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1205  chico:1205
@@ -174,7 +188,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		if self.blenderLogFile != None:
 			blenderArgs    += f" -l {self.blenderLogFile} "
 
-		for hostId in cliArg["fanoutServerAddresses"]:
+		for hostId in cliArgs["fanoutServerAddresses"]:
 			blenderArgs    += f" {hostId} "
 
 		blenderArgs    += f"  > {self.FIFO_name}"
@@ -192,7 +206,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		else: # extract it from fanout server address
 			if len(cliArgs["fanoutServerAddresses"][0].split(':')) != 2:
 				errorMsg = "\n\n\t\t<port> is missing\n\n"
-				print(errorMsg)
+				self.ulogIt(errorMsg, "buildLogFilesAndFifo", 207)
 				self.usage()
 
 			self.port = cliArgs["fanoutServerAddresses"][0].split(':')[1]
@@ -220,14 +234,14 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		if not os.path.exists(pipeName):
 			cmd_proc= f"mkfifo {pipeName}"
 			try:
-				proc= subprocess.check_output(cmd_proc, shell=True )
-				print(f"FIFO: {pipeName} created.")			
+				proc= subprocess.check_output(cmd_proc, shell=True )		
 
 				return pipeName
 
 			except Exception as e:
 				# self.errmsg(f"{cmd} is currently NOT running! ")
-				print(f"Could not create FIFO with this path name: {pipeName}")
+				errmsg = f"Could not create FIFO with this path name: {pipeName}"
+				self.ulogIt(errMsg, "makePipe", 242)
 				sys.exit(2)
 
 		return pipeName
@@ -252,37 +266,43 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	def cliParser(self):
 
-		try:
+		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
+		self.cliParserInit.add_argument('-i', dest='blenderInfoMode', action='store_true', help='', required=False)
+		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
+		self.cliParserInit.add_argument('-l', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
+		self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
+		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
+		self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
+		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
+			action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
 
-			self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
-			self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
-			self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
-			self.cliParserInit.add_argument('-i', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
-			self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
-			self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
-			self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
-			self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
-				action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
-
-			args, other = self.cliParserInit.parse_known_args()
-
-		except getopt.GetoptError as e:
-			self.errmsg(e)
-			self.usage()
-			sys.exit(2)
+		args, other = self.cliParserInit.parse_known_args()
+		
 
 		return vars(args)     # vars(): converts namespace to dict
 		
+	def runProc(self, cmd):
 
-	def errmsg(self, msg):
-		print(f"\n\tNote: {msg}")
-
+		try:
+			proc = subprocess.check_call(cmd, shell=True )
+			
+		except Exception as e:
+			if cmd.startswith("ulog"): # avoid looping
+				print(cmd)
+			else:
+				self.ulogIt(f"{e}", "runProc", 286)
+				exit(0)
+			
 
 def main():
 
 	system('clear')
 	
 	noaaBPInst 		= NoaaportBlender()	
+
+	startMsg = f"Starting up the 2 programs (blender and noaaportIngester)..."
+	noaaBPInst.ulogIt( startMsg , "main", 300)
 
 	cliArg 			= noaaBPInst.cliParser()	# for this script
 	noaaBPInst.buildLogFilesAndFifo(cliArg)
@@ -291,8 +311,9 @@ def main():
 
 	while True:
 
-		print(noaaportCmd)
-		print(blenderCmd) 
+		noaaBPInst.ulogIt(noaaportCmd, "main", 310)
+		noaaBPInst.ulogIt(blenderCmd, "main", 311)
+		
 
 		noaaProc 	= subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
 		blenderProc = subprocess.Popen(blenderCmd,  stdout=subprocess.PIPE, shell=True)
@@ -300,7 +321,8 @@ def main():
 		noaaProc.wait()
 		blenderProc.wait()
 
-		print(f"One or both processes stopped. Re-running them...")
+		msg = "One or both processes stopped. Re-running them..."
+		noaaBPInst.ulogIt(msg, "", 319)
 		time.sleep(2)	
 
 

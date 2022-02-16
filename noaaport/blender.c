@@ -15,8 +15,9 @@ const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
 // =====================================================================
-static	int		serverCount;
+static	int				serverCount;
 static	char*	const*	serverAddresses;
+static  char 			blenderArguments[PATH_MAX]="";
 
 static double	waitTime = 1.0;					///< max time between output frames
 static char*	logfile	 = "/tmp/blender.log";	///< pathname of output messages
@@ -69,15 +70,18 @@ decodeCommandLine(
     extern int          optopt;
     int ch;
     opterr = 0;                         /* no error messages from getopt(3) */
+
     while (0 == status &&
            (ch = getopt(argc, argv, ":vxl:t:")) != -1)
     {
         switch (ch) {
             case 'v':
                 (void)log_set_level(LOG_LEVEL_INFO);
+                strcat(blenderArguments, " -v ");
                 break;
             case 'x':
         	   	(void)log_set_level(LOG_LEVEL_DEBUG);
+        	   	strcat(blenderArguments, " -x ");
                 break;
             case 'l':
               	if (sscanf(optarg, "%ms", &logfile) != 1 ) {
@@ -85,6 +89,9 @@ decodeCommandLine(
                     status = EINVAL;
                     break;
                 }
+              	strcat(blenderArguments, " -l ");
+              	strcat(blenderArguments, logfile);
+              	strcat(blenderArguments, " ");
               	log_set_destination(logfile);
               	free(logfile);
                 break;
@@ -93,6 +100,9 @@ decodeCommandLine(
                 	log_add("Invalid frame latency time-out value (max_wait): \"%s\"", optarg);
                     status = EINVAL;
                 }
+              	strcat(blenderArguments, " -t ");
+              	strcat(blenderArguments, optarg);
+              	strcat(blenderArguments, " ");
                 break;
             case '?': {
                 log_add("Unknown option: \"%c\"", ch);
@@ -115,6 +125,11 @@ decodeCommandLine(
 
 	serverCount 	= argc - optind;
 	serverAddresses = &argv[optind]; ///< list of servers to connect to
+	for(int i=0; i<serverCount; i++)
+	{
+		strcat(blenderArguments, serverAddresses[i]);
+		strcat(blenderArguments, " ");
+	}
 
     return status;
 }
@@ -193,7 +208,7 @@ int main(
         }
         else 
         {
-            log_notice("Starting up %s", PACKAGE_VERSION );
+            log_notice("Starting up v%s blender %s", PACKAGE_VERSION, blenderArguments );
             log_notice("%s", COPYRIGHT_NOTICE);
 
             // Ensures client and server file descriptors are closed cleanly,
