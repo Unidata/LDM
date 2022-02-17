@@ -115,17 +115,17 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 					   launches both noaaportIngester and the blender 
 					   communicating through a FIFO. The latter is created here
 					   for each type of feed.''',
-		"usage": '''\n\n\tnoaaportBlender.py [x][-b <blender log>][-n <noaaportIngester log>] [-p <port#>] --fanout <fanout>:<port> ...  \n
-			-x 		DEBUG mode for `blender`
-			-i 		INFO  mode for `blender`
+		"usage": '''\n\n\tnoaaportBlender.py [-x][-b <blender log>][-l <noaaportIngester log>][-f <fifo>][-p <port>] --fanout <fanout>[:<port>] ...  \n
+			
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-l <log>	Log file for noaaportIngester, default: LDM logfile
-			-v 		Debug   mode for `noaaportIngester`
-			-n 		Verbose mode for `noaaportIngester`
+			-v 		Verbose mode for 'blender' and Debug mode (NOTICE) for `noaaportIngester`
 			-p <port>	fanout server port number
+			-x 		Debug mode for `blender` and Verbose mode (INFO) for 'noaaportIngester'
 			--fanout 	one or more fanoutServerAddresses with syntax: 
-						<server:port> ...
+						<server:port> ... 
+						If <port> is missing, option '-p <port>' is required,
 			''',
 		"epilog":'''
 		Thank you for using noaaportBlender.py...
@@ -175,11 +175,15 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	def prepareBlenderCmd(self, cliArgs):
 
 		blenderArgs = f" -t {self.timeOut} "
-		if cliArgs["debugMode"] == True:
+
+		# debug has precedence over verbose
+
+		if cliArgs["verbose"] == True and cliArgs["debug"] == False:	
+			blenderArgs += " -v "
+
+		if cliArgs["debug"] == True:
 			blenderArgs += " -x "
 
-		if cliArgs["blenderInfoMode"] != None:	
-			blenderArgs += " -v "
 
 		# "blender -t 0.01  -l /var/logs/wxwire.log  chico:1201"
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1205  chico:1205
@@ -250,11 +254,12 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	# Build the blender's command line arguments
 	def prepareNoaaportCmd(self, cliArgs):
 
-		if cliArgs["noaaportVerbose"] != None:	
-			noaaportArgs 	= " -v "
+		# debug has precedence over verbose
+		if cliArgs["verbose"] == True and cliArgs["debug"] == False:	
+			noaaportArgs 	= " -n "
 
-		if cliArgs["noaaportMoreInfo"] != None:	
-			noaaportArgs 	+= " -n "
+		if cliArgs["debug"] == True:	
+			noaaportArgs 	= " -v "	# that's how noaaportingester is expecting it...
 
 		if self.noaaportLogFile != None:
 			noaaportArgs 	+= f" -l {self.noaaportLogFile} "
@@ -266,14 +271,12 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	def cliParser(self):
 
-		self.cliParserInit.add_argument('-x', dest='debugMode', action='store_true', help='', required=False)
-		self.cliParserInit.add_argument('-i', dest='blenderInfoMode', action='store_true', help='', required=False)
 		self.cliParserInit.add_argument('-b', dest='blenderLogFile', action="store", help='Default: LDM logfile', required=False)
 		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
 		self.cliParserInit.add_argument('-l', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
-		self.cliParserInit.add_argument('-n', dest='noaaportMoreInfo', action="store_true",help='', required=False)
 		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
-		self.cliParserInit.add_argument('-v', dest='noaaportVerbose', action="store_true",help='', required=False)
+		self.cliParserInit.add_argument('-v', dest='verbose', action="store_true",help='', required=False)
+		self.cliParserInit.add_argument('-x', dest='debug', action='store_true', help='', required=False)
 		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
 			action="store", help='', required=True, metavar='fanoutAddress', type=str, nargs='+')
 
