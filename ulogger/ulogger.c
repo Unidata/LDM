@@ -170,6 +170,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "log_init() failure\n");
             return 1;
         }
+        log_set_level(LOG_LEVEL_DEBUG); // ulogger(1) shouldn't decide
 
 #ifdef LOG_PERROR
         while ((ch = getopt(argc, argv, "f:ip:st:l:")) != EOF)

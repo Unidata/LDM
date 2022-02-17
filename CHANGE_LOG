@@ -1,3 +1,6 @@
+6.13.17.7       2022-02-17T13:10:01-0700
+    ulogger(1): Have it log everything regardless of message priority
+
 6.13.17.6       2022-02-17T12:18:03-0700
     noaaportBlender.py(1):
         * Changed "-i" (INFO logging) to "-v" to be consistent with other
