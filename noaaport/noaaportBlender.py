@@ -97,9 +97,10 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	"""
 
-	noaaportLogFile = None	#"/tmp/noaaport_"
-	blenderLogFile  = None	#"/tmp/blender_"
-	port 			= ""	# nwstg = 1201, etc.
+	noaaportLogFile 	= None	#"/tmp/noaaport_"
+	blenderLogFile  	= None	#"/tmp/blender_"
+	thisScriptLog  		= "/tmp/noaaportBlender.log"
+	port 				= ""	# nwstg = 1201, etc.
 	
 
 	# Replace destination with desired FIFO destination directory.
@@ -133,10 +134,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	}
 
 
-	def ulogIt(self, msg, funcName, lineNum):
 
-		cmd = f'ulogger "noaaportBlender.py:{funcName}:{lineNum}  {msg}"'
-		self.runProc(cmd) 
 
 
 
@@ -282,9 +280,16 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 		args, other = self.cliParserInit.parse_known_args()
 		
-
 		return vars(args)     # vars(): converts namespace to dict
 		
+
+	def ulogIt(self, msg, funcName, lineNum):
+
+		#cmd = f'ulogger  -l /tmp/noaaportBlender.log "noaaportBlender.py:{funcName}:{lineNum}  {msg}"'
+		cmd = f'ulogger -l {self.thisScriptLog} "noaaportBlender.py:{funcName}:{lineNum}  {msg}"'
+		self.runProc(cmd) 
+
+
 	def runProc(self, cmd):
 
 		try:
@@ -325,7 +330,7 @@ def main():
 		blenderProc.wait()
 
 		msg = "One or both processes stopped. Re-running them..."
-		noaaBPInst.ulogIt(msg, "", 319)
+		noaaBPInst.ulogIt(msg, "main", 329)
 		time.sleep(2)	
 
 

@@ -201,6 +201,8 @@ int nbs_getFrame(
                         nbs_logPDH(&reader->pdh);
                         nbs_logPSH(&reader->psh);
                         log_add("Invalid product-specific header");
+                        if (psh)
+                           *psh = NULL;
                         status = NBS_INVAL;
                     }
                     else {
