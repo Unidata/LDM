@@ -84,6 +84,14 @@ const char* log_get_default_destination(void);
 bool log_stderr_is_open(void);
 
 /**
+ * Indicates if the current process is a daemon.
+ *
+ * @retval `true`   Current process is a daemon
+ * @retval `false`  Current process is not a daemon
+ */
+bool log_amDaemon(void);
+
+/**
  * Initializes the logging module. Should be called before most other functions.
  * <dl>
  *     <dt>log_get_facility() <dd>will return `LOG_LDM`.

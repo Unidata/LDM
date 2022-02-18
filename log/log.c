@@ -920,6 +920,20 @@ bool log_stderr_is_open(void)
     return fstat(STDERR_FILENO, &stderr_stat) == 0;
 }
 
+bool log_amDaemon(void)
+{
+    char  ctermId[L_ctermid];
+    char* ptr = ctermid(ctermId);
+    if (ptr == NULL || *ptr == 0)
+        return true;
+    const int fd = open(ptr, O_RDWR);
+    if (fd >= 0) {
+        close(fd);
+        return false;
+    }
+    return true;
+}
+
 int log_init(const char* const id)
 {
 	int status;
@@ -940,7 +954,7 @@ int log_init(const char* const id)
 		}
 		else {
 			// `avoid_stderr` must be set before `get_default_destination()`
-			avoid_stderr = !log_stderr_is_open();
+			avoid_stderr = log_amDaemon();
 			status = logi_set_destination(get_default_destination());
 
 			if (status) {
