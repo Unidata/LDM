@@ -1,8 +1,10 @@
-6.13.17.8
+6.13.17.8       2022-02-18T13:49:51-0700
     Logging (log(3)):
         * Improved determination of whether or not the current process is a
           daemon by testing for a controlling terminal. This correctly handles
           the standard error stream being open on /dev/null.
+    NOAAPort:
+        * blender(1): Log start of product at the INFO level.
 
 6.13.17.7       2022-02-17T13:10:01-0700
     ulogger(1):
