@@ -50,18 +50,14 @@ buildFrameRoutine(int clientSockFd)
 	int status = NBS_SUCCESS;
     for(;;)
     {
-		if( (status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ) )
+		if ((status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ))
 				== NBS_SUCCESS)
 		{
-			//status = nbs_logHeaders( buf, size); // This just calls `log_add()`
-			//log_flush_debug();
-
 			// buffer now contains frame data of size frameSize at offset 0
 			// Insert in queue
 			status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
 
-			if( log_is_level_enabled(LOG_LEVEL_INFO)  && pdh->transferType == 1)
-			//	&& !( xor % 2 ==1 ) ) // start of new product
+			if (status == 0 && pdh && (pdh->transferType & 1))
 			{
 				if (psh )
 					log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
@@ -69,11 +65,7 @@ buildFrameRoutine(int clientSockFd)
 				else
 					log_info("Starting product {SeqNum=%u, RunNum=%u}" ,
 							fh->seqno, fh->runno);
-
-				//log_add("%" PRIu32 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" PRIu16 "\t%" ,
-				//		fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
 			}
-
 		}
 
 		if( status == NBS_IO)
