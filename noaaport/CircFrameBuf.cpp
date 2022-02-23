@@ -23,7 +23,7 @@ CircFrameBuf::CircFrameBuf(const double timeout)
             std::chrono::duration<double>(timeout)))
 {}
 
-void CircFrameBuf::add(
+int CircFrameBuf::add(
         const RunNum_t    runNum,
         const SeqNum_t    seqNum,
         const char*       data,
@@ -33,27 +33,29 @@ void CircFrameBuf::add(
     Key   key{runNum, seqNum};
 
     if (frameReturned && key < lastOldestKey)
-        return; // Frame arrived too late
+        return 1; // Frame arrived too late
     if (!indexes.insert({key, nextIndex}).second)
-        return; // Frame already added
+        return 2; // Frame already added
 
     slots.emplace(nextIndex, Slot{data, numBytes});
     ++nextIndex;
     cond.notify_one();
+    return 0;
 }
 
 void CircFrameBuf::getOldestFrame(Frame_t* frame)
 {
     Lock  lock{mutex}; /// RAII!
-    cond.wait(lock, [&]{return !indexes.empty();});
-    // A frame exists
 
+    do {
+        cond.wait_for(lock, timeout,
+                [&]{return !indexes.empty() && Slot::Clock::now() >=
+                slots.at(indexes.begin()->second).inserted + timeout;});
+    } while (indexes.empty());
+
+    // The oldest frame shall be returned
     auto  head = indexes.begin();
     auto  key = head->first;
-    cond.wait_for(lock, timeout, [=]{
-        return frameReturned && key.isNextAfter(lastOldestKey);});
-    // The next frame must be returned
-
     auto  index = head->second;
     auto& slot = slots.at(index);
 
@@ -84,21 +86,34 @@ extern "C" {
 	}
 
 	//------------------------- C code ----------------------------------
-	bool cfb_add(
+	/**
+	 *
+	 * @param cfb
+	 * @param runNum
+	 * @param seqNum
+	 * @param data
+	 * @param numBytes
+	 * @retval 0   Success
+	 * @retval 1   Frame is too late
+	 * @retval 2   Frame is duplicate
+	 * @retval -1  System error. `log_add()` called.
+	 */
+	int cfb_add(
 			void*             cfb,
 			const RunNum_t    runNum,
 			const SeqNum_t    seqNum,
 			const char*       data,
 			const FrameSize_t numBytes) {
-		bool success = false;
+        int status;
 		try {
-			static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data, numBytes);
-			success = true;
+			status = static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data,
+                    numBytes);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't add new frame: %s", ex.what());
+			status = -1;
 		}
-		return success;
+		return status;
 	}
 
 	//------------------------- C code ----------------------------------

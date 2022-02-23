@@ -47,7 +47,7 @@ buildFrameRoutine(int clientSockFd)
     const NbsPSH*  	psh;
     log_level_t 	level;
 
-	int status = NBS_SUCCESS;
+	int status;
     for(;;)
     {
 		if ((status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ))
@@ -57,23 +57,35 @@ buildFrameRoutine(int clientSockFd)
 			// Insert in queue
 			status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
 
-			if (status == 0 && pdh && (pdh->transferType & 1))
-			{
-				if (psh )
-					log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
-							fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
-				else
-					log_info("Starting product {SeqNum=%u, RunNum=%u}" ,
-							fh->seqno, fh->runno);
+			if (status == 0) {
+			    if (pdh && (pdh->transferType & 1))
+                {
+                    if (psh )
+                        log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
+                                fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
+                    else
+                        log_info("Starting product {SeqNum=%u, RunNum=%u}" ,
+                                fh->seqno, fh->runno);
+                }
+			}
+			else if (status == 1) {
+			    log_add("Frame was too late");
+			    log_flush_debug();
+			}
+			else if (status == 2) {
+			    log_add("Frame is a duplicate");
+			    log_flush_debug();
+			}
+			else {
+			    break;
 			}
 		}
-
-		if( status == NBS_IO)
+		else if( status == NBS_IO)
 		{
 			log_add_syserr("Read failure");
 			// n == -1 ==> read error
 		}
-		if( status == NBS_EOF)
+		else if( status == NBS_EOF)
 		{
 			log_add("End of file");
 		}
@@ -81,7 +93,6 @@ buildFrameRoutine(int clientSockFd)
     } // for
 
     nbs_freeReader(nbsReader);
-
 }
 
 /**

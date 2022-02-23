@@ -65,12 +65,16 @@ class CircFrameBuf
      * A slot for a frame.
      */
     struct Slot {
-        char        data[5000]; ///< Frame data
-        FrameSize_t numBytes;   ///< Number of bytes of data in the frame
+        using Clock = std::chrono::steady_clock;
+
+        char              data[5000]; ///< Frame data
+        FrameSize_t       numBytes;   ///< Number of bytes of data in the frame
+        Clock::time_point inserted;   ///< When the frame was inserted
 
         Slot(const char* data, FrameSize_t numBytes)
             : data()
             , numBytes(numBytes)
+            , inserted{Clock::now()}
         {
             if (numBytes > sizeof(this->data))
                 throw std::runtime_error("Frame is too large: " + std::to_string(numBytes) + " bytes.");
@@ -118,10 +122,13 @@ public:
      * @param[in] seqNum    Frame sequence number
      * @param[in] data      Frame data
      * @param[in] numBytes  Number of bytes in the frame
+     * @retval    0         Frame added
+     * @retval    1         Frame not added because it arrived too late
+     * @retval    2         Frame not added because it's a duplicate
      * @threadsafety        Safe
      * @see                 `getOldestFrame()`
      */
-    void add(
+    int add(
             const RunNum_t    runNum,
             const SeqNum_t    seqNum,
             const char*       data,
@@ -163,10 +170,12 @@ void* cfb_new(const double timeout);
  * @param[in] seqNum    NOAAPort sequence number
  * @param[in] data      Frame data
  * @param[in] numBytes  Number of bytes of data
- * @retval    `true`    Success
- * @retval    `false`   Fatal error. `log_add()` called.
+ * @retval    0         Success
+ * @retval    1         Frame not added because it's too late
+ * @retval    2         Frame not added because it's a duplicate
+ * @retval    -1        System error. `log_add()` called.
  */
-bool  cfb_add(
+int cfb_add(
         void*             cfb,
         const RunNum_t    runNum,
         const SeqNum_t    seqNum,
