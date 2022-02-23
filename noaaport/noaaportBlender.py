@@ -116,7 +116,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 					   launches both noaaportIngester and the blender 
 					   communicating through a FIFO. The latter is created here
 					   for each type of feed.''',
-		"usage": '''\n\n\tnoaaportBlender.py [-x][-b <blender log>][-l <noaaportIngester log>][-f <fifo>][-p <port>] --fanout <fanout>[:<port>] ...  \n
+		"usage": '''\n\n\tnoaaportBlender.py [-x][-b <blender log>][-l <noaaportIngester log>][-f <fifo>][-p <port>][-t <timeOut>] --fanout <fanout>[:<port>] ...  \n
 			
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
