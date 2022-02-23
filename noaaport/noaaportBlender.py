@@ -108,7 +108,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	# blender  args
 	# blenderLaunch 	= "blender -t 0.01  -l /tmp/blender_out.log 1201 leno, chico"
-	timeOut 		= "0.01"
+	timeOut 		= "5.0"
 
 	progUsage = {
 		"progName": "noaaportBlender.py",
