@@ -121,8 +121,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			-b <log>	Log file for blender, default: LDM logfile
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-l <log>	Log file for noaaportIngester, default: LDM logfile
-			-v 		Verbose mode for 'blender' and Debug mode (NOTICE) for `noaaportIngester`
 			-p <port>	fanout server port number
+			-t <timeOut>	latency between 2 frames sent out
+			-v 		Verbose mode for 'blender' and Debug mode (NOTICE) for `noaaportIngester`
 			-x 		Debug mode for `blender` and Verbose mode (INFO) for 'noaaportIngester'
 			--fanout 	one or more fanoutServerAddresses with syntax: 
 						<server:port> ... 
@@ -173,6 +174,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	def prepareBlenderCmd(self, cliArgs):
 
 		blenderArgs = f" -t {self.timeOut} "
+		if cliArgs["timeOut"] != None:	
+			timeOut = cliArgs["timeOut"]
+			blenderArgs = f" -t {timeOut} "
 
 		# debug has precedence over verbose
 
@@ -273,6 +277,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
 		self.cliParserInit.add_argument('-l', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
 		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
+		self.cliParserInit.add_argument('-t', dest='timeOut', action="store", help='Default: 0.01', required=False)
 		self.cliParserInit.add_argument('-v', dest='verbose', action="store_true",help='', required=False)
 		self.cliParserInit.add_argument('-x', dest='debug', action='store_true', help='', required=False)
 		self.cliParserInit.add_argument('--fanout', dest='fanoutServerAddresses', 
