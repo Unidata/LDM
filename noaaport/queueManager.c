@@ -110,7 +110,9 @@ queue_start(const double frameLatency)
  * @param[out] frameBytes  		Number of data bytes in this frame
 
  * @retval     0  				Success
- * @retval     !0      		  	Error
+ * @retval     1                Frame is too late
+ * @retval     2                Frame is duplicate
+ * @retval     -1               System error. `log_add()` called.
  *
  * pre-condition: 	runMutex is unLOCKed
  * post-condition: 	runMutex is unLOCKed
@@ -121,16 +123,10 @@ tryInsertInQueue(  unsigned 		    sequenceNumber,
 				   const uint8_t* const buffer,
 				   size_t 			    frameBytes)
 {
-	int status = 0;
-
     //lockIt(&runMutex);
 	// call in CircFrameBuf: (C++ class)
-	bool cfbStatus = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
-	if( !cfbStatus )
-	{
-		log_error("Inserting frame in queue failed.");
-		status = -1;
-	}
-    //unlockIt(&runMutex);
+	int status = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
+	//else if (status )
+        //unlockIt(&runMutex);
 	return status;
 }
