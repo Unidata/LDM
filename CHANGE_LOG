@@ -1,3 +1,14 @@
+6.13.17.10      2022-02-22T17:52:57-0700
+    NOAAPort:
+        * blender(1): Improved error handling if a frame can't be inserted.
+        * noaaportBlender(1): Changed default minimum residency from 0.01 s to
+          5.0 s
+
+6.13.17.9       2022-02-22T14:46:27-0700
+    NOAAPort:
+        * blender(1): Improved condition for emitting a frame by using a
+          constant delay
+
 6.13.17.8       2022-02-18T13:49:51-0700
     Logging (log(3)):
         * Improved determination of whether or not the current process is a
