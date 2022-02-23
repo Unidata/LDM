@@ -1,3 +1,9 @@
+6.13.17.11     
+    NOAAPort:
+        * noaaportBlender(1): Added residency time as an option to the Python 
+          script: -t <timeOut>
+        
+     
 6.13.17.10      2022-02-22T17:52:57-0700
     NOAAPort:
         * blender(1): Improved error handling if a frame can't be inserted.
