@@ -122,7 +122,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-l <log>	Log file for noaaportIngester, default: LDM logfile
 			-p <port>	fanout server port number
-			-t <timeOut>	latency between 2 frames sent out
+			-t <delay>	fixed delay, in seconds, to avoid duplicate frames
 			-v 		Verbose mode for 'blender' and Debug mode (NOTICE) for `noaaportIngester`
 			-x 		Debug mode for `blender` and Verbose mode (INFO) for 'noaaportIngester'
 			--fanout 	one or more fanoutServerAddresses with syntax: 
