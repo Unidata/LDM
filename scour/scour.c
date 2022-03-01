@@ -152,23 +152,6 @@ isThisSymlinkADirectory(char *path)
     return S_ISDIR(sb.st_mode)? true : false;
 }
 
-static bool
-isThisDirectoryASymlink(char *path)
-{
-    struct stat sb;
-
-    if (lstat(path, &sb) == -1)
-    {
-        log_info("symlink \"%s\"  is broken! DELETED!", path);
-        
-        unlink(path);
-
-        return false;
-    }
-
-    return S_ISLNK(sb.st_mode)? true : false;
-}
-
 // delete the symlink if target file is older than daysOld, 
 // so that symlink is not left broken
 static int 
@@ -190,8 +173,6 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
             log_add_syserr("Couldn't remove symbolic link \"%s\"", symlinkPath);
             log_flush_warning();
         }
-
-
         //log_flush_error();
         return -1;
     }
