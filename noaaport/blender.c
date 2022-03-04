@@ -14,13 +14,13 @@
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
+int    rcvBufSize = 0;
 // =====================================================================
 static	int				serverCount;
 static	char*	const*	serverAddresses;
 static  char 			blenderArguments[PATH_MAX]="";
 
 static double	waitTime = 1.0;					///< max time between output frames
-static char*	logfile	 = "/tmp/blender.log";	///< pathname of output messages
 // =====================================================================
 
 /**
@@ -37,16 +37,17 @@ usage( const char* const          progName,
 "\n\t%s - version %s\n"
 "\n\t%s\n"
 "\n"
-"Usage: %s [-v|-x] [-l log] [-t sec] host:port ... \n"
+"Usage: %s [-v|-x] [-l log] [-R bufSize] [-t sec] host:port ... \n"
 "where:\n"
 "   -l log      Log to `log`. One of: \"\" (system logging daemon), \"-\"\n"
 "               (standard error), or file `log`. Default is \"%s\"\n"
+"   -R bufSize  Receiver buffer size in bytes. Default is system dependent.\n"
 "   -t sec 		Timeout in (decimal) seconds. Default is '1.0'.\n"
 "   -v          Log through level INFO.\n"
 "   -x          Log through level DEBUG. Too much information.\n"
 "    host:port  Server(s) host <host>, port <port> that the blender reads its data from.\n"
 "\n",
-        progName, PACKAGE_VERSION, copyright, progName, logfile);
+        progName, PACKAGE_VERSION, copyright, progName, log_get_destination());
 
     exit(1);
 }
@@ -72,7 +73,7 @@ decodeCommandLine(
     opterr = 0;                         /* no error messages from getopt(3) */
 
     while (0 == status &&
-           (ch = getopt(argc, argv, ":vxl:t:")) != -1)
+           (ch = getopt(argc, argv, ":vxl:R:t:")) != -1)
     {
         switch (ch) {
             case 'v':
@@ -84,21 +85,27 @@ decodeCommandLine(
         	   	strcat(blenderArguments, " -x ");
                 break;
             case 'l':
-              	if (sscanf(optarg, "%ms", &logfile) != 1 ) {
-              		log_add("Invalid log file name: \"%s\"", optarg);
-                    status = EINVAL;
-                    break;
-                }
               	strcat(blenderArguments, " -l ");
-              	strcat(blenderArguments, logfile);
+              	strcat(blenderArguments, optarg);
               	strcat(blenderArguments, " ");
-              	log_set_destination(logfile);
-              	free(logfile);
+              	log_set_destination(optarg);
                 break;
+            case 'R':
+                    if (sscanf(optarg, "%d", &rcvBufSize) != 1 ||
+                            rcvBufSize <= 0) {
+                        log_notice("Invalid receive buffer size: \"%s\"", optarg);
+                        status = EINVAL;
+                        break;
+                    }
+                    strcat(blenderArguments, " -R ");
+              	    strcat(blenderArguments, optarg);
+              	    strcat(blenderArguments, " ");
+                    break;
             case 't':
                 if (sscanf(optarg, "%lf", &waitTime) != 1 || waitTime < 0) {
                 	log_add("Invalid frame latency time-out value (max_wait): \"%s\"", optarg);
                     status = EINVAL;
+                    break;
                 }
               	strcat(blenderArguments, " -t ");
               	strcat(blenderArguments, optarg);

@@ -22,7 +22,7 @@
 //  ========================================================================
 extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
 extern int   	tryInsertInQueue( uint32_t, uint16_t, const uint8_t*, uint16_t);
-extern int 		nbs_logHeaders( const uint8_t* buf, size_t nbytes);
+extern int      rcvBufSize;
 //  ========================================================================
 
 /**
@@ -118,6 +118,22 @@ inputClientRoutine(void* id)
 			log_flush_fatal();
 			exit(EXIT_FAILURE);
 		}
+
+		if( rcvBufSize > 0 )
+		{
+			int rc = setsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
+			                	&rcvBufSize, sizeof(int));
+			if(rc != 0 )
+				log_warning("Could not set receive buffer to %d bytes", rcvBufSize);
+		}
+		int optval;
+		int optlen = sizeof(optval);
+		int rc = getsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
+							&optval, &optlen);
+		if(rc == 0 )
+			log_notice("Current receive buffer: %d bytes", optval);
+		else
+			log_syserr("Could not get receive buffer size");
 
 		// id is host+port
 		char*     hostId;
