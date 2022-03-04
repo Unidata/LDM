@@ -122,6 +122,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			-f <fifo>	Name of FIFO to create, default: /tmp/blender_<port>.fifo
 			-l <log>	Log file for noaaportIngester, default: LDM logfile
 			-p <port>	fanout server port number
+			-R <rcvBuf>  Receive buffer size in bytes
 			-t <delay>	fixed delay, in seconds, to avoid duplicate frames
 			-v 		Verbose mode for 'blender' and Debug mode (NOTICE) for `noaaportIngester`
 			-x 		Debug mode for `blender` and Verbose mode (INFO) for 'noaaportIngester'
@@ -133,11 +134,6 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		Thank you for using noaaportBlender.py...
 				'''	
 	}
-
-
-
-
-
 
 	def __init__(self):	
 
@@ -159,7 +155,6 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			)
 
 
-
 	def usage(self):
 		program		= self.progUsage["progName"]
 		description = self.progUsage["description"]
@@ -170,6 +165,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		self.ulogIt(epilog, "usage", 172)
 
 		sys.exit(2)
+
 
 	def prepareBlenderCmd(self, cliArgs):
 
@@ -186,6 +182,9 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		if cliArgs["debug"] == True:
 			blenderArgs += " -x "
 
+		if cliArgs["rcvBufSize"] != None:
+			rcvBufSize = cliArgs["rcvBufSize"]
+			blenderArgs += f" -R {rcvBufSize} "
 
 		# "blender -t 0.01  -l /var/logs/wxwire.log  chico:1201"
 		#  /home/miles/projects/ldm/src/noaaport/.libs/lt-blender -t 0.01 -x -l /tmp/blender.log localhost:1205  chico:1205
@@ -256,12 +255,13 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 	# Build the blender's command line arguments
 	def prepareNoaaportCmd(self, cliArgs):
 
+		noaaportArgs 	= " "
 		# debug has precedence over verbose
 		if cliArgs["verbose"] == True and cliArgs["debug"] == False:	
-			noaaportArgs 	= " -n "
+			noaaportArgs 	+= " -n "
 
 		if cliArgs["debug"] == True:	
-			noaaportArgs 	= " -v "	# that's how noaaportingester is expecting it...
+			noaaportArgs 	+= " -v "	# that's how noaaportingester is expecting it...
 
 		if self.noaaportLogFile != None:
 			noaaportArgs 	+= f" -l {self.noaaportLogFile} "
@@ -277,6 +277,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 		self.cliParserInit.add_argument('-f', dest='fifoName', action="store", help='Default: /tmp/blender_1201.fifo', required=False)
 		self.cliParserInit.add_argument('-l', dest='noaaportLogFile', action="store",help='Default: LDM logfile', required=False)
 		self.cliParserInit.add_argument('-p', dest='feedTypePort', action="store", help='', required=False)
+		self.cliParserInit.add_argument('-R', dest='rcvBufSize', action="store", help='', required=False)
 		self.cliParserInit.add_argument('-t', dest='timeOut', action="store", help='Default: 0.01', required=False)
 		self.cliParserInit.add_argument('-v', dest='verbose', action="store_true",help='', required=False)
 		self.cliParserInit.add_argument('-x', dest='debug', action='store_true', help='', required=False)
