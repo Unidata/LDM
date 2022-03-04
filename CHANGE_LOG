@@ -1,3 +1,7 @@
+6.13.17.12      2022-03-04T16:22:19-0700
+    NOAAPort:
+        * noaaportBlender(1): Added -R option to set the 'receive buffer size' of blender(1)
+
 6.13.17.11      2022-03-04T15:02:22-0700 
     NOAAPort:
         * noaaportBlender(1): Added residency time as an option to the Python 
