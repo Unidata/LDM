@@ -451,7 +451,9 @@
 000 019 234 000 Icing severity                   non-dim              ICSEV            0  -9999.00
 000 019 235 000 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
 000 019 235 005 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
+000 019 235 008 Joint Fire Weather Probability   %                    JFWPRB           0  -9999.00
 000 019 236 000 Snow Level                       m                    SNOWLVL          0  -9999.00
+000 019 237 008 Dry Thunderstorm Probability     %                    DRYTPROB         0  -9999.00
 000 019 237 009 Dry Thunderstorm Probability     %                    DRYTPROB         0  -9999.00
 !
 000 019 242 000 Mislabeled RH wrt PW             %                    RHPW             0  -9999.00
