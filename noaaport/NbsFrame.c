@@ -36,36 +36,29 @@ getBytes(int fd, uint8_t* buf, size_t nbytes)
  * Ensures that the frame buffer contains a given number of bytes. Reads more
  * if necessary.
  *
- * @param[in]     fd    File descriptor
- * @param[in]     buf   Buffer
- * @param[in]     size  Size of buffer
- * @param[in]     need  Number of bytes needed in buffer
- * @param[in,out] have  Number of bytes in buffer
- * @retval NBS_SUCCESS  Success. `*nbytes` is adjusted if appropriate
- * @retval NBS_SPACE    Insufficient space. `log_add()` called.
- * @retval NBS_EOF      EOF. `log_add()` called.
- * @retval NBS_IO       I/O failure. `log_add()` called.
+ * @param[in] reader  NBS reader structure
+ * @param[in] need    Number of bytes needed in buffer
+ * @retval NBS_SPACE  Insufficient space. `log_add()` called.
+ * @retval NBS_EOF    EOF. `log_add()` called.
+ * @retval NBS_IO     I/O failure. `log_add()` called.
  */
 static int ensureBytes(
-        const int      fd,
-        uint8_t* const buf,
-        const size_t   size,
-        const size_t   need,
-        size_t* const  have)
+        NbsReader* const reader,
+        const size_t     need)
 {
     int status;
-    if (need > size) {
+    if (need > sizeof(reader->buf)) {
         log_add("Desired number of bytes (%zu) > available space (%zu)",
-                need, size);
+                need, sizeof(reader->buf));
         status = NBS_SPACE;
     }
-    else if (need <= *have) {
+    else if (need <= reader->have) {
         status = NBS_SUCCESS;
     }
     else {
-        status = getBytes(fd, buf+*have, need-*have);
+        status = getBytes(reader->fd, reader->buf+reader->have, need-reader->have);
         if (status < 0) {
-            log_add_syserr("Couldn't read %zu bytes", need-*have);
+            log_add_syserr("Couldn't read %zu bytes", need-reader->have);
             status = NBS_IO;
         }
         else if (status == 0) {
@@ -73,7 +66,7 @@ static int ensureBytes(
             status = NBS_EOF;
         }
         else {
-            *have += status;
+            reader->have += status;
             status = NBS_SUCCESS;
         }
     }
@@ -126,15 +119,13 @@ int nbs_getFrame(
     for (;;) {
         // Ensure buffer contains possible frame header
         size_t  need = NBS_FH_SIZE;
-        if ((status = ensureBytes(reader->fd, reader->buf, sizeof(reader->buf),
-                need, &reader->have)) != NBS_SUCCESS) {
+        if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
             log_add("Couldn't read frame header");
             break;
         }
 
         // Decode and verify frame header
-        if (nbs_decodeFH(reader->buf, reader->have, &reader->fh)
-                != 0) {
+        if (nbs_decodeFH(reader->buf, reader->have, &reader->fh) != 0) {
             nbs_logFH(&reader->fh);
             log_add("Invalid frame header");
         }
@@ -144,16 +135,14 @@ int nbs_getFrame(
 
             // Read rest of frame header
             need = reader->fh.size;
-            if ((status = ensureBytes(reader->fd, reader->buf,
-                    sizeof(reader->buf), need, &reader->have)) != NBS_SUCCESS) {
+            if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
                 log_add("Couldn't read rest of frame header");
                 break;
             }
 
             // Ensure buffer contains possible product-definition header
             need = reader->fh.size + NBS_PDH_SIZE ;
-            if ((status = ensureBytes(reader->fd, reader->buf,
-                    sizeof(reader->buf), need, &reader->have)) != NBS_SUCCESS) {
+            if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
                 log_add("Couldn't read product-definition header");
                 break;
             }
@@ -171,9 +160,7 @@ int nbs_getFrame(
 
                 // Read rest of product-definition header
                 need = reader->fh.size + reader->pdh.size;
-                if ((status = ensureBytes(reader->fd, reader->buf,
-                        sizeof(reader->buf), need, &reader->have)) !=
-                        NBS_SUCCESS) {
+                if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
                     log_add("Couldn't read rest of product-definition header");
                     break;
                 }
@@ -186,9 +173,7 @@ int nbs_getFrame(
                     // Ensure buffer contains product-specific header
                     need = reader->fh.size + reader->pdh.size +
                             reader->pdh.pshSize;
-                    if ((status = ensureBytes(reader->fd, reader->buf,
-                            sizeof(reader->buf), need, &reader->have)) !=
-                            NBS_SUCCESS) {
+                    if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
                         log_add("Couldn't read product-specific header");
                         break;
                     }
@@ -215,9 +200,7 @@ int nbs_getFrame(
                     if (reader->pdh.dataBlockSize) {
                         // Read data block
                         need += reader->pdh.dataBlockSize;
-                        if ((status = ensureBytes(reader->fd, reader->buf,
-                                sizeof(reader->buf), need, &reader->have)) !=
-                                NBS_SUCCESS) {
+                        if ((status = ensureBytes(reader, need)) != NBS_SUCCESS) {
                             log_add("Couldn't read data block");
                             if (status != NBS_SPACE)
                                 break;
@@ -227,8 +210,7 @@ int nbs_getFrame(
                     if (buf)
                         *buf = reader->buf;
                     if (size)
-                        *size = reader->fh.size + reader->pdh.size +
-                                reader->pdh.pshSize +
+                        *size = reader->fh.size + reader->pdh.size + reader->pdh.pshSize +
                                 reader->pdh.dataBlockSize;
 
                     reader->have = 0;
