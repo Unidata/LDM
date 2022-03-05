@@ -859,7 +859,7 @@ int    nnnxxx_offset;
 
                 if (readccb((char*)buf + IOFF + sbn->len + pdh->len + pdh->pshlen,
                         ccb, psh, pdh->dbsize) == -1)
-                    log_error_q("Error reading ccb, using default name");
+                    log_info("Error reading ccb, using default name");
 
                 log_debug("look at ccb start %d %d", ccb->b1, ccb->len);
                 log_info_q("%s", psh->pname);
