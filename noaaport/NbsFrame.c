@@ -16,6 +16,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+struct NbsReader {
+    int     fd;                 ///< Input file descriptor
+    size_t  have;               ///< Number of bytes in buffer
+    bool    logSync;            ///< Log synchronizing message?
+    NbsFH   fh;                 ///< Decoded frame header
+    NbsPDH  pdh;                ///< Decoded product-definition header
+    NbsPSH  psh;                ///< Decoded product-specific header
+    uint8_t buf[NBS_MAX_FRAME]; ///< Frame buffer
+};
+
 ssize_t
 getBytes(int fd, uint8_t* buf, size_t nbytes)
 {
@@ -36,11 +46,12 @@ getBytes(int fd, uint8_t* buf, size_t nbytes)
  * Ensures that the frame buffer contains a given number of bytes. Reads more
  * if necessary.
  *
- * @param[in] reader  NBS reader structure
- * @param[in] need    Number of bytes needed in buffer
- * @retval NBS_SPACE  Insufficient space. `log_add()` called.
- * @retval NBS_EOF    EOF. `log_add()` called.
- * @retval NBS_IO     I/O failure. `log_add()` called.
+ * @param[in] reader    NBS reader structure
+ * @param[in] need      Number of bytes needed in buffer
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
  */
 static int ensureBytes(
         NbsReader* const reader,
@@ -73,16 +84,6 @@ static int ensureBytes(
     return status;
 }
 
-struct NbsReader {
-    int     fd;                 ///< Input file descriptor
-    size_t  have;               ///< Number of bytes in buffer
-    bool    logSync;            ///< Log synchronizing message?
-    NbsFH   fh;                 ///< Decoded frame header
-    NbsPDH  pdh;                ///< Decoded product-definition header
-    NbsPSH  psh;                ///< Decoded product-specific header
-    uint8_t buf[NBS_MAX_FRAME]; ///< Frame buffer
-};
-
 NbsReader* nbs_newReader(int fd)
 {
     NbsReader* reader = malloc(sizeof(NbsReader));
@@ -104,6 +105,201 @@ void nbs_freeReader(NbsReader* reader)
 {
 	close(reader->fd);
 	free(reader);
+}
+
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ */
+static int getFH(NbsReader* reader)
+{
+    int            status;
+    unsigned char* buf = reader->buf;
+
+    for (status = ensureBytes(reader, NBS_FH_SIZE); status == 0;
+            status = ensureBytes(reader, NBS_FH_SIZE)) {
+        unsigned char* start = memchr(buf, 255, reader->have);
+
+        if (start == NULL) {
+            reader->have = 0;
+        }
+        else {
+            const ptrdiff_t delta = start - buf;
+
+            if (delta) {
+                memmove(buf, start, reader->have - delta);
+                reader->have -= delta;
+            }
+            else {
+                // `buf[0] == 255`
+
+                unsigned sum = 0;
+                for (int i = 0; i < 14; ++i)
+                    sum += buf[i];
+
+                NbsFH* fh = &reader->fh;
+                fh->checksum = ntohs(*(uint16_t*)(buf+14));
+                if (sum != fh->checksum) {
+                    log_debug("Frame sum (%u) != checksum (%u). Continuing.", sum, fh->checksum);
+                    buf[0] = 0; // Causes search for new start
+                }
+                else {
+                    // Checksums match
+                    fh->size = (buf[2] & 0xf) * 4;
+                    if (fh->size != NBS_FH_SIZE) {
+                        log_debug("Frame header size (%u bytes) != %d bytes. Continuing.",
+                                fh->size, NBS_FH_SIZE);
+                        buf[0] = 0; // Causes search for new start
+                    }
+                    else {
+                        fh->hdlcAddress = buf[0];
+                        fh->hdlcControl = buf[1];
+                        fh->version = buf[2] >> 4;
+                        fh->control = buf[3];
+                        fh->command = buf[4];
+                        fh->datastream = buf[5];
+                        fh->source = buf[6];
+                        fh->destination = buf[7];
+                        fh->seqno = ntohl(*(uint32_t*)(buf+8));
+                        fh->runno = ntohs(*(uint16_t*)(buf+12));
+                        break;
+                    } // Frame header looks valid
+                } // Checksums match
+            } // `buf[0] == 255`
+        } // Buffer contains 255 somewhere
+    } // Input loop
+
+    return status;
+}
+
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ */
+int nbs_readPDH(NbsReader* reader)
+{
+    int status = ensureBytes(reader, reader->fh.size + NBS_PDH_SIZE);
+
+    if (status != NBS_SUCCESS) {
+        log_add("Couldn't read product-definition header");
+    }
+    else {
+        status = NBS_INVAL;
+
+        unsigned char buf = reader->buf + reader->fh.size;
+        NbsPDH*       pdh = &reader->pdh;
+
+        memset(pdh, 0, sizeof(*pdh));
+
+        pdh->size = (buf[0] & 0xf) * 4;
+        if (pdh->size < 16) {
+            log_add("Product-definition header size (%u bytes) < 16 bytes", pdh->size);
+        }
+        else {
+            unsigned totalSize = ntohs(*(uint16_t*)(buf+2));
+
+            if (totalSize < pdh->size) {
+                log_add("PDH size + PSH size (%u bytes) < PDH size (%u) bytes",
+                        totalSize, pdh->size);
+            }
+            else {
+                pdh->transferType = buf[1];
+                pdh->pshSize = totalSize - pdh->size;
+
+                if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
+                    log_add("Frame isn't start-of-product but PSH size is %u bytes", pdh->pshSize);
+                }
+                else if (pdh->pshSize && ((pdh->transferType & 64) == 0)) {
+                    log_add("Product-specific header shouldn't exist but PSH size is %u bytes",
+                            pdh->pshSize);
+                }
+                else {
+                    NbsFH* fh = &reader->fh;
+
+                    if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_SYNC ||
+                            pdh->transferType == 0)) {
+                        status = 0;
+                    }
+                    else {
+                        pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
+
+                        const unsigned long frameSize = fh->size + pdh->size + pdh->pshSize +
+                                pdh->dataBlockSize;
+                        if (frameSize > NBS_MAX_FRAME) {
+                            log_add("Frame size is too large: %u bytes", frameSize);
+                        }
+                        else {
+                            pdh->version = buf[0] >> 4;
+                            pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+                            pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+                            pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+                            pdh->recsPerBlock = buf[10];
+                            pdh->blocksPerRec = buf[11];
+
+                            status = 0;
+                        } // Valid frame size
+                    } // Frame contains data
+                } // PSH size is consistent with transfer type
+            } // PDH size + PSH size >= PDH size
+        } // PDH size >= 16 bytes
+    } // Read potential PDH
+
+    return status;
+}
+
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ */
+static int readPSH(NbsReader* reader)
+{
+    int status = ensureBytes(reader, reader->fh.size + reader->pdh.size + reader->pdh.pshSize);
+    if (status) {
+        log_add("Couldn't read product-specific header");
+    }
+    else {
+        status = NBS_INVAL;
+
+        unsigned char* buf = reader->buf + reader->fh.size + reader->pdh.size;
+        NbsPDH*        pdh = &reader->pdh;
+        NbsPSH*        psh = &reader->psh;
+
+        psh->size = ntohs(*(uint16_t*)(buf+2));
+        if (psh->size != pdh->pshSize) {
+            log_add("Product-specific header size (%u bytes) != that in "
+                    "product-definition header (%u bytes)", psh->size,
+                    pdh->pshSize);
+        }
+        else {
+            psh->optFieldNum = buf[0];
+            psh->optFieldType = buf[1];
+            psh->version = buf[4];
+            psh->flag = buf[5];
+            psh->awipsSize = ntohs(*(uint16_t*)(buf+6));
+            psh->bytesPerRec = ntohs(*(uint16_t*)(buf+8));
+            psh->type = buf[10];
+            psh->category = buf[11];
+            psh->prodCode = ntohs(*(uint16_t*)(buf+12));
+            psh->numFrags = ntohs(*(uint16_t*)(buf+14));
+            psh->nextHeadOff = ntohs(*(uint16_t*)(buf+16));
+            psh->reserved = buf[18]; ///< Reserved
+            psh->source = buf[19];
+            psh->seqNum = ntohl(*(uint32_t*)(buf+20));
+            psh->ncfRecvTime = ntohl(*(uint32_t*)(buf+24));
+            psh->ncfSendTime = ntohl(*(uint32_t*)(buf+28));
+            psh->currRunId = ntohs(*(uint16_t*)(buf+32));
+            psh->origRunId = ntohs(*(uint16_t*)(buf+34));
+            status = 0;
+        }
+    }
+
+    return status;
 }
 
 int nbs_getFrame(
