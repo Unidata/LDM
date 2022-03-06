@@ -26,7 +26,7 @@ enum {
 /// NBS Frame Header
 typedef struct NbsFH
 {
-   unsigned hdlcAddress; ///< All ones
+   unsigned hdlcAddress; ///< 255
    unsigned hdlcControl; ///< Unused
    unsigned version;     ///< SBN version
    unsigned size;        ///< Size of frame header in bytes
