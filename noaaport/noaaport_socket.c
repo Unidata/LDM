@@ -101,35 +101,23 @@ nportSock_init(
                 log_add("Couldn't initialize socket for multicast reception");
             }
             else {
-                if (rcvBufSize <= 0) {
-                    socklen_t len = sizeof(rcvBufSize);
-                    status = getsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
-                            &rcvBufSize, &len);
-                    if (status) {
-                        log_add_syserr("Couldn't get default receive buffer "
-                                "size. Continuing.");
+                socklen_t sockOptLen = sizeof(rcvBufSize);
+                if (rcvBufSize > 0) {
+                    log_notice("Setting receive buffer size");
+                    if (setsockopt(*socket, SOL_SOCKET, SO_RCVBUF, &rcvBufSize, sockOptLen)) {
+                        log_add_syserr("Couldn't set receive buffer size. Continuing.");
                         log_flush_warning();
-                        status = 0;
-                    }
-                    else {
-                        log_notice("Using default receive buffer size of %d "
-                                "bytes", rcvBufSize);
                     }
                 }
+
+                if (getsockopt(*socket, SOL_SOCKET, SO_RCVBUF, &rcvBufSize, &sockOptLen)) {
+                    log_syserr("Couldn't get receive buffer size. Continuing.");
+                }
                 else {
-                    log_notice("Setting receive buffer size to %d bytes",
-                            rcvBufSize);
-                    status = setsockopt(*socket, SOL_SOCKET, SO_RCVBUF,
-                            &rcvBufSize, sizeof(rcvBufSize));
-                    if (status) {
-                        log_add_syserr("Couldn't set receive buffer size to "
-                                "%d bytes. Continuing.", rcvBufSize);
-                        log_flush_warning();
-                        status = 0;
-                    }
-                } // Receiver buffer size needs to be set
-            } // '*socket' open
-        } // Interface address set
+                    log_notice("Receive buffer size is %d bytes", rcvBufSize);
+                }
+            } // Socket is initialized for multicast reception
+        } // Interface address is set
     } // Socket address is set
 
     return status;
