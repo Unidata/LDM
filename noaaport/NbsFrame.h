@@ -27,13 +27,39 @@ enum {
     NBS_INVAL    ///< Invalid frame
 };
 
-typedef struct NbsReader  NbsReader;
+typedef struct NbsReader {
+    int     fd;                 ///< Input file descriptor
+    size_t  have;               ///< Number of bytes in buffer
+    bool    logSync;            ///< Log synchronizing message?
+    NbsFH   fh;                 ///< Decoded frame header
+    NbsPDH  pdh;                ///< Decoded product-definition header
+    NbsPSH  psh;                ///< Decoded product-specific header
+    size_t  size;               ///< Frame size in bytes
+    uint8_t buf[NBS_MAX_FRAME]; ///< Frame buffer
+} NbsReader;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
+
+/**
+ * Initializes a NBS frame reader.
+ *
+ * @param[out] reader  NBS frame reader
+ * @param[in]  fd      Input file descriptor. Will be closed by `nbs_destroy()`.
+ */
+void nbs_init(
+        NbsReader* reader,
+        const int  fd);
+
+/**
+ * Destroys a NBS frame reader.
+ *
+ * @param[in] reader  NBS frame reader
+ */
+void nbs_destroy(NbsReader* reader);
 
 /**
  * Returns a new NBS frame reader.
@@ -57,26 +83,13 @@ void nbs_freeReader(NbsReader* reader);
 /**
  * Returns the next NBS frame.
  *
- * @param[in]  reade r  NBS reader
- * @param[out] buf      Pointer to NBS frame. May be NULL.
- * @param[out] size     Size of NBS frame. May be NULL.
- * @param[out] fh       Pointer to decoded frame header. May be NULL.
- * @param[out] pdh      Pointer to decoded product-definition header. May be
- *                      NULL.
- * @param[out] psh      Pointer to decoded product-specific header. May be NULL.
- * @retval NBS_SUCCESS  Success. `buf`, `size`, `fh`, `pdh` are set if non-NULL.
- *                      If non-NULL, `psh` is set if the PSH exists and to NULL
- *                      if it doesn't.
+ * @param[in]  reader   NBS reader
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Input frame is too large for buffer
  * @retval NBS_EOF      End-of-file read
  * @retval NBS_IO       I/O failure
  */
-int nbs_getFrame(
-        NbsReader* const      reader,
-        const uint8_t** const buf,
-        size_t*               size,
-        const NbsFH** const   fh,
-        const NbsPDH** const  pdh,
-        const NbsPSH** const  psh);
+int nbs_getFrame(NbsReader* const reader);
 
 #ifdef __cplusplus
 }

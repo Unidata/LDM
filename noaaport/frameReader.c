@@ -38,34 +38,31 @@ buildFrameRoutine(int clientSockFd)
     log_notice("In buildFrameRoutine() waiting to read from "
     		"(fanout) server socket...\n");
 
-    NbsReader* nbsReader = nbs_newReader(clientSockFd);
+	int       status;
+    NbsReader reader;
+    NbsFH*    fh = &reader.fh;
+    NbsPDH*   pdh = &reader.pdh;
+    NbsPSH*   psh = &reader.psh;
 
-    const uint8_t* 	buf;
-    size_t         	size;
-    const NbsFH*   	fh;
-    const NbsPDH*  	pdh;
-    const NbsPSH*  	psh;
-    log_level_t 	level;
+    nbs_init(&reader, clientSockFd);
 
-	int status;
     for(;;)
     {
-		if ((status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ))
-				== NBS_SUCCESS)
+		if ((status = nbs_getFrame(&reader)) == NBS_SUCCESS)
 		{
-			// buffer now contains frame data of size frameSize at offset 0
+			// buffer now contains frame data
 			// Insert in queue
-			status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
+			status = tryInsertInQueue( fh->seqno, fh->runno, reader.buf, reader.size);
 
 			if (status == 0) {
-			    if (pdh && (pdh->transferType & 1))
+			    if (pdh->size && (pdh->transferType & 1))
                 {
-                    if (psh )
+                    if (pdh->pshSize ) {
                         log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
                                 fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
+                    }
                     else
-                        log_info("Starting product {SeqNum=%u, RunNum=%u}" ,
-                                fh->seqno, fh->runno);
+                        log_info("Starting product {SeqNum=%u, RunNum=%u}" , fh->seqno, fh->runno);
                 }
 			}
 			else if (status == 1) {
@@ -83,16 +80,23 @@ buildFrameRoutine(int clientSockFd)
 		else if( status == NBS_IO)
 		{
 			log_add_syserr("Read failure");
+			break;
 			// n == -1 ==> read error
 		}
 		else if( status == NBS_EOF)
 		{
 			log_add("End of file");
+			break;
+		}
+		else if( status == NBS_SPACE)
+		{
+			log_add("Input frame is too large for buffer");
+			break;
 		}
 
     } // for
 
-    nbs_freeReader(nbsReader);
+    nbs_destroy(&reader);
 }
 
 /**
