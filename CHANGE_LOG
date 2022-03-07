@@ -3,6 +3,7 @@
         * GEMPAK tables: Added
             000 019 235 008 Joint Fire Weather Probability   % JFWPRB   0  -9999.00
             000 019 237 008 Dry Thunderstorm Probability     % DRYTPROB 0  -9999.00
+        * blender(1): Improved performance of frame reading
 
 6.13.17.12      2022-03-04T16:22:19-0700
     NOAAPort:
