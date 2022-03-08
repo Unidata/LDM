@@ -1,4 +1,9 @@
-6.13.17.13
+6.13.17.14
+    NOAAPort:
+        * blender(1): Added to "make root-actions" to have it owned by root and setuid so
+          that it can increase the priority of its threads
+
+6.13.17.13      2022-03-08T09:37:36-0700
     NOAAPort:
         * GEMPAK tables: Added
             000 019 235 008 Joint Fire Weather Probability   % JFWPRB   0  -9999.00
