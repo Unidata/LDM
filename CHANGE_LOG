@@ -1,7 +1,9 @@
 6.13.17.14
     NOAAPort:
-        * blender(1): Added to "make root-actions" to have it owned by root and setuid so
-          that it can increase the priority of its threads
+        * blender(1):
+            * Added to "make root-actions" to have it owned by root and setuid so
+              that it can increase the priority of its threads
+            * Added calling of log_refresh() upon SIGUSR1 reception
 
 6.13.17.13      2022-03-08T09:37:36-0700
     NOAAPort:

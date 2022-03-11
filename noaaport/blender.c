@@ -152,7 +152,7 @@ signal_handler( const int sig)
 {
     switch (sig) {
         case SIGUSR1:
-            // .. add as needed
+            log_refresh(); // Will close/open on next log message; not before
             break;
         case SIGUSR2:
             (void)log_roll_level();
