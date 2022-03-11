@@ -1,11 +1,11 @@
-6.13.17.14
+6.13.17.14      2022-03-11T15:19:28-0700
     NOAAPort:
         * blender(1):
             * Added to "make root-actions" to have it owned by root and setuid so
               that it can increase the priority of its threads
             * Added calling of log_refresh() upon SIGUSR1 reception
             * Added totalSize member to product-definition header structure
-            * Made frame filter more lenient. Ignored PSH.
+            * Made frame-filter more lenient. Ignore PSH. Ignore data block offset.
 
 6.13.17.13      2022-03-08T09:37:36-0700
     NOAAPort:

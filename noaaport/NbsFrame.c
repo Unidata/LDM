@@ -219,6 +219,8 @@ static int readPDH(NbsReader* reader)
             }
             else {
 #if 1
+                // This conditional code is more generous than the following but appears to work
+
                 pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
                 const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
                 if (frameSize > sizeof(reader->buf)) {
@@ -358,6 +360,7 @@ int nbs_getFrame(NbsReader* const reader)
         }
         else {
 #if 0
+            // The product-specific header isn't needed for our purpose
             if (reader->pdh.pshSize != 0) {
                 status = readPSH(reader);
                 if (status) {
@@ -374,9 +377,11 @@ int nbs_getFrame(NbsReader* const reader)
 #endif
 
             if (status == 0) {
-                size_t need = reader->fh.size + reader->pdh.totalSize +
-                        //reader->pdh.dataBlockOffset +
-                        reader->pdh.dataBlockSize;
+                /*
+                 * pdh->dataBlockOffset is ignored because it appears that the only valid value is 0
+                 * and any other value necessitates re-synchronizing. SRE 2022-03-11
+                 */
+                size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockSize;
                 status = ensureBytes(reader, need);
                 if (status) {
                     log_add("Couldn't read data block");
