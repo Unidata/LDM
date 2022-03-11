@@ -374,8 +374,9 @@ int nbs_getFrame(NbsReader* const reader)
 #endif
 
             if (status == 0) {
-                size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockOffset
-                        + reader->pdh.dataBlockSize;
+                size_t need = reader->fh.size + reader->pdh.totalSize +
+                        //reader->pdh.dataBlockOffset +
+                        reader->pdh.dataBlockSize;
                 status = ensureBytes(reader, need);
                 if (status) {
                     log_add("Couldn't read data block");
