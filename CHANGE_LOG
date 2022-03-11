@@ -1,3 +1,7 @@
+6.13.17.15
+    NOAAPort:
+        * blender(1): Set data block size to 0 for sync frames and 0 transfer-type
+
 6.13.17.14      2022-03-11T15:19:28-0700
     NOAAPort:
         * blender(1):

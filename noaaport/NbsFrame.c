@@ -221,23 +221,34 @@ static int readPDH(NbsReader* reader)
 #if 1
                 // This conditional code is more generous than the following but appears to work
 
-                pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
-                const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
-                if (frameSize > sizeof(reader->buf)) {
-                    log_add("Frame size is too large: %u bytes", frameSize);
+                if (fh->command == NBS_FH_CMD_SYNC) {
+                    status = 0;
                 }
                 else {
-                    pdh->pshSize = pdh->totalSize - pdh->size;
                     pdh->transferType = buf[1];
-                    pdh->version = buf[0] >> 4;
-                    pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
-                    pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
-                    pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
-                    log_debug("pdh->dataBlockOffset=%u", pdh->dataBlockOffset);
-                    pdh->recsPerBlock = buf[10];
-                    pdh->blocksPerRec = buf[11];
+                    if (pdh->transferType == 0) {
+                        status = 0;
+                    }
+                    else {
+                        pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
 
-                    status = 0;
+                        const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
+                        if (frameSize > sizeof(reader->buf)) {
+                            log_add("Frame size is too large: %u bytes", frameSize);
+                        }
+                        else {
+                            pdh->pshSize = pdh->totalSize - pdh->size;
+                            pdh->version = buf[0] >> 4;
+                            pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+                            pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+                            pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+                            log_debug("pdh->dataBlockOffset=%u", pdh->dataBlockOffset);
+                            pdh->recsPerBlock = buf[10];
+                            pdh->blocksPerRec = buf[11];
+
+                            status = 0;
+                        }
+                    }
                 }
 #else
                 if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
