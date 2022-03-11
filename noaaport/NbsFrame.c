@@ -81,6 +81,7 @@ void nbs_init(
 {
     reader->fd = fd;
     reader->have = 0;
+    reader->size = 0;
     reader->logSync = true;
 }
 
@@ -92,9 +93,7 @@ void nbs_destroy(NbsReader* reader)
 NbsReader* nbs_newReader(int fd)
 {
     NbsReader* reader = malloc(sizeof(NbsReader));
-    reader->fd = fd;
-    reader->have = 0;
-    reader->logSync = true;
+    nbs_init(reader, fd);
 
     return reader;
 }
@@ -209,19 +208,36 @@ static int readPDH(NbsReader* reader)
             log_add("Product-definition header size is too large: %u bytes", pdh->size);
         }
         else {
-            const unsigned totalSize = ntohs(*(uint16_t*)(buf+2)); // PDH size + PSH size
+            pdh->totalSize = ntohs(*(uint16_t*)(buf+2)); // PDH size + PSH size
 
-            if (totalSize < pdh->size) {
-                log_add("PDH size + PSH size (%u bytes) < PDH size (%u) bytes", totalSize,
+            if (pdh->totalSize < pdh->size) {
+                log_add("PDH size + PSH size (%u bytes) < PDH size (%u) bytes", pdh->totalSize,
                         pdh->size);
             }
-            else if (fh->size + totalSize > sizeof(reader->buf)) {
-                log_add("Size of PDH + PSH headers is too large: %u bytes", totalSize);
+            else if (fh->size + pdh->totalSize > sizeof(reader->buf)) {
+                log_add("Size of PDH + PSH headers is too large: %u bytes", pdh->totalSize);
             }
             else {
-                pdh->transferType = buf[1];
-                pdh->pshSize = totalSize - pdh->size;
+#if 1
+                pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
+                const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
+                if (frameSize > sizeof(reader->buf)) {
+                    log_add("Frame size is too large: %u bytes", frameSize);
+                }
+                else {
+                    pdh->pshSize = pdh->totalSize - pdh->size;
+                    pdh->transferType = buf[1];
+                    pdh->version = buf[0] >> 4;
+                    pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+                    pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+                    pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+                    log_debug("pdh->dataBlockOffset=%u", pdh->dataBlockOffset);
+                    pdh->recsPerBlock = buf[10];
+                    pdh->blocksPerRec = buf[11];
 
+                    status = 0;
+                }
+#else
                 if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
                     log_add("Frame isn't start-of-product but PSH size is %u bytes", pdh->pshSize);
                 }
@@ -254,6 +270,7 @@ static int readPDH(NbsReader* reader)
                         } // Valid frame size
                     } // Frame contains data
                 } // PSH size is consistent with transfer type
+#endif
             } // PDH size + PSH size >= PDH size
         } // PDH size >= 16 bytes
     } // Read potential PDH
@@ -316,6 +333,12 @@ int nbs_getFrame(NbsReader* const reader)
 {
     int status;
 
+    const ssize_t excess = reader->have - reader->size;
+    if (excess > 0)
+        memmove(reader->buf, reader->buf+reader->size, excess);
+    reader->have = excess;
+    reader->size = 0;
+
     for (;;) {
         status = getFH(reader);
         if (status) {
@@ -334,6 +357,7 @@ int nbs_getFrame(NbsReader* const reader)
             }
         }
         else {
+#if 0
             if (reader->pdh.pshSize != 0) {
                 status = readPSH(reader);
                 if (status) {
@@ -347,21 +371,17 @@ int nbs_getFrame(NbsReader* const reader)
                     }
                 }
             } // Product-specific header exists
+#endif
 
             if (status == 0) {
-                size_t need = reader->fh.size + reader->pdh.size + reader->pdh.pshSize +
-                        reader->pdh.dataBlockSize;
+                size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockOffset
+                        + reader->pdh.dataBlockSize;
                 status = ensureBytes(reader, need);
                 if (status) {
                     log_add("Couldn't read data block");
                     break;
                 }
                 reader->size = need;
-
-                const size_t excess = reader->have - need;
-                if (excess)
-                    memmove(reader->buf, reader->buf+need, excess);
-                reader->have = excess;
                 reader->logSync = true;
 
                 return 0;
