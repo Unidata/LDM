@@ -88,7 +88,11 @@ typedef struct NbsPDH
      *   64 = Option headers follow; e.g., product-specific header
      */
     unsigned transferType;
-    unsigned pshSize; ///< Size of PSH in bytes
+    /**
+     * Total length of product header in bytes for this frame, including options
+     */
+    unsigned totalSize;
+    unsigned pshSize;   ///< Size of PSH in bytes
     /**
      * Used during fragmentation and reassembly to identify the sequence
      * of the fragmented blocks. Blocks are numbered 0 to n.
