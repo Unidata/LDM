@@ -1619,7 +1619,7 @@ static z_stream i_zstrm;
  * @param[in]  inBuf    Pointer to the frame buffer
  * @param[in]  inLen    Length of the compressed data
  * @param[out] outBuf   Pointer to uncompressed frame data buffer
- * @param[in]  outLen   Length of uncompressed frame
+ * @param[out] outLen   Length of uncompressed frame
  * @param[in]  blk      Block position
  * @retval  0           The frame was successfully uncompressed
  * @retval -1           Failed to uncompress
