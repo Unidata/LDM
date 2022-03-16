@@ -1,3 +1,8 @@
+6.13.17.18      2022-03-16T16:23:59-0600
+    NOAAPort:
+        * blender(1): Search for the next frame when a sync-frame is encountered because the PDH in
+          the sync-frame is garbage
+
 6.13.17.17      2022-03-16T15:22:23-0600
     NOAAPort:
         * blender(1): Moved vetting of frame size in readPDH() to before check of command-type so
