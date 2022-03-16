@@ -1,3 +1,9 @@
+6.13.17.16      2022-03-16T14:37:10-0600
+    NOAAPort:
+        * blender(1):
+            * Unconditionally decode PDH
+            * Log bad PDH at NOTE level
+
 6.13.17.15      2022-03-11T16:18:54-0700
     NOAAPort:
         * blender(1): Set data block size to 0 for sync frames and 0 transfer-type
