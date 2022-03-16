@@ -345,6 +345,11 @@ int nbs_getFrame(NbsReader* const reader)
             break;
         }
 
+        if (reader->fh.command == NBS_FH_CMD_SYNC) {
+            reader->buf[0] = 0; // Causes search for start-of-frame
+            continue;
+        }
+
         status = readPDH(reader);
         if (status) {
             if (status != NBS_INVAL) {
@@ -358,42 +363,23 @@ int nbs_getFrame(NbsReader* const reader)
             }
         }
         else {
-#if 0
-            // The product-specific header isn't needed for our purpose
-            if (reader->pdh.pshSize != 0) {
-                status = readPSH(reader);
-                if (status) {
-                    log_add("Couldn't read product-specific header");
-                    if (status != NBS_INVAL)
-                        break;
-                    if (reader->logSync) {
-                        nbs_logFH(&reader->fh);
-                        nbs_logPDH(&reader->pdh);
-                        nbs_logPSH(&reader->psh);
-                    }
-                }
-            } // Product-specific header exists
-#endif
+            /*
+             * pdh->dataBlockOffset is ignored because it appears that the only valid value is 0
+             * and any other value necessitates re-synchronizing. SRE 2022-03-11
+             */
+            size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockSize;
+            status = ensureBytes(reader, need);
+            if (status) {
+                log_add("Couldn't read data block");
+                break;
+            }
+            reader->size = need;
+            reader->logSync = true;
 
-            if (status == 0) {
-                /*
-                 * pdh->dataBlockOffset is ignored because it appears that the only valid value is 0
-                 * and any other value necessitates re-synchronizing. SRE 2022-03-11
-                 */
-                size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockSize;
-                status = ensureBytes(reader, need);
-                if (status) {
-                    log_add("Couldn't read data block");
-                    break;
-                }
-                reader->size = need;
-                reader->logSync = true;
-
-                return 0;
-            } // All headers read and verified
+            return 0;
         } // Valid PDH
 
-        // Invalid PDH or PSH added to log messages
+        // Invalid PDH added to log messages
         if (reader->logSync) {
             log_add("Synchronizing");
             log_flush_notice();
