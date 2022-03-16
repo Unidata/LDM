@@ -188,10 +188,7 @@ static int readPDH(NbsReader* reader)
 {
     int status = ensureBytes(reader, reader->fh.size + NBS_PDH_SIZE);
 
-    if (status != NBS_SUCCESS) {
-        log_add("Couldn't read product-definition header");
-    }
-    else {
+    if (status == NBS_SUCCESS) {
         status = NBS_INVAL;
 
         NbsFH*         fh = &reader->fh;
@@ -201,55 +198,46 @@ static int readPDH(NbsReader* reader)
         memset(pdh, 0, sizeof(*pdh));
 
         pdh->size = (buf[0] & 0xf) * 4;
+        pdh->totalSize = ntohs(*(uint16_t*)(buf+2)); // PDH size + PSH size
+        pdh->transferType = buf[1];
+        pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
+        pdh->pshSize = pdh->totalSize - pdh->size;
+        pdh->version = buf[0] >> 4;
+        pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
+        pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
+        pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
+        pdh->recsPerBlock = buf[10];
+        pdh->blocksPerRec = buf[11];
+
         if (pdh->size < 16) {
             log_add("Product-definition header size (%u bytes) < 16 bytes", pdh->size);
         }
         else if (fh->size + pdh->size > sizeof(reader->buf)) {
             log_add("Product-definition header size is too large: %u bytes", pdh->size);
         }
-        else {
-            pdh->totalSize = ntohs(*(uint16_t*)(buf+2)); // PDH size + PSH size
+        else if (pdh->totalSize < pdh->size) {
+            log_add("PDH size + PSH size (%u bytes) < PDH size (%u) bytes", pdh->totalSize,
+                    pdh->size);
+        }
+        else if (fh->size + pdh->totalSize > sizeof(reader->buf)) {
+            log_add("Size of PDH + PSH headers is too large: %u bytes", pdh->totalSize);
+        }
+#if 1
+        // The following is more generous than the subsequent, disabled code block
 
-            if (pdh->totalSize < pdh->size) {
-                log_add("PDH size + PSH size (%u bytes) < PDH size (%u) bytes", pdh->totalSize,
-                        pdh->size);
-            }
-            else if (fh->size + pdh->totalSize > sizeof(reader->buf)) {
-                log_add("Size of PDH + PSH headers is too large: %u bytes", pdh->totalSize);
+        else if (fh->command == NBS_FH_CMD_SYNC || pdh->transferType == 0) {
+            // pdh->dataBlockSize = 0;
+            status = 0;
+        }
+        else {
+            const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
+            if (frameSize > sizeof(reader->buf)) {
+                log_add("Frame size is too large: %u bytes", frameSize);
             }
             else {
-#if 1
-                // This conditional code is more generous than the following but appears to work
-
-                if (fh->command == NBS_FH_CMD_SYNC) {
-                    status = 0;
-                }
-                else {
-                    pdh->transferType = buf[1];
-                    if (pdh->transferType == 0) {
-                        status = 0;
-                    }
-                    else {
-                        pdh->dataBlockSize = ntohs(*(uint16_t*)(buf+8));
-
-                        const unsigned long frameSize = fh->size + pdh->totalSize + pdh->dataBlockSize;
-                        if (frameSize > sizeof(reader->buf)) {
-                            log_add("Frame size is too large: %u bytes", frameSize);
-                        }
-                        else {
-                            pdh->pshSize = pdh->totalSize - pdh->size;
-                            pdh->version = buf[0] >> 4;
-                            pdh->prodSeqNum = ntohl(*(uint32_t*)(buf+12));
-                            pdh->blockNum = ntohs(*(uint16_t*)(buf+4));
-                            pdh->dataBlockOffset = ntohs(*(uint16_t*)(buf+6));
-                            log_debug("pdh->dataBlockOffset=%u", pdh->dataBlockOffset);
-                            pdh->recsPerBlock = buf[10];
-                            pdh->blocksPerRec = buf[11];
-
-                            status = 0;
-                        }
-                    }
-                }
+                status = 0;
+            }
+        }
 #else
                 if (pdh->pshSize && ((pdh->transferType & 1) == 0)) {
                     log_add("Frame isn't start-of-product but PSH size is %u bytes", pdh->pshSize);
@@ -284,8 +272,6 @@ static int readPDH(NbsReader* reader)
                     } // Frame contains data
                 } // PSH size is consistent with transfer type
 #endif
-            } // PDH size + PSH size >= PDH size
-        } // PDH size >= 16 bytes
     } // Read potential PDH
 
     return status;
@@ -361,10 +347,12 @@ int nbs_getFrame(NbsReader* const reader)
 
         status = readPDH(reader);
         if (status) {
-            log_add("Couldn't read product-definition header");
-            if (status != NBS_INVAL)
+            if (status != NBS_INVAL) {
+                log_add("Couldn't get product-definition header");
                 break;
+            }
             if (reader->logSync) {
+                log_add("Invalid product-definition header");
                 nbs_logFH(&reader->fh);
                 nbs_logPDH(&reader->pdh);
             }
@@ -408,7 +396,7 @@ int nbs_getFrame(NbsReader* const reader)
         // Invalid PDH or PSH added to log messages
         if (reader->logSync) {
             log_add("Synchronizing");
-            log_flush_info();
+            log_flush_notice();
             reader->logSync = false;
         }
         else {
