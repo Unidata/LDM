@@ -400,6 +400,8 @@ int nbs_getFrame(NbsReader* const reader)
          *   }
          */
 
+        size_t need;
+
         status = readPDH(reader);
         if (status) {
             if (status != NBS_INVAL) {
@@ -409,7 +411,38 @@ int nbs_getFrame(NbsReader* const reader)
             if (reader->fh.command == NBS_FH_CMD_SYNC) {
                 log_debug("Synchronization frame. Sequence number=%u", reader->fh.seqno);
 
-                reader->size = reader->fh.size + NBS_PDH_SIZE; // Right amount?
+                /*
+                 * The following statement appears to cause noaaportIngester(1) to log messages like
+                 * these:
+                 *
+                 *   NOTE  SDUS53 KLMK 171723 /pTV0SDF !nids/ inserted NEXRAD3 [cat 99 type 4 ccb 2/0 seq 111001018 size 78369]
+                 *   ERROR SBN checksum invalid 2593 65271
+                 *   ERROR SBN checksum invalid 3170 6581
+                 *   ERROR SBN checksum invalid 2899 25212
+                 *   ERROR SBN checksum invalid 2459 5145
+                 *   ERROR SBN checksum invalid 2026 50762
+                 *   ERROR SBN checksum invalid 1854 64024
+                 *   ERROR SBN checksum invalid 2351 5209
+                 *   ERROR SBN checksum invalid 2084 40545
+                 *   ERROR SBN checksum invalid 1512 43243
+                 *   ERROR SBN checksum invalid 1849 43898
+                 *   ERROR SBN checksum invalid 1954 15245
+                 *   ERROR SBN checksum invalid 2109 52875
+                 *   ERROR SBN checksum invalid 1866 47555
+                 *   WARN  Gap in packet sequence: 530382880 to 530382882 [skipped 1]
+                 *   ERROR Missing fragment in sequence, last 0/111001019 this 2/111001019
+                 *   NOTE  SDUS53 KLBF 171719 /pDSPLNX !nids/ inserted NEXRAD3 [cat 99 type 4 ccb 2/0 seq 111001020 size 5359]
+                 *
+                 * reader->size = reader->fh.size + NBS_PDH_SIZE; // Right amount?
+                 */
+
+                need = reader->fh.size + reader->pdh.size;
+                status = ensureBytes(reader, need);
+                if (status) {
+                    log_add("Couldn't read data block");
+                    break;
+                }
+                reader->size = need; // Right amount?
                 reader->logSync = true;
                 return 0;
             }
@@ -424,7 +457,7 @@ int nbs_getFrame(NbsReader* const reader)
              * pdh->dataBlockOffset is ignored because it appears that the only valid value is 0
              * and any other value necessitates re-synchronizing. SRE 2022-03-11
              */
-            size_t need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockSize;
+            need = reader->fh.size + reader->pdh.totalSize + reader->pdh.dataBlockSize;
             status = ensureBytes(reader, need);
             if (status) {
                 log_add("Couldn't read data block");
