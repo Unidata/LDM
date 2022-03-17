@@ -345,10 +345,60 @@ int nbs_getFrame(NbsReader* const reader)
             break;
         }
 
-        if (reader->fh.command == NBS_FH_CMD_SYNC) {
-            reader->buf[0] = 0; // Causes search for start-of-frame
-            continue;
-        }
+        /*
+         * Apparently, synchronization frames either don't have a PDH or the PDH they have is bogus.
+         * Here are the log messages for the FH and PDH of such a frame:
+         *
+         *   Invalid product-definition header
+         *   Frame Header:
+         *     hdlcAddress = 0xff
+         *     hdlcControl = 0
+         *         version = 1
+         *            size = 16 bytes
+         *         control = 0
+         *         command = 5                // Synchronization frame
+         *      datastream = 5
+         *          source = 33
+         *     destination = 0
+         *           seqno = 510515957
+         *           runno = 0
+         *        checksum = 920
+         *   Product-Definition Header:
+         *             version = 1
+         *                size = 32 bytes     // Bogus
+         *        transferType = 0            // Bogus
+         *            PSH size = 0 bytes
+         *            blockNum = 25138        // Bogus
+         *     dataBlockOffset = 22288 bytes  // Bogus
+         *       dataBlockSize = 12339 bytes  // Bogus
+         *        recsPerBlock = 47
+         *        blocksPerRec = 49
+         *          prodSeqNum = 909062704
+         *   Synchronizing
+         *
+         * Unfortunately, discarding such frames currently makes noaaportIngester(1) report a "gap"
+         * because it doesn't see the FH sequence number.
+         *
+         * Such frames have been observed arriving approximately three per minute. If such frames
+         * had no PDH, then the bytes read by noaaportIngester(1) for the PDH (and subsequently
+         * discarded) would actually be the start of the next frame; consequently,
+         * noaaportIngester(1) would miss the FH sequence number and report many more gaps than it
+         * does. Therefore, such frames must have bytes following the frame header.
+         *
+         * But, how many bytes? The canonical size (16 bytes) or the stated size (32 bytes)?
+         *
+         * --SRE 2022-03-17
+         */
+
+        /*
+         * The following code causes noaaportIngester(1) to report a gap for every synchronization
+         * frame:
+         *
+         *   if (reader->fh.command == NBS_FH_CMD_SYNC) {
+         *       reader->buf[0] = 0; // Causes search for start-of-frame
+         *       continue; // Get next frame
+         *   }
+         */
 
         status = readPDH(reader);
         if (status) {
@@ -356,7 +406,14 @@ int nbs_getFrame(NbsReader* const reader)
                 log_add("Couldn't get product-definition header");
                 break;
             }
-            if (reader->logSync) {
+            if (reader->fh.command == NBS_FH_CMD_SYNC) {
+                log_debug("Synchronization frame. Sequence number=%u", reader->fh.seqno);
+
+                reader->size = reader->fh.size + NBS_PDH_SIZE; // Right amount?
+                reader->logSync = true;
+                return 0;
+            }
+            else if (reader->logSync) {
                 log_add("Invalid product-definition header");
                 nbs_logFH(&reader->fh);
                 nbs_logPDH(&reader->pdh);
@@ -373,9 +430,9 @@ int nbs_getFrame(NbsReader* const reader)
                 log_add("Couldn't read data block");
                 break;
             }
+
             reader->size = need;
             reader->logSync = true;
-
             return 0;
         } // Valid PDH
 
