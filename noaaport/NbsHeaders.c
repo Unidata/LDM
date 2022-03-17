@@ -178,7 +178,7 @@ int nbs_decodePDH(
 
 void nbs_logPDH(const NbsPDH* const pdh)
 {
-    log_add("Product-Description Header:\n"
+    log_add("Product-Definition Header:\n"
 "      PDH version = %u\n"
 "         PDH size = %u bytes\n"
 "     transferType = %#x\n"
