@@ -56,14 +56,8 @@ buildFrameRoutine(int clientSockFd)
 
 			if (status == 0) {
 			    if (pdh->size && (pdh->transferType & 1))
-                {
-                    if (pdh->pshSize ) {
-                        log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
-                                fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
-                    }
-                    else
-                        log_info("Starting product {SeqNum=%u, RunNum=%u}" , fh->seqno, fh->runno);
-                }
+                    log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
+                            fh->seqno, fh->runno, pdh->prodSeqNum);
 			}
 			else if (status == 1) {
 			    log_add("Frame was too late");
