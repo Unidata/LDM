@@ -1,3 +1,7 @@
+6.13.17.19      2022-03-17T11:16:38-0600
+    NOAAPort:
+        * blender(1): Write synchronization frames
+
 6.13.17.18      2022-03-16T16:23:59-0600
     NOAAPort:
         * blender(1): Search for the next frame when a sync-frame is encountered because the PDH in
