@@ -42,7 +42,6 @@ buildFrameRoutine(int clientSockFd)
     NbsReader reader;
     NbsFH*    fh = &reader.fh;
     NbsPDH*   pdh = &reader.pdh;
-    NbsPSH*   psh = &reader.psh;
 
     nbs_init(&reader, clientSockFd);
 
@@ -55,7 +54,7 @@ buildFrameRoutine(int clientSockFd)
 			status = tryInsertInQueue( fh->seqno, fh->runno, reader.buf, reader.size);
 
 			if (status == 0) {
-			    if (pdh->size && (pdh->transferType & 1))
+			    if (fh->command == NBS_FH_CMD_DATA)
                     log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
                             fh->seqno, fh->runno, pdh->prodSeqNum);
 			}

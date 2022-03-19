@@ -20,7 +20,9 @@
 
 /// Frame header command values:
 enum {
-    NBS_FH_CMD_SYNC = 5
+    NBS_FH_CMD_DATA = 3,
+    NBS_FH_CMD_SYNC = 5,
+    NBS_FH_CMD_TEST = 10
 };
 
 /// NBS Frame Header

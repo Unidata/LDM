@@ -28,14 +28,14 @@ enum {
 };
 
 typedef struct NbsReader {
-    int     fd;                 ///< Input file descriptor
-    size_t  have;               ///< Number of bytes in buffer
-    bool    logSync;            ///< Log synchronizing message?
-    NbsFH   fh;                 ///< Decoded frame header
-    NbsPDH  pdh;                ///< Decoded product-definition header
-    NbsPSH  psh;                ///< Decoded product-specific header
-    size_t  size;               ///< Frame size in bytes
-    uint8_t buf[NBS_MAX_FRAME]; ///< Frame buffer
+    NbsFH    fh;                               ///< Decoded frame header
+    NbsPDH   pdh;                              ///< Decoded product-definition header
+    uint8_t* end;                              ///< One byte beyond buffer contents
+    uint8_t* nextFH;                           ///< Start of next frame header in buffer
+    size_t   size;                             ///< Active frame size in bytes
+    int      fd;                               ///< Input file descriptor
+    bool     logSync;                          ///< Log synchronizing message?
+    uint8_t  buf[NBS_MAX_FRAME + NBS_FH_SIZE]; ///< Frame buffer
 } NbsReader;
 
 #ifdef __cplusplus
