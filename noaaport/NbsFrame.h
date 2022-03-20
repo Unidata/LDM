@@ -27,16 +27,7 @@ enum {
     NBS_INVAL    ///< Invalid frame
 };
 
-typedef struct NbsReader {
-    NbsFH    fh;                               ///< Decoded frame header
-    NbsPDH   pdh;                              ///< Decoded product-definition header
-    uint8_t* end;                              ///< One byte beyond buffer contents
-    uint8_t* nextFH;                           ///< Start of next frame header in buffer
-    size_t   size;                             ///< Active frame size in bytes
-    int      fd;                               ///< Input file descriptor
-    bool     logSync;                          ///< Log synchronizing message?
-    uint8_t  buf[NBS_MAX_FRAME + NBS_FH_SIZE]; ///< Frame buffer
-} NbsReader;
+typedef struct NbsReader NbsReader;
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,51 +36,42 @@ extern "C" {
 ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
 
 /**
- * Initializes a NBS frame reader.
+ * Returns an NBS frame reader.
  *
- * @param[out] reader  NBS frame reader
  * @param[in]  fd      Input file descriptor. Will be closed by `nbs_destroy()`.
+ * @retval     NULL    Allocation failure. `log_add()` called.
+ * @return             Pointer to new instance
+ * @see                `nbs_free()`
  */
-void nbs_init(
-        NbsReader* reader,
-        const int  fd);
+NbsReader* nbs_new(const int fd);
 
 /**
- * Destroys a NBS frame reader.
+ * Frees an NBS frame reader.
  *
  * @param[in] reader  NBS frame reader
+ * @see               `nbs_new()`
  */
-void nbs_destroy(NbsReader* reader);
-
-/**
- * Returns a new NBS frame reader.
- *
- * @param[in] fd  Input file descriptor. Will be closed by `nbs_deleteReader()`.
- * @return        New reader
- * @retval NULL   System failure. `log_add()` called.
- * @see `nbs_freeReader()`
- */
-NbsReader* nbs_newReader(int fd);
-
-/**
- * Frees the resources associated with an NBS frame reader. Closes the
- * file descriptor given to `nbs_newReader()`.
- *
- * @param[in] reader  NBS reader
- * @see `nbs_newReader()`
- */
-void nbs_freeReader(NbsReader* reader);
+void nbs_free(NbsReader* reader);
 
 /**
  * Returns the next NBS frame.
  *
  * @param[in]  reader   NBS reader
- * @retval NBS_SUCCESS  Success
- * @retval NBS_SPACE    Input frame is too large for buffer
- * @retval NBS_EOF      End-of-file read
- * @retval NBS_IO       I/O failure
+ * @param[out] frame    NBS frame
+ * @param[out] size     Size of NBS frame in bytes
+ * @param[out] fh       NBS frame header
+ * @param[out] pdh      NBS product-definition header or NULL. Set iff `fh->command ==
+ *                      NBS_FH_CMD_DATA`.
+ * @retval NBS_SUCCESS  Success. `*frame`, `*size`, and `*fh` are set.
+ * @retval NBS_EOF      End-of-file read. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
  */
-int nbs_getFrame(NbsReader* const reader);
+int nbs_getFrame(
+        NbsReader* const reader,
+        uint8_t** const  frame,
+        size_t* const    size,
+        NbsFH** const    fh,
+        NbsPDH** const   pdh);
 
 #ifdef __cplusplus
 }

@@ -38,23 +38,28 @@ buildFrameRoutine(int clientSockFd)
     log_notice("In buildFrameRoutine() waiting to read from "
     		"(fanout) server socket...\n");
 
-	int       status;
-    NbsReader reader;
-    NbsFH*    fh = &reader.fh;
-    NbsPDH*   pdh = &reader.pdh;
+	int        status;
+    NbsReader* reader = nbs_new(clientSockFd);
+    NbsFH*     fh;
+    NbsPDH*    pdh;
+    uint8_t*   frame;
+    size_t     frameSize;
 
-    nbs_init(&reader, clientSockFd);
+    if (reader == NULL) {
+        log_flush_fatal();
+        abort();
+    }
 
     for(;;)
     {
-		if ((status = nbs_getFrame(&reader)) == NBS_SUCCESS)
+		if ((status = nbs_getFrame(reader, &frame, &frameSize, &fh, &pdh)) == NBS_SUCCESS)
 		{
 			// buffer now contains frame data
 			// Insert in queue
-			status = tryInsertInQueue( fh->seqno, fh->runno, reader.buf, reader.size);
+			status = tryInsertInQueue( fh->seqno, fh->runno, frame, frameSize);
 
 			if (status == 0) {
-			    if (fh->command == NBS_FH_CMD_DATA)
+			    if (fh->command == NBS_FH_CMD_DATA && pdh->transferType & 1)
                     log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
                             fh->seqno, fh->runno, pdh->prodSeqNum);
 			}
@@ -67,29 +72,32 @@ buildFrameRoutine(int clientSockFd)
 			    log_flush_debug();
 			}
 			else {
+                log_add("Unknown return status from tryInsertInQueue(): %d", status);
+			    log_flush_error();
 			    break;
 			}
 		}
-		else if( status == NBS_IO)
-		{
-			log_add_syserr("Read failure");
-			break;
-			// n == -1 ==> read error
-		}
-		else if( status == NBS_EOF)
-		{
-			log_add("End of file");
-			break;
-		}
-		else if( status == NBS_SPACE)
-		{
-			log_add("Input frame is too large for buffer");
-			break;
-		}
+		else {
+            if( status == NBS_IO)
+            {
+                log_add("Read failure");
+                // n == -1 ==> read error
+            }
+            else if( status == NBS_EOF)
+            {
+                log_add("End of file");
+            }
+            else
+            {
+                log_add("Unknown return status from nbs_getFrame(): %d", status);
+            }
 
+            log_flush_error();
+            break;
+		}
     } // for
 
-    nbs_destroy(&reader);
+    nbs_free(reader);
 }
 
 /**

@@ -96,6 +96,58 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+struct NbsReader {
+    NbsFH    fh;                               ///< Decoded frame header
+    NbsPDH   pdh;                              ///< Decoded product-definition header
+    uint8_t* end;                              ///< One byte beyond buffer contents
+    uint8_t* nextFH;                           ///< Start of next frame header in buffer
+    size_t   size;                             ///< Active frame size in bytes
+    int      fd;                               ///< Input file descriptor
+    bool     logSync;                          ///< Log synchronizing message?
+    uint8_t  buf[NBS_MAX_FRAME + NBS_FH_SIZE]; ///< Frame buffer
+};
+
+static void nbs_init(
+        NbsReader* reader,
+        const int  fd)
+{
+    reader->fd = fd;
+    reader->end = reader->buf;
+    reader->nextFH = NULL;
+    reader->size = 0;
+    reader->logSync = true;
+}
+
+static void nbs_destroy(NbsReader* reader)
+{
+	close(reader->fd);
+}
+
+NbsReader* nbs_new(int fd)
+{
+    NbsReader* reader = malloc(sizeof(NbsReader));
+    if (reader == NULL) {
+        log_add_syserr("Couldn't allocated %zu-byte NBS reader structure", sizeof(NbsReader));
+    }
+    else {
+        nbs_init(reader, fd);
+    }
+    return reader;
+}
+
+/**
+ * Frees the resources associated with an NBS frame reader. Closes the
+ * file descriptor given to `nbs_newReader()`.
+ *
+ * @param[in] reader  NBS reader
+ * @see `nbs_newReader()`
+ */
+void nbs_free(NbsReader* reader)
+{
+	nbs_destroy(reader);
+	free(reader);
+}
+
 ssize_t
 getBytes(int fd, uint8_t* buf, size_t nbytes)
 {
@@ -125,7 +177,7 @@ static int ensureBytes(
         NbsReader* const reader,
         const size_t     need)
 {
-    int status;
+    ssize_t status;
     if (need > sizeof(reader->buf)) {
         log_add("Desired number of bytes (%zu) > available space (%zu)",
                 need, sizeof(reader->buf));
@@ -151,42 +203,6 @@ static int ensureBytes(
         }
     }
     return status;
-}
-
-void nbs_init(
-        NbsReader* reader,
-        const int  fd)
-{
-    reader->fd = fd;
-    reader->end = reader->buf;
-    reader->nextFH = NULL;
-    reader->size = 0;
-    reader->logSync = true;
-}
-
-void nbs_destroy(NbsReader* reader)
-{
-	close(reader->fd);
-}
-
-NbsReader* nbs_newReader(int fd)
-{
-    NbsReader* reader = malloc(sizeof(NbsReader));
-    nbs_init(reader, fd);
-    return reader;
-}
-
-/**
- * Frees the resources associated with an NBS frame reader. Closes the
- * file descriptor given to `nbs_newReader()`.
- *
- * @param[in] reader  NBS reader
- * @see `nbs_newReader()`
- */
-void nbs_freeReader(NbsReader* reader)
-{
-	nbs_destroy(reader);
-	free(reader);
 }
 
 /**
@@ -254,19 +270,23 @@ static int appendThruNextFH(NbsReader* reader)
  * of the buffer and decoded.
  *
  * @param[in,out] reader  NBS reader
- * @retval NBS_SUCCESS    Success
+ * @retval NBS_SUCCESS    Success. `reader->nextFH` will be NULL.
  * @retval NBS_EOF        EOF. `log_add()` called.
  * @retval NBS_IO         I/O failure. `log_add()` called.
  */
 static int ensureFH(NbsReader* reader)
 {
-    log_assert((reader->nextFH == NULL) == (reader->end == reader->buf));
+    if (reader->nextFH) {
+        log_assert(reader->end != reader->buf);
+        log_assert(reader->end >= reader->nextFH);
+    }
+    if (reader->end == reader->buf) {
+        log_assert(reader->nextFH == NULL);
+    }
 
     int status = reader->nextFH ? 0 : appendThruNextFH(reader);
 
     if (status == 0) {
-        log_assert(reader->end >= reader->nextFH);
-
         // Move the next frame header to the beginning of the buffer
         size_t excess = reader->end - reader->nextFH;
         memmove(reader->buf, reader->nextFH, excess);
@@ -360,7 +380,7 @@ static int processFrame(NbsReader* reader)
     int status;
 
     if (reader->fh.command != NBS_FH_CMD_DATA) {
-        // The format of frame is unknown => append bytes until the next frame header is seen
+        // The format of the frame is unknown => append bytes until the next frame header is seen
         status = appendThruNextFH(reader);
         if (status) {
             log_add("Couldn't get next frame header");
@@ -375,7 +395,7 @@ static int processFrame(NbsReader* reader)
     } // Frame is not a data frame (e.g., synchronization frame, test frame)
     else {
         /*
-         * The format of frame is known => read the stated frame bytes. This is more efficient
+         * The format of the frame is known => read the stated frame bytes. This is more efficient
          * than the previous "if", which scans every byte looking for a frame header.
          */
         status = readPDH(reader);
@@ -403,30 +423,41 @@ static int processFrame(NbsReader* reader)
         }
     } // Frame is a data frame
 
+    reader->end = reader->buf; // Causes buffer contents to be ignored next time
+
     return status;
 }
 
-int nbs_getFrame(NbsReader* const reader)
+int nbs_getFrame(
+        NbsReader* const reader,
+        uint8_t** const  frame,
+        size_t* const    size,
+        NbsFH** const    fh,
+        NbsPDH** const   pdh)
 {
     int status;
 
     for (;;) {
-        status = ensureFH(reader); // `reader->nextFH` will be NULL on return
+        status = ensureFH(reader); // `reader->nextFH` will be NULL on success
         if (status)
             break; // `NBS_MAX_FRAME < sizeof(reader->buf)` => must be a severe error
         // Buffer now starts with a (decoded) frame header
 
-        status = processFrame(reader);
+        status = processFrame(reader); // Frame now referenced by `reader->buf` & `reader->size`
         if (status == 0) {
             reader->logSync = true;
-            break; // `status == 0`
+            *frame = reader->buf;
+            *size = reader->size;
+            *fh = &reader->fh;
+            *pdh = (reader->fh.command == NBS_FH_CMD_DATA)
+                    ? &reader->pdh
+                    : NULL;
+            break;
         }
         log_add("Couldn't process frame");
 
         if (status != NBS_INVAL && status != NBS_SPACE)
             break; // Severe error
-
-        reader->end = reader->buf; // Causes buffer contents to be discarded
 
         // Log messages are queued
         if (!reader->logSync) {
@@ -438,10 +469,6 @@ int nbs_getFrame(NbsReader* const reader)
             reader->logSync = false;
         }
     } // Indefinite loop
-
-    if (status)
-        // A severe error occurred
-        log_flush_error();
 
     return status;
 }
