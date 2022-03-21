@@ -1,6 +1,6 @@
 6.13.17.21
     NOAAPort:
-        * blender(1):Major refactoring of nbs_getFrame() 
+        * blender(1): Major refactoring of nbs_getFrame() 
 
 6.13.17.20      2022-03-17T12:44:55-0600
     NOAAPort:

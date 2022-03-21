@@ -206,15 +206,15 @@ static int ensureBytes(
 }
 
 /**
- * Appends bytes to the buffer until the next frame header is appended.
+ * Appends bytes to the buffer until a frame header is appended.
  *
  * @param[in,out] reader  NBS reader
- * @retval NBS_SUCCESS    Success
- * @retval NBS_SPACE      Buffer is too small
+ * @retval NBS_SUCCESS    Success. `reader->nextFH` points to start of frame header
+ * @retval NBS_SPACE      Buffer is too small. `log_add()` called.
  * @retval NBS_EOF        EOF. `log_add()` called.
  * @retval NBS_IO         I/O failure. `log_add()` called.
  */
-static int appendThruNextFH(NbsReader* reader)
+static int appendThruFH(NbsReader* reader)
 {
     int      status;
     uint8_t* buf = reader->buf;
@@ -255,7 +255,6 @@ static int appendThruNextFH(NbsReader* reader)
         // Frame header referenced by `start` has correct checksum
         // Buffer ends with frame header referenced by `start`
 
-        reader->size = start - reader->buf; // Number of bytes before appended frame header
         reader->nextFH = start;
 
         break;
@@ -265,29 +264,26 @@ static int appendThruNextFH(NbsReader* reader)
 }
 
 /**
- * Ensures that the buffer starts with a (decoded) frame header. If necessary, bytes are appended to
- * the buffer until the next frame header is seen. The next frame header is moved to the beginning
- * of the buffer and decoded.
+ * Ensures that the buffer starts with a (decoded) frame header. If no frame header has been
+ * identified, then bytes are appended to the buffer until a frame header is seen. The frame header
+ * is moved to the beginning of the buffer and decoded.
  *
+ * @pre If non-NULL, then `reader->nextFH` references the frame header to be moved to the beginning
+ *      of the buffer
  * @param[in,out] reader  NBS reader
  * @retval NBS_SUCCESS    Success. `reader->nextFH` will be NULL.
+ * @retval NBS_SPACE      Buffer is too small. `log_add()` called.
  * @retval NBS_EOF        EOF. `log_add()` called.
  * @retval NBS_IO         I/O failure. `log_add()` called.
+ * @post Buffer starts with the frame header of the next frame to process
+ * @post `reader->nextFH == NULL`
  */
 static int ensureFH(NbsReader* reader)
 {
-    if (reader->nextFH) {
-        log_assert(reader->end != reader->buf);
-        log_assert(reader->end >= reader->nextFH);
-    }
-    if (reader->end == reader->buf) {
-        log_assert(reader->nextFH == NULL);
-    }
-
-    int status = reader->nextFH ? 0 : appendThruNextFH(reader);
+    int status = reader->nextFH ? 0 : appendThruFH(reader);
 
     if (status == 0) {
-        // Move the next frame header to the beginning of the buffer
+        // Move the frame header to the beginning of the buffer
         size_t excess = reader->end - reader->nextFH;
         memmove(reader->buf, reader->nextFH, excess);
         reader->end = reader->buf + excess;
@@ -375,20 +371,32 @@ static int readPDH(NbsReader* reader)
     return status;
 }
 
+/**
+ * @pre Buffer starts with the (decoded) frame header of the next frame to process.
+ * @pre `reader->end > reader->buf`
+ * @param[in,out] reader  NBS reader
+ * @retval NBS_SUCCESS    Success
+ * @retval NBS_SPACE      Buffer is too small. `log_add()` called.
+ * @retval NBS_EOF        EOF. `log_add()` called.
+ * @retval NBS_IO         I/O failure. `log_add()` called.
+ * @post Frame of `reader->size` bytes starts at `reader->buf`
+ */
 static int processFrame(NbsReader* reader)
 {
     int status;
 
+    log_assert(reader->end > reader->buf);
+
     if (reader->fh.command != NBS_FH_CMD_DATA) {
         // The format of the frame is unknown => append bytes until the next frame header is seen
-        status = appendThruNextFH(reader);
+        status = appendThruFH(reader);
         if (status) {
             log_add("Couldn't get next frame header");
         }
         else {
             /*
              * Buffer starts with a (decoded) frame header, contains a complete frame, and ends
-             * with the next frame header
+             * with the next frame header, which begins at `reader->nextFH`.
              */
             reader->size = reader->nextFH - reader->buf;
         }
@@ -417,13 +425,22 @@ static int processFrame(NbsReader* reader)
                 log_add("Couldn't read data block");
             }
             else {
-                // Buffer starts with a complete frame
+                /*
+                 * Buffer starts with a (decoded) frame header and contains a complete frame. The
+                 * next frame header is not identified.
+                 */
                 reader->size = need;
-            }
-        }
-    } // Frame is a data frame
 
-    reader->end = reader->buf; // Causes buffer contents to be ignored next time
+                /*
+                 * The frame was processed according to its self-defined contents, so the next frame
+                 * header wasn't identified; consequently, cause `ensureFH()` to start from scratch
+                 * next time.
+                 */
+                reader->nextFH = NULL;
+                reader->end = reader->buf;
+            } // Entire frame read
+        } // Product-definition header read and decoded
+    } // Frame is a data frame
 
     return status;
 }
@@ -438,36 +455,48 @@ int nbs_getFrame(
     int status;
 
     for (;;) {
-        status = ensureFH(reader); // `reader->nextFH` will be NULL on success
-        if (status)
-            break; // `NBS_MAX_FRAME < sizeof(reader->buf)` => must be a severe error
-        // Buffer now starts with a (decoded) frame header
-
-        status = processFrame(reader); // Frame now referenced by `reader->buf` & `reader->size`
-        if (status == 0) {
-            reader->logSync = true;
-            *frame = reader->buf;
-            *size = reader->size;
-            *fh = &reader->fh;
-            *pdh = (reader->fh.command == NBS_FH_CMD_DATA)
-                    ? &reader->pdh
-                    : NULL;
-            break;
+        status = ensureFH(reader); // Sets `reader->nextFH` to NULL on success
+        if (status == NBS_SPACE) {
+            // Start from scratch
+            reader->end = reader->buf;
+            reader->nextFH = NULL;
         }
-        log_add("Couldn't process frame");
-
-        if (status != NBS_INVAL && status != NBS_SPACE)
+        else if (status) {
             break; // Severe error
-
-        // Log messages are queued
-        if (!reader->logSync) {
-            log_clear();
         }
         else {
-            log_add("Synchronizing");
-            log_flush_notice();
-            reader->logSync = false;
-        }
+            // Buffer now starts with a (decoded) frame header
+
+            status = processFrame(reader); // Frame now referenced by `reader->buf` & `reader->size`
+            if (status == 0) {
+                *frame = reader->buf;
+                *size = reader->size;
+                *fh = &reader->fh;
+                *pdh = (reader->fh.command == NBS_FH_CMD_DATA)
+                        ? &reader->pdh
+                        : NULL;
+                reader->logSync = true; // Log first error next time
+                break; // Success
+            }
+            log_add("Couldn't process frame");
+
+            if (status != NBS_INVAL && status != NBS_SPACE)
+                break; // Severe error
+
+            // Start from scratch
+            reader->end = reader->buf;
+            reader->nextFH = NULL;
+
+            // Log messages are queued
+            if (!reader->logSync) {
+                log_clear();
+            }
+            else {
+                log_add("Synchronizing");
+                log_flush_notice();
+                reader->logSync = false; // Don't log errors until resynchronized
+            }
+        } // Buffer starts with a (decoded) frame header
     } // Indefinite loop
 
     return status;
