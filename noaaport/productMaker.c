@@ -522,7 +522,7 @@ int    nnnxxx_offset;
         log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
         log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
                 pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
+        log_debug("product seqnumber %ld block number %d data block size %d", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
 
         /* Stop here if no psh */
@@ -794,8 +794,8 @@ int    nnnxxx_offset;
                     pdh->len + pdh->pshlen, pdh->pshlen);
                 log_error_q("blocks per record %ld records per block %ld",
                     pdh->blocks_per_record, pdh->records_per_block);
-                log_error_q("product seqnumber %ld block number %ld data block "
-                    "size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
+                log_error_q("product seqnumber %ld block number %d data block "
+                    "size %d", pdh->seqno, pdh->dbno, pdh->dbsize);
                 log_error_q("product header flag %d", psh->hflag);
                 log_error_q("prodspecific data length %ld", psh->psdl);
                 log_error_q("bytes per record %ld", psh->bytes_per_record);
@@ -923,7 +923,7 @@ int    nnnxxx_offset;
             }
             if (prod.head == NULL) {
                 log_info_q("found data block before header, "
-                    "skipping sequence %d frag #%d", pdh->seqno, pdh->dbno);
+                    "skipping sequence %ld frag #%d", pdh->seqno, pdh->dbno);
                 continue;
             }
         } // Don't have product-specific header (pdh->pshlen == 0)
