@@ -50,6 +50,7 @@ static void init(
         const int  fd)
 {
     reader->fd = fd;
+    reader->state = START;
     reader->logSync = true;
     resetBuf(reader);
 }
