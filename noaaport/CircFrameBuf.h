@@ -27,19 +27,10 @@ class CircFrameBuf
      * NOAAPort frame run number and sequence number pair.
      */
     struct Key {
-<<<<<<< HEAD
         unsigned seqNum;
         unsigned blkNum;
-=======
-        SeqNum_t seqNum;
-        BlkNum_t blkNum;
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
 
-<<<<<<< HEAD
         Key(unsigned seqNum, unsigned blkNum)
-=======
-        Key(SeqNum_t seqNum, BlkNum_t blkNum)
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
             : seqNum(seqNum)
             , blkNum(blkNum)
         {}
@@ -126,13 +117,8 @@ public:
      * @see                     `getOldestFrame()`
      */
     int add(
-<<<<<<< HEAD
             const unsigned    prodSeqNum,
             const unsigned    dataBlkNum,
-=======
-            const SeqNum_t    prodSeqNum,
-            const RunNum_t    dataBlkNum,
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
             const char*       data,
             const FrameSize_t numBytes);
 
@@ -179,13 +165,8 @@ void* cfb_new(const double timeout);
  */
 int cfb_add(
         void*             cfb,
-<<<<<<< HEAD
         const unsigned    prodSeqNum,
         const unsigned    dataBlkNum,
-=======
-        const SeqNum_t    prodSeqNum,
-        const RunNum_t    dataBlkNum,
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
         const char*       data,
         const FrameSize_t numBytes);
 

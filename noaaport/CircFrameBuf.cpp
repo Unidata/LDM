@@ -24,13 +24,8 @@ CircFrameBuf::CircFrameBuf(const double timeout)
 {}
 
 int CircFrameBuf::add(
-<<<<<<< HEAD
         const unsigned    seqNum,
         const unsigned    blkNum,
-=======
-        const SeqNum_t    seqNum,
-        const BlkNum_t    blkNum,
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
         const char*       data,
         const FrameSize_t numBytes)
 {
@@ -111,13 +106,8 @@ extern "C" {
 	 */
 	int cfb_add(
 			void*             cfb,
-<<<<<<< HEAD
 			const unsigned    seqNum,
 			const unsigned    blkNum,
-=======
-			const SeqNum_t    seqNum,
-			const BlkNum_t    blkNum,
->>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
 			const char*       data,
 			const FrameSize_t numBytes) {
         int status;
