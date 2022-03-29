@@ -40,10 +40,10 @@ class CircFrameBuf
         {}
 
         bool operator<(const Key& rhs) const {
-            return (rhs.seqNum - seqNum < SEQ_NUM_MAX/2)
+            return (rhs.seqNum - seqNum <= SEQ_NUM_MAX/2)
                     ? true
                     : (rhs.seqNum == seqNum)
-                          ? rhs.blkNum - blkNum < BLK_NUM_MAX/2
+                          ? rhs.blkNum - blkNum <= BLK_NUM_MAX/2
                           : false;
         }
     };
