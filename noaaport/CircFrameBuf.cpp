@@ -19,7 +19,7 @@ CircFrameBuf::CircFrameBuf(const double timeout)
     , slots()
     , lastOldestKey()
     , frameReturned(false)
-    , timeout(std::chrono::duration_cast<Slot::Dur>(
+    , timeout(std::chrono::duration_cast<Key::Dur>(
             std::chrono::duration<double>(timeout)))
 {}
 
@@ -30,14 +30,14 @@ int CircFrameBuf::add(
         const FrameSize_t numBytes)
 {
     Guard guard{mutex}; /// RAII!
-    Key   key{seqNum, blkNum};
+    Key   key{seqNum, blkNum, timeout};
 
     if (frameReturned && key < lastOldestKey)
         return 1; // Frame arrived too late
     if (!indexes.insert({key, nextIndex}).second)
         return 2; // Frame already added
 
-    slots.emplace(nextIndex, Slot{data, numBytes, timeout});
+    slots.emplace(nextIndex, Slot{data, numBytes});
     ++nextIndex;
     cond.notify_one();
     return 0;
@@ -47,25 +47,17 @@ void CircFrameBuf::getOldestFrame(Frame_t* frame)
 {
     Lock  lock{mutex}; /// RAII!
 
-    /*
-    do {
-        cond.wait_for(lock, timeout,
-                [&]{return !indexes.empty() && Slot::Clock::now() >=
-                slots.at(indexes.begin()->second).inserted + timeout;});
-    } while (indexes.empty());
-    */
-
     cond.wait(lock, [&]{return !indexes.empty() &&
-            Slot::Clock::now() >= slots.at(indexes.begin()->second).revealTime;});
+            Key::Clock::now() >= indexes.begin()->first.revealTime;});
 
-    // The oldest frame shall be returned
+    // The earliest frame shall be returned
     auto  head = indexes.begin();
     auto  key = head->first;
     auto  index = head->second;
     auto& slot = slots.at(index);
 
-    frame->dataBlockNum   = key.blkNum;
     frame->prodSeqNum   = key.seqNum;
+    frame->dataBlockNum = key.blkNum;
     ::memcpy(frame->data, slot.data, slot.numBytes);
     frame->nbytes = slot.numBytes;
 
