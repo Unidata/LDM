@@ -55,26 +55,28 @@ buildFrameRoutine(int clientSockFd)
 		if ((status = nbs_getFrame(reader, &frame, &frameSize, &fh, &pdh)) == NBS_SUCCESS)
 		{
 			// buffer now contains frame data
-			// Insert in queue
-			status = tryInsertInQueue( fh->seqno, fh->runno, frame, frameSize);
+		    if (fh->command == NBS_FH_CMD_DATA) {
+                // PDH exists. Insert data-transfer frame in queue
+                status = tryInsertInQueue( pdh->prodSeqNum, pdh->blockNum, frame, frameSize);
 
-			if (status == 0) {
-			    if (fh->command == NBS_FH_CMD_DATA && pdh->transferType & 1)
-                    log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
-                            fh->seqno, fh->runno, pdh->prodSeqNum);
-			}
-			else if (status == 1) {
-			    log_add("Frame was too late");
-			    log_flush_debug();
-			}
-			else if (status == 2) {
-			    log_add("Frame is a duplicate");
-			    log_flush_debug();
-			}
-			else {
-                log_add("Unknown return status from tryInsertInQueue(): %d", status);
-			    log_flush_error();
-			    break;
+                if (status == 0) {
+                    if (pdh->transferType & 1)
+                        log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
+                                fh->seqno, fh->runno, pdh->prodSeqNum);
+                }
+                else if (status == 1) {
+                    log_add("Frame was too late");
+                    log_flush_debug();
+                }
+                else if (status == 2) {
+                    log_add("Frame is a duplicate");
+                    log_flush_debug();
+                }
+                else {
+                    log_add("Unknown return status from tryInsertInQueue(): %d", status);
+                    log_flush_error();
+                    break;
+                }
 			}
 		}
 		else {

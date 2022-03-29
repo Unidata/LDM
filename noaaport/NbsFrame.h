@@ -17,6 +17,7 @@
 
 #define NBS_FH_SIZE  16    ///< Canonical frame header size in bytes
 #define NBS_PDH_SIZE 16    ///< Canonical product-definition header size in bytes
+#define NBS_TCH_SIZE 32    ///< Canonical time-command header size in bytes
 
 /// NBS return codes:
 enum {
@@ -33,7 +34,7 @@ typedef struct NbsReader NbsReader;
 extern "C" {
 #endif
 
-ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
+//ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
 
 /**
  * Returns an NBS frame reader.
