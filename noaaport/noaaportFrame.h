@@ -28,8 +28,13 @@ typedef uint16_t FrameSize_t;
 #define PRI_FRAME_SIZE PRIu16
 
 typedef struct aFrame {
+<<<<<<< HEAD
     unsigned        prodSeqNum;
     unsigned        dataBlockNum;
+=======
+    SeqNum_t        prodSeqNum;
+    BlkNum_t        dataBlockNum;
+>>>>>>> branch 'find_next_frame' of git@github.com:Unidata/LDM.git
     char            data[SBN_FRAME_SIZE];
     FrameSize_t     nbytes;
 } Frame_t;
