@@ -24,26 +24,37 @@
 class CircFrameBuf
 {
     /**
-     * NOAAPort frame run number and sequence number pair.
+     * NOAAPort's product-definition header's product sequence number and data-block number
      */
     struct Key {
-        unsigned seqNum;
-        unsigned blkNum;
+        using Clock = std::chrono::steady_clock;
+        using Dur   = std::chrono::milliseconds;
 
-        Key(unsigned seqNum, unsigned blkNum)
+        unsigned          seqNum;
+        unsigned          blkNum;
+        Clock::time_point revealTime; ///< When the associated frame should be revealed
+
+        Key(unsigned seqNum, unsigned blkNum, Dur& timeout)
             : seqNum(seqNum)
             , blkNum(blkNum)
+            , revealTime(Clock::now() + timeout)
+        {}
+
+        Key(unsigned seqNum, unsigned blkNum, Dur&& timeout)
+            : seqNum(seqNum)
+            , blkNum(blkNum)
+            , revealTime(Clock::now() + timeout)
         {}
 
         Key()
-            : Key(0, 0)
+            : Key(0, 0, Dur::zero())
         {}
 
         bool operator<(const Key& rhs) const {
-            return (rhs.seqNum - seqNum <= SEQ_NUM_MAX/2)
+            return (seqNum - rhs.seqNum > SEQ_NUM_MAX/2)
                     ? true
-                    : (rhs.seqNum == seqNum)
-                          ? rhs.blkNum - blkNum <= BLK_NUM_MAX/2
+                    : (seqNum == rhs.seqNum)
+                          ? blkNum - rhs.blkNum > BLK_NUM_MAX/2
                           : false;
         }
     };
@@ -52,17 +63,12 @@ class CircFrameBuf
      * A slot for a frame.
      */
     struct Slot {
-       using Clock = std::chrono::steady_clock;
-       using Dur   = std::chrono::milliseconds;
-
         char              data[SBN_FRAME_SIZE]; ///< Frame data
         FrameSize_t       numBytes;             ///< Number of bytes of data in the frame
-        Clock::time_point revealTime;           ///< When the frame should be revealed
 
-        Slot(const char* data, FrameSize_t numBytes, Dur& timeout)
+        Slot(const char* data, FrameSize_t numBytes)
             : data()
             , numBytes(numBytes)
-            , revealTime(Clock::now() + timeout)
         {
             if (numBytes > sizeof(this->data))
                 throw std::runtime_error("Frame is too large: " + std::to_string(numBytes) +
@@ -86,7 +92,7 @@ class CircFrameBuf
     Slots         slots;           ///< Slots of frames in unsorted order
     Key           lastOldestKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
-    Slot::Dur     timeout;         ///< Timeout for returning next frame
+    Key::Dur      timeout;         ///< Timeout for returning next frame
 
 public:
     /**
