@@ -36,7 +36,7 @@ struct NbsReader {
     NbsFH    fh;                               ///< Decoded frame-level header
     NbsPDH   pdh;                              ///< Decoded product-definition header
     uint8_t* nextFH;                           ///< Pointer to start of next frame-level header
-    bool     logSync;                          ///< Log synchronizing message?
+    bool     logError;                         ///< Log error messages?
 };
 
 inline static void resetBuf(NbsReader* const reader)
@@ -51,7 +51,7 @@ static void init(
 {
     reader->fd = fd;
     reader->state = START;
-    reader->logSync = true;
+    reader->logError = true;
     resetBuf(reader);
 }
 
@@ -360,7 +360,7 @@ int nbs_getFrame(
                     reader->state = PDH_SEEN;
                 }
                 else if (status == NBS_INVAL) {
-                    if (reader->logSync) {
+                    if (reader->logError) {
                         log_add("Invalid product-definition header");
                         nbs_logFH(&reader->fh);
                         nbs_logPDH(&reader->pdh);
@@ -386,7 +386,7 @@ int nbs_getFrame(
                     *size = reader->end - reader->buf;
                     *fhArg = &reader->fh;
                     *pdhArg = &reader->pdh;
-                    reader->logSync = true; // Log next error
+                    reader->logError = true; // Log next error
                     reader->state = START;
                     return 0;
                 }
@@ -404,7 +404,7 @@ int nbs_getFrame(
                     *size = reader->end - reader->buf;
                     *fhArg = &reader->fh;
                     *pdhArg = NULL;
-                    reader->logSync = true; // Log next error
+                    reader->logError = true; // Log next error
                     reader->state = START;
                     return 0;
                 }
@@ -467,7 +467,7 @@ int nbs_getFrame(
                     *size = reader->nextFH - reader->buf;
                     *fhArg = &reader->fh;
                     *pdhArg = NULL;
-                    reader->logSync = true; // Log next error
+                    reader->logError = true; // Log next error
                     reader->state = NEXT_FH_SEEN;
                     return 0;
                 }
@@ -492,13 +492,12 @@ int nbs_getFrame(
             break; // Severe error. `log_add()` called.
 
         // Non-fatal log messages are queued
-        if (!reader->logSync) {
+        if (!reader->logError) {
             log_clear();
         }
         else {
-            log_add("Synchronizing");
             log_flush_warning();
-            reader->logSync = false; // Don't log next error
+            reader->logError = false; // Don't log next error
         }
     }
 

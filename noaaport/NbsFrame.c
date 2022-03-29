@@ -103,7 +103,7 @@ struct NbsReader {
     uint8_t* nextFH;                           ///< Start of next frame header in buffer
     size_t   size;                             ///< Active frame size in bytes
     int      fd;                               ///< Input file descriptor
-    bool     logSync;                          ///< Log synchronizing message?
+    bool     logError;                          ///< Log synchronizing message?
     uint8_t  buf[NBS_MAX_FRAME + NBS_FH_SIZE]; ///< Frame buffer
 };
 
@@ -115,7 +115,7 @@ static void nbs_init(
     reader->end = reader->buf;
     reader->nextFH = NULL;
     reader->size = 0;
-    reader->logSync = true;
+    reader->logError = true;
 }
 
 static void nbs_destroy(NbsReader* reader)
@@ -408,7 +408,7 @@ static int processFrame(NbsReader* reader)
          */
         status = readPDH(reader);
         if (status == NBS_INVAL) {
-            if (reader->logSync) {
+            if (reader->logError) {
                 log_add("Invalid product-definition header");
                 nbs_logFH(&reader->fh);
                 nbs_logPDH(&reader->pdh);
@@ -475,7 +475,7 @@ int nbs_getFrame(
                 *pdh = (reader->fh.command == NBS_FH_CMD_DATA)
                         ? &reader->pdh
                         : NULL;
-                reader->logSync = true; // Log first error next time
+                reader->logError = true; // Log first error next time
                 break; // Success
             }
             log_add("Couldn't process frame");
@@ -488,13 +488,13 @@ int nbs_getFrame(
             reader->nextFH = NULL;
 
             // Log messages are queued
-            if (!reader->logSync) {
+            if (!reader->logError) {
                 log_clear();
             }
             else {
                 log_add("Synchronizing");
                 log_flush_notice();
-                reader->logSync = false; // Don't log errors until resynchronized
+                reader->logError = false; // Don't log errors until resynchronized
             }
         } // Buffer starts with a (decoded) frame header
     } // Indefinite loop
