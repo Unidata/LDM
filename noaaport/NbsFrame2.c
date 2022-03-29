@@ -298,6 +298,7 @@ int nbs_getFrame(
     for (;;) {
         switch (reader->state) {
             case START: {
+                log_debug("Reading frame-level header number of bytes");
                 // Read a frame-level header's worth of bytes into an empty buffer.
                 resetBuf(reader);
                 status = ensureBytes(reader, NBS_FH_SIZE);
@@ -306,6 +307,7 @@ int nbs_getFrame(
                 break;
             }
             case HAVE_BYTES: {
+                log_debug("Looking for frame-level header sentinel");
                 /*
                  * Buffer starts with at least NBS_FH_SIZE bytes. Look for the frame-level header's
                  * sentinel byte.
@@ -322,6 +324,7 @@ int nbs_getFrame(
                 break;
             }
             case SENTINEL_SEEN: {
+                log_debug("Decoding frame-level header");
                 // Buffer starts with the frame-level header's sentinel byte
                 status = ensureBytes(reader, NBS_FH_SIZE);
                 if (status == NBS_SUCCESS) {
@@ -347,6 +350,7 @@ int nbs_getFrame(
                 break;
             }
             case DATA_FH_SEEN: {
+                log_debug("Getting product-definition header");
                 /*
                  * Buffer contains a (decoded) data-transfer frame-level header. Product-definition
                  * header is next.
@@ -369,6 +373,7 @@ int nbs_getFrame(
                 break;
             }
             case PDH_SEEN: {
+                log_debug("Reading data-block");
                 /*
                  * Buffer contains a (decoded) frame-level header and a (decoded) product-definition
                  * header. Optional headers and data block are next
@@ -388,9 +393,10 @@ int nbs_getFrame(
                 break;
             }
             case TIME_FH_SEEN: {
+                log_debug("Reading time-command header");
                 /*
-                 * Buffer contains a (decoded) time-command frame-level header. Time-command header is
-                 * next.
+                 * Buffer contains a (decoded) time-command frame-level header. Time-command header
+                 * is next.
                  */
                 status = ensureTCH(reader);
                 if (status == NBS_SUCCESS) {
@@ -413,6 +419,7 @@ int nbs_getFrame(
                 break;
             }
             case OTHER_FH_SEEN: {
+                log_debug("Searching for next frame-level header sentinel");
                 /*
                  * Buffer contains at least a (decoded) frame-level header that indicates an unknown
                  * frame format. Find the start of the next frame-level header.
@@ -437,6 +444,7 @@ int nbs_getFrame(
                 break;
             }
             case NEXT_SENTINEL_SEEN: {
+                log_debug("Vetting next frame-level header");
                 /*
                  * Buffer contains a frame-level header that indicates an unknown frame, zero or
                  * more bytes, and at least the sentinel byte of a possible next FH. Vet the next
@@ -466,6 +474,7 @@ int nbs_getFrame(
                 break;
             }
             case NEXT_FH_SEEN: {
+                log_debug("Moving next frame-level header to start of buffer");
                 /*
                  * Buffer contains the previous, processed frame and the next frame-level header.
                  * Move the next frame-level header to the start of the buffer.
@@ -474,6 +483,9 @@ int nbs_getFrame(
                 reader->nextFH = NULL;
                 reader->state = SENTINEL_SEEN;
             }
+            default:
+                log_fatal("Invalid state: %d", reader->state);
+                abort();
         }
 
         if (status)
