@@ -1,6 +1,12 @@
 6.13.17.21
     NOAAPort:
-        * blender(1): Major refactoring of nbs_getFrame() 
+        * blender(1): Major refactoring
+            * nbs_getFrame() is now implemented as a nondeterministic finite-state machine for rigor
+              and ease of modification
+            * Replaced use of run number and sequence number in frame-level header with product
+              sequence number and data-block number in product-definition header because the former
+              pair of numbers isn't reliable
+            * Only data transfer frames are output because only they can be sequenced
 
 6.13.17.20      2022-03-17T12:44:55-0600
     NOAAPort:

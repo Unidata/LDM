@@ -132,7 +132,7 @@ int nbs_decodePDH(
             else {
                 pdh->pshSize = totalSize - pdh->size;
 
-                if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_SYNC ||
+                if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_TIME ||
                         pdh->transferType == 0)) {
                     // Ensure proper values in these PDH-s
                     pdh->blockNum = 0;

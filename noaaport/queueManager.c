@@ -101,11 +101,11 @@ queue_start(const double frameLatency)
 	flowDirector();
 }
 
-/*
+/**
  * tryInsertInQueue():	Try insert a frame in a queue
  *
- * @param[in]  sequenceNumber	Sequence number of this frame
- * @param[in]  runNumber  		Run number of this frame
+ * @param[in]  prodSeqNum       PDH product sequence number
+ * @param[in]  blockNum         PDH block number
  * @param[in]  buffer 			SBN data of this frame
  * @param[out] frameBytes  		Number of data bytes in this frame
 
@@ -118,14 +118,14 @@ queue_start(const double frameLatency)
  * post-condition: 	runMutex is unLOCKed
  */
 int
-tryInsertInQueue(  unsigned 		    sequenceNumber,
-		       	   unsigned 		    runNumber,
+tryInsertInQueue(  unsigned 		    prodSeqNum,
+		       	   unsigned 		    blockNum,
 				   const uint8_t* const buffer,
 				   size_t 			    frameBytes)
 {
     //lockIt(&runMutex);
 	// call in CircFrameBuf: (C++ class)
-	int status = cfb_add( cfbInst, runNumber, sequenceNumber, buffer, frameBytes);
+	int status = cfb_add( cfbInst, prodSeqNum, blockNum, buffer, frameBytes);
 	//else if (status )
         //unlockIt(&runMutex);
 	return status;
