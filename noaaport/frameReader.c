@@ -21,7 +21,7 @@
 
 //  ========================================================================
 extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
-extern int   	tryInsertInQueue( uint32_t, uint16_t, const uint8_t*, uint16_t);
+extern int   	tryInsertInQueue( unsigned, unsigned, const uint8_t*, uint16_t);
 extern int      rcvBufSize;
 //  ========================================================================
 

@@ -24,8 +24,8 @@ CircFrameBuf::CircFrameBuf(const double timeout)
 {}
 
 int CircFrameBuf::add(
-        const SeqNum_t    seqNum,
-        const BlkNum_t    blkNum,
+        const unsigned    seqNum,
+        const unsigned    blkNum,
         const char*       data,
         const FrameSize_t numBytes)
 {
@@ -106,8 +106,8 @@ extern "C" {
 	 */
 	int cfb_add(
 			void*             cfb,
-			const SeqNum_t    seqNum,
-			const BlkNum_t    blkNum,
+			const unsigned    seqNum,
+			const unsigned    blkNum,
 			const char*       data,
 			const FrameSize_t numBytes) {
         int status;

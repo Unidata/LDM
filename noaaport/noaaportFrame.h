@@ -28,8 +28,8 @@ typedef uint16_t FrameSize_t;
 #define PRI_FRAME_SIZE PRIu16
 
 typedef struct aFrame {
-    SeqNum_t        prodSeqNum;
-    BlkNum_t        dataBlockNum;
+    unsigned        prodSeqNum;
+    unsigned        dataBlockNum;
     char            data[SBN_FRAME_SIZE];
     FrameSize_t     nbytes;
 } Frame_t;

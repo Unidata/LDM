@@ -27,10 +27,10 @@ class CircFrameBuf
      * NOAAPort frame run number and sequence number pair.
      */
     struct Key {
-        SeqNum_t seqNum;
-        BlkNum_t blkNum;
+        unsigned seqNum;
+        unsigned blkNum;
 
-        Key(SeqNum_t seqNum, BlkNum_t blkNum)
+        Key(unsigned seqNum, unsigned blkNum)
             : seqNum(seqNum)
             , blkNum(blkNum)
         {}
@@ -117,8 +117,8 @@ public:
      * @see                     `getOldestFrame()`
      */
     int add(
-            const SeqNum_t    prodSeqNum,
-            const RunNum_t    dataBlkNum,
+            const unsigned    prodSeqNum,
+            const unsigned    dataBlkNum,
             const char*       data,
             const FrameSize_t numBytes);
 
@@ -165,8 +165,8 @@ void* cfb_new(const double timeout);
  */
 int cfb_add(
         void*             cfb,
-        const SeqNum_t    prodSeqNum,
-        const RunNum_t    dataBlkNum,
+        const unsigned    prodSeqNum,
+        const unsigned    dataBlkNum,
         const char*       data,
         const FrameSize_t numBytes);
 

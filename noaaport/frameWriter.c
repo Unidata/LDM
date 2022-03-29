@@ -22,8 +22,7 @@ fw_writeFrame(const Frame_t* aFrame)
 {
     int status = 0;
 
-	log_debug("ProdSeqNum: %" PRI_SEQ_NUM " - DataBlkNum: %" PRI_BLK_NUM,
-	        aFrame->prodSeqNum, aFrame->dataBlockNum);
+	log_debug("ProdSeqNum: %u - DataBlkNum: %u", aFrame->prodSeqNum, aFrame->dataBlockNum);
 
    	// FOR INTERACTIVE TESTING, BE SURE TO REDIRECT stdout TO "/dev/null"
    	ssize_t ret = write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);
