@@ -7,6 +7,10 @@
               sequence number and data-block number in product-definition header because the former
               pair of numbers isn't reliable
             * Only data transfer frames are output because only they can be sequenced
+        * Documented the meaning of bit 2^4 (value 16) in the transfer type field of the
+          product-definition header (according to ProductMaker, it means the product is compressed)
+        * noaaportIngester(1):
+            * Modified "gap" reporting to support only receiving data frames
 
 6.13.17.20      2022-03-17T12:44:55-0600
     NOAAPort:

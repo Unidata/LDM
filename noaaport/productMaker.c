@@ -14,11 +14,13 @@
 #include "productMaker.h"     /* Eat own dog food */
 
 #include <ctype.h> /* Required for character classification routines - isalpha */
+#include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -176,8 +178,11 @@ void* pmStart(
     psh_struct*         psh = &productMaker->psh;
     pdb_struct*         pdb = &productMaker->pdb;
     ccb_struct*         ccb = &productMaker->ccb;
-    unsigned long       last_sbn_seqno = 0;
+    bool                firstFrameSeen = false;
+    unsigned long       last_sbn_seqno = 0; // Change this type carefully
     unsigned long       last_sbn_runno = ULONG_MAX;
+    unsigned            lastProdSeqNum;
+    unsigned            lastBlockNum;
     int                 PNGINIT = 0;
     char*               memheap = NULL;
     MD5_CTX*            md5ctxp = productMaker->md5ctxp;
@@ -408,41 +413,6 @@ int    nnnxxx_offset;
 #define          MAX_SEQNO 0xFFFFFFFFu
 
         log_debug("***********************************************");
-        if (last_sbn_runno != sbn->runno) {
-            last_sbn_runno = sbn->runno;
-        }
-        else {
-
-            /*
-             * The sequence number is 4 bytes and `& MAX_SEQNO` is necessary if
-             * `sizeof(unsigned long) > 4`
-             */
-            const unsigned long   delta =
-                    (unsigned long)(sbn->seqno - last_sbn_seqno) & MAX_SEQNO;
-
-            if (0 == delta || MAX_SEQNO/2 < delta) {
-                log_warning_q("Retrograde packet number: previous=%lu, latest=%lu, "
-                        "difference=%lu", last_sbn_seqno, sbn->seqno, 
-                        0 == delta ? 0ul : MAX_SEQNO - delta + 1);
-            }
-            else {
-                if (1 != delta) {
-                    unsigned long   gap = delta - 1;
-
-                    log_warning_q("Gap in packet sequence: %lu to %lu [skipped %lu]",
-                             last_sbn_seqno, sbn->seqno, gap);
-
-                    (void)pthread_mutex_lock(&productMaker->mutex);
-                    productMaker->nmissed += gap;
-                    (void)pthread_mutex_unlock(&productMaker->mutex);
-                }
-
-                (void)pthread_mutex_lock(&productMaker->mutex);
-                productMaker->nframes++;
-                (void)pthread_mutex_unlock(&productMaker->mutex);
-            }                           /* non-retrograde frame number */
-        }                               /* "last_sbn_seqno" initialized */
-        last_sbn_seqno = sbn->seqno;
 
         log_info_q("SBN seqnumber %ld", sbn->seqno);
         log_info_q("SBN datastream %d command %d", sbn->datastream, sbn->command);
@@ -512,7 +482,6 @@ int    nnnxxx_offset;
 
         if ((pdh->transtype & 16) > 0) {
             PROD_COMPRESSED = 1;
-
             log_debug("Product transfer flag compressed %u", pdh->transtype);
         }
         else {
@@ -524,6 +493,40 @@ int    nnnxxx_offset;
                 pdh->records_per_block);
         log_debug("product seqnumber %ld block number %d data block size %d", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
+
+        if (!firstFrameSeen) {
+            firstFrameSeen = true;
+        }
+        else {
+            const uint32_t nmissed = sbn->seqno - last_sbn_seqno - 1;
+
+            if (MAX_SEQNO/2 < nmissed) {
+                log_warning_q("Retrograde packet number: previous=%lu, latest=%lu, "
+                        "difference=%" PRIu32, last_sbn_seqno, sbn->seqno, MAX_SEQNO-nmissed+1);
+            }
+            else {
+                if (nmissed) {
+                    if ((pdh->seqno == lastProdSeqNum && pdh->dbno == lastBlockNum + 1)
+                            || (pdh->seqno == lastProdSeqNum + 1 && pdh->dbno == 0)) {
+                        log_debug("%" PRIu32 " non-data frame(s) missed", nmissed);
+                    }
+                    else {
+                        log_warning_q("Gap in packet sequence: %lu to %lu [skipped %" PRIu32 "]",
+                                 last_sbn_seqno, sbn->seqno, nmissed);
+                        (void)pthread_mutex_lock(&productMaker->mutex);
+                        productMaker->nmissed += nmissed;
+                        (void)pthread_mutex_unlock(&productMaker->mutex);
+                    }
+                }
+
+                (void)pthread_mutex_lock(&productMaker->mutex);
+                productMaker->nframes++;
+                (void)pthread_mutex_unlock(&productMaker->mutex);
+            }
+        }
+        last_sbn_seqno = sbn->seqno;
+        lastProdSeqNum = pdh->seqno;
+        lastBlockNum = pdh->dbno;
 
         /* Stop here if no psh */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
