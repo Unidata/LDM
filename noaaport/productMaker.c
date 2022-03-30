@@ -494,6 +494,12 @@ int    nnnxxx_offset;
         log_debug("product seqnumber %ld block number %d data block size %d", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
 
+        /* Stop here if no psh */
+        if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
+            // IOFF = IOFF + sbn->len + pdh->len; // `IOFF` value isn't used
+            continue;
+        }
+
         if (!firstFrameSeen) {
             firstFrameSeen = true;
         }
@@ -527,12 +533,6 @@ int    nnnxxx_offset;
         last_sbn_seqno = sbn->seqno;
         lastProdSeqNum = pdh->seqno;
         lastBlockNum = pdh->dbno;
-
-        /* Stop here if no psh */
-        if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
-            // IOFF = IOFF + sbn->len + pdh->len; // `IOFF` value isn't used
-            continue;
-        }
 
 #ifdef RETRANS_SUPPORT
                 /** Update acquisition table statistics  **/
@@ -1572,16 +1572,17 @@ int    nnnxxx_offset;
 /**
  * Returns statistics since the last time this function was called or \link
  * pmStart() \endlink was called.
+ *
+ * @param[in]  productMaker      Product maker
+ * @param[out] frameCount        Number of frames
+ * @param[out] missedFrameCount  Number of missed frames
+ * @param[out] prodCount         Number of products inserted into the product-queue
  */
 void pmGetStatistics(
-    ProductMaker* const     productMaker,       /**< [in] Pointer to the
-                                                  *  product-maker */
-    unsigned long* const    frameCount,         /**< [out] Number of frames */
-    unsigned long* const    missedFrameCount,   /**< [out] Number of missed
-                                                  *  frames */
-    unsigned long* const    prodCount)          /**< [out] Number of products 
-                                                  *  inserted into the
-                                                  *  product-queue */
+    ProductMaker* const  productMaker,
+    unsigned long* const frameCount,
+    unsigned long* const missedFrameCount,
+    unsigned long* const prodCount)
 {
     (void)pthread_mutex_lock(&productMaker->mutex);
 

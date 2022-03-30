@@ -10,7 +10,12 @@
         * Documented the meaning of bit 2^4 (value 16) in the transfer type field of the
           product-definition header (according to ProductMaker, it means the product is compressed)
         * noaaportIngester(1):
-            * Modified "gap" reporting to support only receiving data frames
+            * Modified "gap" reporting to support receiving data frames only: if a frame-level gap
+              occurs but the PDH product sequence number and data block number are contiguous, then
+              the missing frame(s) will be ignored and not counted.
+            * Moved the test for no product-specific header and a transfer type of 0 to before the
+              test for frame gaps because the PDH for such a frame is invalid and the gap check now
+              requires a valid PDH
 
 6.13.17.20      2022-03-17T12:44:55-0600
     NOAAPort:
