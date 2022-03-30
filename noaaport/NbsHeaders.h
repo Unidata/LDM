@@ -88,11 +88,12 @@ typedef struct NbsPDH
     unsigned version; ///< Version
     unsigned size;    ///< Header length in bytes
     /**
-     * Transfer type. Indicates the status of a product transfer:
+     * Transfer type. Bitmask indicates the status of a product transfer:
      *    1 = Start of a new product
      *    2 = Product transfer still in progress
      *    4 = End (last packet) of this product
      *    8 = Product error
+    *    16 = Product compressed (from `ProductMaker`)
      *   32 = Product Abort
      *   64 = Option headers follow; e.g., product-specific header
      */
