@@ -18,7 +18,7 @@
 
 typedef enum {
     START,              ///< Initial state. Process frame.
-    HAVE_BYTES,         ///< Buffer starts with a possible frame-level header
+    SYNCHRONIZING,         ///< Buffer starts with a possible frame-level header
     SENTINEL_SEEN,      ///< Sentinel byte of frame-level header seen
     DATA_FH_SEEN,       ///< Data frame-level header seen
     TIME_FH_SEEN,       ///< Time-command frame-level header seen
@@ -303,10 +303,10 @@ int nbs_getFrame(
                 resetBuf(reader);
                 status = ensureBytes(reader, NBS_FH_SIZE);
                 if (status == NBS_SUCCESS)
-                    reader->state = HAVE_BYTES;
+                    reader->state = SYNCHRONIZING;
                 break;
             }
-            case HAVE_BYTES: {
+            case SYNCHRONIZING: {
                 log_debug("Looking for frame-level header sentinel");
                 /*
                  * Buffer starts with at least NBS_FH_SIZE bytes. Look for the frame-level header's
@@ -332,7 +332,7 @@ int nbs_getFrame(
                     if (status == NBS_INVAL) {
                         log_add("Invalid frame-level header");
                         reader->buf[0] = 0;
-                        reader->state = HAVE_BYTES;
+                        reader->state = SYNCHRONIZING;
                     }
                     else if (status == NBS_SUCCESS) {
                         if (reader->fh.command == NBS_FH_CMD_DATA) {
@@ -367,7 +367,7 @@ int nbs_getFrame(
                     }
 
                     reader->buf[0] = 0;
-                    reader->state = HAVE_BYTES;
+                    reader->state = SYNCHRONIZING;
                     status = 0;
                 }
                 break;
@@ -413,7 +413,7 @@ int nbs_getFrame(
 
                     // Give up
                     reader->buf[0] = 0;
-                    reader->state = HAVE_BYTES;
+                    reader->state = SYNCHRONIZING;
                     status = 0;
                 }
                 break;
@@ -497,7 +497,7 @@ int nbs_getFrame(
         }
         else {
             log_flush_warning();
-            reader->logError = false; // Don't log next error
+            reader->logError = false; // Don't log subsequent errors
         }
     }
 
