@@ -93,7 +93,7 @@ typedef struct NbsPDH
      *    2 = Product transfer still in progress
      *    4 = End (last packet) of this product
      *    8 = Product error
-    *    16 = Product compressed (from `ProductMaker`)
+    *    16 = Product compressed (according to `ProductMaker`)
      *   32 = Product Abort
      *   64 = Option headers follow; e.g., product-specific header
      */
@@ -128,6 +128,21 @@ typedef struct NbsPDH
      */
     unsigned prodSeqNum;
 } NbsPDH;
+
+#if 0
+/// 32-byte synchronization header (NbsFH::command == 5). Follows frame-level header.
+typedef struct NbsTCH
+{
+    uint8_t  xfr_time_version:5;  ///< Version xfr_time. Suspect 4 bits
+    uint8_t  xfr_time_length:3;   ///< Byte length (in 4-byte words?). Suspect 4 bits because
+                                  ///< 7*4 bytes < 32 bytes
+    uint8_t  xfr_time_flag;       ///< Header transfer flag
+    uint16_t xfr_time_tot_length; ///< Total length of xfr hdr in bytes
+    uint32_t xfr_time_send;       ///< Time in UTC long format
+    char     ascii_time[20];      ///< Time in UTC ASCII form
+    uint32_t xfr_time_reserved;   ///< Reserved
+} NbsTCH;
+#endif
 
 /// NBS Product-Specific Header
 typedef struct NbsPSH
