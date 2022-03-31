@@ -494,7 +494,11 @@ int    nnnxxx_offset;
         log_debug("product seqnumber %ld block number %d data block size %d", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
 
-        /* Stop here if no psh */
+        /*
+         * Stop here if no psh.
+         *
+         * This will be true for synchronization frames (NbsFH::command == 5) -- SRE 2022-03-30
+         */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
             // IOFF = IOFF + sbn->len + pdh->len; // `IOFF` value isn't used
             continue;
