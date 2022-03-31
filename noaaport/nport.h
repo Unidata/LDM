@@ -200,7 +200,7 @@ typedef struct datastore {
    } datastore;
 
 typedef struct prodstore {
-	int seqno;
+	int seqno;              ///< Product sequence number from PDH
 	int nfrag;
 	struct datastore *head;
 	struct datastore *tail;
