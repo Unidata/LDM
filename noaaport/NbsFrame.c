@@ -49,7 +49,27 @@
 * But, how many bytes? The canonical size (16 bytes) or the stated size (32 bytes)?
 *
 * --SRE 2022-03-17
+*
+* The stated size is correct because the "PDH" is, actually, a 32-byte synchronization header (see
+* below).
 */
+
+/*
+ * The header that follows the frame-level header in a synchronization frame (NbsFH::command == 5)
+ * (i.e., where the PDH would be in a data-frame) has the following, 32-byte format:
+ *
+ * struct {
+ *   uint8_t  xfr_time_version:5;  // Version xfr_time (upper 5 bits) (Suspect it's the upper 4 bits)
+ *   uint8_t  byte length:3;       // Lower 3 bits (in 32-bit words?) (Suspect it's the lower 4 bits)
+ *   uint8_t  xfr_time_flag;       // Header transfer flag
+ *   uint16_t xfr_time_tot_length; // Total len of xfr hdr in bytes
+ *   uint32_t xfr_time_send;       // Time in UTC long format
+ *   char     ascii_time[20];      // Time in UTC ascii form
+ *   uint32_t xfr_time_reserved;   // Reserved
+ * };
+ *
+ * --SRE 2022-03-30
+ */
 
 /*
 * The following code causes noaaportIngester(1) to report a gap for every synchronization
