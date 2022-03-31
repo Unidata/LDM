@@ -269,7 +269,7 @@ static int ensureTCH(NbsReader* const reader)
         unsigned size = ntohs(*(uint16_t*)((reader->buf + reader->fh.size)+2));
 
         if (size != 32) {
-            log_add("Time-command header size (%u bytes) != 32 bytes", size);
+            log_add("Time-command header size in bytes (%u) != 32", size);
             status = NBS_INVAL;
         }
         else {
