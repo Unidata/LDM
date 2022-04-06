@@ -1,3 +1,7 @@
+6.13.17.22
+    NOAAPort:
+        * noaaportIngester(1): Corrected previous modification of gap reporting.
+
 6.13.17.21      2022-03-31T12:02:51-0600
     NOAAPort:
         * blender(1): Major refactoring
