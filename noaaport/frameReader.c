@@ -32,7 +32,7 @@ extern int      rcvBufSize;
  *
  * @param[in]  clientSockId  Socket Id for this client reader thread
  */
-static void
+static int
 buildFrameRoutine(int clientSockFd)
 {
     log_notice("In buildFrameRoutine() waiting to read from "
@@ -100,6 +100,8 @@ buildFrameRoutine(int clientSockFd)
     } // for
 
     nbs_free(reader);
+
+    return status;
 }
 
 /**
@@ -180,11 +182,15 @@ inputClientRoutine(void* id)
                 log_flush_warning();
             }
             else {
-                log_notice("CONNECTED!");
+                log_notice("Connected to server:  %s:%" PRIu16 "\n", hostId, port);
+                int status = buildFrameRoutine(socketClientFd);
 
-                buildFrameRoutine(socketClientFd);
-                log_add("Lost connection with fanout server. Will retry after 60 sec. (%s:%" PRIu16 ")", hostId, port);
-                log_flush_warning();
+                if (status == NBS_IO || status == NBS_EOF){
+                	log_add("Lost connection with fanout server. Will retry after 60 sec. "
+                			"(%s:%" PRIu16 ")", hostId, port);
+                	log_flush_warning();
+                	continue;
+                }
             } // Connected
 
             freeaddrinfo(addrInfo);
