@@ -508,13 +508,14 @@ int    nnnxxx_offset;
             firstFrameSeen = true;
         }
         else {
-            const uint32_t nmissed = sbn->seqno - last_sbn_seqno - 1;
+            const uint32_t delta = sbn->seqno - last_sbn_seqno;
 
-            if (MAX_SEQNO/2 < nmissed) {
+            if (delta == 0 || MAX_SEQNO/2 < delta) {
                 log_warning_q("Retrograde packet number: previous=%lu, latest=%lu, "
-                        "difference=%" PRIu32, last_sbn_seqno, sbn->seqno, MAX_SEQNO-nmissed+1);
+                        "difference=%" PRIu32, last_sbn_seqno, sbn->seqno, delta);
             }
             else {
+                const uint32_t nmissed = delta - 1;
                 if (nmissed) {
                     if ((pdh->seqno == lastProdSeqNum && pdh->dbno == lastBlockNum + 1)
                             || (pdh->seqno == lastProdSeqNum + 1 && pdh->dbno == 0)) {
