@@ -106,7 +106,7 @@ buildFrameRoutine(int clientSockFd)
 
 /**
  * Threaded function to initiate the frameReader running in its own thread.
- * Never returns. Will terminate the process if a fatal error occurs.
+ * Never returns. Will terminate the thread if a fatal error occurs.
  *
  * @param[in]  id  String identifier of server's address and port number. E.g.,
  *                     <hostname>:<port>
@@ -116,11 +116,12 @@ static void*
 inputClientRoutine(void* id)
 {
 	const char* serverId = (char*) id;
+	int socketClientFd;
 
     for(;;)
     {
 		// Create a socket file descriptor for the blender/frameReader(s) client
-		int socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
+		socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
 		if(socketClientFd < 0)
 		{
 			log_add("socket creation failed\n");
@@ -189,7 +190,10 @@ inputClientRoutine(void* id)
                 	log_add("Lost connection with fanout server. Will retry after 60 sec. "
                 			"(%s:%" PRIu16 ")", hostId, port);
                 	log_flush_warning();
-                	continue;
+
+                	freeaddrinfo(addrInfo);
+                	free(hostId);
+                	break;
                 }
             } // Connected
 
@@ -201,9 +205,28 @@ inputClientRoutine(void* id)
         sleep(60);
     } // for
 
-	return 0;
+    close(socketClientFd);	// only executed if breaking from the loop
+
+    // Return value from thread
+    int *ptr = (int*) malloc(sizeof(int));
+    if (ptr == NULL) {
+         log_fatal("Memory not allocated.");
+         exit(EXIT_FAILURE);
+     }
+    *ptr = NBS_IO;
+    return ptr;	// after returning, this thread is terminated
 }
 
+static int
+notEmpty( ThreadHealth *th, int size)
+{
+	for(int i=0; i< size; i++)
+	{
+		if(th[i].redo)
+			return i;
+	}
+	return -1;
+}
 
 /**
  * Function to create client reader threads. As many threads as there are hosts.
@@ -224,12 +247,36 @@ reader_start( char* const* serverAddresses, int serverCount )
 				"none provided (serverCount: %d).", MAX_SERVERS, serverCount);
 		return -1;
 	}
+	ThreadHealth th[serverCount];
+
+	// init array
 	for(int i=0; i< serverCount; ++i)
 	{
-		pthread_t inputClientThread;
-		log_notice("Server to connect to: %s\n", serverAddresses[i]);
+		log_notice("", th[i].redo);
+		th[i].redo = false;
+	}
 
-		const char* id = serverAddresses[i]; // host+port
+	int i = serverCount, j;
+	const char* id; // host+port
+	for(;;)
+	{
+		if((j = notEmpty(th, serverCount)) != -1)
+		{
+			id = serverAddresses[j]; // host+port
+			sleep(60); // a thread was cancelled: wait a bit before recreating one
+		}
+		else if (i > 0)
+		{
+			id = serverAddresses[i]; // host+port
+			--i;
+		}
+		log_notice("Server to connect to: %s\n", id);
+
+			//	for(int i=0; i< serverCount; ++i)
+			//	{
+		pthread_t inputClientThread;
+
+		//const char* id = serverAddresses[i]; // host+port
 		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
 							(void*) id) < 0)
 	    {
@@ -238,12 +285,33 @@ reader_start( char* const* serverAddresses, int serverCount )
 	    }
 	    setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
 
-		if( pthread_detach(inputClientThread) )
+		/*if( pthread_detach(inputClientThread) )
 		{
 			log_add("Could not detach the created thread!\n");
 			log_flush_fatal();
 			exit(EXIT_FAILURE);
-		}
-	}
+		}*/
+
+	    void * ptr = NULL;
+	    log_add("Waiting for thread to exit");
+	    // Wait for thread to exit
+	    int err = pthread_join(inputClientThread, &ptr);
+	    if (err)
+	    {
+	    	log_add("Failed to join Thread : " );
+	    	free( (int *) ptr);
+	        return err;
+	    }
+	    if (ptr)
+	    {
+	    	log_add(" value returned by thread : ", *(int *) ptr);
+	    	th[i].redo = true;
+	    	strcpy(th[i].hostId, id);
+	    	th[i].threadId = inputClientThread;	// not useful for now
+
+	    	free( (int *) ptr); // free return value from thread function
+	    }
+
+	} // loop
 	return 0;
 }
