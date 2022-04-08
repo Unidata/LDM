@@ -29,9 +29,9 @@ static void 	createThreadAndDetach(const char*);
 /**
  * Function to read data bytes from the connection, rebuild the SBN frame,
  * and insert the data in a queue.
- * Never returns. Will terminate the process if a fatal error occurs.
  *
- * @param[in]  clientSockId  Socket Id for this client reader thread
+ * @param[in]  	clientSockId  Socket Id for this client reader thread
+ * @retval	  	NBS_IO failure
  */
 static int
 buildFrameRoutine(int clientSockFd)
@@ -185,17 +185,7 @@ inputClientRoutine(void* id)
             }
             else {
                 log_notice("Connected to server:  %s:%" PRIu16 "\n", hostId, port);
-                int status = buildFrameRoutine(socketClientFd);
-
-                if (status == NBS_IO || status == NBS_EOF){
-                	log_add("Lost connection with fanout server. Will retry after 60 sec. "
-                			"(%s:%" PRIu16 ")", hostId, port);
-                	log_flush_warning();
-
-                	freeaddrinfo(addrInfo);
-                	free(hostId);
-                	break;
-                }
+                buildFrameRoutine(socketClientFd);
             } // Connected
 
             freeaddrinfo(addrInfo);
@@ -203,14 +193,11 @@ inputClientRoutine(void* id)
 		} // Got address information
 
         close(socketClientFd);
+		log_add("Lost connection with fanout server. Will retry after 60 sec. "
+			"(%s:%" PRIu16 ")", hostId, port);
+       	log_flush_warning();
         sleep(60);
     } // for
-
-    close(socketClientFd);	// only executed if breaking from the loop
-
-	createThreadAndDetach(id);// host+port
-
-    return 0;	// after returning, this thread is terminated
 }
 
 static void
