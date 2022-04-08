@@ -152,7 +152,7 @@ inputClientRoutine(void* id)
 
 		if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
 		{
-			log_add("Invalid server specification %s\n", serverId);
+			log_add("Invalid fanout server specification %s\n", serverId);
 			log_flush_fatal();
 			exit(EXIT_FAILURE);
 		}
@@ -174,17 +174,17 @@ inputClientRoutine(void* id)
                     (addrInfo->ai_addr);
             sockaddr.sin_port 				= htons(port);
 
-            log_info("Connecting to TCPServer server:  %s:%" PRIu16 "\n", hostId, port);
+            log_info("Connecting to fanout server:  %s:%" PRIu16 "\n", hostId, port);
 
             if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
                     sizeof(sockaddr)) )
             {
-                log_add("Error connecting to server %s: %s\n", serverId,
+                log_add("Error connecting to fanout server %s: %s\n", serverId,
                         strerror(errno));
                 log_flush_warning();
             }
             else {
-                log_notice("Connected to server:  %s:%" PRIu16 "\n", hostId, port);
+                log_notice("Connected to fanout server:  %s:%" PRIu16 "\n", hostId, port);
                 buildFrameRoutine(socketClientFd);
             } // Connected
 
