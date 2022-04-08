@@ -13,17 +13,6 @@
 #define INVALID_CHECKSUM	-2				// Frame checksum is invalid
 #define SOCKET_READ_ERROR	-1
 
-#include <stdbool.h>
-#include <limits.h>
-
-/// Cancelled threads counter
-typedef struct CancelledThreads
-{
-   char 	hostId[PATH_MAX];
-   int	 	threadId;
-   bool 	redo;
-} ThreadHealth;
-
 int reader_start( char* const*, int);
 
 #endif /* FRAMEREADER_H_ */

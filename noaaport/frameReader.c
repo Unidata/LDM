@@ -25,6 +25,7 @@ extern int   	tryInsertInQueue( unsigned, unsigned, const uint8_t*, uint16_t);
 extern int      rcvBufSize;
 //  ========================================================================
 
+static void 	createThreadAndDetach(const char*);
 /**
  * Function to read data bytes from the connection, rebuild the SBN frame,
  * and insert the data in a queue.
@@ -207,25 +208,31 @@ inputClientRoutine(void* id)
 
     close(socketClientFd);	// only executed if breaking from the loop
 
-    // Return value from thread
-    int *ptr = (int*) malloc(sizeof(int));
-    if (ptr == NULL) {
-         log_fatal("Memory not allocated.");
-         exit(EXIT_FAILURE);
-     }
-    *ptr = NBS_IO;
-    return ptr;	// after returning, this thread is terminated
+	createThreadAndDetach(id);// host+port
+
+    return 0;	// after returning, this thread is terminated
 }
 
-static int
-notEmpty( ThreadHealth *th, int size)
+static void
+createThreadAndDetach(const char* hostId)
 {
-	for(int i=0; i< size; i++)
+	pthread_t inputClientThread;
+	log_notice("Server to connect to: %s", hostId);
+
+	if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
+						(void*) hostId) < 0)
 	{
-		if(th[i].redo)
-			return i;
+		log_add("Could not create a thread for inputClient()!\n");
+		log_flush_error();
 	}
-	return -1;
+	setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
+
+	if( pthread_detach(inputClientThread) )
+	{
+		log_add("Could not detach the created thread!\n");
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
 }
 
 /**
@@ -247,71 +254,10 @@ reader_start( char* const* serverAddresses, int serverCount )
 				"none provided (serverCount: %d).", MAX_SERVERS, serverCount);
 		return -1;
 	}
-	ThreadHealth th[serverCount];
 
-	// init array
 	for(int i=0; i< serverCount; ++i)
 	{
-		log_notice("", th[i].redo);
-		th[i].redo = false;
+		createThreadAndDetach(serverAddresses[i]);// host+port
 	}
-
-	int i = serverCount, j;
-	const char* id; // host+port
-	for(;;)
-	{
-		if((j = notEmpty(th, serverCount)) != -1)
-		{
-			id = serverAddresses[j]; // host+port
-			sleep(60); // a thread was cancelled: wait a bit before recreating one
-		}
-		else if (i > 0)
-		{
-			id = serverAddresses[i]; // host+port
-			--i;
-		}
-		log_notice("Server to connect to: %s\n", id);
-
-			//	for(int i=0; i< serverCount; ++i)
-			//	{
-		pthread_t inputClientThread;
-
-		//const char* id = serverAddresses[i]; // host+port
-		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
-							(void*) id) < 0)
-	    {
-	        log_add("Could not create a thread for inputClient()!\n");
-	        log_flush_error();
-	    }
-	    setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
-
-		/*if( pthread_detach(inputClientThread) )
-		{
-			log_add("Could not detach the created thread!\n");
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
-		}*/
-
-	    void * ptr = NULL;
-	    log_add("Waiting for thread to exit");
-	    // Wait for thread to exit
-	    int err = pthread_join(inputClientThread, &ptr);
-	    if (err)
-	    {
-	    	log_add("Failed to join Thread : " );
-	    	free( (int *) ptr);
-	        return err;
-	    }
-	    if (ptr)
-	    {
-	    	log_add(" value returned by thread : ", *(int *) ptr);
-	    	th[i].redo = true;
-	    	strcpy(th[i].hostId, id);
-	    	th[i].threadId = inputClientThread;	// not useful for now
-
-	    	free( (int *) ptr); // free return value from thread function
-	    }
-
-	} // loop
 	return 0;
 }
