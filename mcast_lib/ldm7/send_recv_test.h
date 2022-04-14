@@ -16,18 +16,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-//#define HELLO_PORT  12345
-//#define HELLO_PORT  1 // Requires superuser privileges
-#define HELLO_PORT  3880
+#define MCAST_PORT  38800
 
-//#define HELLO_GROUP "239.0.0.37" // Works. 239/8 is "administratively scoped"
-
-#if 0
-/*
- * Unicast-based multicast address based on UCAR subnet.
- */
-#define HELLO_GROUP "234.128.117.1"
-#elif 0
+#if 1
 /*
  * Source-specific multicast (SSM) address. According to RFC4607:
  *   - Source-specific multicast address in the range 232.0.0/24 are reserved
@@ -35,9 +26,14 @@
  *   - "The policy for allocating the rest of the SSM addresses to sending
  *     applications is strictly locally determined by the sending host."
  */
-#define HELLO_GROUP "232.128.117.1"
+#define MCAST_ADDR "232.1.1.1"
+#elif 0
+#define MCAST_ADDR "239.0.0.37" // Works. 239/8 is "administratively scoped"
 #else
-#define HELLO_GROUP "234.128.117.1" // Unicast prefix based
+/*
+ * Unicast-based multicast address based on UCAR subnet.
+ */
+#define MCAST_ADDR "234.128.117.1"
 #endif
 
 

@@ -12,8 +12,11 @@
  */
 
 #define _XOPEN_SOURCE 600
-#define _BSD_SOURCE // For `struct ip_mreq_source`
-#define __USE_MISC // For `struct ip_mreq_source`
+
+// For `struct ip_mreq_source`
+#define _DEFAULT_SOURCE // Replaces the following 2 #define-s for later compiler versions
+#define _BSD_SOURCE
+#define __USE_MISC
 
 #include "send_recv_test.h"
 
@@ -62,8 +65,8 @@ get_context(
     ifAddr.s_addr = INADDR_ANY;  // System default interface
     srcAddr.s_addr = INADDR_ANY; // Source-independent multicast
     grpAddr.sin_family = AF_INET;
-    grpAddr.sin_addr.s_addr = inet_addr(HELLO_GROUP);
-    grpAddr.sin_port = htons(HELLO_PORT);
+    grpAddr.sin_addr.s_addr = inet_addr(MCAST_ADDR);
+    grpAddr.sin_port = htons(MCAST_PORT);
 
     while (success && (ch = getopt(argc, argv, "i:g:s:v")) != -1) {
         switch (ch) {
@@ -118,7 +121,7 @@ usage(const char* const progname)
 "    -g <grpAddr> Multicast group IP address. Default is %s.\n"
 "    -s <srcAddr> IPv4 address of source. Default is any-source multicast.\n"
 "    -v           Verbose output\n",
-    progname, HELLO_GROUP);
+    progname, MCAST_ADDR);
 }
 
 static bool
