@@ -565,6 +565,7 @@ createThread(
 				log_add_errno(EPERM, "Couldn't create %s thread with desired "
 						"scheduling", name);
 				log_flush_warning();
+				status = 0; // Ignore this failure
 			}
 		}
 		else {
@@ -1394,8 +1395,7 @@ int main(
                 		         rcvBufSize);
 
                 if (status) {
-                    log_add("Couldn't ingest NOAAPort data");
-                    log_flush_error();
+                    log_error("Couldn't ingest NOAAPort data");
                 }
             }                               /* command line decoded */
         } // Closed `stderr` opened on `/dev/null`
