@@ -524,6 +524,9 @@ int    nnnxxx_offset;
                     else {
                         log_warning_q("Gap in packet sequence: %lu to %lu [skipped %" PRIu32 "]",
                                  last_sbn_seqno, sbn->seqno, nmissed);
+                        log_notice("lastProdSeqNum=%u, pdh->seqno=%ld, lastBlockNum=%u,"
+                                "pdh->dbno=%d",
+                                lastProdSeqNum, pdh->seqno, lastBlockNum, pdh->dbno);
                         (void)pthread_mutex_lock(&productMaker->mutex);
                         productMaker->nmissed += nmissed;
                         (void)pthread_mutex_unlock(&productMaker->mutex);

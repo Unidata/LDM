@@ -1,7 +1,10 @@
 6.13.17.23
     NOAAPort:
         * blender(1): Added logging of unknown frame header command value
-        * noaaportIngester(1): Continue after inability to set desired scheduling of input thread
+        * noaaportIngester(1):
+            * Continue after inability to set desired scheduling of input thread
+            * Log previous and current product sequence numbers and data-block numbers when a gap is
+              detected
 
 6.13.17.22      2022-04-08T16:37:13-0600
     NOAAPort:
