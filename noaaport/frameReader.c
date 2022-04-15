@@ -79,6 +79,9 @@ buildFrameRoutine(int clientSockFd)
                     break;
                 }
 			}
+		    else if (fh->command != 5 && fh->command != 10) {
+		        log_notice("Ignoring frame with unknown command value: %u", fh->command);
+		    }
 		}
 		else {
             if( status == NBS_IO)
