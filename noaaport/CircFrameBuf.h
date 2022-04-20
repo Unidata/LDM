@@ -64,6 +64,11 @@ class CircFrameBuf
             , revealTime(Clock::now())
         {}
 
+        std::string to_string() const {
+            return "{uplinkId=" + std::to_string(uplinkId) + ", prodSeqNum=" +
+                    std::to_string(seqNum) + ", blkNum=" + std::to_string(blkNum) + "}";
+        }
+
         bool operator<(const Key& rhs) const {
             return (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
                     ? true

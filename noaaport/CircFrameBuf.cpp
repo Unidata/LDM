@@ -27,6 +27,11 @@ UplinkId getUplinkId(const unsigned sbnSrc) {
         uplinkId = uplinkIds[sbnSrc];
     }
     else {
+        static SbnSrc prevSbnSrc;
+        if (!uplinkIds.empty())
+            log_notice("Data transmission source changed from %u to %u", prevSbnSrc, sbnSrc);
+        prevSbnSrc = sbnSrc;
+
         uplinkIds.erase(nextUplinkId-2);
         uplinkIds[sbnSrc] = uplinkId = nextUplinkId++;
     }
@@ -55,8 +60,12 @@ int CircFrameBuf::add(
     Guard guard{mutex}; /// RAII!
     Key   key{fh, pdh, timeout};
 
-    if (frameReturned && key < lastOldestKey)
+    if (frameReturned && key < lastOldestKey) {
+        log_warning("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
+                lastOldestKey.to_string().data(), key.to_string().data());
         return 1; // Frame arrived too late
+    }
+
     if (!indexes.insert({key, nextIndex}).second)
         return 2; // Frame already added
 

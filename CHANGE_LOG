@@ -1,3 +1,9 @@
+6.13.17.25
+    NOAAPort:
+        * blender(1): Improve diagnostic logging
+            * Log previous and current keys when frame arrives too late
+            * Log change to data transmission source
+
 6.13.17.24      2022-04-20T12:35:27-0600
     NOAAPort:
         * blender(1): Modified to use SBN source variable as major key (in addition to product

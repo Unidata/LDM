@@ -61,19 +61,16 @@ buildFrameRoutine(int clientSockFd)
                 status = tryInsertInQueue( fh, pdh, frame, frameSize);
 
                 if (status == 0) {
-                    if (pdh->transferType & 1)
+                    if (pdh->transferType & 1) {
                         log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
-                                fh->seqno, fh->runno, pdh->prodSeqNum);
-                }
-                else if (status == 1) {
-                    log_add("Frame was too late");
-                    log_flush_debug();
+                               fh->seqno, fh->runno, pdh->prodSeqNum);
+                    }
                 }
                 else if (status == 2) {
                     log_add("Frame is a duplicate");
                     log_flush_debug();
                 }
-                else {
+                else if (status != 1) { // -1 => frame arrived too late. Already logged.
                     log_add("Unknown return status from tryInsertInQueue(): %d", status);
                     log_flush_error();
                     break;
