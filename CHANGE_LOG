@@ -1,3 +1,8 @@
+6.13.17.24
+    NOAAPort:
+        * blender(1): Modified to use SBN source variable as major key (in addition to product
+          sequence number and data-block number) for ordering frames
+
 6.13.17.23      2022-04-15T14:48:47-0600
     NOAAPort:
         * blender(1): Added logging of unknown frame header command value

@@ -21,7 +21,7 @@
 
 //  ========================================================================
 extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
-extern int   	tryInsertInQueue( unsigned, unsigned, const uint8_t*, uint16_t);
+extern int   	tryInsertInQueue( const NbsFH*, const NbsPDH*, const uint8_t*, uint16_t);
 extern int      rcvBufSize;
 //  ========================================================================
 
@@ -58,7 +58,7 @@ buildFrameRoutine(int clientSockFd)
 			// buffer now contains frame data
 		    if (fh->command == NBS_FH_CMD_DATA) {
                 // PDH exists. Insert data-transfer frame in queue
-                status = tryInsertInQueue( pdh->prodSeqNum, pdh->blockNum, frame, frameSize);
+                status = tryInsertInQueue( fh, pdh, frame, frameSize);
 
                 if (status == 0) {
                     if (pdh->transferType & 1)
@@ -80,7 +80,7 @@ buildFrameRoutine(int clientSockFd)
                 }
 			}
 		    else if (fh->command != 5 && fh->command != 10) {
-		        log_notice("Ignoring frame with unknown command value: %u", fh->command);
+		        log_notice("Ignoring frame with command=%u", fh->command);
 		    }
 		}
 		else {

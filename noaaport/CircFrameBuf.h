@@ -8,6 +8,7 @@
 #ifndef NOAAPORT_CIRCFRAMEBUF_H_
 #define NOAAPORT_CIRCFRAMEBUF_H_
 
+#include "NbsHeaders.h"
 #include "noaaportFrame.h"
 
 #ifdef __cplusplus
@@ -21,6 +22,13 @@
 #include <unordered_map>
 #include <vector>
 
+using SbnSrc        = unsigned;
+using UplinkId      = uint32_t;
+
+static constexpr UplinkId UPLINK_ID_MAX = UINT32_MAX;
+
+UplinkId getUplinkId(const unsigned sbnSrc);
+
 class CircFrameBuf
 {
     /**
@@ -30,32 +38,42 @@ class CircFrameBuf
         using Clock = std::chrono::steady_clock;
         using Dur   = std::chrono::milliseconds;
 
+        UplinkId          uplinkId;
         unsigned          seqNum;
         unsigned          blkNum;
         Clock::time_point revealTime; ///< When the associated frame should be revealed
 
-        Key(unsigned seqNum, unsigned blkNum, Dur& timeout)
-            : seqNum(seqNum)
-            , blkNum(blkNum)
+        Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
+            : uplinkId(getUplinkId(fh.source))
+            , seqNum(pdh.prodSeqNum)
+            , blkNum(pdh.blockNum)
             , revealTime(Clock::now() + timeout)
         {}
 
-        Key(unsigned seqNum, unsigned blkNum, Dur&& timeout)
-            : seqNum(seqNum)
-            , blkNum(blkNum)
+        Key(const NbsFH& fh, const NbsPDH& pdh, Dur&& timeout)
+            : uplinkId(getUplinkId(fh.source))
+            , seqNum(pdh.prodSeqNum)
+            , blkNum(pdh.blockNum)
             , revealTime(Clock::now() + timeout)
         {}
 
         Key()
-            : Key(0, 0, Dur::zero())
+            : uplinkId(0)
+            , seqNum(0)
+            , blkNum(0)
+            , revealTime(Clock::now())
         {}
 
         bool operator<(const Key& rhs) const {
-            return (seqNum - rhs.seqNum > SEQ_NUM_MAX/2)
+            return (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
                     ? true
-                    : (seqNum == rhs.seqNum)
-                          ? blkNum - rhs.blkNum > BLK_NUM_MAX/2
-                          : false;
+                    : (uplinkId == rhs.uplinkId)
+                        ? (seqNum - rhs.seqNum > SEQ_NUM_MAX/2)
+                            ? true
+                            : (seqNum == rhs.seqNum)
+                                  ? blkNum - rhs.blkNum > BLK_NUM_MAX/2
+                                  : false
+                        : false;
         }
     };
 
@@ -112,8 +130,8 @@ public:
      *   - It is an earlier frame than the last, returned frame
      *   - The frame was already added
      *
-     * @param[in] prodSeqNum    PDH product sequence number
-     * @param[in] dataBlkNum    PDH data-block number
+     * @param[in] fh            Frame-level header
+     * @param[in] pdh           Product-description header
      * @param[in] data          Frame data
      * @param[in] numBytes      Number of bytes in the frame
      * @retval    0             Frame added
@@ -123,8 +141,8 @@ public:
      * @see                     `getOldestFrame()`
      */
     int add(
-            const unsigned    prodSeqNum,
-            const unsigned    dataBlkNum,
+            const NbsFH&      fh,
+            const NbsPDH&     pdh,
             const char*       data,
             const FrameSize_t numBytes);
 
@@ -160,6 +178,8 @@ void* cfb_new(const double timeout);
  * Adds a new frame.
  *
  * @param[in] cfb           Pointer to circular frame buffer
+ * @param[in] fh            Frame-level header
+ * @param[in] pdh           Product-description header
  * @param[in] prodSeqNum    PDH product sequence number
  * @param[in] dataBlkNum    PDH data-block number
  * @param[in] data          Frame data
@@ -171,8 +191,8 @@ void* cfb_new(const double timeout);
  */
 int cfb_add(
         void*             cfb,
-        const unsigned    prodSeqNum,
-        const unsigned    dataBlkNum,
+        const NbsFH*      fh,
+        const NbsPDH*     pdh,
         const char*       data,
         const FrameSize_t numBytes);
 

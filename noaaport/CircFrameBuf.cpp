@@ -7,9 +7,32 @@
 
 #include "config.h"
 
-#include <stdint.h>
 #include "CircFrameBuf.h"
 #include "log.h"
+#include "NbsHeaders.h"
+
+#include <stdint.h>
+#include <unordered_map>
+
+using SbnSrc   = unsigned;
+using UplinkId = uint32_t;
+
+static UplinkId                             nextUplinkId = 0;
+static std::unordered_map<SbnSrc, UplinkId> uplinkIds(2);
+
+UplinkId getUplinkId(const unsigned sbnSrc) {
+    UplinkId uplinkId;
+
+    if (uplinkIds.count(sbnSrc)) {
+        uplinkId = uplinkIds[sbnSrc];
+    }
+    else {
+        uplinkIds.erase(nextUplinkId-2);
+        uplinkIds[sbnSrc] = uplinkId = nextUplinkId++;
+    }
+
+    return uplinkId;
+}
 
 CircFrameBuf::CircFrameBuf(const double timeout)
     : mutex()
@@ -24,13 +47,13 @@ CircFrameBuf::CircFrameBuf(const double timeout)
 {}
 
 int CircFrameBuf::add(
-        const unsigned    seqNum,
-        const unsigned    blkNum,
+        const NbsFH&      fh,
+        const NbsPDH&     pdh,
         const char*       data,
         const FrameSize_t numBytes)
 {
     Guard guard{mutex}; /// RAII!
-    Key   key{seqNum, blkNum, timeout};
+    Key   key{fh, pdh, timeout};
 
     if (frameReturned && key < lastOldestKey)
         return 1; // Frame arrived too late
@@ -87,8 +110,8 @@ extern "C" {
 	 * Inserts a data-transfer frame into the circular frame buffer.
 	 *
 	 * @param[in] cfb         Circular frame buffer
-	 * @param[in] seqNum      PDH product sequence number
-	 * @param[in] blkNum      PDH data-block number
+	 * @param[in] fh          Frame-level header
+	 * @param[in] pdh         Product-description header
 	 * @param[in] data        NOAAPort frame
 	 * @param[in] numBytes    Size of NOAAPort frame in bytes
 	 * @retval 0   Success
@@ -98,13 +121,13 @@ extern "C" {
 	 */
 	int cfb_add(
 			void*             cfb,
-			const unsigned    seqNum,
-			const unsigned    blkNum,
+			const NbsFH*      fh,
+			const NbsPDH*     pdh,
 			const char*       data,
 			const FrameSize_t numBytes) {
         int status;
 		try {
-			status = static_cast<CircFrameBuf*>(cfb)->add(seqNum, blkNum, data, numBytes);
+			status = static_cast<CircFrameBuf*>(cfb)->add(*fh, *pdh, data, numBytes);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't add new frame: %s", ex.what());
