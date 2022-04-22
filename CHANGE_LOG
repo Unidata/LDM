@@ -3,7 +3,9 @@
         * noaaportIngester(1):
             * Renamed some "last..." variables to "prev..." for clarity
             * Change logging level of product sequence number diagnostic when a gap is found from
-              NOTE to WARN to ensure visibility when grep(1)ping.  
+              NOTE to WARN to ensure visibility when grep(1)ping.
+        * blender(1):
+            * Fix latent bug due to missing "break" in nbs_getFrame() FSM switch statement
 
 6.13.17.25      2022-04-20T13:37:07-0600
     NOAAPort:

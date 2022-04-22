@@ -482,6 +482,7 @@ int nbs_getFrame(
                 leftJustify(reader, reader->nextFH);
                 reader->nextFH = NULL;
                 reader->state = SENTINEL_SEEN;
+                break;
             }
             default:
                 log_fatal("Invalid state: %d", reader->state);
