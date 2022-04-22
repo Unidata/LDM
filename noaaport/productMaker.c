@@ -181,8 +181,8 @@ void* pmStart(
     bool                firstFrameSeen = false;
     unsigned long       last_sbn_seqno = 0; // Change this type carefully
     unsigned long       last_sbn_runno = ULONG_MAX;
-    unsigned            lastProdSeqNum;
-    unsigned            lastBlockNum;
+    unsigned            prevProdSeqNum;
+    unsigned            prevBlockNum;
     int                 PNGINIT = 0;
     char*               memheap = NULL;
     MD5_CTX*            md5ctxp = productMaker->md5ctxp;
@@ -517,16 +517,16 @@ int    nnnxxx_offset;
             else {
                 const uint32_t nmissed = delta - 1;
                 if (nmissed) {
-                    if ((pdh->seqno == lastProdSeqNum && pdh->dbno == lastBlockNum + 1)
-                            || (pdh->seqno == lastProdSeqNum + 1 && pdh->dbno == 0)) {
+                    if ((pdh->seqno == prevProdSeqNum && pdh->dbno == prevBlockNum + 1)
+                            || (pdh->seqno == prevProdSeqNum + 1 && pdh->dbno == 0)) {
                         log_debug("%" PRIu32 " non-data frame(s) missed", nmissed);
                     }
                     else {
-                        log_warning_q("Gap in packet sequence: %lu to %lu [skipped %" PRIu32 "]",
+                        log_add("Gap in packet sequence: %lu to %lu [skipped %" PRIu32 "]",
                                  last_sbn_seqno, sbn->seqno, nmissed);
-                        log_notice("lastProdSeqNum=%u, pdh->seqno=%ld, lastBlockNum=%u,"
-                                "pdh->dbno=%d",
-                                lastProdSeqNum, pdh->seqno, lastBlockNum, pdh->dbno);
+                        log_add("prevProdSeqNum=%u, pdh->seqno=%ld, prevBlockNum=%u, pdh->dbno=%d",
+                                prevProdSeqNum, pdh->seqno, prevBlockNum, pdh->dbno);
+                        log_flush_warning();
                         (void)pthread_mutex_lock(&productMaker->mutex);
                         productMaker->nmissed += nmissed;
                         (void)pthread_mutex_unlock(&productMaker->mutex);
@@ -539,8 +539,8 @@ int    nnnxxx_offset;
             }
         }
         last_sbn_seqno = sbn->seqno;
-        lastProdSeqNum = pdh->seqno;
-        lastBlockNum = pdh->dbno;
+        prevProdSeqNum = pdh->seqno;
+        prevBlockNum = pdh->dbno;
 
 #ifdef RETRANS_SUPPORT
                 /** Update acquisition table statistics  **/
