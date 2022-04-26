@@ -108,7 +108,7 @@ static ssize_t getBytes(
  * @param[in] reader    NBS reader structure
  * @param[in] need      Number of bytes needed in buffer
  * @retval NBS_SUCCESS  Success
- * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_SPACE    Buffer is too small. `log_add()` called.
  * @retval NBS_EOF      EOF. `log_add()` called.
  * @retval NBS_IO       I/O failure. `log_add()` called.
  */
@@ -153,6 +153,13 @@ static void leftJustify(
     reader->end = reader->buf + nbytes;
 }
 
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ * @retval NBS_INVAL    Frame is invalid. `log_add()` called.
+ */
 static int vetFH(
         NbsReader* const restrict     reader,
         const uint8_t* const restrict fh,
@@ -211,6 +218,13 @@ static int decodeFH(NbsReader* const reader)
     return status;
 }
 
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ * @retval NBS_INVAL    Frame is invalid. `log_add()` called.
+ */
 static int ensurePDH(NbsReader* const reader)
 {
     int status = ensureBytes(reader, reader->fh.size + NBS_PDH_SIZE);
@@ -262,6 +276,13 @@ static int ensurePDH(NbsReader* const reader)
     return status;
 }
 
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_SPACE    Insufficient space. `log_add()` called.
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ * @retval NBS_INVAL    Frame is invalid. `log_add()` called.
+ */
 static int ensureTCH(NbsReader* const reader)
 {
     int status = ensureBytes(reader, reader->fh.size + NBS_TCH_SIZE);
@@ -280,6 +301,11 @@ static int ensureTCH(NbsReader* const reader)
     return status;
 }
 
+/**
+ * @retval NBS_SUCCESS  Success
+ * @retval NBS_EOF      EOF. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
+ */
 int nbs_getFrame(
         NbsReader* const restrict reader,
         uint8_t** const restrict  frame,
@@ -368,7 +394,6 @@ int nbs_getFrame(
 
                     reader->buf[0] = 0;
                     reader->state = SYNCHRONIZING;
-                    status = 0;
                 }
                 break;
             }
@@ -376,7 +401,7 @@ int nbs_getFrame(
                 log_debug("Reading data-block");
                 /*
                  * Buffer contains a (decoded) frame-level header and a (decoded) product-definition
-                 * header. Optional headers and data block are next
+                 * header. Optional headers and data block are next.
                  */
                 status = ensureBytes(reader, reader->fh.size + reader->pdh.totalSize +
                         reader->pdh.dataBlockSize);
@@ -414,7 +439,6 @@ int nbs_getFrame(
                     // Give up
                     reader->buf[0] = 0;
                     reader->state = SYNCHRONIZING;
-                    status = 0;
                 }
                 break;
             }
@@ -435,7 +459,6 @@ int nbs_getFrame(
                     if (status == NBS_SPACE) {
                         // Give up
                         reader->state = START;
-                        status = 0;
                         break;
                     }
                     if (status != NBS_SUCCESS)
@@ -455,12 +478,10 @@ int nbs_getFrame(
                 if (status == NBS_SPACE) {
                     // Give up
                     reader->state = START;
-                    status = 0;
                 }
                 else if (status == NBS_INVAL) {
                     ++reader->nextFH;
                     reader->state = OTHER_FH_SEEN;
-                    status = 0;
                 }
                 else if (status == NBS_SUCCESS) {
                     *frame = reader->buf;
@@ -489,16 +510,20 @@ int nbs_getFrame(
                 abort();
         }
 
-        if (status)
+        if (status != NBS_INVAL && status != NBS_SPACE) {
             break; // Severe error. `log_add()` called.
-
-        // Non-fatal log messages are queued
-        if (!reader->logError) {
-            log_clear();
         }
-        else {
-            log_flush_warning();
-            reader->logError = false; // Don't log subsequent errors
+        else if (status) {
+            // Non-fatal log messages are queued
+            if (!reader->logError) {
+                log_clear();
+            }
+            else {
+                log_flush_warning();
+                reader->logError = false; // Don't log subsequent errors
+            }
+
+            status = 0;
         }
     }
 

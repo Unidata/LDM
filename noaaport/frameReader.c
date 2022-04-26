@@ -31,7 +31,9 @@ static void 	createThreadAndDetach(const char*);
  * and insert the data in a queue.
  *
  * @param[in]  	clientSockId  Socket Id for this client reader thread
- * @retval	  	NBS_IO failure
+ * @retval      NBS_EOF       End-of-file. `log_add()` called.
+ * @retval	  	NBS_IO        I/O failure. `log_add()` called.
+ * @retval      NBS_SYSTEM    System failure. `log_add()` called.
  */
 static int
 buildFrameRoutine(int clientSockFd)
@@ -47,7 +49,7 @@ buildFrameRoutine(int clientSockFd)
     size_t     frameSize;
 
     if (reader == NULL) {
-        log_flush_fatal();
+        log_fatal("Null reader");
         abort();
     }
 
@@ -66,13 +68,15 @@ buildFrameRoutine(int clientSockFd)
                                fh->seqno, fh->runno, pdh->prodSeqNum);
                     }
                 }
+                else if (status == 1) {
+                    log_flush_warning(); // Frame arrived too late
+                }
                 else if (status == 2) {
                     log_add("Frame is a duplicate");
                     log_flush_debug();
                 }
-                else if (status != 1) { // -1 => frame arrived too late. Already logged.
-                    log_add("Unknown return status from tryInsertInQueue(): %d", status);
-                    log_flush_error();
+                else {
+                    log_add("Couldn't add frame due to system failure", status);
                     break;
                 }
 			}
@@ -95,7 +99,6 @@ buildFrameRoutine(int clientSockFd)
                 log_add("Unknown return status from nbs_getFrame(): %d", status);
             }
 
-            log_flush_error();
             break;
 		}
     } // for
@@ -125,22 +128,19 @@ inputClientRoutine(void* id)
 		socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
 		if(socketClientFd < 0)
 		{
-			log_add("socket creation failed\n");
-			log_flush_fatal();
+			log_fatal("socket creation failed\n");
 			exit(EXIT_FAILURE);
 		}
 
 		if( rcvBufSize > 0 )
 		{
-			int rc = setsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
-			                	&rcvBufSize, sizeof(int));
+			int rc = setsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF, &rcvBufSize, sizeof(int));
 			if(rc != 0 )
 				log_warning("Could not set receive buffer to %d bytes", rcvBufSize);
 		}
 		int optval;
 		int optlen = sizeof(optval);
-		int rc = getsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
-							&optval, &optlen);
+		int rc = getsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF, &optval, &optlen);
 		if(rc == 0 )
 			log_notice("Current receive buffer: %d bytes", optval);
 		else
@@ -152,8 +152,7 @@ inputClientRoutine(void* id)
 
 		if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
 		{
-			log_add("Invalid fanout server specification %s\n", serverId);
-			log_flush_fatal();
+			log_fatal("Invalid fanout server specification %s\n", serverId);
 			exit(EXIT_FAILURE);
 		}
 
@@ -166,26 +165,29 @@ inputClientRoutine(void* id)
 
 		if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
 		{
-			log_add_syserr("getaddrinfo() failure on %s", hostId);
-			log_flush_warning();
+			log_syserr("getaddrinfo() failure for %s", hostId);
 		}
 		else {
-            struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * )
-                    (addrInfo->ai_addr);
-            sockaddr.sin_port 				= htons(port);
+            struct sockaddr_in sockaddr = *(struct sockaddr_in  * ) (addrInfo->ai_addr);
+            sockaddr.sin_port 			= htons(port);
 
             log_info("Connecting to fanout server:  %s:%" PRIu16 "\n", hostId, port);
 
-            if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
-                    sizeof(sockaddr)) )
+            if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
             {
-                log_add("Error connecting to fanout server %s: %s\n", serverId,
-                        strerror(errno));
-                log_flush_warning();
+                log_syserr("Error connecting to fanout server %s: %s\n", serverId, strerror(errno));
             }
             else {
                 log_notice("Connected to fanout server:  %s:%" PRIu16 "\n", hostId, port);
-                buildFrameRoutine(socketClientFd);
+                int status = buildFrameRoutine(socketClientFd);
+                if (status == NBS_SYSTEM) {
+                    log_add("System failure on input thread");
+                    log_flush_fatal();
+                    exit(EXIT_FAILURE);
+                }
+                log_add("Lost connection with fanout server. Will retry after 60 s. "
+                        "(%s:%" PRIu16 ")", hostId, port);
+                log_flush_error();
             } // Connected
 
             freeaddrinfo(addrInfo);
@@ -193,11 +195,10 @@ inputClientRoutine(void* id)
 		} // Got address information
 
         close(socketClientFd);
-		log_add("Lost connection with fanout server. Will retry after 60 sec. "
-			"(%s:%" PRIu16 ")", hostId, port);
-       	log_flush_warning();
         sleep(60);
     } // for
+
+    return NULL; // Accommodates Eclipse
 }
 
 static void

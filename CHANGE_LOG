@@ -6,6 +6,7 @@
               NOTE to WARN to ensure visibility when grep(1)ping.
         * blender(1):
             * Fix latent bug due to missing "break" in nbs_getFrame() FSM switch statement
+            * Improved diagnostic error logging
 
 6.13.17.25      2022-04-20T13:37:07-0600
     NOAAPort:

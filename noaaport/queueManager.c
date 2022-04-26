@@ -35,14 +35,15 @@ flowDirectorRoutine()
 		lockIt(&runMutex);
 
 		Frame_t oldestFrame;
-		if (cfb_getOldestFrame(cfbInst, &oldestFrame)) {
-			if( fw_writeFrame( &oldestFrame ) == -1 )
-			{
-				log_add("Error writing to standard output");
-				log_flush_fatal();
-				exit(EXIT_FAILURE);
-			}
+		if (!cfb_getOldestFrame(cfbInst, &oldestFrame)) {
+		    log_flush_fatal();
+		    exit(EXIT_FAILURE);
 		}
+		else if( fw_writeFrame( &oldestFrame ) == -1 )
+        {
+            log_flush_fatal();
+            exit(EXIT_FAILURE);
+        }
 		unlockIt(&runMutex);
 
     } // for
@@ -110,7 +111,7 @@ queue_start(const double frameLatency)
  * @param[out] frameBytes  		Number of data bytes in this frame
 
  * @retval     0  				Success
- * @retval     1                Frame is too late
+ * @retval     1                Frame is too late. `log_add()` called.
  * @retval     2                Frame is duplicate
  * @retval     -1               System error. `log_add()` called.
  *

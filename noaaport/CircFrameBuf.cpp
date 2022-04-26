@@ -51,6 +51,18 @@ CircFrameBuf::CircFrameBuf(const double timeout)
             std::chrono::duration<double>(timeout)))
 {}
 
+/**
+ * Tries to add a frame.
+ *
+ * @param[in] fh              Frame's decoded frame-level header
+ * @param[in] pdh             Frame's decoded product-definition header
+ * @param[in] data            Frame's bytes
+ * @param[in] numBytes        Number of bytes in the frame
+ * @retval    0               Success. Frame was added.
+ * @retval    1               Frame arrived too late. `log_add()` called.
+ * @retval    2               Frame is a duplicate
+ * @throw std::runtime_error  Frame is too large
+ */
 int CircFrameBuf::add(
         const NbsFH&      fh,
         const NbsPDH&     pdh,
@@ -61,7 +73,7 @@ int CircFrameBuf::add(
     Key   key{fh, pdh, timeout};
 
     if (frameReturned && key < lastOldestKey) {
-        log_warning("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
+        log_add("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
                 lastOldestKey.to_string().data(), key.to_string().data());
         return 1; // Frame arrived too late
     }
@@ -124,7 +136,7 @@ extern "C" {
 	 * @param[in] data        NOAAPort frame
 	 * @param[in] numBytes    Size of NOAAPort frame in bytes
 	 * @retval 0   Success
-	 * @retval 1   Frame is too late
+	 * @retval 1   Frame is too late. `log_add()` called.
 	 * @retval 2   Frame is duplicate
 	 * @retval -1  System error. `log_add()` called.
 	 */
@@ -139,7 +151,7 @@ extern "C" {
 			status = static_cast<CircFrameBuf*>(cfb)->add(*fh, *pdh, data, numBytes);
 		}
 		catch (const std::exception& ex) {
-			log_add("Couldn't add new frame: %s", ex.what());
+			log_add("Couldn't add new frame to buffer: %s", ex.what());
 			status = -1;
 		}
 		return status;

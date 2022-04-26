@@ -25,7 +25,8 @@ enum {
     NBS_SPACE,   ///< Insufficient space for frame
     NBS_EOF,     ///< End-of-file read
     NBS_IO,      ///< I/O error
-    NBS_INVAL    ///< Invalid frame
+    NBS_INVAL,   ///< Invalid frame
+    NBS_SYSTEM   ///< System failure
 };
 
 typedef struct NbsReader NbsReader;
