@@ -1,6 +1,8 @@
 6.13.17.27
     NOAAPort:
-        * blender(1): Improved error handling
+        * blender(1):
+            * Improved error handling
+            * Fix bug in return code of nbs_getFrame()
 
 6.13.17.26      2022-04-26T13:11:47-0600
     NOAAPort:

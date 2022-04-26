@@ -302,6 +302,8 @@ static int ensureTCH(NbsReader* const reader)
 }
 
 /**
+ * Returns the next data or time frame and ignores all others.
+ *
  * @retval NBS_SUCCESS  Success
  * @retval NBS_EOF      EOF. `log_add()` called.
  * @retval NBS_IO       I/O failure. `log_add()` called.
@@ -321,7 +323,7 @@ int nbs_getFrame(
      */
     int status = 0;
 
-    for (;;) {
+    while (status == 0) {
         switch (reader->state) {
             case START: {
                 log_debug("Reading frame-level header number of bytes");
@@ -510,22 +512,19 @@ int nbs_getFrame(
                 abort();
         }
 
-        if (status != NBS_INVAL && status != NBS_SPACE) {
-            break; // Severe error. `log_add()` called.
-        }
-        else if (status) {
+        if (status == NBS_INVAL || status == NBS_SPACE) {
             // Non-fatal log messages are queued
             if (!reader->logError) {
                 log_clear();
             }
             else {
                 log_flush_warning();
-                reader->logError = false; // Don't log subsequent errors
+                reader->logError = false; // Don't log subsequent, non-fatal errors until indicated
             }
 
-            status = 0;
-        }
-    }
+            status = 0; // Keep going
+        } // Non-fatal error
+    } // Get frame loop
 
     return status;
 }
