@@ -27,8 +27,8 @@ extern int      rcvBufSize;
 
 static void 	createThreadAndDetach(const char*);
 /**
- * Function to read data bytes from the connection, rebuild the SBN frame,
- * and insert the data in a queue.
+ * Function to read data bytes from the connection, rebuild the SBN frame, and insert the data in a
+ * queue.
  *
  * @param[in]  	clientSockId  Socket Id for this client reader thread
  * @retval      NBS_EOF       End-of-file. `log_add()` called.
@@ -38,72 +38,72 @@ static void 	createThreadAndDetach(const char*);
 static int
 buildFrameRoutine(int clientSockFd)
 {
-    log_notice("In buildFrameRoutine() waiting to read from "
-    		"(fanout) server socket...\n");
-
 	int        status;
-    NbsReader* reader = nbs_new(clientSockFd);
     NbsFH*     fh;
     NbsPDH*    pdh;
     uint8_t*   frame;
     size_t     frameSize;
+    NbsReader* reader = nbs_new(clientSockFd);
 
     if (reader == NULL) {
-        log_fatal("Null reader");
-        abort();
+        log_syserr("Couldn't allocate reader for socket %d", clientSockFd);
+        status = NBS_SYSTEM;
     }
+    else {
+        log_notice("In buildFrameRoutine() waiting to read from (fanout) server socket...");
 
-    for(;;)
-    {
-		if ((status = nbs_getFrame(reader, &frame, &frameSize, &fh, &pdh)) == NBS_SUCCESS)
-		{
-			// buffer now contains frame data
-		    if (fh->command == NBS_FH_CMD_DATA) {
-                // PDH exists. Insert data-transfer frame in queue
-                status = tryInsertInQueue( fh, pdh, frame, frameSize);
+        for(;;)
+        {
+            if ((status = nbs_getFrame(reader, &frame, &frameSize, &fh, &pdh)) == NBS_SUCCESS)
+            {
+                // buffer now contains frame data
+                if (fh->command == NBS_FH_CMD_DATA) {
+                    // PDH exists. Insert data-transfer frame in queue
+                    status = tryInsertInQueue( fh, pdh, frame, frameSize);
 
-                if (status == 0) {
-                    if (pdh->transferType & 1) {
-                        log_info("Starting product {fh->seqno=%u, fh->runno=%u, pdh->prodSeqNum=%u}",
-                               fh->seqno, fh->runno, pdh->prodSeqNum);
+                    if (status == 0) {
+                        if (pdh->transferType & 1) {
+                            log_info("Starting product {fh->seqno=%u, fh->runno=%u,"
+                                    "pdh->prodSeqNum=%u}", fh->seqno, fh->runno, pdh->prodSeqNum);
+                        }
+                    }
+                    else if (status == 1) {
+                        log_flush_warning(); // Frame arrived too late
+                    }
+                    else if (status == 2) {
+                        log_add("Frame is a duplicate");
+                        log_flush_debug();
+                    }
+                    else {
+                        log_add("Couldn't add frame due to system failure", status);
+                        break;
                     }
                 }
-                else if (status == 1) {
-                    log_flush_warning(); // Frame arrived too late
+                else if (fh->command != 5 && fh->command != 10) {
+                    log_notice("Ignoring frame with command=%u", fh->command);
                 }
-                else if (status == 2) {
-                    log_add("Frame is a duplicate");
-                    log_flush_debug();
+            }
+            else {
+                if( status == NBS_IO)
+                {
+                    log_add("Read failure");
+                    // n == -1 ==> read error
                 }
-                else {
-                    log_add("Couldn't add frame due to system failure", status);
-                    break;
+                else if( status == NBS_EOF)
+                {
+                    log_add("End of file");
                 }
-			}
-		    else if (fh->command != 5 && fh->command != 10) {
-		        log_notice("Ignoring frame with command=%u", fh->command);
-		    }
-		}
-		else {
-            if( status == NBS_IO)
-            {
-                log_add("Read failure");
-                // n == -1 ==> read error
-            }
-            else if( status == NBS_EOF)
-            {
-                log_add("End of file");
-            }
-            else
-            {
-                log_add("Unknown return status from nbs_getFrame(): %d", status);
-            }
+                else
+                {
+                    log_add("Unknown return status from nbs_getFrame(): %d", status);
+                }
 
-            break;
-		}
-    } // for
+                break;
+            }
+        } // for
 
-    nbs_free(reader);
+        nbs_free(reader);
+    }
 
     return status;
 }
