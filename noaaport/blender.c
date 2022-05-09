@@ -151,12 +151,12 @@ static void
 signal_handler( const int sig)
 {
     switch (sig) {
-        case SIGUSR1:
-            log_refresh(); // Will close/open on next log message; not before
-            break;
-        case SIGUSR2:
-            (void)log_roll_level();
-            break;
+    case SIGUSR1:
+        log_refresh(); // Will close/open on next log message; not before
+        break;
+    case SIGUSR2:
+        (void)log_roll_level();
+        break;
     }
     return;
 }
@@ -169,22 +169,25 @@ set_sigactions(void)
 {
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = 0;
-
-    /* Handle the following */
     sigact.sa_handler = signal_handler;
 
     /* Restart the following */
-
-    sigset_t sigset;
     sigact.sa_flags |= SA_RESTART;
+    (void)sigaction(SIGUSR1, &sigact, NULL);
+    (void)sigaction(SIGUSR2, &sigact, NULL);
 
+    // Ensure that the above signals will be received
+    sigset_t sigset;
     (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
     (void)sigaddset(&sigset, SIGUSR1);
     (void)sigaddset(&sigset, SIGUSR2);
-    (void)sigaction(SIGUSR1, &sigact, NULL);
-    (void)sigaction(SIGUSR2, &sigact, NULL);    
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+
+    // Ensure that the write(2) to the FIFO will return an error if there's no reader
+    (void)sigemptyset(&sigset);
+    (void)sigaddset(&sigset, SIGPIPE);
+    (void)sigprocmask(SIG_BLOCK, &sigset, NULL);
 }
 
 int main(
