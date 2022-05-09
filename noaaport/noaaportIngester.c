@@ -1395,7 +1395,8 @@ int main(
                 		         rcvBufSize);
 
                 if (status) {
-                    log_error("Couldn't ingest NOAAPort data");
+                    log_add("Couldn't ingest NOAAPort data");
+                    log_flush_error();
                 }
             }                               /* command line decoded */
         } // Closed `stderr` opened on `/dev/null`

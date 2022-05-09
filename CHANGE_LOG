@@ -1,6 +1,7 @@
 6.13.17.28
     NOAAPort:
         * blender(1): Blocked SIGPIPE so that the write(2) to the FIFO returns with an error 
+        * noaaportIngester(1): Ensured that all messages are logged when the input closes
 
 6.13.17.27      2022-04-26T14:24:10-0600
     NOAAPort:
