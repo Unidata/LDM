@@ -56,7 +56,7 @@ from 	pathlib import Path
 import  argparse
 import 	getopt
 import 	logging
-
+from 	multiprocessing  import Process
 
 
 class NoaaportBlender():
@@ -305,9 +305,13 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 			if cmd.startswith("ulog"): # avoid looping
 				print(cmd)
 			else:
-				self.ulogIt(f"{e}", "runProc", 286)
+				self.ulogIt(f"{e}", "runProc", 308)
 				exit(0)
-			
+
+	def execIngesterOrBlender(self, cmd, progName):
+		msg = f"re-Starting {progName}..."
+		self.ulogIt(msg, "noaaFunction", 313)
+		system(cmd)
 
 def main():
 
@@ -316,28 +320,31 @@ def main():
 	noaaBPInst 		= NoaaportBlender()	
 
 	startMsg = f"Starting up the 2 programs (blender and noaaportIngester)..."
-	noaaBPInst.ulogIt( startMsg , "main", 300)
+	noaaBPInst.ulogIt( startMsg , "main", 323)
 
 	cliArg 			= noaaBPInst.cliParser()	# for this script
 	noaaBPInst.buildLogFilesAndFifo(cliArg)
+
 	noaaportCmd 	= noaaBPInst.prepareNoaaportCmd(cliArg)
 	blenderCmd 		= noaaBPInst.prepareBlenderCmd(cliArg)
 
 	while True:
 
-		noaaBPInst.ulogIt(noaaportCmd, "main", 310)
-		noaaBPInst.ulogIt(blenderCmd, "main", 311)
+		noaaBPInst.ulogIt(noaaportCmd, "main", 333)
+		noaaBPInst.ulogIt(blenderCmd, "main", 334)
 		
+		noaaProc 	= Process(target=noaaBPInst.execIngesterOrBlender, args=(noaaportCmd, "NOAAport Ingester", ))
+		blenderProc = Process(target=noaaBPInst.execIngesterOrBlender, args=(blenderCmd,  "blender", ))
 
-		noaaProc 	= subprocess.Popen(noaaportCmd, stdout=subprocess.PIPE, shell=True)
-		blenderProc = subprocess.Popen(blenderCmd,  stdout=subprocess.PIPE, shell=True)
+		blenderProc.start()
+		noaaProc.start()
 		
-		noaaProc.wait()
-		blenderProc.wait()
-
-		msg = "One or both processes stopped. Re-running them..."
-		noaaBPInst.ulogIt(msg, "main", 329)
-		time.sleep(2)	
+		noaaProc.join()       # <-- reader first
+		blenderProc.join()    # <-- writer
+		
+		msg = "The NOAAport ingester and the blender have stopped. Re-running them..."
+		noaaBPInst.ulogIt(msg, "main", 346)
+		time.sleep(1)	
 
 
 if __name__ == '__main__':
