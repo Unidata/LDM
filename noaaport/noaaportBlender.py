@@ -310,7 +310,7 @@ http://www.nws.noaa.gov/noaaport/document/Multicast%20Addresses%201.0.pdf
 
 	def execIngesterOrBlender(self, cmd, progName):
 		msg = f"re-Starting {progName}..."
-		self.ulogIt(msg, "noaaFunction", 313)
+		self.ulogIt(msg, "execIngesterOrBlender", 313)
 		system(cmd)
 
 def main():
@@ -336,11 +336,12 @@ def main():
 		noaaProc 	= Process(target=noaaBPInst.execIngesterOrBlender, args=(noaaportCmd, "NOAAport Ingester", ))
 		blenderProc = Process(target=noaaBPInst.execIngesterOrBlender, args=(blenderCmd,  "blender", ))
 
+		noaaProc.start()		# <-- reader first	
 		blenderProc.start()
-		noaaProc.start()
 		
-		noaaProc.join()       # <-- reader first
-		blenderProc.join()    # <-- writer
+		
+		noaaProc.join()       	# <-- reader first
+		blenderProc.join()    	# <-- writer
 		
 		msg = "The NOAAport ingester and the blender have stopped. Re-running them..."
 		noaaBPInst.ulogIt(msg, "main", 346)
