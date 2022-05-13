@@ -344,8 +344,7 @@ def main():
 		blenderProc.join()    	# <-- writer
 		
 		msg = "The NOAAport ingester and the blender have stopped. Re-running them..."
-		noaaBPInst.ulogIt(msg, "main", 346)
-		time.sleep(1)	
+		noaaBPInst.ulogIt(msg, "main", 346)	
 
 
 if __name__ == '__main__':
