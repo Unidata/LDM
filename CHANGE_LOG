@@ -1,5 +1,8 @@
-6.13.17.28
+6.13.17.28      2022-05-13T14:14:43-0600
     NOAAPort:
+        * noaaportBlender(1):
+            * Modified how the processes are invoked to ensure independence
+            * Removed sleep between re-invocations
         * blender(1):
             * Blocked SIGPIPE so that the write(2) to the FIFO returns with an error 
             * Eliminated superfluous mutex in queueManager.c
