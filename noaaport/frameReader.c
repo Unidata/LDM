@@ -76,6 +76,7 @@ buildFrameRoutine(int clientSockFd)
                     }
                     else {
                         log_add("Couldn't add frame due to system failure", status);
+                        status = NBS_SYSTEM;
                         break;
                     }
                 }
