@@ -6,7 +6,9 @@
               utility to log error messages
 
     NOAAPort:
-        * blender(1): Corrected return value for system failure in input routine.
+        * blender(1):
+            * Corrected return value of input routine for system failure
+            * Handle SIGPIPE rather than block it to ensure termination if no FIFO reader
 
 6.13.17.28      2022-05-13T14:14:43-0600
     NOAAPort:
