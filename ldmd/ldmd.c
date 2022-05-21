@@ -157,6 +157,17 @@ daemonize()
     return 0;
 }
 
+/**
+ * Sends a SIGTERM to the process group as root.
+ */
+static void killProcGroup()
+{
+    // Become root to ensure that even setuid processes owned by root are signaled
+    rootpriv();
+    (void)kill(0, SIGTERM); // Sends SIGTERM to process group
+    unpriv();               // Relinquish root privileges
+}
+
 static pid_t reap(
         pid_t pid,
         int options)
@@ -342,7 +353,7 @@ static void cleanup(
          */
         log_add("Terminating process group");
         log_flush_notice();
-        (void) kill(0, SIGTERM);
+        killProcGroup();
 
         while (reap(-1, 0) > 0)
             ; /*empty*/
