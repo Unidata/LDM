@@ -181,14 +181,6 @@ set_sigactions(void)
     sigact.sa_flags |= SA_RESTART;
     (void)sigaction(SIGUSR1, &sigact, NULL);
     (void)sigaction(SIGUSR2, &sigact, NULL);
-
-    // Ensure that the above signals will be caught
-    sigset_t sigset;
-    (void)sigemptyset(&sigset);
-    (void)sigaddset(&sigset, SIGPIPE);
-    (void)sigaddset(&sigset, SIGUSR1);
-    (void)sigaddset(&sigset, SIGUSR2);
-    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 int main(
