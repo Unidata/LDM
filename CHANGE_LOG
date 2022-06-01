@@ -8,6 +8,9 @@
         * blender(1):
             * Removed unblocking of signals because that's the purview of the parent process
 
+    rpc(3):
+        * Fix latent security bug in unexecuted code
+
 6.13.17.29      2022-05-16T16:11:06-0600
     Documentation:
         * Enhanced section on pqact(1) decoders in the "Programs" page:
