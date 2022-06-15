@@ -45,7 +45,7 @@ CircFrameBuf::CircFrameBuf(const double timeout)
     , nextIndex(0)
     , indexes()
     , slots()
-    , lastOldestKey()
+    , lastOutputKey()
     , frameReturned(false)
     , timeout(std::chrono::duration_cast<Key::Dur>(
             std::chrono::duration<double>(timeout)))
@@ -72,9 +72,9 @@ int CircFrameBuf::add(
     Guard guard{mutex}; /// RAII!
     Key   key{fh, pdh, timeout};
 
-    if (frameReturned && key < lastOldestKey) {
+    if (frameReturned && key < lastOutputKey) {
         log_add("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
-                lastOldestKey.to_string().data(), key.to_string().data());
+                lastOutputKey.to_string().data(), key.to_string().data());
         return 1; // Frame arrived too late
     }
 
@@ -100,15 +100,15 @@ void CircFrameBuf::getOldestFrame(Frame_t* frame)
     auto  index = head->second;
     auto& slot = slots.at(index);
 
-    frame->prodSeqNum   = key.seqNum;
-    frame->dataBlockNum = key.blkNum;
+    frame->prodSeqNum   = key.pdhSeqNum;
+    frame->dataBlockNum = key.pdhBlkNum;
     ::memcpy(frame->data, slot.data, slot.numBytes);
     frame->nbytes = slot.numBytes;
 
     slots.erase(index);
     indexes.erase(head);
 
-    lastOldestKey = key;
+    lastOutputKey = key;
     frameReturned = true;
 }
 
