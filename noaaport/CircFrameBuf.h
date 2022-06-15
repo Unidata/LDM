@@ -39,44 +39,60 @@ class CircFrameBuf
         using Dur   = std::chrono::milliseconds;
 
         UplinkId          uplinkId;
-        unsigned          seqNum;
-        unsigned          blkNum;
+        unsigned          fhSource;
+        unsigned          fhSeqno;
+        unsigned          fhRunno;
+        unsigned          pdhSeqNum;
+        unsigned          pdhBlkNum;
         Clock::time_point revealTime; ///< When the associated frame should be revealed
 
         Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
             : uplinkId(getUplinkId(fh.source))
-            , seqNum(pdh.prodSeqNum)
-            , blkNum(pdh.blockNum)
+            , fhSource(fh.source)
+            , fhSeqno(fh.seqno)
+            , fhRunno(fh.runno)
+            , pdhSeqNum(pdh.prodSeqNum)
+            , pdhBlkNum(pdh.blockNum)
             , revealTime(Clock::now() + timeout)
         {}
 
         Key(const NbsFH& fh, const NbsPDH& pdh, Dur&& timeout)
             : uplinkId(getUplinkId(fh.source))
-            , seqNum(pdh.prodSeqNum)
-            , blkNum(pdh.blockNum)
+            , fhSource(fh.source)
+            , fhSeqno(fh.seqno)
+            , fhRunno(fh.runno)
+            , pdhSeqNum(pdh.prodSeqNum)
+            , pdhBlkNum(pdh.blockNum)
             , revealTime(Clock::now() + timeout)
         {}
 
         Key()
             : uplinkId(0)
-            , seqNum(0)
-            , blkNum(0)
+            , fhSource(0)
+            , fhSeqno(0)
+            , fhRunno(0)
+            , pdhSeqNum(0)
+            , pdhBlkNum(0)
             , revealTime(Clock::now())
         {}
 
         std::string to_string() const {
-            return "{uplinkId=" + std::to_string(uplinkId) + ", prodSeqNum=" +
-                    std::to_string(seqNum) + ", blkNum=" + std::to_string(blkNum) + "}";
+            return "{upId=" + std::to_string(uplinkId) +
+                    ", fhSrc=" + std::to_string(fhSource) +
+                    ", fhSeq=" + std::to_string(fhSeqno) +
+                    ", fhRun=" + std::to_string(fhRunno) +
+                    ", pdhSeq=" + std::to_string(pdhSeqNum) +
+                    ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
         }
 
         bool operator<(const Key& rhs) const {
             return (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
                     ? true
                     : (uplinkId == rhs.uplinkId)
-                        ? (seqNum - rhs.seqNum > SEQ_NUM_MAX/2)
+                        ? (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
                             ? true
-                            : (seqNum == rhs.seqNum)
-                                  ? blkNum - rhs.blkNum > BLK_NUM_MAX/2
+                            : (pdhSeqNum == rhs.pdhSeqNum)
+                                  ? pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2
                                   : false
                         : false;
         }
@@ -113,7 +129,7 @@ class CircFrameBuf
     Index         nextIndex;       ///< Index for next, incoming frame
     Indexes       indexes;         ///< Indexes of frames in sorted order
     Slots         slots;           ///< Slots of frames in unsorted order
-    Key           lastOldestKey;   ///< Key of last, returned frame
+    Key           lastOutputKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
     Key::Dur      timeout;         ///< Timeout for returning next frame
 
