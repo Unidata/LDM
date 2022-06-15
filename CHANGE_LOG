@@ -1,4 +1,4 @@
-6.13.17.30
+6.13.17.30      2022-06-15T14:18:00-0600
     Top-level LDM server, ldmd(1):
         * Now becomes owned by root before sending SIGTERM to process group to ensure that even
           setuid processes that are owned by root receive the signal. Relinquishes root privileges
@@ -7,6 +7,7 @@
     NOAAPort:
         * blender(1):
             * Removed unblocking of signals because that's the purview of the parent process
+            * Enhance information in late-frame log message
 
     rpc(3):
         * Fix latent security bug in unexecuted code
