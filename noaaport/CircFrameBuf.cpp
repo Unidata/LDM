@@ -14,29 +14,34 @@
 #include <stdint.h>
 #include <unordered_map>
 
-using SbnSrc   = unsigned;
+using FhSrc   = unsigned;
 using UplinkId = uint32_t;
 
-static UplinkId                             nextUplinkId = 0;
-static std::unordered_map<SbnSrc, UplinkId> uplinkIds(2);
+/**
+ * Returns a monotonically increasing uplink identifier. This identifier increments every time the
+ * source field in the frame header changes -- even if it reverts to the previous value. This
+ * assumes that the residence time of a frame in the buffer is much less than the time between
+ * changes to the uplink site so that all frames from the previous change will be gone from the
+ * buffer.
+ *
+ * @param[in] fhSrc  Frame header's source field
+ * @return           Monotonically increasing uplink identifier
+ */
+UplinkId getUplinkId(const FhSrc fhSrc) {
+    static bool     initialized = false;
+    static UplinkId currUplinkId = 0;
+    static FhSrc    currFhSrc;
 
-UplinkId getUplinkId(const unsigned sbnSrc) {
-    UplinkId uplinkId;
-
-    if (uplinkIds.count(sbnSrc)) {
-        uplinkId = uplinkIds[sbnSrc];
+    if (!initialized) {
+        initialized = true;
+        currFhSrc = fhSrc;
     }
-    else {
-        static SbnSrc prevSbnSrc;
-        if (!uplinkIds.empty())
-            log_notice("Data transmission source changed from %u to %u", prevSbnSrc, sbnSrc);
-        prevSbnSrc = sbnSrc;
-
-        uplinkIds.erase(nextUplinkId-2);
-        uplinkIds[sbnSrc] = uplinkId = nextUplinkId++;
+    else if (currFhSrc != fhSrc) {
+        currFhSrc = fhSrc;
+        ++currUplinkId;
     }
 
-    return uplinkId;
+    return currUplinkId;
 }
 
 CircFrameBuf::CircFrameBuf(const double timeout)
