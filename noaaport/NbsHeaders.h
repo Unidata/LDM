@@ -58,7 +58,7 @@ typedef struct NbsFH
     *   1 = Generated at primary NCF
     *   2 = Reserved
     */
-   unsigned source;
+   unsigned source;      ///< 1=NCF primary; 2=reserved
    unsigned destination; ///< Destination of data transmission: 0 = All
    /**
     * Unique sequence number for each frame. This field is used in detecting lost packets. Currently
