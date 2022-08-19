@@ -1,3 +1,8 @@
+6.13.17.32
+    ldmadmin(1):
+        * Added "-o <template>" option to "plotmetrics" command to write metrics plots to files
+          instead of to the X-server.
+
 6.13.17.31      2022-07-02T13:39:03-0600
     NOAAPort:
         * blender(1): Corrected getUplinkId()
