@@ -20,7 +20,7 @@ using UplinkId = uint32_t;
 /**
  * Returns a monotonically increasing uplink identifier. This identifier increments every time the
  * source field in the frame header changes -- even if it reverts to the previous value. This
- * assumes that the residence time of a frame in the buffer is much less than the time between
+ * assumes that the delay-time of frames in the buffer is much less than the time between
  * changes to the uplink site so that all frames from the previous change will be gone from the
  * buffer.
  *
@@ -29,19 +29,19 @@ using UplinkId = uint32_t;
  */
 UplinkId getUplinkId(const FhSrc fhSrc) {
     static bool     initialized = false;
-    static UplinkId currUplinkId = 0;
-    static FhSrc    currFhSrc;
+    static UplinkId uplinkId = 0;
+    static FhSrc    saveFhSrc;
 
     if (!initialized) {
         initialized = true;
-        currFhSrc = fhSrc;
+        saveFhSrc = fhSrc;
     }
-    else if (currFhSrc != fhSrc) {
-        currFhSrc = fhSrc;
-        ++currUplinkId;
+    else if (saveFhSrc != fhSrc) {
+        saveFhSrc = fhSrc;
+        ++uplinkId;
     }
 
-    return currUplinkId;
+    return uplinkId;
 }
 
 CircFrameBuf::CircFrameBuf(const double timeout)
