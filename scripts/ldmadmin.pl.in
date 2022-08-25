@@ -1004,7 +1004,7 @@ sub isRunning
 
 # The following test is incompatible with the use of a proxy
     if (!$running) {
-	my($cmd_line) = "ldmping -l- -i 0";
+	my($cmd_line) = "ldmping -l- -i 0 -t 1";
 	$cmd_line = $cmd_line . " $ip_addr" if $ip_addr ne "0.0.0.0";
 
 	system("$cmd_line > /dev/null 2>&1");
