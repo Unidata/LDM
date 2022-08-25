@@ -86,7 +86,7 @@ qstring		([^"]|{escquote})*
 }
 
 
-^[Rr][Ee][Qq][Uu][Ee][Ss][Tt]|POLL|poll {
+^([Rr][Ee][Qq][Uu][Ee][Ss][Tt]|POLL|poll) {
 #if YYDEBUG
     if(yydebug)
 	udebug("REQUEST");
