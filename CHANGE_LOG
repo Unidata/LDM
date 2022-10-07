@@ -2,7 +2,8 @@
     ldmadmin(1):
         * Added "-o <template>" option to "plotmetrics" command to write metrics plots to files
           instead of to the X-server.
-        * Added 1 s timeout to ldmping(1) in isRunning() to speed things up
+        * Added 1 s timeout to ldmping(1) in isRunning() to speed up "ldmadmin start" and
+          "ldmadmin stop"
 
 6.13.17.31      2022-07-02T13:39:03-0600
     NOAAPort:
