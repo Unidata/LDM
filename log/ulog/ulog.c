@@ -318,9 +318,8 @@ openulog(
 #ifdef LOGNAME_ISSOCK
                 logFd = socket(AF_UNIX, SOCK_DGRAM, 0);
                 if (logFd == -1) {
-                        fprintf(stderr,
-                            "ulog: Couldn't open UNIX socket \"%s\": %s\n",
-                            ULOGNAME, strerror(errno));
+                        fprintf(stderr, "ulog: Couldn't open UNIX socket \"%s\": %s\n",
+                                ULOGNAME, strerror(errno));
                 }
                 else {
                     struct sockaddr_un  address;
@@ -330,9 +329,8 @@ openulog(
 
                     if (connect(logFd, (struct sockaddr*)&address, 
                             sizeof(address)) == -1) {
-                        fprintf(stderr,
-                            "ulog: Couldn't connect(2) to UNIX socket \"%s\": "
-                            "%s\n", ULOGNAME, strerror(errno));
+                        fprintf(stderr, "ulog: Couldn't connect(2) to UNIX socket \"%s\": %s\n",
+                                ULOGNAME, strerror(errno));
 
                         (void)close(logFd);
                         logFd = -1;
@@ -371,8 +369,7 @@ openulog(
         {
             if (fcntl(logFd, F_SETFD, FD_CLOEXEC) == -1)
             {
-                    fprintf(stderr, "ulog: fcntl(FD_CLOEXEC) failure: %s\n",
-                        strerror(errno));
+                    fprintf(stderr, "ulog: fcntl(FD_CLOEXEC) failure: %s\n", strerror(errno));
 
                     (void) close(logFd);
                     logFd = -1;
