@@ -6,7 +6,9 @@
           "ldmadmin stop"
 
     scour(1):
-        * Documented missing options in man(1) page.
+        * Documented in man(1) page:
+            * Missing options
+            * Specification of hours and minutes in configuration-file
 
     logging:
         * Corrected logging initialization (i.e., logi_init()) when package is configured to use
