@@ -5,8 +5,9 @@
  *         
  *  @file:  scour.c
  * @author: Mustapha Iles
+ * @author: Steven R. Emmerson
  *
- *    Copyright 2021 University Corporation for Atmospheric Research
+ *    Copyright 2022 University Corporation for Atmospheric Research
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -674,19 +675,19 @@ usage(const char*       progname,
     log_log(level,
 "Usage:\n"
 "       %s -h \n"
-"       %s [-dvx] [-e excludes] [-l dest] [config]\n"
+"       %s [-d] [-e <excludes>] [-l dest] [-v|-x] [<config>]\n"
 "Where:\n"
-" -d          Enable directory deletion.\n"
-" -e excludes Pathname of file listing directories to be excluded.\n"
-"             Default is \"%s\".\n"
-" -h          Print this usage() message and exit.\n"
-" -l dest     Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"             (standard error), or file `dest`.\n"
-"             Default is \"%s\".\n"
-" -v          Log INFO  messages\n"
-" -x          Log DEBUG messages\n"
-" config      Configuration file.\n"
-"             Default is \"%s\".\n",
+" -d            Enable directory deletion.\n"
+" -e <excludes> Pathname of file listing directories to be excluded.\n"
+"               Default is \"%s\".\n"
+" -h            Print this usage() message and exit.\n"
+" -l dest       Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"               (standard error), or file `dest`.\n"
+"               Default is \"%s\".\n"
+" -v            Log messages down to the INFO level\n"
+" -x            Log messages down to the DEBUG level\n"
+" config        Configuration file.\n"
+"               Default is \"%s\".\n",
             progname,
             progname,
             excludePath,
