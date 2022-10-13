@@ -122,22 +122,24 @@ LDM</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>100</x>
+      <x>110</x>
       <y>140</y>
-      <w>160</w>
-      <h>30</h>
+      <w>140</w>
+      <h>80</h>
     </coordinates>
-    <panel_attributes>Extremely Bad
-style=wordwrap
+    <panel_attributes>Bandwidth=1
+Bus Factor=1
+style=autoresize
 halign=center
-fontsize=18</panel_attributes>
+fontsize=18
+</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
       <x>450</x>
-      <y>780</y>
+      <y>740</y>
       <w>410</w>
       <h>50</h>
     </coordinates>
@@ -151,7 +153,7 @@ Boundary</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>460</x>
-      <y>880</y>
+      <y>840</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -163,31 +165,33 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>730</x>
-      <y>880</y>
+      <y>840</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;system&gt;&gt;
-LDM</panel_attributes>
+LDM
+bg=pink</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
       <x>460</x>
-      <y>680</y>
+      <y>640</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;system&gt;&gt;
-LDM</panel_attributes>
+LDM
+bg=pink</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
       <x>730</x>
-      <y>680</y>
+      <y>640</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -199,7 +203,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>780</x>
-      <y>710</y>
+      <y>670</y>
       <w>30</w>
       <h>190</h>
     </coordinates>
@@ -210,7 +214,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>510</x>
-      <y>710</y>
+      <y>670</y>
       <w>30</w>
       <h>190</h>
     </coordinates>
@@ -221,7 +225,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>560</x>
-      <y>880</y>
+      <y>840</y>
       <w>190</w>
       <h>30</h>
     </coordinates>
@@ -232,7 +236,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>560</x>
-      <y>900</y>
+      <y>860</y>
       <w>190</w>
       <h>30</h>
     </coordinates>
@@ -243,7 +247,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1050</x>
-      <y>780</y>
+      <y>740</y>
       <w>360</w>
       <h>40</h>
     </coordinates>
@@ -256,43 +260,46 @@ Administrative Boundary</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1060</x>
-      <y>880</y>
+      <y>840</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;system&gt;&gt;
-LDM</panel_attributes>
+LDM
+bg=pink</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1280</x>
-      <y>880</y>
+      <y>840</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;system&gt;&gt;
-LDM</panel_attributes>
+LDM
+bg=pink</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1060</x>
-      <y>680</y>
+      <y>640</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
     <panel_attributes>&lt;&lt;system&gt;&gt;
-LDM</panel_attributes>
+LDM
+bg=pink</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1280</x>
-      <y>680</y>
+      <y>640</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -304,7 +311,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1330</x>
-      <y>710</y>
+      <y>670</y>
       <w>30</w>
       <h>190</h>
     </coordinates>
@@ -315,7 +322,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1110</x>
-      <y>710</y>
+      <y>670</y>
       <w>30</w>
       <h>190</h>
     </coordinates>
@@ -326,7 +333,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1110</x>
-      <y>710</y>
+      <y>670</y>
       <w>190</w>
       <h>190</h>
     </coordinates>
@@ -337,7 +344,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1160</x>
-      <y>710</y>
+      <y>670</y>
       <w>200</w>
       <h>190</h>
     </coordinates>
@@ -347,13 +354,14 @@ LDM</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>610</x>
-      <y>600</y>
-      <w>80</w>
-      <h>30</h>
+      <x>580</x>
+      <y>560</y>
+      <w>140</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>Better
-style=wordwrap
+    <panel_attributes>Bandwidth=2
+Bus Factor=2
+style=autoresize
 halign=center
 fontsize=18</panel_attributes>
     <additional_attributes/>
@@ -361,13 +369,14 @@ fontsize=18</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>1190</x>
-      <y>610</y>
-      <w>80</w>
-      <h>30</h>
+      <x>1150</x>
+      <y>560</y>
+      <w>160</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>Best
-style=wordwrap
+    <panel_attributes>Bandwidth=2
+Bus Factor=2,3
+style=autoresize
 halign=center
 fontsize=18</panel_attributes>
     <additional_attributes/>
@@ -390,7 +399,7 @@ Boundary</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>400</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -402,7 +411,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>530</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -414,7 +423,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>670</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -426,7 +435,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>800</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -438,7 +447,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>450</x>
-      <y>910</y>
+      <y>870</y>
       <w>90</w>
       <h>170</h>
     </coordinates>
@@ -449,7 +458,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>510</x>
-      <y>910</y>
+      <y>870</y>
       <w>100</w>
       <h>170</h>
     </coordinates>
@@ -460,7 +469,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>510</x>
-      <y>910</y>
+      <y>870</y>
       <w>210</w>
       <h>170</h>
     </coordinates>
@@ -471,7 +480,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>510</x>
-      <y>910</y>
+      <y>870</y>
       <w>310</w>
       <h>170</h>
     </coordinates>
@@ -482,7 +491,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>780</x>
-      <y>910</y>
+      <y>870</y>
       <w>100</w>
       <h>170</h>
     </coordinates>
@@ -493,7 +502,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>750</x>
-      <y>910</y>
+      <y>870</y>
       <w>60</w>
       <h>170</h>
     </coordinates>
@@ -504,7 +513,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>610</x>
-      <y>910</y>
+      <y>870</y>
       <w>200</w>
       <h>170</h>
     </coordinates>
@@ -515,7 +524,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>500</x>
-      <y>910</y>
+      <y>870</y>
       <w>310</w>
       <h>170</h>
     </coordinates>
@@ -526,7 +535,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>980</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -538,7 +547,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1110</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -550,7 +559,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1250</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -562,7 +571,7 @@ LDM</panel_attributes>
     <id>UMLGeneric</id>
     <coordinates>
       <x>1380</x>
-      <y>1060</y>
+      <y>1020</y>
       <w>110</w>
       <h>40</h>
     </coordinates>
@@ -574,7 +583,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1030</x>
-      <y>910</y>
+      <y>870</y>
       <w>110</w>
       <h>170</h>
     </coordinates>
@@ -585,7 +594,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1110</x>
-      <y>910</y>
+      <y>870</y>
       <w>80</w>
       <h>170</h>
     </coordinates>
@@ -596,7 +605,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1110</x>
-      <y>910</y>
+      <y>870</y>
       <w>180</w>
       <h>170</h>
     </coordinates>
@@ -607,7 +616,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1110</x>
-      <y>910</y>
+      <y>870</y>
       <w>290</w>
       <h>170</h>
     </coordinates>
@@ -618,7 +627,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1330</x>
-      <y>910</y>
+      <y>870</y>
       <w>130</w>
       <h>170</h>
     </coordinates>
@@ -629,7 +638,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1310</x>
-      <y>910</y>
+      <y>870</y>
       <w>50</w>
       <h>170</h>
     </coordinates>
@@ -640,7 +649,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1190</x>
-      <y>910</y>
+      <y>870</y>
       <w>170</w>
       <h>170</h>
     </coordinates>
@@ -651,7 +660,7 @@ LDM</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>1080</x>
-      <y>910</y>
+      <y>870</y>
       <w>280</w>
       <h>170</h>
     </coordinates>
@@ -687,13 +696,14 @@ LDM</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>600</x>
+      <x>590</x>
       <y>140</y>
-      <w>110</w>
-      <h>30</h>
+      <w>140</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>Very Bad
-style=wordwrap
+    <panel_attributes>Bandwidth=4
+Bus Factor=1
+style=autoresize
 halign=center
 fontsize=18</panel_attributes>
     <additional_attributes/>
@@ -831,13 +841,14 @@ LDM</panel_attributes>
   <element>
     <id>Text</id>
     <coordinates>
-      <x>1190</x>
+      <x>1180</x>
       <y>140</y>
-      <w>110</w>
-      <h>30</h>
+      <w>140</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>Still Bad
-style=wordwrap
+    <panel_attributes>Bandwidth=4
+Bus Factor=2
+style=autoresize
 halign=center
 fontsize=18</panel_attributes>
     <additional_attributes/>
