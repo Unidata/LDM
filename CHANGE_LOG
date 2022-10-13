@@ -5,9 +5,12 @@
         * Added 1 s timeout to ldmping(1) in isRunning() to speed up "ldmadmin start" and
           "ldmadmin stop"
 
+    scour(1):
+        * Documented missing options in man(1) page.
+
     logging:
         * Corrected logging initialization (i.e., logi_init()) when package is configured to use
-          the system logging daemon (--with-ulog).
+          the system logging daemon.
 
 6.13.17.31      2022-07-02T13:39:03-0600
     NOAAPort:
