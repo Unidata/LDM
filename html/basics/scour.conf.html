@@ -42,12 +42,11 @@ where:
 	directory.  It will follow symbolic links.
 
     <dt><i>maxAge</i>
-    <dd>is the maximum age, in days - optionally specifying time (days[-hhmmss]), 
-    for the files/directories to be considered for deletion.
+    <dd>is the maximum age ([days][-hh:mm])
+        for the files/directories to be considered for deletion.
         Files in the top directory that are older than this will be deleted.  
-        Empty (sub-) directories are not deleted unless a -d option is specified.
-        Directories that are also symbolic links are not deleted. 
-	    
+        Empty (sub-) directories are not deleted unless the -d option is specified.
+        Directories that are symbolic links are not deleted. 
 
     <dt>[<i>pattern</i>]
     <dd>is an optional pattern used for filename expansion.  The default is
