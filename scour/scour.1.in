@@ -106,8 +106,11 @@ The formats for the "Days-old" field are
 .P
 .RS +4
 .nf
-\fID\fR[\fB-\fIhh\fR[\fB:\fImm\fR]]
-[\fID\fR]\fB-\fIhh\fR[\fB:\fImm\fR]
+\fID
+\fB-\fIhh
+\fB-\fIhh\fB:\fImm
+\fID\fB-\fIhh
+\fID\fB-\fIhh\fB:\fImm
 .fi
 .RE
 
