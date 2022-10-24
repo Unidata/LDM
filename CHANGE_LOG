@@ -9,6 +9,9 @@
         * Documented in man(1) page:
             * Missing options
             * Specification of hours and minutes in configuration-file
+        * Corrected format of "old" specification in
+            * Configuration-file
+            * scour(1) internal comments
 
     logging:
         * Corrected logging initialization (i.e., logi_init()) when package is configured to use
