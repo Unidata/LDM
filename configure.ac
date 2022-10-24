@@ -740,6 +740,7 @@ AC_CONFIG_FILES([
     grib2/Makefile
     gribinsert/Makefile
     html/basics/activating.html
+    html/basics/index.html
     html/basics/Makefile
     html/basics/rpm-install-steps.html
     html/basics/source-install-steps.html
