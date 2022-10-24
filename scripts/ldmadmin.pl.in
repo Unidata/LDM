@@ -375,6 +375,7 @@ elsif ($command eq "plotmetrics") {
         shift;
         /^-b/ && ($begin = shift);
         /^-e/ && ($end = shift);
+        /^-o/ && ($template = shift);
     }
     $status = plotMetrics();
 }
@@ -475,7 +476,8 @@ commands:
                                                  termination
     printmetrics                             Prints LDM metrics
     addmetrics                               Accumulates LDM metrics
-    plotmetrics [-b begin] [-e end]          Plots LDM metrics
+    plotmetrics [-b begin] [-e end] [-o template]
+                                             Plots LDM metrics
     newmetrics                               Rotates the metrics files
     showsettings                             Reveals current installation settings
     updategempaktables                       Updates the GEMPAK tables
@@ -493,6 +495,8 @@ options:
     -M max_clients  Maximum number of active clients
     -n numlogs      Number of logs to rotate. Default: $numlogs
     -o offset       Unconditional data-request temporal-offset
+    -o template     Plot metrics to files <template><plot_name>.png. Default
+                    is to use X-server.
     -p pqact_conf   Specify a pqact config path. 
                     Default: valid pqact path(s) in EXEC \"pqact\" line(s)
                     in LDM config file,
@@ -1000,7 +1004,7 @@ sub isRunning
 
 # The following test is incompatible with the use of a proxy
     if (!$running) {
-	my($cmd_line) = "ldmping -l- -i 0";
+	my($cmd_line) = "ldmping -l- -i 0 -t 1";
 	$cmd_line = $cmd_line . " $ip_addr" if $ip_addr ne "0.0.0.0";
 
 	system("$cmd_line > /dev/null 2>&1");
@@ -2029,7 +2033,12 @@ sub printMetrics
 # Command for plotting metrics:
 sub plotMetrics
 {
-    return system("plotMetrics -b $begin -e $end $metrics_files");
+    if ($template) {
+        return system("plotMetrics -b $begin -e $end -o $template $metrics_files");
+    }
+    else {
+        return system("plotMetrics -b $begin -e $end $metrics_files");
+    }
 }
 
 ###############################################################################

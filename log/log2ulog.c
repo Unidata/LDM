@@ -98,18 +98,13 @@ static int reinit(void)
  */
 int logi_init(const char* const id)
 {
-    int status = -1;
+    const char* progname = id ? logl_basename(id) : NULL;
+    int         status = openulog(progname, LOG_PID, LOG_LDM, log_dest);
 
-    if (id != NULL) {
-        const char* const progname = logl_basename(id);
-        int               status = openulog(progname, LOG_PID, LOG_LDM,
-                log_dest);
-
-        if (status != -1) {
-            // Allow all levels because the higher layer will control
-            (void)setulogmask(LOG_UPTO(LOG_DEBUG));
-            status = 0;
-        }
+    if (status != -1) {
+        // Allow all levels because the higher layer will control
+        (void)setulogmask(LOG_UPTO(LOG_DEBUG));
+        status = 0;
     }
 
     return status;

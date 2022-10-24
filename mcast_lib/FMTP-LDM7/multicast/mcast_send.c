@@ -18,7 +18,7 @@
 
 
 #define HELLO_PORT 5173
-#define HELLO_GROUP "224.0.0.1"
+#define MCAST_ADDR "224.0.0.1"
 
 
 int main(int argc, char *argv[])
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     /* set up destination address */
     memset(&addr,0,sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(HELLO_GROUP);
+    addr.sin_addr.s_addr = inet_addr(MCAST_ADDR);
     addr.sin_port = htons(HELLO_PORT);
 
     if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {

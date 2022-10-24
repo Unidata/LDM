@@ -14,11 +14,13 @@
 #include "productMaker.h"     /* Eat own dog food */
 
 #include <ctype.h> /* Required for character classification routines - isalpha */
+#include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -176,8 +178,11 @@ void* pmStart(
     psh_struct*         psh = &productMaker->psh;
     pdb_struct*         pdb = &productMaker->pdb;
     ccb_struct*         ccb = &productMaker->ccb;
-    unsigned long       last_sbn_seqno = 0;
+    bool                firstFrameSeen = false;
+    unsigned long       last_sbn_seqno = 0; // Change this type carefully
     unsigned long       last_sbn_runno = ULONG_MAX;
+    unsigned            prevProdSeqNum;
+    unsigned            prevBlockNum;
     int                 PNGINIT = 0;
     char*               memheap = NULL;
     MD5_CTX*            md5ctxp = productMaker->md5ctxp;
@@ -408,41 +413,6 @@ int    nnnxxx_offset;
 #define          MAX_SEQNO 0xFFFFFFFFu
 
         log_debug("***********************************************");
-        if (last_sbn_runno != sbn->runno) {
-            last_sbn_runno = sbn->runno;
-        }
-        else {
-
-            /*
-             * The sequence number is 4 bytes and `& MAX_SEQNO` is necessary if
-             * `sizeof(unsigned long) > 4`
-             */
-            const unsigned long   delta =
-                    (unsigned long)(sbn->seqno - last_sbn_seqno) & MAX_SEQNO;
-
-            if (0 == delta || MAX_SEQNO/2 < delta) {
-                log_warning_q("Retrograde packet number: previous=%lu, latest=%lu, "
-                        "difference=%lu", last_sbn_seqno, sbn->seqno, 
-                        0 == delta ? 0ul : MAX_SEQNO - delta + 1);
-            }
-            else {
-                if (1 != delta) {
-                    unsigned long   gap = delta - 1;
-
-                    log_warning_q("Gap in packet sequence: %lu to %lu [skipped %lu]",
-                             last_sbn_seqno, sbn->seqno, gap);
-
-                    (void)pthread_mutex_lock(&productMaker->mutex);
-                    productMaker->nmissed += gap;
-                    (void)pthread_mutex_unlock(&productMaker->mutex);
-                }
-
-                (void)pthread_mutex_lock(&productMaker->mutex);
-                productMaker->nframes++;
-                (void)pthread_mutex_unlock(&productMaker->mutex);
-            }                           /* non-retrograde frame number */
-        }                               /* "last_sbn_seqno" initialized */
-        last_sbn_seqno = sbn->seqno;
 
         log_info_q("SBN seqnumber %ld", sbn->seqno);
         log_info_q("SBN datastream %d command %d", sbn->datastream, sbn->command);
@@ -512,7 +482,6 @@ int    nnnxxx_offset;
 
         if ((pdh->transtype & 16) > 0) {
             PROD_COMPRESSED = 1;
-
             log_debug("Product transfer flag compressed %u", pdh->transtype);
         }
         else {
@@ -522,14 +491,56 @@ int    nnnxxx_offset;
         log_debug("header length %ld [pshlen = %d]", pdh->len + pdh->pshlen, pdh->pshlen);
         log_debug("blocks per record %ld records per block %ld\n", pdh->blocks_per_record,
                 pdh->records_per_block);
-        log_debug("product seqnumber %ld block number %ld data block size %ld", pdh->seqno,
+        log_debug("product seqnumber %ld block number %d data block size %d", pdh->seqno,
                 pdh->dbno, pdh->dbsize);
 
-        /* Stop here if no psh */
+        /*
+         * Stop here if no psh.
+         *
+         * This will be true for synchronization frames (NbsFH::command == 5) -- SRE 2022-03-30
+         */
         if ((pdh->pshlen == 0) && (pdh->transtype == 0)) {
             // IOFF = IOFF + sbn->len + pdh->len; // `IOFF` value isn't used
             continue;
         }
+
+        if (!firstFrameSeen) {
+            firstFrameSeen = true;
+        }
+        else {
+            const uint32_t delta = sbn->seqno - last_sbn_seqno;
+
+            if (delta == 0 || MAX_SEQNO/2 < delta) {
+                log_warning_q("Retrograde packet number: previous=%lu, latest=%lu, "
+                        "difference=%" PRIu32, last_sbn_seqno, sbn->seqno, delta);
+            }
+            else {
+                const uint32_t nmissed = delta - 1;
+                if (nmissed) {
+                    if ((pdh->seqno == prevProdSeqNum && pdh->dbno == prevBlockNum + 1)
+                            || (pdh->seqno == prevProdSeqNum + 1 && pdh->dbno == 0)) {
+                        log_debug("%" PRIu32 " non-data frame(s) missed", nmissed);
+                    }
+                    else {
+                        log_add("Gap in packet sequence: %lu to %lu [skipped %" PRIu32 "]",
+                                 last_sbn_seqno, sbn->seqno, nmissed);
+                        log_add("prevProdSeqNum=%u, pdh->seqno=%ld, prevBlockNum=%u, pdh->dbno=%d",
+                                prevProdSeqNum, pdh->seqno, prevBlockNum, pdh->dbno);
+                        log_flush_warning();
+                        (void)pthread_mutex_lock(&productMaker->mutex);
+                        productMaker->nmissed += nmissed;
+                        (void)pthread_mutex_unlock(&productMaker->mutex);
+                    }
+                }
+
+                (void)pthread_mutex_lock(&productMaker->mutex);
+                productMaker->nframes++;
+                (void)pthread_mutex_unlock(&productMaker->mutex);
+            }
+        }
+        last_sbn_seqno = sbn->seqno;
+        prevProdSeqNum = pdh->seqno;
+        prevBlockNum = pdh->dbno;
 
 #ifdef RETRANS_SUPPORT
                 /** Update acquisition table statistics  **/
@@ -794,8 +805,8 @@ int    nnnxxx_offset;
                     pdh->len + pdh->pshlen, pdh->pshlen);
                 log_error_q("blocks per record %ld records per block %ld",
                     pdh->blocks_per_record, pdh->records_per_block);
-                log_error_q("product seqnumber %ld block number %ld data block "
-                    "size %ld", pdh->seqno, pdh->dbno, pdh->dbsize);
+                log_error_q("product seqnumber %ld block number %d data block "
+                    "size %d", pdh->seqno, pdh->dbno, pdh->dbsize);
                 log_error_q("product header flag %d", psh->hflag);
                 log_error_q("prodspecific data length %ld", psh->psdl);
                 log_error_q("bytes per record %ld", psh->bytes_per_record);
@@ -923,7 +934,7 @@ int    nnnxxx_offset;
             }
             if (prod.head == NULL) {
                 log_info_q("found data block before header, "
-                    "skipping sequence %d frag #%d", pdh->seqno, pdh->dbno);
+                    "skipping sequence %ld frag #%d", pdh->seqno, pdh->dbno);
                 continue;
             }
         } // Don't have product-specific header (pdh->pshlen == 0)
@@ -1569,16 +1580,17 @@ int    nnnxxx_offset;
 /**
  * Returns statistics since the last time this function was called or \link
  * pmStart() \endlink was called.
+ *
+ * @param[in]  productMaker      Product maker
+ * @param[out] frameCount        Number of frames
+ * @param[out] missedFrameCount  Number of missed frames
+ * @param[out] prodCount         Number of products inserted into the product-queue
  */
 void pmGetStatistics(
-    ProductMaker* const     productMaker,       /**< [in] Pointer to the
-                                                  *  product-maker */
-    unsigned long* const    frameCount,         /**< [out] Number of frames */
-    unsigned long* const    missedFrameCount,   /**< [out] Number of missed
-                                                  *  frames */
-    unsigned long* const    prodCount)          /**< [out] Number of products 
-                                                  *  inserted into the
-                                                  *  product-queue */
+    ProductMaker* const  productMaker,
+    unsigned long* const frameCount,
+    unsigned long* const missedFrameCount,
+    unsigned long* const prodCount)
 {
     (void)pthread_mutex_lock(&productMaker->mutex);
 
@@ -1619,7 +1631,7 @@ static z_stream i_zstrm;
  * @param[in]  inBuf    Pointer to the frame buffer
  * @param[in]  inLen    Length of the compressed data
  * @param[out] outBuf   Pointer to uncompressed frame data buffer
- * @param[in]  outLen   Length of uncompressed frame
+ * @param[out] outLen   Length of uncompressed frame
  * @param[in]  blk      Block position
  * @retval  0           The frame was successfully uncompressed
  * @retval -1           Failed to uncompress

@@ -1,8 +1,163 @@
-6.13.17.13
+6.13.17.32
+    ldmadmin(1):
+        * Added "-o <template>" option to "plotmetrics" command to write metrics plots to files
+          instead of to the X-server.
+        * Added 1 s timeout to ldmping(1) in isRunning() to speed up "ldmadmin start" and
+          "ldmadmin stop"
+
+    scour(1):
+        * Documented in man(1) page:
+            * Missing options
+            * Specification of hours and minutes in configuration-file
+
+    logging:
+        * Corrected logging initialization (i.e., logi_init()) when package is configured to use
+          the system logging daemon.
+
+6.13.17.31      2022-07-02T13:39:03-0600
+    NOAAPort:
+        * blender(1): Corrected getUplinkId()
+
+6.13.17.30      2022-06-15T14:18:00-0600
+    Top-level LDM server, ldmd(1):
+        * Now becomes owned by root before sending SIGTERM to process group to ensure that even
+          setuid processes that are owned by root receive the signal. Relinquishes root privileges
+          immediately after sending the signal.
+
+    NOAAPort:
+        * blender(1):
+            * Removed unblocking of signals because that's the purview of the parent process
+            * Enhance information in late-frame log message
+
+    rpc(3):
+        * Fix latent security bug in unexecuted code
+
+6.13.17.29      2022-05-16T16:11:06-0600
+    Documentation:
+        * Enhanced section on pqact(1) decoders in the "Programs" page:
+            * Corrected the HTML to make visible the paragraph on shell scripts
+            * Added an example shell script that duplicates the FILE action and uses the ulogger(1)
+              utility to log error messages
+
+    NOAAPort:
+        * blender(1):
+            * Corrected return value of input routine for system failure
+            * Handle SIGPIPE rather than block it to ensure termination if no FIFO reader
+
+6.13.17.28      2022-05-13T14:14:43-0600
+    NOAAPort:
+        * noaaportBlender(1):
+            * Modified how the processes are invoked to ensure independence
+            * Removed sleep between re-invocations
+        * blender(1):
+            * Blocked SIGPIPE so that the write(2) to the FIFO returns with an error 
+            * Eliminated superfluous mutex in queueManager.c
+        * noaaportIngester(1): Ensured that all messages are logged when the input closes
+
+6.13.17.27      2022-04-26T14:24:10-0600
+    NOAAPort:
+        * blender(1):
+            * Improved error handling
+            * Fix bug in return code of nbs_getFrame()
+
+6.13.17.26      2022-04-26T13:11:47-0600
+    NOAAPort:
+        * noaaportIngester(1):
+            * Renamed some "last..." variables to "prev..." for clarity
+            * Change logging level of product sequence number diagnostic when a gap is found from
+              NOTE to WARN to ensure visibility when grep(1)ping.
+        * blender(1):
+            * Fix latent bug due to missing "break" in nbs_getFrame() FSM switch statement
+            * Improved diagnostic error logging
+
+6.13.17.25      2022-04-20T13:37:07-0600
+    NOAAPort:
+        * blender(1): Improve diagnostic logging
+            * Log previous and current keys when frame arrives too late
+            * Log change to data transmission source
+
+6.13.17.24      2022-04-20T12:35:27-0600
+    NOAAPort:
+        * blender(1): Modified to use SBN source variable as major key (in addition to product
+          sequence number and data-block number) for ordering frames
+
+6.13.17.23      2022-04-15T14:48:47-0600
+    NOAAPort:
+        * blender(1): Added logging of unknown frame header command value
+        * noaaportIngester(1):
+            * Continue after inability to set desired scheduling of input thread
+            * Log previous and current product sequence numbers and data-block numbers when a gap is
+              detected
+
+6.13.17.22      2022-04-08T16:37:13-0600
+    NOAAPort:
+        * noaaportIngester(1): Corrected previous modification of gap reporting.
+        * blender(1): Improved execution and handling of input threads 
+
+6.13.17.21      2022-03-31T12:02:51-0600
+    NOAAPort:
+        * blender(1): Major refactoring
+            * nbs_getFrame() is now implemented as a nondeterministic finite-state machine for rigor
+              and ease of modification
+            * Replaced use of run number and sequence number in frame-level header with product
+              sequence number and data-block number in product-definition header because the former
+              pair of numbers isn't reliable
+            * Only data transfer frames are output because only they can be sequenced
+        * Documented the meaning of bit 2^4 (value 16) in the transfer type field of the
+          product-definition header (according to ProductMaker, it means the product is compressed)
+        * noaaportIngester(1):
+            * Modified "gap" reporting to support receiving data frames only: if a frame-level gap
+              occurs but the PDH product sequence number and data block number are contiguous, then
+              the missing frame(s) will be ignored and not counted.
+            * Moved the test for no product-specific header and a transfer type of 0 to before the
+              test for frame gaps because the PDH for such a frame is invalid and the gap check now
+              requires a valid PDH
+
+6.13.17.20      2022-03-17T12:44:55-0600
+    NOAAPort:
+        * blender(1):
+            * Change INFO message about starting new product
+            * Use stated number of bytes in synchronization frame's PDH
+
+6.13.17.19      2022-03-17T11:16:38-0600
+    NOAAPort:
+        * blender(1): Write synchronization frames
+
+6.13.17.18      2022-03-16T16:23:59-0600
+    NOAAPort:
+        * blender(1): Search for the next frame when a sync-frame is encountered because the PDH in
+          the sync-frame is garbage
+
+6.13.17.17      2022-03-16T15:22:23-0600
+    NOAAPort:
+        * blender(1): Moved vetting of frame size in readPDH() to before check of command-type so
+          it's always done if the return status is zero
+
+6.13.17.16      2022-03-16T14:37:10-0600
+    NOAAPort:
+        * blender(1):
+            * Unconditionally decode PDH
+            * Log bad PDH at NOTE level
+
+6.13.17.15      2022-03-11T16:18:54-0700
+    NOAAPort:
+        * blender(1): Set data block size to 0 for sync frames and 0 transfer-type
+
+6.13.17.14      2022-03-11T15:19:28-0700
+    NOAAPort:
+        * blender(1):
+            * Added to "make root-actions" to have it owned by root and setuid so
+              that it can increase the priority of its threads
+            * Added calling of log_refresh() upon SIGUSR1 reception
+            * Added totalSize member to product-definition header structure
+            * Made frame-filter more lenient. Ignore PSH. Ignore data block offset.
+
+6.13.17.13      2022-03-08T09:37:36-0700
     NOAAPort:
         * GEMPAK tables: Added
             000 019 235 008 Joint Fire Weather Probability   % JFWPRB   0  -9999.00
             000 019 237 008 Dry Thunderstorm Probability     % DRYTPROB 0  -9999.00
+        * blender(1): Improved performance of frame reading
 
 6.13.17.12      2022-03-04T16:22:19-0700
     NOAAPort:

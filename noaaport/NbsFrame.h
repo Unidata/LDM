@@ -17,6 +17,7 @@
 
 #define NBS_FH_SIZE  16    ///< Canonical frame header size in bytes
 #define NBS_PDH_SIZE 16    ///< Canonical product-definition header size in bytes
+#define NBS_TCH_SIZE 32    ///< Canonical time-command header size in bytes
 
 /// NBS return codes:
 enum {
@@ -24,59 +25,55 @@ enum {
     NBS_SPACE,   ///< Insufficient space for frame
     NBS_EOF,     ///< End-of-file read
     NBS_IO,      ///< I/O error
-    NBS_INVAL    ///< Invalid frame
+    NBS_INVAL,   ///< Invalid frame
+    NBS_SYSTEM   ///< System failure
 };
 
-typedef struct NbsReader  NbsReader;
+typedef struct NbsReader NbsReader;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
+//ssize_t getBytes(int fd, uint8_t* buf, size_t nbytes);
 
 /**
- * Returns a new NBS frame reader.
+ * Returns an NBS frame reader.
  *
- * @param[in] fd  Input file descriptor. Will be closed by `nbs_deleteReader()`.
- * @return        New reader
- * @retval NULL   System failure. `log_add()` called.
- * @see `nbs_freeReader()`
+ * @param[in]  fd      Input file descriptor. Will be closed by `nbs_destroy()`.
+ * @retval     NULL    Allocation failure. `log_add()` called.
+ * @return             Pointer to new instance
+ * @see                `nbs_free()`
  */
-NbsReader* nbs_newReader(int fd);
+NbsReader* nbs_new(const int fd);
 
 /**
- * Frees the resources associated with an NBS frame reader. Closes the
- * file descriptor given to `nbs_newReader()`.
+ * Frees an NBS frame reader.
  *
- * @param[in] reader  NBS reader
- * @see `nbs_newReader()`
+ * @param[in] reader  NBS frame reader
+ * @see               `nbs_new()`
  */
-void nbs_freeReader(NbsReader* reader);
+void nbs_free(NbsReader* reader);
 
 /**
  * Returns the next NBS frame.
  *
- * @param[in]  reade r  NBS reader
- * @param[out] buf      Pointer to NBS frame. May be NULL.
- * @param[out] size     Size of NBS frame. May be NULL.
- * @param[out] fh       Pointer to decoded frame header. May be NULL.
- * @param[out] pdh      Pointer to decoded product-definition header. May be
- *                      NULL.
- * @param[out] psh      Pointer to decoded product-specific header. May be NULL.
- * @retval NBS_SUCCESS  Success. `buf`, `size`, `fh`, `pdh` are set if non-NULL.
- *                      If non-NULL, `psh` is set if the PSH exists and to NULL
- *                      if it doesn't.
- * @retval NBS_EOF      End-of-file read
- * @retval NBS_IO       I/O failure
+ * @param[in]  reader   NBS reader
+ * @param[out] frame    NBS frame
+ * @param[out] size     Size of NBS frame in bytes
+ * @param[out] fh       NBS frame header
+ * @param[out] pdh      NBS product-definition header or NULL. Set iff `fh->command ==
+ *                      NBS_FH_CMD_DATA`.
+ * @retval NBS_SUCCESS  Success. `*frame`, `*size`, and `*fh` are set.
+ * @retval NBS_EOF      End-of-file read. `log_add()` called.
+ * @retval NBS_IO       I/O failure. `log_add()` called.
  */
 int nbs_getFrame(
-        NbsReader* const      reader,
-        const uint8_t** const buf,
-        size_t*               size,
-        const NbsFH** const   fh,
-        const NbsPDH** const  pdh,
-        const NbsPSH** const  psh);
+        NbsReader* const reader,
+        uint8_t** const  frame,
+        size_t* const    size,
+        NbsFH** const    fh,
+        NbsPDH** const   pdh);
 
 #ifdef __cplusplus
 }

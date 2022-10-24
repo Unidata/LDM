@@ -188,7 +188,6 @@ Such programs have the following characteristics:
     <li>Their standard input is a read-only pipe with the parent
 	<a href="glindex.html#pqact">pqact</a> process but their standard
 	output and standard error do not exist (but see below).
-         
 
     <li>They self-terminate if no data has been received
 	within a certain period of time (<i>e.g.</i>, 10 minutes)
@@ -220,11 +219,13 @@ Such programs have the following characteristics:
 	    <tt>pqact</tt> configuration-file</a>.
 
 	</ul>
+</ul>
 
 Because a decoder doesn't have a useful standard output or standard error, a
-decoder that depends them will not function correctly. An easy workaround
-exists, however: wrap the decoder in a simple script that redirects such
-output into files. The following script is an example:
+decoder that depends them (to report errors, for example) will not function
+correctly. An easy workaround exists, however: wrap the decoder in a simple
+shell script that redirects such output into files. The following shell script is an
+example:
 <blockquote><pre><tt>
 #!/bin/sh
 exec 1&gt;&lt;stdout&gt;
@@ -241,9 +242,27 @@ where:
 
   <dt> &lt;decoder&gt;
   <dd> Is the pathname of the actual decoder
-<\dl>
+</dl>
 
-</ul>
+Decoders that are, themselves, shell scripts, may use the LDM package's <tt>ulogger</tt> utility
+to log error messages. For example, the following, simple
+shell script concatenates its standard input to a file -- reproducing the effect of the
+<tt>pqact(1) FILE</tt> action:
+<blockquote><pre><tt>
+progname=`basename $0`
+if test $# -ne 1; then
+  ulogger -p FATAL "$progname: Usage: $progname &lt;file&gt;"
+else
+  file=$1
+  if ! cat >> "$file"; then
+    ulogger -p FATAL "$progname: Couldn't append to file \"$file\""
+  fi
+fi
+</tt></pre></blockquote>
+By default, the <tt>ulogger</tt> utility logs at the <tt>NOTE</tt> level. It also
+uses the same logging mechanism as the other LDM programs;
+consequently, it will log to the LDM log file by default unless overridden by the "<tt>-l
+<em>file</em></tt>" option.
 
 <hr>
 

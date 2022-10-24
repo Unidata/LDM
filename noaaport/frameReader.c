@@ -21,83 +21,97 @@
 
 //  ========================================================================
 extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
-extern int   	tryInsertInQueue( uint32_t, uint16_t, const uint8_t*, uint16_t);
+extern int   	tryInsertInQueue( const NbsFH*, const NbsPDH*, const uint8_t*, uint16_t);
 extern int      rcvBufSize;
 //  ========================================================================
 
+static void 	createThreadAndDetach(const char*);
 /**
- * Function to read data bytes from the connection, rebuild the SBN frame,
- * and insert the data in a queue.
- * Never returns. Will terminate the process if a fatal error occurs.
+ * Function to read data bytes from the connection, rebuild the SBN frame, and insert the data in a
+ * queue.
  *
- * @param[in]  clientSockId  Socket Id for this client reader thread
+ * @param[in]  	clientSockId  Socket Id for this client reader thread
+ * @retval      NBS_EOF       End-of-file. `log_add()` called.
+ * @retval	  	NBS_IO        I/O failure. `log_add()` called.
+ * @retval      NBS_SYSTEM    System failure. `log_add()` called.
  */
-static void
+static int
 buildFrameRoutine(int clientSockFd)
 {
-    log_notice("In buildFrameRoutine() waiting to read from "
-    		"(fanout) server socket...\n");
+	int        status;
+    NbsFH*     fh;
+    NbsPDH*    pdh;
+    uint8_t*   frame;
+    size_t     frameSize;
+    NbsReader* reader = nbs_new(clientSockFd);
 
-    NbsReader* nbsReader = nbs_newReader(clientSockFd);
+    if (reader == NULL) {
+        log_syserr("Couldn't allocate reader for socket %d", clientSockFd);
+        status = NBS_SYSTEM;
+    }
+    else {
+        log_notice("In buildFrameRoutine() waiting to read from (fanout) server socket...");
 
-    const uint8_t* 	buf;
-    size_t         	size;
-    const NbsFH*   	fh;
-    const NbsPDH*  	pdh;
-    const NbsPSH*  	psh;
-    log_level_t 	level;
+        for(;;)
+        {
+            if ((status = nbs_getFrame(reader, &frame, &frameSize, &fh, &pdh)) == NBS_SUCCESS)
+            {
+                // buffer now contains frame data
+                if (fh->command == NBS_FH_CMD_DATA) {
+                    // PDH exists. Insert data-transfer frame in queue
+                    status = tryInsertInQueue( fh, pdh, frame, frameSize);
 
-	int status;
-    for(;;)
-    {
-		if ((status = nbs_getFrame( nbsReader, &buf, &size, &fh, &pdh, &psh ))
-				== NBS_SUCCESS)
-		{
-			// buffer now contains frame data of size frameSize at offset 0
-			// Insert in queue
-			status = tryInsertInQueue( fh->seqno, fh->runno, buf, size);
-
-			if (status == 0) {
-			    if (pdh && (pdh->transferType & 1))
-                {
-                    if (psh )
-                        log_info("Starting product {SeqNum=%u, RunNum=%u, Cat=%u, prodCode=%u, Type=%u}" ,
-                                fh->seqno, fh->runno, psh->category, psh->prodCode, psh->type);
-                    else
-                        log_info("Starting product {SeqNum=%u, RunNum=%u}" ,
-                                fh->seqno, fh->runno);
+                    if (status == 0) {
+                        if (pdh->transferType & 1) {
+                            log_info("Starting product {fh->seqno=%u, fh->runno=%u,"
+                                    "pdh->prodSeqNum=%u}", fh->seqno, fh->runno, pdh->prodSeqNum);
+                        }
+                    }
+                    else if (status == 1) {
+                        log_flush_warning(); // Frame arrived too late
+                    }
+                    else if (status == 2) {
+                        log_add("Frame is a duplicate");
+                        log_flush_debug();
+                    }
+                    else {
+                        log_add("Couldn't add frame due to system failure", status);
+                        status = NBS_SYSTEM;
+                        break;
+                    }
                 }
-			}
-			else if (status == 1) {
-			    log_add("Frame was too late");
-			    log_flush_debug();
-			}
-			else if (status == 2) {
-			    log_add("Frame is a duplicate");
-			    log_flush_debug();
-			}
-			else {
-			    break;
-			}
-		}
-		else if( status == NBS_IO)
-		{
-			log_add_syserr("Read failure");
-			// n == -1 ==> read error
-		}
-		else if( status == NBS_EOF)
-		{
-			log_add("End of file");
-		}
+                else if (fh->command != 5 && fh->command != 10) {
+                    log_notice("Ignoring frame with command=%u", fh->command);
+                }
+            }
+            else {
+                if( status == NBS_IO)
+                {
+                    log_add("Read failure");
+                    // n == -1 ==> read error
+                }
+                else if( status == NBS_EOF)
+                {
+                    log_add("End of file");
+                }
+                else
+                {
+                    log_add("Unknown return status from nbs_getFrame(): %d", status);
+                }
 
-    } // for
+                break;
+            }
+        } // for
 
-    nbs_freeReader(nbsReader);
+        nbs_free(reader);
+    }
+
+    return status;
 }
 
 /**
  * Threaded function to initiate the frameReader running in its own thread.
- * Never returns. Will terminate the process if a fatal error occurs.
+ * Never returns. Will terminate the thread if a fatal error occurs.
  *
  * @param[in]  id  String identifier of server's address and port number. E.g.,
  *                     <hostname>:<port>
@@ -107,29 +121,27 @@ static void*
 inputClientRoutine(void* id)
 {
 	const char* serverId = (char*) id;
+	int socketClientFd;
 
     for(;;)
     {
 		// Create a socket file descriptor for the blender/frameReader(s) client
-		int socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
+		socketClientFd = socket(AF_INET, SOCK_STREAM, 0);
 		if(socketClientFd < 0)
 		{
-			log_add("socket creation failed\n");
-			log_flush_fatal();
+			log_fatal("socket creation failed\n");
 			exit(EXIT_FAILURE);
 		}
 
 		if( rcvBufSize > 0 )
 		{
-			int rc = setsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
-			                	&rcvBufSize, sizeof(int));
+			int rc = setsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF, &rcvBufSize, sizeof(int));
 			if(rc != 0 )
 				log_warning("Could not set receive buffer to %d bytes", rcvBufSize);
 		}
 		int optval;
 		int optlen = sizeof(optval);
-		int rc = getsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF,
-							&optval, &optlen);
+		int rc = getsockopt(socketClientFd, SOL_SOCKET, SO_RCVBUF, &optval, &optlen);
 		if(rc == 0 )
 			log_notice("Current receive buffer: %d bytes", optval);
 		else
@@ -141,8 +153,7 @@ inputClientRoutine(void* id)
 
 		if( sscanf(serverId, "%m[^:]:%" SCNu16, &hostId, &port) != 2)
 		{
-			log_add("Invalid server specification %s\n", serverId);
-			log_flush_fatal();
+			log_fatal("Invalid fanout server specification %s\n", serverId);
 			exit(EXIT_FAILURE);
 		}
 
@@ -155,29 +166,29 @@ inputClientRoutine(void* id)
 
 		if( getaddrinfo(hostId, NULL, &hints, &addrInfo) !=0 )
 		{
-			log_add_syserr("getaddrinfo() failure on %s", hostId);
-			log_flush_warning();
+			log_syserr("getaddrinfo() failure for %s", hostId);
 		}
 		else {
-            struct sockaddr_in sockaddr 	= *(struct sockaddr_in  * )
-                    (addrInfo->ai_addr);
-            sockaddr.sin_port 				= htons(port);
+            struct sockaddr_in sockaddr = *(struct sockaddr_in  * ) (addrInfo->ai_addr);
+            sockaddr.sin_port 			= htons(port);
 
-            log_info("Connecting to TCPServer server:  %s:%" PRIu16 "\n", hostId, port);
+            log_info("Connecting to fanout server:  %s:%" PRIu16 "\n", hostId, port);
 
-            if( connect(socketClientFd, (const struct sockaddr *) &sockaddr,
-                    sizeof(sockaddr)) )
+            if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
             {
-                log_add("Error connecting to server %s: %s\n", serverId,
-                        strerror(errno));
-                log_flush_warning();
+                log_syserr("Error connecting to fanout server %s: %s\n", serverId, strerror(errno));
             }
             else {
-                log_notice("CONNECTED!");
-
-                buildFrameRoutine(socketClientFd);
-                log_add("Lost connection with fanout server. Will retry after 60 sec. (%s:%" PRIu16 ")", hostId, port);
-                log_flush_warning();
+                log_notice("Connected to fanout server:  %s:%" PRIu16 "\n", hostId, port);
+                int status = buildFrameRoutine(socketClientFd);
+                if (status == NBS_SYSTEM) {
+                    log_add("System failure on input thread");
+                    log_flush_fatal();
+                    exit(EXIT_FAILURE);
+                }
+                log_add("Lost connection with fanout server. Will retry after 60 s. "
+                        "(%s:%" PRIu16 ")", hostId, port);
+                log_flush_error();
             } // Connected
 
             freeaddrinfo(addrInfo);
@@ -188,9 +199,30 @@ inputClientRoutine(void* id)
         sleep(60);
     } // for
 
-	return 0;
+    return NULL; // Accommodates Eclipse
 }
 
+static void
+createThreadAndDetach(const char* hostId)
+{
+	pthread_t inputClientThread;
+	log_notice("Server to connect to: %s", hostId);
+
+	if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
+						(void*) hostId) < 0)
+	{
+		log_add("Could not create a thread for inputClient()!\n");
+		log_flush_error();
+	}
+	setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
+
+	if( pthread_detach(inputClientThread) )
+	{
+		log_add("Could not detach the created thread!\n");
+		log_flush_fatal();
+		exit(EXIT_FAILURE);
+	}
+}
 
 /**
  * Function to create client reader threads. As many threads as there are hosts.
@@ -211,26 +243,10 @@ reader_start( char* const* serverAddresses, int serverCount )
 				"none provided (serverCount: %d).", MAX_SERVERS, serverCount);
 		return -1;
 	}
+
 	for(int i=0; i< serverCount; ++i)
 	{
-		pthread_t inputClientThread;
-		log_notice("Server to connect to: %s\n", serverAddresses[i]);
-
-		const char* id = serverAddresses[i]; // host+port
-		if(pthread_create(  &inputClientThread, NULL, inputClientRoutine,
-							(void*) id) < 0)
-	    {
-	        log_add("Could not create a thread for inputClient()!\n");
-	        log_flush_error();
-	    }
-	    setFIFOPolicySetPriority(inputClientThread, "inputClientThread", 1);
-
-		if( pthread_detach(inputClientThread) )
-		{
-			log_add("Could not detach the created thread!\n");
-			log_flush_fatal();
-			exit(EXIT_FAILURE);
-		}
+		createThreadAndDetach(serverAddresses[i]);// host+port
 	}
 	return 0;
 }

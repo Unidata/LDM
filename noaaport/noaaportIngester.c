@@ -565,6 +565,7 @@ createThread(
 				log_add_errno(EPERM, "Couldn't create %s thread with desired "
 						"scheduling", name);
 				log_flush_warning();
+				status = 0; // Ignore this failure
 			}
 		}
 		else {

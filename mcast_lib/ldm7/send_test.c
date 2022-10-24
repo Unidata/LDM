@@ -39,7 +39,7 @@ get_context(
     int             status = 0;
     struct in_addr  grpAddr = {};
 
-    grpAddr.s_addr = inet_addr(HELLO_GROUP);
+    grpAddr.s_addr = inet_addr(MCAST_ADDR);
 
     while (0 == status && (ch = getopt(argc, argv, "i:g:t:v")) != -1) {
         switch (ch) {
@@ -84,7 +84,7 @@ get_context(
 
     if (0 == status) {
         *groupAddr = grpAddr;
-        *groupPort = HELLO_PORT;
+        *groupPort = MCAST_PORT;
         ifaceAddr->s_addr = tmpIface;
         *ttl = tmpTtl;
         *verbose = verb;
@@ -104,7 +104,7 @@ usage(const char* const progname)
 "    -g <grpAddr> Multicast group IP address. Default is %s.\n"
 "    -t <ttl>     Time-to-live for outgoing packets. Default is 1.\n"
 "    -v           Verbose output\n",
-    progname, HELLO_GROUP);
+    progname, MCAST_ADDR);
 }
 
 static bool sock_remoteString(

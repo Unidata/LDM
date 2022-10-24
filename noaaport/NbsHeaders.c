@@ -75,15 +75,15 @@ void nbs_logFH(const NbsFH* fh)
     log_add("Frame Header:\n"
 "  hdlcAddress = %#x\n"
 "  hdlcControl = %#x\n"
-"      version = %u\n"
-"         size = %u bytes\n"
+"   FH version = %u\n"
+"      FH size = %u bytes\n"
 "      control = %#x\n"
 "      command = %u\n"
 "   datastream = %u\n"
 "       source = %u\n"
 "  destination = %u\n"
-"        seqno = %u\n"
-"        runno = %u\n"
+"     FH seqno = %u\n"
+"     FH runno = %u\n"
 "     checksum = %u",
            fh->hdlcAddress,
            fh->hdlcControl,
@@ -132,7 +132,7 @@ int nbs_decodePDH(
             else {
                 pdh->pshSize = totalSize - pdh->size;
 
-                if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_SYNC ||
+                if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_TIME ||
                         pdh->transferType == 0)) {
                     // Ensure proper values in these PDH-s
                     pdh->blockNum = 0;
@@ -178,10 +178,11 @@ int nbs_decodePDH(
 
 void nbs_logPDH(const NbsPDH* const pdh)
 {
-    log_add("Product-Description Header:\n"
-"          version = %u\n"
-"             size = %u bytes\n"
+    log_add("Product-Definition Header:\n"
+"      PDH version = %u\n"
+"         PDH size = %u bytes\n"
 "     transferType = %#x\n"
+"       total size = %u bytes\n"
 "         PSH size = %u bytes\n"
 "         blockNum = %u\n"
 "  dataBlockOffset = %u bytes\n"
@@ -192,6 +193,7 @@ void nbs_logPDH(const NbsPDH* const pdh)
             pdh->version,
             pdh->size,
             pdh->transferType,
+            pdh->totalSize,
             pdh->pshSize,
             pdh->blockNum,
             pdh->dataBlockOffset,

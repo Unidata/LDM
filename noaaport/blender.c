@@ -151,40 +151,36 @@ static void
 signal_handler( const int sig)
 {
     switch (sig) {
-        case SIGUSR1:
-            // .. add as needed
-            break;
-        case SIGUSR2:
-            (void)log_roll_level();
-            break;
+    case SIGPIPE:
+        break;
+    case SIGUSR1:
+        log_refresh(); // Will close and open output on next log message; not before
+        break;
+    case SIGUSR2:
+        (void)log_roll_level();
+        break;
     }
     return;
 }
 
 /**
- * Registers the signal handler for most signals.
+ * Registers the signal handler.
  */
 static void 
 set_sigactions(void)
 {
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = 0;
-
-    /* Handle the following */
     sigact.sa_handler = signal_handler;
 
+    /* Don't restart the following */
+    sigact.sa_flags = 0;
+    (void)sigaction(SIGPIPE, &sigact, NULL);
+
     /* Restart the following */
-
-    sigset_t sigset;
     sigact.sa_flags |= SA_RESTART;
-
-    (void)sigemptyset(&sigset);
-    (void)sigaddset(&sigset, SIGUSR1);
-    (void)sigaddset(&sigset, SIGUSR2);
     (void)sigaction(SIGUSR1, &sigact, NULL);
-    (void)sigaction(SIGUSR2, &sigact, NULL);    
-    (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+    (void)sigaction(SIGUSR2, &sigact, NULL);
 }
 
 int main(

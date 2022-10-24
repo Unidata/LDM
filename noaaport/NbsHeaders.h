@@ -16,14 +16,18 @@
 #include <stdint.h>
 #include <stdint.h>
 
-#define NBS_MAX_FRAME 5200 ///< Maximum size of an NBS frame in bytes
+#define NBS_MAX_FRAME        5200       ///< Maximum size of an NBS frame in bytes
+#define NBS_MAX_BLOCK_NUM    UINT16_MAX ///< Maximum data block number (origin 0)
+#define NBS_MAX_PROD_SEQ_NUM UINT32_MAX ///< Maximum PDH product sequence number
 
-/// Frame header command values:
+/// Frame-level header command values:
 enum {
-    NBS_FH_CMD_SYNC = 5
+    NBS_FH_CMD_DATA = 3, ///< Product format data transfer
+    NBS_FH_CMD_TIME = 5, ///< Synchronize timing
+    NBS_FH_CMD_TEST = 10 ///< Test message
 };
 
-/// NBS Frame Header
+/// NBS Frame-Level Header
 typedef struct NbsFH
 {
    unsigned hdlcAddress; ///< 255
@@ -54,21 +58,26 @@ typedef struct NbsFH
     *   1 = Generated at primary NCF
     *   2 = Reserved
     */
-   unsigned source;
+   unsigned source;      ///< 1=NCF primary; 2=reserved
    unsigned destination; ///< Destination of data transmission: 0 = All
    /**
-    * Unique sequence number for each frame. This field is used in detecting
-    * lost packets. Currently ARQ or selective repeat is not implemented.
+    * Unique sequence number for each frame. This field is used in detecting lost packets. Currently
+    * ARQ or selective repeat is not implemented.
+    *
+    * NB: The sequence number will likely change when the uplink site is switched between primary
+    * and backup. --SRE 2022-03-25 based on observation and email from Sathya Sankarasubbu
     */
    unsigned seqno;
    /**
-    * Unique run identifier. This field will be incremented each time the
-    * sequence number is reset.
+    * Unique run identifier. This field will be incremented each time the sequence number is reset.
+    *
+    * NB: The run number will not change when the uplink site is switched between primary and
+    * backup. --SRE 2022-03-25
     */
    unsigned runno;
    /**
-    * Checksum is used for frame validation. Unsigned sum of all bytes in frame
-    * level header (except this field of 2 bytes).
+    * Checksum is used for frame validation. Unsigned sum of all bytes in frame level header (except
+    * this field of 2 bytes).
     */
    unsigned checksum;
 } NbsFH;
@@ -79,44 +88,61 @@ typedef struct NbsPDH
     unsigned version; ///< Version
     unsigned size;    ///< Header length in bytes
     /**
-     * Transfer type. Indicates the status of a product transfer:
+     * Transfer type. Bitmask indicates the status of a product transfer:
      *    1 = Start of a new product
      *    2 = Product transfer still in progress
      *    4 = End (last packet) of this product
      *    8 = Product error
+    *    16 = Product compressed (according to `ProductMaker`)
      *   32 = Product Abort
      *   64 = Option headers follow; e.g., product-specific header
      */
     unsigned transferType;
-    unsigned pshSize; ///< Size of PSH in bytes
     /**
-     * Used during fragmentation and reassembly to identify the sequence
-     * of the fragmented blocks. Blocks are numbered 0 to n.
+     * Total length of product header in bytes for this frame, including options
+     */
+    unsigned totalSize;
+    unsigned pshSize;   ///< Size of PSH in bytes
+    /**
+     * Used during fragmentation and reassembly to identify the sequence of the fragmented blocks.
+     * Blocks are numbered 0 to n.
      */
     unsigned blockNum;
     /**
-     * Offset in bytes where the data for this block can be found relative
-     * to beginning of data block area.
+     * Offset in bytes where the data for this block can be found relative to beginning of data
+     * block area.
      */
     unsigned dataBlockOffset;
     unsigned dataBlockSize; ///< Number of data bytes in the data block
      /**
-      * Number of records within the data block. This permits multiple
-      * records per block.
+      * Number of records within the data block. This permits multiple records per block.
       */
     unsigned recsPerBlock;
     /**
-     * Number of blocks a record spans. Records can span multiple
-     * blocks.
+     * Number of blocks a record spans. Records can span multiple blocks.
      */
     unsigned blocksPerRec;
     /**
-     * Unique product sequence number for this product within the
-     * logical data stream. Used for product reassembly integrity to
-     * verify that blocks belong to the same product.
+     * Unique product sequence number for this product within the logical data stream. Used for
+     * product reassembly integrity to verify that blocks belong to the same product.
      */
     unsigned prodSeqNum;
 } NbsPDH;
+
+#if 0
+/// 32-byte synchronization header (NbsFH::command == 5). Follows frame-level header.
+typedef struct NbsTCH
+{
+    uint8_t  xfr_time_version:5;  ///< Version xfr_time. Suspect 4 bits
+    uint8_t  xfr_time_length:3;   ///< Byte length (in 4-byte words?). Suspect 4 bits because
+                                  ///< 7*4 bytes < 32 bytes
+    uint8_t  xfr_time_flag;       ///< Header transfer flag
+    uint16_t xfr_time_tot_length; ///< Total length of xfr hdr in bytes
+    uint32_t xfr_time_send;       ///< Time in UTC long format
+    char     ascii_time[20];      ///< Time in UTC ASCII form
+    uint32_t xfr_time_reserved;   ///< Reserved
+} NbsTCH;
+#endif
 
 /// NBS Product-Specific Header
 typedef struct NbsPSH
@@ -151,8 +177,8 @@ typedef struct NbsPSH
      */
     unsigned type;
     /**
-     * Identifies the category of the product, i.e., image,
-     * graphic, text, grid, point, binary, other.
+     * Identifies the category of the product, i.e., image, graphic, text, grid, point, binary,
+     * other.
      */
     unsigned category;
     /**
@@ -167,8 +193,8 @@ typedef struct NbsPSH
      */
     int      numFrags;
     /**
-     * Offset in bytes from the beginning of this product-specific header to
-     * the next product-specific header. Reserved for future consideration.
+     * Offset in bytes from the beginning of this product-specific header to the next
+     * product-specific header. Reserved for future consideration.
      */
     unsigned nextHeadOff;
 #if 1
@@ -187,8 +213,8 @@ typedef struct NbsPSH
      */
     unsigned  source;
     /**
-     * Original product sequence number as sent by NCF.
-     * Number Used during retransmit only; otherwise, the value is 0.
+     * Original product sequence number as sent by NCF. Number Used during retransmit only;
+     * otherwise, the value is 0.
      */
     unsigned seqNum;
     unsigned ncfRecvTime; ///< Time that product started being received at NCF
@@ -247,8 +273,7 @@ int nbs_decodeFH(
         NbsFH* const fh);
 
 /**
- * Adds log messages for a frame header by calling `log_add()`. Doesn't call
- * `log_flush()`.
+ * Adds log messages for a frame header by calling `log_add()`. Doesn't call `log_flush()`.
  *
  * @param[in] fh  Frame header
  */
@@ -273,8 +298,8 @@ int nbs_decodePDH(
         NbsPDH* const  pdh);
 
 /**
- * Adds log messages for a product-definition header by calling `log_add()`.
- * Doesn't call `log_flush()`.
+ * Adds log messages for a product-definition header by calling `log_add()`. Doesn't call
+ * `log_flush()`.
  *
  * @param[in] pdh  Product-definition header
  */
@@ -288,8 +313,8 @@ void nbs_logPDH(const NbsPDH* pdh);
  * @param[in]  pdh      Product-definition header
  * @param[out] psh      Product-specific header
  * @retval     0        Success. `psh` is set.
- * @retval     EINVAL   `buf == NULL || pdh == NULL || psh == NULL` or `size` is
- *                      too small. `log_add()` called.
+ * @retval     EINVAL   `buf == NULL || pdh == NULL || psh == NULL` or `size` is too small.
+ *                      `log_add()` called.
  * @retval     EBADMSG  Invalid product-specific header. `log_add()` called.
  */
 int nbs_decodePSH(
@@ -299,16 +324,16 @@ int nbs_decodePSH(
         NbsPSH* const  psh);
 
 /**
- * Adds log messages for a product-specific header by calling `log_add()`.
- * Doesn't call `log_flush()`.
+ * Adds log messages for a product-specific header by calling `log_add()`. Doesn't call
+ * `log_flush()`.
  *
  * @param[in] psh  Product-specific header
  */
 void nbs_logPSH(const NbsPSH* psh);
 
 /**
- * Adds log messages for all, undecoded NBS headers by calling `log_add()`.
- * Doesn't call `log_flush()`.
+ * Adds log messages for all, undecoded NBS headers by calling `log_add()`. Doesn't call
+ * `log_flush()`.
  *
  * @param[in]  buf      Start of frame header
  * @param[in]  size     Size of buffer in bytes

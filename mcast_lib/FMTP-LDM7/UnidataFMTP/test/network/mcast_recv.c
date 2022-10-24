@@ -18,7 +18,7 @@
 
 
 #define HELLO_PORT 5173
-#define HELLO_GROUP "224.0.0.1"
+#define MCAST_ADDR "224.0.0.1"
 #define MSGBUFSIZE 256
 
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     }
 
     /* use setsockopt() to request that the kernel join a multicast group */
-    mreq.imr_multiaddr.s_addr = inet_addr(HELLO_GROUP);
+    mreq.imr_multiaddr.s_addr = inet_addr(MCAST_ADDR);
     mreq.imr_interface.s_addr = inet_addr(argv[1]);
     if (setsockopt(fd,IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
         perror("setsockopt");

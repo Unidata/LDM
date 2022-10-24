@@ -66,7 +66,7 @@ _svcauth_unix(
 		int area_gids[NGRPS];
 	} *area;
 	unsigned auth_len;
-	int str_len, gid_len;
+	unsigned str_len, gid_len;
 	register int i;
 
 	area = (struct area *) rqst->rq_clntcred;
@@ -103,7 +103,7 @@ _svcauth_unix(
 		 * timestamp, hostname len (0), uid, gid, and gids len (0).
 		 */
 		if ((5 + gid_len) * BYTES_PER_XDR_UNIT + str_len > auth_len) {
-			(void) printf("bad auth_len gid %d str %d auth %d\n",
+			(void) printf("bad auth_len gid %u str %u auth %d\n",
 			    gid_len, str_len, auth_len);
 			stat = AUTH_BADCRED;
 			goto done;

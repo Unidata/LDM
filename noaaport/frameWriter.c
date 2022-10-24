@@ -14,7 +14,7 @@
  * @param[in]  aFrame			An SBN frame
  *
  * @retval     0  				Success
- * @retval    <0       		  	Error
+ * @retval    -1       		  	I/O failure. `log_add()` called.
  */
 
 int
@@ -22,15 +22,13 @@ fw_writeFrame(const Frame_t* aFrame)
 {
     int status = 0;
 
-	log_debug("SeqNum: %" PRI_SEQ_NUM " - RunNum: %" PRI_RUN_NUM,
-	        aFrame->seqNum, aFrame->runNum);
+	log_debug("ProdSeqNum: %u - DataBlkNum: %u", aFrame->prodSeqNum, aFrame->dataBlockNum);
 
    	// FOR INTERACTIVE TESTING, BE SURE TO REDIRECT stdout TO "/dev/null"
    	ssize_t ret = write(STDOUT_FILENO, aFrame->data, aFrame->nbytes);
     if( ret <= 0 )
     {
-        log_add("Write frame data to standard output failure. (%s)",
-                strerror(errno) );
+        log_add_syserr("Couldn't write frame data to standard output");
         status = -1;
     }
 

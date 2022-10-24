@@ -7,9 +7,42 @@
 
 #include "config.h"
 
-#include <stdint.h>
 #include "CircFrameBuf.h"
 #include "log.h"
+#include "NbsHeaders.h"
+
+#include <stdint.h>
+#include <unordered_map>
+
+using FhSrc   = unsigned;
+using UplinkId = uint32_t;
+
+/**
+ * Returns a monotonically increasing uplink identifier. This identifier increments every time the
+ * source field in the frame header changes -- even if it reverts to the previous value. This
+ * assumes that the delay-time of frames in the buffer is much less than the time between
+ * changes to the uplink site so that all frames from the previous change will be gone from the
+ * buffer.
+ *
+ * @param[in] fhSrc  Frame header's source field
+ * @return           Monotonically increasing uplink identifier
+ */
+UplinkId getUplinkId(const FhSrc fhSrc) {
+    static bool     initialized = false;
+    static UplinkId uplinkId = 0;
+    static FhSrc    saveFhSrc;
+
+    if (!initialized) {
+        initialized = true;
+        saveFhSrc = fhSrc;
+    }
+    else if (saveFhSrc != fhSrc) {
+        saveFhSrc = fhSrc;
+        ++uplinkId;
+    }
+
+    return uplinkId;
+}
 
 CircFrameBuf::CircFrameBuf(const double timeout)
     : mutex()
@@ -17,23 +50,39 @@ CircFrameBuf::CircFrameBuf(const double timeout)
     , nextIndex(0)
     , indexes()
     , slots()
-    , lastOldestKey()
+    , lastOutputKey()
     , frameReturned(false)
-    , timeout(std::chrono::duration_cast<Dur>(
+    , timeout(std::chrono::duration_cast<Key::Dur>(
             std::chrono::duration<double>(timeout)))
 {}
 
+/**
+ * Tries to add a frame.
+ *
+ * @param[in] fh              Frame's decoded frame-level header
+ * @param[in] pdh             Frame's decoded product-definition header
+ * @param[in] data            Frame's bytes
+ * @param[in] numBytes        Number of bytes in the frame
+ * @retval    0               Success. Frame was added.
+ * @retval    1               Frame arrived too late. `log_add()` called.
+ * @retval    2               Frame is a duplicate
+ * @throw std::runtime_error  Frame is too large
+ */
 int CircFrameBuf::add(
-        const RunNum_t    runNum,
-        const SeqNum_t    seqNum,
+        const NbsFH&      fh,
+        const NbsPDH&     pdh,
         const char*       data,
         const FrameSize_t numBytes)
 {
     Guard guard{mutex}; /// RAII!
-    Key   key{runNum, seqNum};
+    Key   key{fh, pdh, timeout};
 
-    if (frameReturned && key < lastOldestKey)
+    if (frameReturned && key < lastOutputKey) {
+        log_add("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
+                lastOutputKey.to_string().data(), key.to_string().data());
         return 1; // Frame arrived too late
+    }
+
     if (!indexes.insert({key, nextIndex}).second)
         return 2; // Frame already added
 
@@ -47,27 +96,24 @@ void CircFrameBuf::getOldestFrame(Frame_t* frame)
 {
     Lock  lock{mutex}; /// RAII!
 
-    do {
-        cond.wait_for(lock, timeout,
-                [&]{return !indexes.empty() && Slot::Clock::now() >=
-                slots.at(indexes.begin()->second).inserted + timeout;});
-    } while (indexes.empty());
+    cond.wait(lock, [&]{return !indexes.empty() &&
+            Key::Clock::now() >= indexes.begin()->first.revealTime;});
 
-    // The oldest frame shall be returned
+    // The earliest frame shall be returned
     auto  head = indexes.begin();
     auto  key = head->first;
     auto  index = head->second;
     auto& slot = slots.at(index);
 
-    frame->runNum   = key.runNum;
-    frame->seqNum   = key.seqNum;
+    frame->prodSeqNum   = key.pdhSeqNum;
+    frame->dataBlockNum = key.pdhBlkNum;
     ::memcpy(frame->data, slot.data, slot.numBytes);
     frame->nbytes = slot.numBytes;
 
     slots.erase(index);
     indexes.erase(head);
 
-    lastOldestKey = key;
+    lastOutputKey = key;
     frameReturned = true;
 }
 
@@ -87,30 +133,30 @@ extern "C" {
 
 	//------------------------- C code ----------------------------------
 	/**
+	 * Inserts a data-transfer frame into the circular frame buffer.
 	 *
-	 * @param cfb
-	 * @param runNum
-	 * @param seqNum
-	 * @param data
-	 * @param numBytes
+	 * @param[in] cfb         Circular frame buffer
+	 * @param[in] fh          Frame-level header
+	 * @param[in] pdh         Product-description header
+	 * @param[in] data        NOAAPort frame
+	 * @param[in] numBytes    Size of NOAAPort frame in bytes
 	 * @retval 0   Success
-	 * @retval 1   Frame is too late
+	 * @retval 1   Frame is too late. `log_add()` called.
 	 * @retval 2   Frame is duplicate
 	 * @retval -1  System error. `log_add()` called.
 	 */
 	int cfb_add(
 			void*             cfb,
-			const RunNum_t    runNum,
-			const SeqNum_t    seqNum,
+			const NbsFH*      fh,
+			const NbsPDH*     pdh,
 			const char*       data,
 			const FrameSize_t numBytes) {
         int status;
 		try {
-			status = static_cast<CircFrameBuf*>(cfb)->add(runNum, seqNum, data,
-                    numBytes);
+			status = static_cast<CircFrameBuf*>(cfb)->add(*fh, *pdh, data, numBytes);
 		}
 		catch (const std::exception& ex) {
-			log_add("Couldn't add new frame: %s", ex.what());
+			log_add("Couldn't add new frame to buffer: %s", ex.what());
 			status = -1;
 		}
 		return status;

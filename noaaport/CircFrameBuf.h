@@ -8,6 +8,7 @@
 #ifndef NOAAPORT_CIRCFRAMEBUF_H_
 #define NOAAPORT_CIRCFRAMEBUF_H_
 
+#include "NbsHeaders.h"
 #include "noaaportFrame.h"
 
 #ifdef __cplusplus
@@ -21,43 +22,79 @@
 #include <unordered_map>
 #include <vector>
 
+using SbnSrc        = unsigned;
+using UplinkId      = uint32_t;
+
+static constexpr UplinkId UPLINK_ID_MAX = UINT32_MAX;
+
+UplinkId getUplinkId(const unsigned sbnSrc);
+
 class CircFrameBuf
 {
     /**
-     * NOAAPort frame run number and sequence number pair.
+     * NOAAPort's product-definition header's product sequence number and data-block number
      */
     struct Key {
-        RunNum_t runNum;
-        SeqNum_t seqNum;
+        using Clock = std::chrono::steady_clock;
+        using Dur   = std::chrono::milliseconds;
 
-        Key(RunNum_t runNum, SeqNum_t seqNum)
-            : runNum(runNum)
-            , seqNum(seqNum)
+        UplinkId          uplinkId;
+        unsigned          fhSource;
+        unsigned          fhSeqno;
+        unsigned          fhRunno;
+        unsigned          pdhSeqNum;
+        unsigned          pdhBlkNum;
+        Clock::time_point revealTime; ///< When the associated frame should be revealed
+
+        Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
+            : uplinkId(getUplinkId(fh.source))
+            , fhSource(fh.source)
+            , fhSeqno(fh.seqno)
+            , fhRunno(fh.runno)
+            , pdhSeqNum(pdh.prodSeqNum)
+            , pdhBlkNum(pdh.blockNum)
+            , revealTime(Clock::now() + timeout)
+        {}
+
+        Key(const NbsFH& fh, const NbsPDH& pdh, Dur&& timeout)
+            : uplinkId(getUplinkId(fh.source))
+            , fhSource(fh.source)
+            , fhSeqno(fh.seqno)
+            , fhRunno(fh.runno)
+            , pdhSeqNum(pdh.prodSeqNum)
+            , pdhBlkNum(pdh.blockNum)
+            , revealTime(Clock::now() + timeout)
         {}
 
         Key()
-            : Key(0, 0)
+            : uplinkId(0)
+            , fhSource(0)
+            , fhSeqno(0)
+            , fhRunno(0)
+            , pdhSeqNum(0)
+            , pdhBlkNum(0)
+            , revealTime(Clock::now())
         {}
 
-        bool operator<(const Key& rhs) const {
-            return (runNum < rhs.runNum)
-                    ? true
-                    : (runNum > rhs.runNum)
-                          ? false
-                          : seqNum < rhs.seqNum;
+        std::string to_string() const {
+            return "{upId=" + std::to_string(uplinkId) +
+                    ", fhSrc=" + std::to_string(fhSource) +
+                    ", fhSeq=" + std::to_string(fhSeqno) +
+                    ", fhRun=" + std::to_string(fhRunno) +
+                    ", pdhSeq=" + std::to_string(pdhSeqNum) +
+                    ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
         }
 
-        /**
-         * Indicates if this instance comes immediately after a given instance.
-         *
-         * @param[in] key      The given instance
-         * @retval    `true`   This instance comes immediately after the given
-         *                     instance
-         * @retval    `false`  This instance doesn't come immediately after the
-         *                     given instance
-         */
-        bool isNextAfter(const Key& key) const {
-            return (runNum == key.runNum) && (seqNum == key.seqNum + 1);
+        bool operator<(const Key& rhs) const {
+            return (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
+                    ? true
+                    : (uplinkId == rhs.uplinkId)
+                        ? (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
+                            ? true
+                            : (pdhSeqNum == rhs.pdhSeqNum)
+                                  ? pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2
+                                  : false
+                        : false;
         }
     };
 
@@ -65,19 +102,16 @@ class CircFrameBuf
      * A slot for a frame.
      */
     struct Slot {
-        using Clock = std::chrono::steady_clock;
-
-        char              data[5000]; ///< Frame data
-        FrameSize_t       numBytes;   ///< Number of bytes of data in the frame
-        Clock::time_point inserted;   ///< When the frame was inserted
+        char              data[SBN_FRAME_SIZE]; ///< Frame data
+        FrameSize_t       numBytes;             ///< Number of bytes of data in the frame
 
         Slot(const char* data, FrameSize_t numBytes)
             : data()
             , numBytes(numBytes)
-            , inserted{Clock::now()}
         {
             if (numBytes > sizeof(this->data))
-                throw std::runtime_error("Frame is too large: " + std::to_string(numBytes) + " bytes.");
+                throw std::runtime_error("Frame is too large: " + std::to_string(numBytes) +
+                        " bytes.");
             ::memcpy(this->data, data, numBytes);
         }
     };
@@ -89,16 +123,15 @@ class CircFrameBuf
     using Index   = unsigned;
     using Indexes = std::map<Key, Index>;
     using Slots   = std::unordered_map<Index, Slot>;
-    using Dur     = std::chrono::milliseconds;
 
     mutable Mutex mutex;           ///< Supports thread safety
     mutable Cond  cond;            ///< Supports concurrent access
     Index         nextIndex;       ///< Index for next, incoming frame
     Indexes       indexes;         ///< Indexes of frames in sorted order
     Slots         slots;           ///< Slots of frames in unsorted order
-    Key           lastOldestKey;   ///< Key of last, returned frame
+    Key           lastOutputKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
-    Dur           timeout;         ///< Timeout for returning next frame
+    Key::Dur      timeout;         ///< Timeout for returning next frame
 
 public:
     /**
@@ -118,19 +151,19 @@ public:
      *   - It is an earlier frame than the last, returned frame
      *   - The frame was already added
      *
-     * @param[in] runNum    Frame run number
-     * @param[in] seqNum    Frame sequence number
-     * @param[in] data      Frame data
-     * @param[in] numBytes  Number of bytes in the frame
-     * @retval    0         Frame added
-     * @retval    1         Frame not added because it arrived too late
-     * @retval    2         Frame not added because it's a duplicate
-     * @threadsafety        Safe
-     * @see                 `getOldestFrame()`
+     * @param[in] fh            Frame-level header
+     * @param[in] pdh           Product-description header
+     * @param[in] data          Frame data
+     * @param[in] numBytes      Number of bytes in the frame
+     * @retval    0             Frame added
+     * @retval    1             Frame not added because it arrived too late
+     * @retval    2             Frame not added because it's a duplicate
+     * @threadsafety            Safe
+     * @see                     `getOldestFrame()`
      */
     int add(
-            const RunNum_t    runNum,
-            const SeqNum_t    seqNum,
+            const NbsFH&      fh,
+            const NbsPDH&     pdh,
             const char*       data,
             const FrameSize_t numBytes);
 
@@ -165,20 +198,22 @@ void* cfb_new(const double timeout);
 /**
  * Adds a new frame.
  *
- * @param[in] cfb       Pointer to circular frame buffer
- * @param[in] runNum    NOAAPort run number
- * @param[in] seqNum    NOAAPort sequence number
- * @param[in] data      Frame data
- * @param[in] numBytes  Number of bytes of data
- * @retval    0         Success
- * @retval    1         Frame not added because it's too late
- * @retval    2         Frame not added because it's a duplicate
- * @retval    -1        System error. `log_add()` called.
+ * @param[in] cfb           Pointer to circular frame buffer
+ * @param[in] fh            Frame-level header
+ * @param[in] pdh           Product-description header
+ * @param[in] prodSeqNum    PDH product sequence number
+ * @param[in] dataBlkNum    PDH data-block number
+ * @param[in] data          Frame data
+ * @param[in] numBytes      Number of bytes of data
+ * @retval    0             Success
+ * @retval    1             Frame not added because it's too late
+ * @retval    2             Frame not added because it's a duplicate
+ * @retval    -1            System error. `log_add()` called.
  */
 int cfb_add(
         void*             cfb,
-        const RunNum_t    runNum,
-        const SeqNum_t    seqNum,
+        const NbsFH*      fh,
+        const NbsPDH*     pdh,
         const char*       data,
         const FrameSize_t numBytes);
 

@@ -112,7 +112,7 @@ typedef struct sbn_struct {
    int version;
    int len; // Length of frame header in bytes
    int datastream;
-   unsigned long seqno;
+   unsigned long seqno; // ProductMaker's arithmetic on this depends on this type
    int runno;
    int command;
    int checksum; 
@@ -127,6 +127,7 @@ typedef struct pdh_struct {
     *    2 = Product transfer still in progress
     *    4 = End (last packet) of this product
     *    8 = Product error
+    *    16 = Product compressed (from `ProductMaker`)
     *    32 = Product Abort
     *    64 = Option headers follow; e. g., product-specific header
     */
@@ -199,7 +200,7 @@ typedef struct datastore {
    } datastore;
 
 typedef struct prodstore {
-	int seqno;
+	int seqno;              ///< Product sequence number from PDH
 	int nfrag;
 	struct datastore *head;
 	struct datastore *tail;
