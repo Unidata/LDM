@@ -439,7 +439,7 @@ nowInEpoch()
 }
 
 /**
- * Converts daysOld specified in scour configuration from a form of <days>-[HH[MM[SS]]]
+ * Converts daysOld specified in scour configuration-file from a string representation
  * into their Epoch time (seconds) equivalent
  * @param[in]  dirName             directory pathname read from the scour config file 
  * @param[in]  excludedDirsList    list of directory paths of directory to exclude 
@@ -453,6 +453,8 @@ time_t
 regexOps(char *pattern, char *daysOldItem, int nmatch)
 {
 	// Allowed formats are:
+    // - -HH
+    // - -HH:MM
 	// - days
 	// - days-HH
 	// - days-HH:MM

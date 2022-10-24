@@ -304,7 +304,7 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
                 // symlink but that of the target file pointed to by the slink
                 if( !removeFileSymlink(absPath, symlinkedEntry, daysOldInEpoch, daysOld))
                 {
-                    log_info("(sl-r) %s is a symlinked file and OLDER than %s daysOld (days[-HHMMSS]). DELETED!", 
+                    log_info("(sl-r) %s is a symlinked file and OLDER than %s daysOld (days[-HH[MM]]). DELETED!",
                             symlinkedEntry, daysOld);
                 }
             }
@@ -372,13 +372,13 @@ scourFilesAndDirs(char *basePath, time_t daysOldInEpoch,
                 else
                 {
                     // current file is OLDER than daysOld
-                    log_info("(+)File \"%s\" is OLDER than %s (days[-HHMMSS]) - DELETED!", absPath, daysOld);
+                    log_info("(+)File \"%s\" is OLDER than %s (days[-HH[MM]]) - DELETED!", absPath, daysOld);
                 }
                 // in any case
                 continue;
             }
 
-            //log_info("(-) File \"%s\" is NOT older than %s (days[-HHMMSS]) - Skipping it...",
+            //log_info("(-) File \"%s\" is NOT older than %s (days[-HH[MM]]) - Skipping it...",
             //            absPath, daysOld);
             break;
 
@@ -412,8 +412,8 @@ scourFilesAndDirsForThisPath(void *oneItemStruct)
                                                 oneItemStruct;
 
     char*  dirPath          = currentItem.dir;
-    char*  daysOld          = currentItem.daysOld;     // <days>[-HHMMSS], eg. 1-122033
-    time_t daysOldInEpoch   = currentItem.daysOldInEpoch;     // parsed from <days>[-HHMMSS], eg. 1-122033 to Epoch time
+    char*  daysOld          = currentItem.daysOld;     // <days>[-HH[MM]], eg. 1-1220
+    time_t daysOldInEpoch   = currentItem.daysOldInEpoch;     // parsed from <days>[-HH[MM]], eg. 1-1220 to Epoch time
     char*  pattern          = currentItem.pattern;
 
     int    deleteDirFlag    = currentItem.deleteDirsFlag;
