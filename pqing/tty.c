@@ -40,6 +40,12 @@
 #	ifdef ultrix /* as of ULTRIX V4.0 */
 #	include <sys/ioctl.h>
 #	endif /* ultrix */
+#   if defined(__APPLE__) || defined(__bsdi__)
+#       include <sys/ioctl.h>
+#   endif
+#   ifdef __linux__
+#       include <sys/ioctl.h>
+#   endif
 #endif /* !TIOCEXCL */
 
 enum rtty_csize_t {
