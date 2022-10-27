@@ -19,6 +19,8 @@ jobs:
       run: ls
     - name: cd src
       run: cd src
+    - name: pwd
+      run: pwd
     - name: ls
       run: ls
     - name: configure
