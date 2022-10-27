@@ -11,18 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-        path: src
-    - name: pwd
-      run: pwd
-    - name: ls
-      run: ls
-    - name: cd src
-      run: cd src
-    - name: pwd
-      run: pwd
-    - name: ls
-      run: ls
+    - run: echo ${GITHUB_WORKSPACE}
     - name: configure
       run: ./configure --disable-root-actions --with-noaaport
     - name: make
