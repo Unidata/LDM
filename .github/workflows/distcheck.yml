@@ -19,6 +19,8 @@ jobs:
       run: ls
     - name: cd src
       run: cd src
+    - name: ls
+      run: ls
     - name: configure
       run: ./configure --disable-root-actions --with-noaaport
     - name: make
