@@ -49,6 +49,7 @@ static char sccsid[] = "@(#)xdr_mem.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <string.h>
 #include <strings.h>
 #include <sys/types.h>
 #include "types.h"
@@ -133,7 +134,7 @@ xdrmem_getbytes(
 	if (xdrs->x_handy < len)
 		return (FALSE);
 	xdrs->x_handy -= len;
-	bcopy(xdrs->x_private, addr, len);
+	memmove(addr, xdrs->x_private, len);
 	xdrs->x_private += len;
 	return (TRUE);
 }
@@ -147,7 +148,7 @@ xdrmem_putbytes(
 	if (xdrs->x_handy < len)
 		return (FALSE);
 	xdrs->x_handy -= len;
-	bcopy(addr, xdrs->x_private, len);
+	memmove(xdrs->x_private, addr, len);
 	xdrs->x_private += len;
 	return (TRUE);
 }

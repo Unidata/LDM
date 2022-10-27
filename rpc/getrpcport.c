@@ -40,6 +40,7 @@ static  char sccsid[] = "@(#)getrpcport.c 1.3 87/08/11 SMI";
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -68,7 +69,7 @@ getrpcport(
         perror("getrpcport(): hp->h_length > sizeof(addr.sin_addr)");
         abort();
     }
-	bcopy(hp->h_addr_list[0], (char *) &addr.sin_addr, hp->h_length);
+	memmove((char *) &addr.sin_addr, hp->h_addr_list[0], hp->h_length);
 	addr.sin_family = AF_INET;
 	addr.sin_port =  0;
 	return (pmap_getport(&addr, prognum, versnum, proto));

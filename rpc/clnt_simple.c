@@ -106,8 +106,7 @@ callrpc(
     		errno = EOVERFLOW;
             return RPC_SYSTEMERROR;
         }
-		bcopy(hp->h_addr_list[0], (char *)&server_addr.sin_addr,
-		    hp->h_length);
+		memmove((char *)&server_addr.sin_addr, hp->h_addr_list[0], hp->h_length);
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_port =  0;
 		if ((crp->client = clntudp_create(&server_addr, (unsigned long)prognum,

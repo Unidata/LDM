@@ -45,6 +45,7 @@ static char sccsid[] = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include "types.h"
 #include "xdr.h"
@@ -82,7 +83,7 @@ xdr_reference(
 				    "xdr_reference: out of memory\n");
 				return (FALSE);
 			}
-			bzero(loc, (int)size);
+			memset(loc, 0, (int)size);
 			break;
 	}
 

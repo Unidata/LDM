@@ -45,6 +45,7 @@ static char sccsid[] = "@(#)svc_auth_unix.c 1.28 88/02/08 Copyr 1984 Sun Micro";
 #include "config.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <strings.h>
 #include "rpc.h"
 
@@ -83,7 +84,7 @@ _svcauth_unix(
 			stat = AUTH_BADCRED;
 			goto done;
 		}
-		bcopy((char*)buf, aup->aup_machname, (unsigned)str_len);
+		memmove(aup->aup_machname, (char*)buf, (unsigned)str_len);
 		aup->aup_machname[str_len] = 0;
 		str_len = RNDUP(str_len);
 		buf += str_len / sizeof (*buf);

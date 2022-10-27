@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)xdr_rec.c 1.21 87/08/11 Copyr 1984 Sun Micro";
 #include <inttypes.h>	/* uint32_t, uintptr_t */
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -170,7 +170,7 @@ get_input_bytes(
 			continue;
 		}
 		current = (len < current) ? len : current;
-		bcopy(rstrm->in_finger, addr, current);
+		memmove(addr, rstrm->in_finger, current);
 		rstrm->in_finger += current;
 		addr += current;
 		len -= current;
@@ -378,7 +378,7 @@ xdrrec_putbytes(
 	while (len != 0) {
 		current = (int)(rstrm->out_boundry - rstrm->out_finger);
 		current = (len < current) ? (int)len : current;
-		bcopy(addr, rstrm->out_finger, current);
+		memmove(rstrm->out_finger, addr, current);
 		rstrm->out_finger += current;
 		addr += current;
 		len -= current;

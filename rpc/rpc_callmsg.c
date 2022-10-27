@@ -42,6 +42,7 @@ static char sccsid[] = "@(#)rpc_callmsg.c 1.4 87/08/11 Copyr 1984 Sun Micro";
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <sys/param.h>
 
@@ -86,14 +87,14 @@ xdr_callmsg(
 			IXDR_PUT_ENUM(buf, oa->oa_flavor);
 			IXDR_PUT_LONG(buf, oa->oa_length);
 			if (oa->oa_length) {
-				bcopy(oa->oa_base, (char*)buf, oa->oa_length);
+				memmove((char*)buf, oa->oa_base, oa->oa_length);
 				buf += RNDUP(oa->oa_length) / sizeof (*buf);
 			}
 			oa = &cmsg->rm_call.cb_verf;
 			IXDR_PUT_ENUM(buf, oa->oa_flavor);
 			IXDR_PUT_LONG(buf, oa->oa_length);
 			if (oa->oa_length) {
-				bcopy(oa->oa_base, (char*)buf, oa->oa_length);
+				memmove((char*)buf, oa->oa_base, oa->oa_length);
 				/* no real need....
 				buf += RNDUP(oa->oa_length) / sizeof (*buf);
 				*/
@@ -134,8 +135,7 @@ xdr_callmsg(
 						return (FALSE);
 					}
 				} else {
-					bcopy((char*)buf, oa->oa_base,
-					    oa->oa_length);
+					memmove(oa->oa_base, (char*)buf, oa->oa_length);
 					/* no real need....
 					buf += RNDUP(oa->oa_length) /
 						sizeof (*buf);
@@ -168,8 +168,7 @@ xdr_callmsg(
 						return (FALSE);
 					}
 				} else {
-					bcopy((char*)buf, oa->oa_base,
-					    oa->oa_length);
+					memmove(oa->oa_base, (char*)buf, oa->oa_length);
 					/* no real need...
 					buf += RNDUP(oa->oa_length) /
 						sizeof (*buf);

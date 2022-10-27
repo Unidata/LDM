@@ -1,8 +1,12 @@
-6.14.0.1
+6.14.1
     pqing(1):
         * Eliminated compilation error in "tty.c" under MacOS by including <sys/ioctl.h>
 
-6.13.17 2022-10-24T15:01:17-0600
+    rpc(3) library:
+        * Eliminated compilation errors under MacOS by replacing bzero(), bset(), and bcmp() with
+          POSIX equivalents
+
+6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0)
     Installation:
         * Restored setting of LDM_PORT in distribution's registry
         * Added support for use of chronyd(8) instead of ntpdate(8)

@@ -35,6 +35,7 @@ static char sccsid[] = "@(#)clnt_generic.c 1.4 87/08/11 (C) 1987 SMI";
  */
 #include "config.h"
 
+#include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
@@ -75,13 +76,13 @@ clnt_create(
 	}
 	sin.sin_family = h->h_addrtype;
 	sin.sin_port = 0;
-	bzero(sin.sin_zero, sizeof(sin.sin_zero));
+	memset(sin.sin_zero, 0, sizeof(sin.sin_zero));
     if (h->h_length > sizeof(sin.sin_addr)) {
 		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
 		rpc_createerr.cf_error.re_errno = EOVERFLOW;
         return NULL;
     }
-	bcopy(h->h_addr_list[0], (char*)&sin.sin_addr, h->h_length);
+	memmove((char*)&sin.sin_addr, h->h_addr_list[0], h->h_length);
 	p = getprotobyname(proto);
 	if (p == NULL) {
 		rpc_createerr.cf_stat = RPC_UNKNOWNPROTO;
