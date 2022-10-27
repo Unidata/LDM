@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <string>
 #include <string.h>
+#include <sys/ioctl.h>
 
 MulticastComm::MulticastComm() {
     // PF_INET for IPv4, SOCK_DGRAM for connectionless udp socket.

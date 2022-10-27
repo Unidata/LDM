@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -10,7 +11,7 @@ int main(int argc, char* argv[])
     char sendbuf[] = "Rivanna says hello!";
     char recvbuf[8192];
     struct sockaddr_in cli_addr;
-	bzero(&cli_addr, sizeof(cli_addr));
+	memset(&cli_addr, 0, sizeof(cli_addr));
 
     // test constructor
     UdpComm demoUDP(5000);

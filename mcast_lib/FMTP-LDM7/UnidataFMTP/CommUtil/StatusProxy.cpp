@@ -7,6 +7,8 @@
 
 #include "StatusProxy.h"
 
+#include <string.h>
+
 
 
 /*****************************************************************************
@@ -32,7 +34,7 @@ StatusProxy::StatusProxy(string addr, int port) {
 	}
 
     // clear servaddr
-	bzero(&servaddr, sizeof(servaddr));
+	memset(&servaddr, 0, sizeof(servaddr));
     // set servaddr struct with given ip and port.
 	servaddr.sin_family 	 = AF_INET;
 	servaddr.sin_addr.s_addr = tempServerAddr;
