@@ -79,12 +79,12 @@ registry.h:	registry.hin registry.c $(srcdir)/regpar.tab.in
 
 # For "make check". Doesn't account for existing, installed registry
 registry.xml:	regpar.tab regutil
-	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	$(PERL) $(srcdir)/installRegistry regpar.tab './regutil -l-' \
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf .
 
 # For "make install". Accounts for existing, installed registry
 install-exec-local:	regpar.tab regutil $(DESTDIR)$(sysconfdir)
-	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	$(PERL) $(srcdir)/installRegistry regpar.tab './regutil -l-' \
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(DESTDIR)$(sysconfdir)
 
 $(DESTDIR)$(sysconfdir):
