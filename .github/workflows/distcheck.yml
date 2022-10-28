@@ -16,6 +16,8 @@ jobs:
       run: mkdir m4
     - name: autoreconf
       run: autoreconf -fi
+    - name: apt-get
+      run: apt-get install doxygen
     - name: configure
       run: ./configure --disable-root-actions --with-noaaport
     - name: make
