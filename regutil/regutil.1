@@ -8,6 +8,7 @@ regutil
 .nh
 \fR[\fB-d \fIdir\fR]
 \fR\fB-c\fR
+\fR[\fB-l \fIlogdest\fR]
 .hy
 .ft
 .HP
@@ -15,6 +16,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-l \fIlogdest\fR]
 \fR\fB-R\fR
 .hy
 .ft
@@ -23,6 +25,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-l \fIlogdest\fR]
 \fR[\fB-q\fR]
 \fR[\fIpath ...\fR]
 .hy
@@ -32,6 +35,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-l \fIlogdest\fR]
 \fR[\fB-q\fR]
 \fB-r \fP
 \fR\fIpath ...\fR
@@ -42,6 +46,7 @@ regutil
 regutil
 .nh
 \fR[\fB-d \fIdir\fR]
+\fR[\fB-l \fIlogdest\fR]
 \fR(\fB-b \fIbool\fR|\fB-h \fIsig\fR|\fB-s \fIstring\fR|\fB-t \fItime\fR|\fB-u \fIuint\fR)
 \fIvalpath\fR
 .hy
@@ -83,6 +88,13 @@ Pathname of the directory containing the LDM registry.  The default is
 .BI "-h " signature
 The signature value to which to set the parameter.  The signature shall be
 specified as a 32 character hexadecimal digit.
+.TP
+.BI "-l " logdest
+Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
+(standard error stream), or file \fIlogdest\fP. Default is the standard error
+stream if the process has a controlling terminal (i.e., the process isn't a
+daemon); otherwise, either the LDM log file or the system logging daemon
+(execute this program with just the option \fB'-?'\fP to determine which).
 .TP
 .BI "-q"
 Causes the utility to be "quiet" (i.e., to not write an error message to the

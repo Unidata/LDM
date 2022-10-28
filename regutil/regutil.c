@@ -402,7 +402,7 @@ int main(
 
             opterr = 0;                     /* supress getopt(3) error messages */
 
-            while (0 == status && (ch = getopt(argc, argv, ":b:cd:h:qRrs:t:u:vx"))
+            while (0 == status && (ch = getopt(argc, argv, ":b:cd:h:l:qRrs:t:u:vx"))
                     != -1) {
                 switch (ch) {
                 case 'b': {
@@ -454,6 +454,10 @@ int main(
                         action = PUT_SIGNATURE;
                         status = 0;
                     }
+                    break;
+                }
+                case 'l': {
+                    log_set_destination(optarg);
                     break;
                 }
                 case 'q': {
