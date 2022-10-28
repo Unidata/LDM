@@ -16,8 +16,10 @@ jobs:
       run: mkdir m4
     - name: autoreconf
       run: autoreconf -fi
-    - name: apt-get
-      run: apt-get install doxygen
+    - name: Install sudo
+      run: apt update && apt install sudo
+    - name: Install Doxygen
+      run: sudo apt install doxygen
     - name: configure
       run: ./configure --disable-root-actions --with-noaaport
     - name: make
