@@ -10,16 +10,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    #- name: Install sudo
+     # run: apt update && apt install sudo
+    - name: Install Doxygen
+      run: sudo apt install doxygen
     - uses: actions/checkout@v3
     - run: echo ${GITHUB_WORKSPACE}
     - name: mkdir m4
       run: mkdir m4
     - name: autoreconf
       run: autoreconf -fi
-    - name: Install sudo
-      run: apt update && apt install sudo
-    - name: Install Doxygen
-      run: sudo apt install doxygen
     - name: configure
       run: ./configure --disable-root-actions --with-noaaport
     - name: make
