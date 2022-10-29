@@ -397,7 +397,6 @@ main(int ac, char *av[])
                 }
             }
 
-            conffilename = getPqactConfigPath();
             datadir = getPqactDataDirPath();
 
             {
@@ -407,8 +406,10 @@ main(int ac, char *av[])
                     log_error_q("Too many operands");
                     usage(progname);
                 }
-                else if (1 == numOperands) {
-                    conffilename = av[optind];
+                else {
+                    conffilename = (1 == numOperands)
+                            ? av[optind]
+                            : getPqactConfigPath();
                 }
             }
         }
