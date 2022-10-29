@@ -12,6 +12,11 @@
         * Eliminated compilation errors under MacOS by replacing bzero(), bset(), and bcmp() with
           POSIX equivalents
 
+    logging:
+        * In order to accomodate GitHub actions, changed the determination of whether or not to use
+          the standard error stream from whether of not the process was a daemon to whether or not
+          the standard error stream is open on /dev/null
+
 6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0 due to blender(1))
     Installation:
         * Restored setting of LDM_PORT in distribution's registry
