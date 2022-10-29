@@ -84,7 +84,7 @@ const char* log_get_default_destination(void);
 bool log_stderr_is_open(void);
 
 /**
- * Indicates if the current process is a daemon.
+ * Indicates if the current process is a daemon (i.e., has no controlling terminal).
  *
  * @retval `true`   Current process is a daemon
  * @retval `false`  Current process is not a daemon
