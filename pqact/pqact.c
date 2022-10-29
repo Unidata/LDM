@@ -298,8 +298,6 @@ main(int ac, char *av[])
             exit(1);
         }
 
-        const char*  pqfname = getQueuePath();
-
         spec.feedtype = DEFAULT_FEEDTYPE;
         spec.pattern = DEFAULT_PATTERN;
 
@@ -364,7 +362,7 @@ main(int ac, char *av[])
                         }
                         break;
                 case 'q':
-                        pqfname = optarg;
+                        setQueuePath(optarg);
                         break;
                 case 'o':
                         toffset = atoi(optarg);
@@ -415,7 +413,7 @@ main(int ac, char *av[])
             }
         }
 
-        setQueuePath(pqfname);
+        const char* const pqfname = getQueuePath();
 
         {
             char cmdBuf[LINE_MAX];
