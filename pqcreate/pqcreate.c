@@ -67,12 +67,11 @@ int main(int ac, char *av[])
         }
 
         int ch;
-        char *qopt = NULL;
+        bool qOptUsed = false;
         char *sopt = NULL;
         char *Sopt = NULL;
         extern char     *optarg;
         extern int       optind;
-        const char* pqfname = getQueuePath();
 
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
@@ -93,7 +92,8 @@ int main(int ac, char *av[])
                         Sopt = optarg;
                         break;
                 case 'q':
-                        qopt = optarg;
+                        setQueuePath(optarg);
+                        qOptUsed = true;
                         break;
                 case 'x':
                         (void)log_set_level(LOG_LEVEL_DEBUG);
@@ -118,15 +118,12 @@ int main(int ac, char *av[])
         }
         if(ac - optind > 0)
         {
-                if(qopt)        
+                if(qOptUsed)
                         usage(av[0]);
-                qopt =  av[ac - 1];
+                setQueuePath(av[ac-1]);
         }
 
-        if(qopt) {
-                pqfname = qopt ;
-                setQueuePath(qopt);
-        }
+        const char* const pqfname = getQueuePath();
 
         if (sopt) {
             char*       cp;
