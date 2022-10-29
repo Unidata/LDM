@@ -278,7 +278,7 @@ nbs_test_LDADD			= $(LDADD) @LIBS_CUNIT@
 
 check-nbs_test:	nbs_test
 	./nbs_test $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini
-	../pqcat/pqcat -l- -q nbs_test.pq >output.gini 2>/dev/null
+	../pqcat/pqcat -l- -q nbs_test.pq >output.gini
 	if cmp $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini output.gini; then \
             rm output.gini nbs_test.pq; \
 	fi
