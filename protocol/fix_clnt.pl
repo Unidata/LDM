@@ -5,9 +5,7 @@ my($zeroTimeout);
 
 while( <STDIN> ) {
 
-    if (/\.\.\/\.\.\/protocol\/ldm.h/) {
-	s/\.\.\/\.\.\/protocol\///;
-    }
+    s/".*ldm\.h"/"ldm.h"/;
 
     if (/static[ 	]+struct[ 	]+timeval[ 	]+TIMEOUT/) {
 	s/25/60/;  # NOTE: INT_MAX causes EINVAL in clnt_call()

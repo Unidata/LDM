@@ -18,3 +18,4 @@ timer.h
 /supplied-ldm_clnt.c
 /supplied-ldm_svc.c
 /supplied-ldm_xdr.c
+/ldm_clnt.c.tmp

@@ -1,6 +1,7 @@
 6.14.1 (6.13.17 is 6.14.0)
     Installation:
         * Modified "make check" in regutil/ to accomodate GitHub actions
+        * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
 
     regutil(1):
         * Added "-l <logdest>" option to accomodate GitHub actions
