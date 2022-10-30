@@ -275,6 +275,9 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
+distcheck-hook:
+	chmod +w .
+
 RPM_BUILDDIR	= $$HOME/rpmbuild
 #
 # Create binary RPM files in this directory
