@@ -72,7 +72,7 @@ $(DESTDIR)$(sysconfdir)/pqact.conf:
 
 # pqact_test.conf is copied to /tmp to accomodate GitHub actions
 check-local:	pqact
-	cp pqact_test.conf /tmp
+	cp $(srcdir)/pqact_test.conf /tmp
 	rm -f /tmp/pqact_test.conf.state
 	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
 	./pqact -d $(srcdir) -q pqact_test.pq /tmp/pqact_test.conf & \
