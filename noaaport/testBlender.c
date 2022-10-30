@@ -112,14 +112,14 @@ decodeCommandLine(
     	usage(argv[0], COPYRIGHT_NOTICE);
 
 	// nbrFrames
-    if( sscanf(argv[optind++], "%" SCNu16, &nbrFrames) != 1)
+    if( sscanf(argv[optind++], "%d", &nbrFrames) != 1)
 		usage(argv[0], COPYRIGHT_NOTICE);
 
 	if(optind >= argc)
 		usage(argv[0], COPYRIGHT_NOTICE);
 
 	// nbrRuns
-    if( sscanf(argv[optind++], "%" SCNu16, &nbrRuns) != 1)
+    if( sscanf(argv[optind++], "%d", &nbrRuns) != 1)
 		usage(argv[0], COPYRIGHT_NOTICE);
 
 	if(optind >= argc)

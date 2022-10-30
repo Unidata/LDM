@@ -30,7 +30,7 @@ unsigned char dattim[6],level[2];
 int CCYY,YYYY,MM,DD,HH;
 time_t time1, time2;
 struct tm tm1, tm2;
-char prodtmp[255],prodid[255],levelstmp[255];
+char prodtmp[255] = {0}, prodid[255],levelstmp[255];
 char *pos;
 static char datyp[]="grib";
 static int isinit=!0;
@@ -82,7 +82,8 @@ if(isinit)
         sprintf(levelstmp,"%s",levels((int)vcordid,(int)level[0],(int)level[1]));
         while((pos = strchr(levelstmp,' ')) != NULL) pos[0] = '_';
 
-        sprintf(prodtmp,"%s/%s/%s/#%03d/%04d%02d%02d%02d%02d/F%03d/%s/%s! %06d",datyp,
+        snprintf(prodtmp, sizeof(prodtmp)-1, "%s/%s/%s/#%03d/%04d%02d%02d%02d%02d/F%03d/%s/%s! %06d",
+                datyp,
                 s_pds_center(center,subcenter),s_pds_model(center,model_id),grid_id,
                 CCYY,dattim[1],dattim[2],dattim[3],dattim[4],
                 (int)(time2 - time1)/3600,
@@ -110,7 +111,7 @@ int unpack=0, expand=0;
 g2int  listsec0[3],listsec1[13],numlocal;
 int model_id, grid_id;
 char g2name[13], fdats[80];
-char prodtmp[255];
+char prodtmp[255] = {0};
 char levelstmp[80];
 char prods[128];
 static char datyp[]="grib2", slashstr[]="/";
@@ -196,7 +197,7 @@ for ( n=0; n < curr_g2.field_tot; n++)
    curr_g2.gfld = NULL;
    }
 
-sprintf(prodtmp,"%s/%s/%s/#%03d/%s/%s/%s! %06d",
+snprintf(prodtmp, sizeof(prodtmp)-1, "%s/%s/%s/#%03d/%s/%s/%s! %06d",
 		datyp,
                 s_pds_center((int)listsec1[0],(int)listsec1[1]),
 		s_pds_model((int)listsec1[0],model_id),

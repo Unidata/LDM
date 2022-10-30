@@ -977,7 +977,7 @@ static void cmd_line (int argc, char **argv) {
 
 static int initLogs () {
 
-	char	logName[MAX_FILENAME_LEN+1];
+	char	logName[MAX_FILENAME_LEN+1] = {0};
 
 	sprintf (logName, "%s.product.log", ProgName);
 	pLog = logInitLogger ("Transaction Log", F_FILE, PROD_LOG_OPTS, V_ERROR,
@@ -1000,7 +1000,7 @@ static int initLogs () {
 	}
 
 #ifdef LDM_SUPPORT
-	sprintf (logName, "%s/ldm.log", MessagePath);
+	snprintf (logName, sizeof(logName)-1, "%s/ldm.log", MessagePath);
 	log_set_destination(logName);
 	log_set_level(LOG_LEVEL_NOTICE);
 #endif
@@ -2026,7 +2026,7 @@ int getWmoId (FILE_NODE *fnode, char *wmo) {
 
 	int	rstat	= 0;
 	char	tmpbuf[40];
-	char	fullName[MAX_FILENAME_LEN+1];
+	char	fullName[MAX_FILENAME_LEN+1] = {0};
 
 	makeAgeStr (fnode->mtime, tmpbuf);
 
@@ -2061,7 +2061,7 @@ int getWmoId (FILE_NODE *fnode, char *wmo) {
 		case IN_PDA:
 		case IN_POLL:
 			/* Must create full file name */
-			sprintf (fullName, "%s/%s", InputSource, fnode->fptr);
+			snprintf (fullName, sizeof(fullName)-1, "%s/%s", InputSource, fnode->fptr);
 			if (getWmoFromFile (fullName, wmo)) {
 				logMsg (pLog, V_ALWAYS, S_STATUS,
 					"END/ERROR_DISCARD WMO[] #%d bytes(%d) f(%s) WMO header not found%s",
@@ -2121,12 +2121,12 @@ int processProducts (FILE_LIST *fileList) {
 	ssize_t		readSize;
 	ssize_t		writeSize;
 	size_t		finalSize;
-	char		hashFileName[MAX_FILENAME_LEN+1];
+	char		hashFileName[MAX_FILENAME_LEN+1] = {0};
 	char		*pFileName;
 	off_t		pFileSize;
 	time_t		pFileTime;
-	char		prodFullName[MAX_FILENAME_LEN+1];
-	char		outFilePath[MAX_FILENAME_LEN+1];
+	char		prodFullName[MAX_FILENAME_LEN+1] = {0};
+	char		outFilePath[MAX_FILENAME_LEN+1] = {0};
 	struct stat	stat_buf;
 
 #ifdef LDM_SUPPORT
@@ -2146,7 +2146,7 @@ int processProducts (FILE_LIST *fileList) {
 		switch (InType) {
 			case IN_NDE:
 			case IN_PDA:	/* File names will be for checksum files here, not product files */
-				sprintf (hashFileName, "%s/%s", InputSource, pFileName);
+				snprintf (hashFileName, sizeof(hashFileName)-1, "%s/%s", InputSource, pFileName);
 				/* Check age and discard hash file if older than maximum allowable ingest age */
 				if (DiscardAge && (age > DiscardAge)) {
 					if (unlink (hashFileName)) {
@@ -2266,17 +2266,18 @@ int processProducts (FILE_LIST *fileList) {
 			case IN_GOESR:	/* Files will be product files */
 			case IN_POLL:
 			default:
-				sprintf (prodFullName, "%s/%s", InputSource, pFileName);
+				snprintf (prodFullName, sizeof(prodFullName), "%s/%s", InputSource, pFileName);
 
 				if (CreateChecksum) {	/* This is only valid for InType==GOESR */
 					/* Can't verify hashcode for GOES-R products since the file containing them (PAR file)
 					 * won't exist yet.  Create a file containing the hash code that must be processed later
 					 * by an external program.
 					 */
-					char	command[MAX_PATH_LEN+1];
+					char	command[MAX_PATH_LEN+1] = {0};
 
-					sprintf (hashFileName, "%s/%s", ParDir, pFileName);
-					sprintf (command, "%s %s > %s.hash", HashProgram, prodFullName, hashFileName);
+					snprintf (hashFileName, sizeof(hashFileName)-1, "%s/%s", ParDir, pFileName);
+					snprintf (command, sizeof(command)-1, "%s %s > %s.hash", HashProgram,
+					        prodFullName, hashFileName);
 					system (command);
 				}
 
@@ -2314,7 +2315,7 @@ int processProducts (FILE_LIST *fileList) {
 
 				if (SaveFails) {
 					/* Create empty file of same name in fail directory */
-					sprintf (outFilePath, "%s/%s", FailDir, pFileName);
+					snprintf (outFilePath, sizeof(outFilePath)-1, "%s/%s", FailDir, pFileName);
 					if ((fd = open (outFilePath, (O_WRONLY | O_CREAT), (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH))) == -1) {
 						logMsg (eLog, V_ERROR, S_ERROR,
 							"(%s) - Error (%d) \"%s\" while creating %s",
@@ -2517,7 +2518,8 @@ int processProducts (FILE_LIST *fileList) {
 #endif
 
 			case OUT_FILE:
-				sprintf (outFilePath, "%s/%s.%0*d", SaveDir, inOpts[InType-1].str, SentFileDigits, SentSeqNo);
+				snprintf (outFilePath, sizeof(outFilePath)-1, "%s/%s.%0*d", SaveDir,
+				        inOpts[InType-1].str, SentFileDigits, SentSeqNo);
 				if (AddWmoHeader) {
 					if ((fd = open (outFilePath, O_WRONLY | O_CREAT | O_TRUNC, OUTFILE_CREATE_PERMS)) == -1) {
 						logMsg (eLog, V_ERROR, S_ERROR,

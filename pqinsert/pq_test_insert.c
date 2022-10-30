@@ -391,8 +391,9 @@ static bool pti_setCreationTime(
 
         // Sleep if necessary
         if (timeval_isPositive(&sleepInterval)) {
-            if (sleep(sleepInterval.tv_sec) != 0 ||
-                    usleep(sleepInterval.tv_usec)) {
+            struct timespec sleepTime = {.tv_sec=sleepInterval.tv_sec,
+                    .tv_nsec=sleepInterval.tv_usec*1000};
+            if (nanosleep(&sleepTime, NULL)) {
                 log_syserr("Couldn't sleep");
                 return false;
             }

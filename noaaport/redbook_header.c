@@ -91,8 +91,9 @@ day = chvalue;
 hour = chvalue;
 (void)read_char1((unsigned char*)buf+i,&chvalue); i++;
 minute = chvalue;
-sprintf(dstr,"%04d%02d%02d %02d%02d",
+snprintf(dstr, sizeof(dstr), "%04d%02d%02d %02d%02d",
         year,month,day,hour,minute);
+dstr[sizeof(dstr)-1] = 0;
 }
 void block_2_2(buf,len)
 char *buf;

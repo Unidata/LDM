@@ -189,8 +189,10 @@ done:
                     if((nonalph == 0)&&(allnum == 0))
                         sprintf(hdr->PIL," /p%s",pilstr);
                 }
-                else if((linelen == 10) && (strncmp(pilstr,"^NMC",4) == 0))
-                    sprintf(hdr->PIL," /p%s",pilstr+4); 
+                else if((linelen == 10) && (strncmp(pilstr,"^NMC",4) == 0)) {
+                    snprintf(hdr->PIL, sizeof(hdr->PIL), " /p%s", pilstr+4);
+                    hdr->PIL[sizeof(hdr->PIL)-1] = 0;
+                }
             }
         }
         
