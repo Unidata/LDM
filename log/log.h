@@ -379,8 +379,7 @@ bool log_is_level_enabled(
 /**
  * Logs a single message at the DEBUG level, bypassing the message-queue.
  *
- * @param[in] ...  Optional arguments of the message -- starting with the format
- *                 of the message.
+ * @param[in] ...      Optional arguments of the message -- starting with the format of the message.
  * @asyncsignalsafety  Unsafe
  */
 #define log_debug(...) do {\
