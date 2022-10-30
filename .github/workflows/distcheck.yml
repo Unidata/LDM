@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - run: sudo apt install doxygen
-    - run: sudo apt install cunit-dev
+    - run: sudo apt install cunit
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.ref_name }}
