@@ -37,4 +37,4 @@ scour_SOURCES		= scour.c \
 TAGS_FILES		=  $(scour_SOURCES) ../log/*.c ../log/*.h 
 
 TESTS_ENVIRONMENT	= LDM_REGISTRY_DIR=$(top_builddir)/regutil
-TESTS			= testCscour.py
+#TESTS			= testCscour.py
