@@ -276,7 +276,8 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 	fi
 
 distcheck-hook:
-	chmod +w .
+	echo distcheckdir=`pwd`
+	chmod u+w $(distName)
 
 RPM_BUILDDIR	= $$HOME/rpmbuild
 #
