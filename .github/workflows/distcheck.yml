@@ -16,5 +16,5 @@ jobs:
     - run: mkdir m4
     - run: autoreconf -fi
     - run: ./configure --disable-root-actions --with-noaaport
-    - run: make distcheck
+    - run: make -j 1 distcheck
 
