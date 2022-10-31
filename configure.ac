@@ -16,16 +16,16 @@ AC_ARG_ENABLE([debug],
 	[enable support for debugging [[default=disabled]]]),
     [
 	case "$enableval" in
-	yes) enable_debug=true
+	(yes) enable_debug=true
 	     # The ": CFLAGS=..." form doesn't work. Bad colon!
 	     # CFLAGS and CXXFLAGS are automatically substituted
 	     CFLAGS="${CFLAGS:+$CFLAGS }-g -O0"
 	     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0"
             ;;
-	no) enable_debug=false
+	(no) enable_debug=false
             AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
             ;;
-	*) AC_MSG_ERROR(
+	(*) AC_MSG_ERROR(
 	    [bad value {$enableval} for --enable-debug])
 	    ;;
 	esac
@@ -74,9 +74,9 @@ else
 fi
 AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
-    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
-    FreeBSD*)    AC_DEFINE([__BSD_VISIBLE], [1], [Needed on FreeBSD systems]);;
+    ("SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
+    (Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
+    (FreeBSD*)    AC_DEFINE([__BSD_VISIBLE], [1], [Needed on FreeBSD systems]);;
 esac
 
 YEAR=`date +%Y`
@@ -99,7 +99,7 @@ else
 fi
 
 case "$CC" in
-*c[[89]]9*)
+(*c[[89]]9*)
     ARFLAGS=-cru
     if test "$max_size" = yes
     then
@@ -180,11 +180,11 @@ case "$CC" in
 esac
 
 case `uname -s` in
-    OSF1)
+    (OSF1)
         AC_DEFINE([_OSF_SOURCE], [1],
                 [Needed for "struct mreq" on OSF1 systems])
         ;;
-    IRIX*)
+    (IRIX*)
         AC_DEFINE([_SGI_SOURCE], [1],
                 [Needed for "struct mreq" on IRIX systems])
         AC_DEFINE([_BSD_TYPES], [1],
@@ -267,9 +267,9 @@ AC_ARG_ENABLE(faux-pq,
 	[use the faux product-queue [[default=disable]]]),
     [
 	case "${enableval}" in
-	yes) fauxPq=yes;;
-	no)  fauxPq=no;;
-	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-faux-pq]);;
+	(yes) fauxPq=yes;;
+	(no)  fauxPq=no;;
+	(*)   AC_MSG_ERROR([bad value ${enableval} for --enable-faux-pq]);;
 	esac
     ],
     [
@@ -329,9 +329,9 @@ AC_ARG_ENABLE([root-actions],
 	[[default=include]]]),
     [
 	case "$enableval" in
-	yes) enable_include=true;;
-	no) enable_include=false;;
-	*) AC_MSG_ERROR(
+	(yes) enable_include=true;;
+	(no) enable_include=false;;
+	(*) AC_MSG_ERROR(
 	    [bad value {$enableval} for --enable-root-actions]);;
 	esac
     ],
