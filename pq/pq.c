@@ -3502,7 +3502,7 @@ fd_lock(
                     (long)conflict);
         }
         else if (status != EACCES) {
-            log_syserr("fcntl() failed; fd=%d, cmd=%s, lock={type=%s, start=%ld, whence=%s, "
+            log_syserr("fcntl() failed: fd=%d, cmd=%s, lock={type=%s, start=%ld, whence=%s, "
                     "len=%zu}", fd, s_fcntlcmd(cmd), s_ltype(l_type), (long)offset,
                     s_whence(l_whence), extent);
         }
