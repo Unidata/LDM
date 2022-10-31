@@ -5,10 +5,18 @@ on:
     branches: [ "devel", "master" ]
 
 jobs:
+# distcheck_matrix:
   distcheck:
-    runs-on: ubuntu-latest
+#   strategy:
+#     matrix:
+#       os: [ubuntu-latest, macos-latest]
+#       os: [macos-latest]
+#   runs-on: ${{ matrix.os }}
+#   runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
-    - run: sudo apt install doxygen
+#   - run: sudo apt install doxygen
+    - run: sudo brew install doxygen
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.ref_name }}
