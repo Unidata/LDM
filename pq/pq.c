@@ -3363,6 +3363,28 @@ fgrow(const int fd, const off_t len, int sparse)
  ******************************************************************************/
 
 /* 
+ * Decode fcntl() command argument to string.
+ * DEBUG
+ */
+static char *
+s_fcntlcmd(const int cmd)
+{
+        switch (cmd) {
+        case F_SETLKW: return "F_SETLKW";
+        case F_SETLK: return "F_SETLK";
+        case F_GETLK: return "F_GETLK";
+        case F_DUPFD: return "F_DUPFD";
+        case F_GETFD: return "F_GETFD";
+        case F_SETFD: return "F_SETFD";
+        case F_GETFL: return "F_GETFL";
+        case F_SETFL: return "F_SETFL";
+        case F_GETOWN: return "F_GETOWN";
+        case F_SETOWN: return "F_SETOWN";
+        }
+        return "Unknown command";
+}
+
+/*
  * Decode flock l_type member to string.
  * DEBUG
  */
@@ -3480,9 +3502,9 @@ fd_lock(
                     (long)conflict);
         }
         else if (status != EACCES) {
-            log_syserr("fcntl(%d, %s) failed for region {whence: %s, off: %ld, "
-                    "extent: %zu}", fd, s_ltype(l_type),  s_whence(l_whence),
-                    (long)offset, extent);
+            log_syserr("fcntl() failed; fd=%d, cmd=%s, lock={type=%s, start=%ld, whence=%s, "
+                    "len=%zu}", fd, s_fcntlcmd(cmd), s_ltype(l_type), (long)offset,
+                    s_whence(l_whence), extent);
         }
     }
     else {
@@ -3773,7 +3795,7 @@ rgn2_reserve(
                 status = EACCES;
             }
             else if (status) {
-                log_errno(status, "rgn_lock() failure");
+                log_error("rgn2_lock() failure");
             }
             else {
                 status = riul_add(&pq->riulp, pq->pagesz, offset, extent, vp,
