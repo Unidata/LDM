@@ -166,10 +166,10 @@ case "$CC" in
             test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
             test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
             test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-            AC_MSG_NOTICE([cflags="'$cflags'"])
-            AC_MSG_NOTICE([ldflags="\"$ldflags\""])
-            AC_MSG_NOTICE([libs="\"$libs\""])
-            AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
+            AC_MSG_NOTICE([cflags="$cflags"])
+            AC_MSG_NOTICE([ldflags="$ldflags"])
+            AC_MSG_NOTICE([libs="$libs"])
+            AC_MSG_NOTICE([ARFLAGS="$ARFLAGS"])
             AC_MSG_CHECKING([the C compiler (again)])
             AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
                 AC_MSG_RESULT(works),
@@ -498,17 +498,17 @@ AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
     [Default pathname of installed-programs directory])
 AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
 AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
-AC_SUBST([LOGS_DIR], $localstatedir/logs])
+AC_SUBST([LOGS_DIR], [$localstatedir/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$localstatedir/logs"],
     [Default pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$localstatedir/run"],
     [Default pathname of LDM var/run directory])
-AC_SUBST([QUEUE_DIR], $localstatedir/queues])
+AC_SUBST([QUEUE_DIR], [$localstatedir/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
     [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
     [Default pathname of LDM product-queue])
-AC_SUBST([LDM_QUEUE_PATH], $localstatedir/queues/ldm.pq])
+AC_SUBST([LDM_QUEUE_PATH], [$localstatedir/queues/ldm.pq])
 AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
     [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
