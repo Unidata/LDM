@@ -169,7 +169,7 @@ case "$CC" in
             AC_MSG_NOTICE([cflags="'$cflags'"])
             AC_MSG_NOTICE([ldflags="'$ldflags'"])
             AC_MSG_NOTICE([libs="'$libs'"])
-            AC_MSG_NOTICE([ARFLAGS="'$ARFLAGS'"])
+            AC_MSG_NOTICE([ARFLAGS="$ARFLAGS"])
             AC_MSG_CHECKING([the C compiler (again)])
             AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
                 AC_MSG_RESULT(works),
