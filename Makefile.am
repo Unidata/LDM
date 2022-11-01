@@ -17,9 +17,9 @@ SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
 # Keep the value of LDMHOME consonant with that in `CI-commit.sh`.
-# "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
-# support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
-# which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
+## "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
+## support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
+## which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
 AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
                                   --disable-root-actions \
 				  --with-noaaport \
@@ -58,9 +58,6 @@ else
 if WANT_GRIBINSERT
     SUBDIRS	+= grib2 gempak
 endif
-endif
-if WANT_MULTICAST
-    SUBDIRS	+= mcast_lib
 endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
@@ -103,9 +100,9 @@ endif
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif
-if WANT_MULTICAST
-    SUBDIRS	+= mldm_sender
-endif
+#if WANT_MULTICAST
+#    SUBDIRS	+= mldm_sender
+#endif
 SUBDIRS		+= html test
 
 nobase_include_HEADERS		= \
@@ -295,22 +292,22 @@ rpmlint:
 	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
 	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
 
-pull-oess:
-	git fetch oess
-# The following command uses the wrong subdirectory
-#	git merge --strategy=subtree --squash oess/master
-	git merge --strategy=subtree -X subtree=mcast_lib/OESS-Client \
-		--squash oess/master
-	git commit -m "Pulled OESS-Client"
-
-pull-fmtp:
-	git subtree pull --prefix=gempak/tables gempak-tables master
-#	git fetch fmtp
+#pull-oess:
+#	git fetch oess
 ## The following command uses the wrong subdirectory
-##	git merge --strategy=subtree --squash fmtp/master
-#	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
-#		--squash fmtp/master
-#	git commit -m "Pulled FMTP-LDM7"
+##	git merge --strategy=subtree --squash oess/master
+#	git merge --strategy=subtree -X subtree=mcast_lib/OESS-Client \
+#		--squash oess/master
+#	git commit -m "Pulled OESS-Client"
+
+#pull-fmtp:
+#	git subtree pull --prefix=gempak/tables gempak-tables master
+##	git fetch fmtp
+### The following command uses the wrong subdirectory
+###	git merge --strategy=subtree --squash fmtp/master
+##	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
+##		--squash fmtp/master
+##	git commit -m "Pulled FMTP-LDM7"
 
 # test
 push-gempak-tables:

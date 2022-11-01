@@ -3354,7 +3354,7 @@ decodeFeedtype(
     return error;
 }
 
-#ifdef WANT_MULTICAST
+#if WANT_MULTICAST
 
 int
 decodeMulticastEntry(

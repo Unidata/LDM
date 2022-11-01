@@ -64,15 +64,15 @@ fi
 # "AM_CXXFLAGS" is not automatically substituted
 AC_SUBST([AM_CXXFLAGS])
 
-if test "$GXX" = "yes"; then
-    case `$CXX -dumpversion` in
-        ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
-        (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
-    esac
-else
-    DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
-fi
-AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
+#if test "$GXX" = "yes"; then
+    #case `$CXX -dumpversion` in
+        #([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
+        #(4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
+    #esac
+#else
+    #DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
+#fi
+#AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
 case "`uname -sr`" in
     ("SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
     (Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
@@ -210,16 +210,18 @@ AM_COND_IF([WANT_SLOG], [AC_DEFINE([WANT_SLOG], [1],
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
-AC_ARG_WITH([multicast],
-    AS_HELP_STRING([--with-multicast],
-	[enable support for multicast. DO NOT USE!
-        [default=without]]),
-    [],
-    [with_multicast=no])
-AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
-AM_COND_IF([WANT_MULTICAST], [
-    AC_DEFINE([WANT_MULTICAST], [1], [Package will have multicast capability])
-])
+#AC_ARG_WITH([multicast],
+    #AS_HELP_STRING([--with-multicast],
+	#[enable support for multicast. DO NOT USE!
+        #[default=without]]),
+    #[],
+    #[with_multicast=no])
+#AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
+AM_CONDITIONAL([WANT_MULTICAST], [false])
+#AM_COND_IF([WANT_MULTICAST], [
+    #AC_DEFINE([WANT_MULTICAST], [1], [Package will have multicast capability])
+#])
+AC_DEFINE([WANT_MULTICAST], [0], [Package will have multicast capability])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -670,13 +672,13 @@ AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
 AC_CHECK_HEADER([zlib.h], , [AC_MSG_ERROR([Header-file not found])])
 AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 
-AM_COND_IF([WANT_MULTICAST], [
-    # Ensure references to the YAML package, which is used by the LDM-7
-    # multicast module.
-    AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
-    AC_SEARCH_LIBS([yaml_emitter_dump], [yaml], ,
-        [AC_MSG_ERROR([Library not found])])
-])
+#AM_COND_IF([WANT_MULTICAST], [
+    ## Ensure references to the YAML package, which is used by the LDM-7
+    ## multicast module.
+    #AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
+    #AC_SEARCH_LIBS([yaml_emitter_dump], [yaml], ,
+        #[AC_MSG_ERROR([Library not found])])
+#])
 
 AM_COND_IF([WANT_NOAAPORT], [
     # Ensure references to the PNG package, which is used by the LDM NOAAPORT
@@ -758,9 +760,6 @@ AC_CONFIG_FILES([
     ldm.spec
     lib/Makefile
     Makefile
-    mcast_lib/Makefile
-    mcast_lib/ldm7/Makefile
-    mcast_lib/OESS-Client/Makefile
     misc/Makefile
     mldm_sender/Makefile
     log/Makefile
@@ -803,10 +802,13 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
 ])
+#   mcast_lib/Makefile
+#   mcast_lib/ldm7/Makefile
+#   mcast_lib/OESS-Client/Makefile
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/FMTP-LDM7/UnidataFMTP])
+#AC_CONFIG_SUBDIRS([mcast_lib/FMTP-LDM7/UnidataFMTP])
 
 export CC
 
