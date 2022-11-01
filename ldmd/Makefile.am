@@ -16,7 +16,6 @@ PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS	= ldmd
 ldmd_SOURCES	= ldmd.c
 AM_CPPFLAGS		= \
-#    -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
     -I$(top_srcdir)/log \
@@ -25,7 +24,8 @@ AM_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir) #\
+    -I$(top_srcdir)
+#    -I$(top_srcdir)/mcast_lib \
 #    -I$(top_builddir)/mcast_lib/ldm7 -I$(top_srcdir)/mcast_lib/ldm7
 LDADD		= \
     $(top_builddir)/lib/libldm.la \
