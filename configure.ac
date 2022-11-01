@@ -166,7 +166,7 @@ case "$CC" in
             test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
             test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
             test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-            AC_MSG_NOTICE([cflags="\"$cflags\""])
+            AC_MSG_NOTICE([cflags="'$cflags'"])
             AC_MSG_NOTICE([ldflags="\"$ldflags\""])
             AC_MSG_NOTICE([libs="\"$libs\""])
             AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
