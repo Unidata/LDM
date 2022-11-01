@@ -581,7 +581,7 @@ AC_DEFUN([UD_PROG_CPP],
 	    AC_MSG_CHECKING(the C preprocessor)
 	    AC_TRY_CPP([#include <stdlib.h>],
 		AC_MSG_RESULT(works),
-		AC_MSG_ERROR([[$[]0: C preprocessor, \`$CPP', doesn't work]]))
+		AC_MSG_ERROR([[$[]0: C preprocessor, $CPP, doesn't work]]))
 	    ;;
     esac
 ])
@@ -758,7 +758,7 @@ AC_MSG_CHECKING(for $5 library)
 	case $found in
 	    no)	
 		AC_MSG_ERROR(
-[$5 library not found.  Adjust library search-path (e.g., LD_LIBRARY_PATH) and/or set environment variable $1 (e.g., to \"$6\").  Then re-execute configure script.])
+[$5 library not found.  Adjust library search-path (e.g., LD_LIBRARY_PATH) and/or set environment variable $1 (e.g., to $6).  Then re-execute configure script.])
 		;;
 	esac
 	;;
