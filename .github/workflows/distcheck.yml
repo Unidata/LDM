@@ -26,7 +26,7 @@ jobs:
         ref: ${{ github.ref_name }}
     - run: mkdir m4
     - run: autoreconf -fi
-    - run: ./configure --disable-root-actions --with-noaaport || cat configure
-#   - run: make all
-#   - run: make distcheck
+    - run: ./configure --disable-root-actions --with-noaaport
+    - run: make all
+    - run: make distcheck
 
