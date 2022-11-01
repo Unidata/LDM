@@ -1,9 +1,8 @@
 dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
-AC_PREREQ(2.59)
-AC_INIT([LDM], [6.14.1], [support-ldm@unidata.ucar.edu],,
-    [http://www.unidata.ucar.edu/software/ldm])
+AC_PREREQ([2.69])
+AC_INIT([LDM],[6.14.1],[support-ldm@unidata.ucar.edu],[],[http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -571,38 +570,34 @@ AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(uint64_t)
 AC_MSG_CHECKING([size of enum])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #include <stdio.h>
     int main() {
 	enum foo { bar };
 	FILE* out = fopen("conftestdata", "w");
 	(void)fprintf(out, "%lu\n", (unsigned long)sizeof(enum foo));
 	exit(0);
-    }],
-    [
+    }]])],[
 	SIZEOF_ENUM=`cat conftestdata`
 	AC_MSG_RESULT($SIZEOF_ENUM)
 	AC_DEFINE_UNQUOTED(SIZEOF_ENUM, $SIZEOF_ENUM, [size of an enum])
-    ],
-    AC_MSG_FAILURE([couldn't run test program])
-)
+    ],[AC_MSG_FAILURE(couldn't run test program)
+],[])
 
 AC_MSG_CHECKING([size of gid_t])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
     #include <stdio.h>
     #include <sys/types.h>
     int main() {
 	FILE* out = fopen("conftestdata", "w");
 	(void)fprintf(out, "%lu\n", (unsigned long)sizeof(gid_t));
 	exit(0);
-    }],
-    [
+    }]])],[
 	SIZEOF_GID_T=`cat conftestdata`
 	AC_MSG_RESULT($SIZEOF_GID_T)
 	AC_DEFINE_UNQUOTED(SIZEOF_GID_T, $SIZEOF_GID_T, [size of a gid_t])
-    ],
-    AC_MSG_FAILURE([couldn't run test program])
-)
+    ],[AC_MSG_FAILURE(couldn't run test program)
+],[])
 
 AC_DEFINE([IEEE_FLOAT], [1], [use IEEE floating-point in XDR layer])
 AC_DEFINE([IEEE_DOUBLE], [1], [use IEEE double-precision in XDR layer])
@@ -619,7 +614,9 @@ AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
 strdup seteuid setenv mmap sigaction])
 UD_SIG_ATOMIC_T
 AC_C_CONST
-AC_STRUCT_ST_BLKSIZE
+AC_CHECK_MEMBERS([struct stat.st_blksize],[AC_DEFINE(HAVE_STRUCT_STAT_ST_BLKSIZE, 1,
+			    [Define to 1 if your `struct stat' has `st_blksize'.])])
+
 UD_SYSLOG_PIDFILE
 AC_SUBST(CFLAGS)
 UD_ULOG
@@ -730,7 +727,7 @@ AC_COMPILE_IFELSE(
     ]
 )
 
-AC_PROG_LIBTOOL
+LT_INIT
 
 AC_CONFIG_FILES([
     fauxPq/Makefile
