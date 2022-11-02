@@ -661,88 +661,12 @@ AC_DEFUN([UD_DB], [dnl
 ])dnl
 
 
-dnl Check for yacc(1) library.
-dnl
-AC_DEFUN([UD_LIB_YACC],
-[
-    AC_ARG_VAR([LD_YACC], [yacc(1) library])
-    case `uname` in
-	Linux)
-	    UD_DEFAULT(LD_YACC, )
-	    ;;
-	*)  UD_CHECK_LIB(LD_YACC, yyerror(""), , y, yacc, -ly)
-	    ;;
-    esac
-])
-
-
 dnl Set the value of a variable.  Use the environment if possible; otherwise
 dnl set it to a default value.  Call the substitute routine.
 dnl
 AC_DEFUN([UD_DEFAULT], [dnl
     $1=${$1-"$2"}
     AC_SUBST([$1])
-])
-
-
-dnl Check for a library that contains a function.
-dnl
-dnl NB: Always checks default library and library directories first.  This
-dnl obviates the need for a `-L...' reference, which can cause problems
-dnl [(]e.g. a `-L/usr/lib -lsocket' reference under SunOS 5.2 can cause the
-dnl wrong `-lm' to be loaded[)].
-dnl
-dnl This rule was changed (for some reason) to return `-lc' if the 
-dnl function was in the default library.  This caused problems on
-dnl an DecStation ULTRIX system when f77(1) was used to link a FORTRAN
-dnl program: the C and FORTRAN libraries had duplicate definitions for
-dnl some functions.  Consequently, we return to the practice of not
-dnl deciding on `-lc'.
-dnl
-dnl UC_CHECK_LIB(varname, func, dir ..., lib ..., libname, example)
-dnl
-AC_DEFUN([UD_CHECK_LIB],
-[dnl
-AC_MSG_CHECKING(for $5 library)
-    case "${$1+set}" in
-    set)
-	AC_MSG_RESULT($$1)
-	;;
-    *) AC_MSG_RESULT()
-	LIBS_save=$LIBS
-	found=no
-	AC_MSG_CHECKING(for $2 in default library(s))
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[$2;]])],[
-			AC_MSG_RESULT(yes)
-			$1=
-			found=yes
-		    ],[
-			AC_MSG_RESULT(no)
-			for dir in '' $3; do
-			    for lib in $4; do
-				UD_LINK_REF(LIBS, $dir, $lib)
-				AC_MSG_CHECKING(for $2 in $LIBS)
-				_au_m4_changequote([,])AC_TRY_LINK(, $2;, 
-					    [
-						AC_MSG_RESULT(yes)
-						$1=$LIBS
-						found=yes
-						break 2
-					    ])
-				AC_MSG_RESULT(no)
-			    done
-			done
-		    ])
-	LIBS=$LIBS_save
-	case $found in
-	    no)	
-		AC_MSG_ERROR(
-[$5 library not found.  Adjust library search-path (e.g., LD_LIBRARY_PATH) and/or set environment variable $1 (e.g., to $6).  Then re-execute configure script.])
-		;;
-	esac
-	;;
-    esac
-    AC_SUBST($1) dnl
 ])
 
 

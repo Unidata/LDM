@@ -561,7 +561,6 @@ UD_PROG_NTPDATE
 AC_SUBST([NTPDATE], ["$NTPDATE"])
 UD_PROG_NETSTAT
 UD_PROG_TOP
-UD_LIB_YACC
 UD_MMAP
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int, 4)
@@ -610,8 +609,7 @@ AC_CHECK_TYPE(ptrdiff_t, int)
 AC_CHECK_FUNCS([timegm])
 AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
-AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid 
-strdup seteuid setenv mmap sigaction])
+AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid strdup seteuid setenv mmap sigaction])
 UD_SIG_ATOMIC_T
 AC_C_CONST
 AC_CHECK_MEMBERS([struct stat.st_blksize],[AC_DEFINE(HAVE_STRUCT_STAT_ST_BLKSIZE, 1,
