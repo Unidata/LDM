@@ -19,15 +19,15 @@ jobs:
 #   - run: sudo apt install doxygen
     - run: brew install autoconf@2.69
     - run: export PATH="/usr/local/opt/autoconf@2.69/bin:$PATH"
+    - run: echo $PATH
+    - run: /usr/local/opt/autoconf@2.69/bin/autoreconf --version
     - run: brew install automake
-    - run: brew install libtool
     - run: brew install doxygen
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.ref_name }}
-    - run: autoreconf --version
     - run: mkdir m4
-    - run: autoreconf -fi
+    - run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
     - run: ./configure --disable-root-actions --with-noaaport || cat configure
     - run: make all
     - run: make distcheck
