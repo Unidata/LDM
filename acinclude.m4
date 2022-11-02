@@ -628,19 +628,6 @@ AC_DEFUN([UD_SIG_ATOMIC_T], [
 		   )
 ])
 
-
-dnl AC_DEFUN(UD_RPCSOC, [dnl
-dnl LIBS_save="${LIBS}"
-dnl LIBS="-R/usr/ucblib -L/usr/ucblib -lrpcsoc ${LIBS}"
-dnl have_lib=""
-dnl AC_MSG_CHECKING([for -lrpcsoc])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[main();]])],[have_lib="1"],[])dnl
-dnl if test -z "${have_lib}"; then
-dnl    LIBS="${LIBS_save}"
-dnl fi
-dnl ])dnl
-
-
 dnl
 dnl Change defaults to be compatible with Peter Neilley's "weather" program
 dnl
