@@ -18,7 +18,8 @@ jobs:
     steps:
 #   - run: sudo apt install doxygen
     - run: brew install autoconf@2.69
-    - run: brew install automake@1.13
+    - run: export PATH="/usr/local/opt/autoconf@2.69/bin:$PATH"
+    - run: brew install automake
     - run: brew install libtool
     - run: brew install doxygen
     - uses: actions/checkout@v3
