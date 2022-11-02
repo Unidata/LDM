@@ -40,7 +40,7 @@
 #   ifdef ultrix /* as of ULTRIX V4.0 */
 #	include <sys/ioctl.h>
 #   endif /* ultrix */
-#   if defined(__APPLE__) || defined(__bsdi__)
+#   if defined(__APPLE__) || defined(macintosh) || defined(Macintosh) || defined(__bsdi__)
 #       include <sys/ioctl.h>
         extern int ioctl (int __fd, unsigned long int __request, ...);
 #   endif
