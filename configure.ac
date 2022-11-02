@@ -570,6 +570,7 @@ AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(uint64_t)
 AC_MSG_CHECKING([size of enum])
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #include <stdlib.h>
     #include <stdio.h>
     int main() {
 	enum foo { bar };
@@ -585,6 +586,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 
 AC_MSG_CHECKING([size of gid_t])
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #include <stdlib.h>
     #include <stdio.h>
     #include <sys/types.h>
     int main() {
