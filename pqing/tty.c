@@ -30,7 +30,7 @@
 /*
  * We want Berkeley style exclusive mode badly enough to do this.
  */
-#ifndef TIOCEXCL
+//#ifndef TIOCEXCL
 #   ifdef sun /* as of SunOS 4.1 */
 #	include <sys/ttold.h> /* sys/ioctl.h has clashes with termios.h */
 #   endif /* sun */
@@ -47,7 +47,7 @@
 #   ifdef __linux__
 #       include <sys/ioctl.h>
 #   endif
-#endif /* !TIOCEXCL */
+//#endif /* !TIOCEXCL */
 
 enum rtty_csize_t {
 	RTTY_CS5 = CS5,
