@@ -610,7 +610,7 @@ AC_CHECK_TYPE(ptrdiff_t, int)
 AC_CHECK_FUNCS([timegm])
 AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
-AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
+AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid 
 strdup seteuid setenv mmap sigaction])
 UD_SIG_ATOMIC_T
 AC_C_CONST
