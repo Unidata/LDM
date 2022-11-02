@@ -11,8 +11,8 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <log.h>
 #include <errno.h>
+#include <libxml/parser.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,11 +22,10 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <libxml/parser.h>
 #include "backend.h"
+#include "log.h"
 #include "registry.h"
-#include "stringBuf.h"
-#include <log.h>
+#include "string_buf.h"
 
 typedef struct {
     char*       path;           /* pathname of file */

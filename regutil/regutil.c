@@ -13,6 +13,7 @@
 #include "ldmprint.h"
 #include "log.h"
 #include "registry.h"
+#include "string_buf.h"
 
 #include <assert.h>
 #include <errno.h>

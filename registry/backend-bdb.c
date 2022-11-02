@@ -10,6 +10,7 @@
 
 #undef NDEBUG
 #include <assert.h>
+#include <db.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,10 +18,10 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <db.h>
 #include "backend.h"
+#include "log.h"
 #include "registry.h"
-#include <log.h>
+#include "string_buf.h"
 
 typedef struct cursor        Cursor;
 

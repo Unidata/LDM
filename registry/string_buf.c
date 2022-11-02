@@ -18,7 +18,7 @@
 #include <log.h>
 #include "misc.h"
 #include "registry.h"
-#include "stringBuf.h"
+#include "string_buf.h"
 
 struct stringBuf {
     char*       buf;    /* NUL-terminated string */

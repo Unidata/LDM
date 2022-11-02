@@ -15,7 +15,7 @@
 #include "misc.h"
 #include "node.h"
 #include "registry.h"
-#include "stringBuf.h"
+#include "string_buf.h"
 
 #include <errno.h>
 #include <search.h>

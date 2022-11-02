@@ -9,7 +9,7 @@ EXTRA_DIST              = \
     misc.hin \
     node.hin \
     registry.hin \
-    stringBuf.hin
+    string_buf.hin
 BUILT_SOURCES           = \
     backend.c \
     backend.h \
@@ -17,7 +17,7 @@ BUILT_SOURCES           = \
     misc.h \
     node.h \
     registry.h \
-    stringBuf.h
+    string_buf.h
 nodist_include_HEADERS	= globals.h
 DISTCLEANFILES          = $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
@@ -26,7 +26,7 @@ lib_la_SOURCES          = \
     misc.c \
     node.c \
     registry.c \
-    stringBuf.c
+    string_buf.c
 nodist_lib_la_SOURCES	= backend.c
 TAGS_FILES              = \
     *.c *.h \
@@ -69,7 +69,7 @@ backend.h:	$(srcdir)/backend.hin backend.c
 globals.h:	$(srcdir)/globals.hin $(srcdir)/globals.c
 misc.h:		$(srcdir)/misc.hin $(srcdir)/misc.c
 node.h:		$(srcdir)/node.hin $(srcdir)/node.c
-stringBuf.h:	$(srcdir)/stringBuf.hin $(srcdir)/stringBuf.c
+string_buf.h:	$(srcdir)/string_buf.hin $(srcdir)/string_buf.c
 
 .c.i:
 	$(COMPILE) $(lib_la_CPPFLAGS) -E -o $@ $<
