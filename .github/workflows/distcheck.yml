@@ -24,9 +24,10 @@ jobs:
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.ref_name }}
-    - run: mkdir m4
-    - run: autoreconf -fi
-    - run: ./configure --disable-root-actions --with-noaaport || cat configure
-    - run: make all
-    - run: make distcheck
-
+    - run: autoreconf --version
+#    - run: mkdir m4
+#    - run: autoreconf -fi
+#    - run: ./configure --disable-root-actions --with-noaaport || cat configure
+#    - run: make all
+#    - run: make distcheck
+#
