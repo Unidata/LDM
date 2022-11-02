@@ -3,7 +3,7 @@ dnl
 dnl These are the local macros used by the ldm4 configure.in
 dnl autoconf 1.6
 dnl
-dnl This is just like AC_HAVE_FUNCS except that the sense is reversed.
+dnl This is just like AC_CHECK_FUNCS except that the sense is reversed.
 dnl
 define(diversion_number, divnum)dnl
 divert([-1])
@@ -464,13 +464,9 @@ AC_DEFUN([UD_ULOG], [dnl
 	    ;;
 	*)
             AC_MSG_CHECKING([whether syslog(3) returns an int])
-	    AC_TRY_COMPILE(
-		[#include <syslog.h>],
-		[int i = syslog(0,0);],
-		AC_DEFINE(SYSLOG_RETURNS_INT, 1,
-		    [Whether syslog(3) returns an int])
-		AC_MSG_RESULT([yes]),
-                [AC_MSG_RESULT([no])])
+	    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <syslog.h>]], [[int i = syslog(0,0);]])],[AC_DEFINE(SYSLOG_RETURNS_INT, 1,
+		    Whether syslog(3) returns an int)
+		AC_MSG_RESULT(yes)],[AC_MSG_RESULT([no])])
 	    ;;
     esac
 
@@ -579,9 +575,7 @@ AC_DEFUN([UD_PROG_CPP],
 	*)
 	    AC_REQUIRE([AC_PROG_CPP]) dnl
 	    AC_MSG_CHECKING(the C preprocessor)
-	    AC_TRY_CPP([#include <stdlib.h>],
-		AC_MSG_RESULT(works),
-		AC_MSG_ERROR([[$[]0: C preprocessor, $CPP, doesn't work]]))
+	    AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <stdlib.h>]])],[AC_MSG_RESULT(works)],[AC_MSG_ERROR([$[]0: C preprocessor, $CPP, doesn't work])])
 	    ;;
     esac
 ])
@@ -589,14 +583,14 @@ AC_DEFUN([UD_PROG_CPP],
 
 AC_DEFUN([UD_HPUX], [
     AC_MSG_CHECKING(for HP-UX)
-    AC_BEFORE([$0], [AC_COMPILE_CHECK])
-    AC_BEFORE([$0], [AC_TEST_PROGRAM])
-    AC_BEFORE([$0], [AC_HEADER_EGREP])
-    AC_PROGRAM_EGREP(yes, [
+    AC_BEFORE([$0], [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[])])
+    AC_BEFORE([$0], [AC_RUN_IFELSE([AC_LANG_SOURCE([[]])],[],[],[])])
+    AC_BEFORE([$0], [AC_EGREP_HEADER])
+    AC_EGREP_CPP([yes],[
 	    #ifdef __hpux
 	      yes
 	    #endif
-	], [
+	],[
 	    AC_MSG_RESULT(yes)
 dnl	Under HP-UX B.11.00, <rpc/rpc.h> includes <rpc/auth.h>, which includes
 dnl	<sys/user.h>, which uses "kt_t", which isn't defined anywhere; so omit
@@ -617,9 +611,8 @@ dnl	are suppressed.
 dnl	In 64-bit mode, the "xnet" networking library must be used.
 	    *+DA2.0W*) LIBS="${LIBS}${LIBS+ }-lxnet";;
 	    esac
-	],
-	AC_MSG_RESULT(no)
-    )dnl
+	],[AC_MSG_RESULT(no)
+    ])dnl
 ])dnl
 
 
@@ -640,7 +633,8 @@ dnl AC_DEFUN(UD_RPCSOC, [dnl
 dnl LIBS_save="${LIBS}"
 dnl LIBS="-R/usr/ucblib -L/usr/ucblib -lrpcsoc ${LIBS}"
 dnl have_lib=""
-dnl AC_COMPILE_CHECK([-lrpcsoc], , [main();], [have_lib="1"])dnl
+dnl AC_MSG_CHECKING([for -lrpcsoc])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[main();]])],[have_lib="1"],[])dnl
 dnl if test -z "${have_lib}"; then
 dnl    LIBS="${LIBS_save}"
 dnl fi
@@ -731,19 +725,17 @@ AC_MSG_CHECKING(for $5 library)
 	LIBS_save=$LIBS
 	found=no
 	AC_MSG_CHECKING(for $2 in default library(s))
-	AC_TRY_LINK(, $2;, 
-		    [
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[$2;]])],[
 			AC_MSG_RESULT(yes)
 			$1=
 			found=yes
-		    ],
-		    [
+		    ],[
 			AC_MSG_RESULT(no)
 			for dir in '' $3; do
 			    for lib in $4; do
 				UD_LINK_REF(LIBS, $dir, $lib)
 				AC_MSG_CHECKING(for $2 in $LIBS)
-				AC_TRY_LINK(, $2;, 
+				_au_m4_changequote([,])AC_TRY_LINK(, $2;, 
 					    [
 						AC_MSG_RESULT(yes)
 						$1=$LIBS
@@ -813,12 +805,8 @@ dnl
 AC_DEFUN([TYPE_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
 [
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
-   #include <sys/socket.h>],
-  [socklen_t len = 42; return 0;],
-  ac_cv_type_socklen_t=yes,
-  ac_cv_type_socklen_t=no)
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+   #include <sys/socket.h>]], [[socklen_t len = 42; return 0;]])],[ac_cv_type_socklen_t=yes],[ac_cv_type_socklen_t=no])
 ])
   if test $ac_cv_type_socklen_t != yes; then
     AC_DEFINE(socklen_t, int, [Type of variable for holding socket-length data])
