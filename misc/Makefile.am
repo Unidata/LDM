@@ -58,10 +58,10 @@ lib_la_SOURCES	= \
 	StrBuf.c StrBuf.h \
 	StringBuf.c StringBuf.h \
 	Thread.c Thread.h \
-        StopFlag.c StopFlag.h \
-        Future.c Future.h \
-        Executor.c Executor.h \
-        Completer.c Completer.h
+        StopFlag.c StopFlag.h
+#        Future.c Future.h \
+#        Executor.c Executor.h \
+#        Completer.c Completer.h
 AM_CPPFLAGS	= \
     -I$(top_builddir) -I$(top_srcdir) \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
