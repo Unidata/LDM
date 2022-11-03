@@ -100,9 +100,6 @@ endif
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
 endif
-#if WANT_MULTICAST
-#    SUBDIRS	+= mldm_sender
-#endif
 SUBDIRS		+= html test
 
 nobase_include_HEADERS		= \
