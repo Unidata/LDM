@@ -212,15 +212,15 @@ TAB_SIZE               = 4
 # the documentation. An alias has the form:
 # name=value
 # For example adding
-# "sideeffect=@par Side Effects:\n"
+# "sideeffect=@par Side Effects:^^"
 # will allow you to put the command \sideeffect (or @sideeffect) in the
 # documentation, which will result in a user-defined paragraph with heading
-# "Side Effects:". You can put \n's in the value part of an alias to insert
+# "Side Effects:". You can put "^^" in the value part of an alias to insert
 # newlines.
 
-ALIASES                = "exceptionsafety=@par Exception Safety:\n"
-ALIASES               += "threadsafety=@par Thread Safety:\n"
-ALIASES               += "asyncsignalsafety=@par Async-signal Safety:\n"
+ALIASES                = "exceptionsafety=@par Exception Safety:^^"
+ALIASES               += "threadsafety=@par Thread Safety:^^"
+ALIASES               += "asyncsignalsafety=@par Async-signal Safety:^^"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
