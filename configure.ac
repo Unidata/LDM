@@ -770,7 +770,6 @@ AC_CONFIG_FILES([
     lib/Makefile
     Makefile
     misc/Makefile
-    mldm_sender/Makefile
     log/Makefile
     log/ulog/Makefile
     noaaport/Makefile
@@ -814,6 +813,7 @@ AC_CONFIG_FILES([
 #   mcast_lib/Makefile
 #   mcast_lib/ldm7/Makefile
 #   mcast_lib/OESS-Client/Makefile
+#   mldm_sender/Makefile
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
