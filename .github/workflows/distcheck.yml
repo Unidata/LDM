@@ -13,7 +13,6 @@ jobs:
 #       os: [ubuntu-latest, macos-latest]
 #       os: [macos-latest]
 #   runs-on: ${{ matrix.os }}
-#   runs-on: ${{ matrix.os }}
     runs-on: macos-latest
     steps:
 #   - run: sudo apt install doxygen
@@ -27,5 +26,5 @@ jobs:
     - run: mkdir m4
     - run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
     - run: ./configure --disable-root-actions --with-noaaport || cat config.log
-    - run: make all
+#    - run: make all
     - run: make distcheck
