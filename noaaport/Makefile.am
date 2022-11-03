@@ -235,7 +235,8 @@ noaaportIngester-nssl.log:      noaaportIngester-nssl.out
 	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
-	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+	test `uname -s` = Darwin || \
+                diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
