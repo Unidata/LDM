@@ -686,11 +686,23 @@ AM_COND_IF([WANT_NOAAPORT], [
 ])
 
 AM_COND_IF([WANT_INGESTER],[
-    AC_SEARCH_LIBS([clock_gettime], [rt],,[AC_MSG_ERROR([Could not find required function clock_gettime],[1])])
-    AC_SEARCH_LIBS([timer_create], [rt],,[AC_MSG_ERROR([Could not find required function timer_create],[1])])
-    AC_SEARCH_LIBS([timer_settime], [rt],,[AC_MSG_ERROR([Could not find required function timer_settime],[1])])
-libs=$LIBS
+    found=yes
+    AC_SEARCH_LIBS([clock_gettime], [rt],,
+            [AC_MSG_WARN([Could not find required function clock_gettime])
+            found=no])
+    AC_SEARCH_LIBS([timer_create], [rt],,
+                [AC_MSG_WARN([Could not find required function timer_create])
+                found=no])
+    AC_SEARCH_LIBS([timer_settime], [rt],,
+            [AC_MSG_WARN([Could not find required function timer_settime])
+            found=no])
+    if test "$found" = "no"; then
+        AC_MSG_WARN([The fileIngest(1) ingester will not be built])
+    else
+        libs=$LIBS
+    fi
 ])
+AM_CONDITIONAL([WANT_INGESTER], [test "$found" = "yes"])
 
 # Ensure references to the XML2 package, which is used by the LDM registry
 # module.
