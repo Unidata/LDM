@@ -18,7 +18,7 @@ jobs:
     steps:
 #   - run: sudo apt install doxygen
     - run: brew install autoconf@2.69
-    - run: export PATH="/usr/local/opt/autoconf@2.69/bin:$PATH"
+    - run: /usr/local/opt/autoconf@2.69/bin/autoreconf --version
     - run: brew install automake
     - run: brew install doxygen
     - uses: actions/checkout@v3
@@ -27,5 +27,5 @@ jobs:
     - run: mkdir m4
     - run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
     - run: ./configure --disable-root-actions --with-noaaport || cat config.log
-#   - run: make all
+    - run: make all
     - run: make distcheck
