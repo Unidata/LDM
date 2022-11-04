@@ -697,7 +697,7 @@ AM_COND_IF([WANT_INGESTER],[
             [AC_MSG_WARN([Could not find required function timer_settime])
             found=no])
     if test "$found" = "no"; then
-        AC_MSG_WARN([The fileIngest(1) ingester will not be built])
+        AC_MSG_WARN([The fileIngest ingester will not be built])
     else
         libs=$LIBS
     fi
