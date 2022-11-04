@@ -2,8 +2,7 @@ name: Distcheck CI
 
 on:
   push:
-#    branches: [ "devel", "master" ]
-    branches: [ "*" ]
+    branches: [ "devel", "master", "main" ]
 
 jobs:
   distcheck_matrix:
