@@ -1,4 +1,4 @@
-6.14.1 (6.13.17 is 6.14.0)
+6.14.1 (6.13.17 should have been 6.14.0)
     Installation:
         * Modified "make check" in regutil/ to accomodate GitHub actions
         * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
@@ -13,12 +13,16 @@
         * Eliminated compilation errors under MacOS by replacing bzero(), bset(), and bcmp() with
           POSIX equivalents
 
-    logging:
+    Logging:
         * In order to accomodate GitHub actions, changed the determination of whether or not to use
           the standard error stream from whether of not the process was a daemon to whether or not
           the standard error stream is open on /dev/null
 
-6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0 due to blender(1))
+    Devops:
+        * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be
+          executed on the latest Ubuntu and MacOS systems.
+
+6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0 due to the addition of blender(1))
     Installation:
         * Restored setting of LDM_PORT in distribution's registry
         * Added support for use of chronyd(8) instead of ntpdate(8)
