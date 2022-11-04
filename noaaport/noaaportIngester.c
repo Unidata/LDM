@@ -63,7 +63,7 @@ static const int SCHED_POLICY = SCHED_FIFO;
 static Fifo*     fifo;
 static pthread_t reporterThread = {0};
 int              inflateFrame;
-int			     fillScanlines;
+int              fillScanlines;
 
 /**
  * Decodes the command-line.
