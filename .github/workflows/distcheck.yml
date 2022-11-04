@@ -21,15 +21,17 @@ jobs:
 
       - name: Ubuntu
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt install doxygen
-        run: autoreconf -fi
+        run: |
+          sudo apt install doxygen
+          autoreconf -fi
 
       - name: MacOS
         if: matrix.os == 'macos-latest'
-        run: brew install autoconf@2.69
-        run: brew install automake
-        run: brew install doxygen
-        run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
+        run: |
+          brew install autoconf@2.69
+          brew install automake
+          brew install doxygen
+          /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
       - run: ./configure --disable-root-actions --with-noaaport
       - run: make all
