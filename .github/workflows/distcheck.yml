@@ -6,25 +6,31 @@ on:
     branches: [ "*" ]
 
 jobs:
-# distcheck_matrix:
-  distcheck:
-#   strategy:
-#     matrix:
-#       os: [ubuntu-latest, macos-latest]
-#       os: [macos-latest]
-#   runs-on: ${{ matrix.os }}
-    runs-on: macos-latest
+  distcheck_matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-#   - run: sudo apt install doxygen
-    - run: brew install autoconf@2.69
-    - run: /usr/local/opt/autoconf@2.69/bin/autoreconf --version
-    - run: brew install automake
-    - run: brew install doxygen
-    - uses: actions/checkout@v3
-      with:
-        ref: ${{ github.ref_name }}
-    - run: mkdir m4
-    - run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
-    - run: ./configure --disable-root-actions --with-noaaport || cat config.log
-#    - run: make all
-    - run: make distcheck
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - run: mkdir m4
+
+      - name: Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt install doxygen
+        run: autoreconf -fi
+
+      - name: MacOS
+        if: matrix.os == 'macos-latest'
+        run: brew install autoconf@2.69
+        run: brew install automake
+        run: brew install doxygen
+        run: /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
+
+      - run: ./configure --disable-root-actions --with-noaaport
+      - run: make all
+      - run: make distcheck
