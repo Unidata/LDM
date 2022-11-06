@@ -640,7 +640,6 @@ AC_SEARCH_LIBS(
 AC_SEARCH_LIBS([sched_setscheduler], [rt],)
 
 AC_C_BIGENDIAN
-AC_HEADER_STDC
 AC_CHECK_HEADERS([errno.h stdio.h unistd.h stdlib.h string.h sys/types.h \
         sys/ipc.h sys/shm.h sys/sem.h sys/stat.h sys/wait.h unistd.h])
 AC_CHECK_HEADERS([stropts.h], ,
