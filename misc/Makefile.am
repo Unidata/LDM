@@ -116,10 +116,10 @@ Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
                                   @LIBS_CUNIT@
 #check_PROGRAMS    		+= Executor_test
 
-Completer_test_SOURCES		= Completer_test.c
-Completer_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Completer_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
+#Completer_test_SOURCES		= Completer_test.c
+#Completer_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Completer_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
 #check_PROGRAMS    		+= Completer_test
 
 #Task_test_SOURCES		= Task_test.c
