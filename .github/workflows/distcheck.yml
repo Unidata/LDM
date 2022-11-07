@@ -21,15 +21,15 @@ jobs:
       - name: Ubuntu 20.04
         if: matrix.os == 'ubuntu-20.04'
         run: |
-          sudo apt install doxygen
+          sudo apt-get install doxygen
           autoreconf -fi
 
       - name: Ubuntu 22.04
         if: matrix.os == 'ubuntu-22.04'
         run: |
-          sudo apt install doxygen
-          sudo apt remove autoconf
-          sudo apt install autotools-dev=2.69
+          sudo apt-get install doxygen
+          sudo apt-get remove autoconf
+          sudo apt-get install autoconf2.69
           autoreconf -fi
 
       - name: MacOS
