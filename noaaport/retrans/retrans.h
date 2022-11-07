@@ -500,31 +500,24 @@ typedef	CPIO_TABLE_ENTRY CPIO_TABLE[];
 
 #define NUM_CPIO_ENTRIES	10
 
-ulong   total_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
-ulong   total_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
-ulong   total_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
-ulong   total_prods_retrans_rqstd;    /* prods retrans requested */
-ulong   total_prods_handled;    /* prods retrans requested */
-ulong   total_prods_lost_err;
-ulong   total_frame_cnt;
-ulong   total_frame_err;
-int     retrans_xmit_enable;
-char    transfer_type[10];
-char    sbn_channel_name[13];
-int     sbn_type;
-char    mcastAddr[16];
+extern ulong   total_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
+extern ulong   total_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
+extern ulong   total_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
+extern ulong   total_prods_retrans_rqstd;    /* prods retrans requested */
+extern ulong   total_prods_handled;    /* prods retrans requested */
+extern ulong   total_prods_lost_err;
+extern ulong   total_frame_cnt;
+extern ulong   total_frame_err;
+extern int     retrans_xmit_enable;
+extern char    transfer_type[10];
+extern char    sbn_channel_name[13];
+extern int     sbn_type;
+extern char    mcastAddr[16];
 
 
-int                global_retransmitpipe_fd;
-long               global_cpio_addr;
-int                global_cpio_fd;
-PROD_RETRANS_TABLE *p_prod_retrans_table;
-char               log_buff[MAX_LOG_DATA];
-static char        *global_time_zone;
-ACQ_TABLE          *global_acq_tbl;
-BUFF_HDR           *buff_hdr;
-
-
+extern PROD_RETRANS_TABLE *p_prod_retrans_table;
+extern char               log_buff[MAX_LOG_DATA];
+extern BUFF_HDR           *buff_hdr;
 
 
 int init_retrans(PROD_RETRANS_TABLE **p_prod_retrans_table);
