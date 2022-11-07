@@ -19,13 +19,13 @@ jobs:
       - run: mkdir m4
 
       - name: Ubuntu 20.04
-        if: matrix.os = 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-20.04'
         run: |
           sudo apt install doxygen
           autoreconf -fi
 
       - name: Ubuntu 22.04
-        if: matrix.os = 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt install doxygen
           sudo apt remove autoconf
