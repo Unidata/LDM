@@ -110,10 +110,10 @@ read_close_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 read_close_test_LDADD		= -lpthread @LIBS_CUNIT@
 check_PROGRAMS    		+= read_close_test
 
-Executor_test_SOURCES		= Executor_test.c
-Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
+#Executor_test_SOURCES		= Executor_test.c
+#Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
 #check_PROGRAMS    		+= Executor_test
 
 #Completer_test_SOURCES		= Completer_test.c
