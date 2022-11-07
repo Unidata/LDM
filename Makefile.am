@@ -12,8 +12,6 @@ QUEUE_DIR			= @QUEUE_DIR@
 LOG_LDM				= @LOG_LDM@
 SYSLOG_CONF			= @SYSLOG_CONF@
 LDM_LOGFILE			= @LDM_LOGFILE@
-SUDO				= @SUDO@
-SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
 # Keep the value of LDMHOME consonant with that in `CI-commit.sh`.

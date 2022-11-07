@@ -10,8 +10,6 @@
 
 LDMHOME			= @LDMHOME@
 LDMSRC                  = $(top_srcdir)
-SUDO                    = @SUDO@
-SU                      = @SU@
 docdir                  = @DOCDIR_UTILITIES@/noaaport
 DOXYGEN                 = @DOXYGEN@
 
@@ -291,16 +289,8 @@ valgrind-nbs_test:	nbs_test
 #	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
 endif
 
-if HAVE_SUDO
 sudo:
-	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
-else
-sudo:
-	@printf "Enter root's password (or don't): " >/dev/tty
-	@su root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) $(TARGET)' \
-	    </dev/tty 2>/dev/tty
-	@echo >/dev/tty
-endif
+	sudo $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
 
 valgrind-noaaportIngester:      .libs/lt-noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
