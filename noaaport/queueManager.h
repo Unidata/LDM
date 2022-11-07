@@ -12,7 +12,6 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-extern pthread_t		flowDirectorThread;
 //  ========================================================================
 
 void setFIFOPolicySetPriority(pthread_t, char *, int);
