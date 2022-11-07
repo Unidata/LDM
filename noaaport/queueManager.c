@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <log.h>
 
+pthread_t		flowDirectorThread;
 
 //  ========================================================================
 static void* cfbInst;
