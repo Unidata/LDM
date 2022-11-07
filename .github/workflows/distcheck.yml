@@ -30,6 +30,7 @@ jobs:
           sudo apt-get install doxygen
           sudo apt-get remove autoconf
           sudo apt-get install autoconf2.69
+          autoconf --version
           autoreconf -fi
 
       - name: MacOS
