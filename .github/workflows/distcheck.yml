@@ -28,7 +28,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get install doxygen
-          sudo apt-get remove autoconf
+          sudo apt-get purge autoconf
           sudo apt-get install autoconf2.69
           autoconf --version
           autoreconf -fi
