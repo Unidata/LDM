@@ -2,7 +2,8 @@ name: Distcheck CI
 
 on:
   push:
-    branches: [ "devel", "master", "main" ]
+#    branches: [ "devel", "master", "main" ]
+    branches: [ "*" ]
 
 jobs:
   distcheck_matrix:
@@ -18,19 +19,10 @@ jobs:
 
       - run: mkdir m4
 
-      - name: Ubuntu 20.04
-        if: matrix.os == 'ubuntu-20.04'
+      - name: Ubuntu
+        if: contains(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install doxygen
-          autoreconf -fi
-
-      - name: Ubuntu 22.04
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get install doxygen
-          sudo apt-get purge autoconf
-          sudo apt-get install autoconf2.69
-          autoconf --version
           autoreconf -fi
 
       - name: MacOS
