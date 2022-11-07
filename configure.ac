@@ -324,58 +324,6 @@ AC_ARG_ENABLE(max-size,
     max_size=$enableval,
     max_size=yes)
 
-AC_ARG_ENABLE([root-actions],
-    AS_HELP_STRING([--disable-root-actions],
-	[don't include superuser (i.e., "root") actions in "make install"
-	[[default=include]]]),
-    [
-	case "$enableval" in
-	(yes) enable_include=true;;
-	(no) enable_include=false;;
-	(*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-root-actions]);;
-	esac
-    ],
-    [
-	enable_include=true
-    ])
-AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
-AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
-    [if touch conftest && chmod u=rwxs conftest &&
-	    ls -l conftest | grep -i rws >/dev/null; then \
-	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
-	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
-		[echo "Enter root's password (or don't)." >/dev/tty
-		$ac_path_SU root -c true </dev/tty >/dev/tty 2>&1 &&
-                    ac_cv_path_SU=$ac_path_SU
-                    ac_path_SU_found=:],
-		[AC_MSG_RESULT([not found])
-		AC_CACHE_CHECK([for sudo(1) that you can use],
-                    [ac_cv_path_SUDO],
-		    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
-			[echo "Enter your password (or don't)." >/dev/tty
-			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty &&
-                            ac_cv_path_SUDO=$ac_path_SUDO
-                            ac_path_SUDO_found=:],
-			[AC_MSG_RESULT([not found])])])])])
-        [echo Continuing... >/dev/tty]
-	AC_SUBST([SU], [$ac_cv_path_SU])
-	AC_SUBST([SUDO], [$ac_cv_path_SUDO])
-	if test -n "$SUDO" -o -n "$SU"; then \
-	    include_root_actions=true
-	else
-	    include_root_actions=false
-	fi
-    else
-	include_root_actions=false
-    fi
-    rm -f conftest],
-    [include_root_actions=false])
-AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
-    [test "$include_root_actions" = true])
-AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
-AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
-
 AC_ARG_ENABLE([setpgid-exec],
     AS_HELP_STRING([--disable-exec-setpgid], 
 	[disable making pqact(1) EXEC programs process-group leaders so that

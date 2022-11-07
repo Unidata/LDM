@@ -21,7 +21,6 @@ PQ_SUBDIR			= @PQ_SUBDIR@
 ## support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
 ## which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
 AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
-                                  --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-ingester \
@@ -166,34 +165,10 @@ MAINTAINERCLEANFILES	= \
 all:
 
 install-data-hook:	ensure-ldmhome-links ensure-var
-if INCLUDE_ROOT_ACTIONS
-	@echo
 	@echo "\
-The next step will perform those installation actions that must be executed \
-by the superuser. \
-If this step doesn't work (for example, if you don't enter \
-root's password), then the superuser will have to manually execute the \
-command \"$(MAKE) root-actions\"." \
-	| fmt >/dev/tty
-	@echo >/dev/tty
-if HAVE_SUDO
-	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions 2>/dev/tty
-else
-if HAVE_SU
-	@printf "Enter root's password (or don't): " >/dev/tty
-	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
-	    </dev/tty 2>/dev/tty
-	@echo >/dev/tty
-endif
-endif
-else
-	@echo
-	@echo "\
-NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
-superuser in order to complete the installation process." \
+NOTE: The command \"$(MAKE) root-actions\" must now be executed by the \
+superuser (i.e., "root") in order to complete the installation process." \
 	| fmt
-	@echo
-endif
 
 ensure-ldmhome-links:
 	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) $(distName)
