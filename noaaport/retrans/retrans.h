@@ -504,15 +504,12 @@ extern ulong   total_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
 extern ulong   total_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
 extern ulong   total_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
 extern ulong   total_prods_retrans_rqstd;    /* prods retrans requested */
-extern ulong   total_prods_handled;    /* prods retrans requested */
-extern ulong   total_prods_lost_err;
-extern ulong   total_frame_cnt;
-extern ulong   total_frame_err;
 extern int     retrans_xmit_enable;
 extern char    transfer_type[10];
 extern char    sbn_channel_name[13];
 extern int     sbn_type;
 extern char    mcastAddr[16];
+extern long    global_cpio_addr;
 
 
 extern PROD_RETRANS_TABLE *p_prod_retrans_table;

@@ -32,11 +32,10 @@
 #include "retrans.h"
 #include "acq_shm_lib.h"
 
-ulong   total_prods_handled;    /* prods retrans requested */
-ulong   total_prods_lost_err;
-ulong   total_frame_cnt;
-ulong   total_frame_cnt;
-
+static ulong       total_prods_handled;    /* prods retrans requested */
+static ulong       total_prods_lost_err;
+static ulong       total_frame_cnt;
+static ulong       total_frame_err;
 static int         global_cpio_fd;
 static ACQ_TABLE   *global_acq_tbl;
 #endif
