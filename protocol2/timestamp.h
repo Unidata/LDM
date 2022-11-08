@@ -7,8 +7,9 @@
 #ifndef _TIMESTAMP_H
 #define _TIMESTAMP_H
 
+#include <rpc/xdr.h>
+#include <stdbool.h>
 #include <sys/time.h>
-#include <rpc/rpc.h>
 
 typedef struct timeval timestampt;
 
@@ -45,7 +46,7 @@ set_timestamp(timestampt *tsp);
 extern void
 swap_timestamp(timestampt *fr, timestampt *to);
 
-extern bool_t
+extern bool
 xdr_timestampt(XDR *, timestampt*);
 
 extern timestampt

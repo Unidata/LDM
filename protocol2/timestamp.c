@@ -48,7 +48,7 @@ swap_timestamp(timestampt *fr, timestampt *to)
 }
 
 
-bool_t
+bool
 xdr_timestampt(XDR *xdrs, timestampt *tvp)
 {
         log_assert(pIf(xdrs->x_op == XDR_ENCODE,
