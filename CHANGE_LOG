@@ -1,3 +1,21 @@
+6.15.0
+    Installation:
+        * Eliminated the configure(1)-script option "--disable-root-actions". Installation now
+          proceeds as if this option were always specified. The "make install" step now prints a
+          message at the end stating that the superuser (i.e., "root") must now execute the command
+          "make root-actions". This was necessary in order to migrate the continuous-integration
+          workflow to GitHub actions: autoconf(1) 2.71 on the Ubuntu 22.04 platform creates an
+          invalid configure(1) script if the autoconf(1) configuration-file contains this option.
+
+          Installation from the unpacked distribution now comprises the following steps (details
+          omitted):
+            - Execute the configure(1) script as the LDM user
+            - "make install" as the LDM user
+            - "make root-actions" as root
+
+    Devops:
+        * Added Ubuntu 22.04 to the platforms on which GitHub actions will run "distcheck.yml"
+
 6.14.1 (6.13.17 should have been 6.14.0)
     Installation:
         * Modified "make check" in regutil/ to accomodate GitHub actions
