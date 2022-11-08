@@ -582,7 +582,7 @@ AC_DEFUN([UD_PROG_CPP],
 
 
 AC_DEFUN([UD_HPUX], [
-    AC_MSG_CHECKING(for HP-UX)
+    AC_MSG_CHECKING([for HP-UX])
     AC_BEFORE([$0], [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[])])
     AC_BEFORE([$0], [AC_RUN_IFELSE([AC_LANG_SOURCE([[]])],[],[],[])])
     AC_BEFORE([$0], [AC_EGREP_HEADER])
@@ -617,7 +617,7 @@ dnl	In 64-bit mode, the "xnet" networking library must be used.
 
 
 AC_DEFUN([UD_SIG_ATOMIC_T], [
-    AC_MSG_CHECKING(for sig_atomic_t in signal.h)
+    AC_MSG_CHECKING([for sig_atomic_t in signal.h])
     AC_EGREP_HEADER(sig_atomic_t, signal.h,
 		    AC_MSG_RESULT(defined),
 		    [
@@ -735,40 +735,40 @@ AC_DEFUN([UD_MAKEWHATIS],
     # conflicting with the (directory creation) target with the same name.
     #
     WHATIS=whatis
-    case `uname -sr` in
-	BSD/OS*|FreeBSD*|Darwin*)
+    case "`uname -sr`" in
+	(BSD/OS*|FreeBSD*|Darwin*)
 	    # Can't generate a user-database -- only /usr/share/man/whatis.db.
 	    MAKEWHATIS_CMD=
 	    ;;
-	'IRIX64 6.5'|'IRIX 6.5')
+	('IRIX64 6.5'|'IRIX 6.5')
 	    MAKEWHATIS_CMD='/usr/lib/makewhatis -M $(mandir) $(mandir)/whatis'
 	    ;;
-	'IRIX 6'*)
+	('IRIX 6'*)
 	    # Can't generate a user-database.
 	    MAKEWHATIS_CMD=
 	    ;;
-	HP-UX*)
+	(HP-UX*)
 	    # Can't generate a user-database -- only /usr/lib/whatis.
 	    MAKEWHATIS_CMD=
 	    ;;
-	'Linux '*)
+	('Linux '*)
 	    # /usr/sbin/makewhatis doesn't work
 	    MAKEWHATIS_CMD=
 	    ;;
-	ULTRIX*)
+	(ULTRIX*)
 	    # Can't generate a user-database -- only /usr/lib/whatis.
 	    MAKEWHATIS_CMD=
 	    ;;
-	*)
+	(*)
 	    if test -r /usr/man/windex; then
 		WHATIS=windex
 	    fi
 	    AC_CHECK_PROGS(prog, catman makewhatis /usr/lib/makewhatis, [catman])
 	    case "$prog" in
-		*catman*)
+		(*catman*)
 		    MAKEWHATIS_CMD=$prog' -w -M $(mandir)'
 		    ;;
-		*makewhatis*)
+		(*makewhatis*)
 		    MAKEWHATIS_CMD=$prog' $(mandir)'
 		    ;;
 	    esac
@@ -803,40 +803,6 @@ AC_DEFUN([UD_CHECK_HEADER],
     fi
 ])
 
-dnl Prepends to CPPFLAGS a preprocessor reference to a header-file directory if
-dnl necessary.
-dnl     $1  Name component (e.g., "XML2")
-dnl     $2  Name of the header-file (may contain "/")
-dnl     $3  Space-separated list of directories
-dnl     $4  Name of the automake output variable (e.g., "XML2_INCLUDE")
-AC_DEFUN([UD_SEARCH_HEADER],
-[
-    AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
-    origCppFlags="$CPPFLAGS"
-    found=no
-    cacheName=ac_cv_header_`echo $2 | tr '/.' '__'`
-    for dir in "" $3; do
-        CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
-        #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
-        AC_CHECK_HEADER([$2], [found=yes; break])
-        unset $cacheName
-        CPPFLAGS="$origCppFlags"
-    done
-    if test $found != yes; then
-        AC_MSG_ERROR(["$1" header-file(s) not found])
-    else
-        AC_MSG_NOTICE(["$1" header-file(s) found in "$dir"])
-        CPPFLAGS="$origCppFlags"
-        test "$CPPFLAGS" || unset CPPFLAGS
-        if test "$dir"; then
-            $4="-I$dir"
-        else
-            $4=
-        fi
-        AC_SUBST($4)
-    fi
-    unset found
-])
 
 dnl Sets a linker reference to a library if necessary.
 dnl     $1  Name component (e.g., "XML2")
