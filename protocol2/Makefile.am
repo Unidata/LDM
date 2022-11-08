@@ -93,13 +93,13 @@ lib_la_SOURCES		= \
     wordexp.c \
     xdr_data.c
 lib_la_CPPFLAGS		= \
-    -I$(top_srcdir) \
-    -I$(top_srcdir)/misc \
+    -I$(top_builddir)          -I$(top_srcdir) \
+    -I$(top_builddir)/misc     -I$(top_srcdir)/misc \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
-    -I$(top_srcdir)/log \
-    -I$(top_srcdir)/pq \
-    -I$(top_srcdir)/mcast_lib/ldm7
+    -I$(top_builddir)/log      -I$(top_srcdir)/log \
+    -I$(top_builddir)/pq       -I$(top_srcdir)/pq \
+    -I$(top_builddir)/mcast_lib/ldm7 -I$(top_srcdir)/mcast_lib/ldm7
 if WANT_MULTICAST
 lib_la_CPPFLAGS		+= -I$(top_builddir)/mcast_lib/ldm \
                            -I$(top_srcdir)/mcast_lib/ldm
