@@ -12,6 +12,7 @@
             - Execute the configure(1) script as the LDM user
             - "make install" as the LDM user
             - "make root-actions" as root
+          See the HTML documentation for details.
 
     Documentation:
         * Changed the download site to downloads.unidata.ucar.edu and eliminated the FTP site
