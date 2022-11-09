@@ -13,6 +13,12 @@
             - "make install" as the LDM user
             - "make root-actions" as root
 
+    Documentation:
+        * Changed the download site to downloads.unidata.ucar.edu and eliminated the FTP site
+        * Added recommended home directory /opt/ldm or /home/ldm
+        * Changed the installation instructions to "make install" by the LDM user and then "make
+          root-actions" by the superuser
+
     Devops:
         * Added Ubuntu 22.04 to the platforms on which GitHub actions will run "distcheck.yml"
 
