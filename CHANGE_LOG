@@ -18,6 +18,10 @@
         * Demoted the logging level of some common connection losses to reduce the number of
           ERROR messages in the log file
 
+    rpc(3):
+        * Demoted the logging level of some common connection losses to reduce the number of
+          ERROR messages in the log file
+
     Documentation:
         * Changed the download site to downloads.unidata.ucar.edu and eliminated the FTP site
         * Added recommended home directory /opt/ldm or /home/ldm
@@ -26,6 +30,9 @@
 
     Devops:
         * Added Ubuntu 22.04 to the platforms on which GitHub actions will run "distcheck.yml"
+        * Modified Git hook "pre-commit" to ensure that the version ID in "configure.ac" is the
+          same as the first word in "CHANGE_LOG" 
+        * Removed target "consistent" and its dependencies from "dev-makefile"
 
 6.14.1 (6.13.17 should have been 6.14.0)
     Installation:

@@ -53,31 +53,10 @@ coverity-scan:  $(COVERITY_SCAN_FILE)
 
 scan:	coverity-scan clang-scan
 
-configure.ac:  CHANGE_LOG
-	versionId=`awk '{print $$1;exit}' CHANGE_LOG`; \
-	if ! `echo "$$versionId" | egrep '^[0-9.]+$$' >/dev/null`; then \
-	    echo "First word in file CHANGE_LOG isn't a version ID"; \
-	    exit 1; \
-	fi; \
-	if test `sed -nr '/AC_INIT/{s/.*\[([0-9.]+)\].*/\1/p;q}' configure.ac` \!= \
-		$$versionId; then \
-	    sed -r '/^AC_INIT\(/s/\[[0-9][0-9.]+\]/['$$versionId']/' configure.ac \
-	            >configure.ac.tmp; \
-	    mv configure.ac.tmp configure.ac; \
-	else \
-	    touch $@; \
-	fi;
-
-configure:	configure.ac
-	autoreconf -fi
-
 Makefile:	configure
 	LDMHOME=`cd .. && pwd`; \
 	./configure --disable-root-actions --enable-debug --with-noaaport \
 	    --with-multicast --prefix=$$LDMHOME LDMHOME=$$LDMHOME
-
-consistent:	configure
-	touch $@
 
 reset:
 	-$(MAKE) distclean
