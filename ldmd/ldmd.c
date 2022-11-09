@@ -849,7 +849,15 @@ handle_connection(const int sock)
 
     int status = runChildLdm(&raddr, xp_sock);
 
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_NOTICE);
+    if (status == 0) {
+        log_flush(LOG_LEVEL_NOTICE);
+    }
+    else if (status == ESRCH || status == ETIMEDOUT) {
+        log_flush(LOG_LEVEL_WARNING);
+    }
+    else {
+        log_flush(LOG_LEVEL_ERROR);
+    }
 
     exit(status); // `cleanup()` will release acquired resources
 }
