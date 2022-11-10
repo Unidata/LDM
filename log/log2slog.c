@@ -710,7 +710,7 @@ int logi_init(const char* const id)
 
     if (id != NULL) {
         (void)strcpy(log_dest, STDERR_SPEC);
-        (void)stderr_init(&dest);
+        (void)stderr_init(&dest); // Necessary to initialize `dest`
 
         syslog_options = LOG_PID | LOG_NDELAY;
         syslog_facility = LOG_LDM;
