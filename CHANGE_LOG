@@ -15,6 +15,8 @@
             - "make install" as the LDM user
             - "make root-actions" as root
           See the HTML documentation for details.
+        * The configure(1) script now requires that a C++ compiler be found if the "--with-noaaport"
+          option is specified
 
     ldmd(1):
         * Demoted the logging level of some common connection losses to reduce the number of

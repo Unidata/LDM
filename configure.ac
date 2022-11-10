@@ -625,6 +625,9 @@ AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 #])
 
 AM_COND_IF([WANT_NOAAPORT], [
+    if test -z "$CXX"; then
+        AC_MSG_ERROR([A C++ compiler is necessary for NOAAPort ingestion and wasn't found])
+    fi
     # Ensure references to the PNG package, which is used by the LDM NOAAPORT
     # module.
     AC_CHECK_HEADER([png.h], , [AC_MSG_ERROR([Header-file not found])])
