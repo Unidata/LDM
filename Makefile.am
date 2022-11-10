@@ -163,10 +163,16 @@ MAINTAINERCLEANFILES	= \
 all:
 
 install-data-hook:	ensure-ldmhome-links ensure-var
-	@echo "\
-NOTE: The command \"$(MAKE) root-actions\" must now be executed by the \
-superuser (i.e., "root") in order to complete the installation process." \
-	| fmt
+	@echo
+	@echo
+	@echo '************************************************************************'
+	@echo "NOTE: Because certain programs must be owned by root and setuid, the"
+	@echo "command \"$(MAKE) root-actions\" must now be executed by the superuser (i.e.,"
+	@echo "\"root\") in order to complete the installation process. If this step is"
+	@echo "omitted, then the LDM won't work."
+	@echo '************************************************************************'
+	@echo
+	@echo
 
 ensure-ldmhome-links:
 	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) $(distName)
