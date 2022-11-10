@@ -1,5 +1,7 @@
-6.15.0
+6.14.1.1 (6.13.17 should have been 6.14.0)
     Installation:
+        * Modified "make check" in regutil/ to accomodate GitHub actions
+        * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
         * Eliminated the configure(1)-script option "--disable-root-actions". Installation now
           proceeds as if this option were always specified. The "make install" step now prints a
           message at the end stating that the superuser (i.e., "root") must now execute the command
@@ -18,27 +20,6 @@
         * Demoted the logging level of some common connection losses to reduce the number of
           ERROR messages in the log file
 
-    rpc(3):
-        * Demoted the logging level of some common connection losses to reduce the number of
-          ERROR messages in the log file
-
-    Documentation:
-        * Changed the download site to downloads.unidata.ucar.edu and eliminated the FTP site
-        * Added recommended home directory /opt/ldm or /home/ldm
-        * Changed the installation instructions to "make install" by the LDM user and then "make
-          root-actions" by the superuser
-
-    Devops:
-        * Added Ubuntu 22.04 to the platforms on which GitHub actions will run "distcheck.yml"
-        * Modified Git hook "pre-commit" to ensure that the version ID in "configure.ac" is the
-          same as the first word in "CHANGE_LOG" 
-        * Removed target "consistent" and its dependencies from "dev-makefile"
-
-6.14.1 (6.13.17 should have been 6.14.0)
-    Installation:
-        * Modified "make check" in regutil/ to accomodate GitHub actions
-        * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
-
     regutil(1):
         * Added "-l <logdest>" option to accomodate GitHub actions
 
@@ -48,15 +29,27 @@
     rpc(3) library:
         * Eliminated compilation errors under MacOS by replacing bzero(), bset(), and bcmp() with
           POSIX equivalents
+        * Demoted the logging level of some common connection losses to reduce the number of
+          ERROR messages in the log file
 
     Logging:
         * In order to accomodate GitHub actions, changed the determination of whether or not to use
           the standard error stream from whether of not the process was a daemon to whether or not
           the standard error stream is open on /dev/null
 
+    Documentation:
+        * Changed the download site to downloads.unidata.ucar.edu and eliminated the FTP site
+        * Added recommended home directory /opt/ldm or /home/ldm
+        * Changed the installation instructions to "make install" by the LDM user and then "make
+          root-actions" by the superuser
+
     Devops:
         * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be
           executed on the latest Ubuntu and MacOS systems.
+        * Added Ubuntu 22.04 to the platforms on which GitHub actions will run "distcheck.yml"
+        * Modified Git hook "pre-commit" to ensure that the version ID in "configure.ac" is the
+          same as the first word in "CHANGE_LOG" 
+        * Removed target "consistent" and its dependencies from "dev-makefile"
 
 6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0 due to the addition of blender(1))
     Installation:
