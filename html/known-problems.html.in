@@ -98,9 +98,7 @@ Include in the email all relevant items that could aid the diagnosis.
 <hr>
 
 <p>
-<script language="JavaScript" type="text/JavaScript">
-document.write(date_modified);
-</script>
+
 
 <script src="/js/ldm_add_in.js" type="text/javascript"></script>
 </body>
