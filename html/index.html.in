@@ -12,11 +12,11 @@
 
 <h1 align="center">LDM @VERSION@</h1><br>
 
-<p align="justify"> The Unidata Local Data Manager (LDM) is a
+<p align="justify"> The Unidata Local Data Manager (LDM) is a 
 collection of cooperating programs that select, capture, manage,
 and distribute arbitrary data products.  The system is designed for
 event-driven data distribution, and is currently used in the <a
-href="/projects/idd/index.html">
+href="https://www.unidata.ucar.edu/projects/idd/">
 <b>Unidata Internet Data
 Distribution</b></a> (IDD) project. The LDM system includes network
 client and server programs and their shared protocols.
@@ -43,7 +43,7 @@ The LDM supports flexible, site-specific configuration.
 	<ul>
 	    <li><a href="COPYRIGHT">LDM Software Licensing Terms and
 		Conditions</a>
-	    <li><a href="/data/data_usage.html#data">
+	    <li><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">
 		Data Usage Terms and Conditions</a>
 	</ul>
 </ul>
@@ -76,7 +76,7 @@ The LDM supports flexible, site-specific configuration.
   <li><p><a href="troubleshooting/index.html">
       Troubleshooting the LDM</a>
 
-  <li><p><a href="../index.html#LDM Support">
+  <li><p><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">
       General LDM help and support</a>
 </ul>
 
@@ -84,17 +84,15 @@ The LDM supports flexible, site-specific configuration.
 <h2>Getting Data via the IDD</h2>
 
 <p><ul>
-    <li><p><a href="/projects/idd/">
+    <li><p><a href="https://www.unidata.ucar.edu/projects/idd/">
 	Link to IDD homepage</a>
     <li><p><a href="basics/feedtypes/index.html">LDM feedtypes</a>
-    <li><p><a href="/data/data_usage.html#data">
+    <li><p><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">
 	Data Usage Terms and Conditions</a>
 </ul>
 
 
-<script language="JavaScript" type="text/JavaScript">
-document.write(date_modified);
-</script>
+
 
 <script src="/js/ldm_add_in.js" type="text/javascript"></script>
 </body>
