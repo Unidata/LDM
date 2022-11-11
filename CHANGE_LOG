@@ -52,6 +52,7 @@
         * Modified Git hook "pre-commit" to ensure that the version ID in "configure.ac" is the
           same as the first word in "CHANGE_LOG" 
         * Removed target "consistent" and its dependencies from "dev-makefile"
+        * Created GitHub Actions file "codeql.yml" to scan the code
 
 6.13.17 2022-10-24T15:01:17-0600 (should have been 6.14.0 due to the addition of blender(1))
     Installation:
