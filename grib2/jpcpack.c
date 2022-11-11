@@ -92,9 +92,9 @@ void jpcpack(g2float *fld,g2int width,g2int height,g2int *idrstmpl,
         if (fld[j] < rmin) rmin=fld[j];
       }
       if (idrstmpl[1] == 0) 
-         maxdif = (g2int) (rint(rmax*dscale) - rint(rmin*dscale));
+         maxdif = (g2int) (rint((double)rmax*dscale) - rint(rmin*(double)dscale));
       else
-         maxdif = (g2int)rint( (rmax-rmin)*dscale*bscale );
+         maxdif = (g2int)rint( ((double)rmax-rmin)*dscale*bscale );
 /*
 //  If max and min values are not equal, pack up field.
 //  If they are equal, we have a constant field, and the reference
@@ -112,15 +112,15 @@ void jpcpack(g2float *fld,g2int width,g2int height,g2int *idrstmpl,
            //  No binary scaling and calculate minumum number of 
            //  bits in which the data will fit.
            */
-           imin=(g2int)rint(rmin*dscale);
-           imax=(g2int)rint(rmax*dscale);
+           imin=(g2int)rint(rmin*(double)dscale);
+           imax=(g2int)rint(rmax*(double)dscale);
            maxdif=imax-imin;
            temp=log((double)(maxdif+1))/alog2;
            nbits=(g2int)ceil(temp);
            rmin=(g2float)imin;
            /*   scale data*/
            for(j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(fld[j]*dscale)-imin;
+             ifld[j]=(g2int)rint(fld[j]*(double)dscale)-imin;
         }
         else {
            /*
@@ -129,12 +129,12 @@ void jpcpack(g2float *fld,g2int width,g2int height,g2int *idrstmpl,
            */
            rmin=rmin*dscale;
            rmax=rmax*dscale;
-           maxdif=(g2int)rint((rmax-rmin)*bscale);
+           maxdif=(g2int)rint(((double)rmax-rmin)*bscale);
            temp=log((double)(maxdif+1))/alog2;
            nbits=(g2int)ceil(temp);
            /*   scale data*/
            for (j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+             ifld[j]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
         }
         /*
         //  Pack data into full octets, then do JPEG 2000 encode.

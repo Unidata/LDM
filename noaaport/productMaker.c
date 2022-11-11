@@ -997,7 +997,7 @@ int    nnnxxx_offset;
                                     MD5Update(md5ctxp,
                                             (unsigned char *) (memheap + heapcount),
                                             (GOES_BLNK_FRM_LEN * n_scanlines));
-                                    heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                    heapcount += (size_t)GOES_BLNK_FRM_LEN * n_scanlines;
                                     log_debug("GOES uncompressed blank frames added "
                                             "[tot/this] [%d/%d] heapcount = %ld "
                                             "blank_frame_len = %d scanlines %d",
@@ -1089,7 +1089,7 @@ int    nnnxxx_offset;
                                  MD5Update(md5ctxp,
                                          (unsigned char *) (memheap + heapcount),
                                         (GOES_BLNK_FRM_LEN * n_scanlines));
-                                 heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                 heapcount += (size_t)GOES_BLNK_FRM_LEN * n_scanlines;
                                  log_debug("GOES blank frames added [tot/this] "
                                          "[%d/%d] heapcount [%ld] blank_frame_len "
                                          "[%d] scanlines [%d]",

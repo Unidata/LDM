@@ -45,6 +45,9 @@
         * Changed the installation instructions to "make install" by the LDM user and then "make
           root-actions" by the superuser
 
+    Security:
+        * Corrected code faults found by GitHub's CodeQL
+
     Devops:
         * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be
           executed on the latest Ubuntu and MacOS systems.

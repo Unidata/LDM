@@ -144,12 +144,12 @@ void misspack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
         */
         nonmiss=0;
         if (idrstmpl[1] == 0) {        /*  No binary scaling */
-           imin=(g2int)rint(rmin*dscale);
+           imin=(g2int)rint((double)rmin*dscale);
            /*imax=(g2int)rint(rmax*dscale); */
            rmin=(g2float)imin;
            for ( j=0; j<ndpts; j++) {
               if (ifldmiss[j] == 0) {
-                jfld[nonmiss]=(g2int)rint(fld[j]*dscale)-imin;
+                jfld[nonmiss]=(g2int)rint(fld[j]*(double)dscale)-imin;
                 nonmiss++;
               }
            }
@@ -159,7 +159,7 @@ void misspack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
            /*rmax=rmax*dscale; */
            for ( j=0; j<ndpts; j++ ) {
               if (ifldmiss[j] == 0) {
-                jfld[nonmiss]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+                jfld[nonmiss]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
                 nonmiss++;
               }
            }

@@ -203,7 +203,7 @@ fb_arena_sz(size_t nelems)
     for (level = 0; level < maxsize; level++) {
         int blksize = level + 1;        /* size of fblk (number of levels) */
 
-        total += blksize*numblks;
+        total += ((size_t)blksize)*numblks;
         if(numblks >= 4)
             numblks /= 4;
         else
@@ -4642,7 +4642,7 @@ pq2_try_del_prod(
                 status = EACCES;
             }
             else {
-                log_syserr("Couldn't get region (offset=%ld,extent=%lu)");
+                log_syserr("Couldn't get region (offset=%ld,extent=%zu)", offset, Extent(rep));
                 status = PQ_SYSTEM;
             }
         }
@@ -8993,7 +8993,8 @@ pqe_newDirect(
      * Vet arguments.
      */
     if (pq == NULL || ptrp == NULL || indexp == NULL || signature == NULL) {
-        log_error("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
+        log_error("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p", pq, ptrp, indexp,
+                signature);
         status = EINVAL;
     }
     else {

@@ -108,17 +108,17 @@ void compack(g2float *fld,g2int ndpts,g2int idrsnum,g2int *idrstmpl,
         //  Scale original data
         */
         if (idrstmpl[1] == 0) {        /*  No binary scaling*/
-           imin=(g2int)rint(rmin*dscale);
+           imin=(g2int)rint(rmin*(double)dscale);
            /*imax=(g2int)rint(rmax*dscale);*/
            rmin=(g2float)imin;
            for (j=0;j<ndpts;j++) 
-              ifld[j]=(g2int)rint(fld[j]*dscale)-imin;
+              ifld[j]=(g2int)rint(fld[j]*(double)dscale)-imin;
         }
         else {                             /*  Use binary scaling factor*/
            rmin=rmin*dscale;
            /*rmax=rmax*dscale;*/
            for (j=0;j<ndpts;j++) 
-             ifld[j]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+             ifld[j]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
         }
         /*
         //  Calculate Spatial differences, if using DRS Template 5.3
