@@ -21,6 +21,7 @@
     ldmd(1):
         * Demoted the logging level of some common connection losses to reduce the number of
           ERROR messages in the log file
+        * Improved log message when select() fails
 
     regutil(1):
         * Added "-l <logdest>" option to accomodate GitHub actions

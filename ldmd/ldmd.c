@@ -885,7 +885,7 @@ static void sock_svc(
              * Handle EINTR as a special case.
              */
             if (errno != EINTR) {
-                log_syserr("sock select");
+                log_syserr("select() failure on socket %d", sock);
                 done = 1;
                 exit(1);
             }
