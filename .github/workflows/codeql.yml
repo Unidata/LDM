@@ -11,10 +11,10 @@
 #
 name: "CodeQL"
 
-on:
-  push:
-    branches: [ "devel", "main" ]
-  workflow_dispatch:
+#on:
+#  push:
+#    branches: [ "devel", "main" ]
+#  workflow_dispatch:
 
 jobs:
   analyze:

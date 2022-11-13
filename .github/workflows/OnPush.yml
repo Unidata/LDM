@@ -1,4 +1,4 @@
-name: Distcheck CI
+name: On Push
 
 on:
   push:
@@ -33,6 +33,20 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-      - run: ./configure --disable-root-actions --with-noaaport || { cat configure; exit 1; }
-      - run: make all
-      - run: make distcheck
+      - name: Build
+        run: |
+          ./configure --disable-root-actions --with-noaaport || { cat configure; exit 1; }
+          make all
+          make distcheck
+
+      - name: Initialize CodeQL
+        if: matrix.os == 'macos-latest'
+        uses: github/codeql-action/init@v2
+        with:
+          languages: "cpp"
+
+      - name: Perform CodeQL Analysis
+        if: matrix.os == 'macos-latest'
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "cpp"
