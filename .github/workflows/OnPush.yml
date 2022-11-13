@@ -33,17 +33,17 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-      - name: Build
-        run: |
-          ./configure --disable-root-actions --with-noaaport || { cat configure; exit 1; }
-          make all
-          make distcheck
-
       - name: Initialize CodeQL
         if: matrix.os == 'macos-latest'
         uses: github/codeql-action/init@v2
         with:
           languages: "cpp"
+
+      - name: Build
+        run: |
+          ./configure --disable-root-actions --with-noaaport || { cat configure; exit 1; }
+          make all
+          make distcheck
 
       - name: Perform CodeQL Analysis
         if: matrix.os == 'macos-latest'
