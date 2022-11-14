@@ -26,7 +26,7 @@ Then, do the following:
 
 <pre>
     su - ldm
-    wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
+    wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
     gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
     rm @PACKAGE@-@VERSION@.tar.gz # optional
     cd @PACKAGE@-@VERSION@/src
@@ -80,10 +80,10 @@ Obtain the
 <a href="glindex.html#LDM">LDM</a> 
 source-distribution can be obtained via the command
 <blockquote><pre>
-wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
+wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
 </pre></blockquote>
 or by clicking on the appropriate link in the 
-<a href="/downloads/ldm/">LDM download page</a>.
+<a href="https://downloads.unidata.ucar.edu/ldm/">LDM download page</a>.
 Download the file into the 
 <a href="glindex.html#LDM user">LDM user</a>'s home directory.
 

@@ -15,7 +15,7 @@
 <BODY>
 <H1 ALIGN=CENTER>LDM @VERSION@ Reference</H1>
 <P STYLE="margin-bottom: 0in">The following HTML pages comprise a
-reference document for the <A HREF="../index.html">Unidata LDM</A>
+reference document for the <A HREF="https://www.unidata.ucar.edu/software/ldm/">Unidata LDM</A>
 and also underlie the <A HREF="../tutorial">LDM Tutorial</A>. If you
 know what you're looking for, then look here; otherwise, use the
 tutorial. 
