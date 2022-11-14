@@ -105,3 +105,5 @@ vgcore.*
 *.yaml
 /uni15-r
 /PAT
+*.DS_Store
+.idea/
