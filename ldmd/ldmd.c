@@ -92,8 +92,8 @@ Signal(int sig, void(*action)(int))
  * "Unix Network Programming" Volume 1, Third Edition, by Richard Stevens.
  *
  * @retval 0      Success
- * @retval 1      fork(2) failure
- * @retval 2      setsid(2) failure
+ * @retval 1      fork(2) failure. `log_add()` called.
+ * @retval 2      setsid(2) failure. `log_add()` called.
  */
 static int
 daemonize()
