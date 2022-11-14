@@ -51,8 +51,8 @@ source. In particular, the following constraints apply:
 <li>Become the superuser (<i>i.e.</i>, "root").</li>
 
 <li>Download the appropriate RPM from
-<a href="ftp://ftp.unidata.ucar.edu/pub/ldm/"><tt>
-ftp://ftp.unidata.ucar.edu/pub/ldm/</tt></a>.</li>
+<a href="https://downloads.unidata.ucar.edu/ldm/"><tt>
+https://downloads.unidata.ucar.edu/ldm/</tt></a>.</li>
 
 <li>Install the package with the command
 <blockquote><pre>

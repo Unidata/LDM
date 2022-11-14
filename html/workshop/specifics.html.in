@@ -63,7 +63,7 @@ the following:
 
 <blockquote><pre>
 cd
-wget ftp://ftp.unidata.ucar.edu/pub/ldm/ldm-@VERSION@.tar.gz
+wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/ldm-@VERSION@.tar.gz
 gunzip -c ldm-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
 cd ldm-@VERSION@/src
 ./configure >&configure.log && echo Configured && make install >&install.log && echo Installed

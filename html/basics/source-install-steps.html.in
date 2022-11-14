@@ -26,7 +26,7 @@ Then, do the following:
 
 <pre>
     su - ldm
-    wget ftp://ftp.unidata.ucar.edu/pub/ldm/@PACKAGE@-@VERSION@.tar.gz
+    wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
     gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
     rm @PACKAGE@-@VERSION@.tar.gz # optional
     cd @PACKAGE@-@VERSION@/src
