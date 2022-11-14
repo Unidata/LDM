@@ -52,7 +52,7 @@
     Devops:
         * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be
           executed on 2 Ubuntu systems and the latest MacOS system and the code to be scanned by
-          CodeQl.
+          CodeQL.
         * Modified Git hook "pre-commit" to ensure that the version ID in "configure.ac" is the
           same as the first word in "CHANGE_LOG" 
         * Removed target "consistent" and its dependencies from "dev-makefile"
