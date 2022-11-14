@@ -41,13 +41,12 @@ jobs:
 
       - name: Build
         run: |
-          ./configure --disable-root-actions --with-noaaport || { cat configure; exit 1; }
+          ./configure --with-noaaport || { cat configure; exit 1; }
           make all
           make distcheck
 
       - name: Perform CodeQL Analysis
         if: matrix.os == 'ubuntu-22.04'
-        run: cd ldm-$(awk '{print $1;exit;}' CHANGE_LOG)
         uses: github/codeql-action/analyze@v2
         with:
           category: "cpp"
