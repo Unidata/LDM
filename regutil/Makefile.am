@@ -43,8 +43,8 @@ regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= substPaths registry.xml
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
-			  registry.xml
+CLEANFILES		= regutil.out substPaths registry.h registry.xml
+DISTCLEANFILES		= regpar.tab
 
 # "regpar.tab" fields:
 #
