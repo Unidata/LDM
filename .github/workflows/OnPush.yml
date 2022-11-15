@@ -6,11 +6,18 @@ on:
     branches: [ "*" ]
 
 jobs:
-  distcheck_matrix:
+  distcheck:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,13 +26,13 @@ jobs:
 
       - run: mkdir m4
 
-      - name: Ubuntu
+      - name: Provision Ubuntu
         if: contains(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install doxygen
           autoreconf -fi
 
-      - name: MacOS
+      - name: Provision MacOS
         if: matrix.os == 'macos-latest'
         run: |
           brew install autoconf@2.69
