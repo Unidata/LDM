@@ -2,8 +2,8 @@ name: On Push
 
 on:
   push:
-#    branches: [ "devel", "master", "main" ]
-    branches: [ "*" ]
+    branches: [ "devel", "master", "main" ]
+#    branches: [ "*" ]
 
 jobs:
   distcheck:
