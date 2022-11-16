@@ -7709,10 +7709,11 @@ pq_processProduct(
  *                                  the caller should call `pq_release(*off)`
  *                                  when the product may be deleted
  *                          - else  The product is unlocked and may be deleted
- * @retval     PQ_CORRUPT Product-queue is corrupt
- * @retval     PQ_END     No next product
- * @retval     PQ_INVAL   Invalid argument
- * @retval     PQ_SYSTEM  System error
+ * @retval     PQ_CORRUPT Product-queue is corrupt (NB: <0). `log_add()` called.
+ * @retval     PQ_END     No next product (NB: <0)
+ * @retval     PQ_INVAL   Invalid argument (NB: <0). `log_add()` called.
+ * @retval     PQ_SYSTEM  System error (NB: <0). `log_add()` called.
+ * @retval     0          Product didn't match
  * @return                Return-value of `ifMatch()`
  */
 static int
@@ -7727,6 +7728,7 @@ pq_sequenceHelper(
     int status;
 
     if (pq == NULL) {
+        log_add("Product-queue is NULL");
         status = PQ_INVAL;
     }
     else {
@@ -7748,6 +7750,7 @@ pq_sequenceHelper(
             status = ctl_get(pq, 0);
 
             if (status) {
+                log_add("ctl_get() failure");
                 status = PQ_SYSTEM;
             }
             else {
@@ -7757,7 +7760,7 @@ pq_sequenceHelper(
                 tqelem* tqep = tqe_find(pq->tqp, &pq->cursor, mt);
 
                 if (tqep == NULL) {
-                    status = PQUEUE_END;
+                    status = PQ_END;
                 }
                 else {
                     // Update cursor
@@ -7783,7 +7786,7 @@ pq_sequenceHelper(
                             char ts[20];
 
                             (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                            log_error("Queue corrupt: tq: %s %s at %ld",
+                            log_add("Queue corrupt: tq: %s %s at %ld",
                                     ts,
                                     status ? "invalid region" : "no data",
                                     tqep->offset);
@@ -7799,6 +7802,7 @@ pq_sequenceHelper(
                             status = rgn_get(pq, rp->offset, Extent(rp), 0, &vp);
 
                             if (status) {
+                                log_add("rgn_get() failure");
                                 status = PQ_SYSTEM;
                             }
                             else {
@@ -7861,7 +7865,7 @@ pq_sequenceHelper(
                                         XDR_DECODE) ;
 
                                 if (!xdr_prod_info(&xdrs, info)) {
-                                    log_error("xdr_prod_info() failed") ;
+                                    log_add("xdr_prod_info() failure") ;
                                     status = PQ_SYSTEM;
                                 }
                                 else {
@@ -7981,11 +7985,12 @@ pq_sequenceHelper(
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval    PQ_CORRUPT  Product-queue is corrupt (NB: <0)
+ * @retval    PQ_CORRUPT  Product-queue is corrupt (NB: <0). `log_add()` called.
  * @retval    PQ_END      No next product (NB: <0)
- * @retval    PQ_INVAL    Invalid argument (NB: <0)
- * @retval    PQ_SYSTEM   System error (NB: <0)
- * @return                Return-value of `ifMatch()`. Should be >0.
+ * @retval    PQ_INVAL    Invalid argument (NB: <0). `log_add()` called.
+ * @retval    PQ_SYSTEM   System error (NB: <0). `log_add()` called.
+ * @retval    0           Product didn't match. `log_add()` called.
+ * @return                Return-value of `ifMatch()`. `log_add()` called.
  */
 int
 pq_sequence(
