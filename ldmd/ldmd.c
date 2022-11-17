@@ -804,7 +804,7 @@ handle_connection(const int sock)
             goto again;
         }
         /* else */
-        log_syserr("accept() failure");
+        log_syserr("accept() failure: sock=%d", sock);
         return;
     }
 
@@ -868,8 +868,8 @@ static void sock_svc(
     const int width = sock + 1;
 
     while (exitIfDone(exit_status)) {
-        int ready;
-        fd_set readfds;
+        int            ready;
+        fd_set         readfds;
         struct timeval stimeo;
 
         stimeo.tv_sec = LDM_SELECT_TIMEO;
@@ -885,7 +885,7 @@ static void sock_svc(
              * Handle EINTR as a special case.
              */
             if (errno != EINTR) {
-                log_syserr("select() failure on socket %d", sock);
+                log_syserr("select() failure: sock=%d", sock);
                 done = 1;
                 exit(1);
             }
