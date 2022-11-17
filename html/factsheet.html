@@ -1,63 +1,71 @@
-<HTML><HEAD><TITLE>LDM Factsheet</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Factsheet">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="">
-<META NAME="DESCRIPTION" CONTENT="">
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1252">
-<META NAME="Generator" CONTENT="Microsoft Word 97">
-<TITLE>LDM Factsheet</TITLE>
-<META NAME="Template" CONTENT="C:\Program Files\Microsoft Office\Office\html.dot">
-</HEAD>
-<BODY>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Fact sheet</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Fact sheet">
+    <meta name="AUTHOR" content="steve">
+  </head>
+  <body>
+    <h1>LDM Fact sheet</h1>
 
-<h1 align="center">LDM Factsheet</h1><br>
-<H3>Overview:</H3>
-<P align="justify">Unidata's Local Data Manager (LDM) software acquires data and
-shares them with other networked computers. A data product is treated
-as a opaque unit, thus nearly any data can be relayed.  In particular, the LDM can handle data from National Weather Service "NOAAport channel 3" data streams, including gridded data from the numerical forecast models. It also handles NEXRAD radar data, lightning data from the National Lightning Detection Network, and GOES satellite imagery.</P>
-<P align="justify">Data can either be ingested directly from a data source by a client ingester, or the LDM server can talk to other LDM servers to either receive or send data. Ingesters scan the data stream, determine product boundaries, and extract products, passing those products on to the server product queue. These data, in turn, can be processed locally and/or passed on to other LDM servers.</P>
-<P align="justify">Data passed to the LDM server are processed in a variety of ways; how specific data are processed is determined by data identifiers and a configuration file. Processing actions include placing the data in files and running arbitrary programs on the data. Decoders are also available from Unidata that interface with the LDM and convert data into the forms required by various applications.</P><br>
-<H3>Features:</H3>
+    <h2>Overview:</h2>
+    <p>Unidata's Local Data Manager (LDM) software acquires data and shares them with other networked computers. A data
+      product is treated as an opaque unit, thus nearly any data can be relayed.  In particular, the LDM can handle data
+      from National Weather Service "NOAAport channel 3" data streams, including gridded data from the numerical
+      forecast models. It also handles NEXRAD radar data, lightning data from the National Lightning Detection Network,
+      and GOES satellite imagery.</p>
+    <p>Data can either be ingested directly from a data source by a client ingester, or the LDM server can talk to other
+      LDM servers to either receive or send data. Ingesters scan the data stream, determine product boundaries, and
+      extract products, passing those products on to the server product queue. These data, in turn, can be processed
+      locally and/or passed on to other LDM servers.</p>
+    <p>Data passed to the LDM server are processed in a variety of ways; how specific data are processed is determined
+      by data identifiers and a configuration file. Processing actions include placing the data in files and running
+      arbitrary programs on the data. Decoders are also available from Unidata that interface with the LDM and convert
+      data into the forms required by various applications.</p>
 
-<UL>
-<LI><B>User configurable:</B> The LDM server can be instructed to append a particular product to a file; execute an arbitrary program with the data product as input; store or retrieve products in a simple key-access database; or forward the data along to other running servers. </LI>
-<LI><B>Supports distributed processing:</B> Data captured on one machine can be stored on other machines on a network. This means that data ingest functions can be separated from storage and use functions. LDM servers may also be configured to relay subsets of data among themselves, distributing the storage and processing around the network. </LI>
-<LI><B>Extensible:</B> New decoders can be added easily, including decoders for archival data. </LI>
-<LI><B>Event-driven:</B> Handles data as it arrives. There's no polling.</LI></UL><br>
+    <h2>Features:</h2>
+    <ul>
+      <li><b>User configurable:</b> The LDM server can be instructed to append a particular product to a file; execute
+        an arbitrary program with the data product as input; store or retrieve products in a simple key-access database;
+        or forward the data along to other running servers.</li>
+      <li><b>Supports distributed processing:</b> Data captured on one machine can be stored on other machines on a
+        network. This means that data ingest functions can be separated from storage and use functions. LDM servers may
+        also be configured to relay subsets of data among themselves, distributing the storage and processing around the
+        network. </li>
+      <li><b>Extensible:</b> New decoders can be added easily, including decoders for archival data. </li>
+      <li><b>Event-driven:</b> Handles data as it arrives. There's no polling.</li>
+    </ul>
 
-<H3>Distribution:</H3>
-<P>The Unidata Program Center distributes the LDM software via FTP and WWW.
-The LDM homepage is <a href="https://www.unidata.ucar.edu/software/ldm">
-https://www.unidata.ucar.edu/software/ldm</a>.
-There is no cost for the LDM software. </P><br>
-<H3>Support:</H3>
-<P>US institutions of higher education receive full support from the Unidata Program Center. Full support includes software upgrades and bug fixes; training; documentation; consultation via e-mail; and an active, special-interest-group electronic mailing list. </P><br>
-<H3>Platforms:</H3>
-<P>The LDM is designed to run on a properly configured UNIX platform.
-The following specifications represent minimum platform requirements: </P>
+    <h2>Distribution:</h2>
+    <p>The Unidata Program Center distributes the LDM software via HTTPS. The LDM homepage is
+      <a href="https://www.unidata.ucar.edu/software/ldm">https://www.unidata.ucar.edu/software/ldm</a>. There is no
+      cost for the LDM software. </p>
 
-<UL>
-<LI>A UNIX system API (e.g., Linux, SunOS, AIX, BSD, etc.) </LI>
-<LI>Adequate disk storage for processed data-products </LI>
-<LI>TCP/IP networking </LI>
-<LI>Standard C compiler </LI>
-<LI>Perl </LI></UL>
+    <h2>Support:</h2>
+    <p>US institutions of higher education receive full support from the Unidata Program Center. Full support includes
+      software upgrades and bug fixes; training; documentation; consultation via e-mail; and an active,
+      special-interest-group electronic mailing list. </p>
 
-<P>&nbsp;</P>
-<H3>For further information:</H3>
-<P ALIGN="CENTER"><STRONG>UCAR Unidata Program Center</STRONG><BR>
-P.O. Box 3000 <BR>
-Boulder, Colorado, USA 80307 <BR>
-(303) 497-8643<BR>
-<B>Internet:</B><I> support at unidata.ucar.edu</I></P>
-<P>
-<HR>
-Questions or comments can be sent to <A
-HREF="mailto:support@unidata.ucar.edu">&lt;support-general at unidata.ucar.
-edu&gt;</A>
+    <h2>Platforms:</h2>
+    <p>The LDM is designed to run on a properly configured UNIX platform. The following specifications represent minimum
+      platform requirements: </p>
+    <ul>
+      <li>A UNIX system API (e.g., Linux, SunOS, AIX, BSD, etc.) </li>
+      <li>Adequate disk storage for processed data-products </li>
+      <li>TCP/IP networking </li>
+      <li>Standard C compiler </li>
+      <li>Perl </li>
+    </ul>
 
+    <h2>For further information:</h2>
+    <p><b>UCAR Unidata Program Center</b><br>
+          P.O. Box 3000 <br>
+          Boulder, Colorado, USA 80307 <br>
+          (303) 497-8643<br>
+         <i>support-ldm at unidata.ucar.edu</i></p>
 
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

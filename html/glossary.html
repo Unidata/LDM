@@ -1,795 +1,683 @@
-<HTML><HEAD><TITLE>Unidata LDM Workshop Glossary</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Glossary">
-<META NAME="AUTHOR" CONTENT="Unidata">
-<META NAME="KEYWORDS" CONTENT="ldm, glossary, terms, phrases">
-<META NAME="DESCRIPTION" CONTENT="This is a glossary of Unidata LDM-specific acronyms, terms, and phrases">
-</HEAD><BODY>
-<div align="left">
-  <h1 align="center">Glossary</h1>
-  <p>T his is a glossary of <strong>Unidata LDM-specific acronyms, terms, and 
-	phrases</strong>. If you don't find what you're looking for here, try the 
-	more general On-line Dictionary of Computing at <a
-href="http://wombat.doc.ic.ac.uk/"> http://wombat.doc.ic.ac.uk/</a>, 
-	or the <a href="http://www.faqs.org/rfcs/rfc1392.html">Internet 
-	Users' Glossary (RFC 1392)</a> from which we have adapted some of these definitions. 
-  </p>
-</div>
-<p>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Unidata LDM Workshop Glossary</title>
+    <meta name="BOOKMARK" content="LDM Glossary">
+    <meta name="AUTHOR" content="Unidata">
+    <meta name="KEYWORDS" content="ldm, glossary, terms, phrases">
+    <meta name="DESCRIPTION" content="This is a glossary of Unidata LDM-specific acronyms, terms, and phrases">
+  </head>
+  <body>
+    <h1>Glossary</h1>
+    <p>This is a glossary of <b>Unidata LDM-specific acronyms, terms, and phrases</b>. If you don't find what you're 
+      looking for here, try the	more general <a href="https://foldoc.org/">On-line Dictionary of Computing</a>, or the
+      <a href="https://www.rfc-editor.org/rfc/rfc1392">Internet Users' Glossary (RFC 1392)</a> from which we have
+      adapted  some of these definitions.</p>
+    
+    <h2>A</h2>
+    <dl>
+      <dt id="actions"><i>actions</i></dt>
+      <dt id="action"><i>actions</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, one of the possible	fates of a <a href="#data product">
+        data product</a> when it is read out of the <a href="#product queue">product queue</a> by the
+        <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a> program. If the
+        <a href="#feed type">feed type</a> and <a href="#product ID">product ID</a> of a data product match a list
+        maintained by <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>,	the associated action is
+        invoked on the product. An action may have arguments that include substitution of matched subparts of the
+        product ID. The currently supported actions include FILE, STDIOFILE, PIPE, EXEC, DBFILE, and NOOP. </dd>
+      <dt id="AFOS"><i>AFOS</i></dt>
+      <dd>An automated system (Automation of Field Operations and Services) used by the National Weather Service to
+        standardize and expedite meteorological services.</dd>
+      <dt id="Alden"><i>Alden</i></dt>
+      <dd><a href="https://aldenx.tripod.com/">Alden Electronics, Inc.</a>, a company that provides meteorological
+        services.</dd>
+      <dt id="ANY"><i>ANY</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the psuedo-<a href="#feed type">feed type</a> that
+        designates any <a href="#data feed">data feed</a>.</dd>
+      <dt id="arrival time"><i>arrival time</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, old and now deprecated name for
+        <a href="#injection time">injection time</a>.</dd>
+      <dt id="ASOS"><i>ASOS</i></dt>
+      <dd>Automated Surface Observing System</dd>
+      <dt id="automatic fail-over"><i>automatic fail-over</i></dt>
+      <dd>The ability of a server to automatically switch to use an alternate data source if the primary source
+        fails.</dd>
+      <dt id="AWIPS"><i>AWIPS</i></dt>
+      <dd>Advanced Weather Interactive Processing System, an <a href="#NWS">NWS</a> program, also known as the
+        "modernization program."</dd>
+    </dl>
 
-<h2>A</h2>
-<dl>
-  <dt> <a name="actions"><i>actions</i></a>
-  <dt>&nbsp;
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, one of the possible 
-	fates of a <a href="#data product">data product</a> when it is read out of 
-	the <a href="#product queue">product queue</a> by the <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>
-	program. If the <a href="#feed type">feed type</a> and <a href="#product ID">product 
-	ID</a> of a data product match a list maintained by <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>,
-	the associated action is invoked on the product. An action may have arguments 
-	that include substitution of matched subparts of the product ID. The currently 
-	supported actions include FILE, STDIOFILE, PIPE, EXEC, DBFILE, and NOOP. 
-  <dt> <a name="AFOS"><i>AFOS</i></a>
-  <dd> An automated system (Automation of Field Operations and  
-       Services) used by the National Weather Service to standardize  
-       and expedite meteorological services.
-  <dt> <a name="Alden"><i>Alden</i></a>
-  <dd> <a href="http://www.alden.com/">Alden Electronics, 
-	Inc.</a>, a company that provides meteorological services. 
-  <dt> <a name="ANY"><i>ANY</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the psuedo-<a href="#feed type">feed type</a> that
-       designates any <a href="#data feed">data feed</a>.
-  <dt> <a name="arrival time"><i>arrival time</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, old and now deprecated name
-       for <a href="#injection time">injection time</a>.
-  <dt> <a name="ASOS"><i>ASOS</i></a>
-  <dd> Automated Surface Observing System
-  <dt> <a name="automatic fail-over"><i>automatic fail-over</i></a>
-  <dd> The ability of a server to automatically 
-       switch to use an alternate data source if the primary source fails
-  <dt> <a name="AWIPS"><i>AWIPS</i></a>
-  <dd> Advanced Weather Interactive Processing System, an
-       <a href="#NWS">NWS</a> program,
-       also known as the "modernization program."
-</dl>
+    <h2>B</h2>
+    <dl>
+      <dt id="BLKDATA"><i>BLKDATA</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data
+        source</a> or <a href="#upstream">upstream</a> node to deliver another piece of a <a href="#large product">large
+        product</a>.</dd>
+      <dt id="broadcast"><i>broadcast</i></dt>
+      <dd>A special type of <a href="#multicast">multicast</a> packet that all nodes on the network are always willing
+        to receive.  Also in the Unidata <a href="#LDM">LDM</a> context, refers to the satellite broadcast of
+        <a href="#FOS">FOS</a> and <a href="#McIDAS">McIDAS</a> data by <a href="#Alden">Alden</a>.</dd>
+      <dt id="BUFR"><i>BUFR</i></dt>
+      <dd>Binary Universal Form for the Representation of meteorological data, a <a href="#WMO">WMO</a> standard for a
+        binary code for the exchange and storage of data.  The format is documented in The WMO Manual on Codes; WMO
+        Publication No. 306; Volume I, Part B; 1988 Edition, plus Supplements 1, 2, and 3.</dd>
+      <dt id="bulletins"><i>bulletins</i></dt>
+      <dt id="bulletin"><i>bulletin</i></dt>
+      <dd>A sequence of consecutive bytes within a <a href="#data stream">data stream</a> that comprises a single unit
+        that can be converted into a <a href="#data product">data product</a> by supplying the necessary identifying
+        information.</dd>
+    </dl>
 
-<h2>B</h2>
-<dl>
-  <dt> <a name="BLKDATA"><i>BLKDATA</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data source</a> or <a href="#upstream">upstream</a>
-       node to deliver another piece of a <a href="#large product">large product</a>.
-  <dt> <a name="broadcast"><i>broadcast</i></a>
-  <dd> A special type of <a href="#multicast">multicast</a> packet that all nodes on the network
-       are always willing to receive.  Also in the Unidata <a href="#LDM">LDM</a> context,
-       refers to the satellite broadcast of <a href="#FOS">FOS</a> and <a href="#McIDAS">McIDAS</a> data by
-       <a href="#Alden">Alden</a>.
-  <dt> <a name="BUFR"><i>BUFR</i></a>
-  <dd> Binary Universal Form for the Representation of meteorological data,
-       a <a href="#WMO">WMO</a> standard for a binary code for the exchange and storage of
-       data.  The format is documented in The WMO Manual on Codes; WMO
-       Publication No. 306; Volume I, Part B; 1988 Edition, plus Supplements
-       1, 2, and 3.
-  <dt> <a name="bulletins"><i>bulletins</i></a>
-  <dt> <a name="bulletin"><i>bulletin</i></a>
-  <dd> A sequence of consecutive bytes within a <a href="#data stream">data stream</a> that
-       comprises a single unit that can be converted into a <a href="#data product">data product</a>
-       by supplying the necessary identifying information.
-</dl>
+    <h2>C</h2>
+    <dl>
+      <dt id="clients"><i>clients</i></dt>
+      <dt id="client"><i>client</i></dt>
+      <dd>A computer system or process that requests a service of another  computer system or process (a
+        <a href="#server">server</a>).</dd>
+      <dt id="client-server model"><i>client-server model</i></dt>
+      <dd>A model for software design in which programs use and provide distributed services. A task is split between
+        one or more server tasks that accept requests, according to some <a href="#protocol">protocol</a>, for
+        information or action from (distributed) client tasks. This model allows clients and servers to be placed
+        independently on nodes in a network. Examples are the name-server/name-resolver relationship in DNS, the
+        file-server/file-client relationship in NFS and the screen server/client application split in the X Window
+        System.</dd>
+      <dt id="COMINGSOON"><i>COMINGSOON</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data
+        source</a> or <a href="#upstream">upstream</a> node to announce the intent to deliver a
+        <a href="#large product">large product</a> in pieces.</dd>
+      <dt id="connection-oriented"><i>connection-oriented</i></dt>
+      <dd>The data communication method in which communication proceeds through three well-defined phases: connection
+        establishment, data transfer, connection release.  TCP is a connection-oriented protocol.</dd>
+      <dt id="connectionless"><i>connectionless</i></dt>
+      <dd>The data communication method in which communication occurs between hosts with no previous setup.  Packets
+        between two hosts may take different routes, as each is independent of the other. UDP is a connectionless
+        protocol.</dd>
+    </dl>
 
-<h2>C</h2>
-<dl>
-  <dt> <a name="clients"><i>clients</i></a>
-  <dt> <a name="client"><i>client</i></a>
-  <dd> A computer system or process that requests a service of another
-       computer system or process (a <a href="#server">server</a>).
-  <dt> <a name="client-server model"><i>client-server model</i></a>
-  <dd> A model for software design in which programs use and provide
-       distributed services. A task is split between one or more server
-       tasks that accept requests, according to some <a href="#protocol">protocol</a>,
-       for information or action from (distributed) client tasks. This model
-       allows clients and servers to be placed independently on nodes in a
-       network. Examples are the name-server/name-resolver relationship in
-       DNS, the file-server/file-client relationship in NFS and the screen
-       server/client application split in the X Window System.
-  <dt> <a name="COMINGSOON"><i>COMINGSOON</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data source</a> or <a href="#upstream">upstream</a>
-       node to announce the intent to deliver a <a href="#large product">large product</a> in pieces.
-  <dt> <a name="connection-oriented"><i>connection-oriented</i></a>
-  <dd> The data communication method in which communication proceeds
-       through three well-defined phases: connection establishment, data
-       transfer, connection release.  TCP is a connection-oriented
-       protocol.
-  <dt> <a name="connectionless"><i>connectionless</i></a>
-  <dd> The data communication method in which communication occurs
-       between hosts with no previous setup.  Packets between two hosts
-       may take different routes, as each is independent of the other.
-       UDP is a connectionless protocol.
-</dl>
+    <h2>D</h2>
+    <dl>
+      <dt id="daemon"><i>daemon</i></dt>
+      <dd>A program that is not invoked explicitly, but lies dormant waiting for some condition(s) to occur. The idea is
+        that the perpetrator of the condition need not be aware that a daemon is lurking (though often a program will
+        commit an action only because it knows that it will implicitly invoke a daemon).  Daemons are usually spawned
+        automatically by the system, and may either live forever or be regenerated at intervals.  Unix systems run many
+        daemons, chiefly to handle requests for services from other hosts on a network. Most of these are now started as
+        required by a single real daemon, inetd, rather than running continuously. Examples are cron (local timed
+        command execution), rshd (remote command execution), rlogind and telnetd (remote login), ftpd, nfsd (file
+        transfer), lpd (printing).</dd>
+      <dt id="data feeds"><i>data feeds</i></dt>
+      <dt id="data feed"><i>data feed</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a sequence of <a href="#data products">data
+        products</a>, all of the same <a href="#feed type">feed type</a>, injected into the IDD from a single
+        <a href="#data source">data source</a>.</dd>
+      <dt id="data products"><i>data products</i></dt>
+      <dt id="data product"><i>data product</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a unit of data with an associated
+        <a href="#feed type">feed type</a>, <a href="#product ID">product ID</a>,
+        <a href="#injection time">injection time</a>, and <a href="#origin">origin</a>, and
+        <a href="#sequence number">sequence number</a>.</dd>
+      <dt id="data relays"><i>data relays</i></dt>
+      <dt id="data relay"><i>data relay</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a network node that relays  <a href="#data products">
+        data products</a> from one or more <a href="#upstream source">upstream source</a> nodes to one or more
+        <a href="#downstream sink">downstream sink</a> nodes.  A relay node may provide data fan-out by receiving data
+        products from a single upstream source that it then transmits to multiple downstream sinks.</dd>
+      <dt id="data sinks"><i>data sinks</i></dt>
+      <dt id="data sink"><i>data sink</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a remote consumer of
+        <a href="#data products">data products</a> that must be transmitted as they arrive.</dd>
+      <dt id="data sources"><i>data sources</i></dt>
+      <dt id="data source"><i>data source</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a remote provider of
+        <a href="#data products">data products</a>.</dd>
+      <dt id="data streams"><i>data streams</i></dt>
+      <dt id="data stream"><i>data stream</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a sequence of bulletins all of the same
+        <a href="#feed type">feed type</a> broadcast from a single <a href="#data source">data source</a>.  Once the
+        bulletins are converted into data products, the result is called a <a href="#data feed">data feed</a>.</dd>
+      <dt id="DCE"><i>DCE</i></dt>
+      <dd>Distributed Computing Environment, an architecture of  programming interfaces, conventions, and server
+        functionalities (e.g. naming, distributed file system, <a href="#remote procedure call">remote procedure
+          call</a>) for  distributing applications transparently across networks of heterogeneous computers promoted and
+        controlled by the Open Software Foundation (OSF).  The Unidata <a href="#LDM">LDM</a> does not use DCE RPCs.</dd>
+      <dt id="DDS"><i>DDS</i></dt>
+      <dd>Domestic Data Service, a <a href="#data feed">data feed</a> that is part of the <a href="#NWS">NWS</a> Family
+        of Services.  DDS includes data products of many kinds for the U.S., Canada, Mexico.</dd>
+      <dt id="decoders"><i>decoders</i></dt>
+      <dt id="decoder"><i>decoder</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>. a program that converts transmitted
+        <a href="#data products">data products</a> into a different form more suitable for use by applications.
+        Decoders often combine multiple products into a single decoded file.</dd>
+      <dt id="DDPLUS"><i>DDPLUS</i></dt>
+      <dt id="DD+"><i>DD+</i></dt>
+      <dd>Domestic Data Plus, a <a href="#data stream">data stream</a> provided by <a href="#Alden">Alden</a> merging
+        the <a href="#DDS">DDS</a> and <a href="#PPS">PPS</a> data streams into one.  </dd>
+      <dt id="DIFAX"><i>DIFAX</i></dt>
+      <dd>Digital facsimile maps, a <a href="#data stream">data stream</a> of digitized maps provided by <a href="#NWS">
+        NWS</a>.</dd>
+      <dt id="disable ldmd.conf entry">Disabling an <b>ldmd.conf</b> Entry</dt>
+      <dd>An entry in the file <b>ldmd.conf</b> is disabled if it  starts with the comment-character "<b>#</b>".</dd>
+      <dt id="downstream"><i>downstream</i></dt>
+      <dd>In the context of the Unidata <a href="#IDD">IDD</a>, the direction of data flow from <a href="#data sources">
+        data sources</a> to <a href="#data sinks">data sinks</a>.</dd>
+      <dt id="downstream sink"><i>downstream sink</i></dt>
+      <dd>see <a href="#data sink">data sink</a>.</dd>
+      <dt id="domain name servers"><i>domain name servers</i></dt>
+      <dt id="domain name server"><i>domain name server</i></dt>
+      <dd>A server that provides translation of hostnames to IP addresses, as part of the Internet
+        <a href="#Domain Name System">Domain Name System</a>.</dd>
+      <dt id="DNS"><i>DNS</i></dt>
+      <dt id="Domain Name System"><i>Domain Name System</i></dt>
+      <dd>A general-purpose distributed, replicated, data query service chiefly used on Internet for translating
+        hostnames into Internet addresses. DNS can be configured to use a sequence of name servers, based on the domains
+        in the name being looked for, until a match is found.  DNS is a distributed database. It can be queried
+        interactively using the command nslookup.</dd>
+      <dt id="dot address"><i>dot address</i></dt>
+      <dd>Dot address refers to the common notation for IP addresses of the form A.B.C.D; where each letter represents,
+        in decimal, one byte  of a four byte IP address.  See also: <a href="#IP address">IP address</a>.</dd>
+    </dl>
 
-<h2>D</h2>
-<dl>
-  <dt> <a name="daemon"><i>daemon</i></a>
-  <dd> A program that is not invoked explicitly, but lies dormant waiting
-       for some condition(s) to occur. The idea is that the perpetrator of
-       the condition need not be aware that a daemon is lurking (though
-       often a program will commit an action only because it knows that it
-       will implicitly invoke a daemon).  Daemons are usually spawned
-       automatically by the system, and may either live forever or be
-       regenerated at intervals.  Unix systems run many daemons, chiefly to
-       handle requests for services from other hosts on a network. Most of
-       these are now started as required by a single real daemon, inetd,
-       rather than running continuously. Examples are cron (local timed
-       command execution), rshd (remote command execution), rlogind and
-       telnetd (remote login), ftpd, nfsd (file transfer), lpd (printing).
-  <dt> <a name="data feeds"><i>data feeds</i></a>
-  <dt> <a name="data feed"><i>data feed</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a sequence of <a href="#data products">data products</a>,
-       all of the same <a href="#feed type">feed type</a>, injected into the IDD from a single
-       <a href="#data source">data source</a>.
-  <dt> <a name="data products"><i>data products</i></a>
-  <dt> <a name="data product"><i>data product</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a unit of data with an associated
-       <a href="#feed type">feed type</a>, <a href="#product ID">product ID</a>, <a href="#injection time">injection time</a>,
-       and <a href="#origin">origin</a>, and <a href="#sequence number">sequence number</a>.
-  <dt> <a name="data relays"><i>data relays</i></a>
-  <dt> <a name="data relay"><i>data relay</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a network node that relays
-       <a href="#data products">data products</a>
-       from one or more <a href="#upstream source">upstream source</a> nodes to one or more
-       <a href="#downstream sink">downstream sink</a> nodes.  A
-       relay node may provide data fan-out by receiving data products from a
-       single upstream source that it then transmits to multiple downstream
-       sinks.
-  <dt> <a name="data sinks"><i>data sinks</i></a>
-  <dt> <a name="data sink"><i>data sink</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a remote consumer of
-       <a href="#data products">data products</a> that must be transmitted as they arrive.
-  <dt> <a name="data sources"><i>data sources</i></a>
-  <dt> <a name="data source"><i>data source</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a remote provider of
-       <a href="#data products">data products</a>.
-  <dt> <a name="data streams"><i>data streams</i></a>
-  <dt> <a name="data stream"><i>data stream</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a sequence of bulletins all of
-       the same <a href="#feed type">feed type</a> broadcast from a single <a href="#data source">data source</a>.  Once
-       the bulletins are converted into data products, the result is called
-       a <a href="#data feed">data feed</a>.
-  <dt> <a name="DCE"><i>DCE</i></a>
-  <dd> Distributed Computing Environment, an architecture of
-       programming interfaces, conventions, and server functionalities
-       (eg. naming, distributed file system, <a href="#remote procedure call">remote procedure call</a>) for
-       distributing applications transparently across networks of heterogeneous
-       computers promoted and controlled by the Open Software Foundation
-       (OSF).  The Unidata <a href="#LDM">LDM</a> does not use DCE RPCs.
-  <dt> <a name="DDS"><i>DDS</i></a>
-  <dd> Domestic Data Service, a <a href="#data feed">data feed</a> that is part of the <a href="#NWS">NWS</a>
-       Family of Services.  DDS includes data products of many kinds for
-       the U.S., Canada, Mexico.
-  <dt> <a name="decoders"><i>decoders</i></a>
-  <dt> <a name="decoder"><i>decoder</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>. a program that converts
-       transmitted <a href="#data products">data products</a> into a different form more suitable for
-       use by applications.  Decoders aften combine multiple products into a
-       single decoded file.
-  <dt> <a name="DDPLUS"><i>DDPLUS</i></a>
-  <dt> <a name="DD+"><i>DD+</i></a>
-  <dd> Domestic Data Plus, a <a href="#data stream">data stream</a> provided by <a href="#Alden">Alden</a> merging the
-       <a href="#DDS">DDS</a> and <a href="#PPS">PPS</a> data streams into one.  
-  <dt> <a name="DIFAX"><i>DIFAX</i></a>
-  <dd> Digital facsimile maps, a <a href="#data stream">data stream</a> of digitized maps provided
-       by <a href="#NWS">NWS</a>.
+    <h2>E</h2>
+    <dl>
+      <dt id="ECMWF"><i>ECMWF</i></dt>
+      <dd>European Center for Medium-range Weather Forecasting, a source for some model output grids in the
+        <a href="#HDS">HDS</a> <a href="#data stream">data stream</a>.</dd>
+      <dt id="enable ldmd.conf entry">Enabling an <b>ldmd.conf</b> Entry</dt>
+      <dd>An entry in the file <b>ldmd.conf</b> is enabled if it doesn't start with the comment-character
+        "<b>#</b>".</dd>
+      <dt id="event-driven"><i>event-driven</i></dt>
+      <dd>A kind of program with a main loop that waits for events to occur. Each event has an associated handler that
+        is passed the details of the event as soon as it is detected.  This is in contrast to a <dfn>polling</dfn>
+        program that frequently wakes up and checks for whether an event has happened yet, or a <dfn>scheduled</dfn>
+        system that periodically wakes up and handles pending events.</dd>
+      <dt id="EXP"><i>EXP</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the <a href="#feed type">feed type</a> for experimental
+        data.  This feed type is unassigned, so it can be used for any purpose for data of low interest to the majority
+        of sites.  This is much easier than adding a new feed type, which is technically a change to the protocol and
+        requires all sites to recompile.</dd>
+    </dl>
 
-    <dt><a name="disable ldmd.conf entry">
-    Disabling an <b><tt>ldmd.conf</tt></b> Entry</a>
-    <dd>An entry in the file <b><tt>ldmd.conf</tt></b> is disabled if it
-    starts with the comment-character "<b>#</b>".
+    <h2>F</h2>
+    <dl>
+      <dt id="feed sets"><i>feed sets</i></dt>
+      <dt id="feed set"><i>feed set</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a combination of feed types that results from applying
+        set union and set difference operations to the basic <a href="#feed types">feed types</a>.  For example,
+        <code>DDS|PPS</code> designates the set of <a href="#data products">data products</a> from either the
+        <a href="#DDS">DDS</a> or <a href="#PPS">PPS</a> <a href="#data feed">data feed</a>.</dd>
+      <dt id="feed types"><i>feed types</i></dt>
+      <dt id="feed type"><i>feed type</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a category of <a href="#data products">data products</a>
+        sharing a name space of <a href="#product IDs">product IDs</a> and injected from a single
+        <a href="#data source">data source</a>.  The feed type is used for coarse selection of data products; finer
+        selection is provided by patterns matching a subset of product IDs.  Primitive feed types supported by the
+        Unidata <a href="#LDM">LDM</a> include:  <a href="#DDS">DDS</a>, <a href="#IDS">IDS</a>, <a href="#PPS">PPS</a>,
+        <a href="#HDS">HDS</a>, <a href="#NLDN">NLDN</a>, <a href="#WSI">WSI</a>, <a href="#EXP">EXP</a>,
+        <a href="#MCIDAS feed type">MCIDAS</a>, <a href="#ANY">ANY</a>.</dd>
+      <dt id="FEEDME"><i>FEEDME</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data sink">data sink</a> or
+        <a href="#downstream">downstream</a> node to sign on and announce what <a href="#feed types">feed types</a> and
+        <a href="#product IDs">product IDs</a> it wants to be fed.</dd>
+      <dt id="FOS"><i>FOS</i></dt>
+      <dt id="Family of Services"><i>Family of Services</i></dt>
+      <dd>A collection of <a href="#data streams">data streams</a> from the National Weather Service, injected into the
+        <a href="#IDD">IDD</a> by the <a href="#Alden">Alden</a> Corporation under a contract with Unidata.  This
+        currently includes <a href="#DDS">DDS</a>, <a href="#PPS">PPS</a>, <a href="#IDS">IDS</a>, and
+        <a href="#HDS">HDS</a> <a href="#data streams">data streams</a>.</dd>
+      <dt id="FSL"><i>FSL</i></dt>
+      <dd>Forecast Systems Laboratory, a NOAA program that is also a <a href="#data source">data source</a> of some
+        experimental <a href="#IDD">IDD</a> data, such as <a href="#MAPS">MAPS</a> <a href="#FSL2">FSL2</a> and
+        <a href="#ISPAN">ISPAN</a>.</dd>
+      <dt id="FSL2"><i>FSL2</i></dt>
+      <dd>60 minute Profiler Data, current source is <a href="#FSL">FSL</a> distributed via IDD.</dd>
+      <dt id="FTP"><i>FTP</i></dt>
+      <dd>File transfer protocol, a method of transferring files over TCP/IP networks.  Anonymous FTP permits users to
+        obtain files from a remote system by logging in as anonymous.</dd>
+    </dl>
 
-  <dt> <a name="downstream"><i>downstream</i></a>
-  <dd> In the context of the Unidata <a href="#IDD">IDD</a>, the direction of data flow
-       from <a href="#data sources">data sources</a> to <a href="#data sinks">data sinks</a>
-  <dt> <a name="downstream sink"><i>downstream sink</i></a>
-  <dd> see <a href="#data sink">data sink</a>
-  <dt> <a name="domain name servers"><i>domain name servers</i></a>
-  <dt> <a name="domain name server"><i>domain name server</i></a>
-  <dd> A server that provides translation of hostnames to IP addresses, as
-       part of the Internet <a href="#Domain Name System">Domain Name System</a>.
-  <dt> <a name="DNS"><i>DNS</i></a>
-  <dt> <a name="Domain Name System"><i>Domain Name System</i></a>
-  <dd> A general-purpose distributed, replicated, data query service chiefly
-       used on Internet for translating hostnames into Internet
-       addresses. DNS can be configured to use a sequence of name servers,
-       based on the domains in the name being looked for, until a match is
-       found.  DNS is a distributed database. It can be queried
-       interactively using the command nslookup.
-  <dt> <a name="dot address"><i>dot address</i></a>
-  <dd> Dot address refers to the common notation for IP addresses of the
-       form A.B.C.D; where each letter represents, in decimal, one byte
-       of a four byte IP address.  See also: <a href="#IP address">IP address</a>.
-</dl>
+    <h2>G</h2>
+    <dl>
+      <dt id="gateway LDM"><i>Gateway LDM</i></dt>
+      <dd>The only LDM of an institution or one that serves as a top-level source of data for the institution's internal
+        LDM network.</dd>
+      <dt id="gdbm"><i>gdbm</i></dt>
+      <dd>GNU database manager, a freely-available library that supports a simple key-contents database. The
+        <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a> program of the Unidata
+        <a href="#LDM">LDM</a> can store <a href="#data products">data products</a> in gdbm databases using the DBPUT
+        action. </dd>
+      <dt id="GDS"><i>GDS</i></dt>
+      <dt id="GAI"><i>GAI</i></dt>
+      <dd>Global Atmospherics, Inc., provider of <a href="#NLDN">NLDN</a> data.</dd>
+      <dt id="GEMPAK"><i>GEMPAK</i></dt>
+      <dd>General Meteorological Package, an analysis and display package developed at NASA Goddard Space Flight Center.
+        More information is available <a href="https://unidata.github.io/gempak/">here</a>.</dd>
+      <dt id="Gopher"><i>Gopher</i></dt>
+      <dd>Software developed by the University of Minnesota for easily providing and accessing public information on
+        computers linked by a network.  There are two kinds of Gophers: servers, which provide a method of making files
+        (graphics, video, or text) publicly available, and clients, which are the tools for accessing information on a
+        Gopher server.</dd>
+      <dt id="GRIB"><i>GRIB</i></dt>
+      <dd>GRidded Binary, a bit-oriented format approved by the <a href="#WMO">WMO</a> that has compaction features for
+        efficiently transmitting and storing large volumes of gridded data. A description of the format can be found
+        <a href="ftp://ncardata.ucar.edu/datasets/ds084.5/docs/format/format_grib_94feb">here</a>. </dd>
+      <dt id="gribtonc"><i>gribtonc</i></dt>
+      <dd>An LDM in-line <a href="#decoder">decoder</a>, supported by the <a href="#UPC">UPC</a>, that decodes
+        <a href="#GRIB">GRIB</a> products on the <a href="#HDS">HDS</a> <a href="#data stream">data stream</a> from
+        <a href="#NMC">NMC</a> and <a href="#ECMWF">ECMWF</a> and writes them into <a href="#netCDF">netCDF</a>
+        files.</dd>
+    </dl>
 
-<h2>E</h2>
-<dl>
-  <dt> <a name="ECMWF"><i>ECMWF</i></a>
-  <dd> European Center for Medium-range Weather Forecasting, a source for
-       some of the model output grids in the <a href="#HDS">HDS</a> <a href="#data stream">data stream</a>.
-
-    <dt><a name="enable ldmd.conf entry">
-    Enabling an <b><tt>ldmd.conf</tt></b> Entry</a>
-    <dd>An entry in the file <b><tt>ldmd.conf</tt></b> is enabled if it doesn't
-    start with the comment-character "<b>#</b>".
-
-  <dt> <a name="event-driven"><i>event-driven</i></a>
-  <dd> A kind of program with a main loop that waits for events to occur.
-       Each event has an associated handler that is passed the details of
-       the event as soon as it is detected.  This is in contrast to a
-       <dfn>polling</dfn> program that frequently wakes up and checks for
-       whether an event has happened yet, or a <dfn>scheduled</dfn> system
-       that periodically wakes up and handles pending events.
-  <dt> <a name="EXP"><i>EXP</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the <a href="#feed type">feed type</a> for experimental
-       data.  This feed type is unassigned, so it can be used for any purpose
-       for data of low interest to the majority of sites.  This is much
-       easier than adding a new feed type, which is technically a change to
-       the protocol and requires all sites to recompile.  
-</dl>
-
-<h2>F</h2>
-<dl>
-  <dt> <a name="feed sets"><i>feed sets</i></a>
-  <dt> <a name="feed set"><i>feed set</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a combination of feed types that
-       results from applying set union and set difference operations to the
-       basic <a href="#feed types">feed types</a>.  For example, <code>DDS|PPS</code> designates
-       the set of <a href="#data products">data products</a> from either the <a href="#DDS">DDS</a> or <a href="#PPS">PPS</a>
-       <a href="#data feed">data feed</a>.
-  <dt> <a name="feed types"><i>feed types</i></a>
-  <dt> <a name="feed type"><i>feed type</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a category of <a href="#data products">data products</a>
-       sharing a name space of <a href="#product IDs">product IDs</a> and injected from a
-       single <a href="#data source">data source</a>.  The feed type is used for coarse selection of
-       data products; finer selection is provided by patterns matching a
-       subset of product IDs.  Primitive feed types supported by the
-       Unidata <a href="#LDM">LDM</a> include:
-       <a href="#DDS">DDS</a>, <a href="#IDS">IDS</a>, <a href="#PPS">PPS</a>, <a href="#HDS">HDS</a>, <a href="#NLDN">NLDN</a>, <a href="#WSI">WSI</a>, <a href="#EXP">EXP</a>,
-       <a href="#MCIDAS">MCIDAS</a>, <a href="#ANY">ANY</a>.
-  <dt> <a name="FEEDME"><i>FEEDME</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data sink">data sink</a> or <a href="#downstream">downstream</a>
-       node to sign on and announce what <a href="#feed types">feed types</a> and <a href="#product IDs">product IDs</a>
-       it wants to be fed.
-  <dt> <a name="FOS"><i>FOS</i></a>
-  <dt> <a name="Family of Services"><i>Family of Services</i></a>
-  <dd> A collection of <a href="#data streams">data streams</a> from the National Weather Service,
-       injected into the <a href="#IDD">IDD</a> by the <a href="#Alden">Alden</a> Corporation under a contract
-       with Unidata.  This currently includes <a href="#DDS">DDS</a>, <a href="#PPS">PPS</a>, <a href="#IDS">IDS</a>, and
-       <a href="#HDS">HDS</a> <a href="#data streams">data streams</a>.
-  <dt> <a name="FSL"><i>FSL</i></a>
-  <dd> Forecast Systems Laboratory, a NOAA program that is also a
-       <a href="#data source">data source</a> of some experimental <a href="#IDD">IDD</a> data, such as <a href="#MAPS">MAPS</a>
-       <a href="#FSL2">FSL2</a> and <a href="#ISPAN">ISPAN</a>.
-  <dt> <a name="FSL2"><i>FSL2</i></a>
-  <dd> 60 minute Profiler Data, current source is <a href="#FSL">FSL</a> distributed via IDD.
-  <dt> <a name="FTP"><i>FTP</i></a>
-  <dd> File transfer protocol, a method of transferring files over TCP/IP
-       networks.  Anonymous FTP permits users to obtain files from a remote
-       system by logging in as anonymous.
-</dl>
-
-<h2>G</h2>
-<dl>
-
-    <dt><a name="gateway LDM">Gateway LDM</a>
-    <dd>The only LDM of an institution or one that serves as a top-level
-    source of data for the institution's internal LDM network.
-
-  <dt> <a name="gdbm"><i>gdbm</i></a>
-  <dd> GNU database manager, a freely-available library that supports a simple 
-	key-contents database. The <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>
-	program of the Unidata <a href="#LDM">LDM</a> can store <a href="#data products">data 
-	products</a> in gdbm databases using the DBPUT action. 
-  <dt> <a name="GDS"><i>GDS</i></a>
-  <dt> <a name="GAI"><i>GAI</i></a>
-  <dd> Global Atmospherics, Inc., provider of <a href="#NLDN">NLDN</a> data. 
-  <dt> <a name="GEMPAK"><i>GEMPAK</i></a>
-  <dd> General Meteorological Package, an analysis and display package developed 
-	at NASA Goddard Space Flight Center. More information is available <a
-       href="https://unidata.github.io/gempak/">here</a>.
-  <dt> <a name="Gopher"><i>Gopher</i></a>
-  <dd> Software developed by the University of Minnesota for easily
-       providing and accessing public information on computers linked by a
-       network.  There are two kinds of Gophers: servers, which provide a
-       method of making files (graphics, video, or text) publicly available,
-       and clients, which are the tools for accessing information on a
-       Gopher server.
-  <dt> <a name="GRIB"><i>GRIB</i></a>
-  <dd> GRidded Binary, a bit-oriented format approved by the <a href="#WMO">WMO</a> 
-	that has compaction features for efficiently transmitting and storing large 
-	volumes of gridded data. A description of the format can be found <a
-       href="ftp://ncardata.ucar.edu/datasets/ds084.5/docs/format/format_grib_94feb">here</a>. 
-  <dt> <a name="gribtonc"><i>gribtonc</i></a>
-  <dd> An LDM in-line <a href="#decoder">decoder</a>, supported by the <a href="#UPC">UPC</a>, that decodes
-       <a href="#GRIB">GRIB</a> products on the <a href="#HDS">HDS</a> <a href="#data stream">data stream</a> from <a href="#NMC">NMC</a>
-       and <a href="#ECMWF">ECMWF</a> and writes them into <a href="#netCDF">netCDF</a> files.
-</dl>
-<h2>H</h2>
-<dl>
-  <dt> <a name="HDS"><i>HDS</i></a>
-  <dd> The <a href="#feed type">feed type</a> for the High-Resolution Data Service, a
-       <a href="#data stream">data stream</a> that is part of the NWS Family of Services.  HDS
-       includes model output data from models run at the <a href="#NMC">NMC</a> and <a href="#ECMWF">ECMWF</a>.
-  <dt> <a name="HEREIS"><i>HEREIS</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data source</a> or <a href="#upstream">upstream</a>
-       node to deliver a <a href="#small product">small product</a>.
-  <dt> <a name="HIYA"><i>HIYA</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data source">data source</a> or <a href="#upstream">upstream</a>
-       node to sign on and announce what <a href="#feed types">feed types</a> and <a href="#product IDs">product IDs</a>
-       it is willing to provide.
-  <dt> <a name="HRS"><i>HRS</i></a>
-  <dd> See <a href="#HDS">HDS</a>
-  <dt> <a name="HTML"><i>HTML</i></a>
-  <dd> HyperText Markup Language, the collection of styles, indicated by
-       markup tags, that define the structure of a World Wide Web document.
-       More information is available <a
-       href="http://www.ncsa.uiuc.edu/General/Internet/WWW/HTMLPrimer.html">here</a>.
-  <dt> <a name="HTTP"><i>HTTP</i></a>
-  <dd> HyperText Transfer Protocol, the protocol used for the World-Wibe Web (<a href="#WWW">WWW</a>). 
-	Extensive information on the protocol is available <a href="http://www.w3.org/Protocols/">here</a>. 
-</dl>
+    <h2>H</h2>
+    <dl>
+      <dt id="HDS"><i>HDS</i></dt>
+      <dd>The <a href="#feed type">feed type</a> for the High-Resolution Data Service, a
+        <a href="#data stream">data stream</a> that is part of the NWS Family of Services.  HDS includes model output
+        data from models run at the <a href="#NMC">NMC</a> and <a href="#ECMWF">ECMWF</a>.</dd>
+      <dt id="HEREIS"><i>HEREIS</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a
+        <a href="#data source">data source</a> or <a href="#upstream">upstream</a> node to deliver a
+        <a href="#small product">small product</a>.</dd>
+      <dt id="HIYA"><i>HIYA</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a
+        <a href="#data source">data source</a> or <a href="#upstream">upstream</a> node to sign on and announce what
+        <a href="#feed types">feed types</a> and <a href="#product IDs">product IDs</a> it is willing to provide.</dd>
+      <dt id="HRS"><i>HRS</i></dt>
+      <dd>See <a href="#HDS">HDS</a>
+      <dt id="HTML"><i>HTML</i></dt>
+      <dd>HyperText Markup Language, the collection of styles, indicated by markup tags, that define the structure of a
+        World Wide Web document.  More information is available
+        <a href="https://en.wikipedia.org/wiki/HTML">here</a>.</dd>
+      <dt id="HTTP"><i>HTTP</i></dt>
+      <dd>HyperText Transfer Protocol, the protocol used for the World-Wibe Web (<a href="#WWW">WWW</a>). Extensive
+        information on the protocol is available
+        <a href="https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">here</a>. </dd>
+    </dl>
        
-<h2>I</h2>
-<dl>
-  <dt> <a name="IDD"><i>IDD</i></a>
-  <dd> Internet Data Distribution, a system for disseminating real-time
-       earth observations via the Internet.  Unlike other systems, which are
-       based on data centers where the information can be accessed, the
-       Unidata IDD is designed so a university can request that certain
-       data sets be delivered to computers at their site as soon as they are
-       available from the observing system.  Moreover any site with access
-       to specialized observations of interest to others can inject the
-       dataset into the IDD for immediate delivery to interested sites.
-  <dt> <a name="idd_monitor"><i>idd_monitor</i></a>
-  <dd> The idd_monitor is an X-based monitoring tool, using the MOTIF
-      toolkit, that allows a user to monitor up to 14 IDD hosts.  It provides
-      audible and visual cues when one or more hosts is either not responding,
-      or is sufferring from excessive packet loss.
-  <dt> <a name="IDS"><i>IDS</i></a>
-  <dd> The <a href="#feed type">feed type</a> for the International Data Service, a <a href="#data stream">data stream</a>
-       that is part of the NWS Family of Services.  IDS includes
-       international data products analogous to the domestic products on
-       <a href="#DDS">DDS</a>.
-  <dt> <a name="ingester"><i>ingester</i></a>
-  <dd> In the context of the Unidata LDM, a program such as <a href="https://docs.unidata.ucar.edu/ldm/man/pqing"><b>pqing</b></a>
-	that reads bytes from a <a href="#data stream">data stream</a> and creates 
-	<a href="#data products">data products</a>. 
-  <dt> <a name="injection time"><i>injection time</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, time when a <a href="#data product">data product</a> is
-       first injected into the <a href="#IDD">IDD</a>, an attribute of the data product
-       that is preserved as it gets distributed to other IDD nodes.
-  <dt> <a name="IP"><i>IP</i></a>
-  <dd> Internet Protocol, the network layer for the <a href="#TCP/IP">TCP/IP</a> protocol suite
-       widely used on Ethernet networks. IP is a connectionless, best-effort
-       packet switching protocol. It provides packet routing, fragmentation
-       and re-assembly through the data link layer.
-  <dt> <a name="IP address"><i>IP address</i></a>
-  <dd> The 32-bit address defined by the Internet Protocol.  It is usually
-       represented in dotted decimal notation.
-  <dt> <a name="ISPAN"><i>ISPAN</i></a>
-  <dd> Information Stream Project for <a href="#AWIPS">AWIPS</a> NOAAport, an experimental data
-       stream available from <a href="#FSL">FSL</a>.
-</dl>
+    <h2>I</h2>
+    <dl>
+      <dt id="IDD"><i>IDD</i></dt>
+      <dd>Internet Data Distribution, a system for disseminating real-time earth observations via the Internet.  Unlike
+        other systems, which are based on data centers where the information can be accessed, the Unidata IDD is
+        designed so a university can request that certain data sets be delivered to computers at their site as soon as
+        they are available from the observing system.  Moreover, any site with access  to specialized observations of
+        interest to others can inject the dataset into the IDD for immediate delivery to interested sites.</dd>
+      <dt id="idd_monitor"><i>idd_monitor</i></dt>
+      <dd>The idd_monitor is an X-based monitoring tool, using the MOTIF toolkit, that allows a user to monitor up to 14
+        IDD hosts.  It provides audible and visual cues when one or more hosts is either not responding, or is suffering
+        from excessive packet loss.</dd>
+      <dt id="IDS"><i>IDS</i></dt>
+      <dd>The <a href="#feed type">feed type</a> for the International Data Service, a
+        <a href="#data stream">data stream</a> that is part of the NWS Family of Services.  IDS includes international
+        data products analogous to the domestic products on <a href="#DDS">DDS</a>.</dd>
+      <dt id="ingester"><i>ingester</i></dt>
+      <dd>In the context of the Unidata LDM, a program such as <a href="https://docs.unidata.ucar.edu/ldm/man/pqing">
+        <b>pqing</b></a>	that reads bytes from a <a href="#data stream">data stream</a> and creates
+        <a href="#data products">data products</a>. </dd>
+      <dt id="injection time"><i>injection time</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, time when a <a href="#data product">data product</a> is
+        first injected into the <a href="#IDD">IDD</a>, an attribute of the data product that is preserved as it gets
+        distributed to other IDD nodes.</dd>
+      <dt id="IP"><i>IP</i></dt>
+      <dd>Internet Protocol, the network layer for the <a href="#TCP/IP">TCP/IP</a> protocol suite widely used on
+        Ethernet networks. IP is a connectionless, best-effort packet switching protocol. It provides packet routing,
+        fragmentation and re-assembly through the data link layer.</dd>
+      <dt id="IP address"><i>IP address</i></dt>
+      <dd>The 32-bit address defined by the Internet Protocol.  It is usually represented in dotted decimal
+        notation.</dd>
+      <dt id="ISPAN"><i>ISPAN</i></dt>
+      <dd>Information Stream Project for <a href="#AWIPS">AWIPS</a> NOAAport, an experimental data stream available from
+        <a href="#FSL">FSL</a>.</dd>
+    </dl>
 
-<h2>J</h2>
+    <h2>J</h2>
 
-<h2>K</h2>
+    <h2>K</h2>
 
-<h2>L</h2>
-<dl>
-  <dt> <a name="LAN"><i>LAN</i></a>
-  <dd> Local area network, a data network intended to serve an area of only
-       a few square kilometers or less.  Since such networks relatively small
-       they can usually be directly controlled by the users and operate at
-       relatively high speeds (up to 100Mb/s) over inexpensive wiring.
-  <dt> <a name="large product"><i>large product</i></a>
-  <dd> In the context of Unidata's <a href="#LDM">LDM</a>, a data product that is large enough
-       to require multiple <a href="#remote procedure calls">remote procedure calls</a> to send it.  Currently,
-       this means the product is larger than about 16 Kb.
-  <dt> <a name="latency"><i>latency</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the delay in delivery of a
-       <a href="#data product">data product</a> since it was first injected from a <a href="#data source">data source</a> site
-  <dt> <a name="LDMs"><i>LDMs</i></a>
-  <dt> <a name="LDM"><i>LDM</i></a>
-  <dd> Local Data Manager, the Unidata software system for event-driven data distribution. 
-	The software allows Unidata sites to select, capture, process, and distribute 
-	<a href="#data products">data products</a>. The LDM is implemented as a set 
-	of network client and server programs and their shared protocols. More information 
-	is available <a
-       href="https://www.unidata.ucar.edu/software/ldm/">here</a>.
-  <dt> <a name="ldmprods"><i>ldmprods</i></a>
-  <dd> A perl script that monitors incoming data in realtime.  Can be used
-      to make sure that data is continuing to flow.  It will either sound
-      an audible alarm, or send email, depending on how it is run, if data
-      flow ceases for any of the data streams it monitors.
-  <dt> <a name="LDM servers"><i>LDM servers</i></a>
-  <dt> <a name="LDM server"><i>LDM server</i></a>
-  <dd> The LDM program <a href="https://docs.unidata.ucar.edu/ldm/man/ldmd"><b>ldmd</b></a>
-	responsible for servicing RPC requests, managing the reception, disposition, 
-	and injection of data to and from the <a href="#IDD">IDD</a>. 
-  <dt> <a name="LDM-McIDAS"><i>LDM-McIDAS</i></a>
-  <dd> a set of LDM-compatible programs used for decoding <a href="#McIDAS">McIDAS</a> 
-	products contained in the Unidata-Wisconsin (McIDAS) data stream that is available 
-	to licensed sites. More information is available <a
-       href="https://www.unidata.ucar.edu/software/mcidas/"> here</a>.
-  <dt> <a name="leaf node"><i>leaf node</i></a>
-  <dd> In the context of the <a href="#IDD">IDD</a>, an LDM system that receives data
-       products but does not relay data products to other IDD nodes.  If the
-       IDD distribution is represented as a directed graph, the leaf nodes
-       have no outgoing edges.  Technically, whether an IDD node is a
-       <a href="#data source">data source</a>, <a href="#data relay">data relay</a>, or leaf node is relative to
-       particular <a href="#data streams">data streams</a>.
-</dl>
+    <h2>L</h2>
+    <dl>
+      <dt id="LAN"><i>LAN</i></dt>
+      <dd>Local area network, a data network intended to serve an area of only a few square kilometers or less.  Since
+        such networks relatively small they can usually be directly controlled by the users and operate at relatively
+        high speeds (up to 100Mb/s) over inexpensive wiring.</dd>
+      <dt id="large product"><i>large product</i></dt>
+      <dd>In the context of Unidata's <a href="#LDM">LDM</a>, a data product that is large enough to require multiple
+        <a href="#remote procedure calls">remote procedure calls</a> to send it.  Currently, this means the product is
+        larger than about 16 Kb.</dd>
+      <dt id="latency"><i>latency</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the delay in delivery of a
+        <a href="#data product">data product</a> since it was first injected from a
+        <a href="#data source">data source</a> site.</dd>
+      <dt id="LDMs"><i>LDMs</i></dt>
+      <dt id="LDM"><i>LDM</i></dt>
+      <dd>Local Data Manager, the Unidata software system for event-driven data distribution. The software allows
+        Unidata sites to select, capture, process, and distribute <a href="#data products">data products</a>. The LDM is
+        implemented as a set of network client and server programs and their shared protocols. More information is
+        available <a href="https://www.unidata.ucar.edu/software/ldm/">here</a>.</dd>
+      <dt id="ldmprods"><i>ldmprods</i></dt>
+      <dd>A perl script that monitors incoming data in realtime.  Can be used to make sure that data is continuing to
+        flow.  It will either sound an audible alarm, or send email, depending on how it is run, if data flow ceases
+        for any of the data streams it monitors.</dd>
+      <dt id="LDM servers"><i>LDM servers</i></dt>
+      <dt id="LDM server"><i>LDM server</i></dt>
+      <dd>The LDM program <a href="https://docs.unidata.ucar.edu/ldm/man/ldmd"><b>ldmd</b></a>	responsible for
+        servicing RPC requests, managing the reception, disposition, and injection of data to and from the
+        <a href="#IDD">IDD</a>. </dd>
+      <dt id="LDM-McIDAS"><i>LDM-McIDAS</i></dt>
+      <dd>a set of LDM-compatible programs used for decoding <a href="#McIDAS">McIDAS</a> products contained in the
+        Unidata-Wisconsin (McIDAS) data stream that is available to licensed sites. More information is available
+        <a href="https://www.unidata.ucar.edu/software/mcidas/">here</a>.</dd>
+      <dt id="leaf node"><i>leaf node</i></dt>
+      <dd>In the context of the <a href="#IDD">IDD</a>, an LDM system that receives data products but does not relay
+        data products to other IDD nodes.  If the IDD distribution is represented as a directed graph, the leaf nodes
+        have no outgoing edges.  Technically, whether an IDD node is a <a href="#data source">data source</a>,
+        <a href="#data relay">data relay</a>, or leaf node is relative to particular
+        <a href="#data streams">data streams</a>.</dd>
+    </dl>
 
-<h2>M</h2>
-<dl>
-  <dt> <a name="MAPS"><i>MAPS</i></a>
-  <dd> Mesoscale Analysis and Prediction System (MAPS) MAPS is a data
-       assimilation and mesoscale modeling system developed by NOAA's
-       Forecast Systems Laboratory; it incorporates asynoptic data such as
-       wind profiler and ACARS data into a mesoscale model with horizontal
-       resolution of 30 kilometers.
-  <dt> <a name="MCIDAS"><i>MCIDAS</i></a>
-  <dd> The <a href="#feed type">feed type</a> used for the Unidata/Wisconsin <a href="#data stream">data stream</a> from
-       <a href="#SSEC">SSEC</a>.
-  <dt> <a name="McIDAS"><i>McIDAS</i></a>
-  <dd> Unidata <a
-       href="https://www.unidata.ucar.edu/software/mcidas/">McIDAS</a> is a suite of applications,
-	developed at <a href="#SSEC">SSEC</a>, for analyzing and displaying meteorological 
-	data for research and education. The software can be used with conventional 
-	observational, satellite, and grid-point data. Unidata distributes two versions 
-	of this software: McIDAS-X for UNIX platforms and McIDAS-OS2 for computers 
-	running OS/2. 
-  <dt> <a name="McLDM"><i>McLDM</i></a>
-  <dd> OS/2 software to ingest the Unidata/Wisconsin data stream directly from
-       an upstream LDM server.
-  <dt> <a name="MD5 checksum"><i>MD5 checksum</i></a>
-  <dd> a kind of checksum that is very likely to be unique for a
-       sequence of bytes.  In the context of the Unidata LDM, it is an
-       attribute of a data product that is used for
-       detecting duplicate products.
-  <dt> <a name="MRF"><i>MRF</i></a>
-  <dd> Medium-Range Forecast, a forecasting model run by the <a href="#NMC">NMC</a>.
-  <dt> <a name="multicast"><i>multicast</i></a>
-  <dd> A packet with a special destination address that multiple nodes
-       on the network may be willing to receive.
-</dl>
+    <h2>M</h2>
+    <dl>
+      <dt id="MAPS"><i>MAPS</i></dt>
+      <dd>Mesoscale Analysis and Prediction System (MAPS) MAPS is a data assimilation and mesoscale modeling system
+        developed by NOAA's Forecast Systems Laboratory; it incorporates asynoptic data such as wind profiler and ACARS
+        data into a mesoscale model with horizontal resolution of 30 kilometers.</dd>
+      <dt id="MCIDAS feed type"><i>MCIDAS</i></dt>
+      <dd>The <a href="#feed type">feed type</a> used for the Unidata/Wisconsin <a href="#data stream">data stream</a>
+        from <a href="#SSEC">SSEC</a>.</dd>
+      <dt id="McIDAS"><i>McIDAS</i></dt>
+      <dd>Unidata <a href="https://www.unidata.ucar.edu/software/mcidas/">McIDAS</a> is a suite of applications,
+        developed at <a href="#SSEC">SSEC</a>, for analyzing and displaying meteorological data for research and
+        education. The software can be used with conventional observational, satellite, and grid-point data. Unidata
+        distributes two versions 	of this software: McIDAS-X for UNIX platforms and McIDAS-OS2 for computers 	running
+        OS/2. </dd>
+      <dt id="McLDM"><i>McLDM</i></dt>
+      <dd>OS/2 software to ingest the Unidata/Wisconsin data stream directly from an upstream LDM server.</dd>
+      <dt id="MD5 checksum"><i>MD5 checksum</i></dt>
+      <dd>a kind of checksum that is very likely to be unique for a sequence of bytes.  In the context of the Unidata
+        LDM, it is an attribute of a data product that is used for detecting duplicate products.</dd>
+      <dt id="MRF"><i>MRF</i></dt>
+      <dd>Medium-Range Forecast, a forecasting model run by the <a href="#NMC">NMC</a>.
+      <dt id="multicast"><i>multicast</i></dt>
+      <dd>A packet with a special destination address that multiple nodes on the network may be willing to receive.</dd>
+    </dl>
 
-<h2>N</h2>
-<dl>
-  <dt> <a name="namespace"><i>namespace</i></a>
-  <dd> A commonly distributed set of names in which all names are unique.
-  <dt> <a name="netCDF"><i>netCDF</i></a>
-  <dd> an interface for scientific data access and a library that provides an 
-	implementation of the interface. The netCDF library also defines a machine-independent 
-	format for representing scientific data. Together, the interface, library, 
-	and format support the creation, access, and sharing of scientific data. The 
-	netCDF software was developed by Unidata. Some inline <a href="#decoders">decoders</a> 
-	that work with the LDM use netCDF as the form of their output. More information 
-	is available from the <a
-       href="https://www.unidata.ucar.edu/software/netcdf/">NetCDF Homepage</a>.
-  <dt> <a name="netcheck"><i>netcheck</i></a>
-  <dd> A perl script that is meant to be run out of cron.  It monitors the
-       network connection between IDD hosts.  Can be set up to provide email
-       notification when the network connection is bad, based on packet loss.
-  <dt> <a name="Netscape"><i>Netscape</i></a>
-  <dd> A widely-used <a href="#WWW">WWW</a> browser client for various operating 
-	systems, used for presenting this Workshop. More information is available 
-	<a href="http://home.mcom.com/home/welcome.html#started">here</a>. 
-  <dt> <a name="NEXRAD"><i>NEXRAD</i></a>
-  <dd> Next Generation Weather Radars, a NOAA radar system of <a href="#WSR-88D">WSR-88D</a>
-       radars and associated processing equipment.  NEXRAD data is
-       made available at discounted prices to the <a href="#IDD">IDD</a> through a contract
-       with <a href="#WSI">WSI</a>.
-  <dt> <a name="NFS"><i>NFS</i></a>
-  <dd> Network File System, a protocol developed by Sun Microsystems, and
-       defined in RFC 1094, which allows a computer to access files over a
-       network as if they were on its local disks. This protocol has been
-       incorporated in products by more than two hundred companies, and is
-       now a de facto standard. NFS is implemented using a connectionless
-       protocol(UDP) in order to make it stateless.
-  <dt> <a name="NIDS"><i>NIDS</i></a>
-  <dd> <a href="#NEXRAD">NEXRAD</a> Information Dissemination System. 
-  <dt> <a name="NLDN"><i>NLDN</i></a>
-  <dd> National Lightning Detection Network, a <a href="#data feed">data feed</a> provided by
-       SUNY Albany through a cooperative agreement with Global
-       Atmospherics, Inc.
-  <dt> <a name="NMC"><i>NMC</i></a>
-  <dd> National Meteorological Center, the source of most of the model
-       output data that appears in <a href="#GRIB">GRIB</a> form on the <a href="#HDS">HDS</a>
-       <a href="#data stream">data stream</a>.
-       The NMC will be named the National Centers for Environmental
-       Prediction after 1 October 1994.
-  <dt> <a name="NOTIFYME"><i>NOTIFYME</i></a>
-  <dd> The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data sink">data sink</a> or <a href="#downstream">downstream</a>
-       node to sign on and announce what <a href="#feed types">feed types</a> and <a href="#product IDs">product IDs</a>
-       it wants to be notified about when they arrive.
-  <dt> <a name="NOAAport"><i>NOAAport</i></a>
-  <dd> Data stream similar to the NWS FOS data stream but enhanced with other
-       data products(Channel 3). It also contains GOES (East|West) images and
-       other experimental products on channels 1,2, and 4.
-  <dt> <a name="NPS"><i>NPS</i></a>
-  <dd> Numerical Products Service, a now-obsolete name for the <a href="#HDS">HDS</a>
-       <a href="#data stream">data stream</a>. 
-  <dt> <a name="NTP"><i>NTP</i></a>
-  <dd> Network Time Protocol, an Internet Standard (12).
-  <dt> <a name="NULLPROC"><i>NULLPROC</i></a>
-  <dd> The trivial <a href="#remote procedure call">remote procedure call</a> supported by RPC <a href="#servers">servers</a> so
-       that <a href="#clients">clients</a> can test connectivity, timing, and flush RPC
-       buffers.
-  <dt> <a name="NWS"><i>NWS</i></a>
-  <dd> National Weather Service.
-</dl>
+    <h2>N</h2>
+    <dl>
+      <dt id="namespace"><i>namespace</i></dt>
+      <dd>A commonly distributed set of names in which all names are unique.</dd>
+      <dt id="netCDF"><i>netCDF</i></dt>
+      <dd>an interface for scientific data access and a library that provides an 	implementation of the interface. The
+        netCDF library also defines a machine-independent format for representing scientific data. Together, the
+        interface, library, and format support the creation, access, and sharing of scientific data. The 	netCDF
+        software was developed by Unidata. Some inline <a href="#decoders">decoders</a> 	that work with the LDM use
+        netCDF as the form of their output. More information 	is available from the
+        <a href="https://www.unidata.ucar.edu/software/netcdf/">NetCDF Homepage</a>.</dd>
+      <dt id="netcheck"><i>netcheck</i></dt>
+      <dd>A perl script that is meant to be run out of cron.  It monitors the network connection between IDD hosts.  Can
+        be set up to provide email notification when the network connection is bad, based on packet loss.</dd>
+      <dt id="Netscape"><i>Netscape</i></dt>
+      <dd>A widely-used <a href="#WWW">WWW</a> browser client for various operating systems, used for presenting this
+        Workshop. More information is available <a href="https://en.wikipedia.org/wiki/Netscape">here</a>. </dd>
+      <dt id="NEXRAD"><i>NEXRAD</i></dt>
+      <dd>Next Generation Weather Radars, a NOAA radar system of <a href="#WSR-88D">WSR-88D</a> radars and associated
+        processing equipment.  NEXRAD data is made available at discounted prices to the <a href="#IDD">IDD</a> through
+        a contract with <a href="#WSI">WSI</a>.</dd>
+      <dt id="NFS"><i>NFS</i></dt>
+      <dd>Network File System, a protocol developed by Sun Microsystems, and defined in RFC 1094, which allows a
+        computer to access files over a network as if they were on its local disks. This protocol has been incorporated
+        in products by more than two hundred companies, and is now a de facto standard. NFS is implemented using a
+        connectionless protocol(UDP) in order to make it stateless.</dd>
+      <dt id="NIDS"><i>NIDS</i></dt>
+      <dd><a href="#NEXRAD">NEXRAD</a> Information Dissemination System. </dd>
+      <dt id="NLDN"><i>NLDN</i></dt>
+      <dd>National Lightning Detection Network, a <a href="#data feed">data feed</a> provided by SUNY Albany through a
+        cooperative agreement with Global Atmospherics, Inc.</dd>
+      <dt id="NMC"><i>NMC</i></dt>
+      <dd>National Meteorological Center, the source of most of the model output data that appears in
+        <a href="#GRIB">GRIB</a> form on the <a href="#HDS">HDS</a> <a href="#data stream">data stream</a>. The NMC was
+        renamed the National Centers for Environmental Prediction after 1 October 1994.</dd>
+      <dt id="NOTIFYME"><i>NOTIFYME</i></dt>
+      <dd>The <a href="#remote procedure call">remote procedure call</a> made by a <a href="#data sink">data sink</a> or
+        <a href="#downstream">downstream</a> node to sign on and announce what <a href="#feed types">feed types</a> and
+        <a href="#product IDs">product IDs</a> it wants to be notified about when they arrive.</dd>
+      <dt id="NOAAport"><i>NOAAport</i></dt>
+      <dd>Data stream similar to the NWS FOS data stream but enhanced with other data products(Channel 3). It also
+        contains GOES (East|West) images and other experimental products on channels 1,2, and 4.</dd>
+      <dt id="NPS"><i>NPS</i></dt>
+      <dd>Numerical Products Service, a now-obsolete name for the <a href="#HDS">HDS</a>
+        <a href="#data stream">data stream</a>.</dd>
+      <dt id="NTP"><i>NTP</i></dt>
+      <dd>Network Time Protocol, an Internet Standard (12).</dd>
+      <dt id="NULLPROC"><i>NULLPROC</i></dt>
+      <dd>The trivial <a href="#remote procedure call">remote procedure call</a> supported by RPC
+        <a href="#servers">servers</a> so that <a href="#clients">clients</a> can test connectivity, timing, and flush
+        RPC buffers.</dd>
+      <dt id="NWS"><i>NWS</i></dt>
+      <dd>National Weather Service.</dd>
+    </dl>
 
-<h2>O</h2>
-<dl>
-  <dt> <a name="ONC"><i>ONC</i></a>
-  <dd> Open Network Computing, an architecture of programming interfaces, conventions, 
-	and server functionalities (eg. naming, distributed file system, <a href="#remote procedure call">remote 
-	procedure call</a>) for distributing applications transparently across networks 
-	of heterogeneous computers promoted by <a href="http://www.sun.com/">Sun</a>. 
-	The ONC architecture includes some widely adopted ad hoc standards such as 
-	<a href="#NFS">NFS</a> and ONC <a href="#RPCs">RPCs</a>. The latter are the 
-	RPCs used by the Unidata <a href="#LDM">LDM</a>. 
-  <dt> <a name="origin"><i>origin</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the host that first injected a
-       <a href="#data product">data product</a> into the <a href="#IDD">IDD</a>, an attribute of the data product
-       that is preserved as it gets distributed to other IDD nodes.
-</dl>
+    <h2>O</h2>
+    <dl>
+      <dt id="ONC"><i>ONC</i></dt>
+      <dd>Open Network Computing, an architecture of programming interfaces, conventions, 	and server functionalities
+        (e.g. naming, distributed file system, <a href="#remote procedure call">remote 	procedure call</a>) for
+        distributing applications transparently across networks of heterogeneous computers promoted by
+        <a href="https://en.wikipedia.org/wiki/Sun_Microsystems">Sun</a>. 	The ONC architecture includes some widely
+        adopted ad hoc standards such as 	<a href="#NFS">NFS</a> and ONC <a href="#RPCs">RPCs</a>. The latter are the
+        RPCs used by the Unidata <a href="#LDM">LDM</a>. </dd>
+      <dt id="origin"><i>origin</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the host that first injected a
+        <a href="#data product">data product</a> into the <a href="#IDD">IDD</a>, an attribute of the data product that
+        is preserved as it gets distributed to other IDD nodes.</dd>
+    </dl>
 
-<h2>P</h2>
-<dl>
-  <dt> <a name="patterns"><i>patterns</i></a>
-  <dt> <a name="pattern"><i>pattern</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a <a href="#regular expression">regular expression</a> that
-       specifies the set of <a href="#product IDs">product IDs</a> matching the pattern.  For
-       example, the pattern `<code>^A</code>' specifies the set of all
-       product IDs beginning with the character `A'.
-  <dt> <a name="pattern-action file"><i>pattern-action file</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the configuration 
-	file for the <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>
-	program that contains a list of entries of the form <a href="#feed type">feed 
-	type</a>, <a href="#product ID">product ID</a> pattern, associated <a href="#action">action</a>, 
-	and action arguments. 
-  <dt> <a name="PCWS"><i>PCWS</i></a>
-  <dd> The <a href="#feed type">feed type</a> for the PC DARE feed from <a href="#FSL">FSL</a>.
-  <dt> <a name="perl"><i>perl</i></a>
-  <dd> A scripting language. More information is available <a
-       href="http://www.perl.com/perl/"> here</a>. 
-  <dt> <a name="ping"><i>ping</i></a>
-  <dd> Packet InterNet Groper, a program used to test reachability of
-       destinations by sending them an ICMP echo request and waiting for a
-       reply.  The term is used as a verb: "Ping host X to see if it is up!"
-  <dt> <a name="port"><i>port</i></a>
-  <dd> Client applications such as FTP must have a way to identify a
-       corresponding server application on a remote host.  TCP/IP designates
-       such remote servers with a port number.  Most common Internet servers
-       have specific, reserved port numbers associated with them.  For
-       example, telnet uses port number 23.  Port numbers less than 512 are
-       assigned by the Internet Assigned Numbers Authority, and termed
-       "well-known ports".  The Unidata <a href="#LDM">LDM</a> has been assigned port 388.
-       Such ports are reserved for privileged processes.
-  <dt> <a name="PPS"><i>PPS</i></a>
-  <dd> Public Product Service, a data feed that is part of the NWS Family of
-       Services.  PPS includes watches, warnings, and text 
-  <dt> <a name="product exploder"><i>product exploder</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a program such as 
-	<a href="#surf_split">surf_split</a> that receives a data product from a <a href="#sender process">sender 
-	process</a>, fragments it into multiple smaller products with manufactured 
-	<a href="#product IDs">product IDs</a>, and feeds them back to the <a href="https://docs.unidata.ucar.edu/ldm/man/ldmd"><b>LDM
-	server</b></a>. 
-  <dt> <a name="product IDs"><i>product IDs</i></a>
-  <dt> <a name="product ID"><i>product ID</i></a>
-  <dd> a short string
-       assigned by a <a href="#data source">data source</a> to uniquely identify each <a href="#data product">data product</a>
-  <dt> <a name="product queue"><i>product queue</i></a>
-  <dd> A stored sequence of <a href="#data products">data products</a> that is shared among
-       LDM processes on a single host.  A <a href="#receiver process">receiver process</a> gets
-       products from <a href="#upstream sources">upstream sources</a> and stores them at the back
-       of the product queue.  A <a href="#sender process">sender process</a> takes products from
-       the front of the product queue and transmits them to a
-       <a href="#downstream sink">downstream sink</a>, moving toward the back of the queue as fast
-       as the sink
-       can accept the data.  Other scanner processes read products out of
-       the queue, moving from front to back, to process the products in some
-       way.  Expire processes delete old products from the queue to make
-       room for new products.
-  <dt> <a name="protocols"><i>protocols</i></a>
-  <dt> <a name="protocol"><i>protocol</i></a>
-  <dd> A set of formal rules describing how to transmit data, especially
-       across networks. Low level protocols define the electrical and
-       physical standards to be observed, bit- and byte-ordering and the
-       transmission and error detection and correction of the bit stream.
-       High level protocols deal with the data formatting, including the
-       syntax and sequencing of messages.
+    <h2>P</h2>
+    <dl>
+      <dt id="patterns"><i>patterns</i></dt>
+      <dt id="pattern"><i>pattern</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a <a href="#regular expression">regular expression</a>
+        that specifies the set of <a href="#product IDs">product IDs</a> matching the pattern.  For example, the pattern
+        `<code>^A</code>' specifies the set of all product IDs beginning with the character `A'.</dd>
+      <dt id="pattern-action file"><i>pattern-action file</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the configuration file for the
+        <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>	program that contains a list of entries
+        of the form <a href="#feed type">feed type</a>, <a href="#product ID">product ID</a> pattern, associated
+        <a href="#action">action</a>,	and action arguments. </dd>
+      <dt id="PCWS"><i>PCWS</i></dt>
+      <dd>The <a href="#feed type">feed type</a> for the PC DARE feed from <a href="#FSL">FSL</a>.</dd>
+      <dt id="perl"><i>perl</i></dt>
+      <dd>A scripting language. More information is available <a href="https://www.perl.org/">here</a>.</dd>
+      <dt id="ping"><i>ping</i></dt>
+      <dd>Packet InterNet Groper, a program used to test reachability of destinations by sending them an ICMP echo
+        request and waiting for a reply.  The term is used as a verb: "Ping host X to see if it is up!"</dd>
+      <dt id="port"><i>port</i></dt>
+      <dd>Client applications such as FTP must have a way to identify a corresponding server application on a remote
+        host.  TCP/IP designates such remote servers with a port number.  Most common Internet servers have specific,
+        reserved port numbers associated with them.  For example, telnet uses port number 23.  Port numbers less than
+        512 are assigned by the Internet Assigned Numbers Authority, and termed "well-known ports".  The Unidata
+        <a href="#LDM">LDM</a> has been assigned port 388. Such ports are reserved for privileged processes.</dd>
+      <dt id="PPS"><i>PPS</i></dt>
+      <dd>Public Product Service, a data feed that is part of the NWS Family of Services.  PPS includes watches,
+        warnings, and text.</dd>
+      <dt id="product exploder"><i>product exploder</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a program such as surf_split
+        that receives a data product from a <a href="#sender process">sender process</a>, fragments it into multiple
+        smaller products with manufactured 	<a href="#product IDs">product IDs</a>, and feeds them back to the
+        <a href="https://docs.unidata.ucar.edu/ldm/man/ldmd"><b>LDM	server</b></a>. </dd>
+      <dt id="product IDs"><i>product IDs</i></dt>
+      <dt id="product ID"><i>product ID</i></dt>
+      <dd>a short string assigned by a <a href="#data source">data source</a> to uniquely identify each
+        <a href="#data product">data product</a>.</dd>
+      <dt id="product queue"><i>product queue</i></dt>
+      <dd>A stored sequence of <a href="#data products">data products</a> that is shared among LDM processes on a single
+        host.  A <a href="#receiver process">receiver process</a> gets products from
+        <a href="#upstream sources">upstream sources</a> and stores them at the back of the product queue.  A
+        <a href="#sender process">sender process</a> takes products from the front of the product queue and transmits
+        them to a <a href="#downstream sink">downstream sink</a>, moving toward the back of the queue as fast as the
+        sink can accept the data.  Other scanner processes read products out of the queue, moving from front to back, to
+        process the products in some way.  Expire processes delete old products from the queue to make room for new
+        products.</dd>
+      <dt id="protocols"><i>protocols</i></dt>
+      <dt id="protocol"><i>protocol</i></dt>
+      <dd>A set of formal rules describing how to transmit data, especially across networks. Low level protocols define
+        the electrical and physical standards to be observed, bit- and byte-ordering and the transmission and error
+        detection and correction of the bit stream. High level protocols deal with the data formatting, including the
+        syntax and sequencing of messages.</dd>
+    </dl>
 
-</dl>
+    <h2>Q</h2>
+    <dl>
+      <dt id="queue"><i>queue</i></dt>
+      <dd>A data structure that permits inserting items at one end and reading and dequeueing items from the other end.
+        Also called a FIFO (First In, First Out) list.  The LDM <a href="#product queue">product queue</a> is an
+        example.</dd>
+    </dl>
 
-<h2>Q</h2>
+    <h2>R</h2>
+    <dl>
+      <dt id="raw file"><i>raw file</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a file consisting of bytes as they appear in a
+        <a href="#data stream">data stream</a>, as a sequence of <a href="#bulletins">bulletins</a>. A raw file is
+        acceptable as input to an LDM <a href="#ingester">ingester</a>.</dd>
+      <dt id="receiver"><i>receiver</i></dt>
+      <dt id="receiver process"><i>receiver process</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a process responsible for receiving
+        <a href="#data products">data products</a> from one or more <a href="#upstream sources">upstream sources</a> and
+        storing the data products in the LDM <a href="#product queue">product queue</a>.</dd>
+      <dt id="regular expressions"><i>regular expressions</i></dt>
+      <dt id="regular expression"><i>regular expression</i></dt>
+      <dd>a notation for patterns used in many UNIX programs, e.g. ed, grep, sed, awk, lex, vi, emacs. The Unidata
+        <a href="#LDM">LDM</a> uses regular expressions as a notation for sets of <a href="#product IDs">product IDs</a>
+        in the <a href="#pattern-action file">pattern-action file</a> that serves as the configuration file for the
+        <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>	program. </dd>
+      <dt id="relay node"><i>relay node</i></dt>
+      <dd>see <a href="#data relay">data relay</a>.</dd>
+      <dt id="RPCs"><i>RPCs</i></dt>
+      <dt id="RPC"><i>RPC</i></dt>
+      <dt id="remote procedure calls"><i>remote procedure calls</i></dt>
+      <dt id="remote procedure call"><i>remote procedure call</i></dt>
+      <dd>An easy and popular paradigm for implementing the client-server model of 	distributed computing. In general,
+        a request is sent to a remote system to execute a designated procedure, using arguments supplied, and the result
+        returned 	to the caller. The LDM uses <a href="#ONC">ONC</a> RPC, version 2, documented 	as
+        <a href="https://www.rfc-editor.org/rfc/rfc1050.html">Internet	RFC 1050</a>. </dd>
+      <dt id="RUC"><i>RUC</i></dt>
+      <dd>Rapid Update Cycle model, a mesoscale analysis/forecast system that operates on a 3-hour cycle to provide
+        frequent updates and short-range forecasts over the lower 48 United States.  RUC output appears in the
+        <a href="#HDS">HDS</a> data stream.</dd>
+    </dl>
 
-<dl>
-  <dt> <a name="queue"><i>queue</i></a>
-  <dd> A data structure that permits inserting items at one end and reading
-       and dequeueing items from the other end.  Also called a FIFO (First
-       In, First Out) list.  The LDM <a href="#product queue">product queue</a> is an example.
-</dl>
+    <h2>S</h2>
+    <dl>
+      <dt id="senders"><i>senders</i></dt>
+      <dt id="sender"><i>sender</i></dt>
+      <dt id="sender process"><i>sender process</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, a process responsible for sending
+        <a href="#data products">data products</a> or notifications of products matching specified criteria to a
+        <a href="#downstream sink">downstream sink</a>.  The products to be sent are read from an LDM
+        <a href="#product queue">product queue</a>.</dd>
+      <dt id="sequence number"><i>sequence number</i></dt>
+      <dd>In the context of the Unidata <a href="#LDM">LDM</a>, the sequence number of a
+        <a href="#data product">data product</a> within a <a href="#data feed">data feed</a>, when a
+        <a href="#data source">data source</a> provides it. Some data sources provide no useful information in this
+        field.</dd>
+      <dt id="servers"><i>servers</i></dt>
+      <dt id="server"><i>server</i></dt>
+      <dd>A computer system or program that provides a service to other <a href="#client">client</a> computer systems or
+        programs.  The connection between client and server is normally by means of message passing, often over a
+        network, and uses some <a href="#protocol">protocol</a> to encode the client's requests and the server's
+        responses. The server may run continuously (as a <a href="#daemon">daemon</a>), waiting for requests to arrive
+        or, it may be invoked by some higher level daemon that controls a number of specific servers (inetd on Unix).
+        There are many servers associated with the Internet, such as those for Network File System, Network Information
+        Service(NIS), Domain Name System (DNS), FTP, news, finger, Network Time Protocol. On Unix, a long list can be
+        found in /etc/services or in the NIS database "services".</dd>
+      <dt id="small product"><i>small product</i></dt>
+      <dd>In the context of Unidata's LDM, a data product that is small enough to be sent in a single
+        <a href="#remote procedure call">remote procedure call</a>.  Currently, this means the product should be smaller
+        than about 16 Kb.</dd>
+      <dt id="SSEC"><i>SSEC</i></dt>
+      <dd>The <A HREF="https://www.ssec.wisc.edu/"> Space Science and Engineering 	Center</A> at the University of
+        Wisconsin in Madison. SSEC makes <a href="#McIDAS">McIDAS</a> data available to the <a href="#IDD">IDD</a>.</dd>
+      <dt id="SUNYA"><i>SUNYA</i></dt>
+      <dd>The State University of New York at Albany, the <a href="#data source">data source</a> for
+        <a href="#NLDN">NLDN</a> data through a cooperative agreement with <a href="#GDS">GDS</a>.</dd>
+      <dt id="syscheck"><i>syscheck</i></dt>
+      <dd>A perl script that is made to run out of cron.  It monitors various system parameters of the machine it runs
+        on.  It is meant to be used to monitor machine load.</dd>
+    </dl>
 
-<h2>R</h2>
-<dl>
-  <dt> <a name="raw file"><i>raw file</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a file consisting of bytes as
-       they appear in a <a href="#data stream">data stream</a>, as a sequence of <a href="#bulletins">bulletins</a>. 
-       A raw file is acceptable as input to an LDM <a href="#ingester">ingester</a>.
-  <dt> <a name="receiver"><i>receiver</i></a>
-  <dt> <a name="receiver process"><i>receiver process</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a process responsible for
-       receiving <a href="#data products">data products</a> from one or more
-       <a href="#upstream sources">upstream sources</a> and storing the data products in the LDM
-       <a href="#product queue">product queue</a>.
-  <dt> <a name="regular expressions"><i>regular expressions</i></a>
-  <dt> <a name="regular expression"><i>regular expression</i></a>
-  <dd> a notation for patterns used in many UNIX programs, e.g. ed, grep, sed, 
-	awk, lex, vi, emacs. The Unidata <a href="#LDM">LDM</a> uses regular expressions 
-	as a notation for sets of <a href="#product IDs">product IDs</a> in the <a href="#pattern-action file">pattern-action 
-	file</a> that serves as the configuration file for the <a href="https://docs.unidata.ucar.edu/ldm/man/pqact"><b>pqact</b></a>
-	program. 
-  <dt> <a name="relay node"><i>relay node</i></a>
-  <dd> see <a href="#data relay">data relay</a>
-  <dt> <a name="RPCs"><i>RPCs</i></a>
-  <dt> <a name="RPC"><i>RPC</i></a>
-  <dt> <a name="remote procedure calls"><i>remote procedure calls</i></a>
-  <dt> <a name="remote procedure call"><i>remote procedure call</i></a>
-  <dd> An easy and popular paradigm for implementing the client-server model of 
-	distributed computing. In general, a request is sent to a remote system to 
-	execute a designated procedure, using arguments supplied, and the result returned 
-	to the caller. The LDM uses <a href="#ONC">ONC</a> RPC, version 2, documented 
-	as <a
-       href="http://www.cis.ohio-state.edu/cgi-bin/rfc/rfc1050.html">Internet 
-	RFC 1050</a>. 
-  <dt> <a name="RUC"><i>RUC</i></a>
-  <dd> Rapid Update Cycle model, a mesoscale analysis/forecast system that
-       operates on a 3-hour cycle to provide frequent updates and
-       short-range forecasts over the lower 48 United States.  RUC output
-       appears in the <a href="#HDS">HDS</a> data stream.
-</dl>
+    <h2>T</h2>
+    <dl>
+      <dt id="TCP"><i>TCP</i></dt>
+      <dd>Transmission Control Protocol, the most common transport layer protocol used on Ethernet.  It is built on top
+        of Internet Protocol and adds reliable communication, flow-control, multiplexing and connection-oriented
+        communication. It provides full-duplex, process-to-process connections.  It is connection-oriented and
+        stream-oriented, as opposed to User Datagram Protocol (<a href="#UDP">UDP</a>).</dd>
+      <dt id="TCP/IP"><i>TCP/IP</i></dt>
+      <dd>Transmission Control Protocol/Internet Protocol, named for two of the major communications protocols used
+        within the Internet (<a href="#TCP">TCP</a> and <a href="#IP">IP</a>).  These protocols (along with several
+        others) provide the basic foundation for communications between hosts in the Internet. The Unidata
+        <a href="#LDM">LDM</a> uses TCP/IP to transfer information.</dd>
+      <dt id="T1"><i>T1</i></dt>
+      <dd>An AT&T term for a digital carrier facility used to transmit a digital signal at 1.544 megabits per
+        second.</dd>
+      <dt id="T3"><i>T3</i></dt>
+      <dd>A term for a digital carrier facility used to transmit a digital signal at 44.746 megabits per second.</dd>
+    </dl>
 
-<h2>S</h2>
-<dl>
-  <dt> <a name="senders"><i>senders</i></a>
-  <dt> <a name="sender"><i>sender</i></a>
-  <dt> <a name="sender process"><i>sender process</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, a process responsible for
-       sending <a href="#data products">data products</a> or notifications of products matching
-       specified criteria to a <a href="#downstream sink">downstream sink</a>.  The products to be sent
-       are read from an LDM <a href="#product queue">product queue</a>.
-  <dt> <a name="sequence number"><i>sequence number</i></a>
-  <dd> In the context of the Unidata <a href="#LDM">LDM</a>, the sequence number of a
-       <a href="#data product">data product</a> within a <a href="#data feed">data feed</a>, when a <a href="#data source">data source</a>
-       provides it.
-       Some data sources provide no useful information in this field.
-  <dt> <a name="servers"><i>servers</i></a>
-  <dt> <a name="server"><i>server</i></a>
-  <dd> A computer system or program that provides a service to other
-       <a href="#client">client</a> computer systems or programs.  The connection
-       between client and server is normally by means of message passing,
-       often over a network, and uses some <a href="#protocol">protocol</a> to encode the
-       client's requests and the server's responses. The server may run
-       continuously (as a <a href="#daemon">daemon</a>), waiting for requests to arrive
-       or it may be invoked by some higher level daemon that controls a
-       number of specific servers (inetd on Unix). There are many servers
-       associated with the Internet, such as those for Network File System,
-       Network Information Service(NIS), Domain Name System (DNS), FTP,
-       news, finger, Network Time Protocol. On Unix, a long list can be
-       found in /etc/services or in the NIS database "services".
-  <dt> <a name="small product"><i>small product</i></a>
-  <dd> In the context of Unidata's LDM, a data product that is small enough
-       to be sent in a single <a href="#remote procedure call">remote procedure call</a>.  Currently, this means
-       the product should be smaller than about 16 Kb.
-  <dt> <a name="SSEC"><i>SSEC</i></a>
-  <dd> The <A HREF="http://www.ssec.wisc.edu/"> Space Science and Engineering 
-	Center</A> at the University of Wisconsin in Madison. The SSEC make <a href="#McIDAS">McIDAS</a> 
-	data available to the <a href="#IDD">IDD</a>. 
-  <dt> <a name="SUNYA"><i>SUNYA</i></a>
-  <dd> The State University of New York at Albany, the <a href="#data source">data source</a> for
-       <a href="#NLDN">NLDN</a> data through a cooperative agreement with <a href="#GDS">GDS</a>.
-  <dt> <a name="syscheck"><i>syscheck</i></a>
-  <dd> A perl script that is made to run out of cron.  It monitors various
-      system parameters of the machine it runs on.  It is meant to be used
-      to monitor machine load.
-</dl>
+    <h2>U</h2>
+    <dl>
+      <dt id="UDP"><i>UDP</i></dt>
+      <dd>User Datagram Protocol, a connectionless protocol which, like <a href="#TCP">TCP</a>, is layered on top of
+        <a href="#IP">IP</a>.  UDP neither guarantees delivery nor does it require a connection. As a result it is
+        lightweight and efficient, but all error processing and retransmission must be taken care of by the application
+        program.</dd>
+      <dt id="UPC"><i>UPC</i></dt>
+      <dd>The <a href="https://www.unidata.ucar.edu/">Unidata</a> Program Center.</dd>
+      <dt id="upstream"><i>upstream</i></dt>
+      <dd>In the context of the Unidata <a href="#IDD">IDD</a>, the direction from which data originates as it flows
+        from <a href="#data sources">data sources</a> to <a href="#data sinks">data sinks</a>.</dd>
+      <dt id="upstream sources"><i>upstream sources</i></dt>
+      <dt id="upstream source"><i>upstream source</i></dt>
+      <dd>see <a href="#data source">data source</a>.</dd>
+      <dt id="UTC"><i>UTC</i></dt>
+      <dd>Universal Coordinated Time.</dd>
+    </dl>
 
-<h2>T</h2>
-<dl>
-  <dt> <a name="TCP"><i>TCP</i></a>
-  <dd> Transmission Control Protocol, the most common transport layer
-       protocol used on Ethernet.  It is built on top of Internet Protocol
-       and adds reliable communication, flow-control, multiplexing and
-       connection-oriented communication. It provides full-duplex,
-       process-to-process connections.  It is connection-oriented and
-       stream-oriented, as opposed to User Datagram Protocol (<a href="#UDP">UDP</a>).
-  <dt> <a name="TCP/IP"><i>TCP/IP</i></a>
-  <dd> Transmission Control Protocol/Internet Protocol, named for two of the
-       major communications protocols used within the Internet (<a href="#TCP">TCP</a> and
-       <a href="#IP">IP</a>).  These protocols (along with several others) provide the
-       basic foundation for communications between hosts in the Internet.
-       The Unidata <a href="#LDM">LDM</a> uses TCP/IP to transfer information
-  <dt> <a name="T1"><i>T1</i></a>
-  <dd> An AT&T term for a digital carrier facility used to transmit a
-       digital signal at 1.544 megabits per second.
-  <dt> <a name="T3"><i>T3</i></a>
-  <dd> A term for a digital carrier facility used to transmit a digital
-       signal at 44.746 megabits per second.
-</dl>
+    <h2>V</h2>
 
-<h2>U</h2>
-<dl>
-  <dt> <a name="UDP"><i>UDP</i></a>
-  <dd> User Datagram Protocol, a connectionless protocol which, like
-       <a href="#TCP">TCP</a>, is layered on top of <a href="#IP">IP</a>.  UDP neither guarantees delivery
-       nor does it require a connection. As a result it is lightweight and
-       efficient, but all error processing and retransmission must be taken
-       care of by the application program.
-  <dt> <a name="UPC"><i>UPC</i></a>
-  <dd> The <a href="https://www.unidata.ucar.edu/">Unidata</a> Program Center.
-  <dt> <a name="upstream"><i>upstream</i></a>
-  <dd> In the context of the Unidata <a href="#IDD">IDD</a>, the direction from which data
-       originates as it flows from <a href="#data sources">data sources</a> to <a href="#data sinks">data sinks</a>
-  <dt> <a name="upstream sources"><i>upstream sources</i></a>
-  <dt> <a name="upstream source"><i>upstream source</i></a>
-  <dd> see <a href="#data source">data source</a>
-  <dt> <a name="UTC"><i>UTC</i></a>
-  <dd> Universal Coordinated Time
-</dl>
+    <h2>W</h2>
+    <dl>
+      <dt id="WMO"><i>WMO</i></dt>
+      <dd>World Meteorological Organization - an organization established under the auspices of the United Nations for
+        the orderly advancement of the science and practice of meteorology.</dd>
+      <dt id="WMO header"><i>WMO header</i></dt>
+      <dd>An abbreviated heading used to identify meteorological products.</dd>
+      <dt id="WSI"><i>WSI</i></dt>
+      <dd>Provider of <a href="#NIDS">NIDS</a> products to the <a href="#IDD">IDD</a> system.  Also, a name of the feed
+        type for such products.</dd>
+      <dt id="WSR-88D"><i>WSR-88D</i></dt>
+      <dd>A single radar from the national <a href="#NEXRAD">NEXRAD</a> network.</dd>
+      <dt id="WWW"><i>WWW</i></dt>
+      <dd>The <a href="https://www.w3.org/">World Wide Web</a>, or Web or W3 for short, a project to make the universe
+        of network-accessible information easily available to all who are suitably connected. This LDM Workshop is using
+        WWW documents for presentations, so they will be available remotely. </dd>
+    </dl>
 
-<h2>V</h2>
+    <h2>X</h2>
+    <dl>
+      <dt id="XDR"><i>XDR</i></dt>
+      <dd>eXternal Data Representation, a standard for the description and encoding of data, useful for transferring
+        data between different computer architectures. 	XDR is documented in
+        <a href="https://www.rfc-editor.org/rfc/rfc1014.html">Internet RFC 1014</a>.</dd>
+    </dl>
 
+    <h2>Y</h2>
 
-<h2>W</h2>
-<dl>
-  <dt> <a name="WMO"><i>WMO</i></a>
-  <dd> World Meteorological Organization - an organization established  
-       under the auspices of the United Nations for the orderly  
-       advancement of the science and practice of meteorology.
-.
-  <dt> <a name="WMO header"><i>WMO header</i></a>
-  <dd> An abbreviated heading used to identify meteorological products.
-  <dt> <a name="WSI"><i>WSI</i></a>
-  <dd> Provider of <a href="#NIDS">NIDS</a> products to the <a href="#IDD">IDD</a> system.  Also a name of
-       the feed type for such products.
-  <dt> <a name="WSR-88D"><i>WSR-88D</i></a>
-  <dd> A single radar from the national <a href="#NEXRAD">NEXRAD</a> network.
-  <dt> <a name="WWW"><i>WWW</i></a>
-  <dd> The <a href="http://www.w3.org/"> World 
-	Wide Web</a>, or Web or W3 for short, a project to make the universe of network-accessible 
-	information easily available to all who are suitably connected. This LDM Workshop 
-	is using WWW documents for presentations, so they will be available remotely. 
-</dl>
+    <h2>Z</h2>
+    <dl>
+      <dt id="Z"><i>Z</i></dt>
+      <dd>an abbreviated symbol for Universal Coordinated Time (UTC) appended to a time.</dd>
+    </dl>
 
-<h2>X</h2>
-<dl>
-  <dt> <a name="XDR"><i>XDR</i></a>
-  <dd> eXternal Data Representation, a standard for the description and encoding 
-	of data, useful for transferring data between different computer architectures. 
-	XDR is documented in <a
-       href="http://www.cis.ohio-state.edu/cgi-bin/rfc/rfc1014.html"> 
-	Internet RFC 1014</a> 
-
-</dl>
-
-<h2>Y</h2>
-
-
-<h2>Z</h2>
-<dl>
-  <dt> <a name="Z"><i>Z</i></a>
-  <dd> an abbreviated symbol for Universal Coordinated Time (UTC) appended
-       to a time 
-</dl>
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body> </html>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
