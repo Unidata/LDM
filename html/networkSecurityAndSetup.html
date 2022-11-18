@@ -1,111 +1,71 @@
+<!DOCTYPE HTML>
 <html>
-<head>
-<title>LDM and Network Security</title>
-<META NAME="BOOKMARK" CONTENT="Network Security">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, network, Security">
-<META NAME="DESCRIPTION" CONTENT="Describes network security issues related to the ldm">
-</head>
+  <head>
+    <title>LDM and Network Security</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM And Network Security">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="Software, LDM, network, security">
+    <meta name="DESCRIPTION" content="Describes network security issues related to the ldm">
+  </head>
+  <body>
+    <h1>The Unidata LDM and Network Security</h1>
+    <p>In order to receive data in near real time the LDM requires round the clock Internet connectivity. With the 
+      ever-increasing risk of computer breakins, it is understandable that system administrators feel the need to 
+      restrict access as much as possible. This page describes the security situation of the LDM. </p>
+    <p><b>To the best of our knowledge (and we should know) no computer system has ever been compromised via the LDM
+      since it was first released in 1994.</b></p>
 
-<BODY>
+    <h2>General LDM Information</h2>
+    <p>Like FTP and HTTP, the LDM uses a reserved port. Unidata has registered with
+      <a href="https://www.iana.org/"><b>IANA</b></a> to use reserved port 388. (For more information on port numbers see
+      <a href="https://www.iana.org/numbers.html"><b>IANA's Protocol Numbers and Assignment Services</b></a> and search
+      for "Port Numbers".)</p>
+    <p>Under UNIX it is necessary to have root level privileges in order to acquire a reserved port.  For this reason
+      the LDM server, the parent <code>ldmd</code> process, temporarily becomes 'root' when opening and closing the
+      port. At all other times, it has the reduced privileges of the LDM user. Similarly, all child processes are owned
+      by the LDM user and thus do not have root privileges. (The LDM should always be invoked by the LDM user and never
+      by 'root'.) In order to implement this, LDM installation requires root privileges to set the user id of
+      <code>ldmd</code> to root and to set the SUID bit.</p>
+    <p>Also, like FTP and HTTP, network communication between LDMs occurs via a limited, well-defined protocol. That
+      protocol is defined in the file <code>ldm.h</code> which comes with the source code distribution. If you would
+      like to read more about the protocol, please see the section entitled
+      <a href="basics/protocol.html">The LDM 6 Protocol</a> in the <a href="basics/">LDM Reference</a> webpages.</p>
+    <p>The only other purpose for which the LDM might need root privileges is to implement logging. LDM version 6.12 and
+      earlier use the system logging daemon. LDM version 6.13 and later can be built to use the system logging daemon.
+      Such logging is initiated via the <code>hupsyslog</code> program, which sends a HUP signal to the system logging
+      daemon (e.g., <code>syslogd</code>, <code>rsyslogd</code>). This can only be done if the <code>hupsyslog</code>
+      process is owned by root. When the system logging daemon receives a HUP, it closes all files it has open and
+      rereads its configuration file. <code>hupsyslog</code> is always called upon LDM start-up, and is typically run
+      periodically to rotate the log files.</p>
+    <p>The LDM makes one more bow to security. It requires a reverse lookup of the client host name. That is, when a
+      client connects to an LDM server, the server will confirm that the client's fully qualified domain name (FQDN)
+      resolves to an IP address, and that that IP address resolves to the same FQDN. For this reason, the LDM may not
+      work if a client is using an alias and relevant tables aren't properly updated or a new name has not yet
+      propagated to the relevant name servers. </p>
+    <p>Because the top-level LDM server immediately daemonizes itself, it is not possible for an outside entity to
+      obtain a user shell by crashing the LDM (even if such a thing were possible).</p>
 
-<h2 align="center">The Unidata LDM and Network Security</h2>
-<p align="justify">In order to receive data in near real time the LDM requires round the clock 
-  Internet connectivity. With the ever increasing risk of computer break ins, 
-  it is understandable that system administrators feel the need to restrict access 
-  as much as possible. This page describes the security situation of the
-  LDM. </p>
+    <h2>Access Control and Access to Port 388</h2>
+    <p>When the LDM was designed it was necessary for it to perform its own access control. This is implemented in the
+      form of <code>ALLOW</code> entries in the configuration file <code>ldmd.conf</code>. In that file,
+      <code>ALLOW</code> entries specify hosts that may connect to the localhost to receive data. Subnet regular
+      expressions may be used as host names. The LDM will deny a connection from any host that is not allowed to
+      connect. </p>
+    <p>Use of the LDM requires that any host listed in its access control list be allowed a TCP connection to port 388
+      on the localhost. If the localhost is behind a firewall, the firewall <i>must</i> allow TCP access to port
+      388.</p>
+    <p>The LDM does not use TCP-Wrappers. Nor is it spawned by <code>inetd</code>, so TCP-Wrappers provide no benefit
+      with respect to the use of port 388. </p>
 
-<p><strong>To the best of our knowledge (and we should know) no computer system
-has ever been compromised via the LDM since it was first released in
-1994.</strong>
+    <h2>The Portmapper</h2>
+    <p>The LDM does not require that the portmapper program (usually called <code>portmap</code> or
+      <code>rcpbind</code>) be running on the host system.  If it is running, however, then the LDM will register its
+      remote procedure call (RPC) service. The portmapper is not required by downstream LDMs because they will attempt
+      to connect directly to port 388.  Only if they cannot connect via this port will they then try to use the
+      portmapper.</p>
 
-<h3>General LDM Information</h3>
-<p align="justify">Like FTP and HTTP, the LDM uses a reserved port. Unidata has 
-  registered with <a
-href="http://www.iana.org/"><b>IANA</b></a> to 
-  use reserved port 388. (For more information on port numbers see <a
-href="http://www.iana.org/numbers.html"> <b>IANA's 
-  Protocol Numbers and Assignment Services</b></a> and search for "Port Numbers".) 
-</p>
-<p align="justify">
-Under UNIX it is necessary to have root level privileges in order to
-acquire a reserved port.  For this reason the LDM server, the parent
-<code>ldmd</code> process, temporarily becomes 'root' when opening and closing the port.
-At all other times, it has the reduced privileges of the LDM user.
-Similarly, all child processes are owned by the LDM user and thus do not have
-root privileges.
-(The LDM should always be invoked by the LDM user and never by 'root'.)
-In order to implement this, LDM installation requires root
-privileges to set the user id of <code>ldmd</code> to root and to set the
-SUID bit.
-</p>
-<p align="justify">Also, like FTP and HTTP, network communication between LDMs 
-  occurs via a limited, well-defined protocol. That protocol is defined in the 
-  file <code>ldm.h</code> which comes with the source code distribution. If you 
-  would like to read more about the protocol, please see the section
-  entitled <a href="basics/protocol.html">The LDM 6 Protocol</a>
-  in the
-  <a href="basics/">LDM Reference</a> webpages.
-</p>
-<p align="justify">
-The only other purpose for which the LDM might need root privileges is to
-implement logging. LDM version 6.12 and earlier use the system logging daemon.
-LDM version 6.13 and later can be built to use the system logging daemon.
-Such logging is initiated via the
-<code>hupsyslog</code> program, which sends a HUP
-signal to the system logging daemon (e.g., <code>syslogd</code>,
-<code>rsyslogd</code>).
-This can only be done if the <code>hupsyslog</code> process is owned by root.
-When the system logging daemon receives a HUP, it closes all files it has open
-and rereads its configuration file. <code>hupsyslog</code> is always
-called upon LDM start-up, and is typically run periodically to rotate the
-log files.
-</p>
-<p align="justify">The LDM makes one more bow to security. It requires a reverse lookup of the 
-  client host name. That is, when a client connects to an LDM server, the server 
-  will confirm that the client's fully qualified domain name (FQDN) resolves to 
-  an IP address, and that that IP address resolves to the same FQDN. For this 
-  reason, the LDM may not work if a client is using an alias and relevant tables 
-  aren't properly updated or a new name has not yet propagated to the relevant 
-  name servers. </p>
-
-<p align="justify">Because the top-level LDM server immediately
-daemonizes itself, it is not possible for an outside entity to obtain a
-user shell by crashing the LDM (even if such a thing were possible).
-
-<h3> Access Control and Access to Port 388</h3>
-
-<p align="justify">When the LDM was designed it was necessary for it to perform its own access 
-  control. This is implemented in the form of <code>ALLOW</code> entries in the 
-  configuration file <code>ldmd.conf</code>. In that file, <code>ALLOW</code> entries 
-  specify hosts that may connect to the localhost to receive data. Subnet
-  regular expressions may 
-  be used as host names. The LDM will deny a connection from any host that is 
-  not allowed to connect. </p>
-<p align="justify">
-Use of the LDM requires that any host listed in its access control list be
-allowed a TCP connection to port 388 on the localhost.
-If the localhost is behind a firewall, the firewall <em>must</em> allow TCP access
-to port 388.
-</p>
-
-<p align="justify">The LDM does not use TCP-Wrappers. Nor is it spawned by <code>inetd</code>, 
-so TCP-Wrappers provide no benefit with respect to the use of port 388. </p>
-
-<h3> The Portmapper </h3>
-<p align="justify">
-The LDM does not require that the portmapper program (usually called
-<code>portmap</code> or <code>rcpbind</code>) be running on
-the host system.  If it is running, however, then the LDM will
-register its remote procedure call (RPC) service.
-The portmapper is not required by downstream LDMs because they
-will attempt to connect directly to port 388.  Only if they cannot connect
-via this port will they then try to use the portmapper.
-
-<p>
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

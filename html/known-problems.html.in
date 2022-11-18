@@ -1,105 +1,62 @@
-<HTML>
-<HEAD>
-<TITLE>LDM @VERSION@ Known Problems</TITLE>
-<META NAME="BOOKMARK" CONTENT="Known Problems">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, Data, Manager, Release, 
-@VERSION@, Notes ">
-</HEAD>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM @VERSION@ Known Problems</title>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="BOOKMARK" content="Known Problems">
+      <meta name="AUTHOR" content="Steve">
+      <meta name="KEYWORDS" content="Software, LDM, Data, Manager, Release, @VERSION@, Notes ">
+  </head>
+  <body>
+    <h1>LDM @VERSION@ Known Problems</h1>
+    <ul>
+      <li><a href="#futex">Hung downstream LDM on Linux system</a></li>
+      <li><a href="#fcntl">Product-queue access hangs in Mac OS X 10	(Darwin 8 & 9)</a></li>
+      <li><a href="#linux_time">Some data-products not processed or relayed</a></li>
+      <li><a href="#reporting">Reporting Problems</a></li>
+    </ul>
 
-<BODY>
+    <h2 id="futex">Hung downstream LDM on Linux system</h2>
+    <p>On some Linux systems, an <b>ldmadmin stop</b> command can hang because a downstream LDM process hangs. An 
+    <b>strace(1)</b> of the hung process indicates that it is repeatedly invoking the <b>futex</b> system-call:
+    <pre>
+      futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
+      --- SIGCONT (Continued) @ 0 (0) ---
+      futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
+      --- SIGCONT (Continued) @ 0 (0) ---
+      ...
+    </pre>
+    <p>This is a known Linux bug.  Fixing it requires modifying either the Linux kernel or the gcc runtime library or 
+    both.  The bug appears to exist in all 2.6 versions prior to and including version 2.6.13.  Further information can 
+    be found by Googling "futex hang".</p>
+    <p>A workaround appears to be to set the environment variable <b>LD_ASSUME_KERNEL</b> to <b>2.4.19</b> before 
+    executing any LDM program.  For best effect, this should be done in the LDM user's profile-file.</p>
 
-<h1 align="center">LDM @VERSION@ Known Problems</h1>
+    <h2 id="fcntl">Product-queue access hangs in Mac OS X 10 (Darwin 8 & 9)</h2>
+    <p>The product-queue module, pq(3), makes repeated use of the fcntl(2) system-function to lock portions of the 
+    product-queue.  This function invokes the Mac OS X system-function fcntl$UNIX2003, which, for an unknown reason, 
+    eventually hangs (i.e., never returns). This problem has been seen on Mac OS X versions 10.5 and 10.6.</p>
+    <p>This bug was first reported to Apple on April 1, 2008.  There have been only a few responses from Apple and no 
+    resolution to date.</p>
+    <p>There is no workaround.</p>
 
-<ul>
-    <li><a href="#futex">Hung downstream LDM on Linux system </a>
-    <li><a href="#fcntl">Product-queue access hangs in Mac OS X 10
-	(Darwin 8 & 9)</a>
-    <li><a href="#linux_time">Some data-products not processed or
-    relayed</a>
-    <li><a href="#reporting">Reporting Problems</a>
-</ul>
+    <h2 id="linux_time">Some data-products not processed or relayed</h2>
+    <p>Processes that read the product-queue such as upstream LDM-s, <b>pqact</b>(1), and <b>pqcat</b>(1) can sometimes
+    miss a data-product that they should have, otherwise, selected and that is actually in the queue if the system clock 
+    is not monotonic (<i>i.e.</i> if the system clock sometimes jumps backwards).  This is because the order in which 
+    products reside in the queue is the same order as their <em>insertion-time</em> into the queue.  Consequently, a
+    backwards time-jump by the system clock can cause a newly-arrived data product to <em>not</em> be inserted at the 
+    tail of the queue and, consequently, be missed by a reader of the queue that's waiting at the queue's tail for the 
+    next product.</p>
+    <p>The solution is to run the <b>ntpd</b>(8) daemon to continuously adjust the clock slew rate to ensure a monotonic 
+    system clock.</p>
 
-<hr>
+    <h2 id="reporting">Reporting Problems</h2>
+    <p>If you encounter bugs or problems, please contact 
+    <a href="mailto:support-ldm@unidata.ucar.edu">support-LDM at unidata.ucar.edu</a>. Include in the email all relevant 
+    items that could aid the diagnosis.</p>
 
-<h2><a name="futex">Hung downstream LDM on Linux system</a></h2>
-
-<p>On some Linux systems, an <b><tt>ldmadmin stop</tt></b> command can
-hang because a downstream LDM process hangs.
-An <b><tt>strace(1)</tt></b> of the hung process indicates that it is
-repeatedly invoking the <b><tt>futex</tt></b> system-call:
-<blockquote><pre>
-futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
---- SIGCONT (Continued) @ 0 (0) ---
-futex(0x583844, FUTEX_WAIT, 2, NULL)    = -1 EINTR (Interrupted system call)
---- SIGCONT (Continued) @ 0 (0) ---
-...
-</blockquote></pre>
-This is a known Linux bug.  Fixing it requires modifying either the Linux
-kernel or the gcc runtime library or both.  The bug appears to exist in all
-2.6 versions prior to and including version 2.6.13.  Further information
-can be found by Googling "futex hang".
-
-<p>A workaround appears to be to set the environment variable <tt><b>
-LD_ASSUME_KERNEL</b></tt> to <tt><b>2.4.19</b></tt> before executing any
-LDM program.  For best effect, this should be done in the LDM user's 
-profile-file.
-
-<hr>
-
-<h2><a name="fcntl">Product-queue access hangs in Mac OS X 10
-(Darwin 8 & 9)</a></h2>
-
-<p>
-The product-queue module, pq(3), makes repeated use of the fcntl(2)
-system-function to lock portions of the product-queue.  This function
-invokes the Mac OS X system-function fcntl$UNIX2003, which, for an
-unknown reason, eventually hangs (i.e., never returns).
-This problem has been seen on Mac OS X versions 10.5 and 10.6.
-
-<p>
-This bug was first reported to Apple on April 1, 2008.  There have been
-only a few responses from Apple and no resolution to date.
-
-<p>
-There is no workaround.
-
-<hr>
-
-<h2><a name="linux_time">Some data-products not processed or relayed</a></h2>
-
-<p>
-Processes that read the product-queue such as upstream LDM-s,
-<tt><b>pqact</b>(1)</tt>, and <tt><b>pqcat</b>(1)</tt> can sometimes
-miss a data-product that they should have, otherwise, selected and that
-is actually in the queue if the system clock is not monotonic
-(<i>i.e.</i> if the system clock sometimes jumps backwards).  This is
-because the order in which products reside in the queue is the same
-order as their <em>insertion-time</em> into the queue.  Consequently, a
-backwards time-jump by the system clock can cause a newly-arrived data
-product to <em>not</em> be inserted at the tail of the queue and,
-consequently, be missed by a reader of the queue that's waiting at the
-queue's tail for the next product.
-
-<p>
-The solution is to run the <tt><b>ntpd</b>(8)</tt> daemon to
-continuously adjust the clock slew rate to ensure a monotonic system
-clock.
-
-<hr>
-
-<h2><a name="reporting">Reporting Problems</a></h2>
-
-<p>
-If you encounter bugs or problems, please contact <a
-href="mailto:support-ldm@unidata.ucar.edu">support-LDM at unidata.ucar.edu</a>.
-Include in the email all relevant items that could aid the diagnosis.
-
-<hr>
-
-<p>
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
