@@ -30,6 +30,9 @@
     pqing(1):
         * Eliminated compilation error in "tty.c" under MacOS by including <sys/ioctl.h>
 
+    LDM registry:
+        * Ensured that the file-descriptor of the registry is close-on-exec
+
     rpc(3) library:
         * Eliminated compilation errors under MacOS by replacing bzero(), bset(), and bcmp() with
           POSIX equivalents
