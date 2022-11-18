@@ -667,10 +667,9 @@ openMap(const char* const restrict dirname,
             status = LDM7_SYSTEM;
         }
         else {
-            status = fcntl(fd, F_SETFD, FD_CLOEXEC);
-            if (status == -1) {
-                log_add_syserr("Couldn't set FD_CLOEXEC flag on file \"%s\"",
-                        pathname);
+            status = ensure_close_on_exec(fd);
+            if (status) {
+                log_add("Couldn't set FD_CLOEXEC flag on file \"%s\"", pathname);
                 (void)close(fd);
                 status = LDM7_SYSTEM;
             }
