@@ -1,99 +1,72 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+   <title>LDM @VERSION@</title>
+     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1" />
+     <meta name="BOOKMARK" content="@VERSION@">
+     <meta name="AUTHOR" content="steve">
+     <meta name="KEYWORDS" content="Software, LDM, @VERSION@, Data, Manager">
+     <meta name="DESCRIPTION" content="The Unidata Local Data Manager (LDM) is a collection of cooperating programs that
+     select, capture, manage, and distribute arbitrary data products. The system is designed for event-driven data
+     distribution and is currently used in the Unidata Internet Data Distribution (IDD) project. The LDM system includes
+     network client and server programs and their shared protocols. The LDM supports flexible, site-specific
+     configuration.">
+  </head>
+  <body>
+    <h1>LDM @VERSION@</h1><br>
+    <p> The Unidata Local Data Manager (LDM) is a collection of cooperating programs that select, capture, manage, and
+    distribute arbitrary data products.  The system is designed for event-driven data distribution, and is currently
+    used in the <a href="https://www.unidata.ucar.edu/projects/idd/"><b>Unidata Internet Data Distribution</b></a>
+    (IDD) project. The LDM system includes network client and server programs and their shared protocols. The LDM
+    supports flexible, site-specific configuration.</p>
 
-<HEAD>
-<TITLE>LDM @VERSION@</TITLE>
-<META NAME="BOOKMARK" CONTENT="@VERSION@">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, @VERSION@, Data, Manager">
-<META NAME="DESCRIPTION" CONTENT="The Unidata Local Data Manager (LDM) is a collection of cooperating programs that select, capture, manage, and distribute arbitrary data products. The system is designed for event-driven data distribution and is currently used in the Unidata Internet Data Distribution (IDD) project. The LDM system includes network client and server programs and their shared protocols. The LDM supports flexible, site-specific configuration.">
-</HEAD>
+    <h2>General Information</h2>
+    <ul>
+      <li><a href="factsheet.html">LDM Factsheet</a></li>
+      <li><a href="ldmfaq.html">LDM FAQ</a></li>
+      <li>Release Information</li>
+	    <ul>
+	      <li><a href="CHANGE_LOG">Change Log</a></li>
+	      <li><a href="known-problems.html">Known Problems</a></li>
+	      <li><a href="compatibility.html">Compatibility with Previous Versions</a></li>
+        <li><a href="https://scan.coverity.com/projects/unidata-ldm">
+          <img alt="Coverity Scan Build Status" src="https://scan.coverity.com/projects/16072/badge.svg"/></a></li>
+	    </ul>
+      <li>Legal Notices</li>
+	    <ul>
+	      <li><a href="COPYRIGHT">LDM Software Licensing Terms and Conditions</a></li>
+	      <li><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">Data Usage Terms and Conditions</a></li>
+	    </ul>
+    </ul>
 
-<BODY>
+    <h2>Download, Installation, and Configuration</h2>
+    <ul>
+      <li>Please see the section entitled <a href="basics/index.html#installation">Installing, Configuring, and 
+      Activating the LDM System</a> in the	<a href="basics/index.html">LDM Reference</a> webpages.</li>
+    </ul>
 
-<h1 align="center">LDM @VERSION@</h1><br>
+    <h2>Tutorials and Documentation</h2>
+    <ul>
+      <li><a href="basics/index.html">LDM Reference</a></li>
+      <li><a href="tutorial/index.html">LDM Tutorial</a></li>
+      <li><a href="manindex.html">LDM <code>man(1)</code> pages</a></li>
+      <li><a href="networkSecurityAndSetup.html">The LDM and Network Security</a></li>
+    </ul>
 
-<p align="justify"> The Unidata Local Data Manager (LDM) is a 
-collection of cooperating programs that select, capture, manage,
-and distribute arbitrary data products.  The system is designed for
-event-driven data distribution, and is currently used in the <a
-href="https://www.unidata.ucar.edu/projects/idd/">
-<b>Unidata Internet Data
-Distribution</b></a> (IDD) project. The LDM system includes network
-client and server programs and their shared protocols.
-The LDM supports flexible, site-specific configuration.
+    <h2>Help and Support</h2>
+    <ul>
+       <li><a href="troubleshooting/index.html">Troubleshooting the LDM</a></li>
+       <li><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">General LDM help and support</a></li>
+    </ul>
 
-<h2>General Information</h2>
+    <h2>Getting Data via the IDD</h2>
+    <ul>
+       <li><a href="https://www.unidata.ucar.edu/projects/idd/">Link to IDD homepage</a></li>
+       <li><a href="basics/feedtypes/index.html">LDM feedtypes</a></li>
+       <li><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">Data Usage Terms and Conditions</a></li>
+    </ul>
 
-<ul>
-    <li><p><a href="factsheet.html">LDM Factsheet</a>
-
-    <li><p><a href="ldmfaq.html">LDM FAQ</a>
-
-    <li><p>Release Information
-	<ul>
-	    <li><a href="CHANGE_LOG">Change Log</a>
-	    <li><a href="known-problems.html">Known Problems</a>
-	    <li><a href="compatibility.html">Compatibility with Previous
-		Versions</a>
-            <li><a href="https://scan.coverity.com/projects/unidata-ldm">
-                <img alt="Coverity Scan Build Status"
-                src="https://scan.coverity.com/projects/16072/badge.svg"/></a>
-	</ul>
-    <li><p>Legal Notices
-	<ul>
-	    <li><a href="COPYRIGHT">LDM Software Licensing Terms and
-		Conditions</a>
-	    <li><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">
-		Data Usage Terms and Conditions</a>
-	</ul>
-</ul>
-
-<br>
-<h2>Download, Installation, and Configuration</h2>
-
-<ul>
-    <li>Please see the section entitled
-	<a href="basics/index.html#installation">Installing, 
-	Configuring, and Activating the LDM System</a> in the
-	<a href="basics/index.html">LDM Reference</a> webpages.
-</ul>
-
-<br>
-<h2>Tutorials and Documentation</h2>
-
-<ul>
-    <li><p><a href="basics/index.html">LDM Reference</a>
-    <li><p><a href="tutorial/index.html">LDM Tutorial</a>
-    <li><p><a href="manindex.html">LDM <code>man(1)</code> pages</a>
-    <li><p><a href="networkSecurityAndSetup.html">
-        The LDM and Network Security</a>
-</ul>
-
-
-<br>
-<h2>Help and Support</h2>
-<ul>
-  <li><p><a href="troubleshooting/index.html">
-      Troubleshooting the LDM</a>
-
-  <li><p><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">
-      General LDM help and support</a>
-</ul>
-
-<br>
-<h2>Getting Data via the IDD</h2>
-
-<p><ul>
-    <li><p><a href="https://www.unidata.ucar.edu/projects/idd/">
-	Link to IDD homepage</a>
-    <li><p><a href="basics/feedtypes/index.html">LDM feedtypes</a>
-    <li><p><a href="https://www.unidata.ucar.edu/data/data_usage.html#data">
-	Data Usage Terms and Conditions</a>
-</ul>
-
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

@@ -1,288 +1,177 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Configuration/Setup</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Configuration">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="LDM, Configuration">
+  </head>
+  <body>
+    <h1>LDM Configuration/Setup</h1>
+    <ul>
+      <li><a href="#upstream feeds">Obtain source(s) of data feed(s)</a></li>
+      <li><a href="#upstream config">Request authorization by the upstream site(s)</a></li>
+      <li><a href="#ldmd.conf">Edit the file <b>etc/ldmd.conf</b></a></li>
+      <li><a href="#pqact.conf">Edit the file <b>etc/pqact.conf</b></a></li>
+      <li><a href="#cron">Edit the LDM-user's crontab(1) file</a></li>
+      <li><a href="#activate">Activate the just-installed LDM</a></li>
+      <li><a href="#boot">Ensure that the LDM is started at boot-time</a></li>
+    </ul>
 
-<HEAD>
-<TITLE>Setup</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Configuration">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="LDM, configuration">
-<META NAME="DESCRIPTION" CONTENT="">
-</HEAD>
+    <h2 id="upstream feeds">Obtain source(s) of data feed(s)</h2>
+    <p>First, find out who your upstream feed site(s) will be.  If you don't know, then contact the Unidata Program 
+      Center at <a href="mailto:support-idd@unidata.ucar.edu">&lt;support-idd at unidata.ucar.edu&gt;</a> with the 
+      following information:</p>
+    <ul>
+      <li>Site Name</li>
+      <li>Site Administrator</li>
+      <li>Email Address</li>
+      <li>Phone Number</li>
+      <li>Fully Qualified Hostname of the IDD Node (i.e., the computer that will run the LDM)</li>
+    </ul>
+    <p>Note that you can have a primary upstream site as well as an alternate upstream site for any given data feed.</p>
 
-<BODY>
+    <h2 id="ldmd.conf">Edit the file <b>etc/ldmd.conf</b></h2>
+    <p>This file tells an LDM what to do on startup.  Several things that you should or might have in this file -- 
+      depending on your exact situation -- are.</p>
+    <ul>
+      <li>"request" lines for your primary upstream feed site(s):</li>
+      <pre>
+        request UNIDATA  ".*"  host1.site1.edu PRIMARY
+        request NLDN     ".*"  host2.site2.edu PRIMARY
+      </pre>
+      <li>Alternate (<i>i.e.</i>, secondary) sources for certain  data feeds, if appropriate:</li>
+      <pre>
+        request UNIDATA  ".*"  host3.site3.edu ALTERNATE
+        request NLDN     ".*"  host4.site4.edu ALTERNATE
+      </pre>
+      <li>An <a href="glossary.html#enable ldmd.conf entry">enabled "exec" entry</a> for <b>pqact</b>, if
+        appropriate.</li>
+      <li>An <a href="glossary.html#enable ldmd.conf entry">enabled "exec" entry</a> for <b>pqsurf</b>, if 
+        appropriate.</li> 
+      <li>A <a href="glossary.html#disable ldmd.conf entry">disabled "exec" entry</a> for <b>rtstats</b> if the LDM is 
+        <i>not</i> a <a href="glossary.html#gateway LDM">gateway LDM</a> for your institution. LDM statistics are the 
+        best way of monitoring IDD performance and identifying problems. It is critical that all 
+        <a href="glossary.html#gateway LDM">gateway LDM</a>-s report statistics. Also, the data from the LDM statistics 
+        is vital in preparing reports used to obtain funding to support the LDM software.  Statistics are displayed on 
+        the <a href="https://rtstats.unidata.ucar.edu/rtstats/">IDD rtstats page</a>.</li>  
+    </ul>
 
-<h1 align="center">LDM Setup </h1><br>
-<ul>
-<li><p><a href="#upstream feeds">Obtain source(s) of data feed(s)</a>
-<li><p><a href="#upstream config">Request authorization by the upstream 
-    site(s)</a>
-<li><p><a href="#ldmd.conf">Edit the file <tt><b>etc/ldmd.conf</b></tt></a>
-<li><p><a href="#pqact.conf">Edit the file <tt><b>etc/pqact.conf</b></tt></a>
-<li><p><a href="#cron">Edit the LDM-user's crontab(1) file</a>
-<li><p><a href="#activate">Activate the just-installed LDM</a>
-<li><p><a href="#boot">Ensure that the LDM is started at boot-time</a>
-</ul>
-<p>
-<hr>
-<a name="upstream feeds"></a>
-<h1>Obtain source(s) of data feed(s)</h1>
-<p>First, find out who your upstream feed site(s)
-will be.  If you don't know, then contact the Unidata Program Center at
-<a href="mailto:support-idd@unidata.ucar.edu">
-&lt;support-idd at unidata.ucar.edu&gt;</a>
-with the following information:
-<ul>
-  <li> Site Name<p>
-  <li> Site Administrator<p>
-  <li> Email Address<p>
-  <li> Phone Number<p>
-  <li> Fully Qualified Hostname of the IDD Node (i.e., the computer that
-  will run the LDM)<p>
-</ul>
-Note that you can have a primary upstream site as well as
-an alternate upstream site for any given data feed.
+    <h2 id="upstream config">Request authorization by upstream site(s)</h2>
+    <p>Ask the administrator(s) of the LDM(s) at the upstream site(s) to add "allow" entries for your LDM to their LDM's
+      <b>ldmd.conf</b> file.  For example,</p>
+    <pre>
+      allow UNIDATA  your.ldm.host
+      allow NLDN  your.ldm.host
+    </pre>
+    <p>To verify that the upstream authorization is in place, execute the following command:</p>
+    <pre>
+      notifyme -vl - -h <i>upstream-site</i>
+    </pre>
+    <p>This should print a list of products that the upstream site is receiving and that your LDM is allowed to
+      receive.</p>
 
-<hr>
+    <h2 id="pqact.conf">Edit the file <b>etc/pqact.conf</b></h2>
+    <p>This file tells the <b>pqact</b> utility how to locally process incoming data products.  Options include filing
+      the data product, executing a local program, and piping the data product to the standard input of a local program.
+      If you're not going to process data products locally, then you don't need to edit this file.</p>
+    <p>For a detailed explanation about configuring this file, consult the chapter on
+      <a href="basics/configuring.html">pqact Configuration</a>.  Start with the <b>pqact.conf</b> file in the LDM
+      distribution, and modify it to meet your needs.  After any modification, check that the syntax of the file is
+      correct by executing the following command:</p>
+    <pre>
+      ldmadmin pqactcheck
+    </pre>
+    <ul>
+      <li><a href="https://github.com/Unidata/netCDF-Decoders">Configuring for Unidata Decoders</a></li>
+      <li><a href="https://unidata.github.io/gempak/">Configuring for GEMPAK</a></li>
+      <li><a href="https://docs.unidata.ucar.edu/ldm-mcidas/current/ldm-mcidas-pqact.conf.all.html">Configuring for McIDAS</a></li>
+    </ul>
 
-<a name="ldmd.conf"></a>
-<h1>Edit the file <tt><b>etc/ldmd.conf</b></tt></h1>
-
-<p>This file tells an LDM what to do on startup.  Several things that
-you should or might have in this file -- depending on your exact situation
--- are.
-
-<ul>
-  <li><p>"request" lines for your primary upstream feed site(s):
-       <pre>
-       request UNIDATA  ".*"  host1.site1.edu PRIMARY
-       request NLDN     ".*"  host2.site2.edu PRIMARY
-       </pre>
-
-  <li><p>Alternate (<i>i.e.</i>, secondary) sources for certain 
-      data feeds, if appropriate:
-       <pre>
-       request UNIDATA  ".*"  host3.site3.edu ALTERNATE
-       request NLDN     ".*"  host4.site4.edu ALTERNATE
-       </pre>
-
-  <li><p>An <a href="glossary.html#enable ldmd.conf entry">
-      enabled "exec" entry</a> for <b><tt>pqact</tt></b>, if appropriate.
-
-  <li><p>An <a href="glossary.html#enable ldmd.conf entry">
-      enabled "exec" entry</a> for <b><tt>pqsurf</tt></b>, if appropriate. 
-
-  <li><p>
-	A <a href="glossary.html#disable ldmd.conf entry">
-	disabled "exec" entry</a> for <b><tt>rtstats</tt></b>
-      if the LDM is <em>not</em> a <a href="glossary.html#gateway LDM">
-      gateway LDM</a> for your institution.
-      LDM statistics are the best way of monitoring
-      IDD performance and identifying problems.
-      It is critical that all <a href="glossary.html#gateway LDM">
-      gateway LDM</a>-s report statistics. Also,the
-      data from the LDM statistics is vital in preparing reports used
-      to obtain funding to support the LDM software.</em>
-
-      <p>Statistics are displayed on the <a 
-      href="https://rtstats.unidata.ucar.edu/rtstats/">
-      IDD rtstats page</a>.
-</ul>
-
-<hr>
-
-<a name="upstream config"></a>
-<h1>Request authorization by upstream site(s)</h1>
-    <p>Ask the administrator(s) of the LDM(s) at the upstream site(s) to add 
-    "allow" entries for your LDM to their LDM's <b><tt>ldmd.conf</tt></b>
-    file.  For example,
-    <blockquote><pre>
-allow UNIDATA  your.ldm.host
-allow NLDN  your.ldm.host
-    </blockquote></pre>
-
-    <p>To verify that the upstream authorization is in place, execute the 
-    following command:
-    <blockquote><pre>
-notifyme -vl - -h <em>upstream-site</em>
-    </blockquote></pre>
-    This should print a list of products that the upstream site is 
-    receiving and that your LDM is allowed to receive.
-
-<hr>
-
-<a name="pqact.conf"></a>
-<h1>Edit the file <b><tt>etc/pqact.conf</tt></b></h1>
-
-<p>This file tells the <b><tt>pqact</tt></b> utility how to locally
-process incoming data products.  Options include filing the data
-product, executing a local program, and piping the data product to the
-standard input of a local program.  If you're not going to process data
-products locally, then you don't need to edit this file.
-
-<p>For a detailed explanation about configuring
-this file, consult the chapter on <a href="basics/configuring.html">
-pqact Configuration</a>.  Start
-with the <tt><b>pqact.conf</b></tt> file in the LDM distribution, and
-modify it to meet your needs.  After any modification, check that the
-syntax of the file is correct by executing the following command:
-
-    <blockquote><pre>
-ldmadmin pqactcheck
-    </blockquote></pre>
-
-<!--
-<LI>Configuring for Unidata Decoders
-
-<ul>
-    <LI><A
-	HREF="/software/decoders/index.html">
-	Unidata Decoders home page </A> 
-</ul>
-
-<LI>Configuring for GEMPAK
-
-<ul>
-    <LI><A HREF=
-	"/packages/gempak/tutorial/decoders.html">
-	GEMPAK tutorial on decoders </A> 
-    <LI><A HREF=
-	"/packages/gempak/examples/pqact/pqact.html">
-	pqact examples for GEMPAK</A> 
-</ul>
-
--->
-
-<LI>Configuring for McIDAS
-
-<ul>
-    <LI><A HREF=
-	"https://www.unidata.ucar.edu/software/mcidas/mcidd/">
-	McIDAS decoders </A> 
-    <LI><A HREF=
-	"https://docs.unidata.ucar.edu/ldm-mcidas/current/ldm-mcidas-pqact.conf.all.html">
-	pqact examples for McIDAS</A> 
-</ul>
-
-<hr>
-
-<a name="cron"></a>
-<h1>Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h1>
-<p>Edit the crontab(1) file of the LDM-user by executing the command
-<blockquote><b><tt>
-    crontab -e
-</tt></b></blockquote>
-as the LDM-user.  Then
-<ul>
-    <li><p>Add an entry to rotate the LDM logfiles.
-	Add the following entry to
-	start a new LDM logfile every day at midnight, change
-	the names of the old log files, and ensure that the number of log 
-	files doesn't grow without bound:
-       <blockquote><tt>
-	    0 0 * * * bin/ldmadmin newlog
-       </tt></blockquote>
-
-    <li><p>Add an entry to purge old data-files if necessary.
-	If you are decoding incoming data into local files, add 
-	an entry like the following to purge outdated data-files so that your
-	disk doesn't become too full:
-       <blockquote><tt>
-	   0 1,4,7,10,13,16,19,22 * * * bin/ldmadmin scour
-       </tt></blockquote>
-       The above runs a program that removes too-old data files every
-       three hours.  You might choose a different time interval.  If
-       you're not having the LDM create local files, then you needn't
-       add the above entry.
-</ul>
-
-<hr>
-
-<a name="activate"></a>
-<h1>Activate the just-installed LDM</h1>
-
-<ol>
-    <li><p>Go to the LDM installation directory:
-	<blockquote><tt>
-	    $ cd $LDMHOME<br>
-	</tt></blockquote>
-    <li><p>Stop the currently-running LDM, if necessary:
-	<blockquote><tt>
-	    $ ldmadmin stop<br>
-	</tt></blockquote>
-    <li><p>Switch the <tt><b>runtime</b></tt> symbolic link to the 
-	just-installed LDM:
-	<blockquote><tt>
+    <h2 id="cron">Edit the LDM-user's <b>crontab(1)</b> file</h2>
+    <p>Edit the crontab(1) file of the LDM-user by executing the command <b>crontab -e</b> as the LDM-user.  Then:</p>
+    <ul>
+      <li>Add an entry to rotate the LDM logfiles.	Add the following entry to	start a new LDM logfile every day at
+        midnight, change	the names of the old log files, and ensure that the number of log files doesn't grow without
+        bound:</li>
+      <pre>
+        0 0 * * * bin/ldmadmin newlog
+      </pre>
+      <li>Add an entry to purge old data-files if necessary. If you are decoding incoming data into local files, add an
+        entry like the following to purge outdated data-files so that your disk doesn't become too full:</li>
+      <pre>
+	      0 1,4,7,10,13,16,19,22 * * * bin/ldmadmin scour
+      </pre>
+      <li>The above runs a program that removes too-old data files every three hours.  You might choose a different time
+        interval.  If you're not having the LDM create local files, then you needn't add the above entry.</li>
+    </ul>
+    <h2 id="activate">Activate the just-installed LDM</h2>
+    <ol>
+      <li>Go to the LDM installation directory:</li>
+	    <pre>
+	    $ cd $LDMHOME
+      </pre>
+      <li>Stop the currently-running LDM, if necessary:</li>
+	    <pre>
+	    $ ldmadmin stop
+      </pre>
+      <li>Switch the <b>runtime</b> symbolic link to the just-installed LDM (where $VERSIONDIR is the version-dependent
+        subdirectory of the just-installed LDM.):</li>
+	    <pre>
 	    $ rm runtime && ln -s $VERSIONDIR
-	</tt></blockquote>
-	where <tt>$VERSIONDIR</tt> is the version-dependent subdirectory 
-	of the just-installed LDM.
-    <li><p>Start the LDM
-	<blockquote><tt>
+      </pre>
+      <li>Start the LDM</li>
+	    <pre>
 	    $ ldmadmin start
-	</tt></blockquote>
-    <li><p>Make sure the LDM is working
-	<blockquote><tt>
+      </pre>
+      <li>Make sure the LDM is working</li>
+	    <pre>
 	    $ ldmadmin watch
-	</tt></blockquote>
-</ol>
+      </pre>
+    </ol>
+    <p>We like to combine the above steps to minimize the time that the LDM is off-line:</p>
+    <pre>
+	    $ cd $LDMHOME && ldmadmin stop && rm runtime && ln -s $VERSIONDIR
+	    && ldmadmin start && ldmadmin watch
+    </pre>
 
-<p>We like to combine the above steps to minimize the time that the LDM is
-off-line:
-    <blockquote><tt>
-	$ cd $LDMHOME && ldmadmin stop && rm runtime && ln -s $VERSIONDIR 
-	&& ldmadmin start && ldmadmin watch
-    </tt></blockquote>
+    <h2 id="boot">Ensure that the LDM is started at boot-time</h2>
+    <p>Although boot-time start-up procedures vary amongst operating systems, each can be tailored to start the LDM.  It
+      is best to start the LDM as late as possible to avoid interfering with processes that could hang the system
+      (<i>e.g.</i>, the <b>syslog</b> daemon). One possible LDM script is:</p>p>
+    <pre>
+      export PATH=/bin:/usr/bin:/usr/etc:/usr/ucb
+      LDMADMIN=/opt/ldm/bin/ldmadmin
 
-<hr>
+      case "$1" in
 
-<a name="boot"></a>
-<h1>Ensure that the LDM is started at boot-time</h1>
-Although boot-time start-up procedures vary amongst operating systems,
-each can be
-tailored to start the LDM.  It is best to start the LDM as late as possible to
-avoid interfering with processes that could hang the system (<i>e.g.</i>, the
-<b><tt>syslog</tt></b> daemon). One possible LDM script is:
+      start)
+        if [ -x $LDMADMIN ] ; then
+	        $LDMADMIN queuecheck >/dev/null 2>&1 || {
+            echo "Corrupt LDM product-queue.  Recreating."
 
-<blockquote><pre>
-export PATH=/bin:/usr/bin:/usr/etc:/usr/ucb
-LDMADMIN=/opt/ldm/bin/ldmadmin
+	          /bin/su - ldm -c "$LDMADMIN delqueue"
+	          /bin/su - ldm -c "$LDMADMIN mkqueue"
+            #  /bin/su - ldm -c "$LDMADMIN delsurfqueue"
+            #  /bin/su - ldm -c "$LDMADMIN mksurfqueue"
+	        }
+        	echo 'Starting LDM using "ldmadmin start".'
 
-case "$1" in
+	        /bin/su - ldm -c "$LDMADMIN start"
+        fi
+        ;;
+      stop)
+        if [ -x $LDMADMIN ] ; then
+          $LDMADMIN stop
+        fi
+        ;;
+    esac
+    </pre>
+    <p>Consult the documentation on your operating system or with your system administrator for the details on how to
+      incorporate this script (or something similar) into the boot-time start-up procedure of your system.</p>
 
-start)
-    if [ -x $LDMADMIN ] ; then
-	$LDMADMIN queuecheck >/dev/null 2>&1 || {
-	    echo "Corrupt LDM product-queue.  Recreating."
-
-	    /bin/su - ldm -c "$LDMADMIN delqueue"
-	    /bin/su - ldm -c "$LDMADMIN mkqueue"
-#           /bin/su - ldm -c "$LDMADMIN delsurfqueue"
-#           /bin/su - ldm -c "$LDMADMIN mksurfqueue"
-	}
-
-	echo 'Starting LDM using "ldmadmin start".'
-
-	/bin/su - ldm -c "$LDMADMIN start"
-    fi
-    ;;
-
-stop)
-    if [ -x $LDMADMIN ] ; then
-        $LDMADMIN stop
-    fi
-    ;;
-
-esac
-</blockquote></pre>
-
-<p>Consult the documentation on your operating system or with your
-system administrator for the details on how to incorporate this script
-(or something similar) into the boot-time start-up procedure of your
-system.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+   <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

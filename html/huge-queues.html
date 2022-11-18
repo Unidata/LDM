@@ -1,84 +1,64 @@
-<HTML><HEAD><TITLE>Huge Queues</TITLE>
-<META NAME="BOOKMARK" CONTENT="Huge Queues">
-<META NAME="AUTHOR" CONTENT="Unidata">
-<META NAME="KEYWORDS" CONTENT="">
-<META NAME="DESCRIPTION" CONTENT="">
-</HEAD><BODY>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Huge Queues</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Huge Queues">
+    <meta name="AUTHOR" content="Unidata">
+  </head>
+  <body>
+    <h1>Building the LP64 version of LDM for huge product queues</h1>
+    <p>On platforms that support a compilation environment for C where ints are 32 bits but longs and pointers are 64
+      bits (the LP64 model), it is possible to build the LDM programs to support huge product queues (larger than
+      2 Gbytes). This document includes instructions for building the LDM programs on such 64-bit platforms.</p>
+    <p>In general you cannot mix 64-bit LDM programs built for use with huge product queues with 32-bit LDM programs
+      built for queues limited to 2 Gbytes in size.  The formats of the two kinds of queues are incompatible.</p>
 
+    <h2>Solaris 7 and 8 (SunOS 5.7, 5.8) for SPARCv9 architectures</h2>
+    <p>This will only work on SPARCv9 or later hardware architectures, and in particular not on SPARCv7, SPARCv8, or
+      Intel. To check what architecture your platform  uses, invoke </p>
+    <pre>
+      isainfo -n
+    </pre>
+    <p>Next, make sure the Sun package <b>SUNWscpux</b> is installed, which provides utilities for user interface and
+      source build compatibility with SunOS 4.x, and in particular the library /usr/ucblib/sparcv9/librpcsoc.so which
+      is necessary to build a 64-bit version of the LDM. You can either check for that library or check for the package
+      installation with the command</p>
+    <pre>
+      pkginfo -l SUNWscpux
+    </pre>
+    <p>In order to use this library you need to make a change to the LDM src/configure script. Since this is somewhat of
+      an exceptional case, we recommend that you copy the script to another name in the src directory, say,
+      configure.sparcv9. Then edit the configure.sparcv9 script to replace the line </p>
+    <pre>
+		  *)  libs="-R/usr/ucblib -L/usr/ucblib -lrpcsoc -lnsl"
+    </pre>
+    with
+    <pre>
+		  *)  libs="-R/usr/ucblib/sparcv9 -L/usr/ucblib/sparcv9 -lrpcsoc -lnsl"
+    </pre>
+    <p>Before actually running the configure.sparcv9 script, you must make sure "-xarch=v9" is included in the CFLAGS
+      environment variable.  For example,</p>
+    <pre>
+      export CFLAGS=-xarch=v9
+    </pre>
+    <p>When the installation instructions tell you to execute the <b>configure</b> script, execute
+      <b>configure.sparcv9</b> instead.</p>
 
-<h2 align="center">Building the LP64 version of LDM for huge product queues</h2>
+    <h2>IRIX64</h2>
+    <p>Just include the "-64" option in CFLAGS before running the configure script to generate a huge queue version of
+      the LDM programs for IRIX64.</p>
 
-<p align="justify">On platforms that support a compilation environment for C where ints are 32 
-  bits but longs and pointers are 64 bits (the LP64 model), it is possible to 
-  build the LDM programs to support huge product queues (larger than 2 Gbytes). 
-  This document includes instructions for building the LDM programs on such 64-bit 
-  platforms.</p>
-<p align="justify">
+    <h2>OSF1/Alpha</h2>
+    <p>[To be written]</p>
 
-In general you cannot mix 64-bit LDM programs built for use with huge
-product queues with 32-bit LDM programs built for queues limited to 2
-Gbytes in size.  The formats of the two kinds of queues are
-incompatible.</p>
+    <h2>Linux/IA-64</h2>
+    <p>[To be written]</p>
 
-<h3>Solaris 7 and 8 (SunOS 5.7, 5.8) for SPARCv9 architectures</h3>
+    <h2>HPUX</h2>
+    <p>[To be written]</p>
 
-<p align="justify">This will only work on SPARCv9 or later hardware architectures, and in particular 
-  not on SPARCv7, SPARCv8, or Intel. To check what architecture your platform 
-  uses, invoke </p>
-<pre>
-  isainfo -n
-</pre>
-<p align="justify">Next, make sure the Sun package <strong>SUNWscpux</strong> is installed, which 
-  provides utilities for user interface and source build compatibility with SunOS 
-  4.x, and in particular the library /usr/ucblib/sparcv9/librpcsoc.so which is 
-  necessary to build a 64-bit version of the LDM. You can either check for that 
-  library or check for the package installation with the command </p>
-<pre>
-  pkginfo -l SUNWscpux
-</pre>
-<p align="justify">In order to use this library you need to make a change to the LDM src/configure 
-  script. Since this is somewhat of an exceptional case, we recommend that you 
-  copy the script to another name in the src directory, say, configure.sparcv9. 
-  Then edit the configure.sparcv9 script to replace the line </p>
-<pre>
-		*)  libs="-R/usr/ucblib -L/usr/ucblib -lrpcsoc -lnsl"
-</pre>
-with
-<pre>
-		*)  libs="-R/usr/ucblib/sparcv9 -L/usr/ucblib/sparcv9 -lrpcsoc -lnsl"
-</pre>
-<p align="justify">
-
-Before actually running the configure.sparcv9 script, you must make sure
-"-xarch=v9" is included in the CFLAGS environment variable.  For
-example, 
-<blockquote><pre>
-export CFLAGS=-xarch=v9
-</blockquote></pre>
-</p>
-<p>When the installation instructions tell you to execute the 
-<b><tt>configure</b></tt>
-script, execute <b><tt>configure.sparcv9</tt></b> instead.
-
-<h3>IRIX64</h3>
-
-Just include the "-64" option in CFLAGS before running the configure
-script to generate a huge queue version of the LDM programs for
-IRIX64.
-
-<h3>OSF1/Alpha</h3>
-
-[To be written]
-
-<h3>Linux/IA-64</h3>
-
-[To be written]
-<p>
-
-<h3>HPUX</h3>
-
-[To be written]
-<p>
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body></HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

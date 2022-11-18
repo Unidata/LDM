@@ -1,110 +1,72 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM FAQ</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM FAQ">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="Software, LDM, FAQ, frequently asked questions">
+    <meta name="DESCRIPTION" content="Frequently asked questions about the LDM">
+  </head>
+  <body>
+    <h1>LDM Frequently Asked Questions</h1>
+    <p>This page contains answers to some of the most frequently asked questions about the LDM.</p>
 
-<HEAD>
-<TITLE>LDM FAQ</TITLE>
-<META NAME="BOOKMARK" CONTENT="FAQ">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, FAQ, frequently asked questions">
-<META NAME="DESCRIPTION" CONTENT="Frequently asked questions about the
-LDM">
-</HEAD>
+    <h2>Table of Contents</h2>
+    <ul>
+      <li><a href="#ldm-what">What is the LDM</a>?</li>
+      <li><a href="#ldm-who">Who can use the LDM software</a></li>
+      <li><a href="#ldm-distribution">How do I get the LDM distribution</a>?</li>
+      <li><a href="#ldm-access1">(IRIX 6.1) Why does my server deny RPC access to others</a>?</li>
+      <li><a href="#ldm-defrag">(IRIX) Why does my LDM die every Sunday at 4:30 am</a>?</li>
+      <li><a href="#ldm-388">Why do I get the error that another server is running on port 388 when there is no other
+      server active</a>?</li>
+    </ul>
 
-<body>
+    <h2 id="ldm-what">What is the LDM?</h2>
+    <p>The LDM is a distributed system for event-driven data distribution.  It consists of a suite of software to
+      select, capture, process, and distribute data products using a set of network client/server programs and their
+      shared protocols.</p>
 
-<H2 align="center">LDM Frequently Asked Questions</H2>
+    <h2 id="ldm-who">Who can use the LDM software?</h2>
+    <p>The LDM software is being used by hundreds of universities and  cooperating agencies and is freely available to
+      anyone who wishes to use it. The software is <a href="COPYRIGHT">copyrighted</a> by the
+      <a href="https://www.ucar.edu">University Corporation for Atmospheric Research</a>.</p>
 
-This page contains answers to some of the most frequently asked questions 
-about the LDM.
+    <h2 id="ldm-distribution">How do I get the LDM distribution?</h2>
+    <p>The LDM software is <a href="COPYRIGHT">freely available</a>
+      <a href="https://downloads.unidata.ucar.edu/ldm/">for download</a> from the Unidata Program Center.</p>
 
-<hr>
+    <h2 id="ldm-access1">(IRIX 6.1) Why does my server deny RPC access to others?</h2>
+    <p>In IRIX, version 6.1, there is a file, /etc/config/portmap.options.  The -a option in this file disallows any
+      host trying to do an RPC call to the machine.  You must explicitly allow any hosts that will connect to you.  See
+      the man page for <code>portmap</code> for more information.</p>
 
-<h3>Table of Contents</h3>
+    <h2 id="ldm-defrag">(IRIX) Why does my LDM die every Sunday at 4:30 am?</h2>
+    <p>On IRIX systems, a disk defragger process runs every Sunday at 4:30 a.m. out of the root account.  Because the
+      product queue is a memory-mapped I/O file, it cannot be de-fragmented on disk while it is mapped.  If it is, it
+      corrupts the queue.</p>
+    <p>The solution is to either remove the root cron job that runs <code>/usr/etc/fsr</code>, or to add a -m switch
+      pointing to a file that does not include the file system that contains the queue.  This will allow other file
+      systems to be de-fragmented, ignoring the data file system.  See the man page for <code>fsr</code> for more
+      information.</p>
+    <p>4/30/96: SGI now has a patch available that seems to fix the <code>fsr</code> problem: patchSG0000870 -
+      EFS filesystem roll-up patch for non-XFS systems.</p>
 
-<ul>
- <li><a href="#ldm-what">What is the LDM</a>?
- <li><a href="#ldm-who">Who can use the LDM software</a>
- <li><a href="#ldm-distribution">How do I get the LDM distribution</a>?
- <li><a href="#ldm-access1">(IRIX 6.1) Why does my server deny RPC access to others</a>?
- <li><a href="#ldm-defrag">(IRIX) Why does my LDM die every Sunday at 4:30 am</a>?
- <li><a href="#ldm-388">Why do I get the error that another server is
-      running on port 388 when there is no other server active</a>?
-</ul>
+    <h2 id="ldm-388">Why do I get the error that another server is running on port 388 when there is no other server
+      active?</h2>
+    <p>If the LDM server does not exit cleanly, port 388 may remain registered with the portmapper, even if the server
+      is no longer running.  Use <code>rpcinfo</code> to check this:</p>
+    <pre>
+      % rpcinfo -p
+    </pre>
+    <p>If port 388 is still registered, <em>as root</em>, use rpcinfo to deregister the port:</p>
+    <pre>
+      % rpcinfo -d 300029 version
+    </pre>
+    <p>where <i>version</i> is the version number of the program that is running, which will be 5 and/or 6.</p>
 
-<hr>
-
-<a name="ldm-what"></a>
-<h4>What is the LDM?</h4>
-
-The LDM is a distributed system for event-driven data distribution.  It
-consists of a suite of software to select, capture, process, and distribute
-data products using a set of network client/server programs and their shared
-protocols.
-
-<a name="ldm-who"></a>
-<h4>Who can use the LDM software?</h4>
-
-The LDM software is being used by hundreds of universities and  cooperating
-agencies and is freely available to anyone who wishes to use it.
-The software is <a href="COPYRIGHT">copyrighted</a> 
-by the <a href="https://www.ucar.edu"> University
-Corporation for Atmospheric Resesarch</a>. <a name="ldm-distribution"></a> 
-
-<h4>How do I get the LDM distribution?</h4>
-
-<p>The LDM software is <a
-href="COPYRIGHT">freely available</a> <a href="https://downloads.unidata.ucar.edu/ldm/">for download</a>
-from the Unidata Program Center. 
-<p>
-
-<a name="ldm-access1"></a>
-<h4>(IRIX 6.1) Why does my server deny RPC access to others?</h4>
-
-In IRIX, version 6.1, there is a file, /etc/config/portmap.options.  The -a
-option in this file disallows any host trying to do an RPC call to the
-machine.  You must explicitly allow any hosts that will connect to you.  See
-the man page for <code>portmap</code> for more information.
-
-<a name="ldm-defrag"></a>
-<h4>(IRIX) Why does my LDM die every Sunday at 4:30 am?</h4>
-
-On IRIX systems, a disk defragger process runs every Sunday at
-4:30 a.m. out of the root account.  Because the product queue is a memory-mapped
-I/O file, it cannot be defragmented on disk while it is mapped.  If it is,
-it corrupts the queue.<p>
-
-The solution is to either remove the root cron job that runs
-<code>/usr/etc/fsr</code>, or to add a -m switch pointing to a file that does
-not include the file system that contains the queue.  This will allow other
-file systems to be defragmented, ignoring the data file system.  See the
-man page for <code>fsr</code> for more information.<p>
-
-4/30/96: SGI now has a patch available that seems to fix the <code>fsr</code>
-problem: patchSG0000870 - EFS filesystem roll-up patch for non-XFS systems.
-
-<a name="ldm-388"></a>
-<h4>Why do I get the error that another server is running on port 388 when
-there is no other server active?</h4>
-
-If the LDM server does not exit cleanly, port 388 may remain registered with
-the portmapper, even if the server is no longer running.  Use
-<code>rpcinfo</code> to check this:<p>
-
-<pre>
-     % rpcinfo -p
-</pre><p>
-
-If port 388 is still registered, <em>as root</em>, use rpcinfo to deregister
-the port:<p>
-
-<pre>
-     % rpcinfo -d 300029 version
-</pre><p>
-
-where <em>version</em> is the version number of the program that is running,
-which will be 5 and/or 6.
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>
