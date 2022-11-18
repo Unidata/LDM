@@ -23,6 +23,7 @@
           ERROR messages in the log file
         * Improved log message when select() fails
         * Improved logging and simplified up6_run()
+        * Only close file-descriptors 0, 1, & 2 when daemonizing
 
     regutil(1):
         * Added "-l <logdest>" option to accomodate GitHub actions

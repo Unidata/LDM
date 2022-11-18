@@ -110,7 +110,8 @@ daemonize()
     }
 
     // Child 1 continues...
-    // Become session leader
+
+    // Become the session leader
     if (setsid() < 0) {
         log_add_syserr("setsid() failure");
         return 2;
@@ -141,8 +142,9 @@ daemonize()
     }
 
     // Child 2 continues...
-    // Close most file descriptors
-    for (int i = 0; i < MAXFD; ++i)
+
+    // Close the file descriptors of the standard I/O streams
+    for (int i = 0; i < 3; ++i)
         close(i);
 
     /*
@@ -363,12 +365,12 @@ static void cleanup(
          */
        if (doSomething)
 		   (void) uldb_delete(NULL);
-    }
 
-    /*
-     * Destroy the LDM configuration-file module.
-     */
-    lcf_destroy(isTopProc);
+        /*
+         * Destroy the LDM configuration-file module.
+         */
+        lcf_destroy(true);
+    }
 
     /*
      * Close registry.
