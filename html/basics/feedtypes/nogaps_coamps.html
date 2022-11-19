@@ -1,112 +1,97 @@
+<!DOCTYPE HTML>
 <html>
+  <head>
+    <title>NOGAPS/COAMPS</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="NOGAPS/COAMPS">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="idd, ldm, data, nogaps, coamps, Feedtype, ft19, ">
+    <meta name="DESCRIPTION" content="Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation
+    Experiment (GODAE)server. FNMOC currently provides two data streams via Unidata's Internet Data Distribution (IDD)
+    network under the FNMOC feedtype: the Navy Operational Global Atmospheric Prediction System (NOGAPS) stream and the
+    Coupled Ocean Atmosphere Mesoscale Prediction System (COAMPS) stream.">
+  </head>
+  <body>
+    <h1>FNMOC/NOGAPS/FT19 Feedtype</h1>
+    <p>Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation Experiment (GODAE) server. This
+      feedtype also has the alias "NOGAPS". Additionally, the newly introduced  alias "FNMOC", is available in LDM
+      version 5.1.4 or greater. This latter alias was introduced as we became aware that FNMOC would be providing more
+      than one data stream. </p>
+    <p>FNMOC currently provides two data streams via Unidata's Internet Data Distribution (IDD) network under the FNMOC
+      feedtype: the Navy Operational Global Atmospheric Prediction System
+      <a href="https://en.wikipedia.org/wiki/Navy_Operational_Global_Atmospheric_Prediction_System"><b>(NOGAPS)</b></a> stream and
+      the Coupled Ocean Atmosphere Mesoscale Prediction System
+      <a href="https://www.nrlmry.navy.mil/coamps-web/web/view"><b>(COAMPS)</b></a>
+      stream.</p>
+    <p>Below are <em>example</em> pqact.conf entries for NOGAPS/COAMPS model data:</p>
+    <pre>
+      #  The below entry is for the one degree nogaps.
+      FNMOC    (^US058.{4}-GR1mdl\.0058_0240_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/nogaps/\2/\2\3/\1\2\3\4
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<title>NOGAPS/COAMPS</title>
-<META NAME="BOOKMARK" CONTENT="NOGAPS/COAMPS">
-<META NAME="AUTHOR" CONTENT="steve">
-<meta name="KEYWORDS" content="idd, ldm, data, nogaps, coamps, Feedtype, ft19, ">
-<meta name="DESCRIPTION" content="Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation Experiment (GODAE)server. FNMOC currently provides two data streams via Unidata's Internet Data Distribution (IDD) network under the FNMOC feedtype: the Navy Operational Global Atmospheric Prediction System (NOGAPS) stream and the Coupled Ocean Atmosphere Mesoscale Prediction System (COAMPS) stream.">
-</HEAD>
+      #  The below entry is for the one degree ww3.
+      FNMOC    (^US058.{4}-GR1mdl\.0110_0240_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/ww3/\2/\2\3/\1\2\3\4
 
-<body>
+      #  The below entry is for the one degree FAROP.
+      FNMOC     (^US058.{4}-GR1mdl\.0135_0240_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/farop/\2/\2\3/\1\2\3\4
 
-<h1 align="center">FNMOC/NOGAPS/FT19 Feedtype</h1><br>
+      #  The below entry is for the 1/4 degree global ocean model.
+      FNMOC     (^US058.{4}-GR1mdl\.0078_0200_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/glb_ocn/\2/\2\3/\1\2\3\4
 
-<p align="justify">Feedtype FT19 is currently allocated to FNMOC's Global Ocean Data Assimilation 
-  Experiment <a href="http://usgodae3.fnmoc.navy.mil/"> <b>(GODAE)</b></a> 
-  server. This feedtype also has the alias "NOGAPS". Additionally, the newly introduced 
-  alias "FNMOC", is available in LDM version 5.1.4 or greater. This latter alias 
-  was introduced as we became aware that FNMOC would be providing more than one 
-  data stream. </p>
-<p align="justify"> FNMOC currently provides two data streams via Unidata's Internet Data Distribution 
-  (IDD) network under the FNMOC feedtype: the Navy Operational Global Atmospheric 
-  Prediction System <a href="https://www.fnmoc.navy.mil/PUBLIC/MODEL_REPORTS/MODEL_SPEC/nogaps4.0.html"> 
-  <b>(NOGAPS)</b></a> stream and the Coupled Ocean Atmosphere Mesoscale Prediction 
-  System <a href="https://www.fnmoc.navy.mil/PUBLIC/MODEL_REPORTS/MODEL_SPEC/coamps2.0.html"> 
-  <b>(COAMPS)</b> </a> stream. 
-</p><p align="justify">
+      #  The below entry is for the COAMPS Western Atlantic (w_atl)
+      FNMOC     (^US058.{4}-GR1mdl\.0063_0187_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/coamps/w_atl/\2/\2\3/\1\2\3\4
 
-Below are <em>example</em> pqact.conf entries for NOGAPS/COAMPS model
-data:
-<pre><blockquote>
-#  The below entry is for the one degree nogaps.
-FNMOC	(^US058.{4}-GR1mdl\.0058_0240_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/nogaps/\2/\2\3/\1\2\3\4
+      #  The below entry is for the COAMPS Central America (cent_am)
+      FNMOC     (^US058.{4}-GR1mdl\.0027_0186_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/coamps/cent_am/\2/\2\3/\1\2\3\4
 
-#  The below entry is for the one degree ww3.
-FNMOC	(^US058.{4}-GR1mdl\.0110_0240_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/ww3/\2/\2\3/\1\2\3\4
+      #  The below entry is for the COAMPS Eastern Pacific (e_pac)
+      FNMOC     (^US058.{4}-GR1mdl\.0060_0188_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/coamps/e_pac/\2/\2\3/\1\2\3\4
 
-#  The below entry is for the one degree FAROP.
-FNMOC	(^US058.{4}-GR1mdl\.0135_0240_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/farop/\2/\2\3/\1\2\3\4
+      #  The below entry is for the COAMPS Europe (europe)
+      FNMOC     (^US058.{4}-GR1mdl\.0022_0158_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/coamps/europe/\2/\2\3/\1\2\3\4
 
-#  The below entry is for the 1/4 degree global ocean model.
-FNMOC	(^US058.{4}-GR1mdl\.0078_0200_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/glb_ocn/\2/\2\3/\1\2\3\4
+      #  The below entry is for the WW3 Mediterranean (med)
+      FNMOC     (^US058.{4}-GR1mdl\.0111_0158_.{5}.{4})(.{4})(.{6})(.*)
+               FILE    -overwrite -close
+               data/fnmoc/models/ww3_regional/med/\2/\2\3/\1\2\3\4
+    </pre>
+    <p><b>Remember</b>, with respect to the above examples, one or more tab characters must be used in certain places:</p>
+    <ul>
+      <li>Between "FNMOC" and "(^..."</li>
+      <li>Before "FILE"</li>
+      <li>Between "FILE" and "-overwrite"</li>
+      <li>Before "data/..."</li>
+  </ul>
+  <!--
+  <p>Although both product IDs start with US058, the NOGAPS data uses model ID 0058, while the COAMPS models are 0027,
+  0041, 0060, 0083, and 0082.  Note that the second pattern simply files any non-0058 model as COAMPS data.</p>
+  <pre>
+    # NOGAPS
+    FNMOC    ^US058....-.......(0058)_...._.........(....)(..)(..)(..)_(.*)
+             FILE    -overwrite      -close  data/nogaps/\2/\3/\4/\5/\1/\6
 
-#  The below entry is for the COAMPS Western Atlantic (w_atl)
-FNMOC	(^US058.{4}-GR1mdl\.0063_0187_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/coamps/w_atl/\2/\2\3/\1\2\3\4
+    # COAMPS
+    FNMOC    ^US058....-.......([^0]...|0[^0]..|00[^5].|005[^8])_...._.........(....)(..)(..)(..)_(.*)
+             FILE    -overwrite      -close  data/coamps/\2/\3/\4/\5/\1/\6
+    </pre>
+    -->
 
-#  The below entry is for the COAMPS Central America (cent_am)
-FNMOC	(^US058.{4}-GR1mdl\.0027_0186_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/coamps/cent_am/\2/\2\3/\1\2\3\4
-
-#  The below entry is for the COAMPS Eastern Pacific (e_pac)
-FNMOC	(^US058.{4}-GR1mdl\.0060_0188_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/coamps/e_pac/\2/\2\3/\1\2\3\4
-
-#  The below entry is for the COAMPS Europe (europe)
-FNMOC	(^US058.{4}-GR1mdl\.0022_0158_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/coamps/europe/\2/\2\3/\1\2\3\4
-
-#  The below entry is for the WW3 Mediterranean (med)
-FNMOC	(^US058.{4}-GR1mdl\.0111_0158_.{5}.{4})(.{4})(.{6})(.*)
-	FILE	-overwrite -close
-	data/fnmoc/models/ww3_regional/med/\2/\2\3/\1\2\3\4
-</pre></blockquote>
-
-<strong>Remember</strong>, with respect to the above examples, one or
-more tab characters must be used in certain places:
-
-<ul>
-    <li>
-    Between "FNMOC" and "(^..."
-    <li>
-    Before "FILE"
-    <li>
-    Between "FILE" and "-overwrite"
-    <li>
-    Before "data/..."
-</ul>
-
-<!--
-Although both product IDs start with
-US058, the NOGAPS data uses model ID 0058, while the COAMPS models are
-0027, 0041, 0060, 0083, and 0082.  Note that the second pattern simply
-files any non-0058 model as COAMPS data. 
-
-</p><pre>
-<b># NOGAPS</b>
-FNMOC	^US058....-.......(0058)_...._.........(....)(..)(..)(..)_(.*)
-        FILE    -overwrite      -close  data/nogaps/\2/\3/\4/\5/\1/\6
-
-
-<b># COAMPS</b>
-FNMOC	^US058....-.......([^0]...|0[^0]..|00[^5].|005[^8])_...._.........(....)(..)(..)(..)_(.*)
-        FILE    -overwrite      -close  data/coamps/\2/\3/\4/\5/\1/\6
-</pre>
--->
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body></html>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

@@ -1,80 +1,60 @@
+<!DOCTYPE HTML>
 <html>
+  <head>
+    <title>GEM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="GEM">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="gem, data, idd, ldm, canadien meteorological center, model">
+    <meta name="DESCRIPTION" content="The CMC's operational Global Environmental Multiscale (GEM) model - regional configuration - is integrated twice daily based on data valid at 00Z and 12Z.">
+  </head>
+  <body>
+    <h1>Canadian Meteorological Center's Global Environmental Multiscale (GEM) Model</h1>
+    <p>The CMC's operational Global Environmental Multiscale (GEM) model - regional configuration - is integrated twice
+      daily based on data valid at 00Z and 12Z.  For a general overview of our regional forecast system, please visit:
+      <a href="https://collaboration.cmc.ec.gc.ca/science/rpn/gef_html_public/">GEM website</a>.</p>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<title>GEM</title>
-<META NAME="BOOKMARK" CONTENT="GEM">
-<META NAME="AUTHOR" CONTENT="steve">
-<meta name="KEYWORDS" content="gem, data, idd, ldm, canadien meteorological center, model">
-<meta name="DESCRIPTION" content="The CMC's operational Global Environmental Multiscale (GEM) model - regional configuration - is integrated twice daily based on data valid at 00Z and 12Z.">
-</HEAD>
+    <p>Currently, 0-, 6-, 12-, 18-, 24-, 30-, 36-,  42-, and 48-hour forecasts of the following fields are available:
+      (0-hour forecast is equivalent to the analysis)</p>
+    <ul>
+      <li>geopotential height at 1000, 850, 700, 500, 400, 250, 150, and 100 hPa</li>
+      <li>air temperature at the above pressure levels as well as at the model surface</li>
+      <li>wind components projected on the x- and y- axes of the grid at the same pressure levels as well as at the
+        model surface</li>
+      <li>dew-point depression at the same pressure levels as well as at the model surface</li>
+      <li>pressure vertical velocity at the above pressure levels.</li>
+      <li>sea-level pressure</li>
+      <li>surface pressure</li>
+      <li>accumulated total precipitation at surface</li>
+      <li>instantaneous rainfall rate at surface</li>
+      <li>total column cloud cover</li>
+    </ul>
+    <p>The above fields have been interpolated onto a Polar-Stereographic grid of 135 x 94 points and horizontal
+      resolution equal to 60 km at 60 degrees N, centered over North America.</p>
+    <p>The data has been encoded in the WMO's GRIB format.</p>
+    <p>The data set contains 2 x 432 products per day with total volume of 17 Mb; one field per product except for the
+      x-, y- wind components at a certain level which are grouped together.  The feed type is CMC and is normally
+      available in the LDM queue by 04Z (16Z) for the model run based on observations valid at 00Z (12Z) on the same
+      day.</p>
 
-<body>
+    <h2>Usage guidelines</h2>
+    <p>he data is provided for educational and research purposes as per the
+      <a href="https://www.unidata.ucar.edu/legal/participation.html#data"><b>Unidata participation
+  policy</b></a>.</p>
+    <p>Re-distribution of the data, as they are or after processing, for other uses needs to be discussed and
+      coordinated with the CMC. Users of the data need to be members of the
+      <a href="https://www.unidata.ucar.edu/community/"><b>Unidata community</b></a> and have the
+      <a href="../index.html"><b>LDM software</b></a> up and running.</p>
+    <p>Requests to receive this new data feed need to be made to Unidata who will relay this to CMC.
+      Contact: <a href="mailto:support@unidata.ucar.edu">support@unidata.ucar.edu</a></p>
+    <p>Information on the content of this data feed or any general questions about CMC can be addressed to:</p>
 
-<h2 align="center">Canadian Meteorological Center's Global Environmental Multiscale 
-  (GEM) Model</h2>
+    <p>Richard Hogue<br>
+       Chief, Implementation and Operational Services Division<br>
+       Canadian Meteorological Center<br>
+       <a href="mailto:Richard.Hogue@ec.gc.ca">Richard.Hogue@ec.gc.ca</a>, 514-421-4662</p>
 
-<p align="justify"> The CMC's operational Global Environmental Multiscale (GEM) model - regional 
-  configuration - is integrated twice daily based on data valid at 00Z and 12Z. 
-  For a general overview of our regional forecast system, please visit: <a href="http://www.smc-msc.ec.gc.ca/cmc/op_systems/regional_forecast_e.html"> http://www.smc-msc.ec.gc.ca/cmc/op_systems/regional_forecast_e.html</a> </p>
-
-<p align="justify">
-Currently, 0-, 6-, 12-, 18-, 24-, 30-, 36-,  42-, and 48-hour forecasts of the 
-following fields are available: (0-hour forecast is equivalent to the analysis)
-</p><ul>
-  <li>geopotential height at 1000, 850, 700, 500, 400, 250, 150, and 100 hPa</li>
-  <li>air temperature at the above pressure levels as well as at the model surface</li>
-  <li>wind components projected on the x- and y- axes of the grid at the same pressure levels as well as at the model surface</li>
-  <li>dew-point depression at the same pressure levels as well as at the model surface</li>
-  <li>pressure vertical velocity at the above pressure levels.</li>
-  <li>sea-level pressure</li>
-  <li>surface pressure</li>
-  <li>accumulated total precipitation at surface</li>
-  <li>instantaneous rainfall rate at surface</li>
-  <li>total column cloud cover</li>
-</ul>
-
-<p align="justify">
-The above fields have been interpolated onto a Polar-Stereographic grid of 135 
-x 94 points and horizontal resolution equal to 60 km at 60 degrees N, centered 
-over North America.
-</p>
-<p>
-The data has been encoded in the WMO's GRIB format.
-</p>
-<p align="justify">
-The data set contains 2 x 432 products per day with total volume of 17 Mb; one 
-field per product except for the x-, y- wind components at a certain level 
-which are grouped together.  The feed type is CMC and is normally available in 
-the LDM queue by 04Z (16Z) for the model run based on observations valid at 00Z 
-(12Z) on the same day.
-</p>
-
-<h2>Usage guidelines</h2>
-<p align="justify"> The data is provided for educational and research purposes 
-  as per the <a href="https://www.unidata.ucar.edu/legal/participation.html#data"><b>Unidata participation
-  policy</b></a>. </p>
-<p align="justify"> Re-distribution of the data, as they are or after processing, 
-  for other uses needs to be discussed and coordinated with the CMC. Users of 
-  the data need to be members of the <a href="https://www.unidata.ucar.edu/community/index.html"><b>Unidata
-  community</b></a> and have the <a href="../index.html"><b>LDM software</b></a> 
-  up and running. </p>
-<p align="justify"> Requests to receive this new data feed need to be made to 
-  Unidata who will relay this to CMC. Contact: <a href="mailto:support@unidata.ucar.edu">support@unidata.ucar.edu</a> 
-</p>
-<p align="justify">
-Information on the content of this data feed or any general questions about CMC 
-can be addressed to:
-</p><address><br>
-Richard Hogue<br>
-Chief, Implementation and Operational Services Division<br>
-Canadian Meteorological Center<br>
-
-<a href="mailto:Richard.Hogue@ec.gc.ca">Richard.Hogue@ec.gc.ca</a>, 514-421-4662
-</address>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>
