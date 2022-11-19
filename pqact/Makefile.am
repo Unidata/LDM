@@ -70,15 +70,17 @@ $(DESTDIR)$(sysconfdir)/pqact.conf:
 .c.i:
 	$(COMPILE) -E $< >$@
 
+# pqact_test.conf is copied to /tmp to accomodate GitHub actions
 check-local:	pqact
-	rm -f pqact_test.conf.state
+	cp $(srcdir)/pqact_test.conf /tmp
+	rm -f /tmp/pqact_test.conf.state
 	../pqcreate/pqcreate -c -s 100k -S 100 -q pqact_test.pq
-	./pqact -d $(srcdir) -q pqact_test.pq $(srcdir)/pqact_test.conf & \
+	./pqact -d $(srcdir) -q pqact_test.pq /tmp/pqact_test.conf & \
 		pid=$$!; \
 	../pqinsert/pq_test_insert -g 10000000 -q pqact_test.pq -m 2000 -n 1000; \
 	sleep 1; \
 	kill $$pid
-	rm -f pqact_test.conf.state pqact_test.pq
+	rm -f /tmp/pqact_test.conf.state pqact_test.pq
 
 callgrind:	pqact
 	rm -f pqact_test.conf.state callgrind.out.*

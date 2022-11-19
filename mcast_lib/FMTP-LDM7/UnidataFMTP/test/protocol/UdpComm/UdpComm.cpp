@@ -13,6 +13,8 @@
 
 #include "UdpComm.h"
 
+#include <string.h>
+
 
 /*****************************************************************************
  * Class Name: UdpComm
@@ -30,7 +32,7 @@ UdpComm::UdpComm(ushort port) {
 	}
 
     // clear struct server_addr.
-	bzero(&server_addr, sizeof(server_addr));
+	memset(&server_addr, 0, sizeof(server_addr));
     // set connection type to IPv4
 	server_addr.sin_family = AF_INET;
     // listen on incoming address 0.0.0.0

@@ -7,7 +7,7 @@
 ## Process this file with automake to produce Makefile.in
 
 lib_LTLIBRARIES		= libldm.la
-libldm_la_SOURCES	=
+libldm_la_SOURCES	= 
 libldm_la_LIBADD	= \
     $(NOAAPORT_LIBS) \
     $(top_builddir)/misc/lib.la \

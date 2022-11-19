@@ -31,6 +31,13 @@
 #ifdef RETRANS_SUPPORT
 #include "retrans.h"
 #include "acq_shm_lib.h"
+
+static ulong       total_prods_handled;    /* prods retrans requested */
+static ulong       total_prods_lost_err;
+static ulong       total_frame_cnt;
+static ulong       total_frame_err;
+static int         global_cpio_fd;
+static ACQ_TABLE   *global_acq_tbl;
 #endif
 
 /*
@@ -990,7 +997,7 @@ int    nnnxxx_offset;
                                     MD5Update(md5ctxp,
                                             (unsigned char *) (memheap + heapcount),
                                             (GOES_BLNK_FRM_LEN * n_scanlines));
-                                    heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                    heapcount += (size_t)GOES_BLNK_FRM_LEN * n_scanlines;
                                     log_debug("GOES uncompressed blank frames added "
                                             "[tot/this] [%d/%d] heapcount = %ld "
                                             "blank_frame_len = %d scanlines %d",
@@ -1082,7 +1089,7 @@ int    nnnxxx_offset;
                                  MD5Update(md5ctxp,
                                          (unsigned char *) (memheap + heapcount),
                                         (GOES_BLNK_FRM_LEN * n_scanlines));
-                                 heapcount += GOES_BLNK_FRM_LEN * n_scanlines;
+                                 heapcount += (size_t)GOES_BLNK_FRM_LEN * n_scanlines;
                                  log_debug("GOES blank frames added [tot/this] "
                                          "[%d/%d] heapcount [%ld] blank_frame_len "
                                          "[%d] scanlines [%d]",

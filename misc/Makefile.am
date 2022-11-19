@@ -58,10 +58,10 @@ lib_la_SOURCES	= \
 	StrBuf.c StrBuf.h \
 	StringBuf.c StringBuf.h \
 	Thread.c Thread.h \
-        StopFlag.c StopFlag.h \
-        Future.c Future.h \
-        Executor.c Executor.h \
-        Completer.c Completer.h
+        StopFlag.c StopFlag.h
+#        Future.c Future.h \
+#        Executor.c Executor.h \
+#        Completer.c Completer.h
 AM_CPPFLAGS	= \
     -I$(top_builddir) -I$(top_srcdir) \
     -I$(top_builddir)/protocol -I$(top_srcdir)/protocol \
@@ -110,17 +110,17 @@ read_close_test_CPPFLAGS	= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
 read_close_test_LDADD		= -lpthread @LIBS_CUNIT@
 check_PROGRAMS    		+= read_close_test
 
-Executor_test_SOURCES		= Executor_test.c
-Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS    		+= Executor_test
+#Executor_test_SOURCES		= Executor_test.c
+#Executor_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Executor_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
+#check_PROGRAMS    		+= Executor_test
 
-Completer_test_SOURCES		= Completer_test.c
-Completer_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
-Completer_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
-                                  @LIBS_CUNIT@
-check_PROGRAMS    		+= Completer_test
+#Completer_test_SOURCES		= Completer_test.c
+#Completer_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@
+#Completer_test_LDADD		= $(top_builddir)/lib/libldm.la -lpthread \
+#                                  @LIBS_CUNIT@
+#check_PROGRAMS    		+= Completer_test
 
 #Task_test_SOURCES		= Task_test.c
 #Task_test_CPPFLAGS		= $(AM_CPPFLAGS) @CPPFLAGS_CUNIT@

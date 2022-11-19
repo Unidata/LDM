@@ -129,49 +129,39 @@ static up6_error_t logFailure(
     return errCode;
 }
 
-/*
- * Arguments:
- *      info    Pointer to the data-product's metadata.
- *      data    Pointer to the data-product's data.
- *      xprod   Pointer to an XDR-encoded version of the data-product (data and
- *              metadata).
- *      size    Size, in bytes, of the XDR-encoded version.
- *      arg     Pointer to pointer to error-object:
- *                  NULL        Success.
- *                  else        Failure.  err_code() values:
- *                      UP6_CLIENT_FAILURE      Client-side RPC transport
- *                                              couldn't be created from
- *                                              Internet address and LDM program
- *                                              number.
- *                      UP6_VERSION_MISMATCH    Downstream LDM isn't version 6.
- *                      UP6_TIME_OUT            Communication timed-out.
- *                      UP6_INTERRUPT           This function was interrupted.  
- *                      UP6_UNKNOWN_HOST        Downstream host is unknown.
- *                      UP6_UNAVAILABLE         Downstream LDM can't be reached
- *                                              for some reason (see log).
- *                      UP6_SYSTEM_ERROR        System-error occurred (check
- *                                              errno or see log).
- *                      UP6_CLOSED              Connection closed.
- * Returns:
- *      0       Always.
+/**
+ * @param[in] info    Pointer to the data-product's metadata.
+ * @param[in] data    Pointer to the data-product's data.
+ * @param[in] xprod   Pointer to an XDR-encoded version of the data-product (data and metadata).
+ * @param[in] size    Size, in bytes, of the XDR-encoded version.
+ * @param[in] arg     Ignored
+ * @retval 0                     Success.
+ * @retval UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be created from Internet address
+ *                               and LDM program number. `log_add()` called.
+ * @retval UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()` called.
+ * @retval UP6_TIME_OUT          Communication timed-out. `log_add()` called.
+ * @retval UP6_INTERRUPT         This function was interrupted.   `log_add()` called.
+ * @retval UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
+ * @retval UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason (see log).
+ *                               `log_add()` called.
+ * @retval UP6_SYSTEM_ERROR      System-error occurred (check errno or see log). `log_add()` called.
+ * @retval UP6_CLOSED            Connection closed. `log_add()` called.
  */
 /*ARGSUSED*/
 static int notify(
         const prod_info* const info,
-        const void* const data,
-        void* const xprod,
-        const size_t size,
-        void* const arg)
+        const void* const      data,
+        void* const            xprod,
+        const size_t           size,
+        void* const            arg)
 {
-    ErrorObj** const errObj = (ErrorObj**) arg;
+    int status = 0; // Default success
 
     if (upFilter_isMatch(_upFilter, info)) {
         int isDebug = log_is_enabled_debug;
 
-        if (log_is_enabled_info || isDebug)
-            err_log_and_free(ERR_NEW1(0, NULL, "notifying: %s",
-                    s_prod_info(NULL, 0, info, isDebug)),
-                    isDebug ? ERR_DEBUG : ERR_INFO);
+        log_log(log_is_enabled_debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO,
+                "notifying: %s", s_prod_info(NULL, 0, info, isDebug));
 
         (void)notification_6((prod_info*) info, _clnt);
         /*
@@ -179,8 +169,8 @@ static int notify(
          * RPC call uses asynchronous message-passing.
          */
         if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
-            *errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
-                    "NOTIFICATION failure: %s", clnt_errmsg(_clnt));
+            log_add("NOTIFICATION failure: %s", clnt_errmsg(_clnt));
+            status = up6_error(clnt_stat(_clnt));
         }
         else {
             _lastSendTime = time(NULL );
@@ -188,35 +178,33 @@ static int notify(
         }
     }
 
-    return 0;
+    return status;
 }
 
 /**
  * Asynchronously sends a data-product to the downstream LDM.
  *
- * @param[in] infop           Pointer to the metadata of the data.
- * @param[in] datap           Pointer to beginning of data.
- * @retval    NULL            Success.
- * @return                    An error object. err_code() values:
- *          UP6_CLIENT_FAILURE      Client-side RPC transport couldn't be 
- *                                  created from Internet address and LDM 
- *                                  program number.
- *          UP6_VERSION_MISMATCH    Downstream LDM isn't version 6.
- *          UP6_TIME_OUT            Communication timed-out.
- *          UP6_INTERRUPT           This function was interrupted.    
- *          UP6_UNKNOWN_HOST        Downstream host is unknown.
- *          UP6_UNAVAILABLE         Downstream LDM can't be reached for some
- *                                  reason (see log).
- *          UP6_SYSTEM_ERROR        System-error occurred (check errno or see
- *                                  log).
- *          UP6_CLOSED              Connection closed.
+ * @param[in] infop                 Pointer to the metadata of the data.
+ * @param[in] datap                 Pointer to beginning of data.
+ * @retval    0                     Success.
+ * @retval    UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be  created from Internet
+ *                                  address and LDM program number. `log_add()` called.
+ * @retval    UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()` called.
+ * @retval    UP6_TIME_OUT          Communication timed-out. `log_add()` called.
+ * @retval    UP6_INTERRUPT         This function was interrupted.     `log_add()` called.
+ * @retval    UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
+ * @retval    UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason (see log).
+ *                                  `log_add()` called.
+ * @retval    UP6_SYSTEM_ERROR      System-error occurred (check errno or see log). `log_add()`
+ *                                  called.
+ * @retval    UP6_CLOSED            Connection closed. `log_add()` called.
  */
-static ErrorObj*
+static int
 hereis(
     const prod_info* infop,
     const void*      datap)
 {
-    ErrorObj* errObj = NULL; /* success */
+    int       status = 0; // Default success
     product   prod;
 
     prod.info = *infop;
@@ -224,12 +212,12 @@ hereis(
 
     (void)hereis_6(&prod, _clnt);
     /*
-     * The status will be RPC_TIMEDOUT unless an error occurs because the RPC
-     * call uses asynchronous message-passing.
+     * The status will be RPC_TIMEDOUT unless an error occurs because the RPC call uses asynchronous
+     * message-passing.
      */
     if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
-        errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
-                "HEREIS: %s", clnt_errmsg(_clnt));
+        log_add("HEREIS: %s", clnt_errmsg(_clnt));
+        status = up6_error(clnt_stat(_clnt));
     }
     else {
         /*
@@ -242,38 +230,32 @@ hereis(
             log_debug("%s", s_prod_info(NULL, 0, infop, 1));
     }
 
-    return errObj;
+    return status;
 }
 
-/*
+/**
  * Sets "_lastSendTime".
  *
- * Arguments:
- *      infop                   Pointer to the metadata of the data.
- *      datap                   Pointer to beginning of data.
- * Returns:
- *      NULL            Success.
- *      else            Error object. err_code() values:
- *          UP6_CLIENT_FAILURE      Client-side RPC transport couldn't be 
- *                                  created from Internet address and LDM 
- *                                  program number.
- *          UP6_VERSION_MISMATCH    Upstream LDM isn't version 6.
- *          UP6_TIME_OUT            Communication timed-out.
- *          UP6_INTERRUPT           This function was interrupted.    
- *          UP6_UNKNOWN_HOST        Upstream host is unknown.
- *          UP6_UNAVAILABLE         Upstream LDM can't be reached for some
- *                                  reason (see log).
- *          UP6_SYSTEM_ERROR        System-error occurred (check errno or see
- *                                  log).
- *          UP6_CLOSED              Connection closed.
+ * @param[in] infop                 Pointer to the metadata of the data.
+ * @param[in] datap                 Pointer to beginning of data.
+ * @retval    0                     Success
+ * @retval    UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be  created from Internet
+ *                                  address and LDM program number. `log_add()` called.
+ * @retval    UP6_VERSION_MISMATCH  Upstream LDM isn't version 6. `log_add()` called.
+ * @retval    UP6_TIME_OUT          Communication timed-out. `log_add()` called.
+ * @retval    UP6_INTERRUPT         This function was interrupted.     `log_add()` called.
+ * @retval    UP6_UNKNOWN_HOST      Upstream host is unknown. `log_add()` called.
+ * @retval    UP6_UNAVAILABLE       Upstream LDM can't be reached for some reason (see log).
+ *                                  `log_add()` called.
+ * @retval    UP6_SYSTEM_ERROR      System-error occurred (check errno or see log). `log_add()` called.
+ * @retval    UP6_CLOSED            Connection closed. `log_add()` called.
  */
-static ErrorObj*
-csbd(
-        const prod_info* infop,
-        const void* datap)
+static int
+csbd(   const prod_info* infop,
+        const void*      datap)
 {
-    ErrorObj* errObj = NULL; /* success */
-    comingsoon_args comingSoon;
+    int                 status = 0; // Default success
+    comingsoon_args     comingSoon;
     comingsoon_reply_t* reply;
 
     comingSoon.infop = (prod_info*) infop;
@@ -281,8 +263,8 @@ csbd(
     reply = comingsoon_6(&comingSoon, _clnt);
 
     if (NULL == reply) {
-        errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
-                "COMINGSOON: %s", clnt_errmsg(_clnt));
+        log_add("COMINGSOON: %s", clnt_errmsg(_clnt));
+        status = up6_error(clnt_stat(_clnt));
     }
     else {
         _lastSendTime = time(NULL );
@@ -302,8 +284,8 @@ csbd(
              * the RPC call uses asynchronous message-passing.
              */
             if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
-                errObj = ERR_NEW1(up6_error(clnt_stat(_clnt)), NULL,
-                        "Error sending BLKDATA: %s", clnt_errmsg(_clnt));
+                log_add("Error sending BLKDATA: %s", clnt_errmsg(_clnt));
+                status = up6_error(clnt_stat(_clnt));
             }
             else {
                 _lastSendTime = time(NULL );
@@ -317,46 +299,39 @@ csbd(
         xdr_free((xdrproc_t) xdr_comingsoon_reply_t, (char*) reply);
     } /* successful comingsoon_6() */
 
-    return errObj;
+    return status;
 }
 
-/*
+/**
  * Transmits a data-product to a downstream LDM.  Called by pq_sequence().
  *
- * Arguments:
- *      info    Pointer to the data-product's metadata.
- *      data    Pointer to the data-product's data.
- *      xprod   Pointer to an XDR-encoded version of the data-product (data and
- *              metadata).
- *      size    Size, in bytes, of the XDR-encoded version.
- *      arg     Pointer to pointer to error-object:
- *                  NULL        Success.
- *                  else        Failure.  err_code() values:
- *                      UP6_CLIENT_FAILURE      Client-side RPC transport
- *                                              couldn't be created from
- *                                              Internet address and LDM program
- *                                              number.
- *                      UP6_VERSION_MISMATCH    Downstream LDM isn't version 6.
- *                      UP6_TIME_OUT            Communication timed-out.
- *                      UP6_INTERRUPT           This function was interrupted.  
- *                      UP6_UNKNOWN_HOST        Downstream host is unknown.
- *                      UP6_UNAVAILABLE         Downstream LDM can't be reached
- *                                              for some reason (see log).
- *                      UP6_SYSTEM_ERROR        System-error occurred (check
- *                                              errno or see log).
- *                      UP6_CLOSED              Connection closed.
- * Returns:
- *      0       Always.
+ * @param[in] info               Pointer to the data-product's metadata.
+ * @param[in] data               Pointer to the data-product's data.
+ * @param[in] xprod              Pointer to an XDR-encoded version of the data-product (data and
+ *                               metadata).
+ * @param[in] size               Size, in bytes, of the XDR-encoded version.
+ * @param[in] arg                Ignored
+ * @retval 0                     Success.
+ * @retval UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be created from Internet address
+ *                               and LDM program number. `log_add()` called.
+ * @retval UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()` called.
+ * @retval UP6_TIME_OUT          Communication timed-out. `log_add()` called.
+ * @retval UP6_INTERRUPT         This function was interrupted. `log_add()` called.
+ * @retval UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
+ * @retval UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason (see log).
+ *                               `log_add()` called.
+ * @retval UP6_SYSTEM_ERROR      System-error occurred (check errno or see log). `log_add()` called.
+ * @retval UP6_CLOSED            Connection closed. `log_add()` called.
  */
 /*ARGSUSED*/
 static int feed(
         const prod_info* const info,
-        const void* const data,
-        void* const xprod,
-        const size_t size,
-        void* const arg)
+        const void* const      data,
+        void* const            xprod,
+        const size_t           size,
+        void* const            arg)
 {
-    ErrorObj** const errObj = (ErrorObj**) arg;
+    int status = 0; // Default success;
 
     if (upFilter_isMatch(_upFilter, info)) {
     	if (log_is_enabled_debug) {
@@ -366,10 +341,10 @@ static int feed(
     		log_info("sending: %s", s_prod_info(NULL, 0, info, false));
     	}
 
-        *errObj = _isPrimary ? hereis(info, data) : csbd(info, data);
+        status = _isPrimary ? hereis(info, data) : csbd(info, data);
     } /* product passes up-filter */
 
-    return 0;
+    return status;
 }
 
 /**
@@ -408,17 +383,15 @@ flushConnection(
                 _downName, clnt_errmsg(_clnt));
 }
 
-/*
- * This function doesn't return until an error occurs.  It calls exitIfDone()
- * after potentially lengthy operations.
+/**
+ * This function doesn't return until an error occurs or the connection is closed.  It calls
+ * exitIfDone() after potentially lengthy operations.
  *
- * Returns:
- *      0                    Success.
- *      UP6_CLIENT_FAILURE   Client-side RPC transport couldn't be 
- *                           created from Internet address and LDM program
- *                           number.
- *      UP6_SYSTEM_ERROR     System-error occurred (check errno or see log).
- *      UP6_PQ               Problem with product-queue.
+ * @retval 0                    Success.
+ * @retval UP6_CLIENT_FAILURE   Client-side RPC transport couldn't be  created from Internet address
+ *                              and LDM program number.
+ * @retval UP6_SYSTEM_ERROR     System-error occurred (check errno or see log).
+ * @retval UP6_PQ               Problem with product-queue.
  */
 static up6_error_t up6_run(
         void)
@@ -486,54 +459,54 @@ static up6_error_t up6_run(
             errCode = UP6_CLIENT_FAILURE;
         }
         else {
-            while (UP6_SUCCESS == errCode && exitIfDone(0)) {
-                ErrorObj*   errObj = NULL;
-                const int   err = pq_sequence(_pq, _mt, _class,
-                        _mode == FEED ? feed : notify, &errObj);
+            while (exitIfDone(0)) {
+                const int status = pq_sequence(_pq, _mt, _class, _mode == FEED ? feed : notify,
+                        NULL);
 
-                if (NULL != errObj) {
+                if (status < 0) {
                     /*
-                     * feed() or notify() reports a problem.
+                     * The product-queue module reported a problem.
                      */
-                    errCode = logFailure("Failure", errObj);
-                }
-                else if (err) {
-                    /*
-                     * The product-queue module reports a problem.
-                     */
-                    if (err == PQUEUE_END || err == EAGAIN || err == EACCES) {
+                    if (status == PQ_END) {
+                        log_debug("End of product-queue");
+
                         if (_flushNeeded) {
-                            (void) exitIfDone(0);
-
-                            if ((errObj = flushConnection()))
-                                errCode = logFailure("Couldn't flush connection",
-                                        errObj);
-                        }
-
-                        if (errCode == UP6_SUCCESS) {
-                            time_t timeSinceLastSend = time(NULL)
-                                    - _lastSendTime;
-
-                            log_debug(err == PQUEUE_END
-                                    ? "End of product-queue"
-                                    : "Hit a lock");
-
-                            if (_interval <= timeSinceLastSend) {
-                                _flushNeeded = 1;
-                            }
-                            else {
                                 (void) exitIfDone(0);
-                                (void) pq_suspend(
-                                        _interval - timeSinceLastSend);
-                            }
+
+                                ErrorObj* errObj = flushConnection();
+                                if (errObj) {
+                                    errCode = logFailure("Couldn't flush connection", errObj);
+                                    break;
+                                }
                         }
-                    } /* end-of-queue reached or lock hit */
+
+                        time_t timeSinceLastSend = time(NULL) - _lastSendTime;
+
+                        if (_interval <= timeSinceLastSend) {
+                            _flushNeeded = 1;
+                        }
+                        else {
+                            (void) exitIfDone(0);
+                            (void) pq_suspend(_interval - timeSinceLastSend);
+                        }
+                    } /* end-of-queue reached */
                     else {
-                        log_error_q("Product send failure: %s", strerror(err));
+                        log_add("pq_sequence() failure");
+                        log_flush_error();
 
                         errCode = UP6_PQ;
+                        break;
                     }
                 } /* problem in product-queue module */
+                else if (status == UP6_CLOSED) {
+                    log_flush_info();
+                    break;
+                }
+                else if (status) {
+                    log_flush_error();
+                    errCode = UP6_SYSTEM_ERROR;
+                    break;
+                }
             } /* pq_sequence() loop */
 
             auth_destroy(_clnt->cl_auth);

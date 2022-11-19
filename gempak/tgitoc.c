@@ -6,7 +6,7 @@
 void tg_itoc ( int *intdtf, char *gdattim, int *iret, size_t len )
 {
 int iftype, iftime;
-char fstr[7], ftype, gtemp[21];
+char fstr[8], ftype, gtemp[21];
 
 *iret = 0;
 gdattim[0] = '\0';

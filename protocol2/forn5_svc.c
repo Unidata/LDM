@@ -285,7 +285,7 @@ noti5_sqf(const prod_info *infop, const void *datap,
                 if(remote->clssp == NULL
                                 || remote->clssp->psa.psa_len == 0)
                 {
-                        log_notice_q("No match for request %s");
+                        log_notice_q("No match for request");
                         return EIO;
                 }
                 if(!clss_eq(remote->clssp, want))

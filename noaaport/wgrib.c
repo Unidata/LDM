@@ -2611,7 +2611,7 @@ int GDS_grid(unsigned char *gds, int *nx, int *ny, long int *nxny) {
 
     *nx = ix = GDS_LatLon_nx(gds);
     *ny = iy = GDS_LatLon_ny(gds);
-    *nxny = ix * iy;
+    *nxny = (long)ix * iy;
 
     /* thin grid */
 

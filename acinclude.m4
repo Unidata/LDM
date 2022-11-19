@@ -3,7 +3,7 @@ dnl
 dnl These are the local macros used by the ldm4 configure.in
 dnl autoconf 1.6
 dnl
-dnl This is just like AC_HAVE_FUNCS except that the sense is reversed.
+dnl This is just like AC_CHECK_FUNCS except that the sense is reversed.
 dnl
 define(diversion_number, divnum)dnl
 divert([-1])
@@ -464,13 +464,9 @@ AC_DEFUN([UD_ULOG], [dnl
 	    ;;
 	*)
             AC_MSG_CHECKING([whether syslog(3) returns an int])
-	    AC_TRY_COMPILE(
-		[#include <syslog.h>],
-		[int i = syslog(0,0);],
-		AC_DEFINE(SYSLOG_RETURNS_INT, 1,
-		    [Whether syslog(3) returns an int])
-		AC_MSG_RESULT([yes]),
-                [AC_MSG_RESULT([no])])
+	    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <syslog.h>]], [[int i = syslog(0,0);]])],[AC_DEFINE(SYSLOG_RETURNS_INT, 1,
+		    Whether syslog(3) returns an int)
+		AC_MSG_RESULT(yes)],[AC_MSG_RESULT([no])])
 	    ;;
     esac
 
@@ -579,24 +575,22 @@ AC_DEFUN([UD_PROG_CPP],
 	*)
 	    AC_REQUIRE([AC_PROG_CPP]) dnl
 	    AC_MSG_CHECKING(the C preprocessor)
-	    AC_TRY_CPP([#include <stdlib.h>],
-		AC_MSG_RESULT(works),
-		AC_MSG_ERROR([[$[]0: C preprocessor, \`$CPP', doesn't work]]))
+	    AC_PREPROC_IFELSE([AC_LANG_SOURCE([[#include <stdlib.h>]])],[AC_MSG_RESULT(works)],[AC_MSG_ERROR([$[]0: C preprocessor, $CPP, doesn't work])])
 	    ;;
     esac
 ])
 
 
 AC_DEFUN([UD_HPUX], [
-    AC_MSG_CHECKING(for HP-UX)
-    AC_BEFORE([$0], [AC_COMPILE_CHECK])
-    AC_BEFORE([$0], [AC_TEST_PROGRAM])
-    AC_BEFORE([$0], [AC_HEADER_EGREP])
-    AC_PROGRAM_EGREP(yes, [
+    AC_MSG_CHECKING([for HP-UX])
+    AC_BEFORE([$0], [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[])])
+    AC_BEFORE([$0], [AC_RUN_IFELSE([AC_LANG_SOURCE([[]])],[],[],[])])
+    AC_BEFORE([$0], [AC_EGREP_HEADER])
+    AC_EGREP_CPP([yes],[
 	    #ifdef __hpux
 	      yes
 	    #endif
-	], [
+	],[
 	    AC_MSG_RESULT(yes)
 dnl	Under HP-UX B.11.00, <rpc/rpc.h> includes <rpc/auth.h>, which includes
 dnl	<sys/user.h>, which uses "kt_t", which isn't defined anywhere; so omit
@@ -617,14 +611,13 @@ dnl	are suppressed.
 dnl	In 64-bit mode, the "xnet" networking library must be used.
 	    *+DA2.0W*) LIBS="${LIBS}${LIBS+ }-lxnet";;
 	    esac
-	],
-	AC_MSG_RESULT(no)
-    )dnl
+	],[AC_MSG_RESULT(no)
+    ])dnl
 ])dnl
 
 
 AC_DEFUN([UD_SIG_ATOMIC_T], [
-    AC_MSG_CHECKING(for sig_atomic_t in signal.h)
+    AC_MSG_CHECKING([for sig_atomic_t in signal.h])
     AC_EGREP_HEADER(sig_atomic_t, signal.h,
 		    AC_MSG_RESULT(defined),
 		    [
@@ -634,18 +627,6 @@ AC_DEFUN([UD_SIG_ATOMIC_T], [
 		    ]
 		   )
 ])
-
-
-dnl AC_DEFUN(UD_RPCSOC, [dnl
-dnl LIBS_save="${LIBS}"
-dnl LIBS="-R/usr/ucblib -L/usr/ucblib -lrpcsoc ${LIBS}"
-dnl have_lib=""
-dnl AC_COMPILE_CHECK([-lrpcsoc], , [main();], [have_lib="1"])dnl
-dnl if test -z "${have_lib}"; then
-dnl    LIBS="${LIBS_save}"
-dnl fi
-dnl ])dnl
-
 
 dnl
 dnl Change defaults to be compatible with Peter Neilley's "weather" program
@@ -680,90 +661,12 @@ AC_DEFUN([UD_DB], [dnl
 ])dnl
 
 
-dnl Check for yacc(1) library.
-dnl
-AC_DEFUN([UD_LIB_YACC],
-[
-    AC_ARG_VAR([LD_YACC], [yacc(1) library])
-    case `uname` in
-	Linux)
-	    UD_DEFAULT(LD_YACC, )
-	    ;;
-	*)  UD_CHECK_LIB(LD_YACC, yyerror(""), , y, yacc, -ly)
-	    ;;
-    esac
-])
-
-
 dnl Set the value of a variable.  Use the environment if possible; otherwise
 dnl set it to a default value.  Call the substitute routine.
 dnl
 AC_DEFUN([UD_DEFAULT], [dnl
     $1=${$1-"$2"}
     AC_SUBST([$1])
-])
-
-
-dnl Check for a library that contains a function.
-dnl
-dnl NB: Always checks default library and library directories first.  This
-dnl obviates the need for a `-L...' reference, which can cause problems
-dnl [(]e.g. a `-L/usr/lib -lsocket' reference under SunOS 5.2 can cause the
-dnl wrong `-lm' to be loaded[)].
-dnl
-dnl This rule was changed (for some reason) to return `-lc' if the 
-dnl function was in the default library.  This caused problems on
-dnl an DecStation ULTRIX system when f77(1) was used to link a FORTRAN
-dnl program: the C and FORTRAN libraries had duplicate definitions for
-dnl some functions.  Consequently, we return to the practice of not
-dnl deciding on `-lc'.
-dnl
-dnl UC_CHECK_LIB(varname, func, dir ..., lib ..., libname, example)
-dnl
-AC_DEFUN([UD_CHECK_LIB],
-[dnl
-AC_MSG_CHECKING(for $5 library)
-    case "${$1+set}" in
-    set)
-	AC_MSG_RESULT($$1)
-	;;
-    *) AC_MSG_RESULT()
-	LIBS_save=$LIBS
-	found=no
-	AC_MSG_CHECKING(for $2 in default library(s))
-	AC_TRY_LINK(, $2;, 
-		    [
-			AC_MSG_RESULT(yes)
-			$1=
-			found=yes
-		    ],
-		    [
-			AC_MSG_RESULT(no)
-			for dir in '' $3; do
-			    for lib in $4; do
-				UD_LINK_REF(LIBS, $dir, $lib)
-				AC_MSG_CHECKING(for $2 in $LIBS)
-				AC_TRY_LINK(, $2;, 
-					    [
-						AC_MSG_RESULT(yes)
-						$1=$LIBS
-						found=yes
-						break 2
-					    ])
-				AC_MSG_RESULT(no)
-			    done
-			done
-		    ])
-	LIBS=$LIBS_save
-	case $found in
-	    no)	
-		AC_MSG_ERROR(
-[$5 library not found.  Adjust library search-path (e.g., LD_LIBRARY_PATH) and/or set environment variable $1 (e.g., to \"$6\").  Then re-execute configure script.])
-		;;
-	esac
-	;;
-    esac
-    AC_SUBST($1) dnl
 ])
 
 
@@ -813,12 +716,8 @@ dnl
 AC_DEFUN([TYPE_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t], ac_cv_type_socklen_t,
 [
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
-   #include <sys/socket.h>],
-  [socklen_t len = 42; return 0;],
-  ac_cv_type_socklen_t=yes,
-  ac_cv_type_socklen_t=no)
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+   #include <sys/socket.h>]], [[socklen_t len = 42; return 0;]])],[ac_cv_type_socklen_t=yes],[ac_cv_type_socklen_t=no])
 ])
   if test $ac_cv_type_socklen_t != yes; then
     AC_DEFINE(socklen_t, int, [Type of variable for holding socket-length data])
@@ -836,40 +735,40 @@ AC_DEFUN([UD_MAKEWHATIS],
     # conflicting with the (directory creation) target with the same name.
     #
     WHATIS=whatis
-    case `uname -sr` in
-	BSD/OS*|FreeBSD*|Darwin*)
+    case "`uname -sr`" in
+	(BSD/OS*|FreeBSD*|Darwin*)
 	    # Can't generate a user-database -- only /usr/share/man/whatis.db.
 	    MAKEWHATIS_CMD=
 	    ;;
-	'IRIX64 6.5'|'IRIX 6.5')
+	('IRIX64 6.5'|'IRIX 6.5')
 	    MAKEWHATIS_CMD='/usr/lib/makewhatis -M $(mandir) $(mandir)/whatis'
 	    ;;
-	'IRIX 6'*)
+	('IRIX 6'*)
 	    # Can't generate a user-database.
 	    MAKEWHATIS_CMD=
 	    ;;
-	HP-UX*)
+	(HP-UX*)
 	    # Can't generate a user-database -- only /usr/lib/whatis.
 	    MAKEWHATIS_CMD=
 	    ;;
-	'Linux '*)
+	('Linux '*)
 	    # /usr/sbin/makewhatis doesn't work
 	    MAKEWHATIS_CMD=
 	    ;;
-	ULTRIX*)
+	(ULTRIX*)
 	    # Can't generate a user-database -- only /usr/lib/whatis.
 	    MAKEWHATIS_CMD=
 	    ;;
-	*)
+	(*)
 	    if test -r /usr/man/windex; then
 		WHATIS=windex
 	    fi
 	    AC_CHECK_PROGS(prog, catman makewhatis /usr/lib/makewhatis, [catman])
 	    case "$prog" in
-		*catman*)
+		(*catman*)
 		    MAKEWHATIS_CMD=$prog' -w -M $(mandir)'
 		    ;;
-		*makewhatis*)
+		(*makewhatis*)
 		    MAKEWHATIS_CMD=$prog' $(mandir)'
 		    ;;
 	    esac
@@ -904,40 +803,6 @@ AC_DEFUN([UD_CHECK_HEADER],
     fi
 ])
 
-dnl Prepends to CPPFLAGS a preprocessor reference to a header-file directory if
-dnl necessary.
-dnl     $1  Name component (e.g., "XML2")
-dnl     $2  Name of the header-file (may contain "/")
-dnl     $3  Space-separated list of directories
-dnl     $4  Name of the automake output variable (e.g., "XML2_INCLUDE")
-AC_DEFUN([UD_SEARCH_HEADER],
-[
-    AC_MSG_NOTICE([Searching for the "$1" header-file(s)])
-    origCppFlags="$CPPFLAGS"
-    found=no
-    cacheName=ac_cv_header_`echo $2 | tr '/.' '__'`
-    for dir in "" $3; do
-        CPPFLAGS="${dir:+-I$dir}${CPPFLAGS:+ $CPPFLAGS}"
-        #AC_MSG_NOTICE([CPPFLAGS = "$CPPFLAGS"])
-        AC_CHECK_HEADER([$2], [found=yes; break])
-        unset $cacheName
-        CPPFLAGS="$origCppFlags"
-    done
-    if test $found != yes; then
-        AC_MSG_ERROR(["$1" header-file(s) not found])
-    else
-        AC_MSG_NOTICE(["$1" header-file(s) found in "$dir"])
-        CPPFLAGS="$origCppFlags"
-        test "$CPPFLAGS" || unset CPPFLAGS
-        if test "$dir"; then
-            $4="-I$dir"
-        else
-            $4=
-        fi
-        AC_SUBST($4)
-    fi
-    unset found
-])
 
 dnl Sets a linker reference to a library if necessary.
 dnl     $1  Name component (e.g., "XML2")

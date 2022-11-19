@@ -27,10 +27,10 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
    int           wmocnt, i, ioff;
    char*         wbuf;
    char          res_string[8];
-   char          ldmname[256];
+   char          ldmname[256] = {0};
 
    wmocnt = 0;
-   memset(psh->pname,0,1024);
+   memset(psh->pname,0,sizeof(psh->pname));
    memset(ldmname,0,sizeof(ldmname));
 
    while((wmocnt<512)&&(buf[wmocnt] != '\n')) {
@@ -54,7 +54,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
          pdb->hour = 0; pdb->minute = 0;
          pdb->sector = 0;
          pdb->res = 0;
-         sprintf(ldmname,"satz/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
+         snprintf(ldmname, sizeof(ldmname), "satz/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
                  psh->ptype,
                  (char *)platform_id((unsigned char)pdb->platform),
                  (char *)channel_id((unsigned char)pdb->channel),
@@ -62,6 +62,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
                  (char *)sector_id((unsigned char)pdb->sector),
                  pdb->res,
                  psh->pname);
+         ldmname[sizeof(ldmname)-1] = 0;
          strcpy(psh->pname, ldmname);
          pdb->len = -1;
          return ( -1 );
@@ -147,7 +148,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
       /* set Octet 43 to "128" since we will encode the data block with png */
       wbuf[42] = 128;
 
-   sprintf(ldmname,"%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
+   snprintf(ldmname, sizeof(ldmname)-1, "%s/ch%d/%s/%s/%04d%02d%02d %02d%02d/%s/%dkm/ %s",
 		 zflag ? "satz" : "sat",
          psh->ptype,
          (char *)platform_id((unsigned char)pdb->platform),

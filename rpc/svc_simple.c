@@ -43,6 +43,7 @@ static char sccsid[] = "@(#)svc_simple.c 1.18 87/08/11 Copyr 1984 Sun Micro";
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
 #include "rpc.h"
@@ -130,7 +131,7 @@ universal(
 	for (plp = proglst; plp != NULL; plp = plp->p_nxt)
 		if (plp->p_prognum == prog && plp->p_procnum == proc) {
 			/* decode arguments into a CLEAN buffer */
-			bzero(xdrbuf, sizeof(xdrbuf)); /* required ! */
+			memset(xdrbuf, 0, sizeof(xdrbuf)); /* required ! */
 			if (!svc_getargs(xp, plp->p_inproc, xdrbuf)) {
 				svcerr_decode(xp);
 				return;

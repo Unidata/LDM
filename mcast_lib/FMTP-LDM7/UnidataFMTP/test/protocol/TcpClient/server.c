@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         errorHandler("ERROR opening socket");
 
      // clear serv_addr array
-     bzero((char *) &serv_addr, sizeof(serv_addr));
+     memset((char *) &serv_addr, 0, sizeof(serv_addr));
      // convert port number from char to int.
      portno = atoi(argv[1]);
      // always set sin_family to AF_INET for net sockets
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
      while(1)
      {
 	     // clear buffer
-	     bzero(buffer,256);
+	     memset(buffer, 0, 256);
 	     // read from the socket and write to buffer
 	     n = read(newsockfd,buffer,255);
 	     if (n < 0) errorHandler("ERROR reading from socket");

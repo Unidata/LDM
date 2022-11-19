@@ -12,16 +12,13 @@ QUEUE_DIR			= @QUEUE_DIR@
 LOG_LDM				= @LOG_LDM@
 SYSLOG_CONF			= @SYSLOG_CONF@
 LDM_LOGFILE			= @LDM_LOGFILE@
-SUDO				= @SUDO@
-SU				= @SU@
 PQ_SUBDIR			= @PQ_SUBDIR@
 
 # Keep the value of LDMHOME consonant with that in `CI-commit.sh`.
-# "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
-# support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
-# which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
+## "--with-multicast" is conditional because Spock's g++ is 4.6.3 and doesn't
+## support the C++11 standard (in particular, `std::this_thread::sleep_for()`),
+## which is used by `mcast_lib/fmtp/FMTPV3/RateShaper/RateShaper.cpp`.
 AM_DISTCHECK_CONFIGURE_FLAGS	= --enable-debug \
-                                  --disable-root-actions \
 				  --with-noaaport \
 				  --with-retrans \
 				  --with-ingester \
@@ -58,9 +55,6 @@ else
 if WANT_GRIBINSERT
     SUBDIRS	+= grib2 gempak
 endif
-endif
-if WANT_MULTICAST
-    SUBDIRS	+= mcast_lib
 endif
 if WANT_RETRANS
     SUBDIRS	+= noaaport/retrans
@@ -102,9 +96,6 @@ if WANT_DELAYQUEUE
 endif
 if WANT_GRIBINSERT
     SUBDIRS	+= gribinsert
-endif
-if WANT_MULTICAST
-    SUBDIRS	+= mldm_sender
 endif
 SUBDIRS		+= html test
 
@@ -172,34 +163,16 @@ MAINTAINERCLEANFILES	= \
 all:
 
 install-data-hook:	ensure-ldmhome-links ensure-var
-if INCLUDE_ROOT_ACTIONS
 	@echo
-	@echo "\
-The next step will perform those installation actions that must be executed \
-by the superuser. \
-If this step doesn't work (for example, if you don't enter \
-root's password), then the superuser will have to manually execute the \
-command \"$(MAKE) root-actions\"." \
-	| fmt >/dev/tty
-	@echo >/dev/tty
-if HAVE_SUDO
-	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) root-actions 2>/dev/tty
-else
-if HAVE_SU
-	@printf "Enter root's password (or don't): " >/dev/tty
-	@$(SU) root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) root-actions' \
-	    </dev/tty 2>/dev/tty
-	@echo >/dev/tty
-endif
-endif
-else
 	@echo
-	@echo "\
-NOTE: The command \"$(MAKE) root-actions\" will have to be executed by the \
-superuser in order to complete the installation process." \
-	| fmt
+	@echo '************************************************************************'
+	@echo "NOTE: Because certain programs must be owned by root and setuid, the"
+	@echo "command \"$(MAKE) root-actions\" must now be executed by the superuser (i.e.,"
+	@echo "\"root\") in order to complete the installation process. If this step is"
+	@echo "omitted, then the LDM won't work."
+	@echo '************************************************************************'
 	@echo
-endif
+	@echo
 
 ensure-ldmhome-links:
 	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) $(distName)
@@ -275,6 +248,10 @@ $(DESTDIR)$(mandir)/$(WHATIS):	$(DESTDIR)$(mandir)
 		echo 1>&2 "Couldn't build manual-page database"; \
 	fi
 
+distcheck-hook:
+	echo distcheckdir=`pwd`
+	chmod u+w $(distName)
+
 RPM_BUILDDIR	= $$HOME/rpmbuild
 #
 # Create binary RPM files in this directory
@@ -291,22 +268,22 @@ rpmlint:
 	    $(RPM_BUILDDIR)/RPMS/x86_64/$(distName)*.rpm | egrep -v \
 	    'invalid-license|explicit-lib-dependency|devel-dependency|hardcoded-library-path|configure-without-libdir-spec|spelling-error|postin-without-ldconfig|no-documentation|use-of-home-in-%post|dangerous-command-in-%post mv|library-without-ldconfig-postun|dangling-relative-symlink|non-standard-executable-perm|non-etc-or-var-file-marked-as-conffile|unstripped-binary-or-object|manpage-not-compressed|non-standard-uid|dir-or-file-in-usr-local|devel-file-in-non-devel-package|setuid-binary|script-without-shebang'
 
-pull-oess:
-	git fetch oess
-# The following command uses the wrong subdirectory
-#	git merge --strategy=subtree --squash oess/master
-	git merge --strategy=subtree -X subtree=mcast_lib/OESS-Client \
-		--squash oess/master
-	git commit -m "Pulled OESS-Client"
-
-pull-fmtp:
-	git subtree pull --prefix=gempak/tables gempak-tables master
-#	git fetch fmtp
+#pull-oess:
+#	git fetch oess
 ## The following command uses the wrong subdirectory
-##	git merge --strategy=subtree --squash fmtp/master
-#	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
-#		--squash fmtp/master
-#	git commit -m "Pulled FMTP-LDM7"
+##	git merge --strategy=subtree --squash oess/master
+#	git merge --strategy=subtree -X subtree=mcast_lib/OESS-Client \
+#		--squash oess/master
+#	git commit -m "Pulled OESS-Client"
+
+#pull-fmtp:
+#	git subtree pull --prefix=gempak/tables gempak-tables master
+##	git fetch fmtp
+### The following command uses the wrong subdirectory
+###	git merge --strategy=subtree --squash fmtp/master
+##	git merge --strategy=subtree -X subtree=mcast_lib/FMTP-LDM7 \
+##		--squash fmtp/master
+##	git commit -m "Pulled FMTP-LDM7"
 
 # test
 push-gempak-tables:

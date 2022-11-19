@@ -153,7 +153,7 @@ svctcp_create(
 		}
 		madesock = TRUE;
 	}
-	bzero((char *)&addr, sizeof (addr));
+	memset((char *)&addr, 0, sizeof (addr));
 	addr.sin_family = AF_INET;
 	if (bindresvport(sock, &addr)) {
 		addr.sin_port = 0;
@@ -363,7 +363,12 @@ readtcp(
 	    log_add("EOF on socket %d", sock);
 	}
 	else {
-	    log_syserr("read() error on socket %d", sock);
+	    if (errno == ECONNRESET) {
+	        log_add("Connection reset on socket %d by remote peer", sock);
+	    }
+	    else {
+                log_syserr("read() error on socket %d", sock);
+	    }
 	}
 fatal_err:
 	((struct tcp_conn *)(xprt->xp_p1))->strm_stat = XPRT_DIED;

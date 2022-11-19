@@ -16,7 +16,6 @@ PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS	= ldmd
 ldmd_SOURCES	= ldmd.c
 AM_CPPFLAGS		= \
-    -I$(top_srcdir)/mcast_lib \
     -I$(top_srcdir)/registry \
     -I$(top_builddir)/registry \
     -I$(top_srcdir)/log \
@@ -25,8 +24,9 @@ AM_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/pq \
     -I$(top_srcdir)/misc \
-    -I$(top_srcdir) \
-    -I$(top_builddir)/mcast_lib/ldm7 -I$(top_srcdir)/mcast_lib/ldm7
+    -I$(top_srcdir)
+#    -I$(top_srcdir)/mcast_lib \
+#    -I$(top_builddir)/mcast_lib/ldm7 -I$(top_srcdir)/mcast_lib/ldm7
 LDADD		= \
     $(top_builddir)/lib/libldm.la \
     $(LD_GEN)
@@ -130,7 +130,7 @@ check-multicast:
 	ps -o pid,ppid,pgid,args -p `cat up7.pid`
 	rm -f down7.log
 	$(TESTS_ENVIRONMENT) ./ldmd -vl down7.log -q down7.pq down7.conf \
-                >down7.pid
+               >down7.pid
 	sleep 1
 	if ! ps -o pid,ppid,pgid,args -p `cat down7.pid`; then \
 	    echo "Downstream LDM-7 isn't running. See \"down7.log\"" 1>&2; \

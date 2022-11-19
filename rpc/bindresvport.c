@@ -71,7 +71,7 @@ bindresvport(
 
 	if (sin == (struct sockaddr_in *)0) {
 		sin = &myaddr;
-		bzero(sin, sizeof (*sin));
+		memset(sin, 0, sizeof (*sin));
 		sin->sin_family = AF_INET;
 	} else if (sin->sin_family != AF_INET) {
 		errno = EAFNOSUPPORT;

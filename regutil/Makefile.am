@@ -43,8 +43,8 @@ regutil_LDADD		= $(top_builddir)/lib/libldm.la $(LD_GEN)
 
 BUILT_SOURCES		= substPaths registry.xml
 dist_man1_MANS		= regutil.1
-CLEANFILES		= regutil.out regpar.tab substPaths registry.h \
-			  registry.xml
+CLEANFILES		= regutil.out substPaths registry.h registry.xml
+DISTCLEANFILES		= regpar.tab
 
 # "regpar.tab" fields:
 #
@@ -79,12 +79,12 @@ registry.h:	registry.hin registry.c $(srcdir)/regpar.tab.in
 
 # For "make check". Doesn't account for existing, installed registry
 registry.xml:	regpar.tab regutil
-	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	$(PERL) $(srcdir)/installRegistry regpar.tab './regutil -l-' \
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf .
 
 # For "make install". Accounts for existing, installed registry
 install-exec-local:	regpar.tab regutil $(DESTDIR)$(sysconfdir)
-	$(PERL) $(srcdir)/installRegistry regpar.tab ./regutil \
+	$(PERL) $(srcdir)/installRegistry regpar.tab './regutil -l-' \
 	    $(DESTDIR)$(sysconfdir)/ldmadmin-pl.conf $(DESTDIR)$(sysconfdir)
 
 $(DESTDIR)$(sysconfdir):

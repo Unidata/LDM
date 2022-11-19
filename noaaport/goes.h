@@ -4,8 +4,8 @@
 #include <sys/types.h>
 #include <zlib.h> /* Required for compress/uncompress */
 
-int inflateFrame;
-int fillScanlines;
+extern int inflateFrame;
+extern int fillScanlines;
 
 #define YES 1
 #define NO 0

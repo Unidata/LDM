@@ -47,6 +47,7 @@ static char sccsid[] = "@(#)auth_unix.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -160,7 +161,7 @@ authunix_create(
 		return (NULL);
 	}
 #endif
-	bcopy(mymem, au->au_origcred.oa_base, (unsigned)len);
+	memmove(au->au_origcred.oa_base, mymem, (unsigned)len);
 
 	/*
 	 * set auth handle to reflect new cred.

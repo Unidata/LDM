@@ -14,9 +14,7 @@
 #define _XOPEN_SOURCE 600
 
 // For `struct ip_mreq_source`
-#define _DEFAULT_SOURCE // Replaces the following 2 #define-s for later compiler versions
-#define _BSD_SOURCE
-#define __USE_MISC
+#define _DEFAULT_SOURCE
 
 #include "send_recv_test.h"
 

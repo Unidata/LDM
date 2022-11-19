@@ -9,8 +9,8 @@
  * declared (and initialized) in ldmd.c
  */
 
+#include <netinet/in.h> // in_addr_t
 #include <stdbool.h>
-#include <rpc/rpc.h>  /* svc_req */
 #include <signal.h>   /* sig_atomic_t */
 
 #ifdef __cplusplus

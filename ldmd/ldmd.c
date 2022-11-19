@@ -92,8 +92,8 @@ Signal(int sig, void(*action)(int))
  * "Unix Network Programming" Volume 1, Third Edition, by Richard Stevens.
  *
  * @retval 0      Success
- * @retval 1      fork(2) failure
- * @retval 2      setsid(2) failure
+ * @retval 1      fork(2) failure. `log_add()` called.
+ * @retval 2      setsid(2) failure. `log_add()` called.
  */
 static int
 daemonize()
@@ -110,7 +110,8 @@ daemonize()
     }
 
     // Child 1 continues...
-    // Become session leader
+
+    // Become the session leader
     if (setsid() < 0) {
         log_add_syserr("setsid() failure");
         return 2;
@@ -141,8 +142,9 @@ daemonize()
     }
 
     // Child 2 continues...
-    // Close most file descriptors
-    for (int i = 0; i < MAXFD; ++i)
+
+    // Close the file descriptors of the standard I/O streams
+    for (int i = 0; i < 3; ++i)
         close(i);
 
     /*
@@ -363,12 +365,12 @@ static void cleanup(
          */
        if (doSomething)
 		   (void) uldb_delete(NULL);
-    }
 
-    /*
-     * Destroy the LDM configuration-file module.
-     */
-    lcf_destroy(isTopProc);
+        /*
+         * Destroy the LDM configuration-file module.
+         */
+        lcf_destroy(true);
+    }
 
     /*
      * Close registry.
@@ -804,7 +806,7 @@ handle_connection(const int sock)
             goto again;
         }
         /* else */
-        log_syserr("accept() failure");
+        log_syserr("accept() failure: sock=%d", sock);
         return;
     }
 
@@ -849,7 +851,15 @@ handle_connection(const int sock)
 
     int status = runChildLdm(&raddr, xp_sock);
 
-    log_flush(status ? LOG_LEVEL_ERROR : LOG_LEVEL_NOTICE);
+    if (status == 0) {
+        log_flush(LOG_LEVEL_NOTICE);
+    }
+    else if (status == ESRCH || status == ETIMEDOUT) {
+        log_flush(LOG_LEVEL_WARNING);
+    }
+    else {
+        log_flush(LOG_LEVEL_ERROR);
+    }
 
     exit(status); // `cleanup()` will release acquired resources
 }
@@ -860,8 +870,8 @@ static void sock_svc(
     const int width = sock + 1;
 
     while (exitIfDone(exit_status)) {
-        int ready;
-        fd_set readfds;
+        int            ready;
+        fd_set         readfds;
         struct timeval stimeo;
 
         stimeo.tv_sec = LDM_SELECT_TIMEO;
@@ -877,7 +887,7 @@ static void sock_svc(
              * Handle EINTR as a special case.
              */
             if (errno != EINTR) {
-                log_syserr("sock select");
+                log_syserr("select() failure: sock=%d", sock);
                 done = 1;
                 exit(1);
             }

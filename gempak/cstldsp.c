@@ -38,7 +38,7 @@ char *tmpstr;
 	    if ( !isspace( str[ii] ) ) {
 		if ( str == outstr ) {
 		    if ( ii != (size_t)0 ) {
-			G_MALLOC(tmpstr, char, (int)strlen(str), "cst_ldsp");
+			G_MALLOC(tmpstr, char, (int)strlen(str)+1, "cst_ldsp");
 			strcpy(tmpstr, &str[ii]);
 			strcpy(outstr, tmpstr);
 			G_FREE(tmpstr, char);

@@ -1695,9 +1695,9 @@ void endpriv(
 
     /* if either euid or uid is unprivileged, use it */
     if (euid > 0)
-        setuid(euid);
+        (void)setuid(euid);
     else if (uid > 0)
-        setuid(uid);
+        (void)setuid(uid);
 
     /* else warn??? or set to nobody??? */
 }

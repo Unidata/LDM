@@ -203,7 +203,7 @@ fb_arena_sz(size_t nelems)
     for (level = 0; level < maxsize; level++) {
         int blksize = level + 1;        /* size of fblk (number of levels) */
 
-        total += blksize*numblks;
+        total += ((size_t)blksize)*numblks;
         if(numblks >= 4)
             numblks /= 4;
         else
@@ -3363,6 +3363,28 @@ fgrow(const int fd, const off_t len, int sparse)
  ******************************************************************************/
 
 /* 
+ * Decode fcntl() command argument to string.
+ * DEBUG
+ */
+static char *
+s_fcntlcmd(const int cmd)
+{
+        switch (cmd) {
+        case F_SETLKW: return "F_SETLKW";
+        case F_SETLK: return "F_SETLK";
+        case F_GETLK: return "F_GETLK";
+        case F_DUPFD: return "F_DUPFD";
+        case F_GETFD: return "F_GETFD";
+        case F_SETFD: return "F_SETFD";
+        case F_GETFL: return "F_GETFL";
+        case F_SETFL: return "F_SETFL";
+        case F_GETOWN: return "F_GETOWN";
+        case F_SETOWN: return "F_SETOWN";
+        }
+        return "Unknown command";
+}
+
+/*
  * Decode flock l_type member to string.
  * DEBUG
  */
@@ -3480,9 +3502,9 @@ fd_lock(
                     (long)conflict);
         }
         else if (status != EACCES) {
-            log_syserr("fcntl(%d, %s) failed for region {whence: %s, off: %ld, "
-                    "extent: %zu}", fd, s_ltype(l_type),  s_whence(l_whence),
-                    (long)offset, extent);
+            log_syserr("fcntl() failed: fd=%d, cmd=%s, lock={type=%s, start=%ld, whence=%s, "
+                    "len=%zu}", fd, s_fcntlcmd(cmd), s_ltype(l_type), (long)offset,
+                    s_whence(l_whence), extent);
         }
     }
     else {
@@ -3773,7 +3795,7 @@ rgn2_reserve(
                 status = EACCES;
             }
             else if (status) {
-                log_errno(status, "rgn_lock() failure");
+                log_error("rgn2_lock() failure");
             }
             else {
                 status = riul_add(&pq->riulp, pq->pagesz, offset, extent, vp,
@@ -4620,7 +4642,7 @@ pq2_try_del_prod(
                 status = EACCES;
             }
             else {
-                log_syserr("Couldn't get region (offset=%ld,extent=%lu)");
+                log_syserr("Couldn't get region (offset=%ld,extent=%zu)", offset, Extent(rep));
                 status = PQ_SYSTEM;
             }
         }
@@ -7687,10 +7709,11 @@ pq_processProduct(
  *                                  the caller should call `pq_release(*off)`
  *                                  when the product may be deleted
  *                          - else  The product is unlocked and may be deleted
- * @retval     PQ_CORRUPT Product-queue is corrupt
- * @retval     PQ_END     No next product
- * @retval     PQ_INVAL   Invalid argument
- * @retval     PQ_SYSTEM  System error
+ * @retval     PQ_CORRUPT Product-queue is corrupt (NB: <0). `log_add()` called.
+ * @retval     PQ_END     No next product (NB: <0)
+ * @retval     PQ_INVAL   Invalid argument (NB: <0). `log_add()` called.
+ * @retval     PQ_SYSTEM  System error (NB: <0). `log_add()` called.
+ * @retval     0          Product didn't match
  * @return                Return-value of `ifMatch()`
  */
 static int
@@ -7705,6 +7728,7 @@ pq_sequenceHelper(
     int status;
 
     if (pq == NULL) {
+        log_add("Product-queue is NULL");
         status = PQ_INVAL;
     }
     else {
@@ -7726,6 +7750,7 @@ pq_sequenceHelper(
             status = ctl_get(pq, 0);
 
             if (status) {
+                log_add("ctl_get() failure");
                 status = PQ_SYSTEM;
             }
             else {
@@ -7735,7 +7760,7 @@ pq_sequenceHelper(
                 tqelem* tqep = tqe_find(pq->tqp, &pq->cursor, mt);
 
                 if (tqep == NULL) {
-                    status = PQUEUE_END;
+                    status = PQ_END;
                 }
                 else {
                     // Update cursor
@@ -7761,7 +7786,7 @@ pq_sequenceHelper(
                             char ts[20];
 
                             (void)sprint_timestampt(ts, sizeof(ts), &tqep->tv);
-                            log_error("Queue corrupt: tq: %s %s at %ld",
+                            log_add("Queue corrupt: tq: %s %s at %ld",
                                     ts,
                                     status ? "invalid region" : "no data",
                                     tqep->offset);
@@ -7777,6 +7802,7 @@ pq_sequenceHelper(
                             status = rgn_get(pq, rp->offset, Extent(rp), 0, &vp);
 
                             if (status) {
+                                log_add("rgn_get() failure");
                                 status = PQ_SYSTEM;
                             }
                             else {
@@ -7839,7 +7865,7 @@ pq_sequenceHelper(
                                         XDR_DECODE) ;
 
                                 if (!xdr_prod_info(&xdrs, info)) {
-                                    log_error("xdr_prod_info() failed") ;
+                                    log_add("xdr_prod_info() failure") ;
                                     status = PQ_SYSTEM;
                                 }
                                 else {
@@ -7959,11 +7985,12 @@ pq_sequenceHelper(
  * @param[in] clss        Class of data-products to match.
  * @param[in] ifMatch     Function to call for matching products.
  * @param[in] otherargs   Optional argument to `ifMatch`.
- * @retval    PQ_CORRUPT  Product-queue is corrupt (NB: <0)
+ * @retval    PQ_CORRUPT  Product-queue is corrupt (NB: <0). `log_add()` called.
  * @retval    PQ_END      No next product (NB: <0)
- * @retval    PQ_INVAL    Invalid argument (NB: <0)
- * @retval    PQ_SYSTEM   System error (NB: <0)
- * @return                Return-value of `ifMatch()`. Should be >0.
+ * @retval    PQ_INVAL    Invalid argument (NB: <0). `log_add()` called.
+ * @retval    PQ_SYSTEM   System error (NB: <0). `log_add()` called.
+ * @retval    0           Product didn't match. `log_add()` called.
+ * @return                Return-value of `ifMatch()`. `log_add()` called.
  */
 int
 pq_sequence(
@@ -8971,7 +8998,8 @@ pqe_newDirect(
      * Vet arguments.
      */
     if (pq == NULL || ptrp == NULL || indexp == NULL || signature == NULL) {
-        log_error("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p");
+        log_error("Invalid argument: pq=%p, ptrp=%p, indexp=%p, signature=%p", pq, ptrp, indexp,
+                signature);
         status = EINVAL;
     }
     else {

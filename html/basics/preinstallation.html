@@ -36,9 +36,12 @@ distribution.
 	creating the account: 
 	</P>
 	<UL>
-		<LI><P>The name of the user should be &quot;<CODE>ldm</CODE>&quot;.</P>
+		<LI><P>The canonical name of the user is &quot;<CODE>ldm</CODE>&quot;, but that's
+		not a requirement.</P>
 		<LI><P STYLE="margin-bottom: 0in">The installation process
 		is simpler if the LDM user's home-directory is on local disk.
+		&quot;<CODE>/opt/ldm</CODE>&quot; and &quot;<CODE>/home/ldm</CODE> are viable
+		candidates. 
 
 		<LI><P>Use a group ID that allows other non-<A HREF="glindex.html#LDM">LDM</A>
 		processes to write files (decoders, etc.). The <A HREF="https://www.unidata.ucar.edu/software/mcidas/index.html">McIDAS</A>

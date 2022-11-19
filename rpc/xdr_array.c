@@ -45,6 +45,7 @@ static char sccsid[] = "@(#)xdr_array.c 1.10 87/08/11 Copyr 1984 Sun Micro";
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 
 #include "types.h"
@@ -101,7 +102,7 @@ xdr_array(
 					"xdr_array: out of memory\n");
 				return (FALSE);
 			}
-			bzero(target, nodesize);
+			memset(target, 0, nodesize);
 			break;
 
 		case XDR_FREE:

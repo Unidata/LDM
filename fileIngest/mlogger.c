@@ -608,7 +608,7 @@ static int archiveLog (LOGGER *p_logger, char *archiveDate) {
 	char		*fname;
 	char		*ext;
 	char		timeStr[64];	/* .HH.MM.SS */
-	char		newName[LOG_MAX_FILENAME_LEN+1];
+	char		newName[LOG_MAX_FILENAME_LEN+1] = {0};
 	struct tm	*lt;
 
 	if (p_logger == NULL) {
@@ -635,7 +635,7 @@ static int archiveLog (LOGGER *p_logger, char *archiveDate) {
 	lt = localtime (&p_logger->lastLogTime);
 	sprintf (timeStr, "%02d.%02d.%02d", lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-	sprintf (newName, "%s/%s.%s", archivePath, fname, timeStr);
+	snprintf (newName, sizeof(newName)-1, "%s/%s.%s", archivePath, fname, timeStr);
 	free (fname);
 
 	if (p_logger->optionMask & O_LOG_INIT) {

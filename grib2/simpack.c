@@ -99,15 +99,15 @@ void simpack(g2float *fld,g2int ndpts,g2int *idrstmpl,unsigned char *cpack,g2int
            //  No binary scaling and calculate minumum number of 
            //  bits in which the data will fit.
            */
-           imin=(g2int)rint(rmin*dscale);
-           imax=(g2int)rint(rmax*dscale);
+           imin=(g2int)rint((double)rmin*dscale);
+           imax=(g2int)rint((double)rmax*dscale);
            maxdif=imax-imin;
            temp=log((double)(maxdif+1))/alog2;
            nbits=(g2int)ceil(temp);
            rmin=(g2float)imin;
            /*   scale data*/
            for(j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(fld[j]*dscale)-imin;
+             ifld[j]=(g2int)rint(fld[j]*(double)dscale)-imin;
         }
         else if (nbits!=0 && idrstmpl[1]==0) {
            /*
@@ -122,7 +122,7 @@ void simpack(g2float *fld,g2int ndpts,g2int *idrstmpl,unsigned char *cpack,g2int
            bscale=int_power(2.0,-idrstmpl[1]);
            /*   scale data*/
            for (j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+             ifld[j]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
         }
         else if (nbits==0 && idrstmpl[1]!=0) {
            /*
@@ -131,12 +131,12 @@ void simpack(g2float *fld,g2int ndpts,g2int *idrstmpl,unsigned char *cpack,g2int
            */
            rmin=rmin*dscale;
            rmax=rmax*dscale;
-           maxdif=(g2int)rint((rmax-rmin)*bscale);
+           maxdif=(g2int)rint(((double)rmax-rmin)*bscale);
            temp=log((double)(maxdif+1))/alog2;
            nbits=(g2int)ceil(temp);
            /*   scale data*/
            for (j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+             ifld[j]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
         }
         else if (nbits!=0 && idrstmpl[1]!=0) {
            /*
@@ -148,7 +148,7 @@ void simpack(g2float *fld,g2int ndpts,g2int *idrstmpl,unsigned char *cpack,g2int
            rmin=rmin*dscale;
            /*   scale data*/
            for (j=0;j<ndpts;j++)
-             ifld[j]=(g2int)rint(((fld[j]*dscale)-rmin)*bscale);
+             ifld[j]=(g2int)rint(((fld[j]*(double)dscale)-rmin)*bscale);
         }
         /*
         //  Pack data, Pad last octet with Zeros, if necessary,

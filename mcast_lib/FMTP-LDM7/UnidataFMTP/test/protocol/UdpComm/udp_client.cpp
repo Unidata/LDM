@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -11,7 +12,7 @@ int main(int argc, char* argv[])
     char sendbuf[] = "Potomac says hello!";
     char recvbuf[8192];
     struct sockaddr_in serv_addr;
-	bzero(&serv_addr, sizeof(serv_addr));
+	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr("128.143.137.117");
     serv_addr.sin_port = htons(5000);

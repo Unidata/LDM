@@ -11,8 +11,8 @@
 #include <config.h>
 
 #undef NDEBUG
-#include <log.h>
 #include <errno.h>
+#include <libxml/parser.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,11 +22,11 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include <libxml/parser.h>
 #include "backend.h"
+#include "ldmfork.h"
+#include "log.h"
 #include "registry.h"
-#include "stringBuf.h"
-#include <log.h>
+#include "string_buf.h"
 
 typedef struct {
     char*       path;           /* pathname of file */
@@ -160,27 +160,33 @@ fileLock(
             status = EIO;
         }
         else {
-            struct flock        flock;
-
-            flock.l_type = file->exclusive ? F_WRLCK : F_RDLCK;
-            flock.l_whence = SEEK_SET;
-            flock.l_start = 0;            /* from beginning */
-            flock.l_len = 0;              /* to end */
-
-            if (fcntl(fd, F_SETLKW, &flock) == -1) {
-                log_add_syserr("Couldn't lock file \"%s\"", file->path);
+            if (ensure_close_on_exec(fd)) {
+                log_add("Couldn't set file \"%s\" to close-on-exec", file->path);
                 status = EIO;
             }
             else {
-                file->fd = fd;
-                file->isLocked = 1;
-                status = 0;
-            }                               /* file locked */
+                struct flock        flock;
 
-            if (status)
-                close(fd);
+                flock.l_type = file->exclusive ? F_WRLCK : F_RDLCK;
+                flock.l_whence = SEEK_SET;
+                flock.l_start = 0;            /* from beginning */
+                flock.l_len = 0;              /* to end */
+
+                if (fcntl(fd, F_SETLKW, &flock) == -1) {
+                    log_add_syserr("Couldn't lock file \"%s\"", file->path);
+                    status = EIO;
+                }
+                else {
+                    file->fd = fd;
+                    file->isLocked = 1;
+                    status = 0;
+                }                               /* file locked */
+
+                if (status)
+                    close(fd);
+            }
         }                                   /* "fd" open */
-    }
+    } // File isn't locked => file isn't open
 
     return status;
 }

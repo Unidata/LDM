@@ -1132,7 +1132,7 @@ static gini_status_t gini_scan_data_blocks(
         }
         else {
             const size_t   num_bytes_data =
-                    num_logical_recs * num_bytes_per_rec;
+                    (size_t)num_logical_recs * num_bytes_per_rec;
             /*
              * 5120 is the documented maximum number of bytes in the payload of
              * an NBS frame for a GINI data-block. See

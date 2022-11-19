@@ -1,9 +1,8 @@
 dnl Process this file with automake to produce a configure script
 dnl Requires ./aclocal.m4
 dnl
-AC_PREREQ(2.59)
-AC_INIT([LDM], [6.13.17], [support-ldm@unidata.ucar.edu],,
-    [http://www.unidata.ucar.edu/software/ldm])
+AC_PREREQ([2.69])
+AC_INIT([LDM],[6.14.1.1],[support-ldm@unidata.ucar.edu],[],[http://www.unidata.ucar.edu/software/ldm])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -16,16 +15,16 @@ AC_ARG_ENABLE([debug],
 	[enable support for debugging [[default=disabled]]]),
     [
 	case "$enableval" in
-	yes) enable_debug=true
+	(yes) enable_debug=true
 	     # The ": CFLAGS=..." form doesn't work. Bad colon!
 	     # CFLAGS and CXXFLAGS are automatically substituted
 	     CFLAGS="${CFLAGS:+$CFLAGS }-g -O0"
 	     CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-g -O0"
             ;;
-	no) enable_debug=false
+	(no) enable_debug=false
             AC_DEFINE([NDEBUG], , [whether or not to disable assertions])
             ;;
-	*) AC_MSG_ERROR(
+	(*) AC_MSG_ERROR(
 	    [bad value {$enableval} for --enable-debug])
 	    ;;
 	esac
@@ -64,19 +63,19 @@ fi
 # "AM_CXXFLAGS" is not automatically substituted
 AC_SUBST([AM_CXXFLAGS])
 
-if test "$GXX" = "yes"; then
-    case `$CXX -dumpversion` in
-        ([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
-        (4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
-    esac
-else
-    DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
-fi
-AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
+#if test "$GXX" = "yes"; then
+    #case `$CXX -dumpversion` in
+        #([5-9].*|4.8.*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=--with-multicast;;
+        #(4.[0-7]*|[1-3].*) DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=;;
+    #esac
+#else
+    #DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST=
+#fi
+#AC_SUBST([DISTCHECK_CONFIGURE_FLAGS_WITH_MULTICAST])
 case "`uname -sr`" in
-    "SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
-    Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
-    FreeBSD*)    AC_DEFINE([__BSD_VISIBLE], [1], [Needed on FreeBSD systems]);;
+    ("SunOS 5."*) AC_DEFINE([__EXTENSIONS__], [1], [Needed for "struct ip_mreq" on SunOS 5]);;
+    (Darwin*)     AC_DEFINE([_DARWIN_C_SOURCE], [1], [Needed for "struct ip_mreq on Darwin"]);;
+    (FreeBSD*)    AC_DEFINE([__BSD_VISIBLE], [1], [Needed on FreeBSD systems]);;
 esac
 
 YEAR=`date +%Y`
@@ -99,7 +98,7 @@ else
 fi
 
 case "$CC" in
-*c[[89]]9*)
+(*c[[89]]9*)
     ARFLAGS=-cru
     if test "$max_size" = yes
     then
@@ -166,10 +165,10 @@ case "$CC" in
             test -n "$ldflags" && LDFLAGS="$LDFLAGS${LDFLAGS+ }$ldflags"
             test -n "$libs"    && LIBS="$LIBS${LIBS+ }$libs"
             test `uname` = AIX && ARFLAGS='-cru -X 32_64'
-            AC_MSG_NOTICE([cflags="\"$cflags\""])
-            AC_MSG_NOTICE([ldflags="\"$ldflags\""])
-            AC_MSG_NOTICE([libs="\"$libs\""])
-            AC_MSG_NOTICE([ARFLAGS="\"$ARFLAGS\""])
+            AC_MSG_NOTICE([cflags="'$cflags'"])
+            AC_MSG_NOTICE([ldflags="'$ldflags'"])
+            AC_MSG_NOTICE([libs="'$libs'"])
+            AC_MSG_NOTICE([ARFLAGS="$ARFLAGS"])
             AC_MSG_CHECKING([the C compiler (again)])
             AC_COMPILE_IFELSE([AC_LANG_SOURCE([int foo;])], 
                 AC_MSG_RESULT(works),
@@ -180,11 +179,11 @@ case "$CC" in
 esac
 
 case `uname -s` in
-    OSF1)
+    (OSF1)
         AC_DEFINE([_OSF_SOURCE], [1],
                 [Needed for "struct mreq" on OSF1 systems])
         ;;
-    IRIX*)
+    (IRIX*)
         AC_DEFINE([_SGI_SOURCE], [1],
                 [Needed for "struct mreq" on IRIX systems])
         AC_DEFINE([_BSD_TYPES], [1],
@@ -210,16 +209,18 @@ AM_COND_IF([WANT_SLOG], [AC_DEFINE([WANT_SLOG], [1],
 
 # The following is for multicast data distribution using the Virtual Circuit
 # Multicast Transport Protocol. DO NOT USE!
-AC_ARG_WITH([multicast],
-    AS_HELP_STRING([--with-multicast],
-	[enable support for multicast. DO NOT USE!
-        [default=without]]),
-    [],
-    [with_multicast=no])
-AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
-AM_COND_IF([WANT_MULTICAST], [
-    AC_DEFINE([WANT_MULTICAST], [1], [Package will have multicast capability])
-])
+#AC_ARG_WITH([multicast],
+    #AS_HELP_STRING([--with-multicast],
+	#[enable support for multicast. DO NOT USE!
+        #[default=without]]),
+    #[],
+    #[with_multicast=no])
+#AM_CONDITIONAL([WANT_MULTICAST], [test "x$with_multicast" != xno])
+AM_CONDITIONAL([WANT_MULTICAST], [false])
+#AM_COND_IF([WANT_MULTICAST], [
+    #AC_DEFINE([WANT_MULTICAST], [1], [Package will have multicast capability])
+#])
+AC_DEFINE([WANT_MULTICAST], [0], [Package will have multicast capability])
 
 AC_ARG_WITH([noaaport],
     AS_HELP_STRING([--with-noaaport],
@@ -267,9 +268,9 @@ AC_ARG_ENABLE(faux-pq,
 	[use the faux product-queue [[default=disable]]]),
     [
 	case "${enableval}" in
-	yes) fauxPq=yes;;
-	no)  fauxPq=no;;
-	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-faux-pq]);;
+	(yes) fauxPq=yes;;
+	(no)  fauxPq=no;;
+	(*)   AC_MSG_ERROR([bad value ${enableval} for --enable-faux-pq]);;
 	esac
     ],
     [
@@ -322,58 +323,6 @@ AC_ARG_ENABLE(max-size,
 	[[default=enable]]]),
     max_size=$enableval,
     max_size=yes)
-
-AC_ARG_ENABLE([root-actions],
-    AS_HELP_STRING([--disable-root-actions],
-	[don't include superuser (i.e., "root") actions in "make install"
-	[[default=include]]]),
-    [
-	case "$enableval" in
-	yes) enable_include=true;;
-	no) enable_include=false;;
-	*) AC_MSG_ERROR(
-	    [bad value {$enableval} for --enable-root-actions]);;
-	esac
-    ],
-    [
-	enable_include=true
-    ])
-AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS], [test "x$enable_include" = "xtrue"])
-AM_COND_IF([INCLUDE_ROOT_ACTIONS], 
-    [if touch conftest && chmod u=rwxs conftest &&
-	    ls -l conftest | grep -i rws >/dev/null; then \
-	AC_CACHE_CHECK([for su(1) that you can use], [ac_cv_path_SU],
-	    [AC_PATH_PROGS_FEATURE_CHECK([SU], [su],
-		[echo "Enter root's password (or don't)." >/dev/tty
-		$ac_path_SU root -c true </dev/tty >/dev/tty 2>&1 &&
-                    ac_cv_path_SU=$ac_path_SU
-                    ac_path_SU_found=:],
-		[AC_MSG_RESULT([not found])
-		AC_CACHE_CHECK([for sudo(1) that you can use],
-                    [ac_cv_path_SUDO],
-		    [AC_PATH_PROGS_FEATURE_CHECK([SUDO], [sudo],
-			[echo "Enter your password (or don't)." >/dev/tty
-			$ac_path_SUDO true >/dev/tty 2>&1 </dev/tty &&
-                            ac_cv_path_SUDO=$ac_path_SUDO
-                            ac_path_SUDO_found=:],
-			[AC_MSG_RESULT([not found])])])])])
-        [echo Continuing... >/dev/tty]
-	AC_SUBST([SU], [$ac_cv_path_SU])
-	AC_SUBST([SUDO], [$ac_cv_path_SUDO])
-	if test -n "$SUDO" -o -n "$SU"; then \
-	    include_root_actions=true
-	else
-	    include_root_actions=false
-	fi
-    else
-	include_root_actions=false
-    fi
-    rm -f conftest],
-    [include_root_actions=false])
-AM_CONDITIONAL([INCLUDE_ROOT_ACTIONS],
-    [test "$include_root_actions" = true])
-AM_CONDITIONAL([HAVE_SUDO], [test -n "$SUDO"])
-AM_CONDITIONAL([HAVE_SU], [test -n "$SU"])
 
 AC_ARG_ENABLE([setpgid-exec],
     AS_HELP_STRING([--disable-exec-setpgid], 
@@ -496,17 +445,17 @@ AC_DEFINE_UNQUOTED([LDM_BIN_DIR], ["$prefix/bin"],
     [Default pathname of installed-programs directory])
 AC_SUBST([DOCDIR_UTILITIES], $docdir/utilities)
 AC_SUBST([DOCDIR_LIBRARIES], $docdir/libraries)
-AC_SUBST([LOGS_DIR], $localstatedir/logs])
+AC_SUBST([LOGS_DIR], [$localstatedir/logs])
 AC_DEFINE_UNQUOTED([LDM_LOG_DIR], ["$localstatedir/logs"],
     [Default pathname of LDM logging directory])
 AC_DEFINE_UNQUOTED([LDM_VAR_RUN_DIR], ["$localstatedir/run"],
     [Default pathname of LDM var/run directory])
-AC_SUBST([QUEUE_DIR], $localstatedir/queues])
+AC_SUBST([QUEUE_DIR], [$localstatedir/queues])
 AC_DEFINE_UNQUOTED([LDM_QUEUE_DIR], ["$localstatedir/queues"],
     [Default pathname of LDM product-queue directory])
 AC_DEFINE([LDM_QUEUE_PATH], [LDM_QUEUE_DIR "/ldm.pq"],
     [Default pathname of LDM product-queue])
-AC_SUBST([LDM_QUEUE_PATH], $localstatedir/queues/ldm.pq])
+AC_SUBST([LDM_QUEUE_PATH], [$localstatedir/queues/ldm.pq])
 AC_DEFINE_UNQUOTED([PQACT_CONFIG_PATH], ["$sysconfdir/pqact.conf"],
     [Default pathname of pqact(1) configuration-file])
 AC_DEFINE_UNQUOTED([LDM_CONFIG_PATH], ["$sysconfdir/ldmd.conf"],
@@ -560,7 +509,6 @@ UD_PROG_NTPDATE
 AC_SUBST([NTPDATE], ["$NTPDATE"])
 UD_PROG_NETSTAT
 UD_PROG_TOP
-UD_LIB_YACC
 UD_MMAP
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int, 4)
@@ -569,38 +517,36 @@ AC_CHECK_SIZEOF(float)
 AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(uint64_t)
 AC_MSG_CHECKING([size of enum])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #include <stdlib.h>
     #include <stdio.h>
     int main() {
 	enum foo { bar };
 	FILE* out = fopen("conftestdata", "w");
 	(void)fprintf(out, "%lu\n", (unsigned long)sizeof(enum foo));
 	exit(0);
-    }],
-    [
+    }]])],[
 	SIZEOF_ENUM=`cat conftestdata`
 	AC_MSG_RESULT($SIZEOF_ENUM)
 	AC_DEFINE_UNQUOTED(SIZEOF_ENUM, $SIZEOF_ENUM, [size of an enum])
-    ],
-    AC_MSG_FAILURE([couldn't run test program])
-)
+    ],[AC_MSG_FAILURE(couldn't run test program)
+],[])
 
 AC_MSG_CHECKING([size of gid_t])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+    #include <stdlib.h>
     #include <stdio.h>
     #include <sys/types.h>
     int main() {
 	FILE* out = fopen("conftestdata", "w");
 	(void)fprintf(out, "%lu\n", (unsigned long)sizeof(gid_t));
 	exit(0);
-    }],
-    [
+    }]])],[
 	SIZEOF_GID_T=`cat conftestdata`
 	AC_MSG_RESULT($SIZEOF_GID_T)
 	AC_DEFINE_UNQUOTED(SIZEOF_GID_T, $SIZEOF_GID_T, [size of a gid_t])
-    ],
-    AC_MSG_FAILURE([couldn't run test program])
-)
+    ],[AC_MSG_FAILURE(couldn't run test program)
+],[])
 
 AC_DEFINE([IEEE_FLOAT], [1], [use IEEE floating-point in XDR layer])
 AC_DEFINE([IEEE_DOUBLE], [1], [use IEEE double-precision in XDR layer])
@@ -613,11 +559,12 @@ AC_CHECK_TYPE(ptrdiff_t, int)
 AC_CHECK_FUNCS([timegm])
 AC_CHECK_FUNCS([fstatvfs fstatfs])
 TYPE_SOCKLEN_T
-AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid dnl
-strdup seteuid setenv mmap sigaction])
+AC_CHECK_FUNCS([fsync ftruncate memmove memcmp rename strerror waitpid strdup seteuid setenv mmap sigaction])
 UD_SIG_ATOMIC_T
 AC_C_CONST
-AC_STRUCT_ST_BLKSIZE
+AC_CHECK_MEMBERS([struct stat.st_blksize],[AC_DEFINE(HAVE_STRUCT_STAT_ST_BLKSIZE, 1,
+			    [Define to 1 if your `struct stat' has `st_blksize'.])])
+
 UD_SYSLOG_PIDFILE
 AC_SUBST(CFLAGS)
 UD_ULOG
@@ -641,7 +588,6 @@ AC_SEARCH_LIBS(
 AC_SEARCH_LIBS([sched_setscheduler], [rt],)
 
 AC_C_BIGENDIAN
-AC_HEADER_STDC
 AC_CHECK_HEADERS([errno.h stdio.h unistd.h stdlib.h string.h sys/types.h \
         sys/ipc.h sys/shm.h sys/sem.h sys/stat.h sys/wait.h unistd.h])
 AC_CHECK_HEADERS([stropts.h], ,
@@ -670,15 +616,18 @@ AC_SEARCH_LIBS([inet_addr], [socket nsl nsl_s], ,
 AC_CHECK_HEADER([zlib.h], , [AC_MSG_ERROR([Header-file not found])])
 AC_SEARCH_LIBS([deflate], [z], , [AC_MSG_ERROR([Library not found])])
 
-AM_COND_IF([WANT_MULTICAST], [
-    # Ensure references to the YAML package, which is used by the LDM-7
-    # multicast module.
-    AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
-    AC_SEARCH_LIBS([yaml_emitter_dump], [yaml], ,
-        [AC_MSG_ERROR([Library not found])])
-])
+#AM_COND_IF([WANT_MULTICAST], [
+    ## Ensure references to the YAML package, which is used by the LDM-7
+    ## multicast module.
+    #AC_CHECK_HEADER([yaml.h], , [AC_MSG_ERROR([Header-file not found])])
+    #AC_SEARCH_LIBS([yaml_emitter_dump], [yaml], ,
+        #[AC_MSG_ERROR([Library not found])])
+#])
 
 AM_COND_IF([WANT_NOAAPORT], [
+    if test -z "$CXX"; then
+        AC_MSG_ERROR([A C++ compiler is necessary for NOAAPort ingestion and wasn't found])
+    fi
     # Ensure references to the PNG package, which is used by the LDM NOAAPORT
     # module.
     AC_CHECK_HEADER([png.h], , [AC_MSG_ERROR([Header-file not found])])
@@ -687,11 +636,23 @@ AM_COND_IF([WANT_NOAAPORT], [
 ])
 
 AM_COND_IF([WANT_INGESTER],[
-    AC_SEARCH_LIBS([clock_gettime], [rt],,[AC_MSG_ERROR([Could not find required function clock_gettime],[1])])
-    AC_SEARCH_LIBS([timer_create], [rt],,[AC_MSG_ERROR([Could not find required function timer_create],[1])])
-    AC_SEARCH_LIBS([timer_settime], [rt],,[AC_MSG_ERROR([Could not find required function timer_settime],[1])])
-libs=$LIBS
+    found=yes
+    AC_SEARCH_LIBS([clock_gettime], [rt],,
+            [AC_MSG_WARN([Could not find required function clock_gettime])
+            found=no])
+    AC_SEARCH_LIBS([timer_create], [rt],,
+                [AC_MSG_WARN([Could not find required function timer_create])
+                found=no])
+    AC_SEARCH_LIBS([timer_settime], [rt],,
+            [AC_MSG_WARN([Could not find required function timer_settime])
+            found=no])
+    if test "$found" = "no"; then
+        AC_MSG_WARN([The fileIngest ingester will not be built])
+    else
+        libs=$LIBS
+    fi
 ])
+AM_CONDITIONAL([WANT_INGESTER], [test "$found" = "yes"])
 
 # Ensure references to the XML2 package, which is used by the LDM registry
 # module.
@@ -728,7 +689,7 @@ AC_COMPILE_IFELSE(
     ]
 )
 
-AC_PROG_LIBTOOL
+LT_INIT
 
 AC_CONFIG_FILES([
     fauxPq/Makefile
@@ -758,11 +719,7 @@ AC_CONFIG_FILES([
     ldm.spec
     lib/Makefile
     Makefile
-    mcast_lib/Makefile
-    mcast_lib/ldm7/Makefile
-    mcast_lib/OESS-Client/Makefile
     misc/Makefile
-    mldm_sender/Makefile
     log/Makefile
     log/ulog/Makefile
     noaaport/Makefile
@@ -803,10 +760,14 @@ AC_CONFIG_FILES([
     uldbutil/Makefile
     ulogger/Makefile
 ])
+#   mcast_lib/Makefile
+#   mcast_lib/ldm7/Makefile
+#   mcast_lib/OESS-Client/Makefile
+#   mldm_sender/Makefile
 
 dnl The subsystems are unconditionally configured to enable, for example,
 dnl "make dist" to work.
-AC_CONFIG_SUBDIRS([mcast_lib/FMTP-LDM7/UnidataFMTP])
+#AC_CONFIG_SUBDIRS([mcast_lib/FMTP-LDM7/UnidataFMTP])
 
 export CC
 

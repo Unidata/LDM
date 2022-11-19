@@ -42,7 +42,7 @@ int lockProcessInMemory(void);
 
 /*********** For Retransmission ****************/
 #ifdef RETRANS_SUPPORT
-#include "retrans.h" 
+#include "retrans.h"
 #endif
 /*********** For Retransmission ****************/
 
@@ -63,7 +63,7 @@ static const int SCHED_POLICY = SCHED_FIFO;
 static Fifo*     fifo;
 static pthread_t reporterThread = {0};
 int              inflateFrame;
-int			     fillScanlines;
+int              fillScanlines;
 
 /**
  * Decodes the command-line.

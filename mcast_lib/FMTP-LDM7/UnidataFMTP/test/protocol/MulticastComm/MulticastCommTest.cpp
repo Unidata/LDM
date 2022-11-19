@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     char recvDataBuf[256];
 
     struct sockaddr_in demo_sain;
-    bzero(&demo_sain, sizeof(demo_sain));
+    memset(&demo_sain, 0, sizeof(demo_sain));
     const char if_name[] = "eth0";
     demo_sain.sin_family = AF_INET;
     demo_sain.sin_addr.s_addr = inet_addr("224.0.0.1");

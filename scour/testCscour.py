@@ -467,6 +467,7 @@ class SymlinkDeletion:
 
 def main():
 
+        print(f"\nParsing arguments")
         cliParser = argparse.ArgumentParser(
             prog='testCscour.py',
             description='''This file is the test file for scour(1) .''',
@@ -475,11 +476,13 @@ def main():
 
             '''
             )
+        print(f"\nAdding argument")
         cliParser.add_argument('-x', action='store_true', help='debug')
         args    = cliParser.parse_args()
         debug   = args.x
         debug and system('clear')
         
+        print(f"\nDeleting symlink")
         sl          = SymlinkDeletion(debug)
         sl_status   = sl.runScenario("-d", debug)
 

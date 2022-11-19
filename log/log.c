@@ -144,6 +144,20 @@ static void assertLocked(void)
     assert(status);
 }
 
+static bool isDevNull(const int fd)
+{
+    struct stat fdStat;
+    if (fstat(fd, &fdStat) == -1)
+        return false;
+
+    struct stat devNullStat;
+    if (stat("/dev/null", &devNullStat) == -1)
+        return false;
+
+    return fdStat.st_dev == devNullStat.st_dev &&
+            fdStat.st_ino == devNullStat.st_ino;
+}
+
 /**
  * Initializes a location structure from another location structure.
  *
@@ -954,7 +968,7 @@ int log_init(const char* const id)
 		}
 		else {
 			// `avoid_stderr` must be set before `get_default_destination()`
-			avoid_stderr = log_amDaemon();
+			avoid_stderr = isDevNull(STDERR_FILENO);
 			status = logi_set_destination(get_default_destination());
 
 			if (status) {

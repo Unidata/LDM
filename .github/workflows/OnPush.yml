@@ -1,0 +1,59 @@
+name: On Push
+
+on:
+  push:
+    branches: [ "devel", "master", "main" ]
+#    branches: [ "*" ]
+
+jobs:
+  distcheck:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - run: mkdir m4
+
+      - name: Provision Ubuntu
+        if: contains(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get install doxygen
+          autoreconf -fi
+
+      - name: Provision MacOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install autoconf@2.69
+          brew install automake
+          brew install doxygen
+          /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
+
+      - name: Initialize CodeQL
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/init@v2
+        with:
+          languages: "cpp"
+
+      - name: Build
+        run: |
+          ./configure --with-noaaport || { cat configure; exit 1; }
+          make all
+          make distcheck
+
+      - name: Perform CodeQL Analysis
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "cpp"

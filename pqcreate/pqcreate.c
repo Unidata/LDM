@@ -30,13 +30,14 @@ usage(const char *av0)
 Usage: %s [options] <initialsz>[k|m|g] <pqfname>\n\
        %s [options] -s <initialsz>[k|m|g] [-q <pqfname>]\n\
 Options:\n\
-        -v\n\
-        -c\n\
-        -f\n\
+        -v           Verbose logging\n\
+        -c           Clobber existing product-queue if it exists\n\
+        -f           Fast creation. Won't fill-in file blocks.\n\
         -l dest      Log to `dest`. One of: \"\" (system logging daemon),\n\
                      \"-\" (standard error), or file `dest`. Default is\n\
                      \"%s\"\n\
-        -S nproducts\n\
+        -S nproducts Maximum number of product to hold\n\
+        -s byteSize  Maximum number of bytes to hold\n\
        (default pqfname is \"%s\")\n\
 "
 
@@ -66,12 +67,11 @@ int main(int ac, char *av[])
         }
 
         int ch;
-        char *qopt = NULL;
+        bool qOptUsed = false;
         char *sopt = NULL;
         char *Sopt = NULL;
         extern char     *optarg;
         extern int       optind;
-        const char* pqfname = getQueuePath();
 
         while ((ch = getopt(ac, av, "xvcfq:s:S:l:")) != EOF)
                 switch (ch) {
@@ -92,7 +92,8 @@ int main(int ac, char *av[])
                         Sopt = optarg;
                         break;
                 case 'q':
-                        qopt = optarg;
+                        setQueuePath(optarg);
+                        qOptUsed = true;
                         break;
                 case 'x':
                         (void)log_set_level(LOG_LEVEL_DEBUG);
@@ -117,15 +118,12 @@ int main(int ac, char *av[])
         }
         if(ac - optind > 0)
         {
-                if(qopt)        
+                if(qOptUsed)
                         usage(av[0]);
-                qopt =  av[ac - 1];
+                setQueuePath(av[ac-1]);
         }
 
-        if(qopt) {
-                pqfname = qopt ;
-                setQueuePath(qopt);
-        }
+        const char* const pqfname = getQueuePath();
 
         if (sopt) {
             char*       cp;

@@ -32,8 +32,8 @@ Then, do the following:
     cd @PACKAGE@-@VERSION@/src
     export PATH=... # if necessary
     ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [--with-gribinsert] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
-    Password: ...
-    make install &gt;make.log 2&gt;&1
+    make install &gt;install.log 2&gt;&1
+    sudo make root-actions
     make clean # optional
 </pre>
 
@@ -78,11 +78,8 @@ Obtain the
 
 <p>The 
 <a href="glindex.html#LDM">LDM</a> 
-source-distribution can be obtained via the command
-<blockquote><pre>
-wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
-</pre></blockquote>
-or by clicking on the appropriate link in the 
+source-distribution can be obtained
+by clicking on the appropriate link in the 
 <a href="https://downloads.unidata.ucar.edu/ldm/">LDM download page</a>.
 Download the file into the 
 <a href="glindex.html#LDM user">LDM user</a>'s home directory.
@@ -177,13 +174,6 @@ installation process for your particular system.  You may use the following
 options and arguments, when and if appropriate:
 <blockquote>
 <dl>
-    <dt><code>--disable-root-actions</code>
-    <dd>Neither the <tt>configure</tt> script nor the command <tt>make
-    install</tt> will not ask you for the superuser's (i.e., root's) password or
-    the LDM user's password; consequently, the installation procedure will be
-    incomplete until the superuser executes the command <tt>make
-    root-actions</tt>.
-
     <dt><code>--with-ulog</code>
     <dd>Use the <code>ulog</code> logging module that was standard prior to LDM
         version 6.12.15. When appropriate, the <code>ulog</code> module writes
@@ -315,19 +305,6 @@ For example:
 Where "<code>...</code>" represents installation-specific arguments and should
 not be entered literally.
 
-<p>Because certain aspects of the LDM require root privileges
-(<i>e.g.</i>, listening on port 388, using the system logging daemon), the
-configure script will ascertain if you can access those privileges.  <b>The
-script will ask you for your password and, possibly, the superuser's 
-(<i>i.e.</i> root's) password.</b>  The script doesn't store or transmit this
-information, it simply uses the passwords to ascertain if you have access to
-the necessary privileges.
-
-<p>If you don't have access to root privileges (or don't trust the configure
-script) then simply enter nonsense when asked for the passwords.  The
-superuser will subsequently have to execute an additional step in order
-to complete the installation process.
-
 <p>Inspect the file <code>configure.log</code> to verify the configuration
 process.  If an error occurred, then the reason for the error can often be
 found in the file <code>config.log</code> (note the slightly different
@@ -339,7 +316,7 @@ and <code>config.log</code>.</p>
 <p>Use a <code>make(1)</code> utility
 appropriate for your system to build and install the package,
 redirecting <em>both</em> standard output
-and standard error to the file <code>make.log</code>.
+and standard error to the file <code>install.log</code>.
 The relevant command depends on your user shell.  For example:
 <blockquote>
 <table align="center" border="2" cellpadding="6" cellspacing="0">
@@ -349,17 +326,17 @@ The relevant command depends on your user shell.  For example:
     </tr>
 	<td>Standard UNIX<sup>�</sup> (e.g. <code>sh, ksh, bash</code>)</td>
 	<td nowrap><code><a href="glindex.html#make">make</a> install
-	    &gt;make.log 2>&1</code></td>
+	    &gt;install.log 2>&1</code></td>
     </tr>
     <tr>
 	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
 	<td nowrap><code><a href="glindex.html#make">make</a> install
-	    &gt;&! make.log</code></td>
+	    &gt;&! install.log</code></td>
     </tr>
 </table>
 </blockquote>
 
-<p>Inspect the file <code>make.log</code> to verify the build and installation
+<p>Inspect the file <code>install.log</code> to verify the build and installation
 process.  If something went wrong that you think might be fixed by <a
 href="#PATH">setting the PATH environment variable</a> or by <a
 href="#configure">invoking the <tt>configure</tt> script</a> differently (such
@@ -371,7 +348,7 @@ compiler) then return to the <a href="#clean-up">clean-up step</a> above.
 because of a problem with this step, be sure to
 enclose the files <code>configure.log</code>, 
 <code>config.log</code>, and
-<code>make.log</code>.</p>
+<code>install.log</code>.</p>
 
 <li><a name="pqcheck"></a>
 <p>(Optional) If you decided that the just-built
@@ -400,13 +377,17 @@ the new LDM.
 
 <li>
 <p>
-If the configure script was unable to access superuser privileges, then
-the superuser must execute <code>make root-actions</code> to finish
+The superuser must now execute the command <code>make root-actions</code> to finish
 the installation.  For example:
+<blockquote><pre>
+sudo make root-actions
+</blockquote></pre>
+or
 <blockquote><pre>
 su root -c 'make root-actions'
 </blockquote></pre>
-Note that this example requires the superuser's password.
+Note that the last example requires the superuser's password. If you can't execute one of these
+commands, then contact your systems administrator to have them perform it.
 </p>
 
 <p>Among other things, this step is necessary for the 
@@ -414,7 +395,7 @@ Note that this example requires the superuser's password.
 a restricted port) 
 and for the LDM's <code>hupsyslog(1)</code> utility
 to notify the system logging daemon when a new log-file has been
-created.
+created, if appropriate.
 
 <li>
 <p>(Optional) Use the <code>make(1)</code> utility to clean-up after yourself.

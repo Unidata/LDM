@@ -24,6 +24,23 @@ CPIO_TABLE cpio_tbl = {
 "224.0.1.10",0x090,9
 };
 
+ulong              total_prods_retrans_rcvd;     /* prods retrans rcvd by proc */
+ulong              total_prods_retrans_rcvd_lost; /* prods retrans rcvd lost */
+ulong              total_prods_retrans_rcvd_notlost; /* prods rcvd not lost */
+ulong              total_prods_retrans_rqstd;    /* prods retrans requested */
+int                retrans_xmit_enable;
+char               transfer_type[10];
+char               sbn_channel_name[13];
+int                sbn_type;
+char               mcastAddr[16];
+long               global_cpio_addr;
+PROD_RETRANS_TABLE *p_prod_retrans_table;
+char               log_buff[MAX_LOG_DATA];
+BUFF_HDR           *buff_hdr;
+
+static int         global_retransmitpipe_fd;
+static char        *global_time_zone;
+
 /* get_cpio_addr -  Routine to get cpio address */
 int get_cpio_addr(char *addr){
 	int i_row;

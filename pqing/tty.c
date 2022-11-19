@@ -30,17 +30,24 @@
 /*
  * We want Berkeley style exclusive mode badly enough to do this.
  */
-#ifndef TIOCEXCL
-#	ifdef sun /* as of SunOS 4.1 */
+//#ifndef TIOCEXCL
+#   ifdef sun /* as of SunOS 4.1 */
 #	include <sys/ttold.h> /* sys/ioctl.h has clashes with termios.h */
-#	endif /* sun */
-#	ifdef _AIX /* as of AIX 3.0 */
+#   endif /* sun */
+#   ifdef _AIX /* as of AIX 3.0 */
 #	include <sys/ioctl.h>
-#	endif /*_AIX */
-#	ifdef ultrix /* as of ULTRIX V4.0 */
+#   endif /*_AIX */
+#   ifdef ultrix /* as of ULTRIX V4.0 */
 #	include <sys/ioctl.h>
-#	endif /* ultrix */
-#endif /* !TIOCEXCL */
+#   endif /* ultrix */
+#   if defined(__APPLE__) || defined(macintosh) || defined(Macintosh) || defined(__bsdi__)
+#       include <sys/ioctl.h>
+        extern int ioctl (int __fd, unsigned long int __request, ...);
+#   endif
+#   ifdef __linux__
+#       include <sys/ioctl.h>
+#   endif
+//#endif /* !TIOCEXCL */
 
 enum rtty_csize_t {
 	RTTY_CS5 = CS5,

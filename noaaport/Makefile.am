@@ -10,8 +10,6 @@
 
 LDMHOME			= @LDMHOME@
 LDMSRC                  = $(top_srcdir)
-SUDO                    = @SUDO@
-SU                      = @SU@
 docdir                  = @DOCDIR_UTILITIES@/noaaport
 DOXYGEN                 = @DOXYGEN@
 
@@ -219,7 +217,7 @@ check-noaaportIngester:         noaaportIngester.log \
 	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
 
 noaaportIngester-nssl.out:      noaaportIngester
-	-rm /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
+	rm -f /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
 	    g2vcrdnssl1.tbl g2vcrdwmo255.tbl
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
 	ln -s $(top_srcdir)/gempak/tables/wmocenter.tbl .
@@ -235,7 +233,8 @@ noaaportIngester-nssl.log:      noaaportIngester-nssl.out
 	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
-	diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+	test `uname -s` = Darwin || \
+                diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
@@ -278,7 +277,7 @@ nbs_test_LDADD			= $(LDADD) @LIBS_CUNIT@
 
 check-nbs_test:	nbs_test
 	./nbs_test $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini
-	../pqcat/pqcat -l- -q nbs_test.pq >output.gini 2>/dev/null
+	../pqcat/pqcat -l- -q nbs_test.pq >output.gini
 	if cmp $(srcdir)/SUPER-NATIONAL_8km_IR_20160422_1915.gini output.gini; then \
             rm output.gini nbs_test.pq; \
 	fi
@@ -290,16 +289,8 @@ valgrind-nbs_test:	nbs_test
 #	$(LIBTOOL) --mode=execute valgrind --leak-check=yes frame_queue_test
 endif
 
-if HAVE_SUDO
 sudo:
-	$(SUDO) $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
-else
-sudo:
-	@printf "Enter root's password (or don't): " >/dev/tty
-	@su root -c 'PATH='$$PATH' $(MAKE) $(AM_MAKEFLAGS) $(TARGET)' \
-	    </dev/tty 2>/dev/tty
-	@echo >/dev/tty
-endif
+	sudo $(MAKE) $(AM_MAKEFLAGS) $(TARGET) 2>/dev/tty
 
 valgrind-noaaportIngester:      .libs/lt-noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
