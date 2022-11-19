@@ -472,9 +472,12 @@ static void usage(
     const char* config_path = getLdmdConfigPath();
     const char* pq_path = getDefaultQueuePath();
     (void) fprintf(stderr,
-            "Usage: %s [options] [conf_filename]\n"
+            "Usage:\n"
+            "    %s -h\n"
+            "    %s [options] [conf_filename]\n"
 "\t(default conf_filename is \"%s\")\n"
 "Options:\n"
+"\t-h              Print a usage message and then exit\n"
 "\t-I IP_addr      Use network interface associated with given IP \n"
 "\t                address (default is all interfaces)\n"
 "\t-P port         The port number for LDM connections (default is \n"
@@ -937,8 +940,11 @@ int main(
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:")) != EOF) {
+        while ((ch = getopt(ac, av, "hI:vxl:nq:o:P:M:m:t:")) != EOF) {
             switch (ch) {
+            case 'h': {
+                usage(av[0]);
+            }
             case 'I': {
                 in_addr_t ipAddr = inet_addr(optarg);
 
