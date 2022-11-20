@@ -1,297 +1,236 @@
+<!DOCTYPE HTML>
 <html>
-
-<HEAD>
-<meta name="UIINDEX" content="4">
-<title>LDM-6 Feed Types</title>
-<META NAME="BOOKMARK" CONTENT="Feed Types">
-<META NAME="AUTHOR" CONTENT="steve">
-<meta name="KEYWORDS" content="LDM, feed types, feed sets, data, idd">
-<meta name="DESCRIPTION" content="The current assignments for LDM feed types and feed sets, used in LDM configuration files and in arguments to LDM programs.">
-</HEAD>
-
-<body>
-
-<h1 align="center">LDM-6 Feed Types</h1><br>
-
-<p align="justify"> The table below summarizes the current assignments for LDM feed
-types and feed sets, used in LDM configuration files and in arguments
-to LDM programs.  (A <em>feed set</em> is a union or difference of
-feed types.)  </p>
-
-
-<table border="1" cellpadding="6">
-  <tbody><tr><th><em>Primary Name</em></th>
-  <th><em>Alternate Names*</em></th>
-  <th><em>Description</em></th>
-       </tr><tr>
-	 <td><strong>PPS</strong></td>
-	 <td>FT0</td>
-	 
-	<td><a href="public_bulletins.html#public">Public 
-	  Products Service</a> (Old timey service. Use <tt>IDS|DDPLUS</tt>
-	  instead.)</td>
+  <head>
+	  <title>LDM-6 Feed Types</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Feed Types">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, feed types, feed sets, data, idd">
+    <meta name="DESCRIPTION" content="The current assignments for LDM feed types and feed sets, used in LDM 
+    configuration files and in arguments to LDM programs.">
+  </head>
+  <body>
+    <h1>LDM-6 Feed Types</h1>
+    <p>The table below summarizes the current assignments for LDM feed types and feed sets, used in LDM configuration
+			files and in arguments to LDM programs.  (A <i>feed set</i> is a union or difference of feed types.)  </p>
+    <table>
+      <tbody>
+			  <tr>
+					<th><i>Primary Name</i></th>
+          <th><i>Alternate Names*</i></th>
+          <th><i>Description</i></th>
+        </tr>
+				<tr>
+	        <td><b>PPS</b></td>
+	        <td>FT0</td>
+	      	<td><a href="public_bulletins.html#public">Public  Products Service</a> (Old timey service. Use IDS|DDPLUS
+						instead.)</td>
+        </tr>
+        <tr>
+	        <td><b>DDS</b> (Old timey service. Use IDS|DDPLUS instead.)</td>
+	        <td>FT1, DOMESTIC</td>
+	        <td><a href="public_bulletins.html">Domestic Data Service</a></td>
+        </tr>
+        <tr>
+	        <td><b>HDS</b></td>
+	        <td>FT2, HRS</td>
+	        <td><a href="hds.html">High resolution Data Service</a></td>
+        </tr>
+        <tr>
+	        <td><b>IDS</b> (Old timey service. Use IDS|DDPLUS instead.)</td>
+	        <td>FT3, INTNL</td>
+	        <td><a href="public_bulletins.html#international">International Data Service</a></td>
+        </tr>
+        <tr>
+	        <td><b>SPARE</b></td>
+	        <td>FT4</td>
+	        <td>Reserved for IDD use</td>
+        </tr>
+        <tr>
+	        <td><b>UNIWISC</b></td>
+	        <td>FT5, MCIDAS</td>
+	        <td><a href="https://www.unidata.ucar.edu/data/uniwisc.html">Satellite imagery and derived products created by
+		 			 Unidata in McIDAS AREA format</a></td>
+        </tr>
+        <tr>
+	        <td><b>PCWS</b></td>
+	        <td>FT6, ACARS</td>
+	       <td>ACARS data from commercial aircraft</td>
+        </tr>
+        <tr>
+	        <td><b>FSL2</b></td>
+	        <td>FT7, PROFILER</td>
+	        <td>Wind profiler data</td>
+        </tr>
+        <tr>
+	        <td><b>FSL3</b></td>
+	        <td>FT8</td>
+	        <td>Reserved for NOAA/GSL use</td>
+        </tr>
+        <tr>
+	        <td><b>FSL4</b></td>
+	        <td>FT9</td>
+	        <td>Reserved for NOAA/GSL use</td>
+        </tr>
+        <tr>
+	        <td><b>FSL5</b></td>
+	        <td>FT10</td>
+	        <td>Reserved for NOAA/GSL use</td>
        </tr>
-       <tr>
-	 <td><strong>DDS</strong> (Old timey service. Use <tt>IDS|DDPLUS</tt>
-	  instead.)</td>
-	 <td>FT1, DOMESTIC</td>
-	 
-	<td><a href="public_bulletins.html">Domestic Data Service</a> 
-	</td>
-       </tr>
-       <tr>
-	 <td><strong>HDS</strong></td>
-	 <td>FT2, HRS</td>
-	 
-	<td><a href="hds.html">High resolution Data Service</a></td>
-       </tr>
-       <tr>
-	 <td><strong>IDS</strong> (Old timey service. Use <tt>IDS|DDPLUS</tt>
-	  instead.)</td>
-	 <td>FT3, INTNL</td>
-	 
-	<td><a href="public_bulletins.html#international">International 
-	  Data Service</a></td>
-       </tr>
-       <tr>
-	 <td><strong>SPARE</strong></td>
-	 <td>FT4</td>
-	 <td>Reserved for IDD use</td>
-       </tr>
-       <tr>
-	 <td><strong>UNIWISC</strong></td>
-	 <td>FT5, MCIDAS</td>
-	 
-	<td><a href="https://www.unidata.ucar.edu/data/uniwisc.html">Satellite imagery and
-	    derived products created by Unidata in McIDAS AREA format</a></td>
-       </tr>
-       <tr>
-	 <td><strong>PCWS</strong></td>
-	 <td>FT6, ACARS</td>
-	 
-	<td>ACARS data from commercial aircraft</td>
-       </tr>
-       <tr>
-	 <td><strong>FSL2</strong></td>
-	 <td>FT7, PROFILER</td>
-	 
-	<td>Wind profiler data</td>
-       </tr>
-       <tr>
-	 <td><strong>FSL3</strong></td>
-	 <td>FT8</td>
-	 <td>Reserved for NOAA/GSL use</td>
-       </tr>
-       <tr>
-	 <td><strong>FSL4</strong></td>
-	 <td>FT9</td>
-	 <td>Reserved for NOAA/GSL use</td>
-       </tr>
-       <tr>
-	 <td><strong>FSL5</strong></td>
-	 <td>FT10</td>
-	 <td>Reserved for NOAA/GSL use</td>
-       </tr>
-       <tr>
-	 <td><strong>GPSSRC</strong></td>
-	 <td>FT11, NMC1, AFOS</td>
-	 <td>SuomiNet GPS data gathering</td>
-       </tr>
-       <tr>
-	 <td><strong>CONDUIT</strong></td>
-	 <td>FT12, NMC2, NCEPH</td>
-	 <td><a href="conduit.html">
+        <tr>
+	        <td><b>GPSSRC</b></td>
+	        <td>FT11, NMC1, AFOS</td>
+	        <td>SuomiNet GPS data gathering</td>
+        </tr>
+        <tr>
+	        <td><b>CONDUIT</b></td>
+	        <td>FT12, NMC2, NCEPH</td>
+	        <td><a href="conduit.html">
 	      NCEP high-resolution model output</a></td>
-       </tr>
-       <tr>
-	 <td><strong>FNEXRAD</strong></td>
-	 <td>FT13, NMC3</td>
-	 
-	<td><a href="https://www.unidata.ucar.edu/data/fnexrad.html">NEXRAD
-	  Level-III composites and MRMS data</a> 
-	</td>
-       </tr>
-       <tr>
-	 <td><strong>LIGHTNING</strong></td>
-	 <td>FT14,NLDN</td>
-	 
-	<td>Lightning data</td>
-       </tr>
-       <tr>
-	 <td><strong>WSI</strong></td>
-	 <td>FT15</td>
-	 <td>NEXRAD Level-III (NIDS) radar products
-	 (Private network: not in the IDD)</td>
-       </tr>
-       <tr>
-	 <td><strong>SATELLITE</strong></td>
-	 <td>FT16</td>
-	 <td><a href="https://www.unidata.ucar.edu/data/goesr.html">
-	   GOES East & West Satellite imagery in GRB format</a></td>
-       </tr>
-       <tr>
-	 <td><strong>FAA604</strong></td>
-	 <td>FT17, FAA, 604</td>
-	 <td>FAA604 products for NWS use (private network), 
-	     but available for IDD use</td>
-       </tr>
-       <tr>
-	 <td><strong>GPS</strong></td>
-	 <td>FT18</td>
-	 <td><a href="https://www.unidata.ucar.edu/data/suominet/index.html">
-	     SuomiNet GPS data</a></td>
-       </tr>
-       <tr>
-	 <td><strong>FNMOC</strong></td>
-	 <td>FT19, SEISMIC, NOGAPS</td>
-	 
-	<td> <a href="nogaps_coamps.html"> 
-	  NOGAPS and COAMP model output from Fleet Numerical</a> 
-  </td></tr>
+        </tr>
+        <tr>
+	        <td><b>FNEXRAD</b></td>
+	        <td>FT13, NMC3</td>
+	        <td><a href="https://www.unidata.ucar.edu/data/fnexrad.html">
+						NEXRAD Level-III composites and MRMS data</a></td>
+        </tr>
+        <tr>
+	        <td><b>LIGHTNING</b></td>
+	        <td>FT14,NLDN</td>
+	        <td>Lightning data</td>
+        </tr>
+        <tr>
+	        <td><b>WSI</b></td>
+	        <td>FT15</td>
+	        <td>NEXRAD Level-III (NIDS) radar products (Private network: not in the IDD)</td>
+        </tr>
+        <tr>
+	        <td><b>SATELLITE</b></td>
+	        <td>FT16</td>
+	        <td><a href="https://www.unidata.ucar.edu/data/goesr.html">
+						GOES East & West Satellite imagery in GRB format</a></td>
+        </tr>
+        <tr>
+	        <td><b>FAA604</b></td>
+	        <td>FT17, FAA, 604</td>
+	        <td>FAA604 products for NWS use (private network),  but available for IDD use</td>
+        </tr>
+        <tr>
+	        <td><b>GPS</b></td>
+	        <td>FT18</td>
+	        <td><a href="https://www.unidata.ucar.edu/data/suominet/">SuomiNet GPS data</a></td>
+        </tr>
+        <tr>
+	        <td><b>FNMOC</b></td>
+	        <td>FT19, SEISMIC, NOGAPS</td>
+	        <td> <a href="nogaps_coamps.html">NOGAPS and COAMP model output from Fleet Numerical</a></td>
+		    </tr>
+        <tr>
+	        <td><b>GEM</b></td>
+	        <td>FT20, CMC</td>
+	        <td><a href="gem.html">Canadian Meteorological Center GEM model output</a></td>
+        </tr>
+        <tr>
+	        <td><b>NIMAGE</b></td>
+	        <td>FT21, IMAGE</td>
+	        <td><a href="nimage.html">NOAAport satellite imagery and level 2 products</a></td>
+        </tr>
+        <tr>
+	        <td><b>NTEXT</b></td>
+	        <td>FT22, TEXT</td>
+	        <td><a href="ntext.html">NOAAport textual products</a> (for future use)</td>
+        </tr>
+        <tr>
+	        <td><b>NGRID</b></td>
+	        <td>FT23, GRID</td>
+	        <td><a href="ngrid.html">NOAAport high-resolution model output</a></td>
+        </tr>
+        <tr>
+	        <td><b>NPOINT</b></td>
+	        <td>FT24, POINT, NBUFR, BUFR</td>
+	        <td>NOAAport point products (for future use)</td>
+        </tr>
+        <tr>
+	        <td><b>NGRAPH</b></td>
+	        <td>FT25, GRAPH</td>
+	        <td><a href="ngraph.html">NOAAport Redbook Graphics</a> (for future use)</td>
+        </tr>
+        <tr>
+	        <td><b>NOTHER</b></td>
+	        <td>FT26, OTHER</td>
+	        <td>NOAAport miscellaneous products</td>
+        </tr>
+        <tr>
+	        <td><b>NEXRAD3</b></td>
+	        <td>FT27, NNEXRAD, NEXRAD</td>
+	       	<td><a href="https://www.unidata.ucar.edu/data/index.html#levelIII"> NEXRAD Level-III products</a></td>
+        </tr>
+        <tr>
+	        <td><b>NEXRAD2</b></td>
+	        <td>FT28, CRAFT, NEXRD2</td>
+	        <td><a href="https://www.roc.noaa.gov/WSR88D/Level_II/Level2Info.aspx">NEXRAD Level-II radar data</a></td>
+        </tr>
+        <tr>
+	        <td><b>NXRDSRC</b></td>
+	        <td>FT29</td>
+	        <td> Used by NCEI for NEXRAD Level-II data archiving</td>
+        </tr>
+        <tr>
+	        <td><b>EXP</b></td>
+	        <td>FT30</td>
+	        <td>For experiments, testing, etc.</td>
+        </tr>
+        <tr>
+	        <td><i>ANY</i></td>
+	        <td>FT0 | FT1 | FT2 | ... | FT31</td>
+	        <td>Predefined feed set name for <i>any</i> feed type</td>
+        </tr>
+        <tr>
+	        <td><i>NONE</i></td>
+	        <td> - </td>
+	        <td>Predefined feed set name for <i>no</i> feed types (will not match anything)</td>
+        </tr>
+        <tr>
+	        <td><i>DDPLUS</i></td>
+	        <td>FT0 | FT1</td>
+	        <td>Predefined feed set name for PPS or DDS</td>
+        </tr>
+        <tr>
+	        <td><i>WMO</i></td>
+	        <td>FT0 | FT1 | FT2 | FT3</td>
+	        <td>Predefined feed set name for PPS, DDS, HDS, or IDS</td>
+        </tr>
+        <tr>
+	        <td><i>UNIDATA</i></td>
+	        <td>FT0 | FT1 | FT2 | FT3 | FT5</td>
+	        <td>Predefined feed set name for PPS, DDS, HDS, IDS, or UNIWISC</td>
+        </tr>
+        <tr>
+	        <td><i>FSL</i></td>
+	        <td>FT6 | FT7 | FT8 | FT9 | FT10</td>
+	        <td>Predefined feed set name for PCWS, FSL2, FSL3, FSL4, or FSL5</td>
+        </tr>
+        <tr>
+	        <td><i>NMC</i></td>
+	        <td>FT11 | FT12 | FT13</td>
+	        <td>Predefined feed set name for AFOS, NMC2, or NMC3</td>
+        </tr>
+        <tr>
+	        <td><i>NPORT</i></td>
+	        <td>FT22 | FT23 | FT24 | FT25 | FT26</td>
+	        <td>Predefined feed set name for NTEXT, NGRID, NPOINT, NGRAPH, or NOTHER</td>
+        </tr>
+        <tr>
+	        <td><i>IDS|DDPLUS</i></td>
+	        <td>FT0 | FT1 | FT3</td>
+	        <td>Feed set <i>expression</i> for everything in the IDS and DDPLUS feeds</td>
+        </tr>
+      </tbody>
+		</table>
+    <p><b>NOTE</b>: The alternate names for each feed type are simply aliases and can  be used interchangably.  However,
+			aliases are introduced in LDM versions over time and therefore not all aliases are known by all LDM versions.</p>
 
-       <tr>
-	 <td><strong>GEM</strong></td>
-	 <td>FT20, CMC</td>
-	 
-	<td><a href="gem.html">Canadian 
-	  Meteorological Center GEM model output</a></td>
-       </tr>
-
-       <tr>
-	 <td><strong>NIMAGE</strong></td>
-	 <td>FT21, IMAGE</td>
-	 <td><a href="nimage.html">NOAAport satellite imagery and level 2
-	 products</a></td>
-       </tr>
-
-       <tr>
-	 <td><strong>NTEXT</strong></td>
-	 <td>FT22, TEXT</td>
-	 <td><a href="ntext.html">NOAAport textual products</a> (for future use)</td>
-       </tr>
-
-       <tr>
-	 <td><strong>NGRID</strong></td>
-	 <td>FT23, GRID</td>
-	 <td><a href="ngrid.html">NOAAport high-resolution model output</a>
-	 </td>
-       </tr>
-
-       <tr>
-	 <td><strong>NPOINT</strong></td>
-	 <td>FT24, POINT, NBUFR, BUFR</td>
-	 <td>NOAAport point products (for future use)</td>
-       </tr>
-
-       <tr>
-	 <td><strong>NGRAPH</strong></td>
-	 <td>FT25, GRAPH</td>
-	 <td><a href="ngraph.html">NOAAport Redbook Graphics</a> (for future use)</td>
-       </tr>
-
-       <tr>
-	 <td><strong>NOTHER</strong></td>
-	 <td>FT26, OTHER</td>
-	 <td>NOAAport miscellaneous products</td>
-       </tr>
-
-       <tr>
-	 <td><strong>NEXRAD3</strong></td>
-	 <td>FT27, NNEXRAD, NEXRAD</td>
-	 
-	<td><a href="https://www.unidata.ucar.edu/data/index.html#levelIII">
-	    NEXRAD Level-III products</a></td>
-       </tr>
-
-       <tr>
-	 <td><strong>NEXRAD2</strong></td>
-	 <td>FT28, CRAFT, NEXRD2</td>
-	 <td><a href="http://www.roc.noaa.gov/NWS_Level_2/">
-	      NEXRAD Level-II radar data</a></td>
-       </tr>
-
-       <tr>
-	 <td><strong>NXRDSRC</strong></td>
-	 <td>FT29</td>
-	 <td> Used by NCEI for NEXRAD Level-II data archiving
-	 </td>
-       </tr>
-
-       <tr>
-	 <td><strong>EXP</strong></td>
-	 <td>FT30</td>
-	 <td>For experiments, testing, etc.</td>
-       </tr>
-
-       <tr>
-	 <td><em>ANY</em></td>
-	 <td>FT0 | FT1 | FT2 | ... | FT31</td>
-	 <td>Predefined feed set name for <em>any</em> feed type</td>
-       </tr>
-
-       <tr>
-	 <td><em>NONE</em></td>
-	 <td> - </td>
-	 <td>Predefined feed set name for <em>no</em> feed types
-	      (will not match anything)</td>
-       </tr>
-
-       <tr>
-	 <td><em>DDPLUS</em></td>
-	 <td>FT0 | FT1</td>
-	 <td>Predefined feed set name for PPS or DDS</td>
-       </tr>
-
-       <tr>
-	 <td><em>WMO</em></td>
-	 <td>FT0 | FT1 | FT2 | FT3</td>
-	 <td>Predefined feed set name for PPS, DDS, HDS, or IDS</td>
-       </tr>
-
-       <tr>
-	 <td><em>UNIDATA</em></td>
-	 <td>FT0 | FT1 | FT2 | FT3 | FT5</td>
-	 <td>Predefined feed set name for PPS, DDS, HDS, IDS, or UNIWISC</td>
-       </tr>
-
-       <tr>
-	 <td><em>FSL</em></td>
-	 <td>FT6 | FT7 | FT8 | FT9 | FT10</td>
-	 <td>Predefined feed set name for PCWS, FSL2, FSL3, FSL4, or FSL5</td>
-       </tr>
-
-       <tr>
-	 <td><em>NMC</em></td>
-	 <td>FT11 | FT12 | FT13</td>
-	 <td>Predefined feed set name for AFOS, NMC2, or NMC3</td>
-       </tr>
-
-       <tr>
-	 <td><em>NPORT</em></td>
-	 <td>FT22 | FT23 | FT24 | FT25 | FT26</td>
-	 <td>Predefined feed set name for NTEXT, NGRID, NPOINT, NGRAPH, or NOTHER</td>
-       </tr>
-
-       <tr>
-	 <td><em>IDS|DDPLUS</em></td>
-	 <td>FT0 | FT1 | FT3</td>
-	 <td>Feed set <em>expression</em> for everything in the IDS and DDPLUS
-	 feeds</td>
-       </tr>
-
-       
-
-</tbody></table>
-<p>
-
-<strong>NOTE</strong>: The alternate names for each feed type are simply aliases and
-can  be used interchangably.  However, aliases are introduced in
-LDM versions over time and therefore not all aliases are known
-by all LDM versions.
-
-<p>
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

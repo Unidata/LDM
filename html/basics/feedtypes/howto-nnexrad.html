@@ -1,369 +1,235 @@
-<HTML>
-
-<HEAD>
-<TITLE>NEXRAD/LDM</TITLE>
-<META NAME="BOOKMARK" CONTENT="NEXRAD/LDM">
-<META NAME="AUTHOR" CONTENT="steve">
-<meta name="KEYWORDS" content="NEXRAD, LDM">
-<meta name="DESCRIPTION" content="How to get NOAAPORT NEXRAD data via
-the LDM.">
-</HEAD>
-
-<BODY>
-
-<h2 align="center">How to Get NOAAPORT NEXRAD Data via the LDM</h2>
-<br>
-
-<p align="justify"> Detailed information about the NOAAPORT NEXRAD feed is available 
-  from the Unidata <a href="https://www.unidata.ucar.edu/data/radar.html"><b>NOAAPORT NEXRAD Feed page</b></a>, including
-  alternatives to using the LDM to get the data. Most sites will only want to 
-  get a subset of the NOAAPORT NEXRAD data via the LDM, because of the large number 
-  of products and volume of the data. This document describes how to get selected 
-  subsets of the new data stream.</p>
-
-<p align="justify">First, determine who your upstream site is for the Family Of
-Services (FOS) data. There should already be a line in your etc/ldmd.conf
-configuration file requesting data from your upstream FOS site,
-which we will call <em>your.floater.feed</em> for the rest of this
-document. This is the host from which you should get the NEXRAD
-Floater Feed.</p>
-
-<p align="justify">Next, determine who your upstream site is for the NEXRAD feed, 
-  by looking at the <a href="https://www.unidata.ucar.edu/projects/idd/nexradFeed.html"><b>NEXRAD
-  Feed Scheme</b></a>, locating your host, and determining the first tier site 
-  <em>in italics</em> above your site name. We'll call this <em>your.nexrad.feed</em> 
-  in the remainder of this document. This is the assignment for the host from 
-  which you will get NEXRAD data other than the NEXRAD Floater Feed, if desired. 
-  <em>your.floater.feed</em> and <em>your.nexrad.feed</em> may or may not be identical.</p>
-
-<p align="justify">The NEXRAD floater feed is named "FNEXRAD" ("NMC3" for LDM version
-5.1.2 and earlier). It is not necessary to upgrade to a later version
-of the LDM just to be able to use the new FNEXRAD feed type name. In
-the rest of this document, we will use the "NMC3" feedtype, since a number of
-sites are still using LDM version 5.1.2 or earlier. "NMC3" will also work
-for later versions, but if you have LDM 5.1.3 or later, we suggest that you
-use "FNEXRAD" instead.</p>
-
-<p align="justify">Before trying to get the NEXRAD floater data or a subset of the
-full NEXRAD data feed, you can check that the data is available to
-you from upstream sites by using the "notifyme" command. To avoid
-having to wait for new products, you can quickly check data for the
-previous hour with (<code>-o 3600</code>). For example, for the
-NEXRAD floater, use:</p>
-
-<pre>notifyme -v -l- -h <em>your.floater.feed</em> -f NMC3 -o 3600
-</pre>
-
-<p align="justify">
-where <em>your.floater.feed</em> refers to the upstream source for
-Family Of Services (FOS) data such as IDS, DDPLUS, and HDS.
-Similarly, to check availability for the full NEXRAD feed, use:</p>
-
-<pre>notifyme -v -l- -h <em>your.nexrad.feed</em> -f NEXRAD -o 3600
-</pre>
-
-<br>
- 
-
-<h2>To specify what to do with the NEXRAD data</h2>
-
-<p align="justify">Before you start getting the data, decide what you want to do
-with it by adding lines to your pqact.conf configuration file for
-decoding or filing the data.</p>
-
-<p>
-</p><h3>NEXRAD Feed</h3>
-
-<p align="justify">
-You will need to know something about the parts of the product ID for
-NOAAPORT NEXRAD products if you want to be able to specify actions
-that depend on information in the product ID.  In general, the product
-ID includes a WMO header followed by a six-character AFOS PILS code
-following "<code>/p</code>":
-</p><pre>  <strong>SDUSij cccc ddhhmm /pyyyzzz</strong>
-</pre>
-<table width="433" border="1">
-<tbody>
-<tr>
-  <th>i</th>
-  <td>digit identifying the type of data.  The first digit is either
-      2, 3, 5, or 7.  See
-      <a href="http://www.nws.noaa.gov/datamgmt/x_ref/xr05_X_ref_by_TT.html">
-      http://www.nws.noaa.gov/datamgmt/x_ref/xr05_X_ref_by_TT.html</a>.
-  </td>
-
-<tr>
-  <th>j</th>
-  <td>digit identifying US region, see 
-      <a
-      href="http://www.nws.noaa.gov/oso/prodhdrs.html">
-      <b>region list</b></a>
-  </td>
-</tr>
-
-<tr>
-  <th>cccc</th>
-    <td><a href="nexrad-fonx.html"><b>NWS forecast
-	  office</b></a></td>
-</tr>
-
-<tr>
-  <th>ddhhmm</th>
-  <td>day of month, hour, minute</td>
-</tr>
-
-<tr>
-  <th>yyy</th>
-    <td>product code, see <a href="https://www.unidata.ucar.edu/data/radar.html"><b>NOAAPORT NEXRAD Feed page</b></a> </td>
-</tr>
-
-<tr>
-  <th>zzz</th>
-    <td>radar site code, see <a href="https://www.unidata.ucar.edu/data/floaters/nexlist.html">
-	  <b>site list</b></a> </td>
-</tr>
-
-
-</tbody></table>
-
-
-<ol>
-  <li> 
-	<p align="justify"> Add appropriate NEXRAD entries to your pqact.conf file. 
-	  Remember to use tabs characters to separate the feedtype, pattern, and action 
-	  fields. For example, if you wanted to file recent compressed floater data 
-	  in a "data/nexrad/" directory using the time, station, and product identifier 
-	  in the file name, you might add an entry something like this to pqact.conf: 
-	</p><pre>       NMC3 SDUS[2357]. .... (......) /p(...)(...)
-                FILE -close -overwrite data/nexrad/\1\3\2.raw
-      
-</pre>
-  </li>
-  <li>Check your pqact.conf configuration file to make sure there are no syntax 
-	errors: 
-	<pre>       ldmadmin pqactcheck
-      
-</pre>
-  </li>
-  <li>Send pqact a signal to reread pqact.conf so it can process new NEXRAD data: 
-	<pre>       ldmadmin pqactHUP
-      </pre><br>
-  </li>
-</ol>
-
-
-<h3>FNEXRAD Feed</h3>
-
-<p align="justify">To get <b>all</b> of the Unidata NEXRAD floater feed containing data for
-several NEXRAD sites where "interesting" weather is occurring and
-composite imagery created by the UPC from select NEXRAD Level III
-products from all reporting stations:</p>
-
-<ol>
-<li>Edit your ldmd.conf configuration file to contain the line 
-
-<pre>       request NMC3 ".*" <em>your.floater.feed</em>
-      
-</pre>
-</li>
-
-<p align="justify"><b>Caution:  <em>The NEXRAD composite imagery can consume quite a bit
-of disk space after decoding.  For example, the 1 km National Base
-Reflectivity Composite gets uncompressed to a 14 MB file.  Since his
-product is transmitted every 6-10 minutes, you can consume a lot of
-disk space in a short amount of time!</em></b>
-
-</p><p>
-</p><li>Stop your ldm: 
-
-<pre>       ldmadmin stop
-      
-</pre>
-</li>
-
-<li>Make sure you wait until all the ldm processes have died before
-restarting: 
-
-<pre>       ldmadmin start
-      
-</pre>
-</li>
-</ol>
-
-
-<br>
-
- 
-
-<p align="justify">To get a subset of the NEXRAD Level III products for the floater
-sites, for example only the base
-reflectivity and velocity products for the lowest tilt (N0R and N0V
-products), replace the pattern for all products ".*" in the above
-with a pattern for the specific products you want:</p>
-
-<ol>
-<li>Edit your ldmd.conf configuration file to contain the line 
-
-<pre>       request NMC3 "/p(N0R|N0V)" <em>your.floater.feed</em>
-      
-</pre>
-	3-character AFOS PIL codes for NEXRAD products are available from the <a href="https://www.unidata.ucar.edu/data/radar.html"><b>NOAAPORT NEXRAD Feed page</b></a>.</li>
-
-<p>
-</p><li>Stop your ldm with 
-
-<pre>       ldmadmin stop
-      
-</pre>
-</li>
-
-<li>Wait until all the ldm processes have died before restarting,
-with 
-
-<pre>       ldmadmin start
-      
-</pre>
-</li>
-</ol>
-
-
-<br>
-
-<p align="justify">To get only the composite images in PNG-compressed format, replace
-the pattern for all products ".*" in the above with a pattern for
-the specific products:
-
-</p><ol>
-<li>Edit your ldmd.conf configuration file to contain the line 
-
-<pre>       request NMC3 "^(pnga2area|rad)" <em>your.floater.feed</em>
-      
-</pre>
-
-</li><li>Stop your ldm with 
-
-<pre>       ldmadmin stop
-      
-</pre>
-</li>
-
-<li>Wait until all the ldm processes have died before restarting,
-with 
-
-<pre>       ldmadmin start
-      
-</pre>
-</li>
-</ol>
-
-
-<br>
-
-<p align="justify">To help you refine your ldmd.conf requests for FNEXRAD data, we provide
-the following examples of IDD headers for the PNG-compressed composite images
-(current as of May 17, 2002):
-
-</p><p>
-<table border="1">
-<tbody><tr>
-<td>Product Description</td>
-<td>Example IDD Header</td>
-</tr>
-<tr><td>1 km National Base Reflectivity (GINI format)</td>
-<td>�<tt>rad/NEXRCOMP/1km/n0r_20020517_2035</tt></td>
-</tr>
-
-<tr>
-<td>2 km National 1-hour Precipitation (GINI format)</td>
-<td>�<tt>rad/NEXRCOMP/2km/n1p_20020517_2038</tt></td>
-</tr>
-
-<tr>
-<td>4 km National Storm Total Precipitation (GINI format)</td>
-<td>�<tt>rad/NEXRCOMP/4km/ntp_20020517_2039</tt></td>
-</tr>
-
-<tr>
-<td>6 km National Base Reflectivity (AREA format)</td>
-<td>�<tt>pnga2area Q5 RL 300 RADAR BREF 6km 20020517 1949</tt></td>
-</tr>
-
-<tr>
-<td>10 km National Radar Coded Message (AREA format)</td>
-<td>�<tt>pnga2area Q5 RN 500 RADAR BREF 10km 20020517 1945</tt></td>
-</tr>
-</tbody></table>
-
-<br><br>
-
-</p><h2>To get the NEXRAD products for a few selected sites</h2>
-
-<p align="justify">To specify a few select sites for which NEXRAD data is always 
-  desired, first get the 3-character site codes for the sites from the <a href="https://www.unidata.ucar.edu/data/floaters/nexlist.html"><b>NEXRAD
-  Site List</b></a> or from a <a href="http://www.intellicast.com/Local/USNationalStd.asp?loc=usa&amp;seg=LocalWeather&amp;prodgrp=NEXRADimagery&amp;product=BaseReflectivity&amp;prodnav=none&amp;pid=none"> 
-  <b>NEXRAD Site Map</b></a>. For the examples, let's assume you choose to get 
-  data from sites designated "ABC" and "XYZ":</p>
-
-<ol>
-<li>Edit your ldmd.conf configuration file to contain the line 
-
-<pre>       request NNEXRAD "/p...(ABC|XYZ)" <em>your.nexrad.feed</em>
-      
-</pre>
-
-after any other request lines, using tabs to delimit the
-fields.</li>
-
-<li>Stop your ldm with 
-
-<pre>       ldmadmin stop
-      
-</pre>
-</li>
-
-<li>Make sure you wait until all the ldm processes have died before
-restarting, with 
-
-<pre>       ldmadmin start
-      
-</pre>
-</li>
-</ol>
-
-<p align="justify">Note that if you want to change the site selection, it is
-necessary to repeat all three of the above steps: there is no way
-to get the LDM to reread the ldmd.conf file without stopping
-and restarting it.</p>
-
- 
-
-<p align="justify">To get just a subset of products, say base reflectivity and base
-radial velocity for the lowest tilt (N0R and N0V products), replace
-the product pattern "..." in the above with a pattern for the
-specific products you want:</p>
-
-<pre>request NNEXRAD "/p(N0R|N0V)(ABC|XYZ)" <em>your.nexrad.feed</em>
-</pre>
-
-<p>which specifies 2 products from each of 2 sites.</p>
-
- 
-
-<p align="justify">To specify NEXRAD products from one of <a href="http://www.nws.noaa.gov/oso/prodhdrs.html"> 
-  <b>10 U.S. regions</b></a>, you can specify a pattern that matches NEXRAD products 
-  from only the desired region. For example, "SDUS[2357]4" designates products from 
-  the South Central U.S. (TX, AL, MS, LA, AR, TN, OK):</p>
-
-<pre>request NNEXRAD "^SDUS[2357]4" <em>your.nexrad.feed</em>
-</pre>
-
-<p align="justify">If you only wanted base reflectivity and base radial velocity
-for the lowest tilt (N0R and N0V products) for radars in this
-region, use:</p>
-
-<pre>request NNEXRAD "^SDUS[2357]4 .* /p(N0R|N0V)" <em>your.nexrad.feed</em>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body></html>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>NEXRAD/LDM</TITLE>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="NEXRAD/LDM">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="NEXRAD, LDM">
+    <meta name="DESCRIPTION" content="How to get NOAAPORT NEXRAD data via the LDM.">
+  </head>
+  <body>
+
+    <h1>How to Get NOAAPORT NEXRAD Data via the LDM</h1>
+
+    <p>Detailed information about the NOAAPORT NEXRAD feed is available from the Unidata
+      <a href="https://www.unidata.ucar.edu/data/radar.html"><b>NOAAPORT NEXRAD Feed page</b></a>, including
+      alternatives to using the LDM to get the data. Most sites will only want to get a subset of the NOAAPORT NEXRAD
+      data via the LDM, because of the large number of products and volume of the data. This document describes how to
+      get selected subsets of the new data stream.</p>
+    <p>First, determine who your upstream site is for the Family Of Services (FOS) data. There should already be a line 
+      in your etc/ldmd.conf configuration file requesting data from your upstream FOS site, which we will call 
+      <i>your.floater.feed</i> for the rest of this document. This is the host from which you should get the NEXRAD
+      Floater Feed.</p>
+    <p>Next, determine who your upstream site is for the NEXRAD feed, by looking at the 
+      <a href="https://www.unidata.ucar.edu/projects/idd/nexradFeed.html"><b>NEXRAD Feed Scheme</b></a>, locating your 
+      host, and determining the first tier site <i>in italics</i> above your site name. We'll call this 
+      <i>your.nexrad.feed</i> in the remainder of this document. This is the assignment for the host from which you 
+      will get NEXRAD data other than the NEXRAD Floater Feed, if desired.  <i>your.floater.feed</i> and 
+      <i>your.nexrad.feed</i> may or may not be identical.</p>
+    <p>The NEXRAD floater feed is named "FNEXRAD" ("NMC3" for LDM version 5.1.2 and earlier). It is not necessary to
+      upgrade to a later version of the LDM just to be able to use the new FNEXRAD feed type name. In the rest of this
+      document, we will use the "NMC3" feedtype, since a number of sites are still using LDM version 5.1.2 or earlier.
+      "NMC3" will also work for later versions, but if you have LDM 5.1.3 or later, we suggest that you use "FNEXRAD"
+      instead.</p>
+    <p>Before trying to get the NEXRAD floater data or a subset of the full NEXRAD data feed, you can check that the
+      data is available to you from upstream sites by using the "notifyme" command. To avoid having to wait for new
+      products, you can quickly check data for the previous hour with (<code>-o 3600</code>). For example, for the
+      NEXRAD floater, use:</p>
+    <pre>
+      notifyme -v -l- -h <i>your.floater.feed</i> -f NMC3 -o 3600
+    </pre>
+    <p>where <i>your.floater.feed</i> refers to the upstream source for Family Of Services (FOS) data such as IDS,
+      DDPLUS, and HDS. Similarly, to check availability for the full NEXRAD feed, use:</p>
+    <pre>
+      notifyme -v -l- -h <i>your.nexrad.feed</i> -f NEXRAD -o 3600
+    </pre>
+
+    <h2>To specify what to do with the NEXRAD data</h2>
+    <p>Before you start getting the data, decide what you want to do with it by adding lines to your pqact.conf
+      configuration file for decoding or filing the data.</p>
+
+    <h3>NEXRAD Feed</h3>
+    <p>You will need to know something about the parts of the product ID for NOAAPORT NEXRAD products if you want to be
+      able to specify actions that depend on information in the product ID.  In general, the product ID includes a WMO
+      header followed by a six-character AFOS PILS code following "<code>/p</code>":</p>
+    <pre>
+      SDUSij cccc ddhhmm /pyyyzzz
+    </pre>
+    <table>
+      <tbody>
+        <tr>
+          <th>i</th>
+          <td>digit identifying the type of data (The first digit is either 2, 3, 5, or 7.)</td>
+        </tr>
+        <tr>
+          <th>j</th>
+          <td>digit identifying US region</td>
+        </tr>
+        <tr>
+          <th>cccc</th>
+          <td><a href="nexrad-fonx.html">NWS forecast office</a></td>
+        </tr>
+        <tr>
+          <th>ddhhmm</th>
+          <td>day of month, hour, minute</td>
+        </tr>
+        <tr>
+          <th>yyy</th>
+          <td><a href="https://www.unidata.ucar.edu/data/radar.html">product code</a></td>
+        </tr>
+        <tr>
+          <th>zzz</th>
+          <td>radar site code</td>
+        </tr>
+      </tbody>
+    </table>
+    <ol>
+      <li>Add appropriate NEXRAD entries to your pqact.conf file. Remember to use tabs characters to separate the
+        feedtype, pattern, and action fields. For example, if you wanted to file recent compressed floater data in a
+        "data/nexrad/" directory using the time, station, and product identifier in the file name, you might add an
+        entry something like this to pqact.conf:</li>
+	    <pre>
+        NMC3 SDUS[2357]. .... (......) /p(...)(...)
+        FILE -close -overwrite data/nexrad/\1\3\2.raw
+      </pre>
+      <li>Check your pqact.conf configuration file to make sure there are no syntax errors:</li>
+	    <pre>
+        ldmadmin pqactcheck
+      </pre>
+      <li>Send pqact a signal to reread pqact.conf so it can process new NEXRAD data: </li>
+	    <pre>
+        ldmadmin pqactHUP
+      </pre>
+    </ol>
+
+    <h3>FNEXRAD Feed</h3>
+    <p>To get <b>all</b> of the Unidata NEXRAD floater feed containing data for several NEXRAD sites where "interesting"
+      weather is occurring and composite imagery created by the UPC from select NEXRAD Level III products from all
+      reporting stations:</p>
+    <ol>
+      <li>Edit your ldmd.conf configuration file to contain the line. (<b>Caution:</b>The NEXRAD composite imagery can
+        consume quite a bit of disk space after decoding.  For example, the 1 km National Base Reflectivity Composite
+        gets uncompressed to a 14 MB file.  Since his product is transmitted every 6-10 minutes, you can consume a lot
+        of disk space in a short amount of time!)</li>
+      <pre>
+        request NMC3 ".*" your.floater.feed
+      </pre>
+      <li>Stop your ldm:</li>
+      <pre>
+        ldmadmin stop
+      </pre>
+      <li>Make sure you wait until all the ldm processes have died before restarting:</li>
+      <pre>
+        ldmadmin start
+      </pre>
+    </ol>
+    <p>To get a subset of the NEXRAD Level III products for the floater sites, for example only the base reflectivity
+      and velocity products for the lowest tilt (N0R and N0V products), replace the pattern for all products ".*" in the
+      above with a pattern for the specific products you want:</p>
+    <ol>
+      <li>Edit your ldmd.conf configuration file to contain the line. (3-character AFOS PIL codes for NEXRAD products
+        are available from the
+        <a href="https://www.unidata.ucar.edu/data/radar.html"><b>NOAAPORT NEXRAD Feed page</b></a>.</li>
+      <pre>
+        request NMC3 "/p(N0R|N0V)" <i>your.floater.feed</i>
+      </pre>
+      <li>Stop your ldm with</li>
+      <pre>
+        ldmadmin stop
+      </pre>
+      <li>Wait until all the ldm processes have died before restarting, with</li>
+      <pre>
+        ldmadmin start
+      </pre>
+    </ol>
+    <p>To get only the composite images in PNG-compressed format, replace the pattern for all products ".*" in the above
+      with a pattern for the specific products:</p>
+    <ol>
+      <li>Edit your ldmd.conf configuration file to contain the line</li>
+      <pre>
+        request NMC3 "^(pnga2area|rad)" your.floater.feed
+      </pre>
+      <li>Stop your ldm with
+      <pre>
+        ldmadmin stop
+      </pre>
+      <li>Wait until all the ldm processes have died before restarting, with</li>
+      <pre>
+        ldmadmin start
+      </pre>
+    </ol>
+    <p>To help you refine your ldmd.conf requests for FNEXRAD data, we provide the following examples of IDD headers for
+      the PNG-compressed composite images (current as of May 17, 2002):</p>
+    <table>
+      <tbody>
+        <tr>
+          <td>Product Description</td>
+          <td>Example IDD Header</td>
+        </tr>
+        <tr>
+          <td>1 km National Base Reflectivity (GINI format)</td>
+          <td>rad/NEXRCOMP/1km/n0r_20020517_2035</td>
+        </tr>
+        <tr>
+          <td>2 km National 1-hour Precipitation (GINI format)</td>
+          <td>rad/NEXRCOMP/2km/n1p_20020517_2038</td>
+        </tr>
+        <tr>
+          <td>4 km National Storm Total Precipitation (GINI format)</td>
+          <td>rad/NEXRCOMP/4km/ntp_20020517_2039</td>
+        </tr>
+        <tr>
+          <td>6 km National Base Reflectivity (AREA format)</td>
+          <td>pnga2area Q5 RL 300 RADAR BREF 6km 20020517 1949</td>
+        </tr>
+        <tr>
+          <td>10 km National Radar Coded Message (AREA format)</td>
+          <td>pnga2area Q5 RN 500 RADAR BREF 10km 20020517 1945</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>To get the NEXRAD products for a few selected sites</h2>
+    <p>To specify a few select sites for which NEXRAD data is always desired, first get the 3-character site codes for
+      the sites from <a href="https://www.wunderground.com/maps/radar/current"><b>NEXRAD Site Map</b></a>. For the examples,
+      let's assume you choose to get  data from sites designated "ABC" and "XYZ":</p>
+    <ol>
+      <li>Edit your ldmd.conf configuration file to contain the following line (after any other request lines, using
+        tabs to delimit the fields.)</li>
+      <pre>
+        request NNEXRAD "/p...(ABC|XYZ)" your.nexrad.feed
+      </pre>
+      <li>Stop your ldm with</li>
+      <pre>
+        ldmadmin stop
+      </pre>
+      <li>Make sure you wait until all the ldm processes have died before restarting, with</li>
+      <pre>
+        ldmadmin start
+      </pre>
+    </ol>
+    <p>Note that if you want to change the site selection, it is necessary to repeat all three of the above steps: there
+      is no way to get the LDM to reread the ldmd.conf file without stopping and restarting it.</p>
+    <p>To get just a subset of products, say base reflectivity and base radial velocity for the lowest tilt (N0R and N0V
+      products), replace the product pattern "..." in the above with a pattern for the specific products you want:</p>
+    <pre>
+      request NNEXRAD "/p(N0R|N0V)(ABC|XYZ)" your.nexrad.feed
+    </pre>
+    <p>which specifies 2 products from each of 2 sites.</p>
+    <p>To specify NEXRAD products from one of <b>10 U.S. regions</b>, you can specify a pattern that matches NEXRAD
+      products from only the desired region. For example, "SDUS[2357]4" designates products from the South Central
+      U.S. (TX, AL, MS, LA, AR, TN, OK):</p>
+    <pre>
+      request NNEXRAD "^SDUS[2357]4" your.nexrad.feed
+    </pre>
+    <p>If you only wanted base reflectivity and base radial velocity for the lowest tilt (N0R and N0V products) for
+      radars in this region, use:</p>
+    <pre>
+      request NNEXRAD "^SDUS[2357]4 .* /p(N0R|N0V)" your.nexrad.feed
+    </pre>
+
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
