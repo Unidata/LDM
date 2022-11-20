@@ -1146,6 +1146,10 @@ int main(
 
         /*
          * Create the sharable database of upstream LDM metadata.
+         *
+         * TODO: Create the upstream LDM database and then close it so that this process can't be
+         * affected by it. This requires that the corresponding TODO-s in "ldm_server.c" and
+         * "forn_5_svc.c" are also done.
          */
         log_debug("Creating shared upstream LDM database");
         if ((status = uldb_delete(NULL))) {

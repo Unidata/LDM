@@ -268,6 +268,9 @@ feed_or_notify(
      *
      * The following relies on atexit()-registered cleanup for removal of the
      * entry from the upstream LDM database.
+     *
+     * TODO: Open, add, then close the upstream LDM database
+     * TODO: Add this process to the upstream LDM database only *after* no RECLASSing is necessary.
      */
     isPrimary = maxHereis > UINT_MAX / 2;
     status = uldb_addProcess(getpid(), 6, &downAddr, allowSub, &uldbSub,
