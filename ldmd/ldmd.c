@@ -943,7 +943,8 @@ int main(
         while ((ch = getopt(ac, av, "hI:vxl:nq:o:P:M:m:t:")) != EOF) {
             switch (ch) {
             case 'h': {
-                usage(av[0], 0);
+                usage(av[0], 0); // Calls `exit()`
+                break; // Silences code scanners
             }
             case 'I': {
                 in_addr_t ipAddr = inet_addr(optarg);
@@ -1051,21 +1052,6 @@ int main(
         pqfname = getQueuePath();
     }
 
-    /*
-     * Initialize the configuration file module.
-     */
-    log_debug("Initializing configuration-file module");
-    if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
-        log_flush_error();
-        exit(1);
-    }
-    if (!lcf_haveSomethingToDo()) {
-        log_add("The LDM configuration-file \"%s\" is effectively empty",
-                getLdmdConfigPath());
-        log_flush_error();
-        exit(1);
-    }
-
 #ifndef DONTFORK
     if (becomeDaemon) {
         if (reg_close()) {
@@ -1083,6 +1069,7 @@ int main(
         log_clear();        // So no queued messages
         log_avoid_stderr(); // Because this process is now a daemon
     }
+    else
 #endif
     /*
      * Make this process a process group leader so that all child processes
@@ -1090,6 +1077,21 @@ int main(
      * `cleanup()`.
      */
     (void)setpgid(0, 0); // can't fail
+
+    /*
+     * Initialize the configuration file module.
+     */
+    log_debug("Initializing configuration-file module");
+    if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
+        log_flush_error();
+        exit(1);
+    }
+    if (!lcf_haveSomethingToDo()) {
+        log_add("The LDM configuration-file \"%s\" is effectively empty",
+                getLdmdConfigPath());
+        log_flush_error();
+        exit(1);
+    }
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
