@@ -917,9 +917,10 @@ int main(
     unpriv(); // Only become root when necessary
 
     int         status;
-    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY);
+    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY); // Address of server interface
     unsigned    ldmPort = LDM_PORT;
-    bool        becomeDaemon = true; // default
+    bool        becomeDaemon = true; // Default
+    const char* pqfname = NULL; // Pathname of product-queue
 
     if (log_init(av[0])) {
         log_syserr("Couldn't initialize logging module");
@@ -927,7 +928,6 @@ int main(
     }
 
     ensureDumpable();
-    const char* pqfname = NULL;
 
     /*
      * Decode the command line, set options

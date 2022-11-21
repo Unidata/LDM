@@ -1,4 +1,6 @@
-6.14.1.1 (6.13.17 should have been 6.14.0)
+6.14.1.1
+    6.13.17 should have been 6.14.0
+
     Installation:
         * Modified "make check" in regutil/ to accomodate GitHub actions
         * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
@@ -53,7 +55,7 @@
           root-actions" by the superuser
 
     Security:
-        * Corrected code faults found by GitHub's CodeQL
+        * Corrected code faults found by GitHub's CodeQL (mostly in GEMPAK library)
 
     Devops:
         * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be
