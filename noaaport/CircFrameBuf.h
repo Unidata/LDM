@@ -86,16 +86,16 @@ class CircFrameBuf
         }
 
         bool operator<(const Key& rhs) const {
-            if (rhs.uplinkId - uplinkId < UPLINK_ID_MAX/2)
+            if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
                 return true;
-            if (rhs.uplinkId == uplinkId) {
-                if (rhs.fhSeqno - fhSeqno < SEQ_NUM_MAX/2)
+            if (uplinkId == rhs.uplinkId) {
+                if (fhSeqno - rhs.fhSeqno > SEQ_NUM_MAX/2)
                     return true;
-                if (rhs.fhSeqno == fhSeqno) {
-                    if (rhs.pdhSeqNum - pdhSeqNum < SEQ_NUM_MAX/2)
+                if (fhSeqno == rhs.fhSeqno) {
+                    if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
                         return true;
-                    if (rhs.pdhSeqNum == pdhSeqNum) {
-                        if (rhs.pdhBlkNum - pdhBlkNum < BLK_NUM_MAX/2)
+                    if (pdhSeqNum == rhs.pdhSeqNum) {
+                        if (pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2)
                             return true;
                     }
                 }
