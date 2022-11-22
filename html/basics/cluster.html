@@ -1,105 +1,54 @@
 <!doctype html public "-//w3c//dtd html 4.0 transitional//en">
 <html>
-<head>
-   <meta name="UIINDEX" content="4">
+  <head>
+    <title>LDM Clusters</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
    <meta name="BOOKMARK" content="LDM Clusters">
    <meta name="AUTHOR" content="steve">
    <meta name="KEYWORDS" content="LDM, cluster">
    <title>LDM Clusters</title>
-</head>
-<body>
+  </head>
+  <body>
+    <h1>LDM Clusters</h1>
 
-<h1 align="center">LDM Clusters</h1>       
+    <p>An <a href="glindex.html#LDM">LDM</a> cluster is a configuration of multiple computers running multiple
+      <a href="glindex.html#LDM">LDM</a>-s that appear to be a single computer on which a single
+      <a href="glindex.html#LDM">LDM</a> is running.  Because multiple computers are involved, the effective performance
+      of the cluster (i.e., the number of connections that can be satisfied) can be much greater than that of a single
+      computer (providing that network bandwidth is not a limiting factor).  The reliability of a cluster can also be
+      greater than that of a single computer.</p>
+    <p>The structure and operation of an <a href="glindex.html#LDM">LDM</a> cluster depends upon the operating systems
+      involved as well as the software package that's used to cluster the computers.  Therefore, this webpage will only
+      explain the experimental <a href="glindex.html#LDM">LDM</a> cluster in-use at the
+      <a href="glindex.html#UPC">UPC</a>. Hopefully, this description will help you regarding your own cluster.</p>
+    <p>The architecture of the cluster involves a "director" computer and multiple "backend" computers.  The director
+      computer runs Linux and the IP Virtual Server (IPVS) software. Each backend computer runs a default
+      <a href="glindex.html#LDM">LDM</a> installation on an arbitrary operating-system and doesn't know that it's part
+      of a cluster.</p>
+    <p>There is a single IP address by which the cluster is known to external hosts.  This is the "cluster IP address".
+      All IP packets destined for the cluster IP address go to the director computer.</p>
+    <p>The IPVS software on the director computer is responsible for forwarding incoming packets received on the
+      <a href="glindex.html#LDM">LDM</a> port to the backend computers. If a
+      <a href="glindex.html#downstream host">downstream host</a> has an open <a href="glindex.html#TCP">TCP</a>
+      connection to the cluster IP address or has had one within the last minute, then the software forwards all
+      incoming <a href="glindex.html#TCP">TCP</a> packets from that host to the same backend computer. Otherwise, an
+      incoming <a href="glindex.html#TCP">TCP</a> packet is forwarded to the least-loaded backend computer.</p>
+    <p>The IPVS software on the director computer maintains a pool of backend computers by monitoring their
+      availability. Should one go offline, then it is removed from the pool and packets will no longer be forwarded to
+      it. This allows for easy maintenance of the backend computers. Conversely, should a new backend computer go
+      online, then it is added to the pool of available backend computers.</p>
+    <p>Each backend computer has two IP addresses corresponding to two network interfaces.  One of the IP addresses is
+      specific that that computer; the other IP address is the cluster IP address.  The backend computer's cluster IP
+      address is not broadcast via the Address Resolution Protocol (ARP) so it is not known by any routers. The LDM on
+      each backend computer is told to use the computer-specific IP address for requesting data. The network interfaces
+      are either real (implemented in hardware) or virtual (implemented in software). </p>
+    <p>The <a href="glindex.html#LDM">LDM</a> systems on the backend computers each have their own product-queue and are
+      individually responsible for requesting and receiving <a href="glindex.html#data-product">data-product</a>s.</p>
+    <p>A newsletter article on the LDM cluster at the Unidata Program Center can be found at
+      <a href="https://www.unidata.ucar.edu/newsletter/2005june/clusterpiece.htm">
+        https://www.unidata.ucar.edu/newsletter/2005june/clusterpiece.htm</a>.</p>
 
-<p>An
-<a href="glindex.html#LDM">LDM</a> 
-cluster is a configuration of multiple computers running multiple 
-<a href="glindex.html#LDM">LDM</a>-s
-that appear to be a single computer on which a single
-<a href="glindex.html#LDM">LDM</a>
-is running.  Because multiple computers are involved, the effective
-performance of the cluster
-(i.e., the number of connections that can be satisfied)
-can be much greater than that of a single computer (providing that network 
-bandwidth is not a limiting factor).  
-The reliability of a cluster can also be greater than that of a single 
-computer.
-
-<p>The structure and operation of an
-<a href="glindex.html#LDM">LDM</a> 
-cluster depends upon the operating systems involved as well as the software
-package that's used to cluster the computers.  Therefore, this
-webpage will only explain the experimental 
-<a href="glindex.html#LDM">LDM</a> 
-cluster in-use at the 
-<a href="glindex.html#UPC">UPC</a>.
-Hopefully, this description will help you regarding your own cluster.
-
-<p>The architecture of the
-cluster involves a "director" computer and multiple "backend" 
-computers.  The director computer runs Linux and the
-IP Virtual Server (IPVS) software.
-Each backend computer runs a default
-<a href="glindex.html#LDM">LDM</a>
-installation on an arbitrary operating-system
-and doesn't know that it's part of a cluster.
-
-<p>
-There is a single IP address by which the cluster is known to external
-hosts.  This is the "cluster IP address".
-All IP packets destined for the cluster IP address go to the director 
-computer.
-
-<p>
-The IPVS software on the director computer is responsible for forwarding
-incoming packets received on the
-<a href="glindex.html#LDM">LDM</a>
-port to the backend computers.
-If a
-<a href="glindex.html#downstream host">downstream host</a>
-has an open 
-<a href="glindex.html#TCP">TCP</a>
-connection to the cluster IP address or has had one within the last minute,
-then the software forwards all incoming
-<a href="glindex.html#TCP">TCP</a>
-packets from that host to the same backend computer.
-Otherwise, an incoming 
-<a href="glindex.html#TCP">TCP</a>
-packet is forwarded to the least-loaded backend computer.
-
-<p>
-The IPVS software on the director computer maintains a pool of
-backend computers by monitoring their availability.
-Should one go offline, then it is removed from the
-pool and packets will no longer be forwarded to it.
-This allows for easy maintenance of the backend computers.
-Conversely, should a new backend computer go
-online, then it is added to the pool of available backend computers.
-
-<p>
-Each backend computer has two IP addresses corresponding to two network
-interfaces.  One of the IP addresses is
-specific that that computer; the other IP address is the cluster IP
-address.  The backend computer's cluster IP address is not 
-broadcast via the Address Resolution Protocol
-(ARP) so it is not known by any routers.
-The LDM on each backend computer is told to use the 
-computer-specific IP address for requesting data.
-The network interfaces are either real (implemented in
-hardware) or virtual (implemented in software).
-
-<p>
-The
-<a href="glindex.html#LDM">LDM</a>
-systems on the backend computers each have their own product-queue and
-are individually responsible for requesting and receiving 
-<a href="glindex.html#data-product">data-product</a>s.
-
-<p>
-A newsletter article on the LDM cluster at the Unidata Program Center can be found at
-<a href="https://www.unidata.ucar.edu/newsletter/2005june/clusterpiece.htm">
-https://www.unidata.ucar.edu/newsletter/2005june/clusterpiece.htm</a>.
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

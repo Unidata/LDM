@@ -1,202 +1,109 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML>
-<HEAD>
-	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
-	<TITLE>LDM Platform Requirements</TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.9.109  (Solaris Sparc)">
-	<META NAME="AUTHOR" CONTENT="Unidata">
-	<META NAME="CREATED" CONTENT="20050714;13432600">
-	<META NAME="CHANGED" CONTENT="20050714;14240600">
-	<META NAME="KEYWORDS" CONTENT="LDM, Installation, Platform, Requirements">
-	<META NAME="UIINDEX" CONTENT="4">
-	<META NAME="BOOKMARK" CONTENT="LDM Platform Requirements">
-</HEAD>
-<BODY LANG="en-US" DIR="LTR">
-<H1 ALIGN=CENTER>LDM Platform Requirements</H1>
-<H2>Contents</H2>
-<UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#general">General
-	Requirements</A> 
-	</P>
-	<LI><P><A HREF="#development">Requirements for Installing from
-	Source-Code</A> 
-	</P>
-</UL>
+<!DOCTYPE HTML>
+<html>  
+  <head>
+    <title>LDM Platform Requirements</title>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="AUTHOR" content="Unidata">
+      <meta name="KEYWORDS" content="LDM, Installation, Platform, Requirements">
+      <meta name="BOOKMARK" content="LDM Platform Requirements">
+  </head>
+  <body>
+    <h1>LDM Platform Requirements</h1>
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#general">General Requirements</a></li> 
+      <li><a href="#development">Requirements for Installing from  Source-Code</a> </li>
+    </ul>
 
-<HR>
-
-<H2><A NAME="general"></A>General Requirements</H2>
-
-<H3>System Requirements</H3>
-<UL>
-	<LI><P STYLE="margin-bottom: 0in">Some variant of a UNIX<SUP>&reg;</SUP>
-	operating system. 
-	</P>
-
-	<LI><P STYLE="margin-bottom: 0in">Standard user-shell (<I>e.g.</I>,
-	<TT>sh(1)</TT>, <TT>ksh(1)</TT>, <TT>bash(1)</TT>) . 
-	</P>
-
-	<LI><P STYLE="margin-bottom: 0in">Sufficient <em>local</em>
-        disk-space
-	for the <A HREF="glindex.html#LDM">LDM</A> <A HREF="glindex.html#product-queue">product-queue</A>,
-	which can range from a few megabytes to many gigabytes in size -�-
-	depending on your data requirements. 
-	</P>
-
-	<LI><P>An accurate and <EM>monotonic</EM> clock.
-</UL>
-
-<P STYLE="margin-bottom: 0in">The requirement for an accurate and monotonic
-clock is absolutely
-necessary because the <A HREF="glindex.html#LDM%20protocol">LDM
-protocol</A> depends on accurate clocks on both the <A
-HREF="glindex.html#upstream%20host">upstream host</A> and the <A
-HREF="glindex.html#downstream%20host">downstream host</A>.</P>
-
-<p>Additionally, if the clock is not monotonic (because it is periodically
-set backwards by <CODE>ntpdate(8)</CODE>, for example) then processes
-that read from the <A
-HREF="glindex.html#product-queue">product-queue</A> (such as <a
-href="glindex.html#upstream LDM">upstream LDM</a>s and <a
-href="glindex.html#pqact"><tt>pqact</tt></a>s <strong>will miss some <A
-HREF="glindex.html#data-product">data-product</A>s</strong> that are in
-the queue.  This is because data-products reside in the product-queue in
-the order in which they were inserted into the queue <em>according to
-the system clock</em>.  If the system clock jumps backwards, then a
-data-product might <em>not</em> be inserted at the tail
-of the queue and so be missed by a process waiting at the tail
-for the next product.  The rate at which products will be missed
-depends, among other things, on the rate at which products are inserted
-into the queue, the frequency with which the system clock is adjusted
-backwards, and the amount of the adjustments.</p>
-
-<p>Linux systems with kernels older than 2.6.18 (for 32-bit systems) or 2.6.21
-(for 64-bit systems) are at high-risk for non-monotonic system clocks.</p>
-
-<P>This requirement can be generally satisfied by running a Network Time
-Protocol daemon (ntpd).  The NTP daemon
-is available at <A HREF="http://www.ntp.org/">ntp.org</A>.
-Information on public NTP time servers is available at
-<A HREF="http://ntp.isc.org/bin/view/Servers/WebHome">http://ntp.isc.org/bin/view/Servers/WebHome</A>.
-Linux users with the older kernels mentioned above should pay particular
-attention to the NTP support documentation on
-<a href="http://support.ntp.org/bin/view/Support/KnownHardwareIssues">
-Known Hardware Issues</a> and
-<a href="http://support.ntp.org/bin/view/Support/KnownOsIssues">
-Known Operating System Issues</a>.
-</P>
-
-<H3>Necessary Packages</H3>
-
-<P>The following items must be installed in order to build the LDM.
-</P>
-
-<UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="http://www.perl.com/">perl</A>
-	5 package</P>
+    <h2 id="general">General Requirements</h2>
     
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="http://zlib.net/"><tt>zlib</tt></A> <em>development</em>
-	package.
-	Look for the file <tt>libz.a</tt> or <tt>libz.so</tt> <em>and</em> the
-	file <tt>zlib.h</tt>.
-	If this
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).
-	This package is used by the
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A>  package.</P>
+    <h4>System Requirements</h4>
+    <ul>
+      <li>Some variant of a UNIX operating system.<li>
+      <li>Standard user-shell (<I>e.g.</I>,  sh(1), ksh(1), bash(1)).</li>
+      <li>Sufficient <i>local</i>  disk-space  for the <a href="glindex.html#LDM">LDM</a> 
+        <a href="glindex.html#product-queue">product-queue</a>,  which can range from a few megabytes to many gigabytes 
+        in size depending on your data requirements.</li>
+      <li>An accurate and <i>monotonic</i> clock.</li>
+    </ul>
+    <p>The requirement for an accurate and monotonic clock is absolutely necessary because the 
+      <a href="glindex.html#LDM protocol">LDM protocol</a> depends on accurate clocks on both the
+      <a href="glindex.html#upstream host">upstream host</a> and the
+      <a href="glindex.html#downstream host">downstream host</a>.</p>
+    <p>Additionally, if the clock is not monotonic (because it is periodically set backwards by <CODE>ntpdate(8)</CODE>,
+      for example) then processes that read from the <a href="glindex.html#product-queue">product-queue</a> (such as
+      <a href="glindex.html#upstream LDM">upstream LDM</a>s and <a href="glindex.html#pqact">pqact</a>s <b>will miss
+      some <a href="glindex.html#data-product">data-product</a>s</b> that are in the queue.  This is because
+      data-products reside in the product-queue in the order in which they were inserted into the queue <i>according to
+      the system clock</i>.  If the system clock jumps backwards, then a data-product might <i>not</i> be inserted at
+      the tail of the queue and so be missed by a process waiting at the tail for the next product.  The rate at which
+      products will be missed depends, among other things, on the rate at which products are inserted into the queue,
+      the frequency with which the system clock is adjusted backwards, and the amount of the adjustments.</p>
+    <p>Linux systems with kernels older than 2.6.18 (for 32-bit systems) or 2.6.21 (for 64-bit systems) are at high-risk
+      for non-monotonic system clocks.</p>
+    <p>This requirement can be generally satisfied by running a Network Time Protocol daemon (ntpd).  The NTP daemon is
+      available at <a href="https://www.ntp.org/">ntp.org</a>. Information on public NTP time-servers is available at
+      <a href="https://timetoolsltd.com/information/public-ntp-server/">
+        https://timetoolsltd.com/information/public-ntp-server/</a>. Linux users
+      with the older kernels mentioned above should pay particular attention to the NTP support documentation on
+      <a href="https://support.ntp.org/Support/KnownHardwareIssues">Known Hardware Issues</a> and
+      <a href="https://support.ntp.org/Support/KnownOsIssues">Known Operating System Issues</a>.</p>
 
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="http://xmlsoft.org/"><tt>libxml2</tt></A> <em>development</em>
-	package.
-	Look for the file <tt>libxml2.a</tt> or <tt>libxml2.so</tt>
-	<em>and</em> the
-	file <tt>libxml/parser.h</tt>.
-	If this
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).
-	This package is used by the LDM to parse the 
-	<a href="glindex.html#LDM registry">LDM registry</a>.</P>
-</UL>
+    <h4>Necessary Packages</h4>
+    <p>The following items must be installed in order to build the LDM.</p>
+    <ul>
+      <li><a href="https://www.perl.com/">perl</a> 5 package</li>
+      <li><a href="https://zlib.net/">zlib</a> <i>development</i> package.  Look for the file libz.a or libz.so <i>and</i>
+        the  file zlib.h.  If this  package's library is installed but not its header-file, then you must  install the
+        <i>development</i> package (the  runtime package doesn't contain the necessary header-files). This package is
+        used by the  <a href="https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home">libxml2</a>  package.</li>
+      <li><a href="https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home">libxml2</a> <i>development</i> package. Look for the file libxml2.a or
+				libxml2.so  <i>and</i> the  file libxml/parser.h.  If this  package's library is installed but not its
+				header-file, then you must  install the <i>development</i> package (the  runtime package doesn't contain the
+				necessary header-files).  This package is used by the LDM to parse the
+				<a href="glindex.html#LDM registry">LDM registry</a>.</li>
+    </ul>
 
-<H3>Necessary for 
-<a href="glindex.html#NOAAPORT">NOAAPort</a> Ingestion</H3>
+    <h4>Necessary for <a href="glindex.html#NOAAPORT">NOAAPort</a> Ingestion</h4>
+    <p>The following item is necessary in order to use the LDM to ingest data-products from the
+			<a href="glindex.html#NOAAPORT">NOAAPort</a> satellite broadcast system.</p>
+    <ul>
+      <li><a href="http://www.libpng.org/pub/png/">PNG</a> <i>development</i> package. Look for the file libpng.a or
+				libpng.so <i>and</i> the file png.h. If the PNG package's library is installed but not its header-file, then you
+				must install the <i>development</i> package (the runtime package doesn't contain the necessary
+				header-files).</li>
+    </ul>
 
-<P>The following item is necessary in order to use the LDM to ingest
-data-products from the <a href="glindex.html#NOAAPORT">NOAAPort</a> satellite
-broadcast system.</P>
+    <h4>Performance Monitoring</h4>
+    <p>The following utilities must be available in order to collect metrics on the performance of the LDM system via
+			the command <a href="glindex.html#ldmadmin">ldmadmin</a> addmetrics.</p>
+    <ul>
+      <li><a href="glindex.html#uptime utility">uptime</a></li>
+      <li><a href="glindex.html#vmstat utility">vmstat</a></li>
+      <li><a href="glindex.html#netstat utility">netstat</a></li>
+      <li><a href="glindex.html#top utility">top</a></li>
+    </ul>
 
-<UL>
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="http://www.libpng.org/pub/png/"><tt>PNG</tt></A>
-	<em>development</em> package.
-	Look for the file <tt>libpng.a</tt> or <tt>libpng.so</tt> <em>and</em>
-	the file <tt>png.h</tt>.
-	If the PNG
-	package's library is installed but not its header-file, then you must
-	install the <em>development</em> package (the
-	runtime package doesn't contain the necessary header-files).</P>
-</UL>
+    <p>The following item is necessary to display the performance metrics of the LDM system via the command
+			<a href="glindex.html#ldmadmin">ldmadmin</a> plotmetrics, or the
+			<a href="glindex.html#plotMetrics">plotMetrics</a> utility.</p>
+    <ul>
+      <li><a href="glindex.html#gnuplot">gnuplot</a> package</li>
+    </ul>
 
-<H3>Performance Monitoring</H3>
+    <h2 id="development">Requirements for Installing from Source-Code</h2>
+    <p>You may ignore this section if you install from a binary RPM file.</p>
+    <p>To install from source, you must have a UNIX development-environment. In particular, your platform must have:</p>
+    <ul>
+      <li>A Standard C compiler (<i>e.g.</i>, <code>c89(1)</code>).</li>
+      <li>A standard <a href="glindex.html#make">make(1)</a> utility.</li>
+    </ul>
+    <p>While every effort is made to ensure that the <a href="glindex.html#LDM">LDM</a> source-code distribution can be
+			compiled and installed on as wide a variety of UNIX platforms as possible, we can, necessarily, only test on
+			platforms that are available at the <a href="glindex.html#UPC">Unidata Program Center</a> (UPC).</p>
+    <p>The <a href="glindex.html#UPC">UPC</a> reserves the right to deny support to outdated or irregular platforms.</p>
 
-<P>The following utilities must be available in order to collect metrics on
-the performance of the LDM system via the command
-<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A> addmetrics</tt>.</P>
-
-<UL>
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="glindex.html#uptime utility"><tt>uptime</tt></A></P>
-
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="glindex.html#vmstat utility"><tt>vmstat</tt></A></P>
-
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="glindex.html#netstat utility"><tt>netstat</tt></A></P>
-
-	<LI><P STYLE="margin-bottom: 0in">
-	<A HREF="glindex.html#top utility"><tt>top</tt></A></P>
-</UL>
-
-<P>The following item is necessary to display the performance metrics of the
-LDM system via the command
-<tt><A HREF="glindex.html#ldmadmin">ldmadmin</A>
-plotmetrics</tt>, or the
-<tt><A HREF="glindex.html#plotMetrics">plotMetrics</A></tt>
-utility.</P>
-
-<UL>
-	<LI><P STYLE="margin-bottom: 0in">
-	<tt><A HREF="glindex.html#gnuplot">gnuplot</A></tt> package</P>
-</UL>
-
-<HR>
-
-<H2><A NAME="development"></A>Requirements for Installing from
-Source-Code</H2>
-<p>You may ignore this section if you install from a binary RPM file.</p>
-<P>To install from source, you must have a UNIX<SUP>&reg;</SUP>
-development-environment. In particular, your platform must have: 
-</P>
-<UL>
-	<LI><P STYLE="margin-bottom: 0in">A Standard C compiler (<i>e.g.</i>,
-        <code>c89(1)</code>). 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in">A standard <A HREF="glindex.html#make">make(1)</A>
-	utility. 
-	</P>
-</UL>
-<P>While every effort is made to ensure that the <A HREF="glindex.html#LDM">LDM</A>
-source-code distribution can be compiled and installed on as wide a
-variety of UNIX<SUP>&reg;</SUP> platforms as possible, we can,
-necessarily, only test on platforms that are available at the <A HREF="glindex.html#UPC">Unidata
-Program Center</A> (UPC).</P>
-</P>
-<P>The <A HREF="glindex.html#UPC">UPC</A> reserves the right to deny
-support to outdated or irregular platforms.</P>
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

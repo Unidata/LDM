@@ -1,120 +1,80 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Activation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Activation">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="LDM, activation">
+    <meta name="DESCRIPTION" content="Activating the LDM installation">
+  </head>
+  <body>
+    <h1>Activating the LDM Installation</h1>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Activation</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Activation">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="LDM, activation">
-<META NAME="DESCRIPTION" CONTENT="Activating the LDM installation">
-</HEAD>
+    <ol>
+      <li>Become the <a href="glindex.html#LDM user">LDM user</a> in their  home directory.</li>
+      <li>If an <a href="glindex.html#LDM">LDM</a> is running, then stop it:</li>
+      <pre>
+        ldmadmin stop
+      </pre>
+      <li id="runtime removal">If the <a href="glindex.html#runtime">runtime symbolic link</a> exists, then
+      remove it:</li>
+      <pre>
+        rm runtime
+      </pre>
+      <li id="runtime creation">Create the<a href="glindex.html#runtime">runtime symbolic link</a> to the 
+      just-installed LDM:</li>
+      <pre>
+        ln -s @PACKAGE@-@VERSION@ runtime
+      </pre>
+      <li>Ensure that a valid <a href="glindex.html#product-queue">product-queue</a> exists by doing one of
+      the following:</li>
+      <ol type="A">
+        <li id="product-queue creation">If the <a href="glindex.html#product-queue">product-queue</a> doesn't exist and
+        the command <code>df -k var</code> indicates that sufficient space exists for it, then create the
+        <a href="glindex.html#product-queue">product-queue</a> with the following command where the <code>-f</code>
+        option requests "fast" creation:
+        <pre>
+            ldmadmin mkqueue -f
+        </pre>
+        (If you don't have sufficient space for the product-queue, then you'll have to free-up some space or configure a
+            smaller queue.)
+        <li>If the <a href="glindex.html#product-queue">product-queue</a> exists, then execute the command
+        <code>pqcheck -v </code> and do one of the following:</li>
+        <ol>
+          <li>If the product-queue is invalid, then recreate it with the following commands:</li>
+          <pre>
+            ldmadmin delqueue
+            ldmadmin mkqueue -f
+          </pre>
+          <li>If the product-queue doesn't have a <a href="glindex.html#writer-counter">writer-counter</a>, then create
+          the counter and set it to zero with the following command:</li>
+          <pre>
+            pqcheck -F
+          </pre>
+        </ol>
+      </ol>
+      <li>Start the LDM:</li>
+      <pre>
+        ldmadmin start
+      </pre>
+      <li>Verify that the LDM is working:</li>
+      <pre>
+        ldmadmin watch
+      </pre>
+      How quickly this verifies your LDM depends on the rate at which
+      <a href="glindex.html#data-product">data-product</a>s are inserted into the
+      <a href="glindex.html#product-queue">product-queue</a>.
+    </ol>
+    <p>If the <a href="glindex.html#LDM">LDM</a> system is already running, then you can minimize the time that the LDM
+    is off-line by combining some of the above steps.  For example:</p>
+    <pre>
+      cd $HOME && ldmadmin stop && rm -f runtime && \
+      ln -s @PACKAGE@-@VERSION@ runtime && ldmadmin start && ldmadmin watch
+    </pre>
+    <p>If you encounter a problem, check the <a href="glindex.html#logfile">LDM logfile</a> for relevant messages.</p>
 
-<BODY>
-
-<h1 align="center">Activating the LDM Installation</h1><br>
-
-<ol>
-    <li>Become the
-	<a href="glindex.html#LDM user">LDM user</a> in their
-	home directory.
-    <li>If an
-	<a href="glindex.html#LDM">LDM</a> is running, then stop it:
-	<blockquote><tt>
-	    ldmadmin stop<br>
-	</tt></blockquote>
-    <li>If the 
-	<a name="runtime removal"></a>
-	<a href="glindex.html#runtime"><tt>runtime</tt> symbolic link</a>
-	exists, then
-	remove it:
-	<blockquote><tt>
-	    rm runtime
-	</tt></blockquote>
-    <li>Create the 
-	<a name="runtime creation"></a>
-	<a href="glindex.html#runtime"><tt>runtime</tt> symbolic link</a>
-	to the just-installed LDM:
-	<blockquote><tt>
-	    ln -s @PACKAGE@-@VERSION@ runtime
-	</tt></blockquote>
-    <li>Ensure that a valid
-	<a href="glindex.html#product-queue">product-queue</a>
-	exists by doing one of the following:
-
-	<ol type="A">
-	    <li><a name="product-queue creation"></a>
-		If the 
-		<a href="glindex.html#product-queue">product-queue</a>
-		doesn't exist and the command
-		<blockquote><tt>
-		    df -k var
-		</tt></blockquote>
-		indicates that sufficient space exists for it, then
-		create the
-		<a href="glindex.html#product-queue">product-queue</a>
-		with the following command:
-		<blockquote><tt>
-		    ldmadmin mkqueue -f
-		</tt></blockquote>
-		where the <code>-f</code> option requests "fast" creation.
-
-		<p>If you don't have sufficient space for the product-queue,
-		then you'll have to free-up some space or configure a
-		smaller queue.
-	    <li>If the 
-		<a href="glindex.html#product-queue">product-queue</a>
-		exists, then execute the command
-		<blockquote><tt>
-		    pqcheck -v
-		</tt></blockquote>
-		and do one of the following:
-		<ol>
-		    <li>If the product-queue is invalid, then recreate it
-			with the following commands:
-			    <blockquote><tt>
-				ldmadmin delqueue<br>
-				ldmadmin mkqueue -f
-			    </tt></blockquote>
-		    <li>If the product-queue doesn't have a 
-			<a href="glindex.html#writer-counter">
-			writer-counter</a>, then
-			create the counter and set it to zero with the
-			following command:
-			<blockquote><tt>
-			    pqcheck -F
-			</tt></blockquote>
-		</ol>
-	</ol>
-    <li>Start the LDM:
-	<blockquote><tt>
-	    ldmadmin start
-	</tt></blockquote>
-    <li>Verify that the LDM is working:
-	<blockquote><tt>
-	    ldmadmin watch
-	</tt></blockquote>
-	How quickly this verifies your LDM depends on the rate at which 
-	<a href="glindex.html#data-product">data-product</a>s
-	are inserted into the
-	<a href="glindex.html#product-queue">product-queue</a>.
-</ol>
-
-<p>If the
-<a href="glindex.html#LDM">LDM</a> system is already running, then you
-can minimize the time that the LDM is off-line 
-by combining some of the above steps.  For example
-<blockquote><pre>
-cd $HOME && ldmadmin stop && rm -f runtime && \
-ln -s @PACKAGE@-@VERSION@ runtime && ldmadmin start && ldmadmin watch
-</pre></blockquote>
-
-<p>If you encounter a problem, check the 
-<a href="glindex.html#logfile">LDM logfile</a> for relevant messages.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

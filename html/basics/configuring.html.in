@@ -1,567 +1,339 @@
-<HTML>
-
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Configuration</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Configuration">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="LDM, configuration">
-<META NAME="DESCRIPTION" CONTENT="LDM, configuration">
-</HEAD>
-
-<BODY>
-
-<h1 align="center">Configuring an LDM Installation</h1><br>
-
-<p>
-If you already have a previous version of the 
-<a href="glindex.html#LDM">LDM</a> installed and working, then you can
-probably skip these steps.
-
-<h2>Steps</h2>
-
-<ol>
-<li><p><a href="#vet registry">Vet the LDM registry</a>
-<li><p><a href="#upstream feeds">Obtain upstream data-feeds</a>
-<li><p><a href="#upstream config">Request authorization at the upstream LDM</a>
-<li><p><a href="#ldmd.conf">Edit the LDM configuration-file,
-    <tt><b>etc/ldmd.conf</b></tt></a>
-<li><p><a href="#pqact.conf">Edit the <tt>pqact</tt> configuration-file,
-    <tt><b>etc/pqact.conf</b></tt>, if appropriate</a>
-<li><p><a href="#scour.conf">Edit the <tt>scour</tt> configuration-file,
-    <tt><b>etc/scour.conf</b></tt>, if appropriate</a>
-<li><p><a href="#cron">Edit the LDM user's <tt>crontab(1)</tt> file</a>
-<li><p><a href="#email">Ensure email forwarding</a>
-<li><p><a href="#boot">Ensure that the LDM is started at boot-time</a>
-</ol>
-
-<hr>
-
-<h2><a name="vet registry">Vet the LDM registry</a></h2>
-
-<p>
-Make any necessary changes to the configuration-parameters in the
-<a href="LDM-registry.html">LDM registry</a>.  If this is your first
-installation, then pay particular attention to the parameters <tt>
-regpath{HOSTNAME},
-regpath{RECONCILIATION_MODE},
-regpath{QUEUE_SIZE},</tt> and <tt>
-regpath{QUEUE_SLOTS}</tt>.  These parameters can be set via the <code>
-<a href="glindex.html#regutil"><tt>regutil</tt></a>(1)</code> utility.
-
-<p>If you are upgrading an existing LDM installation or are planning to use the
-GEMPAK or McIDAS decoders, then make sure that the data directory printed by
-the command "<code><a href="glindex.html#regutil"><tt>regutil</tt></a>
-regpath{PQACT_DATADIR_PATH}</code>" is the same as the current working
-directory assumed by the <a href="glindex.html#scour"><tt>scour</tt></a>
-configuration-file, and the <a href="glindex.html#pqact.conf"><tt>pqact</tt>
-configuration-file</a>.
-
-<p><a href="../workshop/specifics.html#registry">
-Workshop-specific instructions</a>.
-
-<hr>
-
-<a name="upstream feeds"></a>
-<H2>Obtain upstream data-feeds</h2>
-<p>First, find out who your upstream feed site(s) will be.
-If you don't know and you are qualified to participate in the Unidata
-<a href="glindex.html#IDD">IDD</a>,
-then contact the Unidata Program Center at
-<a href="mailto:support-idd@unidata.ucar.edu">
-&lt;support-idd at unidata.ucar.edu&gt;</a>
-with the following information:
-<ul>
-  <li> The name of your site (e.g., University of Elbonia, Mud Science Center)
-  <li> The <a href="glindex.html#LDM">LDM</a> administrator's
-        <ul>
-            <li>Name
-            <li>Phone number
-            <li>Email address
-        </ul>
-  <li> The fully-qualified hostname of the computer that will run
-      the <a href="glindex.html#LDM">LDM</a>
-  <li>Desired <a href="glindex.html#feedtype">feedtypes</a>.
-</ul>
-Note that you can (and probably should) have two
-<a href="glindex.html#upstream host">upstream host</a>s
-for any given data-feed.
-
-<hr>
-
-<a name="upstream config"></a>
-<h2>Request authorization at the
-<a href="glindex.html#upstream LDM">upstream LDM</a></h2>
-
-<p>Ask the administrator of the 
-<a href="glindex.html#upstream LDM">upstream LDM</a> to add 
-<a href="glindex.html#ALLOW entry"><tt>ALLOW</tt> entries</a> for your 
-<a href="glindex.html#LDM">LDM</a> to the
-<a href="glindex.html#upstream LDM">upstream LDM</a>'s
-configuration-file,
-<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>.
-For example,
-<blockquote><pre>
-ALLOW UNIDATA  your.ldm.host
-ALLOW NLDN  your.ldm.host
-</blockquote></pre>
-
-<p><a href="../workshop/specifics.html#allow">
-Workshop-specific instructions</a>.
-
-
-<hr>
-
-<h2>
-<a name="ldmd.conf"></a>
-Edit the LDM configuration-file,
-<tt>etc/ldmd.conf</tt>
-</h2>
-
-<p>This file tells an LDM what to do on startup.  Possibilities include
-executing programs, requesting data, and authorizing connections.
-The default file that comes with the distribution contains examples.
-More information on this configuration-file can be found on the
-<a href="ldmd.conf.html"><tt>ldmd.conf</tt> webpage</a>.
-
-<p>Here are some examples:
-
-<ul>
-  <li><p><a href="glindex.html#REQUEST entry"><tt>REQUEST</tt> entries</a>
-      for your
-      <a href="glindex.html#upstream LDM">upstream LDM</a>s.  For example
-<blockquote><pre>
-REQUEST  ANY  ".*"  host1.site1.edu         # initially primary-mode
-REQUEST  ANY  ".*"  host2.site2.edu         # initially alternate-mode
-</pre></blockquote>
-
-       <p>For a given 
-       <a href="glindex.html#feedtype">feedtype</a> and
-       <a href="glindex.html#identifier">data-product identifier</a> 
-       <a href="glindex.html#ERE">ERE</a>, 
-       you may have more than one such request.
-       You should ensure, however, that the set of data-products
-       referenced by every feedtype/pattern pair is 
-       either identical to that of other pairs or completely disjoint from
-       them.  So, for example, <b>don't do this</b>
-<blockquote><pre>
-REQUEST  UNIDATA  ".*"  host1.site1.edu
-REQUEST  ANY      ".*"  host2.site2.edu       # overlaps previous
-</pre></blockquote>
-       <b>or this</b>
-<blockquote><pre>
-REQUEST  IDS|DDPLUS  ".*"   host1.site1.edu
-REQUEST  IDS|DDPLUS  "^SA"  host2.site2.edu   # overlaps previous
-</pre></blockquote>
-
-       <p>
-       For a given LDM, a trade-off exists between 
-       <a href="glindex.html#data-product">data-product</a> 
-       latency and CPU load.  This trade-off can be controlled to some extent
-       by the number of 
-       <a href="glindex.html#REQUEST entry"><tt>REQUEST</tt> entries</a>
-       to a given
-       <a href="glindex.html#upstream LDM">upstream LDM</a>.
-	For more information, see the 
-	<a href="ldmd.conf.html"><tt>ldmd.conf</tt> webpage</a>.
-
-  <li><p><a href="glindex.html#ALLOW entry"><tt>ALLOW</tt> entries</a>
-	to authorize certain
-	<a href="glindex.html#downstream LDM">downstream LDM</a>s
-	to receive certain
-	<a href="glindex.html#data-product">data-product</a>s
-	from your LDM.  For example
-<blockquote><pre>
-ALLOW  ANY-NLDN-WSI-PCWS-NOGAPS  \.edu$
-ALLOW  IDS|DDPLUS                \.com$  ^SA  ^SAUS
-</pre></blockquote>
-	For more information, see the 
-	<a href="ldmd.conf.html"><tt>ldmd.conf</tt> webpage</a>.
-
-  <li><p>An <a href="glindex.html#EXEC entry">
-      <tt>EXEC</tt> entry</a> for 
-      <a href="glindex.html#pqact">pqact</a>,
-      if you want to save arriving
-      <a href="glindex.html#data-product">data-product</a>s
-      in a file or process them in some way.
-      For example
-       <blockquote><pre>
-EXEC "pqact"
-       </pre></blockquote>
-
-      <p>
-      Note that you might have more than one such
-      <a href="glindex.html#EXEC entry"> <tt>EXEC</tt> entry</a> if,
-      for example, you use the 
-      <a href="glindex.html#pqact.conf"><tt>pqact</tt> configuration-file</a>s
-        that come with the 
-        <a href="/software/gempak/index.html">
-        GEMPAK</a> or
-        <a href="/software/mcidas/index.html">
-        McIDAS</a> packages.  For example
-       <blockquote><pre>
-# Exec GEMPAK specific pqact(1) processing
-EXEC "pqact -f NNEXRAD /usr/local/ldm/etc/GEMPAK/pqact.gempak_nexrad"
-EXEC "pqact -f ANY-NNEXRAD /local/ldm/etc/GEMPAK/pqact.gempak_decoders"
-       </pre></blockquote>
-
-  <li><p>
-        An <a href="glindex.html#EXEC entry">
-        <tt>EXEC</tt> entry</a> for 
-      <a href="glindex.html#rtstats"><tt>rtstats</tt></a>
-      if the 
-      <a href="glindex.html#LDM">LDM</a> is a member of the Unidata
-      <a href="glindex.html#IDD">IDD</a> <strong>and</strong> is a
-      <a href="glindex.html#gateway LDM">
-      gateway LDM</a> for your institution.
-      <a href="glindex.html#LDM">LDM</a>
-      statistics are the best way to monitor
-      <a href="glindex.html#IDD">IDD</a>
-      performance and to identify problems.
-      It is, therefore, crucial that all <a href="glindex.html#gateway LDM">
-      gateway 
-      <a href="glindex.html#LDM">LDM</a></a>-s on the
-      <a href="glindex.html#IDD">IDD</a>
-      report statistics. Also,
-      data on
-      <a href="glindex.html#LDM">LDM</a> 
-      statistics is vital in preparing reports used
-      to obtain funding to support the 
-      <a href="glindex.html#LDM">LDM</a>
-      system.</em>
-
-      <p><a href="glindex.html#IDD">IDD</a>
-      statistics are displayed on the <a 
-      href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a>.
-
-  <li><p><a href="glindex.html#EXEC entry">
-      <tt>EXEC</tt> entries</a> for 
-      <a href="../utilities/noaaport/index.html#configuration">
-      ingesting data-products from a NOAAPORT receiver</a> -- if you
-      built the LDM package to support this.
-
-</ul>
-
-<p><a href="../workshop/specifics.html#ldmd.conf">
-Workshop-specific instructions</a>.
-
-<hr>
-
-<h2><a name="pqact.conf"></a>
-Edit the <tt>pqact</tt> configuration-file,
-<b><tt>etc/pqact.conf</tt></b>, if appropriate</h2>
-
-<p>
-This file tells the
-<a href="glindex.html#pqact"><tt>pqact</tt></a> utility how to locally
-process various classes of 
-<a href="glindex.html#data-product">data-product</a>s.
-Processing actions include filing the 
-<a href="glindex.html#data-product">data-product</a>,
-executing a local program, and piping the 
-<a href="glindex.html#data-product">data-product</a> to the
-standard input of a local program.  If you're not going to process 
-<a href="glindex.html#data-product">data-product</a>s
-locally, then you don't need to edit this file.
-
-<p>
-<a href="pqact.conf.html">More information on this configuration-file</a>.
-
-<LI>Configuring for Unidata Decoders
-
-<ul>
-    <LI><A
-        HREF="/software/decoders/index.html">
-        Unidata Decoders home page </A> 
-</ul>
-
-<LI>Configuring for GEMPAK
-
-<ul>
-    <LI>See the link "Site Configuration for Products" on the 
-        <A HREF="/software/gempak/">
-        GEMPAK homepage</A> .
-</ul>
-
-<LI>Configuring for McIDAS
-
-<ul>
-    <LI>See the link "Using LDM-McIDAS Decoders" on the 
-    <A HREF=
-        "/software/mcidas/mcidd/index.html">
-        McIDAS decoders</A> webpage.
-</ul>
-
-<p><a href="../workshop/specifics.html#pqact.conf">
-Workshop-specific instructions</a>.
-
-<hr>
-
-<h2><a name="scour.conf"></a>
-Edit the <tt>scour</tt> configuration-file,
-<b><tt>etc/scour.conf</tt></b>, if appropriate</h2>
-
-<p>
-This file tells the <a href="glindex.html#scour"><tt>scour</tt></a> utility
-what old files should be deleted and when to delete them.  This is useful if
-a <a href="glindex.html#pqact"><tt>pqact</tt></a> process is saving
-<a href="glindex.html#data-product">data-product</a>s as local files;
-and you want to keep only the most recent files to prevent the file system from
-becoming full.  If you're not doing this, then you
-probably don't need to edit this file.
-
-<p>
-<a href="scour.conf.html">More information on this configuration-file</a>.
-
-<p><a href="../workshop/specifics.html#scour.conf">
-Workshop-specific instructions</a>.
-
-<hr>
-
-<a name="cron"></a>
-<h2>Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
-
-<p>Edit the <tt>crontab</tt> file of the
-<a href="glindex.html#LDM user">LDM-user</a>
-by, for example, executing the command
-<blockquote><b><tt>
-    crontab -e
-</tt></b></blockquote>
-as the <a href="glindex.html#LDM user">LDM-user</a>.  Then 
-<ul>
-    <li><p>Add an entry to rotate the 
-        <a href="glindex.html#logfile">LDM logfile</a>s by
-        starting a new logfile
-        every day at midnight, changing
-        the names of the old logfiles, and ensuring that the number of
-        logfiles doesn't grow without bound:
-       <blockquote><tt>
-            0 0 * * * bash -l -c 'ldmadmin newlog'
-       </tt></blockquote>
-       <a href="newlog.html">More information on rotating logfiles</a>.
-
-    <li><p>Add an entry to purge old files if necessary.
-        If you are executing the
-       <a href="glindex.html#pqact"><tt>pqact</tt></a> utility to
-        decode incoming data-products into local files,
-        then add
-        an entry like the following to purge outdated files so that your
-        disk doesn't become full:
-       <blockquote><tt>
-           0 1,4,7,10,13,16,19,22 * * * bash -l -c 'ldmadmin scour'
-       </tt></blockquote>
-       The above runs the
-       <a href="glindex.html#scour"><tt>scour</tt></a> program to remove
-       too-old files every
-       three hours.  You might choose different times.
-
-    <li><p>We strongly recommend that you add an entry to accumulate performance
-        metrics on the <a href="glindex.html#LDM">LDM</a>
-	system if you have the necessary utilities installed:
-       <blockquote><tt>
-           * * * * * bash -l -c 'ldmadmin addmetrics'
-       </tt></blockquote>
-       This entry will accumulate metrics every minute.
-       See
-       <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
-
-    <li><p>Add an entry to rotate the metrics data files
-	if you are accumulating metrics:
-       <blockquote><tt>
-           0 0 * * 0 bash -l -c 'ldmadmin newmetrics'
-       </tt></blockquote>
-       This entry will rotate the metrics data files at the beginning of each
-       week.
-       You might choose a different period.  See
-       <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
-
-    <li><p>Add an entry to periodically check the LDM system:
-       <blockquote><tt>
-           0,15,30,45 * * * * bash -l -c 'ldmadmin check >/dev/null'
-       </tt></blockquote>
-       This entry will check the LDM system every 15 minutes and
-       send an email to the LDM user if the system isn't OK.
-       You might choose a different interval.
-
-       <p>
-       In particular, this entry
-       will notify the LDM user if a data-product hasn't been received
-       in the past number of seconds given by the <tt>
-       /insertion-check-interval</tt> parameter in the 
-       <a href="glindex.html#LDM registry">LDM registry</a>
-       (to see that value, execute the command
-       <tt><a href="glindex.html#regutil">regutil</a> 
-       /insertion-check-interval</tt>).
-
-    <li><p>If you intend to ingest data-products from a NOAAPORT receiver,
-        then you should read the section on
-        <a href="../utilities/noaaport/index.html#logging">logging</a> in the 
-        <a href="../utilities/noaaport/index.html">NOAAPORT ingestion webpages</a>.
-
-</ul>
-
-<p><b>NOTE:</b> These examples 
-<ol>
-    <li>Assume that the LDM user uses the <tt>bash(1)</tt> shell; and
-    <li>Use the <tt>-l</tt> option to obtain the LDM user's login environment.
-</ol>
-You might have to do something different in order to obtain the same results.
-
-<p><a href="../workshop/specifics.html#crontab">
-Workshop-specific instructions</a>.
-
-<hr>
-
-<a name="email"></a>
-<h2>Ensure email forwarding</h2>
-
-<p>
-Email for the 
-<a href="glindex.html#LDM user">LDM user</a>
-can be generated by a <tt>crontab</tt>(1) entry or by someone trying to
-contact the LDM administrator at a site.
-Consequently, you should ensure than any email sent to the
-<a href="glindex.html#LDM user">LDM user</a>
-is forwarded to a responsible person.  On most UNIX<sup>�</sup>-like
-systems (on which the <tt>sendmail</tt>(8) daemon is used to deliver 
-email) this is done by having a line like the following:
-<blockquote><pre>
-user@host
-</blockquote></pre>
-in the file <tt>.forward</tt> in the LDM user's home-directory.
-This file must also be be owned by the LDM user and be world-readable.
-For security, this file should not be writable by anyone other than the
-LDM user.
-
-<hr>
-
-<a name="boot"></a>
-<h2>Ensure that the LDM is started at boot-time</h2>
-
-<p>
-Although boot-time start-up procedures vary amongst operating systems,
-each can be tailored to start the 
-<a href="glindex.html#LDM">LDM</a>.
-It is best to start the 
-<a href="glindex.html#LDM">LDM</a>
-as late as possible in the boot process to
-avoid interfering with processes that could hang the system (<i>e.g.</i>, the
-<a href="glindex.html#syslog"><tt>syslog</tt> daemon</a>). One possible 
-<a href="glindex.html#LDM">LDM</a>
-script is:
-
-<blockquote><pre>
-export PATH=/bin:/usr/bin
-
-LDMHOME=/usr/local/ldm
-LDMBIN=$LDMHOME/bin
-LDMADMIN=$LDMBIN/ldmadmin
-PQCHECK=$LDMBIN/pqcheck
-PQCAT=$LDMBIN/pqcat
-PQ=$LDMHOME/data/ldm.pq
-LOG="logger -p <a href="glindex.html#localn">local0</a>.err $0:"
-
-case "$1" in
-
-start)
-    $LOG 'Starting LDM system...'
-    if [ -x $LDMADMIN ] ; then
-	if su - ldm -c "$LDMADMIN isrunning"; then
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Configuration</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Configuration">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="LDM, configuration">
+    <meta name="DESCRIPTION" content="LDM, configuration">
+  </head>
+  <body>
+    <h1>Configuring an LDM Installation</h1>
+    <p>If you already have a previous version of the <a href="glindex.html#LDM">LDM</a> installed and working, then you 
+    can probably skip these steps.</p>
+
+    <h2>Steps</h2>
+    <ol>
+      <li><a href="#vet registry">Vet the LDM registry</a></li>
+      <li><a href="#upstream feeds">Obtain upstream data-feeds</a></li>
+      <li><a href="#upstream config">Request authorization at the upstream LDM</a></li>
+      <li><a href="#ldmd.conf">Edit the LDM configuration-file, <b>etc/ldmd.conf</b></a></li>
+      <li><a href="#pqact.conf">Edit the pqact configuration-file, <b>etc/pqact.conf</b>, if appropriate</a></li>
+      <li><a href="#scour.conf">Edit the scour configuration-file, <b>etc/scour.conf</b>, if appropriate</a></li>
+      <li><a href="#cron">Edit the LDM user's crontab(1) file</a></li>
+      <li><a href="#email">Ensure email forwarding</a></li>
+      <li><a href="#boot">Ensure that the LDM is started at boot-time</a></li>
+    </ol>
+
+    <h2 id="vet registry">Vet the LDM registry</h2>
+    <p>Make any necessary changes to the configuration-parameters in the <a href="LDM-registry.html">LDM registry</a>.
+      If this is your first installation, then pay particular attention to the parameters regpath{HOSTNAME}, 
+      regpath{RECONCILIATION_MODE}, regpath{QUEUE_SIZE}, and regpath{QUEUE_SLOTS}. These parameters can be set via the 
+      <code><a href="glindex.html#regutil">regutil</a>(1)</code> utility.</p>
+    <p>If you are upgrading an existing LDM installation or are planning to use the GEMPAK or McIDAS decoders, then make 
+        sure that the data directory printed by the command "<code><a href="glindex.html#regutil">regutil</a> 
+        regpath{PQACT_DATADIR_PATH}</code>" is the same as the current working directory assumed by the 
+        <a href="glindex.html#scour">scour</a> configuration-file, and the 
+        <a href="glindex.html#pqact.conf">pqact configuration-file</a>.</p>
+    <p><a href="../workshop/specifics.html#registry">Workshop-specific instructions</a>.</p>
+
+    <h2 id="upstream feeds">Obtain upstream data-feeds</h2>
+    <p>First, find out who your upstream feed site(s) will be. If you don't know and you are qualified to participate in
+        the Unidata <a href="glindex.html#IDD">IDD</a>, then contact the Unidata Program Center at
+        <a href="mailto:support-idd@unidata.ucar.edu">support-idd@unidata.ucar.edu</a> with the following information:</p>
+    <ul>
+      <li>The name of your site (e.g., University of Elbonia, Mud Science Center)</li>
+      <li>The <a href="glindex.html#LDM">LDM</a> administrator's</li>
+      <ul>
+        <li>Name</li>
+        <li>Phone number</li>
+        <li>Email address</li>
+      </ul>
+      <li>The fully-qualified hostname of the computer that will run the <a href="glindex.html#LDM">LDM</a></li>
+      <li>Desired <a href="glindex.html#feedtype">feedtypes</a></li>
+    </ul>
+    <p>Note that you can (and probably should) have two <a href="glindex.html#upstream host">upstream host</a>s for any
+        given data-feed.</p>
+
+    <h2 id="upstream config">Request authorization at the upstream LDM</h2>
+    <p>Ask the administrator of the <a href="glindex.html#upstream LDM">upstream LDM</a> to add
+     <a href="glindex.html#ALLOW entry">ALLOW entries</a> for your <a href="glindex.html#LDM">LDM</a> to the
+      <a href="glindex.html#upstream LDM">upstream LDM</a>'s configuration-file,
+      <a href="glindex.html#ldmd.conf">ldmd.conf</a>. For example,</p>
+    <pre>
+      ALLOW UNIDATA  your.ldm.host
+      ALLOW NLDN  your.ldm.host
+    </pre>
+    <p><a href="../workshop/specifics.html#allow">Workshop-specific instructions</a>.</p>
+
+    <h2 id="ldmd.conf">Edit the LDM configuration-file, etc/ldmd.conf</h2>
+    <p>This file tells an LDM what to do on startup.  Possibilities include executing programs, requesting data, and
+     authorizing connections. The default file that comes with the distribution contains examples. More information on
+     this configuration-file can be found on the <a href="ldmd.conf.html">ldmd.conf webpage</a>.</p>
+    <p>Here are some examples:
+    <ul>
+      <li><a href="glindex.html#REQUEST entry">REQUEST entries</a> for your
+       <a href="glindex.html#upstream LDM">upstream LDM</a>s.  For example</li>
+      <pre>
+        REQUEST  ANY  ".*"  host1.site1.edu         # initially primary-mode
+        REQUEST  ANY  ".*"  host2.site2.edu         # initially alternate-mode
+      </pre>
+      For a given <a href="glindex.html#feedtype">feedtype</a> and
+       <a href="glindex.html#identifier">data-product identifier</a> <a href="glindex.html#ERE">ERE</a>, you may have
+       more than one such request. You should ensure, however, that the set of data-products referenced by every
+       feedtype/pattern pair is either identical to that of other pairs or completely disjoint from them.  So, for
+       example, <b>don't do this:</b>
+      <pre>
+        REQUEST  UNIDATA  ".*"  host1.site1.edu
+        REQUEST  ANY      ".*"  host2.site2.edu       # overlaps previous
+      </pre>
+      <b>or this:</b>
+      <pre>
+        REQUEST  IDS|DDPLUS  ".*"   host1.site1.edu
+        REQUEST  IDS|DDPLUS  "^SA"  host2.site2.edu   # overlaps previous
+      </pre>
+      For a given LDM, a trade-off exists between <a href="glindex.html#data-product">data-product</a> latency and CPU
+       load.  This trade-off can be controlled to some extent by the number of
+       <a href="glindex.html#REQUEST entry">REQUEST entries</a> to a given
+       <a href="glindex.html#upstream LDM">upstream LDM</a>.	For more information, see the
+       <a href="ldmd.conf.html">ldmd.conf webpage</a>.
+      <li><a href="glindex.html#ALLOW entry">ALLOW entries</a> to authorize certain
+       <a href="glindex.html#downstream LDM">downstream LDM</a>s to receive certain
+        <a href="glindex.html#data-product">data-product</a>s	from your LDM.  For example:</li>
+      <pre>
+        ALLOW  ANY-NLDN-WSI-PCWS-NOGAPS  \.edu$
+        ALLOW  IDS|DDPLUS                \.com$  ^SA  ^SAUS
+      </pre>
+	    For more information, see the <a href="ldmd.conf.html">ldmd.conf webpage</a>.
+      <li>An <a href="glindex.html#EXEC entry">EXEC entry</a> for <a href="glindex.html#pqact">pqact</a>, if you want to
+        save arriving <a href="glindex.html#data-product">data-product</a>s in a file or process them in some way. For
+        example:</li>
+      <pre>
+        EXEC "pqact"
+      </pre>
+      Note that you might have more than one such <a href="glindex.html#EXEC entry"> EXEC entry</a> if, for example, you
+       use the <a href="glindex.html#pqact.conf">pqact configuration-file</a>s that come with the
+       <a href="https://unidata.github.io/gempak/">GEMPAK</a> or
+       <a href="https://www.unidata.ucar.edu/software/mcidas/index.html">McIDAS</a> packages.  For example:
+      <pre>
+        # Exec GEMPAK specific pqact(1) processing
+        EXEC "pqact -f NNEXRAD /usr/local/ldm/etc/GEMPAK/pqact.gempak_nexrad"
+        EXEC "pqact -f ANY-NNEXRAD /local/ldm/etc/GEMPAK/pqact.gempak_decoders"
+      </pre>
+      <li>An <a href="glindex.html#EXEC entry">EXEC entry</a> for <a href="glindex.html#rtstats">rtstats</a> if the
+       <a href="glindex.html#LDM">LDM</a> is a member of the Unidata <a href="glindex.html#IDD">IDD</a> <b>and</b> is a
+       <a href="glindex.html#gateway LDM">gateway LDM</a> for your institution. <a href="glindex.html#LDM">LDM</a>
+       statistics are the best way to monitor <a href="glindex.html#IDD">IDD</a> performance and to identify problems.
+       It is, therefore, crucial that all <a href="glindex.html#gateway LDM">gateway</a>
+       <a href="glindex.html#LDM">LDM</a>-s on the <a href="glindex.html#IDD">IDD</a> report statistics. Also, data on
+       <a href="glindex.html#LDM">LDM</a> statistics is vital in preparing reports used to obtain funding to support the
+       <a href="glindex.html#LDM">LDM</a> system.</li>
+       <a href="glindex.html#IDD">IDD</a> statistics are displayed on the
+       <a href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a>.
+      <li><a href="glindex.html#EXEC entry">EXEC entries</a> for
+      <a href="../utilities/noaaport/index.html#configuration">ingesting data-products from a NOAAPORT receiver</a>
+       -- if you built the LDM package to support this.</li>
+    </ul>
+    <p><a href="../workshop/specifics.html#ldmd.conf">Workshop-specific instructions</a>.
+
+    <h2 id="pqact.conf">Edit the pqact configuration-file, <b>etc/pqact.conf</b>, if appropriate</h2>
+    <p>This file tells the <a href="glindex.html#pqact">pqact</a> utility how to locally process various classes of
+     <a href="glindex.html#data-product">data-product</a>s. Processing actions include filing the
+     <a href="glindex.html#data-product">data-product</a>, executing a local program, and piping the
+     <a href="glindex.html#data-product">data-product</a> to the standard input of a local program.  If you're not going
+     to process <a href="glindex.html#data-product">data-product</a>s locally, then you don't need to edit this
+      file.</p>
+    <p><a href="pqact.conf.html">More information on this configuration-file</a>.</p>
+
+
+    <ul>
+      <li><a href="https://github.com/Unidata/netCDF-Decoders">Configuring for Unidata Decoders</a></li>
+      <li><a href="https://unidata.github.io/gempak/">Configuring for GEMPAK</a></li>
+      <li><a href="https://docs.unidata.ucar.edu/ldm-mcidas/current/ldm-mcidas-build.html">
+      Configuring for LDM-McIDAS Decoders</a></li>
+    </ul>
+    <p><a href="../workshop/specifics.html#pqact.conf">Workshop-specific instructions</a>.</p>
+
+    <h2 id="scour.conf">Edit the scour configuration-file, <b>etc/scour.conf</b>, if appropriate</h2>
+    <p>This file tells the <a href="glindex.html#scour">scour</a> utility what old files should be deleted and when to
+     delete them.  This is useful if a <a href="glindex.html#pqact">pqact</a> process is saving
+     <a href="glindex.html#data-product">data-product</a>s as local files; and you want to keep only the most recent
+     files to prevent the file system from becoming full.  If you're not doing this, then you probably don't need to edit
+     this file.</p>
+    <p><a href="scour.conf.html">More information on this configuration-file</a>.</p>
+    <p><a href="../workshop/specifics.html#scour.conf">Workshop-specific instructions</a>.</p>
+
+    <h2 id="cron">Edit the LDM-user's <b>crontab(1)</b> file</h2>
+    <p>Edit the crontab file of the <a href="glindex.html#LDM user">LDM-user</a> by, for example, executing the
+     command</p>
+    <pre>
+      crontab -e
+    <pre>
+    <p>as the <a href="glindex.html#LDM user">LDM-user</a>.  Then </p>
+    <ul>
+      <li>Add an entry to rotate the <a href="glindex.html#logfile">LDM logfile</a>s by starting a new logfile every day
+       at midnight, changing the names of the old logfiles, and ensuring that the number of logfiles doesn't grow
+       without bound:</li>
+      <pre>
+        0 0 * * * bash -l -c 'ldmadmin newlog'
+      </pre>
+      <a href="newlog.html">More information on rotating logfiles</a>.
+      <li>Add an entry to purge old files if necessary. If you are executing the <a href="glindex.html#pqact">pqact</a>
+       utility to decode incoming data-products into local files, then add an entry like the following to purge outdated
+       files so that your disk doesn't become full:</li>
+      <pre>
+        0 1,4,7,10,13,16,19,22 * * * bash -l -c 'ldmadmin scour'
+      </pre>
+      The above runs the <a href="glindex.html#scour">scour</a> program to remove too-old files every three hours.  You
+       might choose different times.
+      <li>We strongly recommend that you add an entry to accumulate performance metrics on the
+       <a href="glindex.html#LDM">LDM</a>	system if you have the necessary utilities installed:</li>
+      <pre>
+        * * * * * bash -l -c 'ldmadmin addmetrics'
+      </pre>
+      This entry will accumulate metrics every minute. See
+      <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
+      <li>Add an entry to rotate the metrics data files	if you are accumulating metrics:</li>
+      <pre>
+        0 0 * * 0 bash -l -c 'ldmadmin newmetrics'
+      </pre>
+      This entry will rotate the metrics data files at the beginning of each week. You might choose a different period.
+       See <a href="monitoring.html#metrics">Monitoring the LDM System/Metrics</a>.
+      <li>Add an entry to periodically check the LDM system:</li>
+      <pre>
+        0,15,30,45 * * * * bash -l -c 'ldmadmin check >/dev/null'
+      </pre>
+      This entry will check the LDM system every 15 minutes and send an email to the LDM user if the system isn't OK.
+       You might choose a different interval. In particular, this entry will notify the LDM user if a data-product
+       hasn't been received in the past number of seconds given by the /insertion-check-interval parameter in the
+       <a href="glindex.html#LDM registry">LDM registry</a> (to see that value, execute the command
+       <a href="glindex.html#regutil">regutil</a> /insertion-check-interval).
+      <li>If you intend to ingest data-products from a NOAAPORT receiver, then you should read the section on
+       <a href="../utilities/noaaport/index.html#logging">logging</a> in the
+       <a href="../utilities/noaaport/index.html">NOAAPORT ingestion webpages</a>.</li>
+    </ul>
+    <p><b>NOTE:</b> These examples:</p>
+    <ol>
+      <li>Assume that the LDM user uses the bash(1) shell; and</li>
+      <li>Use the -l option to obtain the LDM user's login environment.</li>
+    </ol>
+    <p>You might have to do something different in order to obtain the same results.</p>
+    <p><a href="../workshop/specifics.html#crontab">Workshop-specific instructions</a>.</p>
+
+    <h2 id="email">Ensure email forwarding</h2>
+    <p>Email for the <a href="glindex.html#LDM user">LDM user</a> can be generated by a crontab(1) entry or by someone
+     trying to contact the LDM administrator at a site. Consequently, you should ensure than any email sent to the
+     <a href="glindex.html#LDM user">LDM user</a> is forwarded to a responsible person.  On most UNIX-like systems (on
+     which the sendmail(8) daemon is used to deliver email) this is done by having a line like the following:</p>
+    <pre>
+      user@host
+    </pre>
+    <p>in the file .forward in the LDM user's home-directory.</p>
+    <p>This file must also be be owned by the LDM user and be world-readable. For security, this file should not be
+     writable by anyone other than the LDM user.</p>
+
+    <h2 id="boot">Ensure that the LDM is started at boot-time</h2>
+    <p>Although boot-time start-up procedures vary amongst operating systems, each can be tailored to start the
+     <a href="glindex.html#LDM">LDM</a>. It is best to start the <a href="glindex.html#LDM">LDM</a> as late as possible
+     in the boot process to avoid interfering with processes that could hang the system (<i>e.g.</i>, the
+     <a href="glindex.html#syslog">syslog daemon</a>). One possible <a href="glindex.html#LDM">LDM</a> script is:</p>
+    <pre>
+      #!/bin/sh
+
+      export PATH=/bin:/usr/bin
+      LDMHOME=/usr/local/ldm
+      LDMBIN=$LDMHOME/bin
+      LDMADMIN=$LDMBIN/ldmadmin
+      PQCHECK=$LDMBIN/pqcheck
+      PQCAT=$LDMBIN/pqcat
+      PQ=$LDMHOME/data/ldm.pq
+      LOG="logger -p <a href="glindex.html#localn">local0</a>.err $0:"
+
+      case "$1" in
+
+      start)
+        $LOG 'Starting LDM system...'
+        if [ -x $LDMADMIN ] ; then
+	        if su - ldm -c "$LDMADMIN isrunning"; then
             $LOG "LDM system is already running."
-	else
-	    if [ ! -f $PQ ] ; then
-		$LOG "Product-queue doesn't exist.  Creating..."
-		if ! su - ldm -c "$LDMADMIN mkqueue"; then
-		    $LOG "Aborting..."
-		    exit 1
-		fi
-	    else
-		#
-		# Test the product-queue for corruption.
-		#
-		if ! $PQCHECK -l /dev/null -q $PQ; then
-		    case $? in
-		    1)  $LOG "System error checking product-queue.  Aborting..."
-			exit 1
-			;;
-		    2)  $LOG "Adding writer-counter to product-queue..."
-			if ! $PQCHECK -F -q $PQ; then
-			    $LOG "Aborting..."
-			    exit 1
-			fi
-			;;
-		    3)  $LOG "Product-queue was incorrectly closed.  " \
-			    "Checking..."
-			if $PQCAT -s -l /dev/null; then
-			    $LOG "Product-queue appears OK. "
-			    $LOG "Clearing writer-counter..."
-			    if ! $PQCHECK -F -q $PQ; then
-				$LOG "Couldn't clear counter.  Aborting..."
-				exit 1
-			    fi
-			else
-			    $LOG "Product-queue appears corrupt.  Deleting."
-			    rm $PQ
-			    if ! su - ldm -c "$LDMADMIN mkqueue -f"; then
-				$LOG "Couldn't make new product-queue.  Aborting..."
-				exit 1
-			    fi
-			fi
-			;;
-		    4)  $LOG "Product-queue is corrupt.  Deleting."
-			rm $PQ
-			if ! su - ldm -c "$LDMADMIN mkqueue -f"; then
-			    $LOG "Couldn't make new product-queue.  Aborting..."
-			    exit 1
-			fi
-			;;
-		    esac
-		fi
-	    fi
-	    su - ldm -c "$LDMADMIN clean"
-	    su - ldm -c "$LDMADMIN start"
-	fi
-    fi
-    ;;
+	        else
+	          if [ ! -f $PQ ] ; then
+		          $LOG "Product-queue doesn't exist.  Creating..."
+		          if ! su - ldm -c "$LDMADMIN mkqueue"; then
+		            $LOG "Aborting..."
+		            exit 1
+		          fi
+	          else
+		          #
+		          # Test the product-queue for corruption.
+	          	#
+		          if ! $PQCHECK -l /dev/null -q $PQ; then
+		            case $? in
+		            1)  $LOG "System error checking product-queue.  Aborting..."
+			              exit 1
+			              ;;
+		            2)  $LOG "Adding writer-counter to product-queue..."
+			              if ! $PQCHECK -F -q $PQ; then
+			                $LOG "Aborting..."
+			                exit 1
+			              fi
+			              ;;
+		            3)  $LOG "Product-queue was incorrectly closed.  " \
+			              "Checking..."
+			              if $PQCAT -s -l /dev/null; then
+			                $LOG "Product-queue appears OK. "
+			                $LOG "Clearing writer-counter..."
+			                if ! $PQCHECK -F -q $PQ; then
+				                $LOG "Couldn't clear counter.  Aborting..."
+				                exit 1
+			                fi
+			              else
+			                $LOG "Product-queue appears corrupt.  Deleting."
+			                rm $PQ
+			                if ! su - ldm -c "$LDMADMIN mkqueue -f"; then
+				                $LOG "Couldn't make new product-queue.  Aborting..."
+				                exit 1
+			                fi
+			              fi
+			              ;;
+		            4)  $LOG "Product-queue is corrupt.  Deleting."
+			              rm $PQ
+			              if ! su - ldm -c "$LDMADMIN mkqueue -f"; then
+			                $LOG "Couldn't make new product-queue.  Aborting..."
+			                exit 1
+			              fi
+			              ;;
+		            esac
+		          fi
+	          fi
+	          su - ldm -c "$LDMADMIN clean"
+	          su - ldm -c "$LDMADMIN start"
+	        fi
+        fi
+        ;;
+      stop)
+        $LOG 'Stopping the LDM system.'
+        if [ -x $LDMADMIN ] ; then
+          su - ldm -c "$LDMADMIN stop"
+        fi
+        ;;
+      esac
+    </pre>
+    <p>Note that some user-shells do not conform to the the UNIX standard and will not understand the 
+     "<code>if ! ...</code>" expressions in the above (<i>e.g.</i>, SunOS 5.8's <code>/bin/sh</code>).  You can test 
+     your user-shell with the following command:</p>
+    <pre>
+      if ! false; then echo OK; fi
+    </pre>
+    <p>Instead of using the <code>logger</code> utility as above, you might wish to use something else (<i>e.g.</i>, the
+     <code>echo</code> utility) -- depending on your operating system. Note that the <code>-p</code> option is 
+     system-dependent.</p>
+    <p>Consult the documentation on your operating system or with your system administrator for details on how to 
+     incorporate this script (or something similar) into the boot-time start-up procedure of your system.</p>
+    <p><a href="../workshop/specifics.html#boot">Workshop-specific instructions</a>.</p>
 
-stop)
-    $LOG 'Stopping the LDM system.'
-    if [ -x $LDMADMIN ] ; then
-        su - ldm -c "$LDMADMIN stop"
-    fi
-    ;;
-
-esac
-</blockquote></pre>
-
-<p>Note that some user-shells do not conform to the the UNIX standard and 
-will not understand the "<code>if ! ...</code>" expressions in the 
-above (<i>e.g.</i>, SunOS 5.8's <code>/bin/sh</code>).  You can test your
-user-shell with the following command:
-<blockquote><pre>
-if ! false; then echo OK; fi
-</blockquote></pre>
-
-<p>Instead of using the
-<code>logger</code> utility 
-as above,
-you might wish to use something else
-(<i>e.g.</i>, the <code>echo</code> utility)
--- depending on your operating system.
-Note that the <code>-p</code> option is system-dependent.
-
-<p>Consult the documentation on your operating system or with your
-system administrator for details on how to incorporate this script
-(or something similar) into the boot-time start-up procedure of your
-system.
-
-<p><a href="../workshop/specifics.html#boot">
-Workshop-specific instructions</a>.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

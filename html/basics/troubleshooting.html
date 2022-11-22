@@ -1,325 +1,204 @@
-<HTML>
-
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Troubleshooting</TITLE>
-<META NAME="BOOKMARK" CONTENT="Troubleshooting">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="DESCRIPTION" CONTENT="LDM Troubleshooting">
-<META NAME="KEYWORDS" CONTENT="LDM, troubleshooting">
-</HEAD>
-<BODY>
-
-
-<h1 align="center">LDM Troubleshooting</h1><br>
-
-<h2>Contents</h2>
-
-<ul>
-    <li><a href="#can't start LDM">Can't start the LDM</a>
-    <li><a href="#config-file">The LDM server terminates after executing its
-            configuration-file</a>
-    <li><a href="#LDM not logging">The LDM isn't logging</a>
-    <li><a href="#not_receiving">The LDM isn't receiving data</a>
-    <li><a href="#LDM suddenly disappears">
-    The LDM suddenly disappears on an RHEL/CentOS system</a>
-    <li><a href="#ldmadmin scour takes too long on an XFS file-system">
-    "<code>ldmadmin scour</code>" takes too long</a>
-</ul>
-
-<hr>
-
-<h2><a name="can't start LDM">Can't start the LDM</h2>
-
-If the LDM won't start, then it should log the reason why. Check the LDM
-log file.
-<p>
-If that is inconclusive, then start the LDM in interactive mode by explicitly
-telling it to log to the standard error stream via the <code>-l</code> option.
-Execute the command
-<blockquote><code>
-<pre>ldmd -l- [-v]</pre>
-</code></blockquote>
-This will prevent the LDM from daemonizing itself and it will log directly to
-the terminal. The running LDM can be stopped by typing <code>^C</code> (control-C).
-
-<hr>
-
-<h2><a name="config-file">The LDM server terminates after executing its
-configuration-file</h2>
-
-This could be caused by
-<ul>
-    <li>An effectively empty configuration-file
-    <li>A commented-out <code>ALLOW</code> entry for <code>localhost</code> and
-        <code>127.0.0.1</code>
-</ul>
-
-<hr>
-
-<h2><a name="LDM not logging">The LDM isn't logging</h2>
-<ol>
-    <li>
-    Verify that logging doesn't occur with the commands
-    <blockquote><code>
-<pre>ulogger This is a test 2>/dev/null
-tail -1 ~/var/logs/ldmd.log</pre>
-    </code></blockquote>
-    If the above prints "<samp>This is a test</samp>", then LDM logging works.
-    <p>
-    <li>
-    Verify that the LDM log file is owned and writable by the LDM user:
-    <blockquote><code>
-<pre>ls -l ~/var/logs/ldmd.log</pre>
-    </code></blockquote>
-    If it's not, then make it so: 
-    <blockquote><code>
-<pre>sudo chown ldm ~/var/logs/ldmd.log
-chmod u+w ~/var/logs/ldmd.log</pre>
-    </code></blockquote>
-    <li>
-    Verify that the disk partition that contains the LDM log file isn't full:
-        <blockquote><code>
-<pre>df ~/var/logs/ldmd.log</pre>
-        </code></blockquote>
-        If it's full, then purge stuff.
-    <p>
-    <li>
-    If the script "<code>~/bin/refresh_logging</code>" doesn't exist or simply
-    executes the utility <code>hupsyslog(1)</code>, then
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Troubleshooting</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Troubleshooting">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="DESCRIPTION" content="LDM Troubleshooting">
+    <meta name="KEYWORDS" content="LDM, troubleshooting">
+  </head>  
+  <body>
+    <h1>LDM Troubleshooting</h1>
+    <h2>Contents</h2>
     <ul>
-        <li>
-        Verify that the system logging daemon is running via the command
-        <blockquote><code>
-<pre>ps -ef | grep syslog</pre>
-        </code></blockquote>
-        If it's not running, then start it.
-        <p>
-        <li>
-        Determine the veracity of the following:
-        <ul>
-            <li>
-            The configuration-file for the system logging daemon has an entry
-            for the LDM:
-            <blockquote><code>
-<pre>grep local /etc/*syslog.conf | grep ldm</pre>
-            </code></blockquote>
-            <li>
-            The utility <code>hupsyslog(1)</code> is owned by root and setuid:
-            <blockquote><code>
-<pre>ls -l ~/bin/hupsyslog</pre>
-            </code></blockquote>
-        </ul>
-        If any of the above are false, then execute the command &mdash; as root
-        &mdash; "<code>make root-actions</code>" in the top-level LDM
-        source-directory.
-        <p>
-        <li>
-        Restart the system logging daemon and then retry the
-        <code>ulogger</code> command above.
-        <p>
-        <li>
-        If on a system that has SELINUX, verify that it is disabled or in
-        permissive mode:
-        <blockquote><code>
-<pre>getenforce</pre>
-        </code></blockquote>
-        To change from enabled mode to permissive mode, execute &mdash; as root
-        &mdash; the command
-        <blockquote><code>
-<pre>setenforce permissive</pre>
-        </code></blockquote>
-        To disable SELINUX, edit the file <code>/etc/selinux/config</code> and set
-        the variable <code>SELINUX</code> to <code>disabled</code>. Then, reboot the
-        system.
-        <p>
-        <li>
-        Verify that the disk partition containing the <code>~/bin</code> directory
-        does <em>not</em> have the <code>nosuid</code> attribute:
-        <blockquote><code>
-<pre>dev=`df ~/bin | tail -1 | awk '{print $1}'`
-mount | grep $dev | grep nosuid</pre>
-        </code></blockquote>
-        If the <code>nosuid</code> attribute is enabled, then <code>hupsyslog</code>
-        will not work. Either that attribute must be disabled or the LDM package
-        must be re-installed on a disk partition that has that attribute
-        disabled.
+      <li><a href="#can't start LDM">Can't start the LDM</a></li>
+      <li><a href="#config-file">The LDM server terminates after executing its configuration-file</a></li>
+      <li><a href="#LDM not logging">The LDM isn't logging</a></li>
+      <li><a href="#not_receiving">The LDM isn't receiving data</a></li>
+      <li><a href="#LDM suddenly disappears">The LDM suddenly disappears on an RHEL/CentOS system</a></li>
+      <li><a href="#ldmadmin scour takes too long on an XFS file-system">
+        "<code>ldmadmin scour</code>" takes too long</a></li>
     </ul>
-</ol>
 
-<hr>
+    <h2 id="can't start LDM">Can't start the LDM</h2>
+    <p>If the LDM won't start, then it should log the reason why. Check the LDM log file.</p>
+    <p>If that is inconclusive, then start the LDM in interactive mode by explicitly telling it to log to the standard
+      error stream via the <code>-l</code> option. Execute the command</p>
+    <pre>
+      ldmd -l- [-v]
+    </pre>
+    <p>This will prevent the LDM from daemonizing itself and it will log directly to the terminal. The running LDM can
+      be stopped by typing <code>^C</code> (control-C).</p>
 
-<h2><a name="not_receiving">The LDM isn't receiving data</h2>
+    <h2 id="config-file">The LDM server terminates after executing its configuration-file</h2>
+    <p>This could be caused by</p>
+    <ul>
+      <li>An effectively empty configuration-file</li>
+      <li>A commented-out <code>ALLOW</code> entry for <code>localhost</code> and <code>127.0.0.1</code></li>
+    </ul>
 
-<ol>
-<li>Are you sure? Verify that the LDM hasn't received the data-products in
-question by executing &mdash; as the LDM user &mdash; this command on the same
-system as the LDM:
-    <blockquote><code>
-<pre>notifyme -v [-f <em>feedtype</em>] [-p <em>pattern</em>] -o 9999999</pre>
-    </code></blockquote>
-    where <em><code>feedtype</code></em> and <em><code>pattern</code></em> are a feed
-    specification and extended regular expression, respectively, that match the
-    missing data-products.
-    <p>
-    If this command indicates that the LDM is unavailable, then start it;
-    otherwise, continue.
-<p>
-<li>Verify that your system clock is correct. If your LDM asks for data-products
-from the future, then it won't receive anything until that time.
-<p>
-<li>Verify that each upstream LDM that should be sending the data-products is,
-indeed, receiving those data-products by executing &mdash; as
-the LDM user &mdash; this command on the downstream system:
-    <blockquote><code>
-<pre>notifyme -v [-f <em>feedtype</em>] [-p <em>pattern</em>] -o 9999999 -h <i>host</i></pre>
-    </code></blockquote>
-    where <em><code>feedtype</code></em> and <em><code>pattern</code></em> are as
-    before and <i>host</i> is the hostname of the upstream LDM system (you can
-    get this from the relevant <code>REQUEST</code> entries in the LDM
-    configuration-file).
-    <p>
-    If the <code>notifyme(1)</code> command indicates that
+    <h2 id="LDM not logging">The LDM isn't logging</h2>
+    <ol>
+      <li>Verify that logging doesn't occur with the commands, and if it prints "<code>This is a test</code>", then LDM
+        logging works.</li>
+        <pre>
+          ulogger This is a test 2>/dev/null
+          tail -1 ~/var/logs/ldmd.log
+        </pre>
+      <li>Verify that the LDM log file is owned and writable by the LDM user:</li>
+        <pre>
+          ls -l ~/var/logs/ldmd.log
+        </pre>
+        If it's not, then make it so:
+        <pre>
+          sudo chown ldm ~/var/logs/ldmd.log
+          chmod u+w ~/var/logs/ldmd.log
+        </pre>
+      <li> Verify that the disk partition that contains the LDM log file isn't full:</li>
+        <pre>
+          df ~/var/logs/ldmd.log
+        </pre>
+        If it's full, then purge stuff.
+      <li>If the script "<code>~/bin/refresh_logging</code>" doesn't exist or simply executes the utility
+        <code>hupsyslog(1)</code>, then</li>
         <ul>
-        <li><b>The upstream LDM isn't running</b> (i.e.,
-        the connection is refused), then it must be started.
-        <p>
-        <li>
-        <b>The upstream LDM is unreachable</b>, then you 
-        have a networking issue. This can be verified by executing the following
-        command on the downstream host:
-        <blockquote><code>
-<pre>telnet <i>host</i> 388</pre>
-        </code></blockquote>
-        Contact your network administrator and show them the <code>telnet(1)</code>
-        command.
-        <p>
-        <li>
-        <b>The upstream LDM won't honor the request</b>, then the upstream LDM
-        doesn't have a relevant
-        <code>ALLOW</code> entry for the downstream LDM in its
-        configuration-file. This could be because the upstream LDM allows the
-        downstream LDM <em>by name</em> but that name 
-        can't be determined by the upstream LDM by performing a
-        reverse-DNS lookup on the downstream host's IP address. A reverse-DNS
-        lookup can be verified via the command
-        <blockquote><code>
-<pre>dig -x <i>IP_address</i></pre>
-        </code></blockquote>
-        or
-        <blockquote><code>
-<pre>nslookup <i>IP_address</i></pre>
-        </code></blockquote>
-        where <i>IP_address</i> is the IP address of the downstream LDM's host.
-        If the reverse-DNS lookup fails and the upstream LDM allows by
-        name, then you should contact your network administrator and show them
-        the result of the above command. If the reverse-DNS lookup succeeds,
-        then the upstream LDM likely doesn't have an <code>ALLOW</code> entry
-        for the downstream LDM and you should contact the upstream LDM user.
-        <p>
-        <li>
-        <b>The upstream LDM is, indeed, receiving the data-products</b>, then
-        either
+          <li>Verify that the system logging daemon is running via the command</li>
+            <pre>
+              ps -ef | grep syslog
+            </pre>
+          <p>If it's not running, then start it.</p>
+          <li>Determine the veracity of the following:</li>
             <ul>
-            <li>There's something wrong with the associated <code>REQUEST</code>
-            entry in the downstream LDM's configuration-file (Does it exist? Is
-            it correct?); or
-            <p>
-            <li>The upstream site is using the <i>NOT</i> field of the relevant
-            <code>ALLOW</code> entry in the upstream LDM's configuration-file to
-            prevent the downstream LDM from receiving the data-products. You'll
-            need to contact the upstream LDM user.
+              <li>The configuration-file for the system logging daemon has an entry for the LDM:</li>
+                <pre>
+                  grep local /etc/*syslog.conf | grep ldm
+                </pre>
+              <li>The utility <code>hupsyslog(1)</code> is owned by root and setuid:</li>
+                <pre>
+                  ls -l ~/bin/hupsyslog
+                </pre>
             </ul>
-        <p>
-        <li>
-        <b>The upstream LDM is <em>not</em> receiving the data-products</b>,
-        then either change your <code>REQUEST</code> entry to a host whose LDM
-        <em>is</em> receiving the data-products or execute this section on the
-        upstream system.
+           <p>If any of the above are false, then execute the command &mdash; as root &mdash;
+             "<code>make root-actions</code>" in the top-level LDM source-directory.</p>
+          <li>Restart the system logging daemon and then retry the <code>ulogger</code> command above.</li>
+          <li>If on a system that has SELINUX, verify that it is disabled or in permissive mode:</li>
+            <pre>
+              getenforce
+            </pre>
+            <p>To change from enabled mode to permissive mode, execute &mdash; as root  &mdash; the command</p>
+            <pre>
+              setenforce permissive
+            </pre>
+            <p>To disable SELINUX, edit the file <code>/etc/selinux/config</code> and set the variable
+              <code>SELINUX</code> to <code>disabled</code>. Then, reboot the system.</p>
+          <li>Verify that the disk partition containing the <code>~/bin</code> directory  does <i>not</i> have the
+            <code>nosuid</code> attribute: </li>
+            <pre>
+              dev=`df ~/bin | tail -1 | awk '{print $1}'`
+              mount | grep $dev | grep nosuid
+            </pre>
+            <p>If the <code>nosuid</code> attribute is enabled, then <code>hupsyslog</code> will not work. Either that
+              attribute must be disabled or the LDM package must be re-installed on a disk partition that has that
+              attribute disabled.</p>
         </ul>
-</ol>
+    </ol>
 
-<hr>
+    <h2 id="not_receiving">The LDM isn't receiving data</h2>
+    <ol>
+      <li>Are you sure? Verify that the LDM hasn't received the data-products in question by executing &mdash; as the
+        LDM user &mdash; this command on the same system as the LDM:</li>
+        <pre>
+          notifyme -v [-f <i>feedtype</i>] [-p <i>pattern</i>] -o 9999999
+        </pre>
+        <p>where <i><code>feedtype</code></i> and <i><code>pattern</code></i> are a feed specification and extended
+          regular expression, respectively, that match the  missing data-products.</p>
+        <p>If this command indicates that the LDM is unavailable, then start it; otherwise, continue.</p>
+      <li>Verify that your system clock is correct. If your LDM asks for data-products from the future, then it won't
+        receive anything until that time.</li>
+      <li>Verify that each upstream LDM that should be sending the data-products is, indeed, receiving those
+        data-products by executing &mdash; as the LDM user &mdash; this command on the downstream system:</li>
+        <pre>
+          notifyme -v [-f <i>feedtype</i>] [-p <i>pattern</i>] -o 9999999 -h <i>host</i>
+        </pre>
+        <p>where <i><code>feedtype</code></i> and <i><code>pattern</code></i> are as before and <i>host</i> is the
+          hostname of the upstream LDM system (you can get this from the relevant <code>REQUEST</code> entries in the
+          LDM configuration-file).</p>
+        <p>If the <code>notifyme(1)</code> command indicates that</p>
+        <ul>
+          <li><b>The upstream LDM isn't running</b> (i.e., the connection is refused), then it must be started.</li>
+          <li><b>The upstream LDM is unreachable</b>, then you have a networking issue. This can be verified by
+            executing the following command on the downstream host: <code>telnet <i>host</i> 388</code>. Contact your
+            network administrator and show them the <code>telnet(1)</code> command.</li>
+          <li><b>The upstream LDM won't honor the request</b>, then the upstream LDM doesn't have a relevant
+            <code>ALLOW</code> entry for the downstream LDM in its configuration-file. This could be because the
+            upstream LDM allows the downstream LDM <i>by name</i> but that name can't be determined by the upstream LDM
+            by performing a  reverse-DNS lookup on the downstream host's IP address. A reverse-DNS lookup can be
+            verified via the command  <code>dig -x <i>IP_address</i></code> or <code>nslookup <i>IP_address</i></code>
+            where <i>IP_address</i> is the IP address of the downstream LDM's host. If the reverse-DNS lookup fails and
+            the upstream LDM allows by name, then you should contact your network administrator and show them the result
+            of the above command. If the reverse-DNS lookup succeeds, then the upstream LDM likely doesn't have an
+            <code>ALLOW</code> entry for the downstream LDM and you should contact the upstream LDM user.</li>
+          <li><b>The upstream LDM is, indeed, receiving the data-products</b>, then either</li>
+            <ul>
+              <li>There's something wrong with the associated <code>REQUEST</code> entry in the downstream LDM's
+                configuration-file (Does it exist? Is it correct?); or</li>
+              <li>The upstream site is using the <i>NOT</i> field of the relevant <code>ALLOW</code> entry in the
+                upstream LDM's configuration-file to prevent the downstream LDM from receiving the data-products.
+                You'll  need to contact the upstream LDM user.</li>
+            </ul>
+          <li><b>The upstream LDM is <i>not</i> receiving the data-products</b>, then either change your
+            <code>REQUEST</code> entry to a host whose LDM <i>is</i> receiving the data-products or execute this section
+            on the  upstream system.</li>
+        </ul>
+    </ol>
 
-<h2><a name="LDM suddenly disappears">The LDM suddenly disappears on an
-RHEL/CentOS system</h2>
+    <h2 id="LDM suddenly disappears">The LDM suddenly disappears on an RHEL/CentOS system</h2>
+    <p>Several LDM users have reported the sudden disappearance of a running LDM on their RHEL/CentOS 6 or 7 systems.
+      There's no warning: nothing in the LDM log file. It just vanishes &mdash; as if the superuser had sent it a
+      <code>SIGKILL</code> with extreme prejudice.</p>
+    <p>It turns out, that's exactly what happened. Only, it wasn't the superuser <i>per se</i>, but the out-of-memory
+      manager acting on behalf of the superuser. The smoking gun is an entry in the system log file from the
+      out-of-memory manager about terminating the LDM process around the time that it disappears. </p>
+    <p>The current workaround is to tell the out-of-memory (OOM) manager that the LDM processes are important by
+      assigning the LDM process-group a particular "score". LDM user Daryl Herzmann explains:</p
+    <p><i>So there is a means to set a "score" on each Linux process to inform the oom killer about how it should
+      prioritize the killing.  For RHEL/centos 6+7, this can be done by `echo -1000 > /proc/$PID/oom_score_adj`.
+      For some other Linux flavours, the score should be -17 and the proc file is oom_adj.  Google is your
+      friend!</i></p>
+    <p>A simple <code>crontab(1)</code> entry like so will set this value for ldmd automatically each hour.</p>
+    <pre>
+      1 * * * * root pgrep -f "ldmd" | while read PID; do echo -1000 > /proc/$PID/oom_score_adj; done
+    </pre>
+    <p>Of course, this solution would have a small window of time between a ldm restart and the top of the next hour
+      whereby the score would not be set. There are likely more robust solutions here I am blissfully ignorant of.</p>
+    <p>The OOM killer can be completely disabled with the following command. This is not recommended for production
+      environments, because if an out-of-memory condition does present itself, there could be unexpected behavior
+      depending on the available system resources and configuration. This unexpected behavior could be anything from a
+      kernel panic to a hang depending on the resources available to the kernel at the time of the OOM condition.</p>
+    <pre>
+      sysctl vm.overcommit_memory=2
+      echo "vm.overcommit_memory=2" >> /etc/sysctl.conf
+    </pre>
 
-Several LDM users have reported the sudden disappearance of a running LDM on
-their RHEL/CentOS 6 or 7 systems. There's no warning: nothing in the LDM log
-file. It just vanishes &mdash; as if the superuser had sent it a
-<code>SIGKILL</code> with extreme prejudice.
-<p>
-It turns out, that's exactly what happened. Only, it wasn't the superuser
-<i>per se</i>, but the out-of-memory manager acting on behalf of the superuser.
-The smoking gun is an entry in the system log file from the out-of-memory
-manager about terminating the LDM process around the time that it disappears.
-<p>
-The current workaround is to tell the out-of-memory (OOM) manager that the LDM
-processes are important by assigning the LDM process-group a particular "score".
-LDM user Daryl Herzmann explains:
-<blockquote>
-So there is a means to set a "score" on each Linux process to inform the oom
-killer about how it should prioritizing the killing.  For RHEL/centos 6+7, this
-can be done by `echo -1000 > /proc/$PID/oom_score_adj`.  For some other Linux
-flavours, the score should be -17 and the proc file is oom_adj.  Google is your
-friend!
-<p>
-A simple <code>crontab(1)</code> entry like so will set this value for ldmd
-automatically each hour.
-<blockquote><code>
-<pre>1 * * * * root pgrep -f "ldmd" | while read PID; do echo -1000 > /proc/$PID/oom_score_adj; done</pre>
-</code></blockquote>
-Of course, this solution would have a small window of time between a ldm restart
-and the top of the next hour whereby the score would not be set. There are
-likely more robust solutions here I am blissfully ignorant of.
-</blockquote>
-<p>
-The OOM killer can be completely disabled with the following command. This is
-not recommended for production environments, because if an out-of-memory
-condition does present itself, there could be unexpected behavior depending on
-the available system resources and configuration. This unexpected behavior could
-be anything from a kernel panic to a hang depending on the resources available
-to the kernel at the time of the OOM condition.
-<blockquote><code>
-<pre>sysctl vm.overcommit_memory=2
-echo "vm.overcommit_memory=2" >> /etc/sysctl.conf</pre>
-</code></blockquote>
+    <h2 id="ldmadmin scour takes too long on an XFS file-system">"<code>ldmadmin scour</code>" takes too long</h2>
+    <p>Daryl Herzmann encountered this problem on his system, which uses the XFS filesystem. As he explained it</p>
+    <p><i>Please, I don't wish to start a war regarding which filesystem is the best here...  If you have used XFS
+      (now default filesystem in RHEL7) in the past, you may have suffered from very poor performance with IO related
+      to small files. For me and LDM, this would rear its very ugly head when I wished to `ldmadmin scour` the /data/
+      folder.  It would take 4+ hours to scour out a days worth of NEXRAD III files.  If you looked at output like
+      sysstat, you would see the process at 100% iowait.</i></p>
+    <p>I created a thread about this on the redhat community forums[1] and was kindly responded to by one of the XFS
+      developers, Eric Sandeen.  He wrote the following:</p>
+    <p><i>This is because your xfs filesystem does not store the filetype in the directory, and so every inode in the
+      tree must be stat'd (read) to determine the filetype when you use the "-type f" qualifier. This is much slower
+      than just reading directory information. In RHEL7.3, mkfs.xfs will enable filetypes by default. You can do so
+      today with "mkfs.xfs -n ftype=1".</i></p>
+    <p>So what he is saying is that you have to reformat your filesystem to take advantage of this setting.</p>
+    <p>So I did some testing and now `ldmadmin scour` takes only 4 minutes to transverse the NEXRAD III directory
+      tree!</p>
 
-<hr>
-
-<h2><a name="ldmadmin scour takes too long on an XFS file-system">
-"<code>ldmadmin scour</code>" takes too long</h2>
-Daryl Herzmann encountered this problem on his system, which uses the XFS
-filesystem. As he explained it
-<blockquote>
-Please, I don't wish to start a war regarding which filesystem is the best
-here...  If you have used XFS (now default filesystem in RHEL7) in the past, you
-may have suffered from very poor performance with IO related to small files. 
-For me and LDM, this would rear its very ugly head when I wished to `ldmadmin
-scour` the /data/ folder.  It would take 4+ hours to scour out a days worth of
-NEXRAD III files.  If you looked at output like sysstat, you would see the
-process at 100% iowait.
-
-I created a thread about this on the redhat community forums[1] and was kindly
-responded to by one of the XFS developers, Eric Sandeen.  He wrote the
-following:
-<blockquote>
-    This is because your xfs filesystem does not store the filetype in the
-    directory, and so every inode in the tree must be stat'd (read) to
-    determine the filetype when you use the "-type f" qualifier. This is
-    much slower than just reading directory information. In RHEL7.3,
-    mkfs.xfs will enable filetypes by default. You can do so today with
-    "mkfs.xfs -n ftype=1".
-</blockquote>
-
-So what he is saying is that you have to reformat your filesystem to take
-advantage of this setting.
-
-So I did some testing and now `ldmadmin scour` takes only 4 minutes to
-transverse the NEXRAD III directory tree!
-
-</blockquote>
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

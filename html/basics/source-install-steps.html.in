@@ -1,418 +1,240 @@
-<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<!DOCTYPE HTML>
 <html>
-<head>
-    <meta name="UIINDEX" content="4">
-   <meta name="BOOKMARK" content="Source Install Steps">
-   <meta name="AUTHOR" content="steve">
-   <meta name="KEYWORDS" content="LDM, install, installation, source">
-   <title>LDM Source-Code Installation</title>
-</head>
-<body>
+  <head>
+    <title>LDM Source-Code Installation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Source Install Steps">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, install, installation, source">
+  </head>
+  <body>
+    <h1>LDM Source-Code Installation</h1>
+    <h2>Short Installation Instructions:</h3>
+    <p>The following assumes that you are familiar with both the LDM system and with autoconf-based 
+    package-installation. If you're not, then follow the long installation instructions in the next section. </p>
+    <p>First, enable a 64-bit environment if possible. Then, do the following:</p>
+    <pre>
+      su - ldm
+      wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
+      gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
+      rm @PACKAGE@-@VERSION@.tar.gz # optional
+      cd @PACKAGE@-@VERSION@/src
+      export PATH=... # if necessary
+      ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [--with-gribinsert] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
+      make install &gt;install.log 2&gt;&1
+      sudo make root-actions
+      make clean # optional
+    </pre>
+    <p><b>NOTE</b>: If you don't have the pax(1) utility, then replace the gunzip(1) command-line with the following:</p>
+    <pre>
+      gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+      cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
+    </pre>
+    <p>The root of the installation tree will be <code>$HOME/@PACKAGE@-@VERSION@</code> for the version-dependent
+    files.</p>
+    <p>If you encounter problems, then follow the long installation instructions in the next section.</p>
 
-<h1 align="center">LDM Source-Code Installation</h1>       
+    <h2>Long Installation Instructions:</h3>
+    <h3 id="become">I. Become the LDM User in That User's Home Directory</h3>
+    <p>Follow <a href="become_ldm.html">this advice</a> on becoming the
+    <a href="glindex.html#LDM user">LDM user</a>.</p>
+    <p><a href="../workshop/specifics.html#becomeLdmUser">Workshop-specific instructions</a>.
 
-<hr>
+    <h3 id="obtain">Obtain the <a href="glindex.html#LDM">LDM</a> Source-Distribution</h3>
+    <p>The <a href="glindex.html#LDM">LDM</a> source-distribution can be obtained by clicking on the appropriate link in
+    the  <a href="https://downloads.unidata.ucar.edu/ldm/">LDM download page</a>. Download the file into the
+    <a href="glindex.html#LDM user">LDM user</a>'s home directory.</p>
+    <p>The remaining instructions assume that the distribution was downloaded into the
+    <a href="glindex.html#LDM user">LDM user</a>'s home-directory.</p>
 
-<h2>Short Installation Instructions:</h3>
-
-<p>
-The following assumes that you are familiar with both the LDM system and with
-autoconf-based package-installation. If you're not, then follow the long
-installation instructions in the next section. 
-
-<p>
-First, enable a 64-bit environment if possible.
-Then, do the following:
-
-<pre>
-    su - ldm
-    wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/@PACKAGE@-@VERSION@.tar.gz
-    gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
-    rm @PACKAGE@-@VERSION@.tar.gz # optional
-    cd @PACKAGE@-@VERSION@/src
-    export PATH=... # if necessary
-    ./configure [--enable-logging=local<i>n</i>] [--localstatedir=<i>volatile_dir</i>] [--disable-max-size] [--with-noaaport] [--with-gribinsert] [CC=...] [CFLAGS=...] >configure.log 2&gt;&1
-    make install &gt;install.log 2&gt;&1
-    sudo make root-actions
-    make clean # optional
-</pre>
-
-<p>
-<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then replace
-the <tt>gunzip(1)</tt> command-line with the following:
-
-<pre>
-    gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
-    cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
-</pre>
-
-<p>
-The root of the installation tree will be <code>$HOME/@PACKAGE@-@VERSION@</code>
-for the version-dependent files.
-
-<p>
-If you encounter problems, then follow the long installation instructions in
-the next section. 
-
-<hr>
-
-<h2>Long Installation Instructions:</h3>
-
-<ol>
-
-<li>
-<a NAME="become"></a>
-<h3>Become the LDM User in That User's Home Directory</h3>
-
-<p>Follow
-<a href="become_ldm.html">this advice</a> on becoming the 
-<a href="glindex.html#LDM user">LDM user</a>.
-
-<p><a href="../workshop/specifics.html#becomeLdmUser">Workshop-specific instructions</a>.
-
-<li>
-<a NAME="obtain"></a>
-<h3>
-Obtain the 
-<a href="glindex.html#LDM">LDM</a> Source-Distribution</h3>
-
-<p>The 
-<a href="glindex.html#LDM">LDM</a> 
-source-distribution can be obtained
-by clicking on the appropriate link in the 
-<a href="https://downloads.unidata.ucar.edu/ldm/">LDM download page</a>.
-Download the file into the 
-<a href="glindex.html#LDM user">LDM user</a>'s home directory.
-
-<p>The remaining instructions assume that the distribution was downloaded 
-into the 
-<a href="glindex.html#LDM user">LDM user</a>'s home-directory.</p>
-
-<li>
-<a NAME="unpack"></a>
-<h3>Unpack the Distribution</h3>
-
-<p>Unpack the distribution in the 
-<a href="glindex.html#LDM user">LDM user</a>'s home directory into the
-directory <code>@PACKAGE@-@VERSION@/src</code>
-using the <code>gunzip(1)</code> and <code>pax(1)</code>
-utilities.
-For example:
-<blockquote><pre>
-cd # go to the LDM user's home-directory
-gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
-</pre></blockquote>
-
-<b>NOTE</b>: If you don't have the <tt>pax(1)</tt> utility, then replace the
-<tt>gunzip(1)</tt> command-line with the following:
-
-<pre>
-    gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
+    <h3 id="unpack">Unpack the Distribution</h3>
+    <p>Unpack the distribution in the <a href="glindex.html#LDM user">LDM user</a>'s home directory into the directory
+    <code>@PACKAGE@-@VERSION@/src</code> using the <code>gunzip(1)</code> and <code>pax(1)</code> utilities. For
+    example:</p>
+    <pre>
+      cd # go to the LDM user's home-directory
+      gunzip -c @PACKAGE@-@VERSION@.tar.gz | pax -r '-s:/:/src/:' # unpack the distribution
+    </pre>
+    <p><b>NOTE</b>: If you don't have the pax(1) utility, then replace the gunzip(1) command-line with the
+    following:</p>
+    <pre>
+      gunzip -c @PACKAGE@-@VERSION@.tar.gz | (mkdir -p @PACKAGE@-@VERSION@ &&
         cd @PACKAGE@-@VERSION@ && tar -xf - && mv @PACKAGE@-@VERSION@ src)
-</pre>
+    </pre>
+    <p>The reason for creating the additional <code>src/</code> subdirectory is to allow for reversible upgrading of the
+    LDM.  The section on <a href="activating.html">activating the LDM installation</a> provides an example.</p>
 
-<p>The reason for creating the additional <code>src/</code> subdirectory is
-to allow for reversible upgrading of the LDM.  The section on
-<a href="activating.html">activating the LDM installation</a>
-provides an example.
+    <h3 id="build">Build and Install the Distribution</h3>
+    <ol type="A">
+      <li>Go to the top-level directory of the just-unpacked package.  For example</li>
+      <pre>
+        cd $HOME/@PACKAGE@-@VERSION@/src
+      </pre>
+      <li id="clean-up">If you need to clean-up from a previous build attempt, then use the <code>make(1)</code> utility
+       to return the distribution to a pristine state:</li>
+      <pre>
+        make distclean
+      </pre>
+      Don't worry if this command fails or even fails to execute.
+      <li id="PATH">(Optional) If necessary, adjust the PATH environment variable to obtain the necessary utilities.
+      This step can be necessary due to the vagaries of build environments. Note that some computer systems can build
+      both a 32-bit and a 64-bit LDM system.  We strongly recommend that you choose a 64-bit build environment whenever
+      possible so that the <a href="glindex.html#product-queue">product-queue</a> isn't unnecessarily restricted to
+      small sizes only.</li>
+      <p>How to set an environment variable depends on your user-shell.  For example:
+      <table>
+        <tr>
+	        <th>User Shell</th>
+	        <th>Example</th>
+        </tr>
+	        <td>Standard UNIX (e.g. <code>sh, ksh, bash</code>)</td>
+	        <td><code>export PATH=/usr/gnu/bin:/usr/bin:/bin</code></td>
+        </tr>
+        <tr>
+	        <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+	        <td><code>setenv PATH /usr/gnu/bin:/usr/bin:/bin</code></td>
+        </tr>
+      </table>
+      <li id="configure">Execute the <code>configure</code> script to customize the installation process for your
+       particular system.  You may use the following options and arguments, when and if appropriate: </li>
+        <dl>
+          <dt><code>--with-ulog</code></dt>
+          <dd>Use the <code>ulog</code> logging module that was standard prior to LDM version 6.12.15. When appropriate,
+            the <code>ulog</code> module writes log messages to the
+            <a href="glindex.html#syslog">system logging daemon</a>. Because enabling such use was the single greatest
+            impediment to correctly using the LDM (and for other reasons), the <code>ulog</code> module has been
+            replaced by one that writes directly into the LDM log file when appropriate, yet still supports
+            <a href="newlog.html">LDM log file rotation</a>.</dd>
+          <dt><code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a></code></dt>
+          <dd>Configures the <a href="glindex.html#LDM">LDM</a> to use the
+            <a href="glindex.html#localn">local<i>n</i></a>	facility when logging messages to the
+            <a href="glindex.html#syslog">system logging daemon</a>. If you have a previous
+            <a href="glindex.html#LDM">LDM</a>	installation, then you should use the same facility. The default
+        	  is <code>local0</code>.	Note that, by default, log messages will be written directly into the 	LDM log
+        	  file,	when appropriate, unless the previous option is specified.</dd>
+          <dt><code>--localstatedir=<i>volatile_dir</i></code></dt>
+          <dd>Configures the LDM to use <i>volatile_dir</i> (<i>e.g.</i>, <code>/var/ldm</code>) as the root directory
+            for highly volatile files such as the LDM <a href="glindex.html#product-queue">product-queue</a>,
+            <a href="glindex.html#logfile">LDM logfile</a>, and <a href="monitoring.html#metrics">LDM metrics</a> files.
+            In general, such files should not be backed-up because of their volatility, so having the root-directory for
+            such files reside in a disk partition that's not backed-up is a good idea.  Be aware, however, that this
+            directory <i>must</i> be on a locally mounted disk because the LDM product-queue is memory-mapped,
+            file-locked, and is accessed more often than free beer at a frat party.  The default is
+            <code>$HOME/var</code>.</dd>
+          <dd><b>NOTE:</b> This option  will <i>not</i> work if a pre-6.9 version of the LDM has been installed because
+            then this version wouldn't use the product-queue that already exists.</dd>
+          <dt><code>--disable-max-size</code></dt>
+          <dd>By default, if the C compiler is <b>c89</b>(1) or <b>c99</b>(1), then the <b>configure(1)</b> script will
+            attempt to obtain as large a programming environment as possible in order to support a
+            <a href="glindex.html#product-queue">product-queue</a> that is larger than 2^31 bytes in size.  This option
+            disables that attempt so that the <b>CC</b>, <b>CPPFLAGS</b>, <b>CFLAGS</b>, and <b>LDFLAGS</b> variables
+            are used verbatim.</dd>
+          <dt><code>--disable-setpgid-exec</code></dt>
+          <dd>By default, every process created by a <a href="glindex.html#pqact EXEC action">pqact(1) EXEC action</a>
+            will be made a <a href="glindex.html#process group leader">process group leader</a> so that it will not
+            receive signals sent to the LDM's <a href="glindex.html#process group">process group</a>. This is done
+            because the process is likely not prepared to handle such signals. Disabling this feature will cause those
+            processes to receive  those signals.</dd>
+          <dt><code>--with-noaaport</code></dt>
+          <dd>Include support for ingesting data-products from a <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
+            This option is disabled by default because most sites don't have a
+            <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
+            <a href="../noaaport/index.html">NOAAPORT ingestion webpages</a>.</dd>
+          <dt><code>--with-gribinsert</code></dt>
+          <dd>Include support for converting GRIB2 messages in a file into LDM
+            <a href="glindex.html#data-product">data-product</a>s and inserting them into an LDM
+            <a href="glindex.html#product-queue">product-queue</a>.  This option is disabled by default because most
+            sites don't need this capability.</dd>
+          <dt><code>CC=<i>path</i></code></dt>
+          <dd>Configures the build process to use <i>path</i> as the pathname of the C compiler (<i>e.g.</i>,
+            <code>CC=/usr/gnu/bin/gcc</code>).</dt>
+          <dt><code>CPPFLAGS=</code>...</dt>
+          <dd>C preprocessor options used by the build process (<i>e.g.</i>, <code>CPPFLAGS=-UNDEBUG</code>).</dd>
+          <dt><code>CFLAGS=</code>...</dt>
+          <dd>C options used by the build process (<i>e.g.</i>, <code>CFLAGS=-g</code>).</dd>
+          <dt><code>LIBS=</code>...</dt>
+          <dd>Additional libraries used by the build process (<i>e.g.</i>,
+            <code>LIBS="-L/opt/lib -lrpcsoc"</code>).</dd>
+        </dl>
+        <p>Use of the above can be necessary due to the vagaries of build environments. Note that some of the computer
+          systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend that you choose a 64-bit build
+          environment whenever possible so that the <a href="glindex.html#product-queue">product-queue</a> isn't
+          unnecessarily restricted to small sizes only. Note that, by default, the <b>configure</b>(1) script will
+           attempt to support a large <a href="glindex.html#product-queue">product-queue</a> if the C compiler is
+           <b>c89</b>(1) or <b>c99</b>(1)).</p>
+        <p>When executing the <code>configure</code> script, redirect <i>both</i> the standard output and standard error
+          streams to the file <code>configure.log</code>.  The relevant command depends on your user-shell.
+          For example:</p>
+        <table>
+          <tr>
+	          <th>User Shell</th>
+          	<th>Example</th>
+          </tr>
+          <tr>
+  	        <td>Standard UNIX (e.g. <code>sh, ksh, bash</code>)</td>
+	          <td><code>./configure&nbsp;...&nbsp;>configure.log&nbsp;2>&1</code></td>
+          </tr>
+          <tr>
+	          <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+	          <td><code>./configure&nbsp;&nbsp;...&nbsp;>&!&nbsp;configure.log</code></td>
+          </tr>
+        </table>
+        <p>Where "<code>...</code>" represents installation-specific arguments and should not be entered literally.</p>
+        <p>Inspect the file <code>configure.log</code> to verify the configuration process.  If an error occurred, then
+          the reason for the error can often be found in the file <code>config.log</code> (note the slightly different
+          name).<p> <p>If you email the <a href="glindex.html#UPC">UPC</a> because of a problem with this step, be sure
+          to enclose the files <code>configure.log</code> and <code>config.log</code>.</p>
+      <li>Use a <code>make(1)</code> utility appropriate for your system to build and install the package, redirecting
+        <i>both</i> standard output and standard error to the file <code>install.log</code>. The relevant command
+        depends  on your user shell.  For example:</li>
+        <table>
+          <tr>
+	          <th>User Shell</th>
+	          <th>Command</th>
+          </tr>
+          <tr>
+	          <td>Standard UNIX (e.g. <code>sh, ksh, bash</code>)</td>
+	          <td><code><a href="glindex.html#make">make</a> install &gt;install.log 2>&1</code></td>
+          </tr>
+          <tr>
+	          <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+	          <td><code><a href="glindex.html#make">make</a> install &gt;&! install.log</code></td>
+          </tr>
+        </table>
+        <p>Inspect the file <code>install.log</code> to verify the build and installation process.  If something went
+          wrong that you think might be fixed by <a href="#PATH">setting the PATH environment variable</a> or by
+          <a href="#configure">invoking the configure script</a> differently (such as by using the <code>cc</code>
+          compiler rather than the <code>c89</code> compiler) then return to the <a href="#clean-up">clean-up step</a>
+          above.</p>
+        <p>If you email the <a href="glindex.html#UPC">UPC</a> because of a problem with this step, be sure to enclose
+        the files <code>configure.log</code>, <code>config.log</code>, and <code>install.log</code>.</p>
+      <li id="pqcheck">(Optional) If you decided that the just-built <a href="glindex.html#LDM">LDM</a> system should
+        work with the previous <a href="glindex.html#product-queue">product-queue</a> from a version 6.1 (or earlier)
+        <a href="glindex.html#LDM">LDM</a>, then verify that it does so by executing the command
+        <code>../bin/pqcheck</code>.  If this indicates that the <a href="glindex.html#product-queue">product-queue</a>
+        is invalid, then you must either  reinstall this package -- starting with the
+        <a href="#clean-up">clean-up step above</a> -- and specify a different programming environment via the
+        <code>CC</code> environment variable (<i>e.g.</i> <code>cc -m32</code> instead of  <code>cc -m64</code>) before
+        re-executing the <code>configure</code> script, or you will have to remove the previous
+        <a href="glindex.html#product-queue">product-queue</a> and create a new, empty one using the programs of this
+        package before starting the new LDM.</li>
+      <li>The superuser must now execute the command <code>make root-actions</code> to finish the installation.  For
+        example: <code>sudo make root-actions</code> or <code>su root -c 'make root-actions'</code>.  Note that the last
+        example requires the superuser's password. If you can't execute one of these commands, then contact your systems
+        administrator to have them perform it.</li>
+      <p>Among other things, this step is necessary for the <a href="glindex.html#LDM">LDM</a> server to listen on port
+        388 (which is a restricted port) and for the LDM's <code>hupsyslog(1)</code> utility to notify the system
+        logging daemon when a new log-file has been created, if appropriate.</p>
+      <li>(Optional) Use the <code>make(1)</code> utility to clean-up after yourself.</li>
+        <pre>
+          make clean
+        </pre>
+    </ol>
+    <p>Click <a href="what-gets-installed.html">here</a> to see what gets installed where in a canonical installation
+    process.</p>
+    <p><a href="../workshop/specifics.html#build">Workshop-specific instructions</a>.</p>
 
-<li>
-<a NAME="build"></a>
-<h3>
-Build and Install the Distribution</h3>
-
-<ol type="A">
-
-<li><p>Go to the top-level directory of the just-unpacked package.  For example
-<blockquote><pre>
-cd $HOME/@PACKAGE@-@VERSION@/src
-</pre></blockquote>
-</p></li>
-
-<a name="clean-up"></a>
-<li><p>If you need to clean-up from a previous build attempt, then 
-use the <code>make(1)</code> utility to return the 
-distribution to a pristine state:
-<blockquote><pre>
-make distclean
-</pre></blockquote>
-Don't worry if this command fails or even fails to execute.</li>
-
-<a name="PATH"></a>
-<li><p>(Optional) If necessary, adjust the <tt>PATH</tt> environment variable
-to obtain the necessary utilities.
-This step can be necessary due to the vagaries of build environments.
-Note that some computer
-systems can build both a 32-bit and a 64-bit LDM system.  We strongly 
-recommend that you choose a 64-bit build environment whenever possible so
-that the
-<a href="glindex.html#product-queue">product-queue</a>
-isn't unnecessarilly restricted to small sizes only.
-
-<p>How to set an environment variable depends on your user-shell.  For
-example:
-<blockquote>
-<table align="center" border="2" cellpadding="6" cellspacing="0">
-    <tr>
-	<th>User Shell</th>
-	<th>Example</th>
-    </tr>
-	<td>Standard UNIX<sup>�</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code>export PATH=/usr/gnu/bin:/usr/bin:/bin</code></td>
-    </tr>
-    <tr>
-	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code>setenv PATH /usr/gnu/bin:/usr/bin:/bin</code></td>
-    </tr>
-</table>
-</blockquote>
-
-<li>
-<p><a name="configure"></a>
-Execute the <code>configure</code> script to customize the
-installation process for your particular system.  You may use the following
-options and arguments, when and if appropriate:
-<blockquote>
-<dl>
-    <dt><code>--with-ulog</code>
-    <dd>Use the <code>ulog</code> logging module that was standard prior to LDM
-        version 6.12.15. When appropriate, the <code>ulog</code> module writes
-        log messages to the <a href="glindex.html#syslog">system logging
-        daemon</a>. Because enabling such use was the single greatest impediment
-        to correctly using the LDM (and for other reasons), the
-        <code>ulog</code> module has been replaced by one that writes directly
-        into the LDM log file when appropriate, yet still supports <a
-        href="newlog.html">LDM log file rotation</a>.
-
-    <dt><code>--enable-logging=<a href="glindex.html#localn">local<em>n</em>
-	</a></code>
-    <dd>Configures the <a href="glindex.html#LDM">LDM</a> to use the
-	<a href="glindex.html#localn">local<i>n</i></a>
-	facility when logging messages to the
-	<a href="glindex.html#syslog">system logging daemon</a>.
-	If you have a previous 
-	<a href="glindex.html#LDM">LDM</a>
-	installation, then you should use the same facility.
-	The default is <code>local0</code>.
-	Note that, by default, log messages will be written directly into the
-	LDM log file, when appropriate, unless the previous option is specified.
-
-    <dt><code>--localstatedir=<i>volatile_dir</i></code>
-    <dd>Configures the LDM to use <i>volatile_dir</i> (<i>e.g.</i>,
-        <code>/var/ldm</code>) as the root directory for
-        highly volatile files such as the LDM 
-        <a href="glindex.html#product-queue">product-queue</a>,
-        <a href="glindex.html#logfile">LDM logfile</a>, and 
-        <a href="monitoring.html#metrics">
-        LDM metrics</a>
-        files.  In general, such files should not be backed-up because of their
-        volatility, so having the root-directory for such files reside in a
-        disk partition that's not backed-up is a good idea.  Be aware, however,
-        that this directory <em>must</em> be on a locally mounted disk because
-        the LDM product-queue is memory-mapped, file-locked, and is accessed
-        more often than free beer at a frat party.  The default is
-        <code>$HOME/var</code>.
-
-        <b>NOTE:</b> This option
-        will <em>not</em> work if a pre-6.9 version of the LDM has been
-        installed because then this version wouldn't use the product-queue
-        that already exists.
-
-    <dt><code>--disable-max-size</code>
-    <dd>By default, if the C compiler is <tt><b>c89</b>(1)</tt> or
-        <tt><b>c99</b>(1)</tt>, then the <tt><b>configure(1)</b></tt> script
-        will attempt to obtain as large a programming environment as possible
-        in order to support a <a
-        href="glindex.html#product-queue">product-queue</a> that is larger than
-        2^31 bytes in size.  This option disables that attempt so that the
-        <tt><b>CC</b></tt>, <tt><b>CPPFLAGS</b></tt>, <tt><b>CFLAGS</b></tt>,
-        and <tt><b>LDFLAGS</b></tt> variables are used verbatim. 
-
-    <dt><code>--disable-setpgid-exec</code>
-    <dd>By default, every process created by a
-        <a href="glindex.html#pqact EXEC action">pqact(1) <tt>EXEC</tt> action</a>
-        will be made a
-        <a href="glindex.html#process group leader">process group leader</a>
-        so that it will not receive signals sent to
-        the LDM's <a href="glindex.html#process group">process group</a>. This
-        is done because the process is likely not prepared to handle such
-        signals. Disabling this feature will cause those processes to receive
-        those signals.
-
-    <dt><code>--with-noaaport</code>
-    <dd>Include support for ingesting data-products from a
-        <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
-        This option is disabled by default because most sites don't have a
-        <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
-        <a href="../noaaport/index.html">NOAAPORT ingestion webpages</a>.
-
-    <dt><code>--with-gribinsert</code>
-    <dd>Include support for converting GRIB2 messages in a file into LDM
-        <a href="glindex.html#data-product">data-product</a>s and inserting
-        them into an LDM <a
-        href="glindex.html#product-queue">product-queue</a>.  This option is
-        disabled by default because most sites don't need this capability.
-
-    <dt><code>CC=<em>path</em></code>
-    <dd>Configures the build process to use <i>path</i> as the pathname of the
-        C compiler (<i>e.g.</i>, <code>CC=/usr/gnu/bin/gcc</code>).
-
-    <dt><code>CPPFLAGS=</code>...
-    <dd>C preprocessor options used by the build process
-        (<i>e.g.</i>, <code>CPPFLAGS=-UNDEBUG</code>).
-
-    <dt><code>CFLAGS=</code>...
-    <dd>C options used by the build process
-        (<i>e.g.</i>, <code>CFLAGS=-g</code>).
-
-    <dt><code>LIBS=</code>...
-    <dd>Additional libraries used by the build process
-        (<i>e.g.</i>, <code>LIBS="-L/opt/lib -lrpcsoc"</code>).
-</dl>
-</blockquote>
-
-<p>Use of the above can be necessary due to the vagaries of build environments.
-Note that some of the computer
-systems can build both a 32-bit and a 64-bit LDM system.  We strongly recommend
-that you choose a 64-bit build environment whenever possible so that the <a
-href="glindex.html#product-queue">product-queue</a> isn't unnecessarily
-restricted to small sizes only. Note that, by default, the
-<tt><b>configure</b>(1)</tt> script will attempt to support a large <a
-href="glindex.html#product-queue">product-queue</a> if the C compiler is
-<tt><b>c89</b>(1)</tt> or <tt><b>c99</b>(1)</tt>).
-
-<p>When executing the <code>configure</code> script, redirect <em>both</em> the
-standard output and standard error streams to the file
-<code>configure.log</code>.  The relevant command depends on your user-shell.
-For example:
-<blockquote>
-<table align="center" border="2" cellpadding="6" cellspacing="0">
-    <tr>
-	<th>User Shell</th>
-	<th>Example</th>
-    </tr>
-	<td>Standard UNIX<sup>�</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td><code>./configure&nbsp;...&nbsp;>configure.log&nbsp;2>&1</code><br>
-	</td>
-    </tr>
-    <tr>
-	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td><code>./configure&nbsp;&nbsp;...&nbsp;>&!&nbsp;configure.log</code><br>
-	</td>
-    </tr>
-</table>
-</blockquote>
-Where "<code>...</code>" represents installation-specific arguments and should
-not be entered literally.
-
-<p>Inspect the file <code>configure.log</code> to verify the configuration
-process.  If an error occurred, then the reason for the error can often be
-found in the file <code>config.log</code> (note the slightly different
-name).<p> <p>If you email the <a href="glindex.html#UPC">UPC</a> because of a
-problem with this step, be sure to enclose the files <code>configure.log</code>
-and <code>config.log</code>.</p>
-
-<li>
-<p>Use a <code>make(1)</code> utility
-appropriate for your system to build and install the package,
-redirecting <em>both</em> standard output
-and standard error to the file <code>install.log</code>.
-The relevant command depends on your user shell.  For example:
-<blockquote>
-<table align="center" border="2" cellpadding="6" cellspacing="0">
-    <tr>
-	<th>User Shell</th>
-	<th>Command</th>
-    </tr>
-	<td>Standard UNIX<sup>�</sup> (e.g. <code>sh, ksh, bash</code>)</td>
-	<td nowrap><code><a href="glindex.html#make">make</a> install
-	    &gt;install.log 2>&1</code></td>
-    </tr>
-    <tr>
-	<td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-	<td nowrap><code><a href="glindex.html#make">make</a> install
-	    &gt;&! install.log</code></td>
-    </tr>
-</table>
-</blockquote>
-
-<p>Inspect the file <code>install.log</code> to verify the build and installation
-process.  If something went wrong that you think might be fixed by <a
-href="#PATH">setting the PATH environment variable</a> or by <a
-href="#configure">invoking the <tt>configure</tt> script</a> differently (such
-as by using the <code>cc</code> compiler rather than the <code>c89</code>
-compiler) then return to the <a href="#clean-up">clean-up step</a> above.
-
-<p>If you email the 
-<a href="glindex.html#UPC">UPC</a>
-because of a problem with this step, be sure to
-enclose the files <code>configure.log</code>, 
-<code>config.log</code>, and
-<code>install.log</code>.</p>
-
-<li><a name="pqcheck"></a>
-<p>(Optional) If you decided that the just-built
-<a href="glindex.html#LDM">LDM</a> system should work with the previous
-<a href="glindex.html#product-queue">product-queue</a>
-from a version 6.1 (or earlier)
-<a href="glindex.html#LDM">LDM</a>, then verify that it
-does so by executing the command 
-<blockquote><pre>
-../bin/pqcheck
-</blockquote></pre>
-If this indicates that the
-<a href="glindex.html#product-queue">product-queue</a> is invalid, then
-you must either 
-reinstall this package -- starting with the
-<a href="#clean-up">clean-up step above</a> --
-and specify a different programming environment via the
-<code>CC</code> environment variable 
-(<i>e.g.</i> <code>cc -m32</code> instead of 
-<code>cc -m64</code>)
-before re-executing the <code>configure</code> script, or
-you will have to remove the previous 
-<a href="glindex.html#product-queue">product-queue</a> and
-create a new, empty one using the programs of this package before starting
-the new LDM.
-
-<li>
-<p>
-The superuser must now execute the command <code>make root-actions</code> to finish
-the installation.  For example:
-<blockquote><pre>
-sudo make root-actions
-</blockquote></pre>
-or
-<blockquote><pre>
-su root -c 'make root-actions'
-</blockquote></pre>
-Note that the last example requires the superuser's password. If you can't execute one of these
-commands, then contact your systems administrator to have them perform it.
-</p>
-
-<p>Among other things, this step is necessary for the 
-<a href="glindex.html#LDM">LDM</a> server to listen on port 388 (which is
-a restricted port) 
-and for the LDM's <code>hupsyslog(1)</code> utility
-to notify the system logging daemon when a new log-file has been
-created, if appropriate.
-
-<li>
-<p>(Optional) Use the <code>make(1)</code> utility to clean-up after yourself.
-<blockquote><pre>
-make clean
-</blockquote></pre>
-</li>
-
-</ol>
-
-<p>Click <a href="what-gets-installed.html">here</a> to see what gets
-installed where in a canonical installation process.
-
-<p><a href="../workshop/specifics.html#build">Workshop-specific instructions</a>.
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

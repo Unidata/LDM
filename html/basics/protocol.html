@@ -1,188 +1,116 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Protocol</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Protocol">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="LDM, protocol">
+    <meta name="DESCRIPTION" content="The LDM protocol.">
+  </head>
+  <body>
+    <h1>The LDM 6 Protocol</h1>
+    <p>This page describes the various <a href="glindex.html#RPC">RPC</a> messages used by the 
+      <a href="glindex.html#LDM 6 protocol">LDM 6 protocol</a>.</p>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Protocol</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Protocol">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="LDM, protocol">
-<META NAME="DESCRIPTION" CONTENT="The LDM protocol.">
-</HEAD>
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#General Information">General Information</a></li>
+      <li><a href="#messages">Individual RPC Messages</a></li>
+	    <ul>
+        <li><a href="#FEEDME">FEEDME</a></li>
+        <li><a href="#NOTIFYME">NOTIFYME</a></li>
+        <li><a href="#NOTIFICATION">NOTIFICATION</a></li>
+        <li><a href="#HEREIS">HEREIS</a></li>
+        <li><a href="#COMINGSOON">COMINGSOON</a></li>
+        <li><a href="#BLKDATA">BLKDATA</a></li>
+        <li><a href="#HIYA">HIYA</a></li>
+        <li><a href="#IS_ALIVE">IS_ALIVE</a></li>
+	    </ul>
+    </ul>
 
-<BODY>
+    <h2 id="General Information">General Information</h2>
+    <table>
+      <tr>
+	      <th><b>Item</b></th>
+	      <th><b>Value</b></th>
+      </tr>
+      <tr>
+	      <td><a href="glindex.html#RPC">RPC</a> Program #</td>
+	      <td>300029</td>
+      </tr>
+      <tr>
+	      <td>Well-Known Port #</td>
+      	<td>388</td>
+      </tr>
+    </table>
 
-<h1 align="center">The LDM 6 Protocol</h1><br>
+    <h2 id="messages">Individual <a href="glindex.html#RPC">RPC</a> Messages</h2>
+    <h3 id="FEEDME">FEEDME</h3>
+    <p>A FEEDME message is sent by a <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to its 
+      <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> to request all 
+      <a href="glindex.html#data-product">data-product</a>s that match the 
+      <a href="glindex.html#criteria">data-product selection-criteria</a> specified in the message. The message also 
+      specifies the <a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a>.</p>
 
-<p>
-This page describes the various 
-<a href="glindex.html#RPC">RPC</a> messages used by the
-<a href="glindex.html#LDM 6 protocol">LDM 6 protocol</a>.
+    <h3 id="NOTIFYME">NOTIFYME</h3>
+    <p>A NOTIFYME message is sent by a <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to its 
+      <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> to request the 
+      <a href="glindex.html#metadata">data-product metadata</a> of all 
+      <a href="glindex.html#data-product">data-product</a>s that match the 
+      <a href="glindex.html#criteria">data-product selection-criteria</a> specified in the message.</p>
 
-<h2>Contents</h2>
+    <h3 id="NOTIFICATION">NOTIFICATION</h3>
+    <p>A NOTIFICATION message is sent by an <a href="glindex.html#upstream LDM">upstream LDM 6</a> to a 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to deliver 
+      <a href="glindex.html#metadata">data-product metadata</a> in response to a <a href="#NOTIFYME">NOTIFYME</a> 
+      request from the <a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</p>
 
-<ul>
-    <li><a href="#General Information">General Information</a>
-    <li><a href="#messages">Individual RPC Messages</a>
-	<ul>
-	    <li><a href="#FEEDME"><tt>FEEDME</tt></a>
-	    <li><a href="#NOTIFYME"><tt>NOTIFYME</tt></a>
-	    <li><a href="#NOTIFICATION"><tt>NOTIFICATION</tt></a>
-	    <li><a href="#HEREIS"><tt>HEREIS</tt></a>
-	    <li><a href="#COMINGSOON"><tt>COMINGSOON</tt></a>
-	    <li><a href="#BLKDATA"><tt>BLKDATA</tt></a>
-	    <li><a href="#HIYA"><tt>HIYA</tt></a>
-	    <li><a href="#IS_ALIVE"><tt>IS_ALIVE</tt></a>
-	</ul>
-</ul>
+    <h3 id="HEREIS">HEREIS</h3>   
+    <p>A HEREIS message is sent by an <a href="glindex.html#upstream LDM">upstream LDM 6</a> to a 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to deliver a 
+      <a href="glindex.html#data-product">data-product</a> whose 
+      <a href="glindex.html#product size">data-product size</a> is less than or equal to the 
+      <a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a> specified by the 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.></p>
 
-<hr>
+    <h3 id="COMINGSOON">COMINGSOON</h3>
+    <p>A COMINGSOON message is sent by an <a href="glindex.html#upstream LDM">upstream LDM 6</a> to a 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to deliver the 
+      <a href="glindex.html#metadata">data-product metadata</a> of a 
+      <a href="glindex.html#data-product">data-product</a> whose 
+      <a href="glindex.html#product size">data-product size</a> is greater than the 
+      <a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a> specified by the 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a>. This 
+      <a href="glindex.html#synchronous">synchronous</a> message implicitly asks if the 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> wants the specified 
+      <a href="glindex.html#data-product">data-product</a>. The <a href="glindex.html#data-product">data-product</a> 
+      will be delivered in a subsequent <a href="#BLKDATA">BLKDATA</a> message if and only if the 
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> replies affirmatively.</p>
 
-<h2><a name="General Information">General Information</a></h2>
+    <h3 id="BLKDATA">BLKDATA</h3>
+    <p>A BLKDATA message is sent by an <a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to deliver the
+      <a href="glindex.html#data-product">data-product</a> whose
+      <a href="glindex.html#metadata">data-product metadata</a> was contained in the previous
+      <a href="#COMINGSOON">COMINGSOON</a> message.</p>
 
-<p>
-<table summary="This table specifies general characteristics of the
-LDM 6 protocol" border="1" rules="all" align="center" cellpadding="5">
-    <tr>
-	<th><b>Item</b></th>
-	<th><b>Value</b></th>
-    </tr>
-    <tr>
-	<td><a href="glindex.html#RPC">RPC</a> Program #</td>
-	<td>300029</td>
-    </tr>
-    <tr>
-	<td>Well-Known Port #</td>
-	<td>388</td>
-    </tr>
-</table>
+    <h3 id="HIYA">HIYA</h3>
+    <p>A HIYA message is sent, unsolicited, by an <a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to specify the
+      <a href="glindex.html#criteria">data-product selection-criteria</a> that the
+      <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> will use to send
+      <a href="glindex.html#data-product">data-product</a>s to the
+      <a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</p>
 
-<hr>
+    <h3 id="IS_ALIVE">IS_ALIVE</h3>
+    <p>An IS_ALIVE message is sent by a <a href="glindex.html#downstream LDM">downstream LDM</a> to the top-level
+      <a href="glindex.html#ldmd">ldmd</a> on the <a href="glindex.html#upstream host">upstream host</a> when the
+      <a href="glindex.html#downstream LDM">downstream LDM</a> hasn't received anything in 60 seconds.  The purpose of
+      the message is to inquire whether or not the relevant <a href="glindex.html#upstream LDM">upstream LDM</a> is
+      still running.</p>
 
-<h2><a name="messages">Individual <a href="glindex.html#RPC">RPC</a> 
-Messages</h2>
-
-<h3><a name="FEEDME"><tt>FEEDME</tt></a></h3>
-
-<p>
-A <tt>FEEDME</tt> message is sent by a 
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to its
-<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> to request all
-<a href="glindex.html#data-product">data-product</a>s that match the
-<a href="glindex.html#criteria">
-data-product selection-criteria</a> specified in the message.
-The message also specifies the
-<a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a>.
-
-<h3><a name="NOTIFYME"><tt>NOTIFYME</tt></a></h3>
-
-<p>
-A <tt>NOTIFYME</tt> message is sent by a 
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to its
-<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> to request 
-the
-<a href="glindex.html#metadata">data-product metadata</a> of
-all
-<a href="glindex.html#data-product">data-product</a>s that match the
-<a href="glindex.html#criteria">
-data-product selection-criteria</a> specified in the message.
-
-<h3><a name="NOTIFICATION"><tt>NOTIFICATION</tt></a></h3>
-
-<p>
-A <tt>NOTIFICATION</tt> message is sent by an
-<a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to
-deliver 
-<a href="glindex.html#metadata">data-product metadata</a> in response to
-a <a href"#NOTIFYME"><tt>NOTIFYME</tt></a> request from the
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.
-
-<h3><a name="HEREIS"><tt>HEREIS</tt></a></h3>
-
-<p>
-A <tt>HEREIS</tt> message is sent by an
-<a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to
-deliver a
-<a href="glindex.html#data-product">data-product</a> whose
-<a href="glindex.html#product size">data-product size</a> is less than
-or equal to the
-<a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a>
-specified by the
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.
-
-<h3><a name="COMINGSOON"><tt>COMINGSOON</tt></a></h3>
-
-<p>
-A <tt>COMINGSOON</tt> message is sent by an
-<a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to
-deliver the
-<a href="glindex.html#metadata">data-product metadata</a> of a
-<a href="glindex.html#data-product">data-product</a> whose
-<a href="glindex.html#product size">data-product size</a> is greater than
-the
-<a href="glindex.html#maximum HEREIS size">maximum HEREIS size</a>
-specified by the
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.
-This 
-<a href="glindex.html#synchronous">synchronous</a>
-message implicitly asks if the 
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> wants the
-specified
-<a href="glindex.html#data-product">data-product</a>.
-The
-<a href="glindex.html#data-product">data-product</a> will be delivered in
-a subsequent
-<a href="#BLKDATA">BLKDATA</a> message if and only if the
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> replies
-affirmatively.
-
-<h3><a name="BLKDATA"><tt>BLKDATA</tt></a></h3>
-
-<p>
-A <tt>BLKDATA</tt> message is sent by an
-<a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to
-deliver the
-<a href="glindex.html#data-product">data-product</a> whose
-<a href="glindex.html#metadata">data-product metadata</a> was contained
-in the previous
-<a href="#COMINGSOON">COMINGSOON</a> message.
-
-<h3><a name="HIYA"><tt>HIYA</tt></a></h3>
-
-<p>
-A <tt>HIYA</tt> message is sent, unsolicited, by an
-<a href="glindex.html#upstream LDM">upstream LDM 6</a> to a
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> to
-specify the 
-<a href="glindex.html#criteria">
-data-product selection-criteria</a> that the
-<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> will use
-to send
-<a href="glindex.html#data-product">data-product</a>s to the
-<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.
-
-<h3><a name="IS_ALIVE"><tt>IS_ALIVE</tt></a></h3>
-
-<p>
-An <tt>IS_ALIVE</tt> message is sent by a 
-<a href="glindex.html#downstream LDM">downstream LDM</a> to the
-top-level
-<a href="glindex.html#ldmd"><tt>ldmd</tt></a> on the
-<a href="glindex.html#upstream host">upstream host</a> 
-when the
-<a href="glindex.html#downstream LDM">downstream LDM</a> hasn't
-received anything in 60 seconds.  The purpose of the message is to
-inquire whether or not the relevant
-<a href="glindex.html#upstream LDM">upstream LDM</a> is still
-running.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

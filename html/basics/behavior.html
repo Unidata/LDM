@@ -1,399 +1,203 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Behavior</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="LDM Behavior">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="LDM, behavior">
+    <meta name="DESCRIPTION" content="LDM Behavior.">
+  </head>
+  <body>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Behavior</TITLE>
-<META NAME="BOOKMARK" CONTENT="LDM Behavior">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="LDM, behavior">
-<META NAME="DESCRIPTION" CONTENT="LDM Behavior.">
-</HEAD>
+    <h1>LDM 6 Behavior</h1>
 
-<BODY>
+		<p>This page describes the behavior of the <a href="glindex.html#LDM 6">LDM 6</a> program.</p
 
-<h1 align="center">LDM 6 Behavior</h1><br>
-
-<p>
-This page describes the behavior of the
-<a href="glindex.html#LDM 6">LDM 6</a> program.
-
-<h2>Contents</h2>
-
-<ul>
-    <li><a href="#ldmd">Top-level <tt>ldmd</tt> behavior</a>
-    <li><a href="#downstream">Downstream LDM 6 behavior </a>
-    <li><a href="#upstream">Upstream LDM 6 behavior</a>
-    <li><a href="#pqact">Pqact behavior </a>
-</ul>
-
-<hr>
-
-<h2><a name="ldmd">Top-level <tt>ldmd</tt> behavior</a></h2>
-
-<p>
-<center>
-<img src="ldmd_activity.svg" alt="LDM Server Activity Diagram">
-</center>
-
-
-<p>
-When executed, the <a href="glindex.html#ldmd"><tt>ldmd</tt></a> 
-program does the following:
-<ol>
-    <li>If the <a href="glindex.html#logfile">LDM logfile</a> is not
-	<a href="glindex.html#standard error">standard error</a>, then
-	the program <a href="glindex.html#fork">fork</a>s itself and 
-	the <a href="glindex.html#parent process">parent process</a>
-	terminates.  The <a href="glindex.html#child process">
-	child process</a> detaches itself from the 
-	<a href="glindex.html#process group">process group</a> of the
-	<a href="glindex.html#parent process">parent process</a> and
-	becomes a
-	<a href="glindex.html#process group leader">process group leader</a>.
-
-    <li><p>Initializes logging and logs a "<tt>Starting Up</tt>" message.
-
-    <li><p>Establishes an Internet port that will be used for incoming
-	connections.  If the program is
-	<a href="glindex.html#set-uid-root">set-uid-root</a>, then the
-	port number will be 388; otherwise, the port number will be
-	decided by the operating system.
-
-    <li><p>Registers the <a href="glindex.html#LDM 5">LDM 5</a> and
-	<a href="glindex.html#LDM 6">LDM 6</a> services with the
-	<a href="glindex.html#RPC">RPC</a> 
-	<a href="glindex.html#portmapper">portmapper</a> (if it is
-	available) using the port number from the previous step.
-
-    <li><p>Reads the <a href="glindex.html#ldmd.conf">LDM configuration-file,
-	<tt>ldmd.conf</tt></a>, and does the following:
-	<ul>
-	    <li><p>Adds all <a href="glindex.html#ALLOW entry">
-		<tt>ALLOW</tt></a> and
-		<a href="glindex.html#ACCEPT entry"><tt>ACCEPT</tt></a> 
-		entries to internal databases.
-
-	    <li><p>Executes all programs specified in
-		<a href="glindex.html#EXEC entry"><tt>EXEC</tt> entries</a> 
-		as <a href="glindex.html#asynchronous">asynchronous</a>
-		<a href="glindex.html#child process">child process</a>es.
-
-	    <li><p>For each
-		<a href="glindex.html#REQUEST entry">REQUEST entry</a>,
-                reduces the 
-        	<a href="glindex.html#criteria">data-product selection-criteria</a>
-                of the request by previous requests to the same
-                upstream LDM. If the resulting selection-criteria is empty,
-                then it is ignored; otherwise, the program
-        	<a href="glindex.html#fork">fork</a>s an
-		<a href="glindex.html#asynchronous">asynchronous</a>
-		copy of itself as
-		a <a href="glindex.html#downstream LDM">downstream LDM</a>.
-	</ul>
-
-    <li><p>Goes into a loop in which it alternately 
-	<ul>
-	    <li><p>Accepts the termination of any 
-		<a href="glindex.html#child process">child process</a>es; and
-
-	    <li><p>Listens on the previously-established port for 
-		incoming connections from other
-		<a href="glindex.html#LDM">LDM</a>s.
-		When a connection is made, the program does the following:
-		<ol>
-		    <li><p>Validates the other
-			<a href="glindex.html#LDM">LDM</a>
-			against the internal database of
-			<a href="glindex.html#ALLOW entry">ALLOW</a> and
-			<a href="glindex.html#ACCEPT entry">ACCEPT</a> entries.
-			If the <a href="glindex.html#LDM">LDM</a> 
-			is not allowed to connect, then
-			the connection is terminated; otherwise,
-
-		    <li><p><a href="glindex.html#fork">Fork</a>s an
-			<a href="glindex.html#asynchronous">asynchronous</a>
-			copy of itself to service the connection.  The
-			<a href="glindex.html#child process">child process</a>
-			will be an
-			<a href="glindex.html#upstream LDM">upstream LDM</a>
-			if the first incoming message is a
-			<a href="glindex.html#FEEDME">FEEDME</a> or
-			<a href="glindex.html#NOTIFYME">NOTIFYME</a>; 
-			otherwise, if the first incoming message is a
-			<a href="glindex.html#HIYA">HIYA</a>, then the
-			<a href="glindex.html#child process">child process</a>
-			will be a
-			<a href="glindex.html#downstream LDM">
-			downstream LDM</a>.
-		</ol>
-	</ul>
-</ol>
-<hr>
-
-<h2><a name="downstream">Downstream LDM 6 behavior</a></h2>
-
-<p>
-<center>
-<img src="downstream_ldm6_activity.svg" alt="Downstream LDM6 Activity Diagram">
-</center>
-
-<p>
-A <a href="glindex.html#downstream LDM">downstream LDM</a> does the 
-following:
-<ol>
-    <li><p>Sets the initial
-	<a href="glindex.html#criteria">data-product selection-criteria</a>.
-	The initial "start" time is set as follows:
-	<ul>
-	    <li><p>If a "time offset" option was specified on the 
-		<a href="glindex.html#ldmd"><tt>ldmd</tt></a> 
-		command-line, then the "start" time is set to the current time
-		minus the specified time offset; otherwise,
-
-	    <li><p>The "start" time is set to the current time minus the
-		value of the "maximum latency" option (default: 1 hour).
-	</ul>
-
-    <li><p>Obtains the 
-	<a href="glindex.html#metadata">metadata</a>
-	of the most recently-received
-	<a href="glindex.html#data-product">data-product</a>
-	corresponding to the
-	<a href="glindex.html#criteria">data-product selection-criteria</a>.
-	If the home-directory of the
-	<a href="glindex.html#LDM user">LDM user</a>
-	contains a 
-	<a href="glindex.html#metadata file">metadata file
-	</a> corresponding to the data-request and the 
-	<a href="glindex.html#upstream LDM">upstream LDM</a>,
-	then the
-	<a href="glindex.html#metadata">metadata</a>
-	in that file is read and used;
-	otherwise, the 
-	<a href="glindex.html#metadata">metadata</a>
-	of the most recent
-	<a href="glindex.html#data-product">data-product</a>
-	in the
-	<a href="glindex.html#product-queue">product-queue</a> 
-	that matches the
-	<a href="glindex.html#criteria">data-product selection-criteria</a>
-	is used.
-
-    <li><p>
-	Encodes into the data-request the
-	<a href="glindex.html#signature">data-product signature</a>
-	of the
-	<a href="glindex.html#metadata">metadata</a>
-	from the previous step, if available,
-	so that the
-	<a href="glindex.html#upstream LDM">upstream LDM</a>
-	can start sending
-	<a href="glindex.html#data-product">data-product</a>s
-	from where the previous
-	<a href="glindex.html#downstream LDM">downstream LDM</a>
-	left off.
-
-    <li><p>Enters a loop that terminates when a successful 
-	<a href="glindex.html#FEEDME">FEEDME</a> request is made to the
-	<a href="glindex.html#upstream LDM">upstream LDM</a>:
-	<ul>
-
-	    <li><p>Makes a 
-		<a href="glindex.html#FEEDME">FEEDME</a> request to the
-		<a href="glindex.html#upstream host">upstream host</a> 
-		specified in
-		the <a href="glindex.html#REQUEST entry">REQUEST entry</a>
-		using the current
-		<a href="glindex.html#criteria">
-		data-product selection-criteria</a>.
-		If the REQUEST entry is the first one with that specific
-		feedtype/pattern pair, then the connection will use the
-		<em>primary</em>
-	        <a href="glindex.html#transfer-mode">transfer-mode</a>; 
-		otherwise, the connection will use the alternate
-		<em>alternate</em> transfer-mode.
-
-	    <li>If the <a href="glindex.html#upstream LDM">upstream LDM</a> 
-		replies with a more restrictive 
-		<a href="glindex.html#criteria">
-		data-product selection-criteria</a>,
-		then the processs uses that for the current
-		<a href="glindex.html#criteria">
-		data-product selection-criteria</a>.
-	</ul>
-
-    <li><p>Receives 
-	<a href="glindex.html#data-product">data-product</a>s over the
-	connection contained in 
-	<a href="glindex.html#HEREIS">HEREIS</a> or
-	<a href="glindex.html#COMINGSOON">COMINGSOON</a> and
-	<a href="glindex.html#BLKDATA">BLKDATA</a> messages.
-	When the product has completely arrived, it is inserted into the
-	<a href="glindex.html#product-queue">product-queue</a> and a
-	<a href="glindex.html#SIGCONT"><tt>SIGCONT</tt></a> signal is
-	then sent to the LDM
-	<a href="glindex.html#process group">process group</a>.
-	The
-	<a href="glindex.html#creation-time">data-product creation-time</a> 
-	is used to update the "start" time in the current
-	<a href="glindex.html#criteria">data-product selection-criteria</a>.
-	
-    <li><p>If nothing has been received in 60 seconds, then the process
-        connects to the top-level
-        <a href="glindex.html#ldmd"><tt>ldmd</tt></a> on the
-        <a href="glindex.html#upstream host">upstream host</a> and 
-        uses an <a href="glindex.html#IS_ALIVE">IS_ALIVE</a>
-        message to inquire whether or not the relevant
-        <a href="glindex.html#upstream LDM">upstream LDM</a> process is
-        still running:
-        <ul>
-            <li><p>If the <a href="glindex.html#upstream LDM">upstream LDM</a>
-                terminated, then the process closes the connection and
-                returns to step 2, above; otherwise,
-                
-            <li><p>The process continues to wait for
-                <a href="glindex.html#data-product">data-product</a>s.
-        </ul>
-
-</ol>
-
-<hr>
-
-<h2><a name="upstream">Upstream LDM 6 behavior</a></h2>
-
-<p>
-<center>
-<img src="upstream_ldm6_activity.svg" alt="Upstream LDM6 Activity Diagram">
-</center>
-
-<p>
-An <a href="glindex.html#upstream LDM">upstream LDM</a> does the 
-following:
-<ol>
-    <li><p>Reduces the
-	<a href="glindex.html#criteria">data-product selection-criteria</a>
-	contained in the <a href="glindex.html#FEEDME">FEEDME</a> or
-	<a href="glindex.html#NOTIFYME">NOTIFYME</a> request by the
-	criteria specified in the first relevant 
-	<a href="glindex.html#ALLOW entry">ALLOW entry</a>.
-    
-    <li><p>If the subsequent request is a
-	<a href="glindex.html#FEEDME">FEEDME</a>
-        request <em>and</em> the <a href="glindex.html#anti-DOS">anti-DOS
-        feature</a> is enabled, then
-        
-        <ul>
-        <li><p>If the request duplicates or is a superset of a previous
-            <a href="glindex.html#FEEDME">FEEDME</a>
-            request from the same downstream site that is currently
-            being handled by another
-            <a href="glindex.html#upstream LDM">upstream LDM</a>
-            process, then that other process is sent a termination
-            signal
-            (a request is a superset of another if its
-            <a href="glindex.html#identifier">data-product
-            identifier</a>-matching <a href="glindex.html#ERE">ERE</a>
-            pattern is syntactically
-            identical to the other and its
-            <a href="glindex.html#feedtype">feedtype</a> specification
-            is a superset of the other); otherwise,
-            
-        <li><p>The request is further reduced by existing 
-            <a href="glindex.html#FEEDME">FEEDME</a>
-            requests from the same downstream host.
-        </ul>
-
-    <li><p>If the subsequent request is
-	not equal to the original request, then the process informs
-	the <a href="glindex.html#downstream LDM">downstream LDM</a> about
-	the reduced request via a
-	<a href="glindex.html#RECLASS">RECLASS</a>
-	message.
-        
-    <li><p>If the subsequent request is not equal to the original
-        request, then the process continues to listen; otherwise,
-    
-    <li><p>The process acknowledges the request and begins sending matching
-	<a href="glindex.html#data-product">data-product</a>s from the
-	<a href="glindex.html#product-queue">product-queue</a> to the
-	<a href="glindex.html#downstream LDM">downstream LDM</a> using
-	the <em>primary</em> or <em>alternate</em>
-	<a href="glindex.html#transfer-mode">transfer-mode</a>
-	(for 
-	<a href="glindex.html#FEEDME">FEEDME</a>
-	requests) or
-	<a href="glindex.html#NOTIFICATION">NOTIFICATION</a>
-	messages (for
-	<a href="glindex.html#NOTIFYME">NOTIFYME</a>
-	requests).
-
-    <li><p>If the process reaches the end of the
-	<a href="glindex.html#product-queue">product-queue</a>,
-	then it sends a
-	<a href="glindex.html#NULLPROC">NULLPROC</a> message
-        to the
-	<a href="glindex.html#downstream LDM">downstream LDM</a>)
-        to reduce
-	<a href="glindex.html#data-product latency">data-product latency</a>
-        by flushing the connection
-	and then suspends itself for 30 seconds or until reception of a
-	<a href="glindex.html#SIGCONT"><tt>SIGCONT</tt></a>
-	signal (from an
-        <a href="glindex.html#ingester">ingester</a> or
-	<a href="glindex.html#downstream LDM">downstream LDM</a>
-	running on the local host) whichever occurs first.
-
-    <li><p>If nothing has been sent to the 
-	<a href="glindex.html#downstream LDM">downstream LDM</a> in
-	30 seconds, then the process sends a 
-	<a href="glindex.html#NULLPROC">NULLPROC</a> message.
-</ol>
-
-
-<hr>
-
-<h2><a name="pqact">Pqact(1) behavior</a></h2>
-
-<p>
-<center>
-<img src="pqact_activity.svg" alt="Pqact Activity Diagram">
-</center>
-
-<p>
-A <a href="glindex.html#pqact">pqact</a> process does the 
-following:
-<ol>
-    <li><p>Gets the position in the product-queue of the last
-    successfuly-processed data-product from the previous session if it's
-    available.
-
-    <li><p>Tries to get the next data-product in the product-queue.
-    
-    <li><p>If a product exists, then the process goes into a loop in which
-    it executes the actions of all matching entries from the configuration-file.
-    
-    <li><p>Otherwise if no next product exists, then the process waits until one
-    of three things happens:
+    <h2>Contents</h2>
     <ul>
-            <li>A SIGCONT is received.
-            <li>A SIGTERM is received.
-            <li>30 seconds elapses.
+			<li><a href="#ldmd">Top-level ldmd behavior</a></li>
+			<li><a href="#downstream">Downstream LDM 6 behavior</a></li>
+			<li><a href="#upstream">Upstream LDM 6 behavior</a></li>
+			<li><a href="#pqact">Pqact behavior </a></li>
+    </ul>
+
+    <h2 id="ldmd">Top-level ldmd behavior</h2>
+		<p><img src="ldmd_activity.svg" alt="LDM Server Activity Diagram"></p>
+		<p>When executed, the <a href="glindex.html#ldmd">ldmd</a> program does the following:</p>
+    <ol>
+      <li>If the <a href="glindex.html#logfile">LDM logfile</a> is not
+				<a href="glindex.html#standard error">standard error</a>, then the program <a href="glindex.html#fork">fork</a>s
+				itself and the <a href="glindex.html#parent process">parent process</a>	terminates.  The
+				<a href="glindex.html#child process">	child process</a> detaches itself from the
+				<a href="glindex.html#process group">process group</a> of the
+				<a href="glindex.html#parent process">parent process</a> and	becomes a
+				<a href="glindex.html#process group leader">process group leader</a>.</li>
+			<li>Initializes logging and logs a "Starting Up" message.</li>
+      <li>Establishes an Internet port that will be used for incoming connections.  If the program is
+				<a href="glindex.html#set-uid-root">set-uid-root</a>, then the port number will be 388; otherwise, the port
+				number will be	decided by the operating system.</li>
+      <li>Registers the <a href="glindex.html#LDM 5">LDM 5</a> and <a href="glindex.html#LDM 6">LDM 6</a> services with
+				the	<a href="glindex.html#RPC">RPC</a> 	<a href="glindex.html#portmapper">portmapper</a> (if it is available)
+				using the port number from the previous step.</li>
+			<li>Reads the <a href="glindex.html#ldmd.conf">LDM configuration-file, ldmd.conf</a>, and does the following:</li>
+	    <ul>
+	      <li>Adds all <a href="glindex.html#ALLOW entry">ALLOW</a> and 	<a href="glindex.html#ACCEPT entry">ACCEPT</a>
+				 entries to internal databases.</li>
+				<li>Executes all programs specified in <a href="glindex.html#EXEC entry">EXEC entries</a> as
+					<a href="glindex.html#asynchronous">asynchronous</a>
+					<a href="glindex.html#child process">child process</a>es.</li>
+   	    <li>For each <a href="glindex.html#REQUEST entry">REQUEST entry</a>, reduces the
+					<a href="glindex.html#criteria">data-product selection-criteria</a> of the request by previous requests to the
+					same upstream LDM. If the resulting selection-criteria is empty, then it is ignored; otherwise, the program
+					<a href="glindex.html#fork">fork</a>s an	<a href="glindex.html#asynchronous">asynchronous</a> copy of itself
+					as	a <a href="glindex.html#downstream LDM">downstream LDM</a>.</li>
+	    </ul>
+			<li>Goes into a loop in which it alternately:</li>
+	    <ul>
+				<li>Accepts the termination of any <a href="glindex.html#child process">child process</a>es; and</li>
+   	    <li>Listens on the previously-established port for incoming connections from other
+					<a href="glindex.html#LDM">LDM</a>s. When a connection is made, the program does the following:</li>
+		    <ol>
+		      <li>Validates the other	<a href="glindex.html#LDM">LDM</a>	against the internal database of
+						<a href="glindex.html#ALLOW entry">ALLOW</a> and <a href="glindex.html#ACCEPT entry">ACCEPT</a> entries. If
+						the <a href="glindex.html#LDM">LDM</a> is not allowed to connect, then the connection is terminated;
+						otherwise,</li>
+  		    <li><a href="glindex.html#fork">Fork</a>s an <a href="glindex.html#asynchronous">asynchronous</a> copy of
+						itself to service the connection.  The <a href="glindex.html#child process">child process</a> will be an
+						<a href="glindex.html#upstream LDM">upstream LDM</a> if the first incoming message is a
+						<a href="glindex.html#FEEDME">FEEDME</a> or <a href="glindex.html#NOTIFYME">NOTIFYME</a>; otherwise, if the
+						first incoming message is a <a href="glindex.html#HIYA">HIYA</a>, then the
+						<a href="glindex.html#child process">child process</a> will be a
+						<a href="glindex.html#downstream LDM">downstream LDM</a>.</li>
+    		</ol>
+	    </ul>
+    </ol>
+
+    <h2 id="downstream">Downstream LDM 6 behavior</h2>
+		<p><img src="downstream_ldm6_activity.svg" alt="Downstream LDM6 Activity Diagram"></p>
+		<p>A <a href="glindex.html#downstream LDM">downstream LDM</a> does the following:</p>
+    <ol>
+      <li>Sets the initial <a href="glindex.html#criteria">data-product selection-criteria</a>. The initial "start" time
+				is set as follows:</li>
+	    <ul>
+	      <li>If a "time offset" option was specified on the <a href="glindex.html#ldmd">ldmd</a> command-line, then the
+				 "start" time is set to the current time minus the specified time offset; otherwise,</li>
+    		<li>The "start" time is set to the current time minus the value of the "maximum latency" option
+					(default: 1 hour).</li>
+	    </ul>
+      <li>Obtains the <a href="glindex.html#metadata">metadata</a> of the most recently-received
+				<a href="glindex.html#data-product">data-product</a> corresponding to the
+				<a href="glindex.html#criteria">data-product selection-criteria</a>. If the home-directory of the
+				<a href="glindex.html#LDM user">LDM user</a> contains a <a href="glindex.html#metadata file">metadata file </a>
+				corresponding to the data-request and the <a href="glindex.html#upstream LDM">upstream LDM</a>, then the
+				<a href="glindex.html#metadata">metadata</a> in that file is read and used;	otherwise, the
+				<a href="glindex.html#metadata">metadata</a>  of the most recent
+				<a href="glindex.html#data-product">data-product</a> in the
+				<a href="glindex.html#product-queue">product-queue</a> that matches the
+				<a href="glindex.html#criteria">data-product selection-criteria</a> is used.</li>
+      <li>Encodes into the data-request the	<a href="glindex.html#signature">data-product signature</a>	of the
+				<a href="glindex.html#metadata">metadata</a>	from the previous step, if available,	so that the
+				<a href="glindex.html#upstream LDM">upstream LDM</a>	can start sending
+				<a href="glindex.html#data-product">data-product</a>s	from where the previous
+				<a href="glindex.html#downstream LDM">downstream LDM</a>	left off.</li>
+      <li>Enters a loop that terminates when a successful	<a href="glindex.html#FEEDME">FEEDME</a> request is made to
+				the	<a href="glindex.html#upstream LDM">upstream LDM</a>:</li>
+			<ul>
+	      <li>Makes a <a href="glindex.html#FEEDME">FEEDME</a> request to the
+					<a href="glindex.html#upstream host">upstream host</a>  specified in the
+					<a href="glindex.html#REQUEST entry">REQUEST entry</a> using the current
+					<a href="glindex.html#criteria">data-product selection-criteria</a>. If the REQUEST entry is the first one
+					with that specific	feedtype/pattern pair, then the connection will use the	<i>primary</i>
+					<a href="glindex.html#transfer-mode">transfer-mode</a>; otherwise, the connection will use the alternate
+					<i>alternate</i> transfer-mode.</li>
+	      <li>If the <a href="glindex.html#upstream LDM">upstream LDM</a>	replies with a more restrictive
+					<a href="glindex.html#criteria"> data-product selection-criteria</a>,	then the process uses that for the
+					current	<a href="glindex.html#criteria">data-product selection-criteria</a>.</li>
+	    </ul>
+      <li>Receives	<a href="glindex.html#data-product">data-product</a>s over the	connection contained in
+				<a href="glindex.html#HEREIS">HEREIS</a> or	<a href="glindex.html#COMINGSOON">COMINGSOON</a> and
+				<a href="glindex.html#BLKDATA">BLKDATA</a> messages.	When the product has completely arrived, it is inserted
+				into the	<a href="glindex.html#product-queue">product-queue</a> and a
+				<a href="glindex.html#SIGCONT">SIGCONT</a> signal is	then sent to the LDM
+				<a href="glindex.html#process group">process group</a>.	The
+				<a href="glindex.html#creation-time">data-product creation-time</a> is used to update the "start" time in the
+				current	<a href="glindex.html#criteria">data-product selection-criteria</a>.</li>
+	      <li>If nothing has been received in 60 seconds, then the process connects to the top-level
+					<a href="glindex.html#ldmd">ldmd</a> on the <a href="glindex.html#upstream host">upstream host</a> and uses an
+					<a href="glindex.html#IS_ALIVE">IS_ALIVE</a> message to inquire whether or not the relevant
+					<a href="glindex.html#upstream LDM">upstream LDM</a> process is  still running:</li>
+        <ul>
+          <li>If the <a href="glindex.html#upstream LDM">upstream LDM</a> terminated, then the process closes the
+						connection and returns to step 2, above; otherwise,</li>
+					<li>The process continues to wait for  <a href="glindex.html#data-product">data-product</a>s.</li>
         </ul>
-        
-    <li><p>If a SIGCONT is received or 30 seconds elapses, then the process
-    returns to step 2.
-    
-    <li><p>If a SIGTERM is received, then the the process terminates after 
-    saving the position in the queue of the last successfully-processed 
-    product.
+      </ol>
 
-</ol>
+    <h2 id="upstream">Upstream LDM 6 behavior</h2>
+		<p><img src="upstream_ldm6_activity.svg" alt="Upstream LDM6 Activity Diagram"></p>
+		<p>An <a href="glindex.html#upstream LDM">upstream LDM</a> does the following:</p>
+    <ol>
+      <li>Reduces the	<a href="glindex.html#criteria">data-product selection-criteria</a>	contained in the
+				<a href="glindex.html#FEEDME">FEEDME</a> or	<a href="glindex.html#NOTIFYME">NOTIFYME</a> request by the	criteria
+				specified in the first relevant <a href="glindex.html#ALLOW entry">ALLOW entry</a>.</li>
+      <li>If the subsequent request is a	<a href="glindex.html#FEEDME">FEEDME</a> request <i>and</i> the
+				<a href="glindex.html#anti-DOS">anti-DOS feature</a> is enabled, then</li>
+			<ul>
+        <li>If the request duplicates or is a superset of a previous <a href="glindex.html#FEEDME">FEEDME</a> request
+					from the same downstream site that is currently being handled by another
+					<a href="glindex.html#upstream LDM">upstream LDM</a> process, then that other process is sent a termination
+					signal (a request is a superset of another if its
+					<a href="glindex.html#identifier">data-product identifier</a>-matching <a href="glindex.html#ERE">ERE</a>
+            pattern is syntactically identical to the other and its  <a href="glindex.html#feedtype">feedtype</a>
+					specification is a superset of the other); otherwise,</li>
+				<li>The request is further reduced by existing <a href="glindex.html#FEEDME">FEEDME</a> requests from the same
+					downstream host.</li>
+      </ul>
+      <li>If the subsequent request is not equal to the original request, then the process informs the
+				<a href="glindex.html#downstream LDM">downstream LDM</a> about	the reduced request via a
+				<a href="glindex.html#RECLASS">RECLASS</a>	message.</li>
+			<li>If the subsequent request is not equal to the original request, then the process continues to listen;
+				otherwise,</li>
+      <li>The process acknowledges the request and begins sending matching
+				<a href="glindex.html#data-product">data-product</a>s from the
+				<a href="glindex.html#product-queue">product-queue</a> to the
+				<a href="glindex.html#downstream LDM">downstream LDM</a> using the <i>primary</i> or <i>alternate</i>
+				<a href="glindex.html#transfer-mode">transfer-mode</a> (for <a href="glindex.html#FEEDME">FEEDME</a> requests)
+				or	<a href="glindex.html#NOTIFICATION">NOTIFICATION</a>	messages (for
+				<a href="glindex.html#NOTIFYME">NOTIFYME</a>	requests).</li>
+      <li>If the process reaches the end of the	<a href="glindex.html#product-queue">product-queue</a>,	then it sends a
+				<a href="glindex.html#NULLPROC">NULLPROC</a> message to the
+				<a href="glindex.html#downstream LDM">downstream LDM</a>) to reduce
+				<a href="glindex.html#data-product latency">data-product latency</a> by flushing the connection and then
+				suspends itself for 30 seconds or until reception of a <a href="glindex.html#SIGCONT">SIGCONT</a>	signal (from
+				an  <a href="glindex.html#ingester">ingester</a> or	<a href="glindex.html#downstream LDM">downstream LDM</a>
+				running on the local host) whichever occurs first.</li>
+      <li>If nothing has been sent to the	<a href="glindex.html#downstream LDM">downstream LDM</a> in	30 seconds, then
+				the process sends a 	<a href="glindex.html#NULLPROC">NULLPROC</a> message.</li>
+		</ol>
 
-<hr>
+    <h2 id="pqact">Pqact(1) behavior</h2>
+		<p><img src="pqact_activity.svg" alt="Pqact Activity Diagram"></p>
+		<p>A <a href="glindex.html#pqact">pqact</a> process does the following:</p>
+    <ol>
+      <li>Gets the position in the product-queue of the last  successfuly-processed data-product from the previous
+				session if it's available.</li>
+			<li>Tries to get the next data-product in the product-queue.</li>
+      <li>If a product exists, then the process goes into a loop in which it executes the actions of all matching
+				entries from the configuration-file.</li>
+			<li>Otherwise if no next product exists, then the process waits until one  of three things happens:</li>
+      <ul>
+				<li>A SIGCONT is received.</li>
+				<li>A SIGTERM is received.</li>
+				<li>30 seconds elapses.</li>
+      </ul>
+			<li>If a SIGCONT is received or 30 seconds elapses, then the process returns to step 2.</li>
+      <li>If a SIGTERM is received, then the process terminates after saving the position in the queue of the last
+			successfully-processed product.</li>
+    </ol>
 
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

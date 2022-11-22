@@ -1,92 +1,58 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Product-Queue</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Product-Queue">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, product-queue">
+    <meta name="DESCRIPTION" content="Describes the LDM product-queue">
+  </head>
+  <body>
+    <h1>The LDM Product-Queue</h1>
+    <p><img src="product-queue.svg" alt="LDM Product-Queue"></p>
+    <p>The product-queue is a memory-mapped file that temporarily stores
+			<a href="glindex.html#data-product">data-product</a>s. Access to the product-queue is via the pq module, which
+			coordinates access by the reading and writing processes to ensure that the product-queue isn't corrupted.</p>
+    <p>The product-queue has the following characteristics:</p>
+    <ul>
+      <li>The number of <a href="glindex.html#data-product">data-product</a>s that the queue can contain is fixed when
+				the queue is created. This is the number of <a href="glindex.html#data-product">data-product</a>
+				<i>slots</i>.</li>
+      <li>The amount of data that the queue can contain is fixed when the queue is created. This is the <i>size of the
+				queue</i>.</li>
+      <li>A <a href="glindex.html#data-product">data-product</a> is inserted into the product-queue in contiguous space
+				and indexed by the time of insertion according to the system clock.</li>
+      <li>A <a href="glindex.html#data-product">data-product</a> will <i>not</i> be inserted into the product-queue if
+				its <a href="glindex.html#signature">signature</a> (i.e., MD5 checksum) equals that of a product already in the
+				queue.</li>
+      <li>Reading a <a href="glindex.html#data-product">data-product</a> from the queue creates a read-lock on that
+				product.  Read-locks can be shared by reading processes.</li>
+      <li><a href="glindex.html#data-product">Data-product</a>s  read from the product-queue sequentially are returned
+				in time-sorted order (oldest first) according to the insertion-time.  Therefore,
+				<a href="glindex.html#data-product">data-product</a>s can be skipped if the system clock is set backwards.</li>
+      <li>Writing a <a href="glindex.html#data-product">data-product</a> into the queue creates a write-lock on that
+				product.  Write-locks can't be shared.</li>
+      <li>If a new <a href="glindex.html#data-product">data-product</a> can't be added, either because no space is
+				available for the <a href="glindex.html#data-product">data-product</a> or because no slot is available, then
+				unlocked <a href="glindex.html#data-product">data-product</a>s are deleted from the queue -- beginning with the
+				oldest <a href="glindex.html#data-product">data-product</a> and continuing to the youngest -- until addition is
+				possible.</li>
+      <li id="writer-counter">A <i>writer-counter</i> field in the product-queue keeps track of the number of times the
+				product-queue has been opened for writing.  Opening the product-queue for writing increments the counter;
+				closing the product-queue decrements the counter.  If no process has the product-queue open for writing, then
+				the <i>writer-counter</i> should be 0.  This counter is used to ensure that the product-queue has been properly
+				closed by all processes that could modify it.</li>
+    </ul>
+    <p>The canonical pathname of the LDM product-queue, relative to the LDM home-directory, is var/data/ldm.pq</p>
+    <!--
+    <p>A paper on the implementation-details is
+    <a href="https://www.unidata.ucar.edu/staff/russ/papers/ldm51.fm5.pdf">Rew, Russ and Anne Wilson, 2001:
+    The Unidata LDM System: Recent Improvements for Scalability, Proceedings, 17th IIPS, American Meteorological
+    Society, January, Albuquerque, New Mexico</a>.</p>
+   -->
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>Product-Queue</TITLE>
-<META NAME="BOOKMARK" CONTENT="Product-Queue">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="LDM, product-queue">
-<META NAME="DESCRIPTION" CONTENT="Describes the LDM product-queue">
-</HEAD>
-
-<BODY>
-
-<h1 align="center">The LDM Product-Queue</h1>
-
-<p>
-<center>
-<img src="product-queue.svg" alt="LDM Product-Queue">
-</center>
-
-<p>The product-queue is a memory-mapped file that temporarily
-stores <a href="glindex.html#data-product">data-product</a>s.
-Access to the product-queue is via the <tt>pq</tt> module, which
-coordinates access by the reading and writing processes 
-to ensure that the product-queue isn't corrupted.
-
-<p>The product-queue has the following characteristics:
-<ul>
-    <li>The number of <a
-	href="glindex.html#data-product">data-product</a>s 
-	that the queue can contain is fixed when the queue is created.
-	This is the number of
-	<a href="glindex.html#data-product">data-product</a> <em>slots</em>.
-    <li>The amount of data 
-	that the queue can contain is fixed when the queue is created.
-	This is the <em>size of the queue</em>.
-    <li>A <a href="glindex.html#data-product">data-product</a> is
-	inserted into the product-queue in contiguous space and indexed 
-	by the time of insertion according to the system clock.
-    <li>A <a href="glindex.html#data-product">data-product</a> will <em>not</em>
-	be inserted into the product-queue if its
-	<a href="glindex.html#signature">signature</a> (i.e., MD5 checksum) 
-	equals that of a product already in the queue.
-    <li>Reading a <a href="glindex.html#data-product">data-product</a>
-	from the queue creates a read-lock on that product.
-	Read-locks can be shared by reading processes.
-    <li><a href="glindex.html#data-product">Data-product</a>s
-	read from the product-queue sequentially are returned in time-sorted
-	order (oldest first) according to the insertion-time.  Therefore,
-	<a href="glindex.html#data-product">data-product</a>s
-	can be skipped if the system clock is set backwards.
-    <li>Writing a <a href="glindex.html#data-product">data-product</a>
-	into the queue creates a write-lock on that product.
-	Write-locks can't be shared.
-    <li>If a new <a
-	href="glindex.html#data-product">data-product</a> 
-	can't be added,
-	either because no space is available for the 
-	<a href="glindex.html#data-product">data-product</a> 
-	or because no slot is available, then
-	unlocked <a href="glindex.html#data-product">data-product</a>s
-	are deleted from the queue -- begining with the oldest <a
-	href="glindex.html#data-product">data-product</a> and
-	continuing to the youngest -- until addition is possible.
-    <li>A <a name="writer-counter"><i>writer-counter</i></a>
-	field in the product-queue keeps track 
-	of the number of times
-	the product-queue has been opened for writing.  Opening the 
-	product-queue for writing increments the counter; closing the
-	product-queue decrements the counter.  If no process has the 
-	product-queue open for writing, then the <i>writer-counter</i>
-	should be 0.  This counter is used to ensure that the product-queue
-	has been properly closed by all processes that could modify it.
-</ul>
-
-<p>
-The canonical pathname of the LDM product-queue, relative to the LDM
-home-directory, is <tt>var/data/ldm.pq</tt>
-
-<!--
-<p>A paper on the implementation-details is
-<blockquote>
-<a href="https://www.unidata.ucar.edu/staff/russ/papers/ldm51.fm5.pdf">
-Rew, Russ and Anne Wilson, 2001: The Unidata LDM System: Recent
-Improvements for Scalability, Proceedings, 17th IIPS, American
-Meteorological Society, January, Albuquerque, New Mexico</a>.
-</blockquote>
--->
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
