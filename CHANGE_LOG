@@ -1,3 +1,7 @@
+6.14.1.2        2022-11-22T11:55:49-0700
+    NOAAPort:
+        * blender(1): Added frame-header sequence-number to determination of frame ordering.
+
 6.14.1.1        2022-11-21T11:12:11-0700
     6.13.17 should have been 6.14.0
 
