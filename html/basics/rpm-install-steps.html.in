@@ -1,78 +1,49 @@
-<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<!DOCTYPE HTML>
 <html>
-<head>
-    <meta name="UIINDEX" content="4">
-   <meta name="BOOKMARK" content="RPM Install Steps">
-   <meta name="AUTHOR" content="steve">
-   <meta name="KEYWORDS" content="LDM, install, installation, RPM">
-   <title>LDM RPM Installation</title>
-</head>
-<body>
+  <head>
+    <title>LDM RPM Installation</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="RPM Install Steps">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, install, installation, RPM">
+  </head>
+  <body>
+    <h1>LDM RPM Installation</h1>
+    <h2>Introduction</h2>
 
-<h1 align="center">LDM RPM Installation</h1>       
+    <p>First, let me acknowledge that I am not an RPM expert. Consequently, if you have a suggestion on how to improve
+    the RPM installation process, then please send it to
+    <a href="mailto:@PACKAGE_BUGREPORT@">@PACKAGE_BUGREPORT@</a>.</p>
+    <p>Installing from an RPM is, necessarily, less flexible than installing from source. In particular, the following
+    constraints apply:</p>
+    <ul>
+      <li>Not all platforms are supported. Supported ones are encoded within the name of the RPM file. </li>
+      <li>If the <a href="glindex.html#LDM user">LDM user</a> doesn't exist, then they will be created with the name
+      "ldm", with default user and group ID-s, and with the value of rpm(1)'s prefix option as their
+      home-directory. </li>
+      <li>All utilities will be dynamically linked and only the sharable LDM library will be installed.</li>
+      <li>The top-level <a href="glindex.html#LDM">LDM</a> server, <a href="glindex.html#ldmd">ldmd</a>, will listen on
+      port 388.</li>
+      <li>The "<a href="glindex.html#localn">local0</a>" logging facility will be used.</li>
+    </ul>
 
-<hr>
+    <h2>Installations Steps</h2>
+    <ol>
+      <li>Become the superuser (<i>i.e.</i>, "root").</li>
+      <li>Download the appropriate RPM from
+        <a href="https://downloads.unidata.ucar.edu/ldm/">https://downloads.unidata.ucar.edu/ldm/</a>.</li>
+      <li>Install the package with the command <code>rpm --install [--prefix=<i>ldmhome</i>] <i>rpm-file</i></code>
+      where <i>rpm-file</i> is the RPM file that you just downloaded. The square brackets denote an optional argument
+      in which <i>ldmhome</i> is the home-directory of the <a href="glindex.html#LDM user">LDM user</a>. The default
+      home-directory is /opt/ldm. This option must be used if</li>
+      <ol>
+        <li>An LDM user account exists on the platform with a home-directory that  differs from the default; or</li>
+        <li>An LDM user account doesn't exist on the platform and you want the LDM user to have a home-directory that
+        differs from the default.</li>
+      </ol>
+    </li>
 
-<h2>Introduction</h2>
-
-<p>
-First, let me acknowledge that I am not an RPM expert. Consequently, if you
-have a suggestion on how to improve the RPM installation process, then please
-send it to <a 
-href="mailto:@PACKAGE_BUGREPORT@"><tt>@PACKAGE_BUGREPORT@</tt></a>.</p>
-
-<p>Installing from an RPM is, necessarily, less flexible than installing from
-source. In particular, the following constraints apply:
-<ul>
-    <li>Not all platforms are supported. Supported ones are encoded within
-    the name of the RPM file. </li>
-    
-    <li>If the <a href="glindex.html#LDM user">LDM user</a> doesn't exist, then
-    they will be created with the name "ldm", with default user and group
-    ID-s, and with the value of <tt>rpm(1)</tt>'s <tt>prefix</tt> option as
-    their home-directory. </li>
-    
-    <li>All utilities will be dynamically linked and only the sharable LDM
-    library will be installed.
-    
-    <li>The top-level <a href="glindex.html#LDM">LDM</a> server,
-    <a href="glindex.html#ldmd"><tt>ldmd</tt></a>, will listen on port 388.</li>
-    
-    <li>The "<a href="glindex.html#localn">local0</a>" logging facility will be
-    used.</li>
-</ul>
-
-<hr>
-
-<h2>Installations Steps</h2>
-
-<ol>
-
-<li>Become the superuser (<i>i.e.</i>, "root").</li>
-
-<li>Download the appropriate RPM from
-<a href="https://downloads.unidata.ucar.edu/ldm/"><tt>
-https://downloads.unidata.ucar.edu/ldm/</tt></a>.</li>
-
-<li>Install the package with the command
-<blockquote><pre>
-rpm --install [--prefix=<em>ldmhome</em>] <em>rpm-file</em>
-</pre></blockquote>
-where <em>rpm-file</em> is the RPM file that you just downloaded.
-The square brackets denote an optional argument in which <em>ldmhome</em> is the
-home-directory of the <a href="glindex.html#LDM user">LDM user</a>. The default
-home-directory is <tt>/opt/ldm</tt>.
-This option must be used if
-<ol>
-    <li>An LDM user account exists on the platform with a home-directory that
-    differs from the default; or</li>
-    <li>An LDM user account doesn't exist on the platform and you want the
-    LDM user to have a home-directory that differs from the default.
-</ol>
-</li>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

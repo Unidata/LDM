@@ -1,75 +1,43 @@
-<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<!DOCTYPE HTML>
 <html>
-<head>
-   <meta name="UIINDEX" content="4">
-   <meta name="BOOKMARK" content="Running Multiple LDM-s">
-   <meta name="AUTHOR" content="steve">
-   <meta name="KEYWORDS" content="LDM, multiple">
-   <title>Running Multiple LDM-s</title>
-</head>
-<body>
+  <head>
+    <title>Running Multiple LDM-s</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Running Multiple LDM-s">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, multiple">
+  </head>
+  <body>
+    <h1>Running Multiple LDM-s</h1>
+    <p>It's possible to run multiple instances of an <a href="glindex.html#LDM">LDM</a> system on a single computer.
+      This article explains how and leaves the "why" to the reader.</p>
+    <p>It is assumed that the reader is familiar with the installation and configuration procedures for an
+      <a href="glindex.html#LDM">LDM</a> system. For each <a href="glindex.html#LDM">LDM</a> system that you want to
+      execute, build and install an <a href="glindex.html#LDM">LDM</a> package with the following modifications:</p>
+    <ol>
+      <li>Choose a distinct user-account with its own name (e.g.,	<code>ldm2</code>) and home directory
+        (e.g., <code>/local/ldm2</code>).</li>
+      <li>When executing the configure(1) script, use the option
+        <code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a> </code>to set the logging facility.</li>
+      <li>Decide on one of the following approaches for allowing connections from downstream sites:</li>
+      <ul>
+	      <li>Decide on a distinct IP address to use.  This necessitates the use of a distinct network interface, which
+          could be a real one (implemented in hardware) or a virtual one (implemented in software).  When configuring
+          the LDM installation, set the relevant "interface" parameter in the
+          <a href="glindex.html#LDM registry">LDM registry</a> to the IP address. Or</li>
+       	<li>Select a distinct port on which the LDM server will listen. Use	the --enable-port=port option of the
+          configure(1) script to configure the LDM to use that port. On the downstream hosts, do one of the
+          following:</li>
+        	<ul>
+            <li>Use the optional :<i>port</i> field in REQUEST entries to specify to which port to connect.</li>
+      	    <li>Configure the downstream LDM to use the same port via the same --enable-port=<i>port</i> option of the
+              configure(1) script.  This approach is recursive: further downstream sites will also need to be
+              modified.</li>
+	        </ul>
+      </ul>
+    </ol>
 
-<h1 align="center">Running Multiple LDM-s</h1>       
-
-<p>
-It's possible to run multiple instances of an
-<a href="glindex.html#LDM">LDM</a>
-system on a single computer.  
-This article explains how and leaves the "why" to the reader.
-
-<p>
-It is assumed that the reader is familiar with the installation and
-configuration procedures for an 
-<a href="glindex.html#LDM">LDM</a>
-system.
-For each
-<a href="glindex.html#LDM">LDM</a>
-system that you want to execute, build and install an 
-<a href="glindex.html#LDM">LDM</a>
-package
-with the following modifications:
-
-<ol>
-    <li>Choose a distinct user-account with its own name (e.g., 
-	<code>ldm2</code>) and home directory (e.g., <code>/local/ldm2</code>).
-
-    <li>When executing the <tt>configure(1)</tt> script, use the option
-	<code>--enable-logging=<a href="glindex.html#localn">local<i>n</i></a>
-	</code>to set the logging facility.
-
-    <li>Decide on one of the following approaches for allowing connections
-	from downstream sites:
-
-    <ul>
-
-	<li>Decide on a distinct IP address to use.  This necessitates the use
-	of a distinct network interface, which could be a real one (implemented
-	in hardware) or a virtual one (implemented in software).  When 
-        configuring the LDM installation, set the
-        relevant "interface" parameter in the 
-        <a href="glindex.html#LDM registry">LDM registry</a> to the IP
-        address. Or
-
-	<li>Select a distinct port on which the LDM server will listen. Use
-	the <tt>--enable-port=port</tt> option of the <tt>configure(1)</tt>
-        script to configure the LDM to use that port. On the downstream hosts,
-        do one of the following:
-
-	<ul>
-            <li>Use the optional <tt>:<em>port</em></tt> field in REQUEST
-            entries to specify to which port to connect.
-
-	    <li>Configure the downstream LDM to use the same port via
-	    the same <tt>--enable-port=<em>port</em></tt> option of the
-	    <tt>configure(1)</tt> script.  This approach is recursive: further
-	    downstream sites will also need to be modified.
-	</ul>
-
-    </ul>
-
-</ol>
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

@@ -1,50 +1,33 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Start/Stop LDM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Start/Stop">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="Software, LDM, basics, start, stop">
+    <meta name="DESCRIPTION" content="How to start and stop the LDM system.">
+  </head>
+  <body>
+    <h1>Starting and Stopping the LDM System</h1>
+    <p>The following assumes that you have properly installed and configured the
+      <a href="glindex.html#LDM">LDM</a> package on your platform.</p>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>Start/Stop LDM</TITLE>
-<META NAME="BOOKMARK" CONTENT="Start/Stop">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, basics, start, stop">
-<META NAME="DESCRIPTION" CONTENT="How to start and stop the LDM system.">
-</HEAD>
+    <h2>Stopping the LDM</h2>
+    <p>To stop the <a href="glindex.html#LDM">LDM</a> system, execute the following command as the
+      <a href="glindex.html#LDM user">LDM user</a>:</p>
+    <pre>
+      ldmadmin stop
+    </pre>
 
-<BODY>
+    <h2>Starting the LDM</h2>
+    <p>To start the <a href="glindex.html#LDM">LDM</a> system, execute the following command as the
+      <a href="glindex.html#LDM user">LDM user</a>:</p>
+    <pre>
+      ldmadmin start
+    </pre>
 
-<h1 align="center">Starting and Stopping the LDM System</h1>
-
-<p>
-The following assumes that you have properly installed and configured
-the <a href="glindex.html#LDM">LDM</a> package on your platform.
-
-<hr>
-
-<h2>Stopping the LDM</h2>
-
-<p>
-To stop the
-<a href="glindex.html#LDM">LDM</a> system, execute the following command
-as the <a href="glindex.html#LDM user">LDM user</a>:
-<blockquote><pre>
-ldmadmin stop
-</blockquote><p/re>
-
-<hr>
-
-<h2>Starting the LDM</h2>
-
-<p>
-To start the
-<a href="glindex.html#LDM">LDM</a> system, execute the following command
-as the <a href="glindex.html#LDM user">LDM user</a>:
-<blockquote><pre>
-ldmadmin start
-</blockquote><p/re>
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

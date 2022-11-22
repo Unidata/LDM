@@ -140,9 +140,9 @@ LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '</tr>' >>$@.tmp
 	while IFS=: read name path desc default varName; do \
 	    echo "<tr>"; \
-		echo "<td nowrap><tt>$$path</tt></td>"; \
+		echo "<td nowrap>$$path</td>"; \
 		echo "<td>$$desc</td>"; \
-		echo "<td><tt>$$default</tt></td>"; \
+		echo "<td>$$default</td>"; \
 	    echo "</tr>"; \
 	done <../../regutil/regpar.tab >>$@.tmp
 	echo '</blockquote></BODY></HTML>' >>$@.tmp
@@ -177,18 +177,19 @@ registry-check:	$(top_srcdir)/configure.ac
 successes.html:	$(top_srcdir)/test/results.tab
 	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $? \
 	| awk -F , 'BEGIN { \
-		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
+		print "<!DOCTYPE HTML>"; \
 		print "<html>"; \
 		print "  <head>"; \
-		print "    <meta name=\"UIINDEX\" content=\"4\">"; \
-	        print "    <meta name=\"BOOKMARK\" content=\"Successful Build Environments\">"; \
-	        print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
-	        print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
-	        print "    <title>Successful Build Environments</title>"; \
+	  print "    <title>Successful Build Environments</title>"; \
+	  print "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />"; \
+	  print "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />"; \
+	  print "    <meta name=\"BOOKMARK\" content=\"Successful Build Environments\">"; \
+	  print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
+	  print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
 		print "  </head>"; \
 		print "  <body>"; \
-		print "    <h1 align=\"center\">Successful Build Environments</h1>"; \
-		print "    <table align=\"center\" border=\"2\" cellpadding=\"6\" cellspacing=\"0\">"; \
+		print "    <h1>Successful Build Environments</h1>"; \
+		print "    <table>"; \
 		print "      <tr>"; \
 		print "        <th>O/S</th>"; \
 		print "        <th>CPU</th>"; \
@@ -217,18 +218,19 @@ successes.html:	$(top_srcdir)/test/results.tab
 failures.html:	$(top_srcdir)/test/results.tab
 	sort -t , -k 2,2 -k 3,3 -k 6,6 -k 4,4 -k 7,7 $? \
 	| awk -F , 'BEGIN { \
-		print "<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">"; \
+		print "<!DOCTYPE HTML>"; \
 		print "<html>"; \
 		print "  <head>"; \
-		print "    <meta name=\"UIINDEX\" content=\"4\">"; \
-	        print "    <meta name=\"BOOKMARK\" content=\"Unsuccessful Build Environments\">"; \
-	        print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
-	        print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
-	        print "    <title>Unsuccessful Build Environments</title>"; \
+	  print "    <title>Unsuccessful Build Environments</title>"; \
+	  print "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />"; \
+    print "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />"; \
+	  print "    <meta name=\"BOOKMARK\" content=\"Unsuccessful Build Environments\">"; \
+	  print "    <meta name=\"AUTHOR\" content=\"steve\">"; \
+	  print "    <meta name=\"KEYWORDS\" content=\"LDM, build, source\">"; \
 		print "  </head>"; \
 		print "  <body>"; \
-		print "    <h1 align=\"center\">Unsuccessful Build Environments</h1>"; \
-		print "    <table align=\"center\" border=\"2\" cellpadding=\"6\" cellspacing=\"0\">"; \
+		print "    <h1>Unsuccessful Build Environments</h1>"; \
+		print "    <table>"; \
 		print "      <tr>"; \
 		print "        <th>O/S</th>"; \
 		print "        <th>CPU</th>"; \

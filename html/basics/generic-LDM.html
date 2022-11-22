@@ -1,68 +1,44 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Runtime Structure</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Generic LDM">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, structure, runtime">
+    <meta name="DESCRIPTION" content="Describes the runtime structure of a generic LDM system">
+  </head>
+  <body>
+    <h1>Runtime Structure of a Generic <a href="glindex.html#LDM">LDM</a> System</h1>
+    <p>The following figure depicts the runtime structure of a generic <a href="glindex.html#LDM">LDM</a>
+      installation.</p>
+    <p><img src="generic-LDM.gif" alt="Runtime Structure of a Generic LDM"></p>
+    <p>The figure shows the top-level <a href="glindex.html#ldmd">ldmd</a> process at the upper-left.  At startup, this
+      process starts the following child processes:</p>
+    <ul>
+      <li>The <a href="glindex.html#ingester">ingester</a> processes;</li>
+      <li>The receiving LDM (alias <a href="glindex.html#downstream LDM">	downstream LDM</a>) processes; and</li>
+      <li>The <a href="glindex.html#pqact">pqact</a> processes.</li>
+    </ul>
+    <p>The top-level <a href="glindex.html#LDM">LDM</a> process is also responsible for creating the sending LDM (alias
+      <a href="glindex.html#upstream LDM">upstream LDM</a>) processes when requested by
+      <a href="glindex.html#downstream LDM">downstream LDM</a> processes.</p>
+    <p>Both the <a href="glindex.html#ingester">ingester</a>s and the
+      <a href="glindex.html#downstream LDM">downstream LDM</a>s write
+      <a href="glindex.html#data-product">data-product</a>s into the
+      <a href="glindex.html#product-queue">product-queue</a>.  Each <a href="glindex.html#ingester">ingester</a> creates
+      its <a href="glindex.html#data-product">data-product</a>s from an unspecified data-source.  Each
+      <a href="glindex.html#downstream LDM">downstream LDM</a>, on the other hand, receives its
+      <a href="glindex.html#data-product">data-product</a>s from the
+      <a href="glindex.html#upstream LDM">upstream LDM</a> to which it's connected.</p>
+    <p>Each <a href="glindex.html#upstream LDM">upstream LDM</a> reads
+      <a href="glindex.html#data-product">data-product</a>s from the
+      <a href="glindex.html#product-queue">product-queue</a> and writes them to the
+      <a href="glindex.html#downstream LDM">downstream LDM</a> to which it's connected.</p>
+    <p>A <a href="glindex.html#pqact">pqact</a> process writes <a href="glindex.html#data-product">data-product</a>s to
+      disk or to LDM <a href="glindex.html#decoder">decoder</a> processes that it starts and manages.</p>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>LDM Runtime Structure</TITLE>
-<META NAME="BOOKMARK" CONTENT="Generic LDM">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="LDM, structure, runtime">
-<META NAME="DESCRIPTION" CONTENT="Describes the runtime structure of a 
-generic LDM system">
-</HEAD>
-
-<BODY>
-
-<h1 align="center">Runtime Structure of a Generic <a
-href="glindex.html#LDM">LDM</a> System</h1>
-
-<p>The following figure depicts the runtime structure of a generic <a
-href="glindex.html#LDM">LDM</a> installation.
-
-<p>
-<center>
-<img src="generic-LDM.gif" alt="Runtime Structure of a Generic LDM">
-</center>
-
-<p>
-The figure shows the top-level 
-<a href="glindex.html#ldmd"><tt>ldmd</tt></a>
-process at the upper-left.  At startup, this process starts the following 
-child processes:
-<ul>
-    <li> The <a href="glindex.html#ingester">ingester</a> processes;
-    <li> The receiving LDM (alias <a href="glindex.html#downstream LDM">
-	downstream LDM</a>) processes; and
-    <li> The <a href="glindex.html#pqact">pqact</a> processes.
-</ul>
-The top-level <a href="glindex.html#LDM">LDM</a> process is also
-responsible for creating the sending LDM (alias <a
-href="glindex.html#upstream LDM">upstream LDM</a>) processes when
-requested by <a href="glindex.html#downstream LDM">downstream LDM</a>
-processes.
-
-<p>Both the <a href="glindex.html#ingester">ingester</a>s and the
-<a href="glindex.html#downstream LDM">downstream LDM</a>s write <a
-href="glindex.html#data-product">data-product</a>s into the <a
-href="glindex.html#product-queue">product-queue</a>.  Each <a
-href="glindex.html#ingester">ingester</a> creates its <a
-href="glindex.html#data-product">data-product</a>s from an unspecified
-data-source.  Each <a href="glindex.html#downstream LDM">
-downstream LDM</a>, on the other hand, receives its <a
-href="glindex.html#data-product">data-product</a>s from the <a
-href="glindex.html#upstream LDM">upstream LDM</a> to which it's
-connected.
-
-<p>Each <a href="glindex.html#upstream LDM">upstream LDM</a> reads <a
-href="glindex.html#data-product">data-product</a>s from the <a
-href="glindex.html#product-queue">product-queue</a> and writes them to
-the <a href="glindex.html#downstream LDM">downstream LDM</a> to which
-it's connected.
-
-<p>A <a href="glindex.html#pqact">pqact</a> process
-writes <a href="glindex.html#data-product">data-product</a>s to disk or
-to LDM <a href="glindex.html#decoder">decoder</a> processes that it
-starts and manages.
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
