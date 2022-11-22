@@ -7,8 +7,9 @@ set -e
 printUsage()
 {
     cat 1>&2 <<EOF
-Usage: `basename $0` [-M <make>] [-m] [-n] [-r <root>] [-s] [-u <user>] [-v <version>] <host>
+Usage: `basename $0` [-i] [-M <make>] [-m] [-n] [-r <root>] [-s] [-u <user>] [-v <version>] <host>
 Where:
+    -i           Install only: do not throw runtime link and execute
     -M <make>    Pathname of make(1) utility
     -m           Enable multicast support
     -n           Enable NOAAPort support
@@ -29,6 +30,7 @@ sudoUser=ldm
 
 while getopts M:mnr:su:v: opt; do
     case $opt in
+        i) installOnly=true;;
         M) makePath=$OPTARG;;
         m) withMulticast=true;;
         n) withNoaaport=true;;
@@ -96,21 +98,23 @@ else
 EOF
 fi
 
-ssh -x -T $ldmUser@$host bash --login <<EOF
-    set -e
-    if test -e runtime && ldmadmin stop; then
-        echo "Throwing the runtime switch"
-        rm runtime
-        ln -s $pkgId runtime
-        ldmadmin start
-    else
-        echo "LDM wasn't previously installed or isn't running. New installation not started."
-        rm -f runtime
-        ln -s $pkgId runtime
-    fi
-    
-    # Delete previous versions. NB: THIS SHOULD ONLY BE DONE ON NON-PRODUCTION
-    # SYSEMS!
-    #find . \( -name 'ldm-*.gz' -o \( -name 'ldm-*' -type d \) \) \
-            #! -name $pkgId ! -name $pkgId.tar.gz -print -prune | xargs rm -rf
+if test -z "${installOnly}"; then
+    ssh -x -T $ldmUser@$host bash --login <<EOF
+        set -e
+        if test -e runtime && ldmadmin stop; then
+            echo "Throwing the runtime switch"
+            rm runtime
+            ln -s $pkgId runtime
+            ldmadmin start
+        else
+            echo "LDM wasn't previously installed or isn't running. New installation not started."
+            rm -f runtime
+            ln -s $pkgId runtime
+        fi
+        
+        # Delete previous versions. NB: THIS SHOULD ONLY BE DONE ON NON-PRODUCTION
+        # SYSEMS!
+        #find . \( -name 'ldm-*.gz' -o \( -name 'ldm-*' -type d \) \) \
+                #! -name $pkgId ! -name $pkgId.tar.gz -print -prune | xargs rm -rf
 EOF
+fi
