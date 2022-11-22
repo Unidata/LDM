@@ -466,40 +466,43 @@ static void set_sigactions(
 }
 
 static void usage(
-        char *av0) /*  id string */
+        char*     av0,
+        const int exitStatus) /*  id string */
 {
     const char* log_dest = log_get_default_daemon_destination();
     const char* config_path = getLdmdConfigPath();
     const char* pq_path = getDefaultQueuePath();
     (void) fprintf(stderr,
-            "Usage: %s [options] [conf_filename]\n"
-"\t(default conf_filename is \"%s\")\n"
+            "Usage:\n"
+            "    %s -h\n"
+            "    %s [options] [-v|-x] [conf_filename]\n"
 "Options:\n"
-"\t-I IP_addr      Use network interface associated with given IP \n"
-"\t                address (default is all interfaces)\n"
-"\t-P port         The port number for LDM connections (default is \n"
-"\t                %d)\n"
-"\t-v              Verbose logging mode: log each match (SIGUSR2\n"
-"\t                cycles)\n"
-"\t-x              Debug logging mode (SIGUSR2 cycles)\n"
-"\t-l dest         Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"\t                (standard error), or file `dest`. If standard error is\n"
-"\t                specified, then process will stay interactive. Default is\n"
-"\t                \"%s\".\n"
-"\t-M maxnum       Maximum number of clients (default is %u)\n"
-"\t-q pqfname      Product-queue pathname (default is\n"
-"\t                \"%s\")\n"
-"\t-o offset       The \"from\" time of data-product requests will be\n"
-"\t                no earlier than \"offset\" seconds ago (default is\n"
-"\t                \"max_latency\", below)\n"
-"\t-m max_latency  The maximum acceptable data-product latency in\n"
-"\t                seconds (default is %d)\n"
-"\t-n              Do nothing other than check the configuration-file\n"
-"\t-t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds\n"
-"\t                (default is %d)\n",
-            av0, config_path, LDM_PORT, log_dest, maxClients, pq_path,
-            DEFAULT_OLDEST, DEFAULT_RPCTIMEO);
-    exit(1);
+"    -h              Print this usage message and then exit\n"
+"    -I IP_addr      Use network interface associated with given IP address.\n"
+"                    Default is all interfaces.\n"
+"    -P port         The port number for LDM connections. Default is %d.\n"
+"    -l dest         Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                    (standard error), or file `dest`. If standard error is\n"
+"                    specified, then process will stay interactive. Default is\n"
+"                    \"%s\".\n"
+"    -M maxnum       Maximum number of clients. Default is %u.\n"
+"    -q pqfname      Product-queue pathname. Default is\n"
+"                    \"%s\".\n"
+"    -o offset       The \"from\" time of data-product requests will be no earlier\n"
+"                    than \"offset\" seconds ago. Default is \"max_latency\",\n"
+"                    below.\n"
+"    -m max_latency  The maximum acceptable data-product latency in seconds\n"
+"                    Default is %d.\n"
+"    -n              Do nothing other than check the configuration-file\n"
+"    -t rpctimeo     Set LDM-5 RPC timeout to \"rpctimeo\" seconds. Default is %d.\n"
+"    -v              Verbose logging mode: log each match (SIGUSR2 cycles)\n"
+"    -x              Debug logging mode (SIGUSR2 cycles)\n"
+"\n"
+"conf_filename   Pathname of configuration-file. Default is\n"
+"                \"%s\"\n",
+            av0, av0, LDM_PORT, log_dest, maxClients, pq_path,
+            DEFAULT_OLDEST, DEFAULT_RPCTIMEO, config_path);
+    exit(exitStatus);
 }
 
 /*
@@ -914,9 +917,10 @@ int main(
     unpriv(); // Only become root when necessary
 
     int         status;
-    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY);
+    in_addr_t   ldmIpAddr = (in_addr_t) htonl(INADDR_ANY); // Address of server interface
     unsigned    ldmPort = LDM_PORT;
-    bool        becomeDaemon = true; // default
+    bool        becomeDaemon = true; // Default
+    const char* pqfname = NULL; // Pathname of product-queue
 
     if (log_init(av[0])) {
         log_syserr("Couldn't initialize logging module");
@@ -924,7 +928,6 @@ int main(
     }
 
     ensureDumpable();
-    const char* pqfname = getQueuePath();
 
     /*
      * Decode the command line, set options
@@ -937,8 +940,12 @@ int main(
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "I:vxl:nq:o:P:M:m:t:")) != EOF) {
+        while ((ch = getopt(ac, av, "hI:vxl:nq:o:P:M:m:t:")) != EOF) {
             switch (ch) {
+            case 'h': {
+                usage(av[0], 0); // Calls `exit()`
+                break; // Silences code scanners
+            }
             case 'I': {
                 in_addr_t ipAddr = inet_addr(optarg);
 
@@ -976,7 +983,7 @@ int main(
                 if (toffset == 0 && *optarg != '0') {
                     (void) fprintf(stderr, "%s: invalid offset %s\n", av[0],
                             optarg);
-                    usage(av[0]);
+                    usage(av[0], 1);
                 }
                 break;
             case 'P': {
@@ -986,7 +993,7 @@ int main(
                         0 != optarg[nbytes] || port > 0xffff) {
                     (void)fprintf(stderr, "%s: invalid port number: %s\n",
                             av[0], optarg);
-                    usage(av[0]);
+                    usage(av[0], 1);
                 }
                 ldmPort = port;
                 break;
@@ -997,7 +1004,7 @@ int main(
                     (void) fprintf(stderr,
                             "%s: invalid maximum number of clients %s\n", av[0],
                             optarg);
-                    usage(av[0]);
+                    usage(av[0], 1);
                 }
                 maxClients = max;
                 break;
@@ -1007,7 +1014,7 @@ int main(
                 if (max_latency <= 0) {
                     (void) fprintf(stderr, "%s: invalid max_latency %s\n",
                             av[0], optarg);
-                    usage(av[0]);
+                    usage(av[0], 1);
                 }
                 break;
             case 'n':
@@ -1018,11 +1025,11 @@ int main(
                 if (rpctimeo == 0 || rpctimeo > 32767) {
                     (void) fprintf(stderr, "%s: invalid timeout %s", av[0],
                             optarg);
-                    usage(av[0]);
+                    usage(av[0], 1);
                 }
                 break;
             case '?':
-                usage(av[0]);
+                usage(av[0], 1);
                 break;
             } /* "switch" statement */
         } /* argument loop */
@@ -1034,25 +1041,15 @@ int main(
             (void) fprintf(stderr,
                     "%s: invalid toffset (%d) > max_latency (%d)\n", av[0],
                     toffset, max_latency);
-            usage(av[0]);
+            usage(av[0], 1);
         }
     } /* command-line argument decoding */
 
-    setQueuePath(pqfname);
-
-    /*
-     * Initialize the configuration file module.
-     */
-    log_debug("Initializing configuration-file module");
-    if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
-        log_flush_error();
-        exit(1);
+    if (pqfname) {
+        setQueuePath(pqfname);
     }
-    if (!lcf_haveSomethingToDo()) {
-        log_add("The LDM configuration-file \"%s\" is effectively empty",
-                getLdmdConfigPath());
-        log_flush_error();
-        exit(1);
+    else {
+        pqfname = getQueuePath();
     }
 
 #ifndef DONTFORK
@@ -1072,6 +1069,7 @@ int main(
         log_clear();        // So no queued messages
         log_avoid_stderr(); // Because this process is now a daemon
     }
+    else
 #endif
     /*
      * Make this process a process group leader so that all child processes
@@ -1079,6 +1077,21 @@ int main(
      * `cleanup()`.
      */
     (void)setpgid(0, 0); // can't fail
+
+    /*
+     * Initialize the configuration file module.
+     */
+    log_debug("Initializing configuration-file module");
+    if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
+        log_flush_error();
+        exit(1);
+    }
+    if (!lcf_haveSomethingToDo()) {
+        log_add("The LDM configuration-file \"%s\" is effectively empty",
+                getLdmdConfigPath());
+        log_flush_error();
+        exit(1);
+    }
 
     log_notice("Starting Up (version: %s; built: %s %s)", PACKAGE_VERSION,
             __DATE__, __TIME__);
@@ -1133,6 +1146,10 @@ int main(
 
         /*
          * Create the sharable database of upstream LDM metadata.
+         *
+         * TODO: Create the upstream LDM database and then close it so that this process can't be
+         * affected by it. This requires that the corresponding TODO-s in "ldm_server.c" and
+         * "forn_5_svc.c" are also done.
          */
         log_debug("Creating shared upstream LDM database");
         if ((status = uldb_delete(NULL))) {

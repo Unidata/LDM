@@ -2161,16 +2161,16 @@ uldb_Status uldb_addProcess(
 
             const int unlockStatus = db_unlock(&database);
             if (unlockStatus) {
-				log_add("Couldn't unlock database");
-				status = ULDB_SYSTEM;
+                log_add("Couldn't unlock database");
+                status = ULDB_SYSTEM;
             }
 
-			if (status || allowed == NULL) {
-				free_prod_class(sub); /* NULL safe */
-			}
-			else if (allowed) {
-				*allowed = sub;
-			}
+            if (status || allowed == NULL) {
+                free_prod_class(sub); /* NULL safe */
+            }
+            else if (allowed) {
+                *allowed = sub;
+            }
         } /* database is locked */
 
         cs_leave(&origSigSet);

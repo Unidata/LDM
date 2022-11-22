@@ -1,4 +1,14 @@
-6.14.1.1 (6.13.17 should have been 6.14.0)
+6.14.1.3        2022-11-22T13:16:41-0700
+    NOAAPort:
+        * blender(1): Corrected determination of frame ordering
+
+6.14.1.2        2022-11-22T11:55:49-0700
+    NOAAPort:
+        * blender(1): Added frame-header sequence-number to determination of frame ordering.
+
+6.14.1.1        2022-11-21T11:12:11-0700
+    6.13.17 should have been 6.14.0
+
     Installation:
         * Modified "make check" in regutil/ to accomodate GitHub actions
         * Modified include of "ldm.h" in "fix_clnt.pl" to accomodate GitHub actions
@@ -24,6 +34,8 @@
         * Improved log message when select() fails
         * Improved logging and simplified up6_run()
         * Only close file-descriptors 0, 1, & 2 when daemonizing
+        * Added "-h" (help) option
+        * Moved daemonization to before the creation of the shared upstream LDM database
 
     regutil(1):
         * Added "-l <logdest>" option to accomodate GitHub actions
@@ -52,7 +64,7 @@
           root-actions" by the superuser
 
     Security:
-        * Corrected code faults found by GitHub's CodeQL
+        * Corrected code faults found by GitHub's CodeQL (mostly in GEMPAK library)
 
     Devops:
         * A push to the "devel" and "master" branches on GitHub now causes "make distclean" to be

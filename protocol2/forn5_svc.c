@@ -398,6 +398,10 @@ forn_5_svc(prod_class_t *want, struct svc_req *rqstp, const char *ident,
         /*
          * The following relies on atexit()-registered cleanup for removal of
          * the entry from the database.
+         *
+         * TODO: Open, add, then close the upstream LDM database
+         * TODO: Add this process to the upstream LDM database only *after* no RECLASSing is
+         * necessary.
          */
         status = uldb_addProcess(getpid(), 5, downAddr, remote->clssp, &uldbSub,
                 noti5_sqf == doit, 0);

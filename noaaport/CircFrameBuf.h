@@ -79,22 +79,28 @@ class CircFrameBuf
         std::string to_string() const {
             return "{upId=" + std::to_string(uplinkId) +
                     ", fhSrc=" + std::to_string(fhSource) +
-                    ", fhSeq=" + std::to_string(fhSeqno) +
                     ", fhRun=" + std::to_string(fhRunno) +
+                    ", fhSeq=" + std::to_string(fhSeqno) +
                     ", pdhSeq=" + std::to_string(pdhSeqNum) +
                     ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
         }
 
         bool operator<(const Key& rhs) const {
-            return (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
-                    ? true
-                    : (uplinkId == rhs.uplinkId)
-                        ? (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
-                            ? true
-                            : (pdhSeqNum == rhs.pdhSeqNum)
-                                  ? pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2
-                                  : false
-                        : false;
+            if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
+                return true;
+            if (uplinkId == rhs.uplinkId) {
+                if (fhSeqno - rhs.fhSeqno > SEQ_NUM_MAX/2)
+                    return true;
+                if (fhSeqno == rhs.fhSeqno) {
+                    if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
+                        return true;
+                    if (pdhSeqNum == rhs.pdhSeqNum) {
+                        if (pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2)
+                            return true;
+                    }
+                }
+            }
+            return false;
         }
     };
 
