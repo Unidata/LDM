@@ -1,266 +1,163 @@
 <html>
+  <head>
+    <title>Network Trouble</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Network Trouble">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="Software, LDM, Troubleshooting, Network">
+    <meta name="DESCRIPTION" content="Missing Data and Internet Data Distribution (IDD) Latency Problems.  Sometimes a
+    site will be running a correctly configured LDM and yet not be receiving all requested data.  Or a site may receive
+    data correctly most of the time but also experience possibly recurring episodes of missing data.  Such symptoms
+    often indicate network problems.  This page is to help you diagnose and possibly treat these problems.">
+  </head>
+  <body>
 
-<HEAD>
-<TITLE>Network Trouble</TITLE>
-<META NAME="BOOKMARK" CONTENT="Network Trouble">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, Troubleshooting, Network">
-<META NAME="DESCRIPTION" CONTENT="Missing Data and Latency Problems.">
-<META NAME="DESCRIPTION" CONTENT="Missing Data and Internet Data Distribution (IDD) Latency Problems.  Sometimes a site will be running a correctly configured LDM and yet not be receiving all requested data.  Or a site may receive data correctly most of the time but also experience possibly recurring episodes of missing data.  Such symptoms often indicate
-network problems.  This page is to help you diagnose and possibly treat these problems.">
-</HEAD>
+    <h1>Missing Data and Latency Problems</h1>
+    <p>Sometimes a site will be running a correctly configured LDM and yet not be receiving all requested data.  Or a
+     site may receive data correctly most of the time but also experience possibly recurring episodes of missing data.
+     Such symptoms often indicate network problems.  Network problems are difficult because frequently there is very
+     little control over them.  This page is to help you diagnose and possibly treat these problems.</p>
+    <p>First, it is important that LDM site managers develop a good relationship with their system administrators.
+      System administrators are among the best suited people to assist with network problems. Furthermore, if your site
+      is a data relay site, it is important that these people be aware of the role that you are playing so that they can
+      consider this when making changes affecting the network.</p>
+    <p>The LDM tries to deal with the problem of network congestion. In particular, if a product doesn't make it to its
+      destination site, the upstream LDM will try to re-send it. This will continue until the product is successfully
+      sent, or it becomes too old (over an hour, by default), or some other disabling event occurs such as a machine or
+      network connection going down. Due to the fewer number of packets, it is more likely for a low-volume stream to be
+      successfully transmitted than a high-volume stream.</p>
 
-<body>
+    <h2>Missing Data Upon LDM Start-Up</h2>
+    <p>Missing data is not uncommon when stopping and starting an LDM. This is because upon LDM start-up the upstream
+      and downstream sites must reestablish which products should be sent to the downstream site. Then products must be
+      transferred, including a possible backlog of products that accumulated while the site was down.</p>
+    <p>We can break down this situation into three cases. First, if an LDM is down for just a brief time, say, a few
+     minutes, it is possible that no data will be lost. Second, if an LDM is down for between a few minutes and one
+     hour, data may or may not be lost, depending on whether the upstream and downstream site can reestablish which
+     products should be sent and transfer the backlog of products in a timely manner. Third, if an LDM is down for over
+     one hour, products over one hour old will be lost because data at the upstream site is, by default, expired after
+     one hour. The success of transfer of products less than one hour old is the same as in the second case.</p>
+    <p>In any of these cases, the system should eventually be able to catch up and the problem of missing data should 
+      disappear. If it doesn't, the next two steps are to (1) evaluate your upstream feed then (2) evaluate the 
+      connection to your upstream feed.</p>
 
-<h2 align="center">Missing Data and Latency Problems</h2>
-<br>
-<p align="justify">
-Sometimes a site will be running a correctly configured LDM
-and yet not be receiving all requested data.  Or a site may receive
-data correctly most of the time but also experience possibly recurring
-episodes of missing data.  Such symptoms often indicate
-network problems.  Network problems are difficult because frequently there
-is very little control over them.  This page is to help you diagnose and
-possibly treat these problems.
-<p align="justify">
-First, it is important that LDM site managers develop a good
-relationship with their system administrators.
-System administrators are among the best suited people to assist
-with network problems.
-Furthermore, if your site is a data relay site, it is important
-that these people be aware of the role that you are playing so that
-they can consider this when making changes affecting the network.
-<p align="justify">
-The LDM tries to deal with the problem of network congestion.
-In particular, if a product doesn't make it to its destination site,
-the upstream LDM will try
-to re-send it.
-This will continue until the product is successfully sent, or it becomes too
-old (over an hour, by default), or some other disabling event occurs
-such as a machine or network connection going down.
-Due to the fewer number of packets, it is more likely for a low-volume
-stream to be successfully transmitted than a high-volume stream.
-<p align="justify"><br>
-<h2>Missing Data Upon LDM Start-Up</h2>
+    <h2>Evaluating Your Upstream Feed</h2>
+    <p>If you notice missing data, it may be due to a problem at your upstream feed. Here are a few tools to help 
+      determine if your upstream site is actually up, if the LDM is running on that site, if it is receiving data, and 
+      if it is configured to send data to your downstream site.</p>
+    <p>Note that <b>man pages are available for all the commands listed in this section and the following section</b>. 
+      Be sure to check the man pages for detailed information about command options and output.</p>
+    <ul>
+      <li><b>ping</b> - This is a UNIX command. It sends a continuous stream of small packets to the named host, so that 
+        you can watch the quality of the connection over time. Upon completion, it gives a few summarizing statistics. 
+        With <b>ping</b> you can see if a site is connected and responding. It also gives some indication of network 
+        delays and packet delivery reliability. </li>
+      <li>Example: <b>ping <i>host_name</i></b>. Note that by default <b>ping</b> only sends very small packets. The 
+        reliability of transmission of larger packets may be different. See the man page for info regarding how to 
+        change the packet size.</li>
+	    <li><b>ldmping</b> - This is an LDM command. It checks to see if an LDM server is running on a remote host. It does 
+       not require the 'ping'ing site to be on the access control list of the upstream LDM (unlike <b>notifyme</b>, 
+       below), and thus can be used on any host. It should return the string "RESPONDING" in the state field. If it 
+       doesn't, check the man page to see what the state means. </li>
+      <li> Example: <b>ldmping -i 5 -h <i>host_name</i></b> to ping every five seconds. Since network traffic varies 
+        over time, it can be useful to either run <b>ldmping</b> for a while, say 1/2 hour, or use it to sample at a 
+        variety of times. </li>
+	    <li><b>notifyme</b> - This is an LDM command to see if upstream host is receiving data. The remote host must have 
+        an 'allow' line for your site in the ldmd.conf file, so it also ensures that the upstream site is configured 
+        properly to send you products. </li>
+      <li>Example: <b>notifyme -vl - -h <i>host_name</i></b>.  <b>notifyme</b> returns (1) the current system time, (2) 
+        the string 'notifyme', (3) the product size, (4) the time the product was injected into the IDD, (5) the feed 
+        type, (6) a sequence number, and (7) the product ID with the actual product time. If you take the difference 
+        between the first and fourth  fields, you can see how long it took the product to arrive at the host.</li> 
+    </ul>
+    <p>Although these are ways for you to get some information regarding your upstream feed, there is no way for you to 
+      determine what 'allow' entries your upstream feed has in its ldmd.conf file for your site. Thus, your upstream 
+      feed may be getting the data you want, but it may not be configured properly to send it to you. If you have ruled 
+      out network congestion (see below) and suspect this is the case, contact your upstream site. </p>
 
-Missing data is not uncommon when stopping and starting an LDM.
-This is because upon LDM
-start-up the upstream and downstream sites must reestablish which
-products should be sent to the downstream site.
-Then products must be transferred, including a possible backlog of products that accumulated while the site was down.
-<p align="justify">
-We can break down this situation into three cases.
-First, if an LDM is down for just a brief time, say, a few minutes, it is possible
-that no data will be lost.
-Second, if an LDM is down for between a few minutes and one hour, data may or
-may not be lost, depending on whether the upstream and downstream site
-can reestablish which products should be sent and transfer the backlog of products in a timely manner.
-Third, if an LDM is down for over one hour,
-products over one hour old will be lost because data at the upstream site is, by default,
-expired after one hour.
-The success of transfer of products less than one hour old is the same
-as in the second case.
+    <h2>Evaluating the Connection to Your Upstream Site</h2>
+    <p>If your upstream site is up but you have missing data, then you may have network congestion problems. If, at this 
+      point you suspect network congestion, take a look at the log. Execute the command: <code>ldmadmin log</code>. If 
+      high latency is occurring, the downstream LDM log will contain messages similar to the following exchange between 
+      the upstream site 'rainbow' and the downstream site 'shadow': </p>
+    <pre>
+      > Nov 14 20:53:13 shadow rainbow[15060]:
+      >       RECLASS: 19971114195313.567 TS_ENDT
+      >                {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      > Nov 14 20:53:13 shadow rainbow[15060]:
+      >        skipped: 19971114195019.062 (174.505 seconds)
+      > Nov 14 20:58:29 shadow rainbow[15060]:
+      >       RECLASS: 19971114195829.792 TS_ENDT
+      >               {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      > Nov 14 20:58:29 shadow rainbow[15060]:
+      >       skipped: 19971114195339.392 (290.400 seconds)
+      > Nov 14 21:04:06 shadow rainbow[15060]:
+      >       RECLASS: 19971114200406.219 TS_ENDT
+      >               {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      > Nov 14 21:04:06 shadow rainbow[15060]:
+      >       skipped: 19971114195920.680 (285.539 seconds)
+    </pre>
+    <p>In this case the RECLASS message means that rainbow has sent shadow data that is older than shadow wishes to
+      accept. Shadow responded by sending the upstream site the RECLASS message. The purpose of the RECLASS message is 
+      to reestablish which products should actually be sent, including information about the desired time ranges. Also, 
+      the 'skipped' entries indicate that shadow is throwing away the old products it received.</p>
+    <p>For more information on the RECLASS and 'skipped' messages, click <a href="reclassDoc.html">here</a>.</p>
+    <p>Here are a few tools to help in evaluating the quality of the connectivity to your upstream site:</p>
+    <ul>
+      <li><b>traceroute</b> - Use this UNIX command to identify the route through which information flows from one host 
+        to another. It will also show where slow links are located. After using traceroute to determine the intermediate 
+        hops between your machine and the destination machine, you can use ping to test where a source of packet loss 
+        may be located.</li>
+      <li>Example: <b> traceroute <i>host_name</i></b>. <b>traceroute</b> picks a path to the named host, then, by 
+        default, sends three probes to each gateway along the path. Each line of output displays the timing results of 
+        these three probes. By default, timing results greater than five seconds are reported by displaying a '*' for 
+        that probe. See the man page for more information and changing default values. </li>
+      <li><b>ftp</b> - This is the UNIX file transfer utility. Grabbing a junk file can give you another perspective of 
+        the degree of network congestion. This requires that you know of, and have access to, a file to transfer.</li>
+      <li>Example: <b> ftp <i>host_name</i></b>, then follow the protocol to transfer a file.</li>
+      <li><b>netcheck</b> - This LDM command is also a perl script that combines traceroute and ping.  This can be run 
+        as a cron job to monitor the network  over time. Example: <b>netcheck</b></li>
+    </ul>
 
-<p align="justify">
-In any of these cases, the system should eventually be able to catch up
-and the problem of missing data should disappear.
-If it doesn't, the next two steps are to (1) evaluate your upstream
-feed then (2) evaluate the connection to your upstream feed.
+   <h2>Options</h2>
+    <p>Once network congestion has been confirmed, only a limited set of options are available. Here at the UPC we can
+      make some changes in the IDD topology based on empirical knowledge of the network. However, this solution can be
+      labor-intensive and is limited due to site resources.</p>
+    <p>If your network connection is bad, you will need to show the problem to your system administrator or ISP. The
+      submission of the network problem must come from the customer, so the UPC cannot submit the request on your
+      behalf. Since network problems can be intermittent, it's important to get your system administrator or ISP
+      involved when you can actually show them the problem.</p>
+    <p>You can increase the '-m max_latency' parameter to ldmd(1) to allow the upstream site more time to deliver. You
+      would have to increase your queue size proportionately. Of course, this really won't do much good unless the
+      upstream site has a correspondingly large product-queue. Otherwise, the products will be garbage-collected before
+      they are able to send. This would allow you to get the data, albeit in a less timely manner. <i>This is not a
+        great solution.</i></p>
+    <p>Another thing you can try is to split the feed requests of your LDM so that multiple connections are used. For
+      example, in <b>etc/ldmd.conf</b> change
+    <pre>
+      request DDPLUS|IDS|HDS  ".*"    rainbow.eas.purdue.edu
+    </pre>
+    <p>to</p>
+    <pre>
+      request DDPLUS  ".*"    rainbow.eas.purdue.edu
+      request IDS     ".*"    rainbow.eas.purdue.edu
+      request HDS     ".*"    rainbow.eas.purdue.edu
+    </pre>
+    <p>Because of the multiple entries, the LDM will fork off a separate process and, thus, a separate connection for
+      the three feeds.  The parallel connections sometimes result in greater throughput.</p>
+    <p>In the long run, however, you may need to ask for less data or get a fatter pipe. It is worth considering
+      whether you can get by with less data. Sites often request more data than they actually use. Or, NSF provides
+      grants for equipment that might include hardware to upgrade network connections.  Such grants are announced on the
+      <a href="https://www.unidata.ucar.edu/"><b>UPC</b> homepage</a>.  You can also see
+      <a href="https://www.nsf.gov/publications/pub_summ.jsp?ods_key=nsf0051"><b>an old announcement</b></a> from the
+      NSF for more information.</p>
+    <p>A last resort would be to purchase or build your own direct satellite receiver system for acquiring NOAAport
+      data and feeding these data  to your LDM. Some required components include: a satellite antenna, an ingest card,
+      a PC, some software, and a demodulator for each channel desired. Contact
+      <a href="mailto:support@unidata.ucar.edu"> support@unidata.ucar.edu</a> for more information. This option will
+      not help with non-NOAAPORT data feeds, such as NIDS or NLDN.</p>
 
-<p align="justify"><br>
-<h2>Evaluating Your Upstream Feed</h2>
-If you notice missing data, it may be due to a problem at your
-upstream feed.
-Here are a few tools to help determine if your upstream site is
-actually up, if the LDM is running on that site, if it is
-receiving data, and if it is configured to send data to your
-downstream site.
-<p align="justify">
-Note that <b>man pages are available for all the commands listed in this
-section and the following section</b>. Be sure to check the man pages for
-detailed information about command options and output. 
-<ul>
-  <li>
-	<p align="justify"><b>ping</b> - This is a UNIX command. It sends a continuous stream of small 
-	  packets to the named host, so that you can watch the quality of the connection 
-	  over time. Upon completion it gives a few summarizing statistics. With <b>ping</b> 
-	  you can see if a site is connected and responding. It also gives some indication 
-	  of network delays and packet delivery reliability. </p>
-  <li>
-	<p align="justify"> Example: <b>ping <i>host_name</i></b> 
-	<p align="justify"> Note that by default <b>ping</b> only sends very small packets. The reliability 
-	  of transmission of larger packets may be different. See the man page for 
-	  info regarding how to change the packet size. </p>
-	
-  <li>
-	<p align="justify"><b>ldmping</b> - This is an LDM command. It checks to see if an LDM server 
-	  is running on a remote host. It does not require the 'ping'ing site to be 
-	  on the access control list of the upstream LDM (unlike <b>notifyme</b>, 
-	  below), and thus can be used on any host. It should return the string 
-	  "RESPONDING" in the state field. If it doesn't, check the man page to see 
-	  what the state means. </p>
-  <li>
-	<p align="justify"> Example: <b>ldmping -i 5 -h <i>host_name</i></b> to ping every five seconds 
-	<p align="justify"> Since network traffic varies over time, it can be useful to either run 
-	  <b>ldmping</b> for a while, say 1/2 hour, or use it to sample at a variety 
-	  of times. </P>
-	 
-  <li>
-	<p align="justify"><b>notifyme</b> - This is an LDM command to see if upstream host is receiving 
-	  data. The remote host must have an 'allow' line for your site in the ldmd.conf 
-	  file, so it also ensures that the upstream site is configured properly to 
-	  send you products. </p>
-  <li>
-	<p align="justify"> Example: <b>notifyme -vl - -h <i>host_name</i></b> 
-	<p align="justify"> <b>notifyme</b> returns (1) the current system time, (2) the string 'notifyme', 
-	  (3) the product size, (4) the time the product was injected into the IDD, 
-	  (5) the feed type, (6) a sequence number, and (7) the product ID with the 
-	  actual product time. If you take the difference between the first and fourth 
-	  fields, you can see how long it took the product to arrive at the host. 
-</ul>
-<p align="justify">Although these are ways for you to get some information regarding your upstream 
-  feed, there is no way for you to determine what 'allow' entries your upstream 
-  feed has in its ldmd.conf file for your site. Thus, your upstream feed may be 
-  getting the data you want, but it may not be configured properly to send it 
-  to you. If you have ruled out network congestion (see below) and suspect this 
-  is the case, contact your upstream site. </p><br>
-<h2>Evaluating the Connection to Your Upstream Site</h2>
-<p align="justify">If your upstream site is up but you have missing data, then you may have network 
-  congestion problems. If, at this point you suspect network congestion, take 
-  a look at the log. Execute the command: <b>ldmadmin log</b> <br>
-  If high latency is occurring, the downstream LDM log will contain messages similar 
-  to the following exchange between the upstream site 'rainbow' and the downstream 
-  site 'shadow': </p>
-<PRE>
-> Nov 14 20:53:13 shadow rainbow[15060]:
->       RECLASS: 19971114195313.567 TS_ENDT
->                {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-> Nov 14 20:53:13 shadow rainbow[15060]:
->        skipped: 19971114195019.062 (174.505 seconds)
-> Nov 14 20:58:29 shadow rainbow[15060]:
->       RECLASS: 19971114195829.792 TS_ENDT
->               {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-> Nov 14 20:58:29 shadow rainbow[15060]:
->       skipped: 19971114195339.392 (290.400 seconds)
-> Nov 14 21:04:06 shadow rainbow[15060]:
->       RECLASS: 19971114200406.219 TS_ENDT
->               {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-> Nov 14 21:04:06 shadow rainbow[15060]:
->       skipped: 19971114195920.680 (285.539 seconds)
-</PRE>
-<p align="justify">In this case the RECLASS message means that rainbow has sent 
-  shadow data that is older than shadow wishes to accept. Shadow responded by 
-  sending the upstream site the RECLASS message. The purpose of the RECLASS message 
-  is to reestablish which products should actually be sent, including information 
-  about the desired time ranges. Also, the 'skipped' entries indicate that shadow 
-  is throwing away the old products it received.
-
-<p align="justify">For more information on the RECLASS and 'skipped'
-messages, click <a href="reclassDoc.html">here</a>.
-
-<p align="justify">
-Here are a few tools to help in evaluating the quality of the
-connectivity to your upstream site:.
-<ul>
-  <li>
-	<p align="justify"><b>traceroute</b> - Use this UNIX command to identify the 
-	  route through which information flows from one host to another. It will 
-	  also show where slow links are located. After using traceroute to determine 
-	  the intermediate hops between your machine and the destination machine, 
-	  you can use ping to test where a source of packet loss may be located. </p>
-  <li>
-	<p align="justify"> Example: <b> traceroute <i>host_name</i></b> 
-	<p align="justify"> <b>traceroute</b> picks a path to the named host, then, by default, sends 
-	  three probes to each gateway along the path. Each line of output displays 
-	  the timing results of these three probes. By default, timing results greater 
-	  than five seconds are reported by displaying a '*' for that probe. See the 
-	  man page for more information and changing default values. 
-	<p> 
-  <li>
-	<p align="justify"><b>ftp</b> - This is the UNIX file transfer utility. Grabbing a junk file 
-	  can give you another perspective of the degree of network congestion. This 
-	  requires that you know of, and have access to, a file to transfer. </p>
-  <li>
-	<p align="justify"> Example: <b> ftp <i>host_name</i></b>, then follow the protocol to transfer 
-	  a file. 
-	<p> 
-  <li>
-	<p> 
-  <li><b>netcheck</b> - This LDM command is also a perl script that combines traceroute and
-       ping.  This can be run as a cron job to monitor the network
-       over time.
-       <p>
-       Example: <b> netcheck </b>
-       <p>
-</ul><br>
-
-<h2>Options</h2>
-<p align="justify">
-Once network congestion has been confirmed,
-only a limited set of options are available.
-Here at the UPC we can make some changes in the IDD topology based on
-empirical knowledge of the network.
-However, this solution can be labor intensive and is limited due to
-site resources.
-
-<p align="justify">
-If your network connection is bad, you will need to show the
-problem to your system administrator or ISP.
-The submission of the network problem must come from the customer, so
-the UPC cannot submit the request on your behalf.
-Since network problems can be intermittent, it's important to get
-your system administrator or ISP involved when you can actually show them 
-the problem.
-<p align="justify">
-You can increase the '-m max_latency' parameter to ldmd(1)
-to allow the upstream site more time to deliver.
-You would have to increase your queue size proportionately.
-Of course, this really won't do much good unless the upstream site
-has a correspondingly large product-queue.
-Otherwise, the products will be garbage-collected before they are able to 
-be sent.
-This would allow you to get the data, albeit in a less timely manner.
-<i>This is not a great solution.</i>
-<p align="justify">
-Another thing you can try is to split the feed requests of your LDM so
-that multiple connections are used.
-For example, in <b><tt>etc/ldmd.conf</tt></b> change
-<blockquote><PRE>
-request DDPLUS|IDS|HDS  ".*"    rainbow.eas.purdue.edu
-</blockquote></PRE>
-to
-<blockquote><PRE>
-request DDPLUS  ".*"    rainbow.eas.purdue.edu
-request IDS     ".*"    rainbow.eas.purdue.edu
-request HDS     ".*"    rainbow.eas.purdue.edu
-</blockquote></PRE>
-
-<p align="justify">Because of the multiple entries,
-  the LDM will fork off a separate 
-  process and, thus, a separate connection for the three feeds.  The
-  parallel connections sometimes result in greater throughput.
-
-<p align="justify"> In the long run, however, you may need to ask for less 
-data or get 
-  a fatter pipe. It is worth considering whether you can get by with less data. 
-  Sites often request more data than they actually use. Or, NSF provides grants 
-  for equipment that might include hardware to upgrade network connections. 
-  Such grants are announced on the <a href="/">
-  <b>UPC</b> homepage</a>.  You can also see
-  <a href="http://www.nsf.gov/cgi-bin/getpub?nsf0051"><b>an old
-  announcement</b></a> from the NSF for more information. 
-
-<p align="justify"> A last resort would be to purchase or build your own direct 
-  satellite receiver system for acquiring NOAAport data and feeding these data 
-  to your LDM. Some of the required components include: a satellite antenna, an 
-  ingest card, a PC, some software, and a demodulator for each channel desired. 
-  Contact <samp><a href="mailto:support@unidata.ucar.edu"> support@unidata.ucar.edu</a></samp> 
-  for more information. This option will not help with non-NOAAPORT data feeds, 
-  such as NIDS or NLDN.</p>
-<br>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </html>

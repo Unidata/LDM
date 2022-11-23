@@ -1,104 +1,65 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Unidata - reclassDoc</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="RECLASS Message">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, troubleshooting, idd, latency, RECLASS,  skipped">
+    <meta name="DESCRIPTION" content="Log Entries Related to Product Latency.  If high latency is occurring, the downstream LDM log will contain messages similar to the following exchange between the upstream site 'rainbow' and the downstream site 'shadow':">
+  </head>
+  <body>
+    <h1>Log Entries Related to Product Latency</h1>
+    <p>If high latency is occurring, the downstream LDM log will contain messages similar to the following exchange
+      between the upstream site 'rainbow' and the downstream site 'shadow':</p>
+    <pre>
+      Nov 14 20:53:13 shadow rainbow[15060]: RECLASS: 19971114195313.567 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      Nov 14 20:53:13 shadow rainbow[15060]: skipped: 19971114195019.062 (174.505 seconds)
+      Nov 14 20:58:29 shadow rainbow[15060]: RECLASS: 19971114195829.792 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      Nov 14 20:58:29 shadow rainbow[15060]: skipped: 19971114195339.392 (290.400 seconds)
+      Nov 14 21:04:06 shadow rainbow[15060]: RECLASS: 19971114200406.219 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
+      Nov 14 21:04:06 shadow rainbow[15060]: skipped: 19971114195920.680 (285.539 seconds)
+    </pre>
 
-<HEAD>
-<title>Unidata - reclassDoc</title>
-<META NAME="BOOKMARK" CONTENT="RECLASS Message">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="LDM, troubleshooting, idd, latency, RECLASS,
-    skipped">
-<META NAME="DESCRIPTION" CONTENT="Log Entries Related to Product Latency.  If high latency is occurring, the downstream LDM log will contain messages similar to the following exchange between the upstream site 'rainbow' and the downstream site 'shadow':">
-</HEAD>
+    <h2>The RECLASS message</h2>
+    <p>Due to product latency, upstream and downstream sites must occasionally renegotiate acceptable product start and
+      end times so that old products are not transferred unnecessarily. This is the purpose of the RECLASS message.
+      First, it indicates that a problem of unwanted or unavailable data occurred. Second, it serves to reestablish
+      which products should actually be sent.</p>
+    <p>The RECLASS message can originate from either a downstream site or an upstream site. We will consider each in
+      turn.</p>
+    <p> When the RECLASS message originates at the <b>downstream</b> site it means that the data available at the
+      upstream site is unwanted by the downstream site because it is too old. This occurs when either the upstream site
+      has gone down completely or is otherwise unable to transfer products in a timely manner.</p>
+    <p>Assume the upstream site has gone down completely. When it comes back up, it sends the downstream site a HIYA
+      message that includes information about the type and timestamps of the products it has (but not the actual
+      products themselves). If the downstream site doesn't want those products it responds with a RECLASS message to the
+      upstream site.</p>
+    <p>If the upstream site is simply unable to keep up due to network congestion or other reasons, it may actually send
+      an old product to the downstream site. This also causes the downstream site to respond with a RECLASS message.
+      This is the scenario which generated the log entries in the above example.</p>
+    <p>When the RECLASS message originates at the <b>upstream</b> site, it indicates that data desired by the downstream
+      site is unavailable at the upstream site. This may happen when the downstream site has gone down. When it comes
+      back up the downstream site sends a FEEDME request to the upstream site that includes information about the type
+      and timestamps of the products desired. The downstream site will request data starting from the time that it last
+      stopped receiving data, if that information is available. If the downstream site was down a long time, it may
+      request old data. If the upstream site can't fulfill that request because the products have expired, it responds
+      by sending a RECLASS message to the downstream site. Note that this is not a case of product latency per se.</p>
+    <p>The second purpose of the RECLASS message is to reestablish which products should actually be sent. You can see
+      in the above example that its parameters include a list of products,
+      e.g., {{DDPLUS, ".*"},{IDS,  ".*"},{HDS,  ".*"}}, and a time range, e.g., 19971114195313.567 TS_ENDT. In this
+      case, TS_ENDT has a value that for practical purposes means "the end of time" (although there could be a problem
+      around Mon Jan 18 20:14:07 2038, a known UNIX time limit).</p>
 
-<body>
+    <h2>The 'skipped' Message</h2>
+    <p>When the downstream site receives notice of unwanted data it must decide how to respond. By default, products over
+     an hour old are not wanted. In the above log entries we see that the downstream site responded by telling the
+     upstream site what products it wanted in the RECLASS message. Also, the 'skipped' entries in the log confirm that
+     the products available were older than the downstream site was willing to accept. The number after the word
+     'skipped' is the timestamp of the product which triggered the RECLASS message. The time in parentheses is the
+     difference between the product timestamp and the new lower bound being sent in the RECLASS message.</p>
 
-<h2 align="center">Log Entries Related to Product Latency</h2><br>
-
-<p align="justify">
- If high latency is occurring, the
-downstream LDM log will contain messages similar to the following
-exchange between the upstream site 'rainbow' and the downstream site
-'shadow':
-<blockquote><PRE>
-Nov 14 20:53:13 shadow rainbow[15060]: RECLASS: 19971114195313.567 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-Nov 14 20:53:13 shadow rainbow[15060]: skipped: 19971114195019.062 (174.505 seconds)
-Nov 14 20:58:29 shadow rainbow[15060]: RECLASS: 19971114195829.792 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-Nov 14 20:58:29 shadow rainbow[15060]: skipped: 19971114195339.392 (290.400 seconds)
-Nov 14 21:04:06 shadow rainbow[15060]: RECLASS: 19971114200406.219 TS_ENDT {{DDPLUS,  ".*"},{IDS,  ".*"},{HDS,  ".*"}}
-Nov 14 21:04:06 shadow rainbow[15060]: skipped: 19971114195920.680 (285.539 seconds)
-</blockquote></PRE>
-
-<h3>The RECLASS message</h3>
-<p align="justify">
-Due to product latency, upstream and downstream sites must occasionally
-renegotiate acceptable product start and end times so that old products are not
-transferred unnecessarily.
-This is the purpose of the RECLASS message.
-First, it indicates that a problem of unwanted or unavailable data occurred.
-Second, it serves to reestablish which products should actually be
-sent.
-<p align="justify">
-The RECLASS message can originate from either a downstream site or an
-upstream site.
-We will consider each in turn.
-<p align="justify">
-When the RECLASS message originates at the <u>downstream</u> site it means that the data available at the upstream site
-is unwanted by the downstream site because it is too old.
-This occurs when either the upstream site has gone down completely or
-is otherwise unable to transfer products in a timely manner.
-<p align="justify">
-Assume the upstream site has gone down completely.
-When it comes back up, it sends the downstream site a
-HIYA message that includes information about the type and timestamps
-of the products it has (but not the actual products themselves).
-If the downstream site doesn't want those products it responds with a
-RECLASS message to the upstream site.
-<p align="justify">
-If the upstream site is simply unable to keep up due to network
-congestion or other reasons, it may actually send
-an old product to the downstream site.
-This also causes the downstream site to respond with a RECLASS message.
-This is the scenario which generated the log entries in the above
-example.
-<p align="justify">
-When the RECLASS message originates at the <u>upstream</u> site, it indicates that data
-desired by the downstream site is
-unavailable at the upstream site.
-This may happen when the downstream site has gone down.
-When it comes back up the downstream site sends a FEEDME request to the upstream site that
-includes information about the type and timestamps of the products desired.
-The downstream site will request data
-starting from the time that it last stopped receiving data, if that information is available.
-If the downstream site was down a long time, it may request old data.
-If the upstream site can't fulfill that request because the products
-have expired, it responds by sending
-a RECLASS message to the downstream site.
-Note that this is not a case of product latency per se.
-<p align="justify">
-The second purpose of the RECLASS message is to reestablish which products
-should actually be sent.
-You can see in the above example that its parameters include a list of products, e.g., {{DDPLUS,
-".*"},{IDS,  ".*"},{HDS,  ".*"}}, and a time range, e.g.,
-19971114195313.567 TS_ENDT.
-In this case, TS_ENDT has a value that for practical purposes means
-"the end of time" (although there could be a problem around Mon Jan 18
-20:14:07 2038, a known UNIX time limit).
-</p><br>
-<h3>The 'skipped' Message</h3>
-<p align="justify">
-When the downstream site receives notice of unwanted data it must decide how to respond.
-By default, products over an hour old are not wanted.
-In the above log entries we see that the downstream site responded by telling the upstream
-site what products it wanted in the RECLASS message.
-Also, the 'skipped' entries in the log confirm that the products
-available were older than the downstream site
-was willing to accept.
-The number after the word 'skipped' is the timestamp of the product
-which triggered the RECLASS message.
-The time in parentheses is the difference between the product timestamp and the
-new lower bound being sent in the RECLASS message.</p><br>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
