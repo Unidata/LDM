@@ -1069,14 +1069,15 @@ int main(
         log_clear();        // So no queued messages
         log_avoid_stderr(); // Because this process is now a daemon
     }
-    else
 #endif
     /*
-     * Make this process a process group leader so that all child processes
-     * (e.g., upstream LDM, downstream LDM, pqact(1)s) will be signaled by
-     * `cleanup()`.
+     * Ensure that this process is the process group leader so that all child processes (e.g.,
+     * upstream LDM, downstream LDM, pqact(1)s) will receive a signal sent to the process group.
+     *
+     * Must be done even if a daemon.
      */
-    (void)setpgid(0, 0); // can't fail
+    if (getpgid(0) != getpid())
+        (void)setpgid(0, 0); // Can't fail
 
     /*
      * Initialize the configuration file module.
