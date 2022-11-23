@@ -1,222 +1,129 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Troubleshooting the LDM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Packet Shaper">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="packetshaper, LDM, idd, troubleshooting">
+    <meta name="DESCRIPTION" content="Recently a few of our sites experienced data reception that was severely throttled 
+    or stopped for no apparent reason.  We determined that Packetshaper had been installed at these sites. Packetshaper 
+    can discriminate traffic based on port number, IP address, application, protocol, subnet, URL, and other criteria. 
+    But if it's mis-configured, LDM traffic can be adversely affected.">
+  </head>
+  <body>
+    <h1>Packetshaper and the LDM</h1>
+    <h2>Introduction</h2>
+     <p> Recently a few of our sites experienced data reception that was severely throttled or stopped for no apparent 
+      reason. Symptoms were inconsistent and somewhat sporadic  and included: </p>
+    <ul>
+      <li>extremely low throughput</li>
+      <li>latency problems </li>
+      <li>RPC time outs </li>
+      <li>"can't contact portmapper" messages</li>
+      <li>"no route to host" messages</li>
+      <li>ldmping failure, usually due to RPC time out</li>
+    </ul>
+    <p>In some cases a subset of products got through, but in other cases nothing got through.</p>
+    <p>We determined that Packetshaper had been installed at these sites. Packetshaper is a product developed by
+      Packeteer to analyze and 	"shape" network traffic. It is often used to limit traffic from low priority
+      applications. Packetshaper is a box that generally sits between a router and switch.  Thus, there's no way to
+      tell whether it's running except to ask your network administrator.</p>
+    <p>Packetshaper can discriminate traffic based on port number, IP address,  application, protocol, subnet, URL, and
+      other criteria. But if it's mis-configured, LDM traffic can be adversely affected.</p>
+    <p>If you determine that Packetshaper is running at your site, perhaps the easiest way to determine if it is
+      affecting your data	flow is to ask your network engineer to turn it off for 30 minutes.  If your data reception
+      quickly	improves, it's reasonable to assume that Packetshaper was not	properly configured.  With technical help
+      from Packeteer, we are providing the instructions below for configuring Packetshaper to allow LDM traffic
+      to flow.</p>
+    <p><b>Note</b>: when buying Packetshaper, sites have an option to purchase    support.  Please check to see if your
+      contract includes support. If you have support, you should use that, as these  pages may become outdated. </p>
+    <p><b>Note</b>: Technical support at Packeteer recommends that the Packetshaper be upgraded to the current software
+      version, 5.2.2 if they have not done so already.  Performance of the rate policies is improved over previous
+      versions. Also, Packeteer is regularly  adding applications to the "autodiscover" process, which are made
+      available via upgrades.</p>
 
-<HEAD>
-<TITLE>Troubleshooting the LDM</TITLE>
-<META NAME="BOOKMARK" CONTENT="Packet Shaper">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="packetshaper, LDM, idd, troubleshooting">
-<META NAME="DESCRIPTION" CONTENT="Recently a few of our sites experienced data reception that was severely throttled or stopped for no apparent reason.  We
-determined that Packetshaper had been installed at these sites. Packetshaper can discriminate traffic based on port number, IP address, application, protocol, subnet, URL, and other criteria. But if it's misconfigured, LDM traffic can be adversely affected.">
-</HEAD>
+    <h2>Configuring Packetshaper to Handle LDM Traffic</h2>
+    <h3>Isolating LDM Traffic for Configuration Purposes</h3>
+    <p>To isolate this traffic it will be necessary to create two classes  to capture traffic on this port. One will be
+      an inbound class, the other will be outbound. For each class we will </p>
+    <ol>
+      <li>assign rules for "catching" traffic</li>
+      <li>assign a priority</li>
+      <li>reserve a portion of bandwidth for LDM traffic</li>
+    </ol>
 
-<BODY>
+    <h3>Creating the Inbound Class and Assigning Rules</h3>
+    <p>Each class, both inbound and outbound, will contain two matching rules.  One rule will match the ports
+      "inside:any" and "outside:388".  The other rule will match ports "inside:388" and  "outside:any".  This will allow
+      us to catch traffic on port 388 on either side regardless of whether the machine is a server or client.
+      (Technically, an LDM site can switch roles, so that at any	time it may be either a client or a server.)</p>
+    <p>To create the inbound class, first click the "/Inbound" folder in the left frame.  This will take you to the
+      manage page for the root /inbound folder. Click the "class" button, then "add" in the dropdown menu.  This will
+      take you to the page shown here:</p>
+    <p><img src='newclass2.gif' alt="New Class"/></p>
+    <p>First, name the class.</p>
+    <p>Next, we will specify two rules for the class. When creating a new traffic class, the Packetshaper automatically
+      adds at least one matching rule. For the first rule,  choose location "any", then specify an inside port of "any"
+      and an outside port of "388".  All other fields are left as their defaults.  Click "add class".</p>
+    <p>To add the second rule, return to the manage page, click the "class" button once again, then "add matching rule".
+      This will take you to a class which is identical to the newclass page, except it will be missing the class name.
+      Add another rule that will match ports "inside:388" "outside:any". Click "add rule" and the class is complete.</p>
+    <p>This now takes us to the manage page for the LDM class:</p>
+    <p><img src="manageLDM.gif" alt="Manage LDM"/></p>
+    <p>Choose Type: "Exception" then "Apply Changes".  The Packetshaper classifies traffic from top to bottom, so this
+      will move the class toward the top of the tree.</p>
 
-<h2 align="center">Packetshaper and the LDM</h2>
-<br>
-<h3> Introduction</h3>
-<p align="justify">Recently a few of our sites experienced data reception that was severely throttled 
-  or stopped for no apparent reason. Symptoms were inconsistent and somewhat sporadic 
-  and included: </p>
-<ul>
-<li>extremely low throughput 
-<li>latency problems 
-<li>RPC time outs 
-<li>"can't contact portmapper" messages
-<li>"no route to host" messages
-<li> ldmping failure, usually due to RPC time out
-</ul>
-In some cases a subset of products got through, but in other cases
-    nothing got through.
-<p align="justify">
-We determined that Packetshaper had been installed at these sites.
-Packetshaper is a product developed by Packeteer to analyze and
-	"shape" network traffic.
-It is often used to limit traffic from low priority applications.
-Packetshaper is a box that generally sits between
-a router and switch.  Thus,
-there's no way to tell whether it's running except to ask
-    your network administrator.
-<p align="justify">
-Packetshaper can discriminate traffic based on port number, IP address,  application,
-protocol, subnet, URL, and other criteria.
-But if it's misconfigured, LDM traffic can be adversely affected.
-<p align="justify">
-If you determine that Packetshaper is running at your site, perhaps
-	the easiest way to determine if it is affecting your data
-	flow is to ask your network engineer to 
-	turn it off for 30 minutes.  If your data reception quickly
-	improves, it's reasonable to assume that Packetshaper was not
-	properly configured.  With technical help from Packeteer, we
-	are providing the instructions below 
-      for configuring Packetshaper to allow LDM traffic to flow.
+    <h3>Giving the LDM Inbound Class a High Priority</h3>
+    <p>All classes get priority 3 by default. To prioritize this traffic one can give it a higher rate policy. First,
+      on the manage page for the class, click  the "Policy" button then "add" to get the following page: </p>
+    <p><img src="addpolicy.gif" alt="Add Policy"/></p>
+    <p>On this screen you can choose to add either a rate policy, or a priority policy. The page Selecting and Using
+      Policies describes the differences between both types of policies and when it is appropriate to use each type.
+      For the LDM, it is recommended that you set a rate policy because this allows reservation of bandwidth. Packeteer
+      technical support recommends setting the rate policy to Priority 5. Although Priority 7 is the highest, very high
+      rate policies should be used with caution because they tend to starve those traffic types with lower-priority
+      policies if the traffic type is persistent and particularly aggressive. A rate 5 is usually sufficient. </p>
+    <p>With a rate policy you are required to fill out several fields.  First, enter 0 for "Guaranteed". Check the
+      "burstable" box, then choose Priority 5 from the dropdown menu.  Upper limit should be left blank.  Click "add
+      policy" to complete the process. </p>
 
+    <h3>Reserving Bandwidth for the LDM Inbound Class</h3>
+    <p>There is also an option to add a bandwidth partition for the class.  The most important difference between a
+      policy and a partition is that a policy will work on individual flows, while a partition will work on the
+      aggregate of all flows within the partition.  So if a traffic type is particularly delay sensitive it is usually
+      a good idea to guarantee some bandwidth to the class as a whole.   </p>
+    <p>To add a partition go to the manage page for the class and click on	"partition" (and then "add"?) to get this
+      window:</p>
+    <p><img src="addpart.gif" alt="Add Part"/></p>
+    <p>The "size" specifies the reserved bandwidth for this traffic type.  This can remain fixed by unchecking the
+      "burstable" box, or a "limit" can be specified up to which it can burst. If the upper limit is left blank, the
+      traffic will be allowed to burst up to the link rate.  Otherwise, it will be capped.  Click "add partition" to
+      complete the process.  In this example, all LDM traffic is guaranteed 200k.  It will not compete for these 200k
+      with any other traffic types but if LDM does not need all 200k, the remaining bandwidth will be available to
+      classes outside the partition.  When it reaches 200k, if it needs more bandwidth, then it will receive it based
+      on the policy on the class.  In this case it is a rate policy with 0 guaranteed, and burstable at priority 5.</p>
+    <p>(If you would like help in estimating the volume of data to your site, please send email to
+      support@unidata.ucar.edu.  Please include the 'request' lines from your ldmd.conf file.)</p>
+    <p>This completes the class in the /Inbound folder.</p>
 
-<p align="justify">
-<b>Note</b>: when buying Packetshaper, sites have an option to purchase
-    support.  Please check to see if your contract includes support.
-    If you have support, you should use that, as these
-    pages may become outdated.  
-<p align="justify">
-<b>Note</b>: Technical support at Packeteer recommends that the Packetshaper be upgraded to the current
-software version, 5.2.2 if they have not done so already.  Performance of
-the rate policies is improved over previous versions. 
-Also, Packeteer is regularly
-    adding applications to the "autodiscover" process, which are made
-    available via upgrades.
-</p> <br>
-<h2>Configuring Packetshaper to Handle LDM Traffic</h2>
-<h3> Isolating LDM Traffic for Configuration Purposes </h3>
+    <h3>Creating the LDM Outbound Class</h3>
+    <p>Now to duplicate the inbound class in the /Outbound folder, simply click the "class" button once again, choose
+      "copy" then choose "Outbound/" for the destination.  This will copy the class along with any policies and
+      partitions to the /outbound folder.</p>
 
-<p align="justify">To isolate this traffic it will be necessary to create two classes 
-  to capture traffic on this port. One will be an inbound class, the other will 
-  be outbound. For each class we will </p>
-<ol>
-<li> assign rules for "catching" traffic
-<li> assign a priority
-<li> reserve a portion of bandwidth for LDM traffic
-</ol>
-<p>
-<h3> Creating the Inbound Class and Assigning Rules </h3>
-<p align="justify">
-Each class, both inbound and outbound, will contain two matching rules.  One rule will
-match the ports "inside:any" and "outside:388".  The other rule will match
-ports "inside:388" and  "outside:any".  This will allow us to catch traffic on
-port 388 on either side regardless of whether the machine is a server or
-client.  
-(Technically, an LDM site can switch roles, so that at any
-	time it may be either a client or a server.)
-<p align="justify">
-To create the inbound class, first click the "/Inbound" folder in the
-left frame.  This will take you to the manage page for the root /inbound folder.
-Click the "class" button, then "add" in the drop down menu.  This will take you to
-the page shown here:
-<p> <img src='newclass2.gif' width="1152" height="840"> 
-<p>
-<p>
-First, name the class.  
-<p>
-Next, we will specify two rules for the class.
-When creating a new traffic class, the
-Packetshaper automatically adds at least one matching rule.
-For the first rule,  
-choose location "any", then
-specify an inside port of "any" and an outside port of "388".  
-All other fields are left as their defaults.  
-Click "add class".
-<p>
-To add the second rule, return to the manage page, click the "class" button once again, then "add matching
-rule".  
-This will take you to a class which is identical to the newclass page, except
-it will be missing the class name.
-Add another rule that will match
-ports "inside:388" "outside:any".  
-Click "add rule" and the class
-is complete.  
+    <h2>Testing the Connection</h2>
+    <p>This is an image of the Traffic Test screen:</p>
+    <p><img src="traffictest.gif" alt="Traffic Test"/></p>
+    <p>To get to this screen click the "Manage" tab, then the "traffic class test"  button on the upper right side.
+        You will then get the screen in the image. </p>
+    <p>To test, enter the server port number 388 then click "test".  This will list the traffic class which is currently
+      classifying this traffic.  You can also test for both directions of traffic flow, Inbound and Outbound to make
+      doubly sure.  Most likely, it will be going to DiscoveredPorts/TCP_Port_388.</p>
+    <p>Thanks and appreciation to Andres Escalera from Packeteer for his assistance in providing these instructions and
+      the screen images.</p>
 
-<p>
-This now takes us to the manage page for the LDM class:
-<p> <img src="manageLDM.gif" width="1152" height="840"> 
-<p>
-
-
-
-
-
-
-Choose
-Type: "Exception" then "Apply Changes".  The Packetshaper classifies traffic from top
-to bottom, so this will move the class toward the top of the tree.
-
-
-<p>
-
-<h3> Giving the LDM Inbound Class a High Priority </h3>
-
-<p align="justify">All classes get priority 3 by default. To prioritize this traffic one can give 
-  it a higher rate policy. First of all, on the manage page for the class, click 
-  the "Policy" button then "add" to get the following page: </p>
-<p> <img src="addpolicy.gif" width="1152" height="840"> 
-<p align="justify"> On this screen you can choose to add either a rate policy, 
-  or a priority policy. The page Selecting and Using Policies describes the differences 
-  between both types of policies and when it is appropriate to use each type. 
-  For the LDM, it is recommended that you set a rate policy because this allows 
-  reservation of bandwidth. Packeteer technical support recommends setting the 
-  rate policy to Priority 5. Although Priority 7 is the highest, very high rate 
-  policies should be used with caution because they tend to starve those 
-  traffic types with lower-priority policies if the traffic type is persistent 
-  and particularly aggressive. A rate 5 is usually sufficient. 
-<p align="justify">
-With a rate policy you are required
-to fill out several fields.  First of all, enter 0 for "Guaranteed".  
-Check the
-"burstable" box, then choose Priority 5 from the drop down menu.  
-Upper limit should be left blank.  
-Click "add policy" to complete the process.  
-<p>
-
-<h3> Reserving Bandwidth for the LDM Inbound Class</h3>
-<p align="justify">
-There is also an option to add a bandwidth partition for the class.  The most important difference
-between a policy and a partition is that a policy will work on individual flows,
-while a partition will work on the aggregate of all flows within the partition.  So
-if a traffic type is particularly delay sensitive it is usually a good idea to
-guarantee some bandwidth to the class as a whole.   
-<p align="justify">
-To add a partition go to the manage page for the class and click on
-	"partition" (and then "add"?) to get this window:
-<p> <img src="addpart.gif" width="1152" height="840"> 
-<p>
-
-
-
-<p align="justify">
-The "size"
-specifies the reserved bandwidth for this traffic type.  This can remain fixed by
-unchecking the "burstable" box, or a "limit" can be specified up to which it can
-burst. If the upper limit is left blank, the traffic will be allowed to burst up to
-the link rate.  Otherwise, it will be capped.  Click "add partition" to complete the
-process.  In this example, all LDM traffic is guaranteed 200k.  It will not compete
-for these 200k with any other traffic types but if LDM does not need all 200k, the
-remaining bandwidth will be available to classes outside the partition.  When it
-reaches 200k, if it needs more bandwidth then it will receive it based on the policy
-on the class.  In this case it is a rate policy with 0 guaranteed, and burstable at
-priority 5.
-<p align="justify">
-(If you would like help in estimating the volume of data to your site,
-      please send email to support@unidata.ucar.edu.  Please include
-      the 'request' lines from your ldmd.conf file.)
-<p>
-This completes the class in the /Inbound folder.  
-
-<h3> Creating the LDM Outbound Class </h3>
-Now to duplicate the inbound class in the
-/Outbound folder, simply click the "class" button once again, choose "copy" then
-choose "Outbound/" for the destination.  This will copy the class along with any
-policies and partitions to the /outbound folder.
-
-<h2> Testing the Connection </h2>
-
-This is an image of the Traffic Test screen:
-<p> <img src="traffictest.gif" width="1152" height="840"> 
-<p align="justify">
-To get to this
-    screen click the "Manage" tab, then the "traffic class test"
-    button on the upper right hand side.  You will then get the screen
-      in the image.  
-
-<p align="justify">
-
-To test, enter the server port number 388 then click "test".  This will list the
-traffic class which is currently classifying this traffic.  You can
-    also test for both directions of traffic flow, Inbound and
-    Outbound to make doubly sure.  Most likely, it will be going to DiscoveredPorts/TCP_Port_388.
-
-<hr>
-Thanks and appreciation to Andres Escalera from Packeteer for his assistance in
-    providing these instructions and the screen images.
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
