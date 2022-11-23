@@ -22,13 +22,14 @@ Where:
 EOF
 }
 
+unset installOnly
 makePath=make
 ldmUser=ldm
 version=`awk '{print $1; exit}' CHANGE_LOG`
 rootUser=root
 sudoUser=ldm
 
-while getopts M:mnr:su:v: opt; do
+while getopts iM:mnr:su:v: opt; do
     case $opt in
         i) installOnly=true;;
         M) makePath=$OPTARG;;
