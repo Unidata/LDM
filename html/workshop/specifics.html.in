@@ -1,187 +1,105 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Workshop-Specific Instructions</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="Workshop-Specific Instructions">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="Software, LDM, @YEAR@, workshop, training, specifics">
+    <meta name="DESCRIPTION" content="@YEAR@ LDM Workshop-Specific Instructions">
+  </head>
+  <body>
+    <h1>Workshop-Specific Instructions</h1>
+    <p>The following comprises workshop-specific instructions and details for the LDM Training Workshop.</p>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>Workshop-Specific Instructions</TITLE>
-<META NAME="BOOKMARK" CONTENT="Workshop-Specific Instructions">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, @YEAR@, workshop, training, specifics">
-<META NAME="DESCRIPTION" CONTENT="@YEAR@ LDM Workshop-Specific Instructions">
-</HEAD>
+    <h2 id="LdmUserAccount">Create the LDM user-account</h2>
+    <p>An account for the LDM user should already exist on your workstation.</p>
 
-<BODY>
+    <h2 id="firewall">Ensure that TCP connections can be made</h2>
+    <p>This should already have been done.</p>
 
-<h1 align="center">Workshop-Specific Instructions</h1>
+    <h2 id="becomeLdmUser">Become the LDM user in the user's home-directory</h2>
+    <p>If you became root by executing the <code>su</code> command as the LDM user in a terminal window, then simply 
+    execute the command <code>exit</code> in the terminal window; otherwise, log off the computer and log in as the LDM 
+    user.</p>
 
-<p>
-The following comprises workshop-specific instructions and details for the 
-LDM Training Workshop.
+    <h2 id="profile">Edit the LDM user's profile-file</h2>
+    <p>This should already have been done.  You can verify this with the command</p>
+    <pre>
+      cat .bash_profile
+    </pre>
 
-<hr>
+    <h2 id="build">Build and Install the Distribution</h2>
+    <p>If <code>bash(1)</code> is your user-shell (which is the default) then do the following:</p>
+    <pre>
+      cd
+      wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/ldm-@VERSION@.tar.gz
+      gunzip -c ldm-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
+      cd ldm-@VERSION@/src
+      ./configure >&configure.log && echo Configured && make install >&install.log && echo Installed
+    </pre>
+    <p>Otherwise, do the equivalent of the above for your user-shell.</p>
 
-<h2><a name="LdmUserAccount"></a>
-Create the LDM user-account</h2>
+    <h2 id="registry">Vet the LDM registry</h2>
+    <p>The default values are fine.</p>
+    <p>For average rates of the various feedtypes, see, for example, the
+    <a href="http://rtstats.unidata.ucar.edu/cgi-bin/rtstats/rtstats_summary_volume?idd.unidata.ucar.edu">
+    data-volume summary webpage for a computer at the UPC</a>.</p>
 
-<p>An account for the LDM user should already exist on your
-workstation.
+    <h2 id="allow">Request authorization at the upstream LDM</h2>
+    <p>Add the following entry to the file <code>$HOME/etc/ldmd.conf</code> to allow all workshop LDM-s to obtain data
+    from any workshop LDM:</p>
+    <pre>
+      ALLOW	ANY	^workshop[0-9]{2}\.fl-guest\.ucar\.edu$
+    </pre>
+    <p>For reference, see <a href="../basics/ldmd.conf.html">LDM Basics: <code>ldmd.conf</code></a>.</p>
 
-<hr>
+    <h2 id="ldmd.conf">Edit the LDM configuration-file, <code>etc/ldmd.conf</code></h2>
+    <p>The "<code>EXEC pqact</code>" entry should already be enabled to allow local processing of received
+    data-products.</p>
+    <p>Add the following entries to the LDM configuration file, <code>ldmd.conf</code>, to request the
+    <code>IDS|DDPLUS</code> and <code>NEXRAD3</code> data-feeds from the instructor's LDM:</p>
+    <pre>
+      REQUEST	IDS|DDPLUS	.*	workshop01.fl-guest.ucar.edu
+      REQUEST	NEXRAD3		.*	workshop01.fl-guest.ucar.edu
+    </pre>
+    <p>For reference, see <a href="../basics/ldmd.conf.html">LDM Basics: <code>ldmd.conf</code></a>.</p>
 
-<h2><a name="firewall"></a>
-Ensure that TCP connections can be made</h2>
+    <h2 id="pqact.conf">Edit the <code>pqact</code> configuration-file, <code>etc/pqact.conf</code></h2>
+    <p>Ensure that the following is the only active entry:</p>
+    <pre>
+      IDS|DDPLUS
+	    ^(..)(..).. .... (..)(..)
+	    FILE
+	    IDS_DDPLUS/\1/\2/(\3:yyyy)(\3:mm)(\3:dd)T\4.txt
+    </pre>
+    <p><i>Remember to start the continuation-lines with a tab character!</em>
+    <p>This entry will file data-products of feedtype <code>IDS|DDPLUS</code> in an appropriate directory hierarchy with
+    the canonical time of the data-product as the file name.</p>
+    <p>For reference, see <a href="../basics/pqact.conf.html">LDM Basics: <code>pqact.conf</code></a>.</p>
 
-<p>This should already have been done.
+    <h2 id="scour.conf">Edit the <code>scour</code> configuration-file, <code>etc/scour.conf</code></h2>
+    <p>Add the following line to the scour(1) configuration-file, <code>etc/scour.conf</code>:</p>
+    <pre>
+      IDS_DDPLUS 1
+    </pre>
+    <p>This will remove all files in the data directory hierarchy that are older than one day.</p>
+    <p>For reference, see <a href="../basics/scour.conf.html">LDM Basics: <code>scour.conf</code></a>.</p>
 
-<hr>
+    <h2 id="crontab">Edit the LDM-user's <b><code>crontab(1)</code></b> file</h2>
+    <p>Add the following lines via the command "crontab -e":</p>
+    <pre>
+      0 * * * * bin/ldmadmin scour >/dev/null
+      0 0 * * * bin/ldmadmin newlog
+      * * * * * bin/ldmadmin addmetrics
+      * * 0 0 0 bin/ldmadmin newmetrics
+      0,15,30,45 * * * * bin/ldmadmin check >/dev/null
+    </pre>
 
-<h2><a name="becomeLdmUser"></a>
-Become the LDM user in the user's home-directory</h2>
+    <h2 id="boot">Ensure that the LDM is started at boot-time</h2>
+    <p>We're not concerned about restarting the LDM at boot-time for this workshop.  So we'll skip this step.</p>
 
-<p>If you became root by executing the <tt>su</tt> command as the LDM
-user in a terminal window, then simply execute the command <tt>exit</tt>
-in the terminal window;
-otherwise, log off the computer and log in as the LDM user.
-
-<hr>
-
-<h2><a name="profile"></a>
-Edit the LDM user's profile-file</h2>
-
-<p>This should already have been done.  You can verify this with the
-command
-<blockquote><pre>
-cat .bash_profile
-</pre></blockquote>
-
-<hr>
-
-<h2><a name="build"></a>
-Build and Install the Distribution</h2>
-
-<p>If <tt>bash(1)</tt> is your user-shell (which is the default) then do
-the following:
-
-<blockquote><pre>
-cd
-wget https://downloads.unidata.ucar.edu/ldm/@VERSION@/ldm-@VERSION@.tar.gz
-gunzip -c ldm-@VERSION@.tar.gz | pax -r '-s:/:/src/:'
-cd ldm-@VERSION@/src
-./configure >&configure.log && echo Configured && make install >&install.log && echo Installed
-</blockquote></pre>
-
-Otherwise, do the equivalent of the above for your user-shell.
-
-<hr>
-
-<h2><a name="registry"></a>
-Vet the LDM registry</h2>
-
-<p>The default values are fine.
-
-<p>For average rates of the various feedtypes, see, for example, the
-<a
-href="http://rtstats.unidata.ucar.edu/cgi-bin/rtstats/rtstats_summary_volume?idd.unidata.ucar.edu">
-data-volume summary webpage for a computer at the UPC</a>.
-
-<hr>
-
-<h2><a name="allow"></a>
-Request authorization at the upstream LDM</h2>
-
-<p>Add the following entry to the file <tt>$HOME/etc/ldmd.conf</tt> to allow all
-workshop LDM-s to obtain data from any workshop LDM:
-<blockquote><pre>
-ALLOW	ANY	^workshop[0-9]{2}\.fl-guest\.ucar\.edu$
-</blockquote></pre>
-
-<p>For reference, see
-<a href="../basics/ldmd.conf.html">LDM Basics: <tt>ldmd.conf</tt></a>.
-
-<hr>
-
-<h2><a name="ldmd.conf"></a>
-Edit the LDM configuration-file, <tt>etc/ldmd.conf</tt></h2>
-
-<p>The "<tt>EXEC pqact</tt>" entry should already be enabled to allow local
-processing of received data-products.
-
-<p>Add the following entries to the LDM
-configuration file, <tt>ldmd.conf</tt>, to request the
-<tt>IDS|DDPLUS</tt> and <tt>NEXRAD3</tt> data-feeds from the
-instructor's LDM:
-<blockquote><pre>
-REQUEST	IDS|DDPLUS	.*	workshop01.fl-guest.ucar.edu
-REQUEST	NEXRAD3		.*	workshop01.fl-guest.ucar.edu
-</blockquote></pre>
-
-<p>For reference, see
-<a href="../basics/ldmd.conf.html">LDM Basics: <tt>ldmd.conf</tt></a>.
-
-<hr>
-
-<h2><a name="pqact.conf"></a>
-Edit the <tt>pqact</tt> configuration-file, <tt>etc/pqact.conf</tt></h2>
-
-<p>Ensure that the following is the only active entry:
-<blockquote><pre>
-IDS|DDPLUS
-	^(..)(..).. .... (..)(..)
-	FILE
-	IDS_DDPLUS/\1/\2/(\3:yyyy)(\3:mm)(\3:dd)T\4.txt
-</blockquote></pre>
-<em>Remember to start the continuation-lines with a tab character!</em>
-
-<p>This entry will file data-products of feedtype
-<tt>IDS|DDPLUS</tt> in an appropriate directory hierarchy with the
-canonical time of the data-product as the file name.
-
-<p>For reference, see
-<a href="../basics/pqact.conf.html">LDM Basics: <tt>pqact.conf</tt></a>.
-
-<hr>
-
-<h2><a name="scour.conf"></a>
-Edit the <tt>scour</tt> configuration-file, <tt>etc/scour.conf</tt></h2>
-
-<p>Add the following line to the scour(1) configuration-file,
-<code>etc/scour.conf</code>:
-
-<blockquote><pre>
-IDS_DDPLUS 1
-</blockquote></pre>
-
-This will remove all files in the data directory hierarchy that are
-older than one day.
-
-<p>For reference, see
-<a href="../basics/scour.conf.html">LDM Basics: <tt>scour.conf</tt></a>.
-
-<hr>
-
-<h2><a name="crontab"></a>
-Edit the LDM-user's <b><tt>crontab(1)</tt></b> file</h2>
-
-<p>Add the following lines via the command "crontab -e":
-<blockquote><pre>
-0 * * * * bin/ldmadmin scour >/dev/null
-0 0 * * * bin/ldmadmin newlog
-* * * * * bin/ldmadmin addmetrics
-* * 0 0 0 bin/ldmadmin newmetrics
-0,15,30,45 * * * * bin/ldmadmin check >/dev/null
-</blockquote></pre>
-
-<hr>
-
-<h2><a name="boot"></a>
-Ensure that the LDM is started at boot-time</h2>
-
-<p>We're not concerned about restarting the LDM at boot-time for this
-workshop.  So we'll skip this step.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
 </HTML>
