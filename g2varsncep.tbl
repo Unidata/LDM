@@ -11,8 +11,10 @@
 000 000 003 000 Pseudo-Adiabat or Equiv Pot Temp K                    VTMP             0  -9999.00
 000 000 004 000 Maximum Temperature              K                    TMAX             0  -9999.00
 000 000 004 008 Maximum Temperature              K                    TMAX             0  -9999.00
+000 000 004 012 Maximum Temperature              K                    TMAX             0  -9999.00
 000 000 005 000 Minimum Temperature              K                    TMIN             0  -9999.00
 000 000 005 008 Minimum Temperature              K                    TMIN             0  -9999.00
+000 000 005 012 Minimum Temperature              K                    TMIN             0  -9999.00
 000 000 006 000 Dew Point Temperature            K                    DPT              0  -9999.00
 000 000 006 002 Dew Point Temperature            K                    DPT              0  -9999.00
 000 000 006 005 Dew Point Temperature            K                    DPT              0  -9999.00

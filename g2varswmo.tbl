@@ -108,6 +108,7 @@
 000 001 013 001 Wat equiv of accum snow dep      kg m**-2             SWEM             0  -9999.00
 000 001 013 002 Wat equiv of accum snow dep      kg m**-2             SWEM             0  -9999.00
 000 001 013 008 Wat equiv of accum snow dep      kg m**-2             SWEM             0  -9999.00
+000 001 013 009 Wat equiv of accum snow dep      kg m**-2             SWEM             0  -9999.00
 000 001 014 000 Convective snow                  kg m**-2             CSNO             0  -9999.00
 000 001 015 000 Large scale snow                 kg m**-2             LSNO             0  -9999.00
 000 001 015 009 Large scale snow                 kg m**-2             LSNO             0  -9999.00
