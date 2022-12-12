@@ -1,196 +1,175 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>What Gets Installed</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="version ID">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="Software, LDM, basics, installation">
+    <meta name="DESCRIPTION" content="What Gets Installed.">
+  </head>
+  <body>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>What Gets Installed</TITLE>
-<META NAME="BOOKMARK" CONTENT="version ID">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="Software, LDM, basics, installation">
-<META NAME="DESCRIPTION" CONTENT="What Gets Installed.">
-</HEAD>
+    <h1>What Gets Installed</h1>
+    <p>The following directories and files are created or installed by a canonical LDM installation process:</p>
+    <dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/bin/</dt>
+      <dd>Executable program directory:</dd>
+        <dl>
+          <dt>afos</dt>
+          <dd>Symbolic link to pqing(1) for AFOS data</dd>
+          <dt>ddplus</dt>
+          <dd>Symbolic link to pqing(1) for DDPLUS data</dd>
+          <dt>dds</dt>
+          <dd>Symbolic link to pqing(1) for DDS data</dd>
+          <dt>dvbs_multicast</dt>
+          <dd>Optional program for ingesting NOAAPORT data (deprecated)</dd>
+          <dt>feedme</dt>
+          <dd>Program for obtaining data from a remote LDM (deprecated)</dd>
+          <dt>feedtest</dt>
+          <dd>Symbolic link to pqing(1) for generic data</dd>
+          <dt>hds</dt>
+          <dd>Symbolic link to pqing(1) for HDS data</dd>
+          <dt>hrs</dt>
+          <dd>Symbolic link to pqing(1) for HRS data</dd>
+          <dt>hupsyslog</dt>
+          <dd>Program to tell system logger to reread configuration file</dd>
+          <dt>ids</dt>
+          <dd>Symbolic link to pqing(1) for IDS data</dd>
+          <dt>ldmadmin</dt>
+          <dd>Top-level LDM management utility</dd>
+          <dt>ldmd</dt>
+          <dd>The LDM server</dd>
+          <dt>ldmfail</dt>
+          <dd>LDM system failure utility (deprecated)</dd>
+          <dt>ldmping</dt>
+          <dd>Program for testing for a remote LDM server</dd>
+          <dt>ldmsend</dt>
+          <dd>Program for sending files to a remote LDM</dd>
+          <dt>netcheck</dt>
+          <dd>Utility for monitoring remote hosts (deprecated)</dd>
+          <dt>newlog</dt>
+          <dd>Program for rotating LDM log files</dd>
+          <dt>noaaportIngester</dt>
+          <dd>Optional program for ingesting NOAAPORT data</dd>
+          <dt>notifyme</dt>
+          <dd>Program for testing access to a remote LDM</dd>
+          <dt>plotMetrics</dt>
+          <dd>Utility for plotting LDM metrics</dd>
+          <dt>pps</dt>
+          <dd>Symbolic link to pqing(1) for PPS data</dd>
+          <dt>pqact</dt>
+          <dd>Program for locally-processing contents of the product-queue</dd>
+          <dt>pqcat</dt>
+          <dd>Program for writing contents of the product-queue</dd>
+          <dt>pqcheck</dt>
+          <dd>Program for checking a product-queue for consistency</dd>
+          <dt>pqcopy</dt>
+          <dd>Program for copying data-products from one product-queue to another</dd>
+          <dt>pqcreate</dt>
+          <dd>Program for creating a product-queue</dd>
+          <dt>pqexpire</dt>
+          <dd>Program for removing old data-products from a product-queue (deprecated)</dd>
+          <dt>pqing</dt>
+          <dd>Program for ingesting serial data into the product-queue</dd>
+          <dt>pqinsert</dt>
+          <dd>Program for inserting files into the product-queue</dd>
+          <dt>pqmon</dt>
+          <dd>Program for monitoring the product-queue</dd>
+          <dt>pqsend</dt>
+          <dd>Program for sending product-queue data-products to a remote LDM</dd>
+          <dt>pqsurf</dt>
+          <dd>Program for splitting WMO bulletins</dd>
+          <dt>pqutil</dt>
+          <dd>Program for manipulating a product-queue</dd>
+          <dt>readnoaaport</dt>
+          <dd>Optional program for ingesting NOAAPORT data (deprecated)</dd>
+          <dt>regex</dt>
+          <dd>Program for testing regular expressions</dd>
+          <dt>regutil</dt>
+          <dd>Program for managing the LDM registry</dd>
+          <dt>rtstats</dt>
+          <dd>Program for reporting LDM statistics back to the mothership</dd>
+          <dt>scour</dt>
+          <dd>Program for purging old, locally-processed data-files.</dd>
+          <dt>syscheck</dt>
+          <dd>Program for monitoring system parameters (deprecated)</dd>
+          <dt>ulogger</dt>
+          <dd>Program for logging to the LDM log file</dd>
+        </dl>
+      <dt>$HOME/etc/</dt>
+      <dd>Configuration directory:</dd>
+        <dl>
+          <dt>g2*.tbl</dt>
+          <dd>Optional GRIB2 tables for ingesting NOAAPORT data</dd>
+          <dt>ldmd.conf</dt>
+          <dd>LDM server configuration file</dd>
+          <dt>netcheck.conf</dt>
+          <dd>netcheck(1) configuration file (deprecated)</dd>
+          <dt>pqact.conf</dt>
+          <dd>Canonical pqact(1) configuration file</dd>
+          <dt>registry</dt>
+          <dd>LDM registry directory</dd>
+          <dt>scour.conf</dt>
+          <dd>Scour(1) configuration file</dd>
+        </dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/include/</dt>
+      <dd>C header-file directory</dd>
+      <dt>$HOME/@PACKAGE@-@VERSION@/lib/</dt>
+      <dd>Library directory:</dd>
+        <dl>
+          <dt>libldm.a</dt>
+          <dd>Static LDM library</dd>
+          <dt>libldm.la</dt>
+          <dd>LDM libtool(1) library</dd>
+          <dt>libldm.so</dt>
+          <dd>Link to dynamic LDM library</dd>
+          <dt>libldm.so.0</dt>
+          <dd>Link to dynamic LDM library</dd>
+          <dt>libldm.so.0.0.0</dt>
+          <dd>Dynamic LDM library</dd>
+        </dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/share/</dt>
+      <dd>Installation-independent documentation:</dd>
+        <dl>
+          <dt>doc</dt>
+          <dd>Documentation other than man(1) pages (e.g., HTML files)</dd>
+          <dt>man</dt>
+          <dd>man(1) pages</dd>
+        </dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/share/doc/ldm/</dt>
+      <dd>HTML documentation on the LDM:</dd>
+        <dl>
+          <dt>index.html</dt>
+          <dd>Top-level HTML page on the LDM</dd>
+        </dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/share/doc/noaaport/</dt>
+      <dd>Optional HTML documentation on NOAAPORT ingestion:</dd>
+        <dl>
+          <dt>index.html</dt>
+          <dd>Top-level HTML page on NOAAPORT ingestion</dd>
+        </dl>
+      <dt>$HOME/@PACKAGE@-@VERSION@/share/man/</dt>
+      <dd>man(1) pages on the LDM system:</dd>
+        <dl>
+          <dt>man1</dt>
+          <dd>man(1) pages for LDM programs</dd>
+          <dt>man3</dt>
+          <dd>man(1) pages for LDM library functions</dd>
+        </dl>
+      <dt>$HOME/var/</dt>
+      <dd>Variable LDM state files:</dd>
+        <dl>
+          <dt>data</dt>
+          <dd>Default locally-processed files directory</dd>
+          <dt>logs</dt>
+          <dd>Log file directory</dd>
+          <dt>queues</dt>
+          <dd>Product-queue directory</dd>
+        </dl>
+      </dl>
 
-<BODY>
-
-<h1 align="center">What Gets Installed</h1>
-
-<p>
-The following directories and files are created or installed by a canonical
-LDM installation process:
-<dl>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/bin/</tt>
-    <dd>Executable program directory:
-    <br><br>
-        <dl>
-            <dt><tt>afos</tt>
-            <dd>Symbolic link to pqing(1) for AFOS data
-            <dt><tt>ddplus</tt>
-            <dd>Symbolic link to pqing(1) for DDPLUS data
-            <dt><tt>dds</tt>
-            <dd>Symbolic link to pqing(1) for DDS data
-            <dt><tt>dvbs_multicast</tt>
-            <dd>Optional program for ingesting NOAAPORT data (deprecated)
-            <dt><tt>feedme</tt>
-            <dd>Program for obtaining data from a remote LDM (deprecated)
-            <dt><tt>feedtest</tt>
-            <dd>Symbolic link to pqing(1) for generic data
-            <dt><tt>hds</tt>
-            <dd>Symbolic link to pqing(1) for HDS data
-            <dt><tt>hrs</tt>
-            <dd>Symbolic link to pqing(1) for HRS data
-            <dt><tt>hupsyslog</tt>
-            <dd>Program to tell system logger to reread configuration file
-            <dt><tt>ids</tt>
-            <dd>Symbolic link to pqing(1) for IDS data
-            <dt><tt>ldmadmin</tt>
-            <dd>Top-level LDM management utility
-            <dt><tt>ldmd</tt>
-            <dd>The LDM server
-            <dt><tt>ldmfail</tt>
-            <dd>LDM system failure utility (deprecated)
-            <dt><tt>ldmping</tt>
-            <dd>Program for testing for a remote LDM server
-            <dt><tt>ldmsend</tt>
-            <dd>Program for sending files to a remote LDM
-            <dt><tt>netcheck</tt>
-            <dd>Utility for monitoring remote hosts (deprecated)
-            <dt><tt>newlog</tt>
-            <dd>Program for rotating LDM log files
-            <dt><tt>noaaportIngester</tt>
-            <dd>Optional program for ingesting NOAAPORT data
-            <dt><tt>notifyme</tt>
-            <dd>Program for testing access to a remote LDM
-            <dt><tt>plotMetrics</tt>
-            <dd>Utility for plotting LDM metrics
-            <dt><tt>pps</tt>
-            <dd>Symbolic link to pqing(1) for PPS data
-            <dt><tt>pqact</tt>
-            <dd>Program for locally-processing contents of the product-queue
-            <dt><tt>pqcat</tt>
-            <dd>Program for writing contents of the product-queue
-            <dt><tt>pqcheck</tt>
-            <dd>Program for checking a product-queue for consistency
-            <dt><tt>pqcopy</tt>
-            <dd>Program for copying data-products from one product-queue to another
-            <dt><tt>pqcreate</tt>
-            <dd>Program for creating a product-queue
-            <dt><tt>pqexpire</tt>
-            <dd>Program for removing old data-products from a product-queue (deprecated)
-            <dt><tt>pqing</tt>
-            <dd>Program for ingesting serial data into the product-queue
-            <dt><tt>pqinsert</tt>
-            <dd>Program for inserting files into the product-queue
-            <dt><tt>pqmon</tt>
-            <dd>Program for monitoring the product-queue
-            <dt><tt>pqsend</tt>
-            <dd>Program for sending product-queue data-products to a remote LDM
-            <dt><tt>pqsurf</tt>
-            <dd>Program for splitting WMO bulletins
-            <dt><tt>pqutil</tt>
-            <dd>Program for manipulating a product-queue
-            <dt><tt>readnoaaport</tt>
-            <dd>Optional program for ingesting NOAAPORT data (deprecated)
-            <dt><tt>regex</tt>
-            <dd>Program for testing regular expressions
-            <dt><tt>regutil</tt>
-            <dd>Program for managing the LDM registry
-            <dt><tt>rtstats</tt>
-            <dd>Program for reporting LDM statistics back to the mothership
-            <dt><tt>scour</tt>
-            <dd>Program for purging old, locally-processed data-files.
-            <dt><tt>syscheck</tt>
-            <dd>Program for monitoring system parameters (deprecated)
-            <dt><tt>ulogger</tt>
-            <dd>Program for logging to the LDM log file
-        </dl>
-<br><br>
-    <dt><tt>$HOME/etc/</tt>
-    <dd>Configuration directory:
-    <br><br>
-        <dl>
-            <dt><tt>g2*.tbl</tt>
-            <dd>Optional GRIB2 tables for ingesting NOAAPORT data
-            <dt><tt>ldmd.conf</tt>
-            <dd>LDM server configuration file
-            <dt><tt>netcheck.conf</tt>
-            <dd>netcheck(1) configuration file (deprecated)
-            <dt><tt>pqact.conf</tt>
-            <dd>Canonical pqact(1) configuration file
-            <dt><tt>registry</tt>
-            <dd>LDM registry directory
-            <dt><tt>scour.conf</tt>
-            <dd>Scour(1) configuration file
-        </dl>
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/include/</tt>
-    <dd>C header-file directory
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/lib/</tt>
-    <dd>Library directory:
-    <br><br>
-        <dl>
-            <dt><tt>libldm.a</tt>
-            <dd>Static LDM library
-            <dt><tt>libldm.la</tt>
-            <dd>LDM libtool(1) library
-            <dt><tt>libldm.so</tt>
-            <dd>Link to dynamic LDM library
-            <dt><tt>libldm.so.0</tt>
-            <dd>Link to dynamic LDM library
-            <dt><tt>libldm.so.0.0.0</tt>
-            <dd>Dynamic LDM library
-        </dl>
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/</tt>
-    <dd>Installation-independent documentation:
-    <br><br>
-        <dl>
-            <dt><tt>doc</tt>
-            <dd>Documentation other than man(1) pages (e.g., HTML files)
-            <dt><tt>man</tt>
-            <dd>man(1) pages
-        </dl>
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/doc/ldm/</tt>
-    <dd>HTML documentation on the LDM:
-    <br><br>
-        <dl>
-            <dt>index.html</tt>
-            <dd>Top-level HTML page on the LDM
-        </dl>
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/doc/noaaport/</tt>
-    <dd>Optional HTML documentation on NOAAPORT ingestion:
-    <br><br>
-        <dl>
-            <dt>index.html</tt>
-            <dd>Top-level HTML page on NOAAPORT ingestion
-        </dl>
-<br><br>
-    <dt><tt>$HOME/@PACKAGE@-@VERSION@/share/man/</tt>
-    <dd>man(1) pages on the LDM system:
-    <br><br>
-        <dl>
-            <dt><tt>man1</tt>
-            <dd>man(1) pages for LDM programs
-            <dt><tt>man3</tt>
-            <dd>man(1) pages for LDM library functions
-        </dl>
-<br><br>
-    <dt><tt>$HOME/var/</tt>
-    <dd>Variable LDM state files:
-    <br><br>
-        <dl>
-            <dt><tt>data</tt>
-            <dd>Default locally-processed files directory
-            <dt><tt>logs</tt>
-            <dd>Log file directory
-            <dt><tt>queues</tt>
-            <dd>Product-queue directory
-        </dl>
-<dl>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

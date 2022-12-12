@@ -1,170 +1,98 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML>
-<HEAD>
-	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
-	<TITLE>LDM Preinstallation Steps</TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.9.109  (Solaris Sparc)">
-	<META NAME="CREATED" CONTENT="20050714;14293800">
-	<META NAME="CHANGED" CONTENT="16010101;0">
-	<META NAME="UIINDEX" CONTENT="4">
-</HEAD>
-<BODY>
-<H1 ALIGN=CENTER>LDM Preinstallation Steps</H1>
-<P>The platform on which the <A HREF="glindex.html#LDM">LDM</A>
-package is to be installed must be prepared in advance prior to
-unpacking and installing the
-<A HREF="glindex.html#LDM">LDM</A>
-distribution. 
-</P>
-<H2>Contents</H2>
-<UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="#root">Steps to Perform
-	as <CODE>root</CODE></A> 
-	</P>
-	<LI><P><A HREF="#ldm-user">Steps to Perform as the LDM User</A> 
-	</P>
-</UL>
-<HR>
-<H2><A NAME="root"></A>Steps to Perform as <CODE>root</CODE></H2>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM Preinstallation Steps</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="CREATED" content="20050714;14293800">
+    <meta name="CHANGED" content="16010101;0">
+    <meta name="UIINDEX" content="4">
+  </head>
+  <body>
+    <h1>LDM Preinstallation Steps</h1>
+    <p>The platform on which the <a href="glindex.html#LDM">LDM</a> package is to be installed must be prepared in 
+      advance prior to unpacking and installing the <a href="glindex.html#LDM">LDM</a> distribution. </p>
+    
+    <h2>Contents</h2>
+    <ul>
+      <li><a href="#root">Steps to Perform as <code>root</code></a></li>
+      <li><a href="#ldm-user">Steps to Perform as the LDM User</a></li>
+    </ul>
 
-	<H3><A NAME="LDM user"></A>Create the <A HREF="glindex.html#LDM">LDM</A>
-	user-account</H3>
-	<P>This is, necessarily, a system-dependent operation. Consult with
-	your system's administrator, if necessary. 
-	</P>
-	<P STYLE="margin-bottom: 0in">Keep the following in mind when
-	creating the account: 
-	</P>
-	<UL>
-		<LI><P>The canonical name of the user is &quot;<CODE>ldm</CODE>&quot;, but that's
-		not a requirement.</P>
-		<LI><P STYLE="margin-bottom: 0in">The installation process
-		is simpler if the LDM user's home-directory is on local disk.
-		&quot;<CODE>/opt/ldm</CODE>&quot; and &quot;<CODE>/home/ldm</CODE> are viable
-		candidates. 
+    <h2 id="root">Steps to Perform as <code>root</code></h2>
+    <h3 id="LDM user">Create the <a href="glindex.html#LDM">LDM</a> user-account</h3>
+    <p>This is, necessarily, a system-dependent operation. Consult with  your system's administrator, if necessary. </p>
+    <p>Keep the following in mind when creating the account: </p>
+    <ul>
+      <li>The canonical name of the user is &quot;<code>ldm</code>&quot;, but that's not a requirement.</li>
+      <li>The installation process is simpler if the LDM user's home-directory is on local disk.
+        &quot;<code>/opt/ldm</code>&quot; and &quot;<code>/home/ldm</code> are viable  candidates. </li>
+      <li>Use a group ID that allows other non-<a href="glindex.html#LDM">LDM</a>
+        processes to write files (decoders, etc.). The
+        <a href="https://www.unidata.ucar.edu/software/mcidas/index.html">McIDAS</a> and
+        <a href="https://unidata.github.io/gempak/">GEMPAK</a>  users are often members of this group.</li>
+    </ul>
+    <p><a href="../workshop/specifics.html#LdmUserAccount">Workshop-specific instructions</a>. </p>
 
-		<LI><P>Use a group ID that allows other non-<A HREF="glindex.html#LDM">LDM</A>
-		processes to write files (decoders, etc.). The <A HREF="https://www.unidata.ucar.edu/software/mcidas/index.html">McIDAS</A>
-		and <A HREF="https://unidata.github.io/gempak/">GEMPAK</A>
-		users are often members of this group.</P>
-	</UL>
-	<P><A HREF="../workshop/specifics.html#LdmUserAccount">Workshop-specific
-	instructions</A>. 
-	</P>
+    <h3 id=firewall">Ensure that <a href="glindex.html#TCP">TCP</a> connections can be made</h3>
+    <p>If the computer on which the  <a href="glindex.html#LDM">LDM</a> runs has firewall (alias, packet filtering)
+      rules, then these  rules must be configured to allow connections to and from the
+      <a href="glindex.html#LDM">LDM</a>.  How this is done is operating-system specific, so you might have to  consult
+      with your system or network administrator.</p>
+    <p>  In order for the  <a href="glindex.html#LDM">LDM</a> system to send data to a  
+      <a href="glindex.html#downstream LDM">downstream LDM</a>,  the firewall rules must allow incoming 
+      <a href="glindex.html#TCP">TCP </a>  connections to the port on which the <a href="glindex.html#LDM">LDM</a>  server 
+      is listening (the default is 388).  An <i>example</i> of ensuring this for firewall rules based on iptables(8) is 
+      the command  <code>iptables -A INPUT -p tcp --dport 388 -j ACCEPT</code></p>
+    <p>Similarly, in order for the  <a href="glindex.html#LDM">LDM</a> to receive data from an 
+      <a href="glindex.html#upstream LDM">upstream LDM</a>,  the firewall rules must allow outgoing 
+      <a href="glindex.html#TCP">TCP</a>  connections to the port on which the
+			<a href="glindex.html#upstream LDM">upstream LDM</a>  server is listening (the default is 388).  Because most
+			sites don't bother filtering outgoing connections,  this configuration step is usually not necessary.</p>
+    <p><a href="../workshop/specifics.html#firewall">Workshop-specific  instructions</a>.</p>
 
-	<H3><A NAME="firewall">Ensure that 
-	    <a href="glindex.html#TCP">TCP </a>
-	    connections can be made</a></A></H3>
-	<P STYLE="margin-bottom: 0in">
-	If the computer on which the
-	<a href="glindex.html#LDM">LDM</a>
-	runs has firewall (alias, packet filtering) rules, then these
-	rules must be configured to allow connections to and from the 
-	<a href="glindex.html#LDM">LDM</a>.
-	How this is done is operating-system specific, so you might have to
-	consult with your system or network administrator.
+    <h2 id="ldm-user">Steps to Perform as the LDM User</h2>
+    <h3 id="profile">Edit the <a href="glindex.html#LDM user">LDM user</a>'s profile-file</h3>
+    <p>As the LDM user, add the following entries to the appropriate login profile-file of the
+			<a href="glindex.html#LDM user">LDM user</a>'s user-shell. The profile-file should be the one that the user-shell
+			reads when it's a  login shell (<i>e.g.</i>, <b>.bash_profile</b>,  <b>.login</b>).</p>
+    <table>
+      <tr>
+        <th>User Shell</th>
+        <th>Entries</th>
+      </tr>
+			<tr>
+        <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
+        <td><code>export&nbsp;PATH=$HOME/decoders:$HOME/util:$HOME/bin:$PATH<br>
+					export&nbsp;MANPATH=$HOME/share/man:<i>SysManPath</i></code></td>
+      </tr>
+      <tr>
+        <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+        <td><code>set&nbsp;path=($HOME/decoders&nbsp;$HOME/util&nbsp;$HOME/bin&nbsp;$path)<br>
+					setenv&nbsp;MANPATH&nbsp;$HOME/share/man:<i>SysManPath</i></code></td>
+			</tr>
+    </table>
+    <p id="MANPATH"><i>SysManPath</i> is the pathname for the manual-pages of the operating system (<i>e.g.</i>,
+			<b>/usr/man</b> or   <b>/usr/share/man</b>). The MANPATH environment variable might already contain this path.</p>
+    <p>If necessary, modify the setting of the PATH environment variable above to ensure that the
+			<a href="platform.html#development">necessary build utilities</a> can be found.</p>
+		<p>Don't forget to source the profile-file so that the modifications take effect.  For example:</p>
+    <table>
+      <tr>
+        <th>User Shell</th>
+        <th>Command</th>
+      </tr>
+			<tr>
+        <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
+        <td><code>.&nbsp;.bash_profile</code></td>
+      </tr>
+      <tr>
+        <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
+        <td><code>source&nbsp;.login</code></td>
+      </tr>
+    </table>
+    <p><a href="../workshop/specifics.html#profile">Workshop-specific instructions</a>.</p>
 
-	<p>
-	In order for the
-	<a href="glindex.html#LDM">LDM</a>
-	system to send data to a
-	<a href="glindex.html#downstream LDM">downstream LDM</a>,
-	the firewall rules must allow incoming 
-	<a href="glindex.html#TCP">TCP </a>
-	connections to the port on which the
-	<a href="glindex.html#LDM">LDM</a>
-	server is listening (the default is 388).
-	An <em>example</em> of ensuring this for firewall rules based on 
-	iptables(8) is the command
-	<BLOCKQUOTE><CODE>iptables -A INPUT -p tcp --dport 388 -j ACCEPT</CODE>
-	</BLOCKQUOTE>
-
-	<p>
-	Similarly, in order for the
-	<a href="glindex.html#LDM">LDM</a>
-	to receive data from an
-	<a href="glindex.html#upstream LDM">upstream LDM</a>,
-	the firewall rules must allow outgoing
-	<a href="glindex.html#TCP">TCP </a>
-	connections to the port on which the
-	<a href="glindex.html#upstream LDM">upstream LDM</a>
-	server is listening (the default is 388).
-	Because most sites don't bother filtering outgoing connections,
-	this configuration step is usually not necessary.
-
-	<P><A HREF="../workshop/specifics.html#firewall">Workshop-specific
-	instructions</A>.</P>
-
-<HR>
-<H2><A NAME="ldm-user"></A>Steps to Perform as the LDM
-User</H2>
-
-	<H3><A NAME="profile"></A>Edit the <A HREF="glindex.html#LDM%20user">LDM
-	user</A>'s profile-file</H3>
-	<P STYLE="margin-bottom: 0in">As the LDM user, add the following entries
-	to the appropriate login profile-file of the <A
-	HREF="glindex.html#LDM%20user">LDM user</A>'s user-shell. The
-	profile-file should be the one that the user-shell reads when it's a
-	login shell (<i>e.g.</i>, <b><tt>.bash_profile</b></tt>,
-	<b><tt>.login</b></tt>).
-
-	    <blockquote>
-	    <table align="center" border="2" cellpadding="6" cellspacing="0">
-		<tr>
-		    <th>User Shell</th>
-		    <th>Entries</th>
-		</tr>
-		    <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
-		    <td nowrap><code>
-export&nbsp;PATH=$HOME/decoders:$HOME/util:$HOME/bin:$PATH<br>
-export&nbsp;MANPATH=$HOME/share/man:<I>SysManPath</I></code></td>
-		</tr>
-		<tr>
-		    <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-		    <td nowrap><code>
-set&nbsp;path=($HOME/decoders&nbsp;$HOME/util&nbsp;$HOME/bin&nbsp;$path)<br>
-setenv&nbsp;MANPATH&nbsp;$HOME/share/man:<I>SysManPath</I></code></td>
-		</tr>
-	    </table>
-	    </blockquote>
-
-	</UL>
-	<P><I>SysManPath</I></a>
-	is the pathname for the manual-pages of the
-	operating system (<I>e.g.</I>, <TT><B>/usr/man</B></TT> or
-	<TT><B>/usr/share/man</B></TT>). The <TT>MANPATH</TT> environment
-	variable might already contain this path. 
-	</P>
-
-	<P>If necessary, modify the setting of the <TT>PATH</TT> environment
-	variable above to ensure that the <A HREF="platform.html#development">necessary
-	build utilities</A> can be found. 
-	</P>
-	<p>
-	Don't forget to source the profile-file so that the modifications
-	take effect.  For example:
-
-	    <blockquote>
-	    <table align="center" border="2" cellpadding="6" cellspacing="0">
-		<tr>
-		    <th>User Shell</th>
-		    <th>Command</th>
-		</tr>
-		    <td>Standard (e.g. <code>sh, ksh, bash</code>)</td>
-		    <td><code>.&nbsp;.bash_profile</code></td>
-		</tr>
-		<tr>
-		    <td><code>csh</code>-like (e.g. <code>csh, tcsh</code>)</td>
-		    <td><code>source&nbsp;.login</code></td>
-		</tr>
-	    </table>
-	    </blockquote>
-	</p>
-
-	<P><A HREF="../workshop/specifics.html#profile">Workshop-specific
-	instructions</A>. 
-	</P>
-	</OL>
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

@@ -1,106 +1,66 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Troubleshooting the LDM</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="pqmon">
+    <meta name="AUTHOR" content="steve">
+    <meta name="KEYWORDS" content="LDM, troubleshooting, pqmon, product-queue parameters">
+    <meta name="DESCRIPTION" content="Using the pqmon utility to tune the product-queue.">
+  </head>
+  <body>
+    <h1>Tuning product queue parameters with pqmon</h1>
+    <p>What size product queue should you create to hold an hour's worth of data?  This depends on what data feeds you 
+      are subscribing to as well as the changing contents of the data streams.  The number of products and the aggregate 
+      amount of data for each feed type may change over time.  The LDM program <b>pqmon</b>, available with version 
+      5.1.1 and later releases, may be useful for helping to determine what size queue to create, whether your current 
+      queue size is adequate, or whether you are wasting space in the queue with many unused product slots.  </p>
+    <p>The <b>pqmon</b> program monitors the state of a product queue, including the number of products currently in 
+      the queue, the number of queue bytes that are in use to hold products, the maximum number of products in the queue 
+      since it was created, and the age of the oldest product in the queue.  </p>    
+    <p>Here's an example of the first two lines of output from invoking "pqmon -i 5", which prints a line of queue 
+      statistics to standard output every 5 seconds:</p>
+    <pre>
+      % pqmon -i 5
+      Nov 07 15:05:19 pqmon: Starting Up (7628)
+      Nov 07 15:05:19 pqmon: nprods nfree  nempty      nbytes  maxprods  maxfree  minempty    maxext  age
+      Nov 07 15:05:19 pqmon: 139246     3  336825  1949558728    173916      503    302150    441256 9663
+      Nov 07 15:05:24 pqmon: 139273     2  336799  1949992192    173916      503    302150     10312 9658
+      ...
+    </pre>
+    <p>You will usually need a wide terminal to see all the pqmon output on one  line. The statistics of primary use to 
+      LDM site administrators are the number of products in the queue (<i>nprods</i>), the number of bytes of the 
+      product queue currently in use (<i>nbytes</i>), the maximum number of products in the queue so far
+      (<i>maxprods</i>), and the age in seconds of the oldest product in the queue (<i>age</i>). The above shows a
+      product queue that contained 139246 products, about 1.95 Gbytes of data, a previous maximum of 173916 products,
+      and an age for the oldest product in the queue of 9663 seconds (about 2.68 hours). 5 seconds later, some of these
+      statistics have changed as more products have come in, more bytes have been added to the queue, and some old
+      products have been deleted. </p>
+    <p>After you have run an LDM system for a while and the queue has reached a steady state, where old products are
+      being expired to make room for new products as they arrive, it is useful to note the age of the oldest product in
+      the queue.  This is the last column of <b>pqmon</b> output providing the age in seconds of the oldest product.
+      If this is over 3600, you currently have more than an hour's worth of data in the queue.  If you are relaying data
+      to downstream sites, this would permit a downstream site to disconnect and reconnect within an hour without losing
+      data.</p>
+    <p>As a rule of thumb, you want to make sure that your product queue is large enough that the age of the oldest
+      product does not go below 3600 seconds. Note that you might want to watch the age of the oldest product for a
+      while using the <i>-i</i> option of <b>pqmon</b> to specify an interval in seconds between outputs, because this
+      number can vary over time. For example, if a large product arrives and there is no free region in the queue big
+      enough to hold it, many old products might be deleted until enough room is available. </p>
+    <p>Another useful statistic in <b>pqmon</b> output is the maximum number of products stored in the queue so far.
+      This is a "high-water mark" of the number of products that could fit in the queue at once, and depends on the
+      distribution of product sizes over time.  For example, if a large number of small products arrive in a short time
+      interval replacing a few large old products, the number of products in the queue might rise.</p>
+    <p>It is desirable to allocate on creation more product slots in the queue than are ever needed, so that products
+      are only deleted for lack of space and not for lack of empty product slots.  On the other hand, allocating too
+      many product slots that never get used wastes some space that could be used instead to hold more products.  Each
+      product slot only has an overhead of about 68 bytes, however, so it is OK to over-allocate product slots to some
+      extent to make sure you don't run out.  By default, an average product size -- that is guaranteed to be incorrect
+      -- is used to compute the default number of product slots.</p>
+    <p>The other statistics in <b>pqmon</b> output are of less relevance for tuning queue parameters, but may be useful
+      to make sure the allocation and garbage collection algorithms are working as intended.</p>
 
-<HEAD>
-<TITLE>Troubleshooting the LDM</TITLE>
-<META NAME="BOOKMARK" CONTENT="pqmon">
-<META NAME="AUTHOR" CONTENT="steve">
-<META NAME="KEYWORDS" CONTENT="LDM, troubleshooting, pqmon, product-queue parameters">
-<META NAME="DESCRIPTION" CONTENT="Using the pqmon utility to tune the
-product-queue.">
-</HEAD>
-
-<BODY>
-
-<H2 align="center">Tuning product queue parameters with pqmon</H2>
-<br>
-<p align="justify"> What size product queue should you create to hold an hour's worth
-of data?  This depends on what data feeds you are subscribing to as
-well as the changing contents of the data streams.  The number of
-products and the aggregate amount of data for each feed type may
-change over time.  The LDM program <strong>pqmon</strong>, available
-with version 5.1.1 and later releases, may be useful for helping to
-determine what size queue to create, whether your current queue size
-is adequate, or whether you are wasting space in the queue with many
-unused product slots.  </p>
-
-<p align="justify"> The <strong>pqmon</strong> program monitors the state of a product
-queue, including the number of products currently in the queue, the
-number of queue bytes that are in use to hold products, the maximum
-number of products in the queue since it was created, and the age of
-the oldest product in the queue.  </p> <p align="justify"> Here's an example of the
-first two lines of output from invoking "pqmon -i 5", which prints a
-line of queue statistics to standard output every 5 seconds:
-
-<pre>
-% pqmon -i 5
-Nov 07 15:05:19 pqmon: Starting Up (7628)
-Nov 07 15:05:19 pqmon: nprods nfree  nempty      nbytes  maxprods  maxfree  minempty    maxext  age
-Nov 07 15:05:19 pqmon: 139246     3  336825  1949558728    173916      503    302150    441256 9663
-Nov 07 15:05:24 pqmon: 139273     2  336799  1949992192    173916      503    302150     10312 9658
- ...
-</pre>
-<p align="justify">You will usually need a wide terminal to see all of the pqmon output on one 
-  line. The statistics of primary use to LDM site administrators are the number 
-  of products in the queue (<em>nprods</em>), the number of bytes of the product 
-  queue currently in use (<em>nbytes</em>), the maximum number of products in 
-  the queue so far (<em>maxprods</em>), and the age in seconds of the oldest product 
-  in the queue (<em>age</em>). The above shows a product queue that contained 
-  139246 products, about 1.95 Gbytes of data, a previous maximum of 173916 products, 
-  and an age for the oldest product in the queue of 9663 seconds (about 2.68 hours). 
-  5 seconds later, some of these statistics have changed as more products have 
-  come in, more bytes have been added to the queue, and some old products have 
-  been deleted. </p>
-<p align="justify">
-After you have run an LDM system for a while
-and the queue has reached a steady state, where old products are being
-expired to make room for new products as they arrive, it is useful to
-note the age of the oldest product in the queue.  This is the last
-column of <strong>pqmon</strong> output providing the age in seconds
-of the oldest product.  If this is over 3600, you currently have
-more than an
-hour's worth of data in the queue.  If you are relaying data to
-downstream sites, this would permit a downstream site to disconnect
-and reconnect within an hour without losing data.
-<p>
-</p>
-<p align="justify">As a rule of thumb, you want to make sure that your product queue is large 
-  enough that the age of the oldest product does not go below 3600 seconds. Note 
-  that you might want to watch the age of the oldest product for a while using 
-  the <em>-i</em> option of <strong>pqmon</strong> to specify an interval in seconds 
-  between outputs, because this number can vary over time. For example, if a large 
-  product arrives and there is no free region in the queue big enough to hold 
-  it, many old products might be deleted until enough room is available. </p>
-<p align="justify">
-Another useful statistic in
-<strong>pqmon</strong> output is the maximum number of products stored
-in the queue so far.  This is a "high-water mark" of the number of
-products that could fit in the queue at once, and depends on the
-distribution of product sizes over time.  For example, if a large
-number of small products arrive in a short time interval replacing a
-few large old products, the number of
-products in the queue might rise.
-</p>
-
-<p align="justify">
-It is desirable to allocate on creation more product slots in the queue than are
-ever needed, so that products are only deleted for lack of space and not for
-lack of empty product slots.  On the other hand, allocating too many product
-slots that never get used wastes some space that could be used instead to hold
-more products.  Each product slot only has an overhead of about 68 bytes,
-however, so it is OK to over-allocate product slots to some extent to make sure
-you don't run out.  By default, an average product size -- that is guaranteed to
-be incorrect -- is used to compute the default number of product slots.
-</p>
-
-<p align="justify">
-The other statistics in <strong>pqmon</strong> output are of less
-relevance for tuning queue parameters, but may be useful to make sure
-the allocation and garbage collection algorithms are working as
-intended.
-</p>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

@@ -1,156 +1,82 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<HTML>
-<HEAD>
-	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=iso-8859-1">
-	<TITLE>LDM @VERSION@ Reference</TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 1.9.109  (Solaris Sparc)">
-	<META NAME="AUTHOR" CONTENT="steve">
-	<META NAME="CREATED" CONTENT="20050712;15095500">
-	<META NAME="CHANGED" CONTENT="16010101;0">
-	<META NAME="DESCRIPTION" CONTENT="Fundamentals of the Unidata LDM">
-	<META NAME="KEYWORDS" CONTENT="Software, LDM, basics, Data, Manager">
-	<META NAME="UIINDEX" CONTENT="4">
-	<META NAME="BOOKMARK" CONTENT="LDM @VERSION@ Reference">
-</HEAD>
-<BODY>
-<H1 ALIGN=CENTER>LDM @VERSION@ Reference</H1>
-<P STYLE="margin-bottom: 0in">The following HTML pages comprise a
-reference document for the <A HREF="https://www.unidata.ucar.edu/software/ldm/">Unidata LDM</A>
-and also underlie the <A HREF="../tutorial">LDM Tutorial</A>. If you
-know what you're looking for, then look here; otherwise, use the
-tutorial. 
-</P>
-<HR>
-<H2>Table of Contents</H2>
-<UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="versionId.html">The LDM
-	Version Identifier</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="data-product.html">The
-	Data-Product Abstraction</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="feedtypes/index.html">LDM
-	Feedtypes</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="generic-LDM.html">Runtime
-	Structure of a Generic LDM System</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="programs.html">Programs
-	of the LDM System</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="product-queue.html">The
-	LDM Product-Queue <TT><B>ldm.pq</B></TT></A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="behavior.html">LDM
-	Behavior</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="protocol.html">LDM
-	Protocol Messages</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="LDM-user.html">The LDM
-	User</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A NAME="installation"></A>Installing,
-	Configuring, and Activating the LDM System 
-	</P>
-	<UL>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="platform.html">Platform
-		Requirements</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="preinstallation.html">Preinstallation
-		Steps</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in">
-                <A HREF="source-install-steps.html">Building and installing
-                from source distribution</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="configuring.html">Configuring
-		an LDM Installation</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="tradeoffs.html">Trade-offs
-		in Configuring the LDM</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="activating.html">Activating
-		the LDM Installation</A> 
-		</P>
-	</UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="multiple_ldms.html">Running
-	Multiple LDM-s on the Same Computer</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="cluster.html">LDM
-	Clusters</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in">Configuration-Files 
-	</P>
-	<UL>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="ldmd.conf.html">The LDM
-		Configuration-File, <TT><B>ldmd.conf</B></TT></A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="pqact.conf.html">The
-		<TT><B>pqact</B></TT> Configuration-File, <TT><B>pqact.conf</B></TT></A>
-				</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="scour.conf.html">The
-		<TT><B>scour</B></TT> Configuration-File, <TT><B>scour.conf</B></TT></A>
-				</P>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>LDM @VERSION@ Reference</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="AUTHOR" content="steve">
+    <meta name="CREATED" content="20050712;15095500">
+    <meta name="CHANGED" content="16010101;0">
+    <meta name="DESCRIPTION" content="Fundamentals of the Unidata LDM">
+    <meta name="KEYWORDS" content="Software, LDM, basics, Data, Manager">
+    <meta name="BOOKMARK" content="LDM @VERSION@ Reference">
+  </head>
+  <body>
+    <h1>LDM @VERSION@ Reference</1>
+    <p>The following HTML pages comprise a reference document for the 
+    <a href="https://www.unidata.ucar.edu/software/ldm/">Unidata LDM</a> and also underlie the 
+    <a href="../tutorial">LDM Tutorial</a>. If you know what you're looking for, then look here; otherwise, use the 
+    tutorial.</p> 
 
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="LDM-registry.html">
-                The LDM Registry</A></P>
-	</UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="ERE.html">Extended
-	Regular Expressions</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="startStop.html">Starting
-	and Stopping the LDM System</A> 
-	</P>
-	<LI><P STYLE="margin-bottom: 0in">The LDM Logfile 
-	</P>
-	<UL>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="logging-format.html">Format
-		and interpretation</A> 
-		</P>
-		<LI><P STYLE="margin-bottom: 0in"><A HREF="newlog.html">Rotation
-		and purging</A>. 
-		</P>
-	</UL>
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="monitoring.html">Monitoring
-	the LDM System</A>
-<!-- 
-	<li>Monitoring, Tuning, and Troubleshooting the LDM System
-	<ul>
-	    <li>Product Arrival
-	    <li>Product Latency
-	    <li>LDM Connection Topology
-	    <li>The Product-Queue
-	    <li>Utilization of Operating System Resources
-		<ul>
-		    <li>CPU
-		    <li>Memory
-		    <li>File System
-		</ul>
-	    <li>Status of LDM Network Connections
-	    <li>Status of a Remote LDM
-	    <li>General Network Status
-	</ul>
--->
-        </P>
-
-	<LI><P><A HREF="tips.html">LDM Tips</A> 
-	</P>
-
-	<LI><P><A HREF="troubleshooting.html">LDM Troubleshooting</A> 
-	</P>
-
-        <LI><P><A HREF="noaaport.html">NOAAPORT ingestion</A>
-        </P>
-
-	<LI><P STYLE="margin-bottom: 0in"><A HREF="support.html">User-Support
-	Resources</A> 
-	</P>
-	<LI><P><A HREF="glindex.html">Glossary/Index</A> 
-	</P>
-
-</UL>
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <h2>Table of Contents</h2>
+    <ul>
+      <li><a href="versionId.html">The LDM Version Identifier</a></li>
+      <li><a href="data-product.html">The Data-Product Abstraction</a></li>
+      <li><a href="feedtypes/index.html">LDM Feedtypes</a></li>
+      <li><a href="generic-LDM.html">Runtime Structure of a Generic LDM System</a></li>
+      <li><a href="programs.html">Programs of the LDM System</a></li>
+      <li><a href="product-queue.html">The LDM Product-Queue <b>ldm.pq</b></a></li>
+      <li><a href="behavior.html">LDM Behavior</a></li>
+      <li><a href="protocol.html">LDM Protocol Messages</a></li>
+      <li><a href="LDM-user.html">The LDM User</a></li>
+      <li id="installation">Installing, Configuring, and Activating the LDM System</li>
+        <ul>
+          <li><a href="platform.html">Platform Requirements</a></li>
+          <li><a href="preinstallation.html">Preinstallation Steps</a></li>
+          <li><a href="source-install-steps.html">Building and installing from source distribution</a></li>
+          <li><a href="configuring.html">Configuring an LDM Installation</a></li>
+          <li><a href="tradeoffs.html">Trade-offs in Configuring the LDM</a></li>
+          <li><a href="activating.html">Activating the LDM Installation</a></li>
+        </ul>
+      <li><a href="multiple_ldms.html">Running Multiple LDM-s on the Same Computer</a></li>
+      <li><a href="cluster.html">LDM clusters</a></li>
+      <li id="configuration">Configuration-Files</li>
+        <ul>
+          <li><a href="ldmd.conf.html">The LDM Configuration-File, <b>ldmd.conf</b></a></li>
+          <li><a href="pqact.conf.html">The <b>pqact</b> Configuration-File, <b>pqact.conf</b></a></li>
+          <li><a href="scour.conf.html">The <b>scour</b> Configuration-File, <b>scour.conf</b></a></li>
+          <li><a href="LDM-registry.html">The LDM Registry</a></li>
+        </ul>
+      <li><a href="ERE.html">Extended Regular Expressions</a></li>
+      <li><a href="startStop.html">Starting and Stopping the LDM System</a></li>
+      <li id="logfile">The LDM Logfile</li>
+        <ul>
+          <li><a href="logging-format.html">Format and interpretation</a></li>
+          <li><a href="newlog.html">Rotation and purging</a></li>
+        </ul>
+      <li><a href="monitoring.html">Monitoring the LDM System</li>
+      <!--
+      <li id="monitoring">Monitoring, Tuning, and Troubleshooting the LDM System</li>
+        <ul>
+          <li>Product Arrival</li>
+          <li>Product Latency</li>
+          <li>LDM Connection Topology</li>
+          <li>The Product-Queue</li>
+          <li>Utilization of Operating System Resources</li>
+          <li>CPU</li>
+          <li>Memory</li>
+          <li>File System</li>
+      </ul>
+      <li>Status of LDM Network Connections</li>
+      <li>Status of a Remote LDM</li>
+      <li>General Network Status</li>
+      -->
+      <li><a href="tips.html">LDM Tips</a></li>
+      <li><a href="troubleshooting.html">LDM Troubleshooting</a></li>
+      <li><a href="noaaport.html">NOAAPORT ingestion</a></li>
+      <li><a href="support.html">User-Support Resources</a></li>
+      <li><a href="glindex.html">Glossary/Index</a></li>
+    </ul>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>

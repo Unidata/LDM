@@ -1,145 +1,99 @@
-<HTML>
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>ERE</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="BOOKMARK" content="ERE">
+    <meta name="AUTHOR" content="Steve">
+    <meta name="KEYWORDS" content="ERE, extended regular expression">
+    <meta name="DESCRIPTION" content="Extended regular expression">
+  </head>
+  <body>
+    <h1>Extended Regular Expressions</h1>
 
-<HEAD>
-<meta name="UIINDEX" content="4">
-<TITLE>ERE</TITLE>
-<META NAME="BOOKMARK" CONTENT="ERE">
-<META NAME="AUTHOR" CONTENT="Steve">
-<META NAME="KEYWORDS" CONTENT="ERE, extended regular expression">
-<META NAME="DESCRIPTION" CONTENT="Extended regular expression">
-</HEAD>
+    <h2>General Information</h2>
+    <p>Extended regular expressions (ERE-s) are used in several places in the <a href="glindex.html#LDM">LDM</a> system
+      -- primarily as a pattern for matching</p>
+    <ul>
+      <li><a href="glindex.html#identifier">data-product identifier</a>s in the configuration-files
+        <a href="glindex.html#ldmd.conf">ldmd.conf</a> and <a href="glindex.html#pqact.conf">pqact.conf</a>, and in the
+        utilities <a href="glindex.html#notifyme">notifyme</a>, <a href="glindex.html#pqcat">pqcat</a>, and
+        <a href="glindex.html#pqsurf">pqsurf</a></li>
+      <li>Host identifiers in the <a href="glindex.html#ACCEPT entry">ACCEPT entries</a> of the
+        <a href="glindex.html#LDM">LDM</a> configuration-file <a href="glindex.html#ldmd.conf">ldmd.conf</a></li>
+    </ul>
+    <p>Consequently, it's important to know how to use ERE-s.</p>
+    <p>See the <a href="https://pubs.opengroup.org/onlinepubs/7908799/xbd/re.html#tag_007_004">
+      official description of ERE-s</a>.</p>
+    <p>There is an <a href="https://txt2re.com/">excellent tool for determining a matching ERE from example text</a>.</p>
+    <p>Here is an incomplete summary of ERE syntax:</p>
+    <pre>
+      <b>Text:</b>
+        <b><code>.</code></b>           Any single character
+        <b><code>[</code></b><i>chars</i><b><code>]</code></b>     Character class: One  of <i>chars</i>
+        <b><code>[^</code></b><i>chars</i><b><code>]</code></b>    Character class: None of <i>chars</i>
+        <i>text1</i><b><code>|</code></b><i>text2</i> Alternative: <i>text1</i> or <i>text2</i>
 
-<BODY>
+      <b>Quantifiers:</b>
+        <b><code>?</code></b>           0 or 1 of the preceding text
+        <b><code>*</code></b>           0 or N of the preceding text (N &gt; 0)
+        <b><code>+</code></b>           1 or N of the preceding text (N &gt; 1)
+        <b><code>{M,N}</code></b>       M through N of the preceding text (either may be missing)
 
-<h1 align="center">Extended Regular Expressions</h1><br>
+      <b>Grouping:</b>
+        <b><code>(</code></b><i>text</i><b><code>)</code></b>      Grouping of text
+                 (either to set the borders of an alternative or
+                 for making backreferences where the <b>N</b>th group can
+                 be used in a <a href="glindex.html#pqact PIPE action">pqact PIPE action</a> with (for example) <code>\</code><b>N</b>)
 
-<hr>
+      <b>Anchors:</b>
+        <b><code>^</code></b>           Start of string anchor
+        <b><code>$</code></b>           End   of string anchor
 
-<h2>General Information</h2>
+      <b>Escaping:</b>
+        <b><code>\</code></b><i>char</i>       escape that particular character
+                 (for instance to specify the characters "<code>.[]()</code>"
+                 <i>etc.</i>)
+    </pre>
 
-<p>
-Extended regular expressions (ERE-s) are used in several places in the
-<a href="glindex.html#LDM">LDM</a> system -- primarily as a pattern 
-for matching
-<ul>
-    <li><a href="glindex.html#identifier">data-product identifier</a>s
-	in the configuration-files
-	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a> and
-	<a href="glindex.html#pqact.conf"><tt>pqact.conf</tt></a>, and in
-	the utilities <a href="glindex.html#notifyme"><tt>notifyme</tt></a>,
-	<a href="glindex.html#pqcat"><tt>pqcat</tt></a>, and
-	<a href="glindex.html#pqsurf"><tt>pqsurf</tt></a>
+    <h2>Pathological ERE-s</h2>
+    <p>Don't use ERE-s with a ".*" prefix because:</p>
+    <ol>
+      <li>They can take up to three orders of magnitude longer to match against a string than their unprefixed
+        counterparts; and</li>
+      <li>The ".*" prefix adds nothing to the ERE: the same set of strings is matched if it's omitted.</li>
+    </ol>
+    <p>This only applies to ERE-s with a ".*" <b>prefix</b>: the ERE ".*", by itself, is perfectly OK.</p>
+    <p>The inefficiency of pathological ERE-s can be seen by using the UNIX
+      <a href="glindex.html#time utility">time utility</a> with the <a href="glindex.html#LDM">LDM</a>'s
+      <a href="glindex.html#regex utility">regex utility</a>. First the non-pathological case:</p>
+    <pre>
+      $ time regex -n 10000 \
+        -s 'lksjdfklsdjfkljsdfkljsdljfsdlkjfdlskjfldjflkjsdflkjsdflkjsd' \
+        "some-sort-of-pattern"
+      no match
 
-    <li>Host identifiers 
-	in the 
-	<a href="glindex.html#ACCEPT entry">ACCEPT entries</a> of the
-	<a href="glindex.html#LDM">LDM</a> configuration-file
-	<a href="glindex.html#ldmd.conf"><tt>ldmd.conf</tt></a>
-</ul>
-Consequently, it's important to know how to use ERE-s.
+      real	0m0.044s
+      user	0m0.040s
+      sys	0m0.000s
+    </pre>
+    <p>The above indicates that ten-thousand comparisons of the given string against the ERE took 0.04 seconds of
+      user-time.</p>
+    <p>The timing of the corresponding pathological ERE is much different:</p>
+    <pre>
+      $ time regex -n 10000 \
+        -s 'lksjdfklsdjfkljsdfkljsdljfsdlkjfdlskjfldjflkjsdflkjsdflkjsd' \
+        ".*some-sort-of-pattern"
+      no match
 
-<p>
-The official description of ERE-s can be found at
-<a href="http://www.opengroup.org/onlinepubs/7908799/xbd/re.html#tag_007_004">
-<tt>http://www.opengroup.org/onlinepubs/7908799/xbd/re.html#tag_007_004</tt>
-</a>.
+      real	0m18.424s
+      user	0m17.720s
+      sys	0m0.020s
+    </pre>
+    <p>The above took 17.72 seconds of user-time, meaning that the non-pathological ERE is 443 times more efficient than
+      the pathological one.  More complex pathological ERE-s have even worse results.</p>
 
-<p>An excellent tool for determining a matching ERE from example text
-can be found at <a href="http://txt2re.com">http://txt2re.com</a>.
-
-<p>Here is an incomplete summary of ERE syntax:
-<blockquote>
-      <table bgcolor="#f0f0f0" cellspacing="0" cellpadding="5">
-        <tbody><tr>
-          <td valign="top">
-<pre><strong>Text:</strong>
-  <strong><code>.</code></strong>           Any single character
-  <strong><code>[</code></strong><i>chars</i><strong><code>]</code></strong>     Character class: One  of <i>chars</i>
-  <strong><code>[^</code></strong><i>chars</i><strong><code>]</code></strong>    Character class: None of <i>chars</i>
-  <i>text1</i><strong><code>|</code></strong><i>text2</i> Alternative: <i>text1</i> or <i>text2</i>
-
-<strong>Quantifiers:</strong>
-  <strong><code>?</code></strong>           0 or 1 of the preceding text
-  <strong><code>*</code></strong>           0 or N of the preceding text (N &gt; 0)
-  <strong><code>+</code></strong>           1 or N of the preceding text (N &gt; 1)
-  <strong><code>{M,N}</code></strong>       M through N of the preceding text (either may be missing)
-
-<strong>Grouping:</strong>
-  <strong><code>(</code></strong><i>text</i><strong><code>)</code></strong>      Grouping of text
-              (either to set the borders of an alternative or
-              for making backreferences where the <strong>N</strong>th group can 
-              be used in a <a href="glindex.html#pqact PIPE action"><tt>pqact PIPE</tt> action</a> with (for example) <code>\</code><strong>N</strong>)
-
-<strong>Anchors:</strong>
-  <strong><code>^</code></strong>           Start of string anchor
-  <strong><code>$</code></strong>           End   of string anchor
-
-<strong>Escaping:</strong>
-  <strong><code>\</code></strong><i>char</i>       escape that particular character
-              (for instance to specify the characters "<code>.[]()</code>" 
-              <em>etc.</em>)
-</pre>
-          </td>
-        </tr>
-      </tbody></table>
-</blockquote>
-
-<hr>
-
-<h2>Pathological ERE-s</h2>
-
-<p>
-Don't use ERE-s with a "<tt>.*</tt>" prefix because:
-<ol>
-    <li>They can take up to three orders of magnitude longer to match
-	against a string than their unprefixed counterparts; and
-    <li>The "<tt>.*</tt>" prefix adds nothing to the ERE: the same set of
-	strings is matched if it's omitted.
-</ol>
-This only applies to ERE-s with a "<tt>.*</tt>" <b>prefix</b>: the ERE
-"<tt>.*</tt>", by itself, is perfectly OK.
-
-<p>
-The inefficiency of pathological ERE-s can be seen by using the
-UNIX<sup>�</sup>
-<a href="glindex.html#time utility"><tt>time</tt> utility</a>
-with the
-<a href="glindex.html#LDM">LDM</a>'s
-<a href="glindex.html#regex utility"><tt>regex</tt> utility</a>.
-First the non-pathological case:
-<blockquote><pre>
-$ time regex -n 10000 \
-    -s 'lksjdfklsdjfkljsdfkljsdljfsdlkjfdlskjfldjflkjsdflkjsdflkjsd' \
-    "some-sort-of-pattern"
-no match
-
-real	0m0.044s
-user	0m0.040s
-sys	0m0.000s
-</blockquote></pre>
-The above indicates that ten-thousand comparisons of the given string
-against the ERE took 0.04 seconds of user-time.
-
-<p>
-The timing of the corresponding pathological ERE is much different:
-<blockquote><pre>
-$ time regex -n 10000 \
-    -s 'lksjdfklsdjfkljsdfkljsdljfsdlkjfdlskjfldjflkjsdflkjsdflkjsd' \
-    ".*some-sort-of-pattern"
-no match
-
-real	0m18.424s
-user	0m17.720s
-sys	0m0.020s
-</blockquote></pre>
-The above took 17.72 seconds of user-time, meaning that the
-non-pathological ERE is 443 times more efficient than the pathological
-one.  More complex pathological ERE-s have even worse results.
-
-<hr>
-
-
-
-<script src="/js/ldm_add_in.js" type="text/javascript"></script>
-</body>
-</HTML>
+    <script src="/js/ldm_add_in.js" type="text/javascript"></script>
+  </body>
+</html>
