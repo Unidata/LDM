@@ -12,6 +12,8 @@ jobs:
       contents: read
       security-events: write
 
+    environment: Publish
+
     strategy:
       matrix:
         os: [ubuntu-22.04]
