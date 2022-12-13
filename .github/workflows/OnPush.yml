@@ -14,7 +14,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+        os: ubuntu-22.04
+#        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -40,11 +41,11 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-      - name: Initialize CodeQL
-        if: matrix.os == 'ubuntu-22.04'
-        uses: github/codeql-action/init@v2
-        with:
-          languages: "cpp"
+#      - name: Initialize CodeQL
+#        if: matrix.os == 'ubuntu-22.04'
+#        uses: github/codeql-action/init@v2
+#        with:
+#          languages: "cpp"
 
       - name: Build
         run: |
@@ -52,8 +53,17 @@ jobs:
           make all
           make distcheck
 
-      - name: Perform CodeQL Analysis
+#      - name: Perform CodeQL Analysis
+#        if: matrix.os == 'ubuntu-22.04'
+#        uses: github/codeql-action/analyze@v2
+#        with:
+#          category: "cpp"
+
+      - name: Upload Distribution
         if: matrix.os == 'ubuntu-22.04'
-        uses: github/codeql-action/analyze@v2
-        with:
-          category: "cpp"
+        run: |
+          file=`ls *.gz`
+          version=`echo $file | echo *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PW }} \
+          --upload-file *.gz \
+          https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/$file
