@@ -61,9 +61,11 @@ jobs:
 
       - name: Upload Distribution
         if: matrix.os == 'ubuntu-22.04'
+        env:
+          USER: ${{ secrets.NEXUS_USER }}
+          PW: ${{ secrets.NEXUS_PW }}
         run: |
           file=`ls *.gz`
           version=`echo $file | echo *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
-          curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PW }} \
-          --upload-file *.gz \
+          curl -u "$USER":"$PW" --upload-file *.gz \
           https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/$file
