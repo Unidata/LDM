@@ -2,7 +2,7 @@ name: On Push
 
 on:
   push:
-    branches: [ "devel", "master", "main" ]
+    branches: [ "devel", "main" ]
 #    branches: [ "*" ]
 
 jobs:
@@ -43,11 +43,11 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-#      - name: Initialize CodeQL
-#        if: matrix.os == 'ubuntu-22.04'
-#        uses: github/codeql-action/init@v2
-#        with:
-#          languages: "cpp"
+      - name: Initialize CodeQL
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/init@v2
+        with:
+          languages: "cpp"
 
       - name: Build
         run: |
@@ -55,19 +55,18 @@ jobs:
           make all
           make distcheck
 
-#      - name: Perform CodeQL Analysis
-#        if: matrix.os == 'ubuntu-22.04'
-#        uses: github/codeql-action/analyze@v2
-#        with:
-#          category: "cpp"
+      - name: Perform CodeQL Analysis
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "cpp"
 
       - name: Upload Distribution
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
         env:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}
         run: |
-          file=`ls *.gz`
-          version=`echo $file | echo *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          version=`ls *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
           curl -u "$USER":"$PW" --upload-file *.gz \
-          https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/$file
+            https://artifacts.unidata.ucar.edu/repository/downloads-ldm/{$version,current}/
