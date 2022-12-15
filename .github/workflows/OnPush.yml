@@ -53,8 +53,8 @@ jobs:
         run: |
           ./configure --prefix=/tmp/ldm --with-noaaport || { cat configure; exit 1; }
           make all
-#          make distcheck
           make dist
+#          make distcheck
 
 #      - name: Perform CodeQL Analysis
 #        if: matrix.os == 'ubuntu-22.04'
@@ -62,8 +62,9 @@ jobs:
 #        with:
 #          category: "cpp"
 
-      - name: Upload Distribution and Documentation
 #        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
+
+      - name: Upload Distribution and Documentation
         if: matrix.os == 'ubuntu-22.04'
         env:
           USER: ${{ secrets.NEXUS_USER }}
