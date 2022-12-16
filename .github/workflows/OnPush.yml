@@ -22,13 +22,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
-
-      - run: mkdir m4
-
       - name: Provision Ubuntu
         if: contains(matrix.os, 'ubuntu')
         run: |
@@ -42,6 +35,13 @@ jobs:
           brew install automake
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - run: mkdir m4
 
 #      - name: Initialize CodeQL
 #        if: matrix.os == 'ubuntu-22.04'
