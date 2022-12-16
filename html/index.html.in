@@ -30,8 +30,6 @@
 	      <li><a href="CHANGE_LOG">Change Log</a></li>
 	      <li><a href="known-problems.html">Known Problems</a></li>
 	      <li><a href="compatibility.html">Compatibility with Previous Versions</a></li>
-        <li><a href="https://scan.coverity.com/projects/unidata-ldm">
-          <img alt="Coverity Scan Build Status" src="https://scan.coverity.com/projects/16072/badge.svg"/></a></li>
 	    </ul>
       <li>Legal Notices</li>
 	    <ul>
