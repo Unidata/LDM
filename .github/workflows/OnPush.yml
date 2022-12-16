@@ -62,8 +62,10 @@ jobs:
 #        with:
 #          category: "cpp"
 
+#        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
+
       - name: Publish Distribution and Documentation
-        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
+        if: matrix.os == 'ubuntu-22.04'
         env:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}
