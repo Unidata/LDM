@@ -77,6 +77,6 @@ jobs:
           cd /tmp/ldm/share/doc/ldm
           find . -type f | sed 's/^\.\///' | while read path; do
             curl -u "$USER":"$PW" \
-              --upload-file $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/$version/ \
-              --upload-file $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/current/
+              -T $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/$version/$path \
+              -T $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/current/$path
           done
