@@ -63,6 +63,7 @@ jobs:
 #          category: "cpp"
 
       - name: Save Distribution
+        if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v3
         with:
           name: distro
@@ -70,11 +71,13 @@ jobs:
           retention-days: 1
 
       - name: Make Documentation
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           make install
           pax -w /tmp/ldm/share/doc/ldm >docs.tar
 
       - name: Save Documentation
+        if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v3
         with:
           name: docs
@@ -91,6 +94,9 @@ jobs:
       PW: ${{ secrets.NEXUS_PW }}
 
     steps:
+      - name: Provision
+        run: sudo apt-get install pax
+
       - name: Get Distribution
         uses: actions/download-artifact@v3
         with:
