@@ -31,6 +31,7 @@ jobs:
         if: contains(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install doxygen
+          sudo apt-get install pax
           autoreconf -fi
 
       - name: Provision MacOS
@@ -39,6 +40,7 @@ jobs:
           brew install autoconf@2.69
           brew install automake
           brew install doxygen
+          brew install pax
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
 #      - name: Initialize CodeQL
@@ -80,7 +82,7 @@ jobs:
           retention-days: 1
 
   publish:
-    if: github.ref == 'main'
+#    if: github.ref == 'main'
     needs: check
     environment: Publish
     runs-on: ubuntu-latest
