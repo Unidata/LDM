@@ -12,6 +12,8 @@ jobs:
       contents: read
       security-events: write
 
+    environment: Publish
+
     strategy:
       matrix:
         os: [ubuntu-22.04]
@@ -31,7 +33,6 @@ jobs:
         if: contains(matrix.os, 'ubuntu')
         run: |
           sudo apt-get install doxygen
-          sudo apt-get install pax
           autoreconf -fi
 
       - name: Provision MacOS
@@ -40,7 +41,6 @@ jobs:
           brew install autoconf@2.69
           brew install automake
           brew install doxygen
-          brew install pax
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
 #      - name: Initialize CodeQL
@@ -62,63 +62,21 @@ jobs:
 #        with:
 #          category: "cpp"
 
-      - name: Save Distribution
-        if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v3
-        with:
-          name: distro
-          path: ldm-*.gz
-          retention-days: 1
+#        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
 
-      - name: Make Documentation
+      - name: Upload Distribution and Documentation
         if: matrix.os == 'ubuntu-22.04'
+        env:
+          USER: ${{ secrets.NEXUS_USER }}
+          PW: ${{ secrets.NEXUS_PW }}
         run: |
-          make install
-          pax -w /tmp/ldm/share/doc/ldm >docs.tar
-
-      - name: Save Documentation
-        if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v3
-        with:
-          name: docs
-          path: docs.tar
-          retention-days: 1
-
-  publish:
-#    if: github.ref == 'main'
-    needs: check
-    environment: Publish
-    runs-on: ubuntu-latest
-    env:
-      USER: ${{ secrets.NEXUS_USER }}
-      PW: ${{ secrets.NEXUS_PW }}
-
-    steps:
-      - name: Provision
-        run: sudo apt-get install pax
-
-      - name: Get Distribution
-        uses: actions/download-artifact@v3
-        with:
-          name: distro
-
-      - name: Publish Distribution
-        run: |
-          version=`ls ldm-*.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          version=`ls *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
           curl -u "$USER":"$PW" \
-            -T ldm-*.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
-            -T ldm-*.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
+            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
+            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
 
-      - name: Get Documentation
-        uses: actions/download-artifact@v3
-        with:
-          name: docs
-
-      - name: Publish Documentation
-        run: |
-          version=`ls ldm-*.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
-          pax -r <docs.tar
-          cd ldm
+          make install
+          cd /tmp/ldm/share/doc/ldm
           find . -type f | sed 's/^\.\///' | while read path; do
             curl -u "$USER":"$PW" \
               --upload-file $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/$version/ \
