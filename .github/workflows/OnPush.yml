@@ -6,13 +6,11 @@ on:
 #    branches: [ "*" ]
 
 jobs:
-  distcheck:
+  check:
     permissions:
       actions: read
       contents: read
       security-events: write
-
-    environment: Publish
 
     strategy:
       matrix:
@@ -49,7 +47,7 @@ jobs:
 #        with:
 #          languages: "cpp"
 
-      - name: Build
+      - name: Make Distribution
         run: |
           ./configure --prefix=/tmp/ldm --with-noaaport || { cat configure; exit 1; }
           make all
@@ -62,21 +60,57 @@ jobs:
 #        with:
 #          category: "cpp"
 
-#        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
+      - name: Save Distribution
+        uses: actions/upload-artifact@v3
+        with:
+          name: distro
+          path: ldm-*.gz
+          retention-days: 1
 
-      - name: Upload Distribution and Documentation
-        if: matrix.os == 'ubuntu-22.04'
-        env:
-          USER: ${{ secrets.NEXUS_USER }}
-          PW: ${{ secrets.NEXUS_PW }}
+      - name: Make Documentation
         run: |
-          version=`ls *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
-          curl -u "$USER":"$PW" \
-            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
-            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
-
           make install
-          cd /tmp/ldm/share/doc/ldm
+          pax -w /tmp/ldm/share/doc/ldm >docs.tar
+
+      - name: Save Documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: docs.tar
+          retention-days: 1
+
+  publish:
+    if: github.ref == 'main'
+    needs: check
+    environment: Publish
+    runs-on: ubuntu-latest
+    env:
+      USER: ${{ secrets.NEXUS_USER }}
+      PW: ${{ secrets.NEXUS_PW }}
+
+    steps:
+      - name: Get Distribution
+        uses: actions/download-artifact@v3
+        with:
+          name: distro
+
+      - name: Publish Distribution
+        run: |
+          version=`ls ldm-*.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          curl -u "$USER":"$PW" \
+            -T ldm-*.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
+            -T ldm-*.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
+
+      - name: Get Documentation
+        uses: actions/download-artifact@v3
+        with:
+          name: docs
+
+      - name: Publish Documentation
+        run: |
+          version=`ls ldm-*.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          pax -r <docs.tar
+          cd ldm
           find . -type f | sed 's/^\.\///' | while read path; do
             curl -u "$USER":"$PW" \
               --upload-file $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/$version/ \
