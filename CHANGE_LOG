@@ -2,6 +2,8 @@
     Documentation:
         * Removed the Coverity Scan badge from the top-level, version-specific "index.html" page
           because the code is now being scanned by GitHub's CodeQL
+        * Changed the example LDM home-directory from "/opt/ldm" back to "/home/ldm" because that's
+          more appropriate for an LDM *user*
 
 6.14.1.5        2022-12-14T11:45:29-0700
     NOAAPort:

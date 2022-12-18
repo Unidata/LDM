@@ -36,7 +36,7 @@
       <li>Install the package with the command <code>rpm --install [--prefix=<i>ldmhome</i>] <i>rpm-file</i></code>
       where <i>rpm-file</i> is the RPM file that you just downloaded. The square brackets denote an optional argument
       in which <i>ldmhome</i> is the home-directory of the <a href="glindex.html#LDM user">LDM user</a>. The default
-      home-directory is /opt/ldm. This option must be used if</li>
+      home-directory is /home/ldm. This option must be used if</li>
       <ol>
         <li>An LDM user account exists on the platform with a home-directory that  differs from the default; or</li>
         <li>An LDM user account doesn't exist on the platform and you want the LDM user to have a home-directory that

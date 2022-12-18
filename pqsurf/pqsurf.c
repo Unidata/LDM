@@ -8,7 +8,7 @@
 
 /*
  * Need to create a queue before running this:
- * pqcreate -c -s 2M -S 13762 /opt/ldm/data/pqsurf.pq
+ * pqcreate -c -s 2M -S 13762 /home/ldm/data/pqsurf.pq
  */
 
 #include <config.h>

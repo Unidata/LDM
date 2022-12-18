@@ -26,17 +26,17 @@
     <p>For example, if the ldmadmin newlog command was executed at 18:00 on the 20th and if the $numlogs variable was 2,
         then the following files:</p>
     <pre>
-      -rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /opt/ldm/logs/ldmd.log
-      -rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /opt/ldm/logs/ldmd.log.1
-      -rw-rw-r--   1 ldm      staff       826 Sep 17 18:00 /opt/ldm/logs/ldmd.log.2
-      -rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /opt/ldm/logs/ldmd.log.3
+      -rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /home/ldm/logs/ldmd.log
+      -rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /home/ldm/logs/ldmd.log.1
+      -rw-rw-r--   1 ldm      staff       826 Sep 17 18:00 /home/ldm/logs/ldmd.log.2
+      -rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /home/ldm/logs/ldmd.log.3
     </pre>
     <p>would become</p>
     <pre>
-      -rw-r--r--   1 ldm      staff         0 Sep 20 18:00 /opt/ldm/logs/ldmd.log
-      -rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /opt/ldm/logs/ldmd.log.1
-      -rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /opt/ldm/logs/ldmd.log.2
-      -rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /opt/ldm/logs/ldmd.log.3
+      -rw-r--r--   1 ldm      staff         0 Sep 20 18:00 /home/ldm/logs/ldmd.log
+      -rw-r--r--   1 ldm      staff       972 Sep 19 18:00 /home/ldm/logs/ldmd.log.1
+      -rw-r--r--   1 ldm      staff       845 Sep 18 18:00 /home/ldm/logs/ldmd.log.2
+      -rw-r--r--   1 ldm      staff       981 Sep 16 18:00 /home/ldm/logs/ldmd.log.3
     </pre>
     <p>Note that the ldmd.log.3 file was untouched.</p>
     <p>An excellent way to ensure that this rotation occurs on an automatic and regular basis is to execute the command
