@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-#        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+#        os: [ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
 
@@ -43,29 +43,30 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-#      - name: Initialize CodeQL
-#        if: matrix.os == 'ubuntu-22.04'
-#        uses: github/codeql-action/init@v2
-#        with:
-#          languages: "cpp"
+      - name: Initialize CodeQL
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/init@v2
+        with:
+          languages: "cpp"
 
       - name: Make Distribution
         run: |
-          ./configure --prefix=/tmp/ldm --with-noaaport || { cat configure; exit 1; }
+          ./configure --prefix=/tmp/ldm --with-noaaport --with-gribinsert \
+            || { cat configure; exit 1; }
           make all
-          make dist
-#          make distcheck
+          make distcheck
+#          make dist
 
-#      - name: Perform CodeQL Analysis
+      - name: Perform CodeQL Analysis
+        if: matrix.os == 'ubuntu-22.04'
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "cpp"
+
 #        if: matrix.os == 'ubuntu-22.04'
-#        uses: github/codeql-action/analyze@v2
-#        with:
-#          category: "cpp"
-
-#        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
 
       - name: Publish Distribution and Documentation
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
         env:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}
