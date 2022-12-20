@@ -12,10 +12,10 @@
     <meta name="BOOKMARK" content="LDM @VERSION@ Reference">
   </head>
   <body>
-    <h1>LDM @VERSION@ Reference</1>
+    <h1>LDM @VERSION@ Reference</h1>
     <p>The following HTML pages comprise a reference document for the 
     <a href="https://www.unidata.ucar.edu/software/ldm/">Unidata LDM</a> and also underlie the 
-    <a href="../tutorial">LDM Tutorial</a>. If you know what you're looking for, then look here; otherwise, use the 
+    <a href="../tutorial/index.html">LDM Tutorial</a>. If you know what you're looking for, then look here; otherwise, use the 
     tutorial.</p> 
 
     <h2>Table of Contents</h2>

@@ -26,42 +26,42 @@
     </ul>
 
     <h2 id="CPU">System CPU load</h2>
-    <p>The <a href="glindex.html#top utility">top</a> and <a href="glindex.html#uptime utility">uptime</a> utilities can 
+    <p>The <a href="glindex.html#top_utility">top</a> and <a href="glindex.html#uptime_utility">uptime</a> utilities can
       be used to monitor the system CPU load:</p>
     <pre>
-      <a href="glindex.html#top utility">top</a>
+      <a href="glindex.html#top_utility">top</a>
       ...
-      <a href="glindex.html#uptime utility">uptime</a>
+      <a href="glindex.html#uptime_utility">uptime</a>
       ...
     </pre>
 
     <h2 id="I/O">System I/O load</h2>
-    <p>The <a href="glindex.html#top utility">top</a> and <a href="glindex.html#iostat utility">iostat</a> utilities can 
+    <p>The <a href="glindex.html#top_utility">top</a> and <a href="glindex.html#iostat_utility">iostat</a> utilities can
       be used to monitor the system I/O load:</p>
     <pre>
-      <a href="glindex.html#top utility">top</a>
+      <a href="glindex.html#top_utility">top</a>
       ...
-     <a href="glindex.html#iostat utility">iostat</a>
+     <a href="glindex.html#iostat_utility">iostat</a>
       ...
     </pre>
 
     <h2 id="latency">Data-product latency</h2>
     <ul>
-      <li><a href="#IDD rtstats webpages">Using the IDD rtstats webpages</a></li>
+      <li><a href="#IDD_rtstats_webpages">Using the IDD rtstats webpages</a></li>
       <li><a href="#ldmadmin watch">Using ldmadmin watch</a></li>
     </ul>
 
-    <h4 id="IDD rtstats webpages">Using the <a href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a></h4>
+    <h4 id="IDD_rtstats_webpages">Using the <a href="glindex.html#IDD_rtstats_webpages">IDD rtstats webpages</a></h4>
     <p>If your<a href="glindex.html#LDM">LDM</a> is a node on the <a href="glindex.html#IDD">IDD</a> and is a
-      <a href="glindex.html#gateway LDM">gateway LDM</a>, then the most convenient way to monitor
-      <a href="glindex.html#data-product latency"> data-product latency</a> is to go to the
-      <a href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a>, select your computer, find the
+      <a href="glindex.html#gateway_LDM">gateway LDM</a>, then the most convenient way to monitor
+      <a href="glindex.html#data-product_latency"> data-product latency</a> is to go to the
+      <a href="glindex.html#IDD_rtstats_webpages">IDD rtstats webpages</a>, select your computer, find the
       <a href="glindex.html#feedtype">feedtype</a> in which you're interested, and then select the <b>latency</b>
       plot.</p>
 
     <h4 id="ldmadmin watch">Using ldmadmin watch</h4>
     <p>The <a href="glindex.html#ldmadmin">ldmadmin</a> utility can be used to monitor the
-      <a href="glindex.html#data-product latency">data-product latency</a> of incoming data:</p>
+      <a href="glindex.html#data-product_latency">data-product latency</a> of incoming data:</p>
     <pre>
       <a href="glindex.html#ldmadmin">ldmadmin</a> watch
       (Type ^D or ^C when finished)
@@ -91,13 +91,13 @@
         <a href="glindex.html#data-product">data-product</a>.</dd>
     </dl>
     <p>By comparing the two timestamp fields, one can get an idea of the
-      <a href="glindex.html#data-product latency">data-product latency</a>.</p>
+      <a href="glindex.html#data-product_latency">data-product latency</a>.</p>
 
     <h2 id="pqmon">The <a href="glindex.html#product-queue">product-queue</a></h2>
-    <p>The <a href="glindex.html#pqmon utility">pqmon</a> utility can be used to monitor the
+    <p>The <a href="glindex.html#pqmon_utility">pqmon</a> utility can be used to monitor the
       <a href="glindex.html#product-queue">product-queue</a>.For example</p>
     <pre>
-      <a href="glindex.html#pqmon utility">pqmon</a>
+      <a href="glindex.html#pqmon_utility">pqmon</a>
       Oct 27 16:48:28 pqmon: Starting Up (19969)
       Oct 27 16:48:28 pqmon: nprods nfree  nempty      nbytes  maxprods  maxfree  minempty    maxext  age
       Oct 27 16:48:28 pqmon:  70301    12  417968  1999781144    234870     1293    253410     92040 2867
@@ -117,9 +117,9 @@
       unnecessarily large parameter specifying the maximum number of data-products. The overhead of managing the queue
       could be slightly reduced by recreating the queue with a smaller number of slots (<i>e.g.</i>, 250000).</p>
 
-    <h2 id="upstream availability">LDM availability on an <a href="glindex.html#upstream host">upstream host</a></h2>
+    <h2 id="upstream availability">LDM availability on an <a href="glindex.html#upstream_host">upstream host</a></h2>
     <p>The <a href="glindex.html#ldmping">ldmping</a> utility can be used to determine the availability of an
-      <a href="glindex.html#upstream LDM">upstream LDM</a>.  For example</p>
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>.  For example</p>
     <pre>
       <a href="glindex.html#ldmping">ldmping</a> -i 0 <i>hostname</i>
       <i>MMM DD hh:mm:ss</i>      State    Elapsed Port   Remote_Host           rpc_stat
@@ -130,21 +130,21 @@
       <dt><i>MMM DD hh:mm:ss</i></dt>
       <dd>is the current month, day, hour, minute, and second.</dd>
       <dt><i>state</i></dt>
-      <dd>is the state of the <a href="glindex.html#upstream LDM">upstream LDM</a>:</dd>
+      <dd>is the state of the <a href="glindex.html#upstream_LDM">upstream LDM</a>:</dd>
     	<dl>
         <dt>NAMED</dt>
         <dd>The hostname couldn't be converted into an IP address.</dd>
         <dt>SVC_UNAVAIL</dt>
-	      <dd>An LDM is not running on the	<a href="glindex.html#upstream host">upstream host</a> on	the expected port
+	      <dd>An LDM is not running on the	<a href="glindex.html#upstream_host">upstream host</a> on	the expected port
           (both port 388 and the	upstream host's	<a href="glindex.html#portmapper">portmapper</a> will have been
           tried).</dd>
         <dt>ADDRESSED</dt>
-	      <dd>An LDM is running on the <a href="glindex.html#upstream host">upstream host</a> on the expected port but
+	      <dd>An LDM is running on the <a href="glindex.html#upstream_host">upstream host</a> on the expected port but
           we're not allowed to connect to it (<i>i.e.</i>, there's no	<a href="glindex.html#ALLOW entry">ALLOW entry</a>
           for our	LDM in the 	<a href="glindex.html#ldmd.conf">configuration-file</a> of the
-          <a href="glindex.html#upstream LDM">upstream LDM</a>).</dd>
+          <a href="glindex.html#upstream_LDM">upstream LDM</a>).</dd>
         <dt>RESPONDING</dt>
-	      <dd>An LDM is running on the	<a href="glindex.html#upstream host">upstream host</a> on	the expected port and
+	      <dd>An LDM is running on the	<a href="glindex.html#upstream_host">upstream host</a> on	the expected port and
           we're allowed to connect to it.</dd>
 	    </dl>
       <dt><i>time</i></dt>
@@ -152,56 +152,56 @@
       <dt><i>port</i></dt>
       <dd>is the port number.  This is only valid if the state is  RESPONDING.</dd>
       <dt><i>hostname</i></dt>
-      <dd>is the name of the <a href="glindex.html#upstream host">upstream host</a>.</dd>
+      <dd>is the name of the <a href="glindex.html#upstream_host">upstream host</a>.</dd>
       <dt><i>rpcMsg</i></dt>
       <dd>is the associated message (if any) from the RPC layer.</dd>
     </dl>
-    <p>If the state of the <a href="glindex.html#upstream LDM">upstream LDM</a> is anything other than
+    <p>If the state of the <a href="glindex.html#upstream_LDM">upstream LDM</a> is anything other than
       <b>RESPONDING</b>, then an <a href="glindex.html#LDM">LDM</a> on the computer on which the
       <a href="glindex.html#ldmping">ldmping</a> utility was executed will not be able to receive any
       <a href="glindex.html#data-product">data-product</a>s.</p>
-    <p>If an <a href="glindex.html#ldmping">ldmping</a> to the <a href="glindex.html#upstream LDM">upstream LDM</a>
+    <p>If an <a href="glindex.html#ldmping">ldmping</a> to the <a href="glindex.html#upstream_LDM">upstream LDM</a>
       shows no problems, then the <a href="glindex.html#NOTIFYME">notifyme</a> utility can be used to determine what an
-<a href="glindex.html#downstream LDM">downstream LDM</a> connecting to the
-      <a href="glindex.html#upstream LDM">upstream LDM</a> should receive:</p>
+<a href="glindex.html#downstream_LDM">downstream LDM</a> connecting to the
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> should receive:</p>
     <pre>
       notifyme -vl- -h <i>hostname</i>
     </pre>
 
-    <h2 id="downstream process">Monitoring a <a href="glindex.html#downstream LDM">downstream LDM</a>
+    <h2 id="downstream process">Monitoring a <a href="glindex.html#downstream_LDM">downstream LDM</a>
       on the local system</h2>
-    <p>You can monitor a <a href="glindex.html#downstream LDM">downstream LDM</a> process that is executing on the local
+    <p>You can monitor a <a href="glindex.html#downstream_LDM">downstream LDM</a> process that is executing on the local
       system by setting its logging-level to <b>verbose</b>, at which time it will print the
       <a href="glindex.html#metadata">data-product metadata</a> of every data-product that it receives to the
       <a href="glindex.html#logfile">LDM logfile</a>.  The logging-level of a
-      <a href="glindex.html#downstream LDM">downstream LDM</a> process can be changed by sending it a
-      <a href="glindex.html#SIGUSR2">SIGUSR2</a> signal via the <a href="glindex.html#kill utility">kill utility</a>,
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> process can be changed by sending it a
+      <a href="glindex.html#SIGUSR2">SIGUSR2</a> signal via the <a href="glindex.html#kill_utility">kill utility</a>,
       <i>e.g.</i></p>
     <pre>
       kill -s USR2 <i>pid</i>
     </pre>
-    <p>where <i>pid</i> is the process-ID of the <a href="glindex.html#downstream LDM">downstream LDM</a> process,
+    <p>where <i>pid</i> is the process-ID of the <a href="glindex.html#downstream_LDM">downstream LDM</a> process,
     which can be discovered by searching the <a href="glindex.html#logfile">LDM logfile</a>s for the relevant
     "Starting Up" message, <i>e.g.</i>,</p>
     <pre>
       cd $HOME/logs
-      <a href="glindex.html#grep utility">grep</a> -Fi 'Starting Up' `ls -rt ldmd.log*`
+      <a href="glindex.html#grep_utility">grep</a> -Fi 'Starting Up' `ls -rt ldmd.log*`
       ...
     </pre>
 
-    <h2 id="upstream process">Monitoring an <a href="glindex.html#upstream LDM">upstream LDM</a>
+    <h2 id="upstream process">Monitoring an <a href="glindex.html#upstream_LDM">upstream LDM</a>
       on the local system</h2>
-    <p>You can monitor an <a href="glindex.html#upstream LDM">upstream LDM</a> process that is executing on the local
+    <p>You can monitor an <a href="glindex.html#upstream_LDM">upstream LDM</a> process that is executing on the local
       system by setting its logging-level to <b>debug</b>, at which time it will print the
       <a href="glindex.html#metadata">data-product metadata</a> of every data-product that it sends to the
       <a href="glindex.html#logfile">LDM logfile</a> (along with other debugging information).  The logging-level of an
-      <a href="glindex.html#upstream LDM">upstream LDM</a> process can be
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> process can be
       changed by sending it a <a href="glindex.html#SIGUSR2">SIGUSR2</a> signal via the
-      <a href="glindex.html#kill utility">kill utility</a>, <i>e.g.</i>, </p>
+      <a href="glindex.html#kill_utility">kill utility</a>, <i>e.g.</i>, </p>
     <pre>
       kill -s USR2 <i>pid</i>
     </pre>
-    <p>where <i>pid</i> is the process-ID of the <a href="glindex.html#upstream LDM">upstream LDM</a> process, which can
+    <p>where <i>pid</i> is the process-ID of the <a href="glindex.html#upstream_LDM">upstream LDM</a> process, which can
       be most easily discovered via the <a href="glindex.html#uldbutil">uldbutil</a> utility:</p>
     <pre>
       <a href="glindex.html#uldbutil">uldbutil</a>
@@ -211,7 +211,7 @@
       "Starting Up" message: </p>
     <pre>
       cd $HOME/logs
-      <a href="glindex.html#grep utility">grep</a> -Fi 'Starting Up' `ls -rt ldmd.log*`
+      <a href="glindex.html#grep_utility">grep</a> -Fi 'Starting Up' `ls -rt ldmd.log*`
       ...
     </pre>
 
@@ -257,21 +257,21 @@
       your operating system.</p>
     <p>The last line of the output shows the top-level <a href="glindex.html#ldmd">ldmd</a> listening for
       <a href="glindex.html#TCP">TCP</a> connections on port "ldm" (alias 388). The output also shows nineteen regular
-      <a href="glindex.html#upstream LDM">upstream LDM</a>s (identified by having "emo.ldm" as the local address).  The
-      connections of two of these <a href="glindex.html#upstream LDM">upstream LDM</a>s are in TIME_WAIT and the
-      associated processes should terminate soon. Seven active <a href="glindex.html#downstream LDM">downstream LDM</a>s
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>s (identified by having "emo.ldm" as the local address).  The
+      connections of two of these <a href="glindex.html#upstream_LDM">upstream LDM</a>s are in TIME_WAIT and the
+      associated processes should terminate soon. Seven active <a href="glindex.html#downstream_LDM">downstream LDM</a>s
       are also shown near the end of the output. Lastly, the connection whose local address is "emo.4392" is special.
       This connection is due to the <a href="glindex.html#rtstats">rtstats(1)</a> process sending statistics to the
       <a href="glindex.html#UPC">Unidata Program Center</a> computer "rtstats.unidata.ucar.edu" (alias "flip").</p>
 
     <h2 id="metrics">Metrics</h2>
-    <p>If your computer system has the<a href="glindex.html#top utility">top</a>,
-      <a href="glindex.html#netstat utility">netstat</a>, <a href="glindex.html#uptime utility">uptime</a>, and
-      <a href="glindex.html#vmstat utility">vmstat</a> utilities installed, and you have
+    <p>If your computer system has the<a href="glindex.html#top_utility">top</a>,
+      <a href="glindex.html#netstat_utility">netstat</a>, <a href="glindex.html#uptime_utility">uptime</a>, and
+      <a href="glindex.html#vmstat_utility">vmstat</a> utilities installed, and you have
       <a href="LDM-registry.html">configured the /metrics parameters in the LDM registry</a> correctly, then you can
       periodically accumulate LDM performance metrics in a file for subsequent display and analysis by executing the
       addmetrics command of the <a href="glindex.html#ldmadmin">ldmadmin</a> utility from a
-      <a href="glindex.html#crontab utility">crontab</a> entry.  See <a href="configuring.html#cron">Edit the LDM user's
+      <a href="glindex.html#crontab_utility">crontab</a> entry.  See <a href="configuring.html#cron">Edit the LDM user's
         crontab(1) file</a>.
     <p>Additionally, if your computer system has the <a href="glindex.html#gnuplot">gnuplot</a> utility installed, then
       you can plot the LDM performance metrics by executing the plotmetrics command of the
@@ -281,8 +281,8 @@
     <h2 id="logfile">Use the<a href="glindex.html#logfile">LDM logfile</a></h2>
     <p>The <a href="glindex.html#logfile">LDM logfile</a> is your friend. If you encounter a problem, then one of the
       first things you should do is to look at it.  Problems can often be diagnosed by comparing corresponding logfile
-      entries from the <a href="glindex.html#upstream LDM">upstream LDM</a> and the
-      <a href="glindex.html#downstream LDM">downstream LDM</a>.</p>
+      entries from the <a href="glindex.html#upstream_LDM">upstream LDM</a> and the
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>.</p>
 
     <script src="/js/ldm_add_in.js" type="text/javascript"></script>
   </body>

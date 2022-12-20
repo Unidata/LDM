@@ -19,7 +19,7 @@
     constraints apply:</p>
     <ul>
       <li>Not all platforms are supported. Supported ones are encoded within the name of the RPM file. </li>
-      <li>If the <a href="glindex.html#LDM user">LDM user</a> doesn't exist, then they will be created with the name
+      <li>If the <a href="glindex.html#LDM_user">LDM user</a> doesn't exist, then they will be created with the name
       "ldm", with default user and group ID-s, and with the value of rpm(1)'s prefix option as their
       home-directory. </li>
       <li>All utilities will be dynamically linked and only the sharable LDM library will be installed.</li>
@@ -35,7 +35,7 @@
         <a href="https://downloads.unidata.ucar.edu/ldm/">https://downloads.unidata.ucar.edu/ldm/</a>.</li>
       <li>Install the package with the command <code>rpm --install [--prefix=<i>ldmhome</i>] <i>rpm-file</i></code>
       where <i>rpm-file</i> is the RPM file that you just downloaded. The square brackets denote an optional argument
-      in which <i>ldmhome</i> is the home-directory of the <a href="glindex.html#LDM user">LDM user</a>. The default
+      in which <i>ldmhome</i> is the home-directory of the <a href="glindex.html#LDM_user">LDM user</a>. The default
       home-directory is /home/ldm. This option must be used if</li>
       <ol>
         <li>An LDM user account exists on the platform with a home-directory that  differs from the default; or</li>

@@ -35,13 +35,13 @@
       <dt><a href="#EXEC">EXEC</a></dt>
       <dd>Execute programs as child processes on startup</dd>
       <dt><a href="#REQUEST">REQUEST</a></dt>
-      <dd>Connect to <a href="glindex.html#upstream LDM">upstream LDM</a>s to request 
+      <dd>Connect to <a href="glindex.html#upstream_LDM">upstream LDM</a>s to request
         <a href="glindex.html#data-product">data-product</a>s</dd>
       <dt><a href="#ALLOW">ALLOW</a></dt>
-      <dd>Allow certain <a href="glindex.html#downstream LDM">downstream LDM</a>s to connect and to receive certain 
+      <dd>Allow certain <a href="glindex.html#downstream_LDM">downstream LDM</a>s to connect and to receive certain
         <a href="glindex.html#data-product">data-product</a>s</dd>
       <dt><a href="#ACCEPT">ACCEPT</a></dt>
-      <dd>Allow certain <a href="glindex.html#upstream LDM">upstream LDM</a>s to send certain unrequested 
+      <dd>Allow certain <a href="glindex.html#upstream_LDM">upstream LDM</a>s to send certain unrequested
         <a href="glindex.html#data-product">data-product</a>s</dd>
       <dt><a href="#INCLUDE">INCLUDE</a></dt>
       <dd>Include another configuration-file</dd>
@@ -51,7 +51,7 @@
     <h2 id="EXEC">EXEC Entry</h2>
     <p>An EXEC entry tells the top-level <a href="glindex.html#ldmd">ldmd</a> to execute a program on startup.  The 
       programs most typically executed are <a href="glindex.html#pqact">pqact</a> and 
-      <a href="glindex.html#rtstats">rtstats</a> (for IDD <a href="glindex.html#gateway LDM">gateway LDM</a>s).</p>
+      <a href="glindex.html#rtstats">rtstats</a> (for IDD <a href="glindex.html#gateway_LDM">gateway LDM</a>s).</p>
     <p>The syntax of an EXEC entry is</p>
     <pre>
       EXEC "<i>command</i>"
@@ -65,51 +65,51 @@
 
     <h2 id="REQUEST">REQUEST Entry</h2>
     <p>A REQUEST entry tells the top-level <a href="glindex.html#ldmd">ldmd</a> to start a 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> child process.</p>
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> child process.</p>
     <p>The syntax of a REQUEST entry is</p>
     <p>
       <code>REQUEST <a href="#feedtype"><i>feedtype</i></a> <a href="#prodIdEre"><i>prodIdEre</i></a>
         <a href="#hostId"><i>hostId</i></a>[:<i>port</i>]</code></p>
     <p>When the top-level <a href="glindex.html#ldmd">ldmd</a> is started, it creates a 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> child process for every REQUEST entry.  The 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> connects to the 
-      <a href="glindex.html#upstream LDM">upstream LDM</a> on the specified host. The specified port is used if it 
-      exists; otherwise, the default port is used.  The <a href="glindex.html#downstream LDM">downstream LDM</a> 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> child process for every REQUEST entry.  The
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> connects to the
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> on the specified host. The specified port is used if it
+      exists; otherwise, the default port is used.  The <a href="glindex.html#downstream_LDM">downstream LDM</a>
       requests the specified class of <a href="glindex.html#data-product">data-product</a>s. If there are multiple 
       request-entries with the same <a href="#feedtype"><i>feedtype</i></a> and 
       <a href="#prodIdEre"><i>prodIdEre</i></a> combination, then the 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> corresponding to the first such entry in the file will 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> corresponding to the first such entry in the file will
       use the primary <a href="glindex.html#transfer-mode">transfer-mode</a> and all others will use the alternate 
       <a href="glindex.html#transfer-mode">transfer-mode</a>.</p>
     <p>The behavior of the <a href="glindex.html#LDM">LDM</a> is unspecified if multiple REQUEST entries exist for the 
-      same <a href="glindex.html#upstream LDM">upstream LDM</a> and the <a href="glindex.html#feedtype">feedtype</a>s 
+      same <a href="glindex.html#upstream_LDM">upstream LDM</a> and the <a href="glindex.html#feedtype">feedtype</a>s
       in the entries are not disjoint.</p>
 
     <h2 id="ALLOW">ALLOW Entry</h2>
     <p>An ALLOW entry tells the top-level <a href="glindex.html#ldmd">ldmd</a> what 
-      <a href="glindex.html#downstream LDM">downstream LDM</a>s are allowed to connect and what class of 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>s are allowed to connect and what class of
       <a href="glindex.html#data-product">data-product</a> they are allowed to receive.</p>
     <p>The syntax of an ALLOW entry is</p>
     <p><code>ALLOW <a href="#feedtype"><i>feedtype</i></a> <a href="#hostIdEre"><i>hostIdEre</i></a>
       <a href="#OK_pattern"><i>OK_pattern</i></a> [<a href="#NOT_pattern"><i>NOT_pattern</i></a>]]</code></p>
     <p>where the square brackets denote optional fields and are not part of the syntax.</p>
-    <p>When a <a href="glindex.html#downstream LDM">downstream LDM</a> connects, its host identifier is checked against 
+    <p>When a <a href="glindex.html#downstream_LDM">downstream LDM</a> connects, its host identifier is checked against
       the set of ALLOW entries. If nothing matches the host identifier, then the 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> is disconnected. The 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> is disconnected. The
       <a href="glindex.html#feedtype">feedtype</a> of the matching entry specifies the type of 
-      <a href="glindex.html#data-product">data-product</a>s the <a href="glindex.html#downstream LDM">downstream LDM</a>
+      <a href="glindex.html#data-product">data-product</a>s the <a href="glindex.html#downstream_LDM">downstream LDM</a>
       is allowed to receive. If the host identifier and feedtype in the incoming request match multiple ALLOW entries 
       and the <a href="glindex.html#feedtype">feedtype</a>s of the entries are not disjoint, then the behavior of the 
-      <a href="glindex.html#upstream LDM">upstream LDM</a> is determined by the first matching entry.</p>
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> is determined by the first matching entry.</p>
     <p>Besides matching the <a href="glindex.html#criteria">data-product selection-criteria</a> specified by the 
-      <a href="glindex.html#downstream LDM">downstream LDM</a>, the 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>, the
       <a href="glindex.html#identifier">data-product identifier</a> must also match the optional 
       <a href="#OK_pattern"><i>OK_pattern</i></a> and not match the optional 
       <a href="#NOT_pattern"><i>NOT_pattern</i></a> in order to be transmitted.  The default for the OK-pattern is ".*"
       and the default for the NOT-pattern is to not perform that test.  These two patterns allow an 
-      <a href="glindex.html#upstream LDM">upstream LDM</a> to fine-tune the products that a  
-      <a href="glindex.html#downstream LDM">downstream LDM</a> receives. For example, the following entry will allow a 
-      <a href="glindex.html#downstream LDM">downstream LDM</a> on host ldm.downstream.site to receive all 
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> to fine-tune the products that a
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> receives. For example, the following entry will allow a
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> on host ldm.downstream.site to receive all
       <a href="glindex.html#data-product">data-product</a>s except those that begin with "TEST"</p>
     <pre>
       ALLOW ANY ^ldm\.downstream\.site$ .* ^TEST
@@ -125,17 +125,17 @@
 
     <h2 id="ACCEPT">ACCEPT Entry</h2>
     <p>An ACCEPT entry tells the top-level <a href="glindex.html#ldmd">ldmd</a> what unrequested
-      <a href="glindex.html#upstream LDM">upstream LDM</a>s are allowed to connect and what class of
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>s are allowed to connect and what class of
       <a href="glindex.html#data-product">data-product</a> they are allowed to send.</p>
     <p>The syntax of an ACCEPT entry is</p>
     <p><code>ACCEPT <a href="#feedtype"><i>feedtype</i></a> <a href="#prodIdEre"><i>prodIdEre</i></a>
       <a href="#hostIdEre"><i>hostIdEre</i></a></code></p>
-    <p>When an <a href="glindex.html#upstream LDM 5">upstream LDM</a> connects using the
+    <p>When an <a href="glindex.html#upstream_LDM_5">upstream LDM</a> connects using the
       <a href="glindex.html#HIYA">HIYA</a> message, its host identifier is checked against the set of ACCEPT entries. If
-      nothing matches the host identifier, then the <a href="glindex.html#upstream LDM">upstream LDM</a> is
+      nothing matches the host identifier, then the <a href="glindex.html#upstream_LDM">upstream LDM</a> is
       disconnected. The <a href="glindex.html#feedtype">feedtype</a> and <a href="#prodIdEre"><i>prodIdEre</i></a> of
       the first matching entry specifies the type of <a href="glindex.html#data-product">data-product</a>s the
-      <a href="glindex.html#upstream LDM">upstream LDM</a> is allowed to send.</p>
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> is allowed to send.</p>
     <p>This entry was primarily used for receiving (unREQUESTed) radar data from WSI Corporation and is now primarily
       used to receive statistics from the <a href="glindex.html#rtstats">rtstats(1)</a> utility, which are formatted as
       <a href="glindex.html#data-product">data-product</a>s.</p>

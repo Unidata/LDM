@@ -22,21 +22,21 @@
       <a href="glindex.html#TCP">TCP</a> implementations that -- between two computers -- a single
       <a href="glindex.html#TCP">TCP</a> connection has much poorer performance than two
       <a href="glindex.html#TCP">TCP</a> connections that each carry half the data<sup>1</sup>. Therefore, the number
-      of <a href="glindex.html#REQUEST entry">REQUEST entries</a> to the same
-      <a href="glindex.html#upstream LDM">upstream LDM</a> can affect the tradeoff that consequently exists in the
+      of <a href="glindex.html#REQUEST_entry">REQUEST entries</a> to the same
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> can affect the tradeoff that consequently exists in the
       <a href="glindex.html#LDM">LDM</a> system between
-      <a href="glindex.html#data-product latency">data-product latency</a> and computer load. Take, for example, the
+      <a href="glindex.html#data-product_latency">data-product latency</a> and computer load. Take, for example, the
       following entry in the  <a href="glindex.html#ldmd.conf">LDM configuration-file, ldmd.conf</a>:</p>
     <pre>
       REQUEST WMO .* <i>hostId</i>
     </pre>
-    <p>It <i>might</i> be better, in terms of <a href="glindex.html#data-product latency">data-product latency</a> to
+    <p>It <i>might</i> be better, in terms of <a href="glindex.html#data-product_latency">data-product latency</a> to
       split this request into the following:</p>
     <pre>
       REQUEST HDS        .* <i>hostId</i>
       REQUEST IDS|DDPLUS .* <i>hostId</i>
     </pre>
-    <p>If the increased load on the computer from having two <a href="glindex.html#downstream LDM">downstream LDM</a>s
+    <p>If the increased load on the computer from having two <a href="glindex.html#downstream_LDM">downstream LDM</a>s
       running instead of one caused performance problems, however, then this would be a bad idea.</p>
     <p>Besides splitting the data-feeds on the <a href="glindex.html#feedtype">feedtype</a> as in the above example, it
       is also possible to split them on the <a href="glindex.html#identifier">data-product identifier</a>
@@ -47,7 +47,7 @@
       REQUEST CONDUIT "[13579]$" <i>hostId</i>
     </pre>
     <p>would split reception of <a href="glindex.html#CONDUIT">CONDUIT</a> data into two connections to the same
-      <a href="glindex.html#upstream LDM">upstream LDM</a> of equal volume by taking advantage of the trailing
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> of equal volume by taking advantage of the trailing
       <i>sequence number</i> that is part of the <a href="glindex.html#identifier">data-product identifier</a> of
       <a href="glindex.html#CONDUIT">CONDUIT</a> <a href="glindex.html#data-product">data-product</a>s. Similarly, the
       feed could be split into five connections of equal volume if experience proved that necessary.</p>

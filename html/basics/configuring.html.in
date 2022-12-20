@@ -54,13 +54,13 @@
       <li>The fully-qualified hostname of the computer that will run the <a href="glindex.html#LDM">LDM</a></li>
       <li>Desired <a href="glindex.html#feedtype">feedtypes</a></li>
     </ul>
-    <p>Note that you can (and probably should) have two <a href="glindex.html#upstream host">upstream host</a>s for any
+    <p>Note that you can (and probably should) have two <a href="glindex.html#upstream_host">upstream host</a>s for any
         given data-feed.</p>
 
     <h2 id="upstream config">Request authorization at the upstream LDM</h2>
-    <p>Ask the administrator of the <a href="glindex.html#upstream LDM">upstream LDM</a> to add
+    <p>Ask the administrator of the <a href="glindex.html#upstream_LDM">upstream LDM</a> to add
      <a href="glindex.html#ALLOW entry">ALLOW entries</a> for your <a href="glindex.html#LDM">LDM</a> to the
-      <a href="glindex.html#upstream LDM">upstream LDM</a>'s configuration-file,
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>'s configuration-file,
       <a href="glindex.html#ldmd.conf">ldmd.conf</a>. For example,</p>
     <pre>
       ALLOW UNIDATA  your.ldm.host
@@ -74,8 +74,8 @@
      this configuration-file can be found on the <a href="ldmd.conf.html">ldmd.conf webpage</a>.</p>
     <p>Here are some examples:
     <ul>
-      <li><a href="glindex.html#REQUEST entry">REQUEST entries</a> for your
-       <a href="glindex.html#upstream LDM">upstream LDM</a>s.  For example</li>
+      <li><a href="glindex.html#REQUEST_entry">REQUEST entries</a> for your
+       <a href="glindex.html#upstream_LDM">upstream LDM</a>s.  For example</li>
       <pre>
         REQUEST  ANY  ".*"  host1.site1.edu         # initially primary-mode
         REQUEST  ANY  ".*"  host2.site2.edu         # initially alternate-mode
@@ -96,24 +96,24 @@
       </pre>
       For a given LDM, a trade-off exists between <a href="glindex.html#data-product">data-product</a> latency and CPU
        load.  This trade-off can be controlled to some extent by the number of
-       <a href="glindex.html#REQUEST entry">REQUEST entries</a> to a given
-       <a href="glindex.html#upstream LDM">upstream LDM</a>.	For more information, see the
+       <a href="glindex.html#REQUEST_entry">REQUEST entries</a> to a given
+       <a href="glindex.html#upstream_LDM">upstream LDM</a>.	For more information, see the
        <a href="ldmd.conf.html">ldmd.conf webpage</a>.
       <li><a href="glindex.html#ALLOW entry">ALLOW entries</a> to authorize certain
-       <a href="glindex.html#downstream LDM">downstream LDM</a>s to receive certain
+       <a href="glindex.html#downstream_LDM">downstream LDM</a>s to receive certain
         <a href="glindex.html#data-product">data-product</a>s	from your LDM.  For example:</li>
       <pre>
         ALLOW  ANY-NLDN-WSI-PCWS-NOGAPS  \.edu$
         ALLOW  IDS|DDPLUS                \.com$  ^SA  ^SAUS
       </pre>
 	    For more information, see the <a href="ldmd.conf.html">ldmd.conf webpage</a>.
-      <li>An <a href="glindex.html#EXEC entry">EXEC entry</a> for <a href="glindex.html#pqact">pqact</a>, if you want to
+      <li>An <a href="glindex.html#EXEC_entry">EXEC entry</a> for <a href="glindex.html#pqact">pqact</a>, if you want to
         save arriving <a href="glindex.html#data-product">data-product</a>s in a file or process them in some way. For
         example:</li>
       <pre>
         EXEC "pqact"
       </pre>
-      Note that you might have more than one such <a href="glindex.html#EXEC entry"> EXEC entry</a> if, for example, you
+      Note that you might have more than one such <a href="glindex.html#EXEC_entry"> EXEC entry</a> if, for example, you
        use the <a href="glindex.html#pqact.conf">pqact configuration-file</a>s that come with the
        <a href="https://unidata.github.io/gempak/">GEMPAK</a> or
        <a href="https://www.unidata.ucar.edu/software/mcidas/index.html">McIDAS</a> packages.  For example:
@@ -122,17 +122,17 @@
         EXEC "pqact -f NNEXRAD /usr/local/ldm/etc/GEMPAK/pqact.gempak_nexrad"
         EXEC "pqact -f ANY-NNEXRAD /local/ldm/etc/GEMPAK/pqact.gempak_decoders"
       </pre>
-      <li>An <a href="glindex.html#EXEC entry">EXEC entry</a> for <a href="glindex.html#rtstats">rtstats</a> if the
+      <li>An <a href="glindex.html#EXEC_entry">EXEC entry</a> for <a href="glindex.html#rtstats">rtstats</a> if the
        <a href="glindex.html#LDM">LDM</a> is a member of the Unidata <a href="glindex.html#IDD">IDD</a> <b>and</b> is a
-       <a href="glindex.html#gateway LDM">gateway LDM</a> for your institution. <a href="glindex.html#LDM">LDM</a>
+       <a href="glindex.html#gateway_LDM">gateway LDM</a> for your institution. <a href="glindex.html#LDM">LDM</a>
        statistics are the best way to monitor <a href="glindex.html#IDD">IDD</a> performance and to identify problems.
-       It is, therefore, crucial that all <a href="glindex.html#gateway LDM">gateway</a>
+       It is, therefore, crucial that all <a href="glindex.html#gateway_LDM">gateway</a>
        <a href="glindex.html#LDM">LDM</a>-s on the <a href="glindex.html#IDD">IDD</a> report statistics. Also, data on
        <a href="glindex.html#LDM">LDM</a> statistics is vital in preparing reports used to obtain funding to support the
        <a href="glindex.html#LDM">LDM</a> system.</li>
        <a href="glindex.html#IDD">IDD</a> statistics are displayed on the
-       <a href="glindex.html#IDD rtstats webpages">IDD rtstats webpages</a>.
-      <li><a href="glindex.html#EXEC entry">EXEC entries</a> for
+       <a href="glindex.html#IDD_rtstats_webpages">IDD rtstats webpages</a>.
+      <li><a href="glindex.html#EXEC_entry">EXEC entries</a> for
       <a href="../utilities/noaaport/index.html#configuration">ingesting data-products from a NOAAPORT receiver</a>
        -- if you built the LDM package to support this.</li>
     </ul>
@@ -166,12 +166,12 @@
     <p><a href="../workshop/specifics.html#scour.conf">Workshop-specific instructions</a>.</p>
 
     <h2 id="cron">Edit the LDM-user's <b>crontab(1)</b> file</h2>
-    <p>Edit the crontab file of the <a href="glindex.html#LDM user">LDM-user</a> by, for example, executing the
+    <p>Edit the crontab file of the <a href="glindex.html#LDM_user">LDM-user</a> by, for example, executing the
      command</p>
     <pre>
       crontab -e
-    <pre>
-    <p>as the <a href="glindex.html#LDM user">LDM-user</a>.  Then </p>
+    </pre>
+    <p>as the <a href="glindex.html#LDM_user">LDM-user</a>.  Then </p>
     <ul>
       <li>Add an entry to rotate the <a href="glindex.html#logfile">LDM logfile</a>s by starting a new logfile every day
        at midnight, changing the names of the old logfiles, and ensuring that the number of logfiles doesn't grow
@@ -208,7 +208,7 @@
       This entry will check the LDM system every 15 minutes and send an email to the LDM user if the system isn't OK.
        You might choose a different interval. In particular, this entry will notify the LDM user if a data-product
        hasn't been received in the past number of seconds given by the /insertion-check-interval parameter in the
-       <a href="glindex.html#LDM registry">LDM registry</a> (to see that value, execute the command
+       <a href="glindex.html#LDM_registry">LDM registry</a> (to see that value, execute the command
        <a href="glindex.html#regutil">regutil</a> /insertion-check-interval).
       <li>If you intend to ingest data-products from a NOAAPORT receiver, then you should read the section on
        <a href="../utilities/noaaport/index.html#logging">logging</a> in the
@@ -223,9 +223,9 @@
     <p><a href="../workshop/specifics.html#crontab">Workshop-specific instructions</a>.</p>
 
     <h2 id="email">Ensure email forwarding</h2>
-    <p>Email for the <a href="glindex.html#LDM user">LDM user</a> can be generated by a crontab(1) entry or by someone
+    <p>Email for the <a href="glindex.html#LDM_user">LDM user</a> can be generated by a crontab(1) entry or by someone
      trying to contact the LDM administrator at a site. Consequently, you should ensure than any email sent to the
-     <a href="glindex.html#LDM user">LDM user</a> is forwarded to a responsible person.  On most UNIX-like systems (on
+     <a href="glindex.html#LDM_user">LDM user</a> is forwarded to a responsible person.  On most UNIX-like systems (on
      which the sendmail(8) daemon is used to deliver email) this is done by having a line like the following:</p>
     <pre>
       user@host
