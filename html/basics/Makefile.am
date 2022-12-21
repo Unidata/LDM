@@ -27,6 +27,7 @@ EXTRA_DIST	= \
     pqact_activity.svg \
     preinstallation.html \
     product-queue.html \
+    product-queue.svg \
     programs.html \
     protocol.html \
     regpar-top.html \
@@ -91,6 +92,7 @@ html_DATA	= \
     pqact_activity.svg \
     preinstallation.html \
     product-queue.html \
+    product-queue.svg \
     programs.html \
     protocol.html \
     rpm-install-steps.html \
