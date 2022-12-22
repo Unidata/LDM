@@ -20,7 +20,7 @@
     </ul>
 
     <h2 id="root">Steps to Perform as <code>root</code></h2>
-    <h3 id="LDM user">Create the <a href="glindex.html#LDM">LDM</a> user-account</h3>
+    <h3 id="LDM_user">Create the <a href="glindex.html#LDM">LDM</a> user-account</h3>
     <p>This is, necessarily, a system-dependent operation. Consult with  your system's administrator, if necessary. </p>
     <p>Keep the following in mind when creating the account: </p>
     <ul>
@@ -40,21 +40,21 @@
       <a href="glindex.html#LDM">LDM</a>.  How this is done is operating-system specific, so you might have to  consult
       with your system or network administrator.</p>
     <p>  In order for the  <a href="glindex.html#LDM">LDM</a> system to send data to a  
-      <a href="glindex.html#downstream LDM">downstream LDM</a>,  the firewall rules must allow incoming 
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>,  the firewall rules must allow incoming
       <a href="glindex.html#TCP">TCP </a>  connections to the port on which the <a href="glindex.html#LDM">LDM</a>  server 
       is listening (the default is 388).  An <i>example</i> of ensuring this for firewall rules based on iptables(8) is 
       the command  <code>iptables -A INPUT -p tcp --dport 388 -j ACCEPT</code></p>
     <p>Similarly, in order for the  <a href="glindex.html#LDM">LDM</a> to receive data from an 
-      <a href="glindex.html#upstream LDM">upstream LDM</a>,  the firewall rules must allow outgoing 
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>,  the firewall rules must allow outgoing
       <a href="glindex.html#TCP">TCP</a>  connections to the port on which the
-			<a href="glindex.html#upstream LDM">upstream LDM</a>  server is listening (the default is 388).  Because most
+			<a href="glindex.html#upstream_LDM">upstream LDM</a>  server is listening (the default is 388).  Because most
 			sites don't bother filtering outgoing connections,  this configuration step is usually not necessary.</p>
     <p><a href="../workshop/specifics.html#firewall">Workshop-specific  instructions</a>.</p>
 
     <h2 id="ldm-user">Steps to Perform as the LDM User</h2>
-    <h3 id="profile">Edit the <a href="glindex.html#LDM user">LDM user</a>'s profile-file</h3>
+    <h3 id="profile">Edit the <a href="glindex.html#LDM_user">LDM user</a>'s profile-file</h3>
     <p>As the LDM user, add the following entries to the appropriate login profile-file of the
-			<a href="glindex.html#LDM user">LDM user</a>'s user-shell. The profile-file should be the one that the user-shell
+			<a href="glindex.html#LDM_user">LDM user</a>'s user-shell. The profile-file should be the one that the user-shell
 			reads when it's a  login shell (<i>e.g.</i>, <b>.bash_profile</b>,  <b>.login</b>).</p>
     <table>
       <tr>

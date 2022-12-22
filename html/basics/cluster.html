@@ -30,7 +30,7 @@
       All IP packets destined for the cluster IP address go to the director computer.</p>
     <p>The IPVS software on the director computer is responsible for forwarding incoming packets received on the
       <a href="glindex.html#LDM">LDM</a> port to the backend computers. If a
-      <a href="glindex.html#downstream host">downstream host</a> has an open <a href="glindex.html#TCP">TCP</a>
+      <a href="glindex.html#downstream_host">downstream host</a> has an open <a href="glindex.html#TCP">TCP</a>
       connection to the cluster IP address or has had one within the last minute, then the software forwards all
       incoming <a href="glindex.html#TCP">TCP</a> packets from that host to the same backend computer. Otherwise, an
       incoming <a href="glindex.html#TCP">TCP</a> packet is forwarded to the least-loaded backend computer.</p>

@@ -28,12 +28,12 @@
       <li>An accurate and <i>monotonic</i> clock.</li>
     </ul>
     <p>The requirement for an accurate and monotonic clock is absolutely necessary because the 
-      <a href="glindex.html#LDM protocol">LDM protocol</a> depends on accurate clocks on both the
-      <a href="glindex.html#upstream host">upstream host</a> and the
-      <a href="glindex.html#downstream host">downstream host</a>.</p>
+      <a href="glindex.html#LDM_protocol">LDM protocol</a> depends on accurate clocks on both the
+      <a href="glindex.html#upstream_host">upstream host</a> and the
+      <a href="glindex.html#downstream_host">downstream host</a>.</p>
     <p>Additionally, if the clock is not monotonic (because it is periodically set backwards by <CODE>ntpdate(8)</CODE>,
       for example) then processes that read from the <a href="glindex.html#product-queue">product-queue</a> (such as
-      <a href="glindex.html#upstream LDM">upstream LDM</a>s and <a href="glindex.html#pqact">pqact</a>s <b>will miss
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>s and <a href="glindex.html#pqact">pqact</a>s <b>will miss
       some <a href="glindex.html#data-product">data-product</a>s</b> that are in the queue.  This is because
       data-products reside in the product-queue in the order in which they were inserted into the queue <i>according to
       the system clock</i>.  If the system clock jumps backwards, then a data-product might <i>not</i> be inserted at
@@ -62,7 +62,7 @@
 				libxml2.so  <i>and</i> the  file libxml/parser.h.  If this  package's library is installed but not its
 				header-file, then you must  install the <i>development</i> package (the  runtime package doesn't contain the
 				necessary header-files).  This package is used by the LDM to parse the
-				<a href="glindex.html#LDM registry">LDM registry</a>.</li>
+				<a href="glindex.html#LDM_registry">LDM registry</a>.</li>
     </ul>
 
     <h4>Necessary for <a href="glindex.html#NOAAPORT">NOAAPort</a> Ingestion</h4>
@@ -79,10 +79,10 @@
     <p>The following utilities must be available in order to collect metrics on the performance of the LDM system via
 			the command <a href="glindex.html#ldmadmin">ldmadmin</a> addmetrics.</p>
     <ul>
-      <li><a href="glindex.html#uptime utility">uptime</a></li>
-      <li><a href="glindex.html#vmstat utility">vmstat</a></li>
-      <li><a href="glindex.html#netstat utility">netstat</a></li>
-      <li><a href="glindex.html#top utility">top</a></li>
+      <li><a href="glindex.html#uptime_utility">uptime</a></li>
+      <li><a href="glindex.html#vmstat_utility">vmstat</a></li>
+      <li><a href="glindex.html#netstat_utility">netstat</a></li>
+      <li><a href="glindex.html#top_utility">top</a></li>
     </ul>
 
     <p>The following item is necessary to display the performance metrics of the LDM system via the command

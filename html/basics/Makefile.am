@@ -133,21 +133,23 @@ CLEANFILES              = configuring.html LDM-registry.html
 LDM-registry.html:	$(srcdir)/regpar-top.html ../../regutil/regpar.tab
 	echo '<!-- Generated automatically.  Do not edit. -->' >$@.tmp
 	cat $(srcdir)/regpar-top.html >>$@.tmp
-	echo '<table align="center" border="2" cellpadding="6"' \
-	    'cellspacing="0">' >>$@.tmp
-	echo '<tr>' >>$@.tmp
-	echo '<th>Parameter Pathname</th>' >>$@.tmp
-	echo '<th>Parameter Description</th>' >>$@.tmp
-	echo '<th>Default Value</th>' >>$@.tmp
-	echo '</tr>' >>$@.tmp
+	echo '    <table>' >>$@.tmp
+	echo '      <tr>' >>$@.tmp
+	echo '        <th>Parameter Pathname</th>' >>$@.tmp
+	echo '        <th>Parameter Description</th>' >>$@.tmp
+	echo '        <th>Default Value</th>' >>$@.tmp
+	echo '      </tr>' >>$@.tmp
 	while IFS=: read name path desc default varName; do \
-	    echo "<tr>"; \
-		echo "<td nowrap>$$path</td>"; \
-		echo "<td>$$desc</td>"; \
-		echo "<td>$$default</td>"; \
-	    echo "</tr>"; \
+	    echo "      <tr>"; \
+		echo "        <td nowrap>$$path</td>"; \
+		echo "        <td>$$desc</td>"; \
+		echo "        <td>$$default</td>"; \
+	    echo "      </tr>"; \
 	done <../../regutil/regpar.tab >>$@.tmp
-	echo '</blockquote></BODY></HTML>' >>$@.tmp
+	echo '    </table>' >>$@.tmp
+	echo '    <script src=\"/js/ldm_add_in.js\" type=\"text/javascript\"></script>' >>$@.tmp
+	echo '  </body>' >>$@.tmp
+	echo '</html>' >>$@.tmp
 	mv $@.tmp $@
 
 all:	$(srcdir)/successes.html $(srcdir)/failures.html

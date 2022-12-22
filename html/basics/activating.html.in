@@ -13,17 +13,17 @@
     <h1>Activating the LDM Installation</h1>
 
     <ol>
-      <li>Become the <a href="glindex.html#LDM user">LDM user</a> in their  home directory.</li>
+      <li>Become the <a href="glindex.html#LDM_user">LDM user</a> in their  home directory.</li>
       <li>If an <a href="glindex.html#LDM">LDM</a> is running, then stop it:</li>
       <pre>
         ldmadmin stop
       </pre>
-      <li id="runtime removal">If the <a href="glindex.html#runtime">runtime symbolic link</a> exists, then
+      <li id="runtime_removal">If the <a href="glindex.html#runtime">runtime symbolic link</a> exists, then
       remove it:</li>
       <pre>
         rm runtime
       </pre>
-      <li id="runtime creation">Create the<a href="glindex.html#runtime">runtime symbolic link</a> to the 
+      <li id="runtime_creation">Create the<a href="glindex.html#runtime">runtime symbolic link</a> to the
       just-installed LDM:</li>
       <pre>
         ln -s @PACKAGE@-@VERSION@ runtime

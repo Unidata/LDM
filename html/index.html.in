@@ -30,6 +30,7 @@
 	      <li><a href="CHANGE_LOG">Change Log</a></li>
 	      <li><a href="known-problems.html">Known Problems</a></li>
 	      <li><a href="compatibility.html">Compatibility with Previous Versions</a></li>
+	      <li><a href="https://docs.unidata.ucar.edu/ldm/versions.html">Previous Versions</a></li>
 	    </ul>
       <li>Legal Notices</li>
 	    <ul>
@@ -42,6 +43,8 @@
     <ul>
       <li>Please see the section entitled <a href="basics/index.html#installation">Installing, Configuring, and 
       Activating the LDM System</a> in the	<a href="basics/index.html">LDM Reference</a> webpages.</li>
+      <li>A select number of <a href="https://docs.unidata.ucar.edu/ldm/versions.html">prior releases</a> of the ldm are
+      available for download. </li>
     </ul>
 
     <h2>Tutorials and Documentation</h2>
@@ -54,8 +57,14 @@
 
     <h2>Help and Support</h2>
     <ul>
-       <li><a href="troubleshooting/index.html">Troubleshooting the LDM</a></li>
-       <li><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">General LDM help and support</a></li>
+      <li><a href="troubleshooting/index.html">Troubleshooting the LDM</a></li>
+      <li><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">General LDM help and support</a></li>
+    </ul>
+
+    <h2>Help and Support</h2>
+    <ul>
+      <li><a href="troubleshooting/index.html">Troubleshooting the LDM</a></li>
+      <li><a href="https://www.unidata.ucar.edu/software/ldm/index.html#help">General LDM help and support</a></li>
     </ul>
 
     <h2>Getting Data via the IDD</h2>

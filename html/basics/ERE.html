@@ -18,7 +18,7 @@
     <ul>
       <li><a href="glindex.html#identifier">data-product identifier</a>s in the configuration-files
         <a href="glindex.html#ldmd.conf">ldmd.conf</a> and <a href="glindex.html#pqact.conf">pqact.conf</a>, and in the
-        utilities <a href="glindex.html#notifyme">notifyme</a>, <a href="glindex.html#pqcat">pqcat</a>, and
+        utilities <a href="glindex.html#NOTIFYME">notifyme</a>, <a href="glindex.html#pqcat">pqcat</a>, and
         <a href="glindex.html#pqsurf">pqsurf</a></li>
       <li>Host identifiers in the <a href="glindex.html#ACCEPT entry">ACCEPT entries</a> of the
         <a href="glindex.html#LDM">LDM</a> configuration-file <a href="glindex.html#ldmd.conf">ldmd.conf</a></li>
@@ -45,7 +45,7 @@
         <b><code>(</code></b><i>text</i><b><code>)</code></b>      Grouping of text
                  (either to set the borders of an alternative or
                  for making backreferences where the <b>N</b>th group can
-                 be used in a <a href="glindex.html#pqact PIPE action">pqact PIPE action</a> with (for example) <code>\</code><b>N</b>)
+                 be used in a <a href="glindex.html#pqact_PIPE_action">pqact PIPE action</a> with (for example) <code>\</code><b>N</b>)
 
       <b>Anchors:</b>
         <b><code>^</code></b>           Start of string anchor
@@ -66,8 +66,8 @@
     </ol>
     <p>This only applies to ERE-s with a ".*" <b>prefix</b>: the ERE ".*", by itself, is perfectly OK.</p>
     <p>The inefficiency of pathological ERE-s can be seen by using the UNIX
-      <a href="glindex.html#time utility">time utility</a> with the <a href="glindex.html#LDM">LDM</a>'s
-      <a href="glindex.html#regex utility">regex utility</a>. First the non-pathological case:</p>
+      <a href="glindex.html#time_utility">time utility</a> with the <a href="glindex.html#LDM">LDM</a>'s
+      <a href="glindex.html#regex_utility">regex utility</a>. First the non-pathological case:</p>
     <pre>
       $ time regex -n 10000 \
         -s 'lksjdfklsdjfkljsdfkljsdljfsdlkjfdlskjfldjflkjsdflkjsdflkjsd' \

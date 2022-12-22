@@ -15,17 +15,17 @@
     <ul>
       <li>Size the product-queue (<a href="LDM-registry.html">LDM registry</a> parameters "<code>/queue/size</code>"
         and "<code>/queue/slots</code>") sufficiently large so that the age of the oldest product in the queue is
-        greater than the maximum <a href="glindex.html#data-product latency">latency</a> parameter
+        greater than the maximum <a href="glindex.html#data-product_latency">latency</a> parameter
         ("<code>/server/max-latency</code>"). Once you get close enough, set the "<code>/reconciliation-mode</code>"
         parameter to "<code>increase queue</code>". Use the "<code>ldmadmin plotmetrics</code>" command to help you
         determine when you're close.</li>
       <li>Have sufficient physical memory on the LDM computer to allow the product-queue to be completely contained
         in memory.</li>
-      <li>When practicable, have two <a href="glindex.html#REQUEST entry"><code>REQUEST</code></a> entries for the same
+      <li>When practicable, have two <a href="glindex.html#REQUEST_entry"><code>REQUEST</code></a> entries for the same
         data to two, different, upstream LDM-s.</li>
-      <li>Execute data-product ingesters via <a href="glindex.html#EXEC entry"><code>EXEC</code></a> entries in the LDM
+      <li>Execute data-product ingesters via <a href="glindex.html#EXEC_entry"><code>EXEC</code></a> entries in the LDM
         configuration-file so that the LDM process-group will be  signaled when a new product is inserted.</li>
-      <li>Consider splitting a large-volume <a href="glindex.html#REQUEST entry"><code>REQUEST</code></a> entry in the
+      <li>Consider splitting a large-volume <a href="glindex.html#REQUEST_entry"><code>REQUEST</code></a> entry in the
         LDM configuration-file, <a href="glindex.html#ldmd.conf"><code>ldmd.conf</code></a>, into multiple, smaller,
         disjoint entries.  <a href="tradeoffs.html">More information</a>.</li>
       <li>Favor doing your local processing of data-products by <a href="glindex.html#pqact">pqact</a> on a computer

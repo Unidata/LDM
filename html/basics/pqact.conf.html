@@ -25,7 +25,7 @@
         <li><a href="#PIPE">PIPE</a></li>
       </ul>
       <li><a href="#checking">Checking Modifications</a></li>
-      <li><a href="#output-file limit">Limit on the Number of Open Output-Files</a></li>
+      <li><a href="#output-file_limit">Limit on the Number of Open Output-Files</a></li>
     </ul>
 
     <h2 id="introduction">Introduction and General Syntax</h2>
@@ -80,7 +80,7 @@
       as templates for replacement strings derived from either the combination of the
       <a href="#prodIdPat"><i>prodIdPat</i></a> and the <a href="glindex.html#identifier">data-product identifier</a>,
       from the <a href="glindex.html#creation-time">data-product creation-time</a>, or from the
-      <a href="glindex.html#sequence number">sequence number</a>.</p>
+      <a href="glindex.html#sequence_number">sequence number</a>.</p>
 
     <h3>Replacment-Strings Derived from the <a href="#prodIdPat"><i>prodIdPat</i></a> and the
       <a href="glindex.html#identifier">Data-Product Identifier</a></h3>
@@ -220,9 +220,9 @@
       <dd>is replaced by %. </dd>
     </dl>
 
-    <h3>Replacment-String Derived from the<a href="glindex.html#sequence number">sequence number</a></h3>
+    <h3>Replacment-String Derived from the<a href="glindex.html#sequence_number">sequence number</a></h3>
     <p>The string "<code>(seq)</code>" (without the quotes) in the argument field will be replaced by the
-      <a href="glindex.html#sequence number">sequence number</a> of the
+      <a href="glindex.html#sequence_number">sequence number</a> of the
       <a href="glindex.html#data-product">data-product</a>. This might be useful to differentiate two different products
       that, nevertheless, have the same identifiers.</p>
 
@@ -404,7 +404,7 @@
       ldmadmin pqactcheck -p <i>pathname</i>
     </pre>
 
-    <h2 id="output-file limit">Limit on the Number of Open Output-Files</h2>
+    <h2 id="output-file_limit">Limit on the Number of Open Output-Files</h2>
     <p>The <a href="glindex.html#pqact">pqact</a> utility has a limit on the number of open output-files.  A output-file
       is opened for every unique instance of the following actions:</p>
     <pre>

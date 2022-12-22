@@ -162,7 +162,7 @@
       manager acting on behalf of the superuser. The smoking gun is an entry in the system log file from the
       out-of-memory manager about terminating the LDM process around the time that it disappears. </p>
     <p>The current workaround is to tell the out-of-memory (OOM) manager that the LDM processes are important by
-      assigning the LDM process-group a particular "score". LDM user Daryl Herzmann explains:</p
+      assigning the LDM process-group a particular "score". LDM user Daryl Herzmann explains:</p>
     <p><i>So there is a means to set a "score" on each Linux process to inform the oom killer about how it should
       prioritize the killing.  For RHEL/centos 6+7, this can be done by `echo -1000 > /proc/$PID/oom_score_adj`.
       For some other Linux flavours, the score should be -17 and the proc file is oom_adj.  Google is your
