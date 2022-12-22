@@ -44,7 +44,7 @@ jobs:
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
       - name: Initialize CodeQL
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04' &&  github.ref_name == 'devel'
         uses: github/codeql-action/init@v2
         with:
           languages: "cpp"
@@ -54,11 +54,14 @@ jobs:
           ./configure --prefix=/tmp/ldm --with-noaaport --with-gribinsert \
             || { cat configure; exit 1; }
           make all
-          make distcheck
-#          make dist
+          if test "${{ github.ref_name }}" = "main"; then
+            make dist
+          else
+            make distcheck
+          fi
 
       - name: Perform CodeQL Analysis
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-22.04' &&  github.ref_name == 'devel'
         uses: github/codeql-action/analyze@v2
         with:
           category: "cpp"
@@ -66,7 +69,7 @@ jobs:
 #        if: matrix.os == 'ubuntu-22.04'
 
       - name: Publish Distribution and Documentation
-        if: matrix.os == 'ubuntu-22.04' && github.ref == 'main'
+        if: matrix.os == 'ubuntu-22.04' && github.ref_name == 'main'
         env:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}

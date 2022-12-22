@@ -18,24 +18,24 @@
       process starts the following child processes:</p>
     <ul>
       <li>The <a href="glindex.html#ingester">ingester</a> processes;</li>
-      <li>The receiving LDM (alias <a href="glindex.html#downstream LDM">	downstream LDM</a>) processes; and</li>
+      <li>The receiving LDM (alias <a href="glindex.html#downstream_LDM">	downstream LDM</a>) processes; and</li>
       <li>The <a href="glindex.html#pqact">pqact</a> processes.</li>
     </ul>
     <p>The top-level <a href="glindex.html#LDM">LDM</a> process is also responsible for creating the sending LDM (alias
-      <a href="glindex.html#upstream LDM">upstream LDM</a>) processes when requested by
-      <a href="glindex.html#downstream LDM">downstream LDM</a> processes.</p>
+      <a href="glindex.html#upstream_LDM">upstream LDM</a>) processes when requested by
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> processes.</p>
     <p>Both the <a href="glindex.html#ingester">ingester</a>s and the
-      <a href="glindex.html#downstream LDM">downstream LDM</a>s write
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>s write
       <a href="glindex.html#data-product">data-product</a>s into the
       <a href="glindex.html#product-queue">product-queue</a>.  Each <a href="glindex.html#ingester">ingester</a> creates
       its <a href="glindex.html#data-product">data-product</a>s from an unspecified data-source.  Each
-      <a href="glindex.html#downstream LDM">downstream LDM</a>, on the other hand, receives its
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>, on the other hand, receives its
       <a href="glindex.html#data-product">data-product</a>s from the
-      <a href="glindex.html#upstream LDM">upstream LDM</a> to which it's connected.</p>
-    <p>Each <a href="glindex.html#upstream LDM">upstream LDM</a> reads
+      <a href="glindex.html#upstream_LDM">upstream LDM</a> to which it's connected.</p>
+    <p>Each <a href="glindex.html#upstream_LDM">upstream LDM</a> reads
       <a href="glindex.html#data-product">data-product</a>s from the
       <a href="glindex.html#product-queue">product-queue</a> and writes them to the
-      <a href="glindex.html#downstream LDM">downstream LDM</a> to which it's connected.</p>
+      <a href="glindex.html#downstream_LDM">downstream LDM</a> to which it's connected.</p>
     <p>A <a href="glindex.html#pqact">pqact</a> process writes <a href="glindex.html#data-product">data-product</a>s to
       disk or to LDM <a href="glindex.html#decoder">decoder</a> processes that it starts and manages.</p>
 

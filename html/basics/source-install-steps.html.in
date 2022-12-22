@@ -38,18 +38,18 @@
     <h2>Long Installation Instructions:</h3>
     <h3 id="become">I. Become the LDM User in That User's Home Directory</h3>
     <p>Follow <a href="become_ldm.html">this advice</a> on becoming the
-    <a href="glindex.html#LDM user">LDM user</a>.</p>
+    <a href="glindex.html#LDM_user">LDM user</a>.</p>
     <p><a href="../workshop/specifics.html#becomeLdmUser">Workshop-specific instructions</a>.
 
     <h3 id="obtain">Obtain the <a href="glindex.html#LDM">LDM</a> Source-Distribution</h3>
     <p>The <a href="glindex.html#LDM">LDM</a> source-distribution can be obtained by clicking on the appropriate link in
     the  <a href="https://downloads.unidata.ucar.edu/ldm/">LDM download page</a>. Download the file into the
-    <a href="glindex.html#LDM user">LDM user</a>'s home directory.</p>
+    <a href="glindex.html#LDM_user">LDM user</a>'s home directory.</p>
     <p>The remaining instructions assume that the distribution was downloaded into the
-    <a href="glindex.html#LDM user">LDM user</a>'s home-directory.</p>
+    <a href="glindex.html#LDM_user">LDM user</a>'s home-directory.</p>
 
     <h3 id="unpack">Unpack the Distribution</h3>
-    <p>Unpack the distribution in the <a href="glindex.html#LDM user">LDM user</a>'s home directory into the directory
+    <p>Unpack the distribution in the <a href="glindex.html#LDM_user">LDM user</a>'s home directory into the directory
     <code>@PACKAGE@-@VERSION@/src</code> using the <code>gunzip(1)</code> and <code>pax(1)</code> utilities. For
     example:</p>
     <pre>
@@ -131,9 +131,9 @@
             disables that attempt so that the <b>CC</b>, <b>CPPFLAGS</b>, <b>CFLAGS</b>, and <b>LDFLAGS</b> variables
             are used verbatim.</dd>
           <dt><code>--disable-setpgid-exec</code></dt>
-          <dd>By default, every process created by a <a href="glindex.html#pqact EXEC action">pqact(1) EXEC action</a>
-            will be made a <a href="glindex.html#process group leader">process group leader</a> so that it will not
-            receive signals sent to the LDM's <a href="glindex.html#process group">process group</a>. This is done
+          <dd>By default, every process created by a <a href="glindex.html#pqact_EXEC_action">pqact(1) EXEC action</a>
+            will be made a <a href="glindex.html#process_group_leader">process group leader</a> so that it will not
+            receive signals sent to the LDM's <a href="glindex.html#process_group">process group</a>. This is done
             because the process is likely not prepared to handle such signals. Disabling this feature will cause those
             processes to receive  those signals.</dd>
           <dt><code>--with-noaaport</code></dt>

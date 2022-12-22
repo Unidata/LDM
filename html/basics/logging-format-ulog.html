@@ -19,7 +19,7 @@
 
     <h2 id="introduction">Introduction</h2>
     <p>While some <a href="glindex.html#LDM">LDM</a> utilities are designed to write diagnostic and informational
-      messages to <a href="glindex.html#standard output">standard output</a>, most utilities (in particular the LDM
+      messages to <a href="glindex.html#standard_output">standard output</a>, most utilities (in particular the LDM
       server, <a href="glindex.html#ldmd">ldmd</a>) are designed to write such messages to a log file.  The log file is
       $HOME/logs/ldmd.log.</p>
     <p>In general, the format of most log-messages is</p>
@@ -33,8 +33,8 @@
       the log file to grow more rapidly).  Another common option is "-x", which will cause the utility to also log debug 
       messages (and cause the log file to grow extremely fast).  You should rarely, if ever, need to use the "-x" 
       option.</p>
-    <p>Each LDM process (<a href="glindex.html#ldmd">server</a>, <a href="glindex.html#upstream LDM">upstream LDM</a>, 
-      <a href="glindex.html#downstream LDM">downstream LDM</a>) has another way to alter its logging-level.  Reception 
+    <p>Each LDM process (<a href="glindex.html#ldmd">server</a>, <a href="glindex.html#upstream_LDM">upstream LDM</a>,
+      <a href="glindex.html#downstream_LDM">downstream LDM</a>) has another way to alter its logging-level.  Reception
       of a USR2 signal by the process will cause it to change the logging-level threshold in the following sequence:</p>
     <pre>
       notice -> informational -> debug -> notice -> ...
@@ -43,7 +43,7 @@
 
     <h2 id="examples">Message Templates</h2>
     <p>A message template is an abstract log-message in which concrete fields (<i>e.g.</i>, UNIX process-ID,
-      <a href="glindex.html#upstream host">upstream host</a> name) have been replaced with corresponding placeholders
+      <a href="glindex.html#upstream_host">upstream host</a> name) have been replaced with corresponding placeholders
       (<i>e.g.</i>, <a href="#pid"><i>pid</i></a>, <a href="#uphost"><i>uphost</i></a>). When searching this web page
       for the message template corresponding to an actual log-message, be sure to search for only that part of the
       message that doesn't vary (such parts are in a non-italic font in the templates).</p>
@@ -93,12 +93,12 @@
       <dd>The child process corresponding to the specified process-ID terminated with the specified exit-status. An
 				exit-status other than zero indicates an error.</dd>
 			<dt><b>Killing (SIGTERM) process group</b></dt>
-			<dd>A <a href="glindex.html#child process">child process</a> of the LDM server has terminated abnormally.
+			<dd>A <a href="glindex.html#child_process">child process</a> of the LDM server has terminated abnormally.
 				Consequently, the LDM server has decided to terminate the LDM system by sending a TERM signal to its
-				<a href="glindex.html#process group">process group</a>.</dd>
+				<a href="glindex.html#process_group">process group</a>.</dd>
 			<dt><b>Terminating process group</b></dt>
       <dd>The LDM server has been told to terminate. Consequently, the LDM server will terminate the LDM system by
-				signaling its	<a href="glindex.html#process group">process group</a></dd>
+				signaling its	<a href="glindex.html#process_group">process group</a></dd>
 			<dt><b>Using local address <i>IP_addr</i>:<i>port</i></b></dt>
       <dd>The LDM server will listen on the specified IP address using the	specified port.</dd>
 			<dt><b>Denying connection from [<i>IP_addr</i>] because too many clients</b></dt>
@@ -118,7 +118,7 @@
       <dt><b>ldmd[<a href="#pid"><i>pid</i></a>]: Adjusted pathological regular expression "<i>ere</i>" at line
 				<i>lineno</i>, file <i>pathname</i></b></dt>
       <dd>The <a href="glindex.html#ldmd.conf">LDM configuration-file</a> <i>pathname</i> contains the
-				<a href="glindex.html#pathological RE">pathological regular-expression</a> <i>ere</i> at line <i>lineno</i>.
+				<a href="glindex.html#pathological_RE">pathological regular-expression</a> <i>ere</i> at line <i>lineno</i>.
 				The LDM converted the pathological regular-expression to a non-pathological one, internally,  and should work
 				OK.  At some time, however, you should edit the	configuration-file to correct the regular-expression.</dd>
     </dl>
@@ -127,12 +127,12 @@
     <dl>
       <dt><b>Adjusted pathological regular expression "<a href="glindex.html#ERE"><i>ERE</i></a>" near line <i>n</i>, file
 		  	"<a href="#pathname"><i>pathname</i></a>"</b></dt>
-      <dd>The LDM server converted the  <a href="glindex.html#pathological RE">pathological regular-expression</a> near
+      <dd>The LDM server converted the  <a href="glindex.html#pathological_RE">pathological regular-expression</a> near
 			the specified line of the specified configuration-file into an equivalent, non-pathological form.  You should
 			change the regular-expression to avoid this warning.</dd>
       <dt><b>Pathological regular expression "<a href="glindex.html#ERE"><i>ERE</i></a>" near line <i>n</i>, file
 			"<a href="#pathname"><i>pathname</i></a>"</b></dt>
-      <dd>The LDM server converted the <a href="glindex.html#pathological RE">pathological regular-expression</a> near
+      <dd>The LDM server converted the <a href="glindex.html#pathological_RE">pathological regular-expression</a> near
 				the specified line of the specified configuration-file into an equivalent, non-pathological form.  You should
 				change the  regular-expression to avoid this warning.</dd>
     </dl>
@@ -141,16 +141,16 @@
     <dl>
 			<dt><b>run_requester: fork</b></dt>
       <dd>The <a href="glindex.html#LDM">LDM</a> server was unable to  <a href="glindex.html">fork</a> a
-				<a href="glindex.html#downstream LDM">downstream LDM</a>
-				<a href="glindex.html#child process">child process</a>.</dd>
+				<a href="glindex.html#downstream_LDM">downstream LDM</a>
+				<a href="glindex.html#child_process">child process</a>.</dd>
 			<dt><b>fork</b></dt>
       <dd>The  <a href="glindex.html#LDM">LDM</a> server was unable to <a href="glindex.html">fork</a> a
-				<a href="glindex.html#child process">child process</a> for an
-				<a href="glindex.html#EXEC entry">EXEC entry</a> in its configuration-file,
+				<a href="glindex.html#child_process">child process</a> for an
+				<a href="glindex.html#EXEC_entry">EXEC entry</a> in its configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>.</dd>
 			<dt><b>execvp: <i>command</i></b></dt>
       <dd>The <a href="glindex.html#LDM">LDM</a> server was unable to execute <i>command</i> from an
-				<a href="glindex.html#EXEC entry">EXEC entry</a> in its configuration-file,
+				<a href="glindex.html#EXEC_entry">EXEC entry</a> in its configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>.</dd>
 			<dt><b>Error near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>": <i>msg</i></b></dt>
 			<dd>The specified LDM configuration-file contained the error <i>msg</i> near the specified line.</dd>
@@ -186,7 +186,7 @@
       <dt><b>Couldn't get request-entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to convert the
-				<a href="glindex.html#REQUEST entry">REQUEST entry</a> near the specified line into a data-object due to
+				<a href="glindex.html#REQUEST_entry">REQUEST entry</a> near the specified line into a data-object due to
 				<i>reason</i>.</dd>
       <dt><b>Invalid hostname specification "<i>hostname</i>" near line <i>n</i>, file
 				"<a href="#pathname"><i>pathname</i></a>"</b></dt>
@@ -197,14 +197,14 @@
       <dt><b>Couldn't add host to request-entry near line <i>n</i>, file
 				"<a href="#pathname"><i>pathname</i></a>":<i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to add the specified host of the
-				<a href="glindex.html#REQUEST entry">REQUEST entry</a> near the specified line to the internal data-object
+				<a href="glindex.html#REQUEST_entry">REQUEST entry</a> near the specified line to the internal data-object
 				associated with that REQUEST entry's <a href="#feedtype">feedtype</a> and <a href="glindex.html#ERE">ERE</a> due
 				to <i>reason</i>.</dd>
   		<dt><b>fopen: <a href="#pathname"><i>pathname</i></a>: <i>reason</i></b></dt>
       <dd>The LDM server was unable to open the specified configuration-file	due to <i>reason</i>.</dd>
 			<dt><b>Problem requesting data: <i>reason</i></b></dt>
-			<dd>The LDM server was unable to create all the  <a href="glindex.html#downstream LDM">downstream LDM</a>s
-				corresponding to the <a href="glindex.html#REQUEST entry">REQUEST entries</a> in its configuration-file due to
+			<dd>The LDM server was unable to create all the  <a href="glindex.html#downstream_LDM">downstream LDM</a>s
+				corresponding to the <a href="glindex.html#REQUEST_entry">REQUEST entries</a> in its configuration-file due to
 				<i>reason</i>.</dd>
       <dt><b>Couldn't add ACCEPT entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
@@ -214,14 +214,14 @@
       <dt><b>Couldn't decode command "<i>command</i>" near line <i>n</i>, file
 				"<a href="#pathname"><i>pathname</i></a>": <i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to decode the specified command of
-				the <a href="glindex.html#EXEC entry">EXEC entry</a>	near the specified line due to <i>reason</i>.</dd>
+				the <a href="glindex.html#EXEC_entry">EXEC entry</a>	near the specified line due to <i>reason</i>.</dd>
 			<dt><b>String too long</b></dt>
       <dd>While parsing its configuration-file, the LDM server encountered a string that was longer than it could
 				handle.</dd>
       <dt><b>Couldn't add EXEC entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to add the
-				<a href="glindex.html#EXEC entry">EXEC entry</a> near the specified line to its internal list	due to
+				<a href="glindex.html#EXEC_entry">EXEC entry</a> near the specified line to its internal list	due to
 				<i>reason</i>.</dd>
 			<dt><b>waitpid: <i>reason</i></b></dt>
 			<dd>The waitpid() system-call failed due to <i>reason</i>.</dd>
@@ -247,7 +247,7 @@
       <dd>The fork() system-call failed		due to <i>reason</i>.</dd>
   		<dt><b>Couldn't add child PID to set: <i>reason</i></b></dt>
       <dd>The LDM server was unable to save the fact that it successfully forked a
-				<a href="glindex.html#child process">child process</a>	due to <i>reason</i>.</dd>
+				<a href="glindex.html#child_process">child process</a>	due to <i>reason</i>.</dd>
 			<dt><b>Can't create fd service.</b></dt>
       <dd>The LDM server was unable to create an <a href="glindex.html#RPC">RPC</a> service on socket.  This is,
 				basically, a failure of	the svcfd_create() RPC function.</dd>
@@ -274,62 +274,62 @@
 				is, basically, a failure of the setsockopt() system-call.</dd>
     </dl>
 
-    <h2 id="downstream">Message Templates for a <a href="glindex.html#downstream LDM">Downstream LDM</a></h2>
+    <h2 id="downstream">Message Templates for a <a href="glindex.html#downstream_LDM">Downstream LDM</a></h2>
     <h4>Notices</h4>
     <dl>
       <dt><b>Starting Up(<a href="#version"><i>maj.min.bug</i></a>): <a href="#uphost"><i>uphost</i></a>:<i>port</i>
 				<a href="#criteria"><i>criteria</i></a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> started.  It should connect to the specified
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> started.  It should connect to the specified
 				host using the  specified port and <a href="glindex.html#criteria">data-product selection-criteria</a>.</dd>
 			<dt><b>LDM-6 desired product-class: <a href="#criteria"><i>criteria</i></a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> has adjusted its
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> has adjusted its
 				<a href="glindex.html#criteria">data-product selection-criteria</a> according to the most recent
 				<a href="glindex.html#data-product">data-product</a> in the
 				<a href="glindex.html#product-queue">product-queue</a> that matches the startup selection-criteria.  This will
 				be the selection-criteria that will be used in the <a href="glindex.html#FEEDME">FEEDME</a> request to the
-				<a href="glindex.html#upstream LDM">upstream LDM</a></dd>
+				<a href="glindex.html#upstream_LDM">upstream LDM</a></dd>
 			<dt><b>hiya6:  <a href="#criteria"><i>criteria</i></a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> received a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> received a
 				<a href="glindex.html#HIYA">HIYA</a> message with the specified
 				<a href="glindex.html#criteria">data-product selection-criteria</a> from an
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>.</dd>
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>.</dd>
 			<dt><b>nhits (<i>n</i>) >= MAXHITS (<i>max</i>)</b></dt>
 			<dd>The number of <a href="glindex.html#ACCEPT entry"><code>ACCEPT</code> entries</a> in the LDM
 				configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>, that match an incoming
 				<a href="glindex.html#HIYA">HIYA</a> message exceeds a fixed limit.  This means that the configuration-file is
 				way too complicated.</dd>
 			<dt><b>Upstream LDM-6 on <a href="#uphost"><i>uphost</i></a> is willing to be a primary feeder</b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> successfully negotiated with the
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> on the specified host for getting
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> successfully negotiated with the
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> on the specified host for getting
 				<a href="glindex.html#data-product">data-product</a>s  via the primary
 				<a href="glindex.html#transfer-mode">transfer-mode</a>.</dd>
 			<dt><b>Upstream LDM-6 on <a href="#uphost"><i>uphost</i></a> is willing to be an alternate feeder</b></dt>
-      <dd>The  <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> successfully negotiated with the
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> on the specified host for getting
+      <dd>The  <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> successfully negotiated with the
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> on the specified host for getting
 				<a href="glindex.html#data-product">data-product</a>s  via the alternate
 				<a href="glindex.html#transfer-mode">transfer-mode</a>.</dd>
       <dt><b>Product reclassification by upstream LDM: <a href="#criteria">criteria</a> ->
 				<a href="#criteria">criteria</a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> received a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> received a
 				<a href="glindex.html#RECLASS">RECLASS</a> reply from the
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> in response to the downstream's
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> in response to the downstream's
 				<a href="glindex.html#FEEDME">FEEDME</a>request.</dd>
 			<dt><b>Switching data-product transfer-mode to <i>mode</i></b></dt>
-			<dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> has decided to change its
+			<dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> has decided to change its
 				<a href="glindex.html#data-product">data-product</a> <a href="glindex.html#transfer-mode">transfer-mode</a> to
 				<i>mode</i>.</dd>
       <dt><b>Couldn't connect to LDM on <a href="#uphost"><i>uphost</i></a> using either port <i>port</i> or
 				portmapper: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> couldn't connect to an
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>	due to <i>reason</i>.</dd>
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> couldn't connect to an
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>	due to <i>reason</i>.</dd>
 			<dt><b>nullproc_<i>n</i> failure to  <a href="#uphost"><i>uphost</i></a></b></dt>
       <dd>The <a href="glindex.html#NULLPROC">NULLPROC</a> message that the
-				<a href="glindex.html#downstream LDM">downstream LDM</a> <i>n</i> sent to the
-				<a href="glindex.html#upstream LDM">upstream LDM</a> <i>n</i>	in order to test the connection failed due to
+				<a href="glindex.html#downstream_LDM">downstream LDM</a> <i>n</i> sent to the
+				<a href="glindex.html#upstream_LDM">upstream LDM</a> <i>n</i>	in order to test the connection failed due to
 				<i>reason</i>.</dd>
 			<dt><b>Connection aborted</b></dt>
-      <dd>The connection between the <a href="glindex.html#downstream LDM 5">downstream LDM 5</a> subsystem and the
-				<a href="glindex.html#upstream LDM 5">upstream LDM 5</a>	was terminated because:</dd>
+      <dd>The connection between the <a href="glindex.html#downstream_LDM_5">downstream LDM 5</a> subsystem and the
+				<a href="glindex.html#upstream_LDM_5">upstream LDM 5</a>	was terminated because:</dd>
       <ul>
 				<li>The upstream LDM wasn't version 5;</li>
 				<li>An LDM wasn't running on the upstream host;</li>
@@ -343,17 +343,17 @@
 				<li>The downstream LDM 5 subsystem received an unexpected reply  from the upstream LDM.</li>
       </ul>
 			<dt><b>Connection closed by upstream LDM</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 5">upstream LDM 5</a> terminated the connection with the
-				<a href="glindex.html#downstream LDM 5">downstream LDM 5</a> subsystem (typically because of no matching
+      <dd>The <a href="glindex.html#upstream_LDM_5">upstream LDM 5</a> terminated the connection with the
+				<a href="glindex.html#downstream_LDM_5">downstream LDM 5</a> subsystem (typically because of no matching
 				<a href="glindex.html#ALLOW entry">ALLOW entry</a> in the upstream LDM's configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>).</dd>
 			<dt><b>Connection timed-out</b></dt>
-      <dd>The connection between the <a href="glindex.html#downstream LDM 5">downstream LDM 5</a> subsystem and the
-				<a href="glindex.html#upstream LDM 5">upstream LDM 5</a> was terminated due to an
+      <dd>The connection between the <a href="glindex.html#downstream_LDM_5">downstream LDM 5</a> subsystem and the
+				<a href="glindex.html#upstream_LDM_5">upstream LDM 5</a> was terminated due to an
 				<a href="glindex.html#RPC">RPC</a> timeout.</dd>
 			<dt><b>Connection refused by upstream LDM</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 5">upstream LDM 5</a> refused to connect with the
-				<a href="glindex.html#downstream LDM 5">downstream LDM 5</a>	subsystem because</dd>
+      <dd>The <a href="glindex.html#upstream_LDM_5">upstream LDM 5</a> refused to connect with the
+				<a href="glindex.html#downstream_LDM_5">downstream LDM 5</a>	subsystem because</dd>
       <ul>
         <li>There is no matching <a href="glindex.html#ALLOW entry">ALLOW entry</a> in the upstream LDM's
 					configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>; or</li>
@@ -364,7 +364,7 @@
       <dd>The file <b><i>path</i></b> that would hold the <a href="glindex.html#metadata">metadata</a> of the last,
 				successfully-received <a href="glindex.html#data-product">data-product</a> doesn't exist. This message should
 				only be seen when upgrading from version 6.5 (or earlier versions) or after modifying or adding a
-				<a href="glindex.html#REQUEST entry">REQUEST entry</a>in the LDM configuration-file and restarting the LDM.</dd>
+				<a href="glindex.html#REQUEST_entry">REQUEST entry</a>in the LDM configuration-file and restarting the LDM.</dd>
     </dl>
 
     <h4>Warnings</h4>
@@ -373,7 +373,7 @@
 				<a href="#metadata"><i>metadata</i></a></b></dt>
       <dd>The system clock on ingest host <i>uphost</i> (the computer that created the
 				<a href="glindex.html#data-product">data-product</a>) is fast relative to the local system clock.
-				If, during a reconnection attempt, a <a href="glindex.html#downstream LDM">downstream LDM</a> asks for data
+				If, during a reconnection attempt, a <a href="glindex.html#downstream_LDM">downstream LDM</a> asks for data
 				beginning with this <a href="glindex.html#data-product">data-product</a>, then the performance of the
 				<a href="glindex.html#LDM">LDM</a> on the local host will be significantly degraded. The solution is to check
 				the system clocks on the local and ingest hosts and to fix whichever one is incorrect by installing and running
@@ -382,14 +382,14 @@
 				is part of the Unidata <a href="glindex.html#IDD">IDD</a>, then you can email
 				<a href="mailto:support-idd@unidata.ucar.edu">support-idd at unidata.ucar.edu</a>.</dd>
       <dd>Because of the potential for receiving such data-products at a high rate, each
-				<a href="glindex.html#downstream LDM">downstream LDM</a> process will print only one such message every hour for
+				<a href="glindex.html#downstream_LDM">downstream LDM</a> process will print only one such message every hour for
 				any given ingest host (unless the process is in <a href="#introduction">verbose logging mode</a>, in which case
 				it will print a message for every such data-product). You can use a command like the following to extract a
 				unique list of such ingest hosts from an LDM log file:</dd>
 				<pre>
           grep -F 'WARN: Future' ldmd.log.1 | sort -u -t ' ' -k 10,10
         </pre>
-        <dd>This command could be executed, for example, via the  <a href="glindex.html#crontab utility"> <b>crontab
+        <dd>This command could be executed, for example, via the  <a href="glindex.html#crontab_utility"> <b>crontab
 					utility</b></a>  just after the  <a href="newlog.html">log files are rotated</a>  to notify the LDM
 					administrator of problems via email.</dd>
     </dl>
@@ -397,18 +397,18 @@
     <h4>Errors</h4>
     <dl>
 			<dt><b>Couldn't save product-information: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to save the
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to save the
 				<a href="glindex.html#metadata">metadata</a> of the just-arrived
 				<a href="glindex.html#data-product">data-product</a>	because of <i>reason</i>.</dd>
 			<dt><b>Couldn't save acceptance of data-product: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to save the fact that a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to save the fact that a
 				<a href="glindex.html#data-product">data-product</a> just arrived successfully because of <i>reason</i>.</dd>
 			<dt><b>pq_insert() failed: <i>reason</i>: <a href="#metadata"><i>metadata</i></a></b></dt>
-			<dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to insert a just-arrived
+			<dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to insert a just-arrived
 				<a href="glindex.html#data-product">data-product</a> into the
 				<a href="glindex.html#product-queue">product-queue</a> because of <i>reason</i>.</dd>
 			<dt><b>Couldn't save rejection of data-product: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to save the fact that a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to save the fact that a
 				<a href="glindex.html#data-product">data-product</a> just was not inserted into the
 				<a href="glindex.html#data-product">data-product</a> because it was a duplicate because of <i>reason</i>.</dd>
 			<dt><b>Couldn't open product-queue "<a href="#pathname"><i>pathname</i></a>" for writing: <i>reason</i></b></dt>
@@ -418,55 +418,55 @@
       <dd>The software module that saves the <a href="glindex.html#metadata">metadata</a> of just-arrived
 				<a href="glindex.html#data-product">data-product</a>s	could not be initialized because of <i>reason</i>.</dd>
 			<dt><b>Terminating due to system failure: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM">downstream LDM</a> cannot continue due to the operating-system
+      <dd>The <a href="glindex.html#downstream_LDM">downstream LDM</a> cannot continue due to the operating-system
 				failure <i>reason</i>.</dd>
 			<dt><b>Terminating due to LDM failure: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM">downstream LDM</a> cannot continue due to the LDM failure
+      <dd>The <a href="glindex.html#downstream_LDM">downstream LDM</a> cannot continue due to the LDM failure
 				<i>reason</i>.</dd>
 			<dt><b>Unexpected forn5() return: <i>errno</i></b></dt>
-      <dd>The  <a href="glindex.html#downstream LDM">downstream LDM</a> cannot continue due to an unanticipated
+      <dd>The  <a href="glindex.html#downstream_LDM">downstream LDM</a> cannot continue due to an unanticipated
 				operating-system error in the LDM 5 function <i>forn5()</i>.  The number of the error	is <i>errno</i>.</dd>
 			<dt><b>Couldn't allocate new product-information structure:  <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM">downstream LDM</a> was unable to allocate an object to hold the
+      <dd>The <a href="glindex.html#downstream_LDM">downstream LDM</a> was unable to allocate an object to hold the
 				<a href="glindex.html#metadata">metadata</a> of a <a href="glindex.html#data-product">data-product</a> due to
 				<i>reason</i>.</dd>
 			<dt><b>Couldn't allocate new product-class: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM">downstream LDM</a> was unable to allocate an object to hold its
+      <dd>The <a href="glindex.html#downstream_LDM">downstream LDM</a> was unable to allocate an object to hold its
 				<a href="glindex.html#criteria">data-product selection-criteria</a>	due to <i>reason</i>.</dd>
 			<dt><b>pqe_new() failed: <i>reason</i>: <a href="#metadata"><i>metadata</i></a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to determine if a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to determine if a
 				<a href="glindex.html#data-product">data-product</a> corresponding to the just-arrived
 				<a href="glindex.html#metadata">data-product metadata</a> of a <a href="glindex.html#COMINGSOON">COMINGSOON</a>
 				message already exists in the <a href="glindex.html#product-queue">product-queue</a> because of
 				<i>reason</i>.</dd>
 			<dt><b>Couldn't open product-queue "<a href="#pathname"><i>pathname</i></a>": for writing: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">upstream LDM 6</a> was unable to open the specified
+      <dd>The <a href="glindex.html#downstream_LDM_6">upstream LDM 6</a> was unable to open the specified
 				<a href="glindex.html#product-queue">product-queue</a> for writing	due to <i>reason</i>.</dd>
 			<dt><b>Couldn't initialize downstream LDM</b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> couldn't initialize itself in response to a
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> couldn't initialize itself in response to a
 				<a href="glindex.html#HIYA">HIYA</a> message from an
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a>.</dd>
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>.</dd>
 			<dt><b>Couldn't validate HIYA: <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#downstream LDM">downstream LDM</a> couldn't match a
-				<a href="glindex.html#HIYA">HIYA</a> message from an <a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+      <dd>The  <a href="glindex.html#downstream_LDM">downstream LDM</a> couldn't match a
+				<a href="glindex.html#HIYA">HIYA</a> message from an <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>
 				against its <a href="glindex.html#ACCEPT entry">ACCEPT entries</a>	due to <i>reason</i>.</dd>
 			<dt><b>Couldn't set product class: <a href="#criteria"><i>criteria</i></a>:  <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> couldn't set its internal
+      <dd>The  <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> couldn't set its internal
 				<a href="glindex.html#criteria">data-product selection-criteria</a> object to the specified value	due to
 				<i>reason</i>.</dd>
 			<dt><b>Couldn't clone product-information:  <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM">downstream LDM</a> couldn't make a copy of a
+      <dd>The <a href="glindex.html#downstream_LDM">downstream LDM</a> couldn't make a copy of a
 				<a href="glindex.html#metadata">data-product's metadata</a>	due to <i>reason</i>.</dd>
 			<dt><b>Request not allowed. Does it overlap with another?</b></dt>
-			<dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> reduced the
+			<dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> reduced the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> given to it to an empty subscription after
 				first reducing it by the relevant <a href="glindex.html#ALLOW entry">ALLOW entries</a> in the upstream LDM's
 				configuration-file and then by the subscriptions from other, existing
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>s that are executing on the same host. You should
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>s that are executing on the same host. You should
 				check your LDM configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>, for overlapping
-				<a href="glindex.html#REQUEST entry">REQUESTs</a> entries	to the upstream host.</dd>
+				<a href="glindex.html#REQUEST_entry">REQUESTs</a> entries	to the upstream host.</dd>
 			<dt><b>Product too big: <a href="#metadata"><i>metadata</i></a></b></dt>
-      <dd>The <a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was unable to insert a just-arrived
+      <dd>The <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was unable to insert a just-arrived
 				<a href="glindex.html#data-product">data-product</a> into the
 				<a href="glindex.html#product-queue">product-queue</a> because it was larger than the largest
 				<a href="glindex.html#data-product">data-product</a> that the
@@ -474,155 +474,155 @@
 				data-products	or increase the size of your product-queue.</dd>
 		</dl>
 
-    <h2 id="upstream">Message Templates for an <a href="glindex.html#upstream LDM">Upstream LDM</a></h2>
-    <p>Log-messages from <a href="glindex.html#upstream LDM">upstream LDM</a>s usually have the string "(feed)" or
+    <h2 id="upstream">Message Templates for an <a href="glindex.html#upstream_LDM">Upstream LDM</a></h2>
+    <p>Log-messages from <a href="glindex.html#upstream_LDM">upstream LDM</a>s usually have the string "(feed)" or
 			"(noti)" in the <a href="#util"><i>util</i></a> field of the log-message, corresponding to
 			<a href="glindex.html#FEEDME">FEEDME</a> and <a href="glindex.html#NOTIFYME">NOTIFYME</a> requests from the
-			<a href="glindex.html#downstream LDM">downstream LDM</a>, respectively.</p>
+			<a href="glindex.html#downstream_LDM">downstream LDM</a>, respectively.</p>
 
     <h4>Notices</h4>
     <dl>
       <dt><b>Starting Up(<a href="#version"><i>maj.min.bug</i></a>/6):  <a href="#criteria"><i>criteria</i></a>,
 				<i>transfer-mode</i></b></dt>
-      <dd>The feeding <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> is starting in response to a
+      <dd>The feeding <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> is starting in response to a
 				<a href="glindex.html#FEEDME">FEEDME</a> request from a
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>. The specified
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>. The specified
 				<a href="glindex.html#criteria">data-product selection-criteria</a> will be used to select
 				<a href="glindex.html#data-product">data-product</a>s from the
 				<a href="glindex.html#product-queue">product-queue</a>. Such products will be further filtered by the
-				<a href="glindex.html#upstream filter">upstream filter</a>. The specified
+				<a href="glindex.html#upstream_filter">upstream filter</a>. The specified
 				<a href="glindex.html#transfer-mode">transfer-mode</a> will be used to send the products.</dd>
 
 			<dt><b>Starting Up(<a href="#version"><i>maj.min.bug</i></a>/6):  <a href="#criteria"><i>criteria</i></a></b></dt>
       <dd>The <a href="glindex.html#NOTIFICATION">NOTIFICATION</a>-using
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> is starting in response to a
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> is starting in response to a
 				<a href="glindex.html#FEEDME">FEEDME</a> request from a
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>. The specified
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>. The specified
 				<a href="glindex.html#criteria">data-product selection-criteria</a> will be used to select
 				<a href="glindex.html#data-product">data-product</a>s from the
 				<a href="glindex.html#product-queue">product-queue</a>. Such products will be further filtered by the
-				<a href="glindex.html#upstream filter">upstream filter</a>.</dd>
+				<a href="glindex.html#upstream_filter">upstream filter</a>.</dd>
 			<dt><b>Restricting request: <a href="#criteria"><i>criteria</i> ->  <i>criteria</i></a></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> determined that the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was not allowed to receive the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> determined that the
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was not allowed to receive the
 				<a href="glindex.html#feedtype">feedtype</a> that it requested, based on
 				<a href="glindex.html#ALLOW entry">ALLOW entries</a> in the LDM configuration-file,
-				<a href="glindex.html#ldmd.conf">ldmd.conf</a>. The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a>,
+				<a href="glindex.html#ldmd.conf">ldmd.conf</a>. The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>,
 				consequently, restricted the <a href="glindex.html#criteria">data-product selection-criteria</a> to that
 				specified.</dd>
 			<dt><b>Terminated obsolete upstream LDM <i>LDM_spec</i></b></dt>
-      <dd>The newly-created <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> process determined that an earlier
+      <dd>The newly-created <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> process determined that an earlier
 				upstream LDM process was supplying a subset (either proper or improper) of the requested data to the same
 				downstream host; consequently, the other process was terminated.</dd>
 			<dt><b>topo: <a href="#downhost"><i>downhost</i></a> <i>upfilter</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> will send the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> will send the
 				<a href="glindex.html#data-product">data-product</a>s specified by the
-				<a href="glindex.html#upstream filter">upstream filter</a> to the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> on the specified host.</dd>
+				<a href="glindex.html#upstream_filter">upstream filter</a> to the
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> on the specified host.</dd>
 			<dt><b>Invalid signature (<i>signature</i>)</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to decode the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to decode the
 				<a href="glindex.html#signature">data-product signature</a> encoded in the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> of a request for data from am
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>.</dd>
 			<dt><b>Invalid signature (<i>signature</i>): <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to decode the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to decode the
 				<a href="glindex.html#signature">data-product signature</a> encoded in the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> of a request for data from a
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> due to <i>reason</i>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> due to <i>reason</i>.</dd>
 			<dt><b>Data-product with signature <i>sig</i> wasn't found in product-queue</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to find the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to find the
 				<a href="glindex.html#data-product">data-product</a> whose signature was encoded in the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> in the request-for-data from the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>. The upstream LDM will use the rest of the
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>. The upstream LDM will use the rest of the
 				selection-criteria to determine which data-products to send.</dd>
     </dl>
 
     <h4>Warnings</h4>
     <dl>
 			<dt><b>Couldn't terminate obsolete upstream LDM <i>LDM_spec</i></b></dt>
-      <dd>The newly-created <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> process was unable to terminate an
+      <dd>The newly-created <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> process was unable to terminate an
 			 earlier upstream LDM 6 process that was supplying a subset (either proper or improper) of the requested data to
 			 the same downstream host.</dd>
 			<dt><b>Subscription reduced by one or more ALLOW entries: <i>desired</i> -> <i>allowed</i></b></dt>
       <dd>The <a href="glindex.html#criteria">data-product selection-criteria</a> from the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was reduced by the ALLOW entries in the LDM
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was reduced by the ALLOW entries in the LDM
 				configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>.</dd>
 			<dt><b>Subscription reduced by one or more existing subscriptions: <i>desired</i> -> <i>allowed</i></b></dt>
       <dd>The <a href="glindex.html#criteria">data-product selection-criteria</a> from the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> was reduced by existing previous subscriptions
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was reduced by existing previous subscriptions
 				from the same host. in order to reduce bandwidth usage by the upstream site.</dd>
     </dl>
 
     <h4>Errors</h4>
     <dl>
 			<dt><b>Couldn't duplicate product-class: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to make a copy of the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to make a copy of the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> of a request for data from a
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> due to <i>reason</i>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> due to <i>reason</i>.</dd>
 			<dt><b>Couldn't compute wanted/allowed product intersection: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to compute the intersection of the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to compute the intersection of the
 				set of requested <a href="glindex.html#data-product">data-product</a>s with the set of allowed
 				<a href="glindex.html#data-product">data-product</a>s	due to <i>reason</i>.</dd>
 			<dt><b>Couldn't duplicate socket <i>n</i>:  <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to duplicate the specified socket	due
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to duplicate the specified socket	due
 				to <i>reason</i>.</dd>
 			<dt><b>Invalid product pattern: <a href="#criteria"><i>criteria</i></a></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> encountered an invalid
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> encountered an invalid
 				<a href="glindex.html#ERE">ERE</a> in the specified <a href="glindex.html#criteria">data-product
-					selection-criteria</a> from the	<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</dd>
+					selection-criteria</a> from the	<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>.</dd>
 			<dt><b>Couldn't get "upstream" filter: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to obtain its
-				<a href="glindex.html#upstream filter">upstream filter</a>due to <i>reason</i>.</dd>
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to obtain its
+				<a href="glindex.html#upstream_filter">upstream filter</a>due to <i>reason</i>.</dd>
 			<dt><b>Upstream filter prevents data-transfer</b></dt>
-      <dd>The  <a href="glindex.html#upstream filter">upstream filter</a>  of the
-				<a href="glindex.html#upstream LDM 6">upstream LDM 6</a> prevented the transfer of all
+      <dd>The  <a href="glindex.html#upstream_filter">upstream filter</a>  of the
+				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> prevented the transfer of all
 				<a href="glindex.html#data-product">data-product</a>s. You should either modify the upstream filter to allow
 				some transfer or remove the relevant <a href="glindex.html#ALLOW entry">ALLOW entry</a>	entirely.</dd>
 			<dt><b>svc_sendreply(...) failure</b></dt>
-			<dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to send an
+			<dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to send an
 				<a href="glindex.html#RPC">RPC</a> reply to the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>.</dd>
 			<dt><b>Couldn't free arguments</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to free the arguments associated with
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to free the arguments associated with
 				an <a href="glindex.html#RPC">RPC</a> message from a
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>.</dd>
 			<dt><b>fcntl(F_GETFL) failure: <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to get the flags associated with its
+      <dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to get the flags associated with its
 				socket due to <i>reason</i>.This is, basically, a failure of the fcntl() system-call.</dd>
 			<dt><b>fcntl(F_SETFL) failure: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to set the flags associated with its
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to set the flags associated with its
 				socket due to <i>reason</i>. This is, basically, a failure of the fcntl() system-call.</dd>
 			<dt><b>Couldn't connect to downstream LDM on <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#RPC">RPC</a> layer of the <a href="glindex.html#upstream LDM 6">upstream LDM 6</a>
+      <dd>The <a href="glindex.html#RPC">RPC</a> layer of the <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>
 				was unable to connect to the <a href="glindex.html#RPC">RPC</a> layer of the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> on the specified host due to <i>reason</i>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> on the specified host due to <i>reason</i>.</dd>
 			<dt><b>Couldn't set product-class in queue "<a href="#pathname"><i>pathname</i></a>": <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to set the
+      <dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to set the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> in the specified
 				<a href="glindex.html#product-queue">product-queue</a> due to <i>reason</i>.</dd>
 			<dt><b>Couldn't initialize autoshift module: <i>reason</i></b></dt>
-			<dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to initialize the
+			<dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to initialize the
 				<a href="glindex.html#autoshift">autoshift</a> module	due to <i>reason</i>.</dd>
 			<dt><b>Failure: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to feed or notify its
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> due to <i>reason</i>.</dd>
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to feed or notify its
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> due to <i>reason</i>.</dd>
 			<dt><b>Couldn't flush connection: <i>reason</i></b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to flush the
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to flush the
 				<a href="glindex.html#TCP">TCP</a> connection to the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> due to <i>reason</i>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> due to <i>reason</i>.</dd>
 			<dt><b>Product send failure: <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> was unable to send a
+      <dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to send a
 				<a href="glindex.html#data-product">data-product</a> to the
-				<a href="glindex.html#downstream LDM 6">downstream LDM 6</a> due to <i>reason</i>.</dd>
+				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> due to <i>reason</i>.</dd>
 			<dt><b>The product-queue "<a href="#pathname"><i>pathname</i></a>" is inconsistent</b></dt>
-      <dd>The <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> determined that the specified
+      <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> determined that the specified
 				<a href="glindex.html#product-queue">product-queue</a> was in an inconsistent state (i.e., corrupt).  The queue
 				will have to be deleted and recreated.</dd>
 			<dt><b>Couldn't open product-queue "<a href="#pathname"><i>pathname</i></a>": <i>reason</i></b></dt>
-     <dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a> couldn't open the specified
+     <dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> couldn't open the specified
 			 <a href="glindex.html#product-queue">product-queue</a>	due to <i>reason</i>.</dd>
 			<dt><b>Couldn't adjust product-class specification (<a href="#criteria">criteria</a>): <i>reason</i></b></dt>
-      <dd>The  <a href="glindex.html#upstream LDM 6">upstream LDM 6</a>  couldn't adjust its
+      <dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>  couldn't adjust its
 				<a href="glindex.html#criteria">data-product selection-criteria</a>		due to <i>reason</i>.</dd>
     </dl>
 
@@ -723,7 +723,7 @@
     <h2>Key</h2>
     <dl>
 			<dt id="blockno"><i>blockno</i></dt>
-			<dd>Is the origin-0 block-number of an  <a href="glindex.html#LDM 5">LDM 5</a>
+			<dd>Is the origin-0 block-number of an  <a href="glindex.html#LDM_5">LDM 5</a>
 				<a href="glindex.html#BLKDATA">BLKDATA</a> message.</dd>
       <dt id="child-pid"><i>child-pid</i></dt>
 			<dd>Is the UNIX process-ID number of the relevant child process.</dd>
@@ -749,7 +749,7 @@
       <dt id="DD"><i>DD</i></dt>
 			<dd>Is the day of the month when the message was generated (<i>e.g.</i>, 08).</dd>
       <dt id="downhost"><i>downhost</i></dt>
-      <dd>Is the <a href="glindex.html#downstream host">downstream host</a>. This can be a hostname, a fully-qualified
+      <dd>Is the <a href="glindex.html#downstream_host">downstream host</a>. This can be a hostname, a fully-qualified
 				hostname, or an IP address.</dd>
       <dt id="feedtype"><i>feedtype</i></dt>
       <dd>Is the <a href="glindex.html#data-product">data-product</a>	<a href="glindex.html#feedtype">feedtype</a>.</dd>
@@ -772,24 +772,24 @@
       <dt id="metadata"><i>metadata</i></dt>
       <dd>Is the <a href="glindex.html#metadata"><i>metadata</i></a> of a
 				<a href="glindex.html#data-product">data-product</a>  in the form
-				<i>[<a href="glindex.html#signature">signature</a>] <a href="glindex.html#product size">size</a>
+				<i>[<a href="glindex.html#signature">signature</a>] <a href="glindex.html#product_size">size</a>
 					<a href="glindex.html#creation-time">creation-time</a> <a href="glindex.html#feedtype">feedtype</a>
 					sequence_number <a href="glindex.html#identifier">identifier</a></i></dd>
       <dt id="prod-ID"><i>prod-ID</i></dt>
 			<dd>Is the <a href="glindex.html#identifier">data-product identifier</a>.</dd>
       <dt id="uphost"><i>uphost</i></dt>
-      <dd>Is the <a href="glindex.html#upstream host">upstream host</a> identifier.  This can be a hostname, a
+      <dd>Is the <a href="glindex.html#upstream_host">upstream host</a> identifier.  This can be a hostname, a
 				fully-qualified hostname, or an IP address.</dd>
       <dt id="util"><i>util</i></dt>
       <dd>Is the identifier of the utility that generated the message.  This is usually the name of the program
 				(<i>e.g.</i>, <a href="glindex.html#ldmd">ldmd</a>, <a href="glindex.html#pqact">pqact</a>).  For a
-				<a href="glindex.html#downstream LDM">downstream LDM</a>, however, the identifier is the name of computer that's
-				running the <a href="glindex.html#upstream LDM">upstream LDM</a>. For an
-				<a href="glindex.html#upstream LDM">upstream LDM</a>,	the identifier has the form
+				<a href="glindex.html#downstream_LDM">downstream LDM</a>, however, the identifier is the name of computer that's
+				running the <a href="glindex.html#upstream_LDM">upstream LDM</a>. For an
+				<a href="glindex.html#upstream_LDM">upstream LDM</a>,	the identifier has the form
 				<code><a href="#downhost"><i>downhost</i></a>(<i>mode</i>)</code> where:</dd>
         <dl>
           <dt><i>mode</i></dt>
-          <dd>Is (typically) "feed" or (atypically) "noti" to indicate that the <a href="glindex.html#upstream LDM">
+          <dd>Is (typically) "feed" or (atypically) "noti" to indicate that the <a href="glindex.html#upstream_LDM">
 						upstream LDM</a> results from a <a href="glindex.html#FEEDME">FEEDME</a> or
 						<a href="glindex.html#NOTIFYME">NOTIFYME</a> request, respectively.</dd>
         </dl>

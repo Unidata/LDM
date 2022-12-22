@@ -17,7 +17,7 @@
       <li><a href="#ingesters">Data-Product Ingesters</a></li>
       <li><a href="#decoders">Data-Product Decoders</a></li>
       <li><a href="#ldmadmin">The ldmadmin Script</a></li>
-      <li><a href="#ancillary utilities">Ancillary Utilities of the LDM</a></li>
+      <li><a href="#ancillary_utilities">Ancillary Utilities of the LDM</a></li>
     </ul>
 
     <h2 id="ldmd">The LDM Program ldmd</h2>
@@ -27,14 +27,14 @@
       <li>Configures itself according to the LDM configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>.</li>
 			<li>Starts-up the LDM <a href="glindex.html#ingester">ingester</a>s.</li>
-      <li>Forks itself to create  <a href="glindex.html#downstream LDM">downstream LDM</a>s.</li>
+      <li>Forks itself to create  <a href="glindex.html#downstream_LDM">downstream LDM</a>s.</li>
       <li>Starts-up the <a href="glindex.html#pqact">pqact</a>  processes.</li>
       <li>Validates <a href="glindex.html#FEEDME">FEEDME</a> requests by
-				<a href="glindex.html#downstream LDM">downstream LDM</a>s and forks itself to create corresponding
-				<a href="glindex.html#upstream LDM">upstream LDM</a>  processes.</li>
+				<a href="glindex.html#downstream_LDM">downstream LDM</a>s and forks itself to create corresponding
+				<a href="glindex.html#upstream_LDM">upstream LDM</a>  processes.</li>
       <li>Validates <a href="glindex.html#HIYA">HIYA</a> connections by
-				<a href="glindex.html#upstream LDM">upstream LDM</a>s and forks itself to create corresponding
-				<a href="glindex.html#downstream LDM">downstream LDM</a>processes.  This is an uncommon operation.</li>
+				<a href="glindex.html#upstream_LDM">upstream LDM</a>s and forks itself to create corresponding
+				<a href="glindex.html#downstream_LDM">downstream LDM</a>processes.  This is an uncommon operation.</li>
     </ul>
 
     <h2 id="pqact">The Utility pqact</h2>
@@ -42,13 +42,13 @@
 			<a href="glindex.html#product-queue">product-queue</a> and disposes of them according to user-configurable
 			instructions.  One or more instances of this program are, typically, started by the top-level
 			<a href="glindex.html#ldmd">ldmd</a> process as the result of
-			<a href="glindex.html#EXEC entry">EXEC entries</a> in the LDM configuration-file,
+			<a href="glindex.html#EXEC_entry">EXEC entries</a> in the LDM configuration-file,
 			<a href="glindex.html#ldmd.conf">ldmd.conf</a>. Instructions for the disposition of data-products are contained in
 			a	<a href="glindex.html#pqact.conf">pqact configuration-file</a>.</p>
     <p>Certain instructions in the <a href="glindex.html#pqact.conf">pqact configuration-file</a> cause the pqact
-			utility to spawn <a href="glindex.html#child process">child process</a>s to aid in the disposition of
-			data-products.  These instructions are the <a href="glindex.html#pqact PIPE action">pqact PIPE action</a> and the
-			<a href="glindex.html#pqact EXEC action">pqact EXEC action</a>.</p>
+			utility to spawn <a href="glindex.html#child_process">child process</a>s to aid in the disposition of
+			data-products.  These instructions are the <a href="glindex.html#pqact_PIPE_action">pqact PIPE action</a> and the
+			<a href="glindex.html#pqact_EXEC_action">pqact EXEC action</a>.</p>
     <p>Typically, pqact processes are terminated by reception of a <a href="glindex.html#SIGINT">SIGINT</a> or
 			<a href="glindex.html#SIGTERM">SIGTERM</a> from the top-level <a href="glindex.html#ldmd">ldmd</a> process.</p>
     <p>When a pqact process terminates, it saves the <a href="glindex.html#insertion-time">insertion-time</a> of the
@@ -64,15 +64,15 @@
 			characteristics:</p>
     <ul>
       <li>It should send a <a href="glindex.html#SIGCONT">SIGCONT</a> signal to its
-				<a href="glindex.html#process group">process group</a> whenever it inserts a
+				<a href="glindex.html#process_group">process group</a> whenever it inserts a
 				<a href="glindex.html#data-product">data-product</a> into the
 				<a href="glindex.html#product-queue">product-queue</a>.</li>
 			<li>In general, it should be started by the top-level <a href="glindex.html#ldmd">ldmd</a> process as the result
-				of an <a href="glindex.html#EXEC entry">EXEC entry</a> in the LDM configuration-file,
+				of an <a href="glindex.html#EXEC_entry">EXEC entry</a> in the LDM configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>, so that the the LDM
-				<a href="glindex.html#process group">process group</a> will immediately act upon the new data-product.  Failure
+				<a href="glindex.html#process_group">process group</a> will immediately act upon the new data-product.  Failure
 				to be started in this way will result in larger than necessary
-				<a href="glindex.html#data-product latency">data-product latency</a>.</li>
+				<a href="glindex.html#data-product_latency">data-product latency</a>.</li>
         <li>In general, it should never self-terminate; instead, it should terminate upon reception of a
 					<a href="glindex.html#SIGINT">SIGINT</a> or <a href="glindex.html#SIGTERM">SIGTERM</a>, which will be sent to
 					it from the top-level <a href="glindex.html#ldmd">ldmd</a> process.</li>
@@ -97,20 +97,20 @@
 
     <h2 id="decoders">Data-Product Decoders</h2>
     <p>An LDM <a href="glindex.html#data-product">data-product</a> decoder is a program that reads 
-			<a href="glindex.html#data-product data">data-product data</a> from 
-			<a href="glindex.html#standard input">standard input</a> and disposes of the data in some fashion -- often
+			<a href="glindex.html#data-product_data">data-product data</a> from
+			<a href="glindex.html#standard_input">standard input</a> and disposes of the data in some fashion -- often
 			by writing the data into a file that is specific to an analysis package (<i>e.g.</i>, 
 			<a href="glindex.html#McIDAS">McIDAS</a> or <a href="glindex.html#GEMPAK">GEMPAK</a>). Such programs have the 
 			following characteristics:</p>
     <ul>
       <li>They are typically started by a  <a href="glindex.html#pqact">pqact</a> process as the result of 
-				<a href="glindex.html#pqact PIPE action">PIPE action</a>s in the process's
+				<a href="glindex.html#pqact_PIPE_action">PIPE action</a>s in the process's
 				<a href="glindex.html#pqact.conf">pqact configuration-file</a>.</li>
       <li>Their standard input is a read-only pipe with the parent <a href="glindex.html#pqact">pqact</a> process but 
 				their standard output and standard error do not exist (but see below).</li>
       <li>They self-terminate if no data has been received within a certain period of time (<i>e.g.</i>, 10 minutes)
 				or upon reception of a <a href="glindex.html#SIGINT">SIGINT</a> or <a href="glindex.html#SIGTERM">SIGTERM</a>
-				from the <a href="glindex.html#pqact">pqact</a>	<a href="glindex.html#parent process">parent process</a>.</li>
+				from the <a href="glindex.html#pqact">pqact</a>	<a href="glindex.html#parent_process">parent process</a>.</li>
       <li>Due to a limitation on the number of output-files that the <a href="glindex.html#pqact">pqact</a> program can 
 				have open at one time, decoders should</li>
       <ul>
@@ -159,7 +159,7 @@
 			option.</p>
 
 		<h2 id="ldmadmin">The ldmadmin Script</h2>
-    <p>The ldmadmin utility is a <a href="glindex.html#perl utility"> Perl</a>-5 script intended for high-level 
+    <p>The ldmadmin utility is a <a href="glindex.html#perl_utility"> Perl</a>-5 script intended for high-level
 			administration of an <a href="glindex.html#LDM">LDM</a> system.  The script acts as a facade for more primitive 
 			utilities -- coordinating their use for the sake of convenience.  The things you can do with the ldmadmin script 
 			include the following:</p>
@@ -221,11 +221,11 @@
       <tr>
         <td>ldmadmin check</td>
         <td>Check that everything is OK with the LDM system. Usually executed periodically via the
-					<a href="glindex.html#crontab utility">crontab utility</a>.</td>
+					<a href="glindex.html#crontab_utility">crontab utility</a>.</td>
       </tr>
     </table>
 
-    <h2 id="ancillary utilities">Ancillary Utilities of the LDM</h2>
+    <h2 id="ancillary_utilities">Ancillary Utilities of the LDM</h2>
     <p>Utilities that are included in the <a href="glindex.html#LDM">LDM</a> package but are less important than the
 			separately-documented ones above include the following:</p>
     <table>
@@ -236,25 +236,25 @@
       <tr>
         <td>feedme</td>
         <td>Requests <a href="glindex.html#data-product">data-product</a>s from an
-					<a href="glindex.html#upstream LDM">upstream LDM</a> and writes them to
-					<a href="glindex.html#standard output">standard output</a>.
+					<a href="glindex.html#upstream_LDM">upstream LDM</a> and writes them to
+					<a href="glindex.html#standard_output">standard output</a>.
 					<a href="glindex.html#deprecated"><b>Deprecated</b></a>.</td>
       </tr>
       <tr>
         <td>ldmping</td>
-        <td>Temporarily connects to an <a href="glindex.html#upstream LDM">upstream LDM</a> to	test its
+        <td>Temporarily connects to an <a href="glindex.html#upstream_LDM">upstream LDM</a> to	test its
 					availability.</td>
       </tr>
       <tr>
         <td>ldmsend</td>
         <td>Sends files as LDM <a href="glindex.html#data-product">data-product</a>s to a
-					<a href="glindex.html#downstream LDM">downstream LDM</a>  using <a href="glindex.html#HEREIS">HEREIS</a>
+					<a href="glindex.html#downstream_LDM">downstream LDM</a>  using <a href="glindex.html#HEREIS">HEREIS</a>
 					messages.</td>
       </tr>
       <tr>
         <td>notifyme</td>
         <td>Requests <a href="glindex.html#metadata">data-product metadata</a> from an
-					<a href="glindex.html#upstream LDM">upstream LDM</a> and, optionally, writes the metadata to an
+					<a href="glindex.html#upstream_LDM">upstream LDM</a> and, optionally, writes the metadata to an
 					<a href="glindex.html#logfile">LDM   logfile</a>.</td>
       </tr>
       <tr>
@@ -265,7 +265,7 @@
         <td>pqcat</td>
         <td>Reads once through a <a href="glindex.html#product-queue">product-queue</a> and writes the
 					<a href="glindex.html#data-product">data-product</a>s to a file or to
-					<a href="glindex.html#standard output">standard output</a>. Useful for ensuring that a
+					<a href="glindex.html#standard_output">standard output</a>. Useful for ensuring that a
 					<a href="glindex.html#product-queue">product-queue</a> isn't corrupt.</td>
       </tr>
       <tr>
@@ -297,7 +297,7 @@
         <td>pqsend</td>
         <td>Reads a <a href="glindex.html#product-queue">product-queue</a> and sends the
 					<a href="glindex.html#data-product">data-product</a>s to a
-					<a href="glindex.html#downstream LDM">downstream LDM</a>.Waits for more
+					<a href="glindex.html#downstream_LDM">downstream LDM</a>.Waits for more
 					<a href="glindex.html#data-product">data-product</a>s.</td>
       </tr>
       <tr>
@@ -319,12 +319,12 @@
       </tr>
       <tr>
         <td>regutil</td>
-        <td>Manages the <a href="glindex.html#LDM registry">LDM registry</a>.</td>
+        <td>Manages the <a href="glindex.html#LDM_registry">LDM registry</a>.</td>
       </tr>
       <tr>
         <td>rtstats</td>
         <td>Monitors the <a href="glindex.html#product-queue">product-queue</a> and periodically sends summary
-					statistics to a <a href="glindex.html#downstream LDM">downstream LDM</a> (which, for the
+					statistics to a <a href="glindex.html#downstream_LDM">downstream LDM</a> (which, for the
 					<a href="glindex.html#IDD">IDD</a>, is at the <a href="glindex.html#UPC">Unidata Program Center</a>).</td>
       </tr>
       <tr>
@@ -340,8 +340,8 @@
       </tr>
       <tr>
         <td>uldbutil</td>
-				<td>Accesses the <a href="glindex.html#upstream ldm database">transitory database</a> of
-					<a href="glindex.html#upstream LDM">upstream LDM</a> processes.</td>
+				<td>Accesses the <a href="glindex.html#upstream_ldm_database">transitory database</a> of
+					<a href="glindex.html#upstream_LDM">upstream LDM</a> processes.</td>
       </tr>
     </table>
 
