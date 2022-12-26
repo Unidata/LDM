@@ -2,7 +2,7 @@
     DevOps:
         * Enhanced "pre-commit" hook to vet the version ID in CHANGE_LOG and ensure a timestamp
           in CHANGE_LOG when committing to the main branch
-        * Enhanced "OnPush.yml" to vet the version ID in CHANGE_LOG and "configure.ac".
+        * Enhanced "OnPush.yml" to vet the version ID in CHANGE_LOG and "configure.ac"
 
 6.14.3  2022-12-22T13:34:03-0700
     Documentation:

@@ -31,6 +31,7 @@ jobs:
 #     "devel" and "main" branches respectively. Additionally, the second word in CHANGE_LOG must be
 #     a valid timestamp for a push to the "main" branch.
       - name: Vet CHANGE_LOG
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           versionId=`awk '{print $1;exit}' CHANGE_LOG`
           if test ${{ github.ref_name }} = devel; then
@@ -44,6 +45,7 @@ jobs:
 
 #     File "configure.ac" must have the same version identifier as CHANGE_LOG
       - name: Vet configure.ac
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           versionId=`awk '{print $1;exit}' CHANGE_LOG`
           egrep "^AC_INIT.*\[$versionId\]" configure.ac >/dev/null || exit 1
