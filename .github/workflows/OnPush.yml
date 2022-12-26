@@ -96,11 +96,46 @@ jobs:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}
         run: |
-          version=`ls *.gz | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
+          # Publish the tarball
+          tarball=`ls *.gz`
+          version=`echo $tarball | sed -r 's/ldm-([0-9]+(\.[0-9]+)*)\.tar.gz/\1/'`
           curl -u "$USER":"$PW" \
-            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
-            -T *.gz https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
+            -T $tarball https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
+            -T $tarball https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
 
+          # Update the release information file if necessary
+          wget https://artifacts.unidata.ucar.edu/repository/downloads-ldm/release_info.json
+          if ! grep '"version": "'$version'",' release_info.json; then
+            sed -n '1,/"releases":/p' release_info.json >release_info.json.new
+            cat <<EOF >>release_info.json.new
+              {
+                "version": "$version",
+                "releaseDate": "`date +%Y-%m-%d`",
+                "status": "current",
+                "description": "",
+                "baseURL": "https://downloads.unidata.ucar.edu/ldm/$version/",
+                "resources": {
+                  "jar": {
+                    "type": "application",
+                    "package": "$tarball",
+                    "name": "GZipped TAR file",
+                    "hash": {
+                      "MD5": "",
+                      "SHA1": "",
+                      "SHA256": ""
+                    },
+                    "info": ""
+                  }
+                }
+              },
+          EOF
+            sed -n '/"releases":/,$p' release_info.json | sed '1d' | sed 's/current/previous/' \
+              >>release_info.json.new
+            curl -u "$USER":"$PW" -T release_info.json.new \
+              https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/release_info.json
+          fi
+
+          # Publish the documentation
           make install
           cd /tmp/ldm/share/doc/ldm
           find . -type f | sed 's/^\.\///' | while read path; do
