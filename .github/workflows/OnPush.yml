@@ -19,6 +19,9 @@ jobs:
         os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
 #        os: [ubuntu-22.04]
 
+    env:
+      MAIN_OS: ubuntu-22.04
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -31,7 +34,7 @@ jobs:
 #     "devel" and "main" branches respectively. Additionally, the second word in CHANGE_LOG must be
 #     a valid timestamp for a push to the "main" branch.
       - name: Vet CHANGE_LOG
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == $MAIN_OS
         run: |
           versionId=`awk '{print $1;exit}' CHANGE_LOG`
           if test ${{ github.ref_name }} = devel; then
@@ -45,7 +48,7 @@ jobs:
 
 #     File "configure.ac" must have the same version identifier as CHANGE_LOG
       - name: Vet configure.ac
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == $MAIN_OS
         run: |
           versionId=`awk '{print $1;exit}' CHANGE_LOG`
           egrep "^AC_INIT.*\[$versionId\]" configure.ac >/dev/null || exit 1
@@ -68,7 +71,7 @@ jobs:
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
       - name: Initialize CodeQL
-        if: matrix.os == 'ubuntu-22.04' &&  github.ref_name == 'devel'
+        if: matrix.os == $MAIN_OS &&  github.ref_name == 'devel'
         uses: github/codeql-action/init@v2
         with:
           languages: "cpp"
@@ -85,15 +88,15 @@ jobs:
           fi
 
       - name: Perform CodeQL Analysis
-        if: matrix.os == 'ubuntu-22.04' &&  github.ref_name == 'devel'
+        if: matrix.os == $MAIN_OS &&  github.ref_name == 'devel'
         uses: github/codeql-action/analyze@v2
         with:
           category: "cpp"
 
-#        if: matrix.os == 'ubuntu-22.04'
+#        if: matrix.os == $MAIN_OS
 
       - name: Publish Source Distribution and Documentation
-        if: matrix.os == 'ubuntu-22.04' && github.ref_name == 'main'
+        if: matrix.os == $MAIN_OS && github.ref_name == 'main'
         env:
           USER: ${{ secrets.NEXUS_USER }}
           PW: ${{ secrets.NEXUS_PW }}
