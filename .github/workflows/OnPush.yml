@@ -19,6 +19,7 @@ jobs:
         os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
 #        os: [ubuntu-22.04]
 
+#   The name of the operating system for performing single O/S actions
     env:
       MAIN_OS: ubuntu-22.04
 
