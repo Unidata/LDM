@@ -109,7 +109,7 @@ jobs:
             -T $tarball https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/ \
             -T $tarball https://artifacts.unidata.ucar.edu/repository/downloads-ldm/current/
 
-          # Update the tarball information file if necessary
+          # Update the information file on the source distributions if necessary
           wget https://artifacts.unidata.ucar.edu/repository/downloads-ldm/release_info.json
           if ! grep '"version": "'$version'",' release_info.json; then
             sed -n '1,/"releases":/p' release_info.json >release_info.json.new
@@ -149,3 +149,28 @@ jobs:
               -T $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/$version/$path \
               -T $path https://artifacts.unidata.ucar.edu/repository/docs-ldm/current/$path
           done
+
+          # Update the versions file on the documentation if necessary
+          filename=versions.html
+          wget https://artifacts.unidata.ucar.edu/repository/docs-ldm/$filename
+          if ! grep -w '"version": "'$version'",' $filename; then
+            sed -n '1,/<tr>/p' $filename >$filename.new
+            cat <<EOF >>$filename.new
+                  <td>
+                    <b>$version</b>
+                  </td>
+                  <td>
+                    <a href="https://docs.unidata.ucar.edu/ldm/$version/">Documentation</a>
+                  </td>
+                  <td>
+                    <a href="https://downloads.unidata.ucar.edu/ldm/$version/ldm-$version.tar.gz">Download</a>
+                  </td>
+                  <td>
+                    <a href="https://docs.unidata.ucar.edu/ldm/$version/CHANGE_LOG">Release Notes</a>
+                  </td>
+                </tr>
+          EOF
+            sed -n '/<tr>/,$p' $filename | >>$filename.new
+            curl -u "$USER":"$PW" -T $filename.new \
+              https://artifacts.unidata.ucar.edu/repository/docs-ldm/$filename
+          fi
