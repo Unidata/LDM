@@ -43,7 +43,7 @@
 				using the port number from the previous step.</li>
 			<li>Reads the <a href="glindex.html#ldmd.conf">LDM configuration-file, ldmd.conf</a>, and does the following:</li>
 	    <ul>
-	      <li>Adds all <a href="glindex.html#ALLOW entry">ALLOW</a> and 	<a href="glindex.html#ACCEPT entry">ACCEPT</a>
+	      <li>Adds all <a href="glindex.html#ALLOW_entry">ALLOW</a> and 	<a href="glindex.html#ACCEPT_entry">ACCEPT</a>
 				 entries to internal databases.</li>
 				<li>Executes all programs specified in <a href="glindex.html#EXEC_entry">EXEC entries</a> as
 					<a href="glindex.html#asynchronous">asynchronous</a>
@@ -61,7 +61,7 @@
 					<a href="glindex.html#LDM">LDM</a>s. When a connection is made, the program does the following:</li>
 		    <ol>
 		      <li>Validates the other	<a href="glindex.html#LDM">LDM</a>	against the internal database of
-						<a href="glindex.html#ALLOW entry">ALLOW</a> and <a href="glindex.html#ACCEPT entry">ACCEPT</a> entries. If
+						<a href="glindex.html#ALLOW_entry">ALLOW</a> and <a href="glindex.html#ACCEPT_entry">ACCEPT</a> entries. If
 						the <a href="glindex.html#LDM">LDM</a> is not allowed to connect, then the connection is terminated;
 						otherwise,</li>
   		    <li><a href="glindex.html#fork">Fork</a>s an <a href="glindex.html#asynchronous">asynchronous</a> copy of
@@ -141,7 +141,7 @@
     <ol>
       <li>Reduces the	<a href="glindex.html#criteria">data-product selection-criteria</a>	contained in the
 				<a href="glindex.html#FEEDME">FEEDME</a> or	<a href="glindex.html#NOTIFYME">NOTIFYME</a> request by the	criteria
-				specified in the first relevant <a href="glindex.html#ALLOW entry">ALLOW entry</a>.</li>
+				specified in the first relevant <a href="glindex.html#ALLOW_entry">ALLOW entry</a>.</li>
       <li>If the subsequent request is a	<a href="glindex.html#FEEDME">FEEDME</a> request <i>and</i> the
 				<a href="glindex.html#anti-DOS">anti-DOS feature</a> is enabled, then</li>
 			<ul>

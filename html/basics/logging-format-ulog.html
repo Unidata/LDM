@@ -108,12 +108,12 @@
 				<a href="https://docs.unidata.ucar.edu/ldm/man/ldmadmin">ldmadmin configuration-file</a>.</dd>
 			<dt><b>Denying connection from [<i>IP_addr</i>] because not allowed</b></dt>
       <dd>The LDM server denied a connection attempt from the specified IP address because the IP address didn't match
-				any <a href="glindex.html#ALLOW entry">ALLOW</a> or <a href="glindex.html#ACCEPT entry">ACCEPT</a> entry in the
+				any <a href="glindex.html#ALLOW_entry">ALLOW</a> or <a href="glindex.html#ACCEPT_entry">ACCEPT</a> entry in the
 				LDM configuration-file <a href="glindex.html#ldmd.conf">ldmd.conf</a>.</dd>
 			<dt><b>Denying connection from "<i>hostame</i>" [<i>IP_addr</i>] because not allowed</b></dt>
       <dd>The LDM server denied a connection attempt from the specified host with the specified IP address because
-				neither the hostname nor IP address matched any <a href="glindex.html#ALLOW entry">ALLOW</a> or
-				<a href="glindex.html#ACCEPT entry">ACCEPT</a> entry in the LDM configuration-file
+				neither the hostname nor IP address matched any <a href="glindex.html#ALLOW_entry">ALLOW</a> or
+				<a href="glindex.html#ACCEPT_entry">ACCEPT</a> entry in the LDM configuration-file
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>.</dd>
       <dt><b>ldmd[<a href="#pid"><i>pid</i></a>]: Adjusted pathological regular expression "<i>ere</i>" at line
 				<i>lineno</i>, file <i>pathname</i></b></dt>
@@ -181,7 +181,7 @@
       <dt><b>Couldn't add ALLOW entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to add the
-				<a href="glindex.html#ALLOW entry">ALLOW entry</a> near the specified line to its internal list
+				<a href="glindex.html#ALLOW_entry">ALLOW entry</a> near the specified line to its internal list
 				due to <i>reason</i>.</dd>
       <dt><b>Couldn't get request-entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
@@ -209,7 +209,7 @@
       <dt><b>Couldn't add ACCEPT entry near line <i>n</i>, file "<a href="#pathname"><i>pathname</i></a>":
 				<i>reason</i></b></dt>
       <dd>While parsing the specified configuration-file, the LDM server was unable to add the
-				<a href="glindex.html#ACCEPT entry">ACCEPT entry</a> near the specified line to its internal list	due to
+				<a href="glindex.html#ACCEPT_entry">ACCEPT entry</a> near the specified line to its internal list	due to
 				<i>reason</i>.</dd>
       <dt><b>Couldn't decode command "<i>command</i>" near line <i>n</i>, file
 				"<a href="#pathname"><i>pathname</i></a>": <i>reason</i></b></dt>
@@ -294,7 +294,7 @@
 				<a href="glindex.html#criteria">data-product selection-criteria</a> from an
 				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>.</dd>
 			<dt><b>nhits (<i>n</i>) >= MAXHITS (<i>max</i>)</b></dt>
-			<dd>The number of <a href="glindex.html#ACCEPT entry"><code>ACCEPT</code> entries</a> in the LDM
+			<dd>The number of <a href="glindex.html#ACCEPT_entry"><code>ACCEPT</code> entries</a> in the LDM
 				configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>, that match an incoming
 				<a href="glindex.html#HIYA">HIYA</a> message exceeds a fixed limit.  This means that the configuration-file is
 				way too complicated.</dd>
@@ -336,7 +336,7 @@
         <li>A request for information from the  <a href="glindex.html#portmapper">portmapper</a> on the upstream host
 					failed;</li>
 				<li>An LDM isn't registered with the  <a href="glindex.html#RPC">RPC</a> layer on the upstream host;</li>
-        <li>The upstream LDM doesn't have a matching  <a href="glindex.html#ALLOW entry">ALLOW entry</a> in its
+        <li>The upstream LDM doesn't have a matching  <a href="glindex.html#ALLOW_entry">ALLOW entry</a> in its
 					configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a> for the downstream LDM;</li>
 				<li>The upstream LDM host is unknown to the   downstream LDM host;</li>
 				<li>The upstream LDM was told to terminate; or</li>
@@ -345,7 +345,7 @@
 			<dt><b>Connection closed by upstream LDM</b></dt>
       <dd>The <a href="glindex.html#upstream_LDM_5">upstream LDM 5</a> terminated the connection with the
 				<a href="glindex.html#downstream_LDM_5">downstream LDM 5</a> subsystem (typically because of no matching
-				<a href="glindex.html#ALLOW entry">ALLOW entry</a> in the upstream LDM's configuration-file,
+				<a href="glindex.html#ALLOW_entry">ALLOW entry</a> in the upstream LDM's configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>).</dd>
 			<dt><b>Connection timed-out</b></dt>
       <dd>The connection between the <a href="glindex.html#downstream_LDM_5">downstream LDM 5</a> subsystem and the
@@ -355,7 +355,7 @@
       <dd>The <a href="glindex.html#upstream_LDM_5">upstream LDM 5</a> refused to connect with the
 				<a href="glindex.html#downstream_LDM_5">downstream LDM 5</a>	subsystem because</dd>
       <ul>
-        <li>There is no matching <a href="glindex.html#ALLOW entry">ALLOW entry</a> in the upstream LDM's
+        <li>There is no matching <a href="glindex.html#ALLOW_entry">ALLOW entry</a> in the upstream LDM's
 					configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>; or</li>
 				<li>The intersection of the set of requested <a href="glindex.html#data-product">data-product</a>s and the set
 					of allowed data-products is the empty set.</li>
@@ -449,7 +449,7 @@
 			<dt><b>Couldn't validate HIYA: <i>reason</i></b></dt>
       <dd>The  <a href="glindex.html#downstream_LDM">downstream LDM</a> couldn't match a
 				<a href="glindex.html#HIYA">HIYA</a> message from an <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>
-				against its <a href="glindex.html#ACCEPT entry">ACCEPT entries</a>	due to <i>reason</i>.</dd>
+				against its <a href="glindex.html#ACCEPT_entry">ACCEPT entries</a>	due to <i>reason</i>.</dd>
 			<dt><b>Couldn't set product class: <a href="#criteria"><i>criteria</i></a>:  <i>reason</i></b></dt>
       <dd>The  <a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> couldn't set its internal
 				<a href="glindex.html#criteria">data-product selection-criteria</a> object to the specified value	due to
@@ -460,7 +460,7 @@
 			<dt><b>Request not allowed. Does it overlap with another?</b></dt>
 			<dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> reduced the
 				<a href="glindex.html#criteria">data-product selection-criteria</a> given to it to an empty subscription after
-				first reducing it by the relevant <a href="glindex.html#ALLOW entry">ALLOW entries</a> in the upstream LDM's
+				first reducing it by the relevant <a href="glindex.html#ALLOW_entry">ALLOW entries</a> in the upstream LDM's
 				configuration-file and then by the subscriptions from other, existing
 				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a>s that are executing on the same host. You should
 				check your LDM configuration-file, <a href="glindex.html#ldmd.conf">ldmd.conf</a>, for overlapping
@@ -506,7 +506,7 @@
       <dd>The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> determined that the
 				<a href="glindex.html#downstream_LDM_6">downstream LDM 6</a> was not allowed to receive the
 				<a href="glindex.html#feedtype">feedtype</a> that it requested, based on
-				<a href="glindex.html#ALLOW entry">ALLOW entries</a> in the LDM configuration-file,
+				<a href="glindex.html#ALLOW_entry">ALLOW entries</a> in the LDM configuration-file,
 				<a href="glindex.html#ldmd.conf">ldmd.conf</a>. The <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a>,
 				consequently, restricted the <a href="glindex.html#criteria">data-product selection-criteria</a> to that
 				specified.</dd>
@@ -577,7 +577,7 @@
       <dd>The  <a href="glindex.html#upstream_filter">upstream filter</a>  of the
 				<a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> prevented the transfer of all
 				<a href="glindex.html#data-product">data-product</a>s. You should either modify the upstream filter to allow
-				some transfer or remove the relevant <a href="glindex.html#ALLOW entry">ALLOW entry</a>	entirely.</dd>
+				some transfer or remove the relevant <a href="glindex.html#ALLOW_entry">ALLOW entry</a>	entirely.</dd>
 			<dt><b>svc_sendreply(...) failure</b></dt>
 			<dd>The  <a href="glindex.html#upstream_LDM_6">upstream LDM 6</a> was unable to send an
 				<a href="glindex.html#RPC">RPC</a> reply to the
