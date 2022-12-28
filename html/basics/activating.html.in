@@ -31,7 +31,7 @@
       <li>Ensure that a valid <a href="glindex.html#product-queue">product-queue</a> exists by doing one of
       the following:</li>
       <ol type="A">
-        <li id="product-queue creation">If the <a href="glindex.html#product-queue">product-queue</a> doesn't exist and
+        <li id="product-queue_creation">If the <a href="glindex.html#product-queue">product-queue</a> doesn't exist and
         the command <code>df -k var</code> indicates that sufficient space exists for it, then create the
         <a href="glindex.html#product-queue">product-queue</a> with the following command where the <code>-f</code>
         option requests "fast" creation:
