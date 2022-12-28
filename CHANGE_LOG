@@ -5,6 +5,7 @@
         * Enhanced "OnPush.yml":
             * Vet the version ID in CHANGE_LOG and "configure.ac"
             * Update the "versions.html" file for LDM documentation on the artifacts server
+        * Deleted "--disable-root-actions" from Coverity Scan target
 
 6.14.3  2022-12-22T13:34:03-0700
     Documentation:
@@ -39,7 +40,7 @@
         * Improved log message when select() fails
         * Improved logging and simplified up6_run()
         * Only close file-descriptors 0, 1, & 2 when daemonizing
-        * Added "-h" (help) option
+        * Added "-h" (help) optionS
         * Moved daemonization to before the creation of the shared upstream LDM database
         * Ensured that the LDM server is the process group leader.
 
