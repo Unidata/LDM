@@ -71,11 +71,12 @@ jobs:
           brew install doxygen
           /usr/local/opt/autoconf@2.69/bin/autoreconf -fi
 
-      - name: Initialize CodeQL
-        if: matrix.os == env.MAIN_OS &&  github.ref_name == 'devel'
-        uses: github/codeql-action/init@v2
-        with:
-          languages: "cpp"
+# Coverity Scan is better
+#     - name: Initialize CodeQL
+#       if: matrix.os == env.MAIN_OS &&  github.ref_name == 'devel'
+#       uses: github/codeql-action/init@v2
+#       with:
+#         languages: "cpp"
 
       - name: Make Source Distribution
         run: |
@@ -88,13 +89,11 @@ jobs:
             make distcheck
           fi
 
-      - name: Perform CodeQL Analysis
-        if: matrix.os == env.MAIN_OS &&  github.ref_name == 'devel'
-        uses: github/codeql-action/analyze@v2
-        with:
-          category: "cpp"
-
-#        if: matrix.os == env.MAIN_OS
+#     - name: Perform CodeQL Analysis
+#       if: matrix.os == env.MAIN_OS &&  github.ref_name == 'devel'
+#       uses: github/codeql-action/analyze@v2
+#       with:
+#         category: "cpp"
 
       - name: Publish Source Distribution and Documentation
         if: matrix.os == env.MAIN_OS && github.ref_name == 'main'
