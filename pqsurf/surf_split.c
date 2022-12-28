@@ -215,7 +215,7 @@ surf_split(const prod_info *infop, const void *datap,
         
         /* #### */
         {
-        char cbuf[8];
+        char cbuf[8] = {};
         int digit;
         dtime time;
         wind_units_t wind_units = WIND_UNAVAIL;

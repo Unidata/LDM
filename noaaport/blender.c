@@ -11,6 +11,10 @@
 #include <limits.h>
 #include <log.h>
 
+#ifndef ARG_MAX
+#define ARG_MAX _POSIX_ARG_MAX
+#endif
+
 const char* const COPYRIGHT_NOTICE  = "Copyright (C) 2021 "
             "University Corporation for Atmospheric Research";
 
@@ -18,7 +22,7 @@ int    rcvBufSize = 0;
 // =====================================================================
 static	int				serverCount;
 static	char*	const*	serverAddresses;
-static  char 			blenderArguments[PATH_MAX]="";
+static  char 			blenderArguments[ARG_MAX]="";
 
 static double	waitTime = 1.0;					///< max time between output frames
 // =====================================================================
@@ -78,17 +82,26 @@ decodeCommandLine(
         switch (ch) {
             case 'v':
                 (void)log_set_level(LOG_LEVEL_INFO);
-                strcat(blenderArguments, " -v ");
+                strncat(blenderArguments, " -v ",
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
                 break;
             case 'x':
         	   	(void)log_set_level(LOG_LEVEL_DEBUG);
-        	   	strcat(blenderArguments, " -x ");
+        	   	strncat(blenderArguments, " -x ",
+                                sizeof(blenderArguments)-strlen(blenderArguments)-1);
                 break;
             case 'l':
-              	strcat(blenderArguments, " -l ");
-              	strcat(blenderArguments, optarg);
-              	strcat(blenderArguments, " ");
-              	log_set_destination(optarg);
+              	strncat(blenderArguments, " -l ",
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	strncat(blenderArguments, optarg,
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	strncat(blenderArguments, " ",
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	if (log_set_destination(optarg)) {
+              	    log_add("Couldn't set logging destination to \"%s\"", optarg);
+              	    log_flush_fatal();
+                    usage(argv[0], COPYRIGHT_NOTICE);
+              	}
                 break;
             case 'R':
                     if (sscanf(optarg, "%d", &rcvBufSize) != 1 ||
@@ -97,9 +110,12 @@ decodeCommandLine(
                         status = EINVAL;
                         break;
                     }
-                    strcat(blenderArguments, " -R ");
-              	    strcat(blenderArguments, optarg);
-              	    strcat(blenderArguments, " ");
+                    strncat(blenderArguments, " -R ",
+                            sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	    strncat(blenderArguments, optarg,
+                            sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	    strncat(blenderArguments, " ",
+                            sizeof(blenderArguments)-strlen(blenderArguments)-1);
                     break;
             case 't':
                 if (sscanf(optarg, "%lf", &waitTime) != 1 || waitTime < 0) {
@@ -107,9 +123,12 @@ decodeCommandLine(
                     status = EINVAL;
                     break;
                 }
-              	strcat(blenderArguments, " -t ");
-              	strcat(blenderArguments, optarg);
-              	strcat(blenderArguments, " ");
+              	strncat(blenderArguments, " -t ",
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	strncat(blenderArguments, optarg,
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+              	strncat(blenderArguments, " ",
+                        sizeof(blenderArguments)-strlen(blenderArguments)-1);
                 break;
             case '?': {
                 log_add("Unknown option: \"%c\"", ch);
@@ -134,8 +153,10 @@ decodeCommandLine(
 	serverAddresses = &argv[optind]; ///< list of servers to connect to
 	for(int i=0; i<serverCount; i++)
 	{
-		strcat(blenderArguments, serverAddresses[i]);
-		strcat(blenderArguments, " ");
+		strncat(blenderArguments, serverAddresses[i],
+		        sizeof(blenderArguments)-strlen(blenderArguments)-1);
+		strncat(blenderArguments, " ",
+		        sizeof(blenderArguments)-strlen(blenderArguments)-1);
 	}
 
     return status;
@@ -232,5 +253,5 @@ int main(
         }   /* command line decoded */
   }  // log_fini();
     
-        return status ? 1 : 0;
+        return 1;
 }

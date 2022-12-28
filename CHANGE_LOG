@@ -1,4 +1,7 @@
 6.14.4.1
+    Misc:
+        * Removed lint found by Coverity Scan
+
     DevOps:
         * Enhanced "pre-commit" hook to vet the version ID in CHANGE_LOG and ensure a timestamp
           in CHANGE_LOG when committing to the main branch

@@ -46,13 +46,14 @@ void cfl_tinq ( char *table, char *type, long *flen, char *newfil,
  **									*
  * S. Jacobs/NCEP	 5/01	Copied from cfl_tbop			*
  * S. Chiswell/Unidata	 3/06	Modified for $LDM/etc			*
+ * S. Emmerson/Unidata   12/22  Use PATH_MAX
  ***********************************************************************/
 {
     int		found;
     int		lenp, lenf, lent, ier;
     long	lfsize;
-    char	filepart[FILE_NAMESZ], pathpart[LLPATH];
-    char	actualpath[LLPATH], pathfile[FILE_FULLSZ];
+    char	filepart[PATH_MAX], pathpart[PATH_MAX];
+    char	actualpath[PATH_MAX], pathfile[PATH_MAX];
 
 /*---------------------------------------------------------------------*/
 

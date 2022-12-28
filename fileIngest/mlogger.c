@@ -1240,7 +1240,7 @@ static void flushHandler (int sig, siginfo_t *si, void *uc) {
 
 static int setFlushTimer (char *name, timer_t *tid, int sigNo, int expireSec) {
 
-	struct sigevent se;
+	struct sigevent se = {};
 	struct itimerspec its;
 	struct sigaction sa;
 

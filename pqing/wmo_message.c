@@ -404,9 +404,10 @@ wmo_send_buf(
 	wmo_message mess[1];
 	wmo_start_t start[1];
 	wmo_header_t hdr[1];
-	dtime time[1];
+	dtime time[1] = {};
 	char *ident;
 
+	start[0].seqno = -1;
 	mess->start = start;
 	mess->hdr = hdr;
 	mess->hdr->time = time;
