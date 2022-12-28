@@ -13,16 +13,16 @@
     <h1>LDM Troubleshooting</h1>
     <h2>Contents</h2>
     <ul>
-      <li><a href="#can't start LDM">Can't start the LDM</a></li>
+      <li><a href="#cant_start_LDM">Can't start the LDM</a></li>
       <li><a href="#config-file">The LDM server terminates after executing its configuration-file</a></li>
-      <li><a href="#LDM not logging">The LDM isn't logging</a></li>
+      <li><a href="#LDM_not_logging">The LDM isn't logging</a></li>
       <li><a href="#not_receiving">The LDM isn't receiving data</a></li>
-      <li><a href="#LDM suddenly disappears">The LDM suddenly disappears on an RHEL/CentOS system</a></li>
-      <li><a href="#ldmadmin scour takes too long on an XFS file-system">
+      <li><a href="#LDM_suddenly_disappears">The LDM suddenly disappears on an RHEL/CentOS system</a></li>
+      <li><a href="#ldmadmin_scour_takes_too_long">
         "<code>ldmadmin scour</code>" takes too long</a></li>
     </ul>
 
-    <h2 id="can't start LDM">Can't start the LDM</h2>
+    <h2 id="cant_start_LDM">Can't start the LDM</h2>
     <p>If the LDM won't start, then it should log the reason why. Check the LDM log file.</p>
     <p>If that is inconclusive, then start the LDM in interactive mode by explicitly telling it to log to the standard
       error stream via the <code>-l</code> option. Execute the command</p>
@@ -39,7 +39,7 @@
       <li>A commented-out <code>ALLOW</code> entry for <code>localhost</code> and <code>127.0.0.1</code></li>
     </ul>
 
-    <h2 id="LDM not logging">The LDM isn't logging</h2>
+    <h2 id="LDM_not_logging">The LDM isn't logging</h2>
     <ol>
       <li>Verify that logging doesn't occur with the commands, and if it prints "<code>This is a test</code>", then LDM
         logging works.</li>
@@ -154,7 +154,7 @@
         </ul>
     </ol>
 
-    <h2 id="LDM suddenly disappears">The LDM suddenly disappears on an RHEL/CentOS system</h2>
+    <h2 id="LDM_suddenly_disappears">The LDM suddenly disappears on an RHEL/CentOS system</h2>
     <p>Several LDM users have reported the sudden disappearance of a running LDM on their RHEL/CentOS 6 or 7 systems.
       There's no warning: nothing in the LDM log file. It just vanishes &mdash; as if the superuser had sent it a
       <code>SIGKILL</code> with extreme prejudice.</p>
@@ -182,7 +182,7 @@
       echo "vm.overcommit_memory=2" >> /etc/sysctl.conf
     </pre>
 
-    <h2 id="ldmadmin scour takes too long on an XFS file-system">"<code>ldmadmin scour</code>" takes too long</h2>
+    <h2 id="ldmadmin_scour_takes_too_long">"<code>ldmadmin scour</code>" takes too long</h2>
     <p>Daryl Herzmann encountered this problem on his system, which uses the XFS filesystem. As he explained it</p>
     <p><i>Please, I don't wish to start a war regarding which filesystem is the best here...  If you have used XFS
       (now default filesystem in RHEL7) in the past, you may have suffered from very poor performance with IO related
