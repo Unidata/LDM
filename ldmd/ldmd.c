@@ -662,7 +662,7 @@ runSvc( SVCXPRT* const restrict    xprt,
          */
         if (hiyaCalled) {
             /*
-             * Remote process likely used ldmsend(3) (e.g., rtstats(1), ldmsend(1), or pqsend(1))
+             * Remote process likely used ldmsend(3) (e.g., rtstats(1), ldmsend(1), pqsend(1))
              * and has terminated. This is routine.
              */
             log_clear();
