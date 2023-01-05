@@ -21,6 +21,13 @@ extern const char *conf_path;
 extern volatile sig_atomic_t done;
 extern const char *logfname;
 
+/**
+ * Did the remote process use the HIYA protocol data unit? If so, then it likely used ldmsend(3)
+ * (e.g., rtstats(1), ldmsend(1), pqsend(1)) and is relying on a matching ACCEPT entry in the LDM
+ * configuration-file.
+ */
+extern bool hiyaCalled;
+
 /* timeout for rpc calls */
 #ifndef DEFAULT_RPCTIMEO
 #  define DEFAULT_RPCTIMEO  60

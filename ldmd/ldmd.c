@@ -70,8 +70,6 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
-bool hiyaCalled = false;
-
 static int      doSomething = 1; ///< Do something or just check config-file?
 static unsigned maxClients = 256;
 static int      exit_status = 0;

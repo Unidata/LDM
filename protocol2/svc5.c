@@ -32,8 +32,6 @@
 #include "LdmConfFile.h"
 #include "xdr_data.h"
 
-bool hiyaCalled;
-
 static ldm_replyt  reply;
 static prod_info*  newInfo;             /* new product-information */
 static char       *datap;
