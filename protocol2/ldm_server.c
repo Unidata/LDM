@@ -43,7 +43,7 @@
 #include "LdmConfFile.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "up6.h"         /* the pure "upstream" LDM module */
 
-extern bool hiyaCalled;
+bool hiyaCalled;
 
 /*
  * Decodes a data-product signature from the last product-specification of a
