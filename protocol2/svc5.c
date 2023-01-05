@@ -32,6 +32,8 @@
 #include "LdmConfFile.h"
 #include "xdr_data.h"
 
+extern bool hiyaCalled;
+
 static ldm_replyt  reply;
 static prod_info*  newInfo;             /* new product-information */
 static char       *datap;
@@ -262,9 +264,11 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
                 reply.ldm_replyt_u.newclssp = remote->clssp;
         }
         /* else, reply.code == OK */
-        if(!log_is_enabled_info)
+        if(!log_is_enabled_info) {
                 log_notice_q("hiya5: %s",
                         s_prod_class(NULL, 0, remote->clssp));
+                hiyaCalled = true;
+        }
 
         /*
          * Ensure that the product-queue is open for writing.  It will be closed

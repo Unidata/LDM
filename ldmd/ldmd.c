@@ -70,6 +70,8 @@
     #define LDM_SELECT_TIMEO  6
 #endif
 
+bool hiyaCalled = false;
+
 static int      doSomething = 1; ///< Do something or just check config-file?
 static unsigned maxClients = 256;
 static int      exit_status = 0;
@@ -658,7 +660,16 @@ runSvc( SVCXPRT* const restrict    xprt,
          * one_svc_run() called svc_getreqsock(), which called
          * svc_destroy(xprt), which must only be called once
          */
-        log_add("Connection with client LDM, %s, has been lost", hostId);
+        if (hiyaCalled) {
+            /*
+             * Remote process likely used ldmsend(3) (e.g., rtstats(1), ldmsend(1), or pqsend(1))
+             * and has terminated. This is routine.
+             */
+            log_clear();
+        }
+        else {
+            log_add("Connection with client LDM, %s, has been lost", hostId);
+        }
     }
     else {
         if (status == ETIMEDOUT)

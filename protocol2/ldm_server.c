@@ -43,6 +43,8 @@
 #include "LdmConfFile.h"         /* acl_product_intersection(), acl_check_hiya() */
 #include "up6.h"         /* the pure "upstream" LDM module */
 
+extern bool hiyaCalled;
+
 /*
  * Decodes a data-product signature from the last product-specification of a
  * product-class if it exists.
@@ -550,6 +552,8 @@ hiya_6_svc(
 
                 reply.code = OK;
                 reply.hiya_reply_t_u.max_hereis = maxHereis;
+
+                hiyaCalled = true;
             }
             else {
                 if (log_is_enabled_info) {
