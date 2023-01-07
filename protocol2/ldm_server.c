@@ -457,6 +457,8 @@ hiya_6_svc(
     unsigned int maxHereis;
     static prod_class_t *accept;
 
+    hiyaCalled = true;
+
     /*
      * Open the product-queue for writing.  It will be closed by cleanup()
      * during process termination.
@@ -550,8 +552,6 @@ hiya_6_svc(
 
                 reply.code = OK;
                 reply.hiya_reply_t_u.max_hereis = maxHereis;
-
-                hiyaCalled = true;
             }
             else {
                 if (log_is_enabled_info) {

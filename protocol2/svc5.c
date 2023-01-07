@@ -186,6 +186,8 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         const char* const       pqfname = getQueuePath();
         peer_info*              remote = get_remote();
 
+        hiyaCalled = true;
+
         log_debug("hiya_5_svc()");
 
         (void)memset((char*)&reply, 0, sizeof(reply));
@@ -265,7 +267,6 @@ hiya_5_svc(prod_class_t *offerd, struct svc_req *rqstp)
         if(!log_is_enabled_info) {
                 log_notice_q("hiya5: %s",
                         s_prod_class(NULL, 0, remote->clssp));
-                hiyaCalled = true;
         }
 
         /*
