@@ -1,6 +1,9 @@
 6.14.4.2
     ldmd(1):
         * Moved setting of "hiyaCalled" to top of HIYA service functions
+
+    rtstats(1):
+        * Made error reporting more robust
     
 6.14.4.1    2023-01-05T10:47:36-0700
     ldmd(1):

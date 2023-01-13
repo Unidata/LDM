@@ -131,7 +131,7 @@ dump_statsbin(statsbin *sb)
  * @param sb            [in] The statistics to be sent.
  * @param myname        [in] The name of the local host.
  */
-static void
+static int
 ldmsend_statsbin(
         statsbin*           sb,
         const char* const   myname)
@@ -141,27 +141,37 @@ ldmsend_statsbin(
         char stats_data[4096];
         int status;
 
-        if(sb->recent_a.tv_sec == -1) return;
+        if(sb->recent_a.tv_sec == -1) {
+            status = 0;
+        }
+        else {
+            snprintf(stats_data, sizeof(stats_data),
+                    "%14.14s %14.14s %32.*s %7.10s %32.*s %12.0lf %12.0lf %.8g %10.2f %4.0f@%4.4s %20.20s\n",
+                    s_time(buf, sizeof(buf), sb->recent.tv_sec),
+                    s_time(buf_a, sizeof(buf_a), sb->recent_a.tv_sec),
+                    (int)_POSIX_HOST_NAME_MAX,
+                    myname,
+                    s_feedtypet(sb->feedtype),
+                    (int)HOSTNAMESIZE,
+                    sb->origin,
+                    sb->nprods,
+                    sb->nbytes,
+                    d_diff_timestamp(&sb->recent_a, &sb->recent),
+                    sb->latency_sum/(sb->nprods == 0 ? 1: sb->nprods),
+                    sb->max_latency,
+                    s_time_abrv(sb->slowest_at),
+                    PACKAGE_VERSION
+            );
+            status = ldmsend_main(stats_data, myname);
+            if (status) {
+                log_add("ldmsend_main() failure: myname=%s, stats_data=\"%s\"", myname, stats_data);
+            }
+            else {
+                sb->needswrite = 0;
+            }
+        }
 
-        snprintf(stats_data, sizeof(stats_data),
-                "%14.14s %14.14s %32.*s %7.10s %32.*s %12.0lf %12.0lf %.8g %10.2f %4.0f@%4.4s %20.20s\n",
-                s_time(buf, sizeof(buf), sb->recent.tv_sec),
-                s_time(buf_a, sizeof(buf_a), sb->recent_a.tv_sec),
-                (int)_POSIX_HOST_NAME_MAX,
-                myname,
-                s_feedtypet(sb->feedtype),
-                (int)HOSTNAMESIZE,
-                sb->origin,
-                sb->nprods,
-                sb->nbytes,
-                d_diff_timestamp(&sb->recent_a, &sb->recent),
-                sb->latency_sum/(sb->nprods == 0 ? 1: sb->nprods),
-                sb->max_latency,
-                s_time_abrv(sb->slowest_at),
-                PACKAGE_VERSION
-        );
-        status = ldmsend_main(stats_data, myname);
-        if ( status == 0 ) sb->needswrite = 0;
+        return status;
 }
 
 
@@ -494,9 +504,15 @@ syncbinstats(
            {
            lastsent = tnow;
 
-           for (ii = 0; ii < nbins; ii++) {
+           int status = 0;
+           for (ii = 0; status == 0 && ii < nbins; ii++) {
                if (binList[ii]->needswrite)
-                   ldmsend_statsbin(binList[ii], hostname);
+                   status = ldmsend_statsbin(binList[ii], hostname);
+           }
+
+           if (status) {
+               log_add("Couldn't report statistics");
+               log_flush_error();
            }
 
            /* Add a Random time offset from reporting interval so that
@@ -506,5 +522,4 @@ syncbinstats(
 
            ldmsend_clnt_destroy();
            }
-
 }
