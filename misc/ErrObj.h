@@ -48,7 +48,7 @@ ErrObj* eo_new(
 void eo_delete(ErrObj* errObj);
 
 /**
- * Adds an error to an error-object.
+ * Adds a later-occuring error to an error-object.
  *
  * @param[in] errObj  The error-object to be added to
  * @param[in] file    The name of the file in which the error occurred
@@ -153,7 +153,7 @@ const char* eo_msg(const Error* errObj);
 #define EO_SYSTEM() EO_NEW(errno, "%s", strerror(errno))
 
 /**
- * Adds an error to an error-object.
+ * Adds a later-occuring error to an error-object.
  *
  * @param[in] errObj  The error-object to be added to
  * @param[in] code    The error-code to associate with the error
