@@ -636,6 +636,7 @@ static int create_ldm_tcp_svc(
  * @param[in]     hostId      Identifier of client
  * @retval        ECONNRESET  The connection to the client LDM was lost.
  *                            `svc_destroy(xprt)` called. `log_add()` called.
+ * @retval        ETIMEDOUT   The connection to the client timed-out
  * @retval        EBADF       The socket isn't open. `log_add()` called.
  */
 static int
@@ -658,16 +659,8 @@ runSvc( SVCXPRT* const restrict    xprt,
          * one_svc_run() called svc_getreqsock(), which called
          * svc_destroy(xprt), which must only be called once
          */
-        if (hiyaCalled) {
-            /*
-             * Remote process likely used ldmsend(3) (e.g., rtstats(1), ldmsend(1), pqsend(1))
-             * and has terminated. This is routine.
-             */
-            log_clear();
-        }
-        else {
-            log_add("Connection with client LDM, %s, has been lost", hostId);
-        }
+        log_clear();
+        log_info("Connection with client LDM, %s, has been lost", hostId);
     }
     else {
         if (status == ETIMEDOUT)
@@ -693,7 +686,7 @@ runSvc( SVCXPRT* const restrict    xprt,
  * @retval    EPERM       Can't create server-side RPC transport. `log_add()`
  *                        called.
  * @retval    ESRCH       Client isn't allowed. `log_add()` called.
- * @retval    ETIMEDOUT   Client didn't make contact. `log_add()` called.
+ * @retval    ETIMEDOUT   Connection to client timed-out. `log_add()` called.
  */
 static int
 runChildLdm(
