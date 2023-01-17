@@ -1,3 +1,7 @@
+6.14.4.3
+    Misc:
+        * Created ErrObj. Might get used; might not.
+
 6.14.4.2    2023-01-13T15:38:04-0700
     ldmd(1):
         * Moved setting of "hiyaCalled" to top of HIYA service functions
