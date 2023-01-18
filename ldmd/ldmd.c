@@ -1058,13 +1058,13 @@ int main(
     if (becomeDaemon) {
         if (reg_close()) {
             log_add("reg_close() failure");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
         if (daemonize()) { // Bwa-ha-ha!
             log_add("daemonize() failure");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
@@ -1086,13 +1086,13 @@ int main(
      */
     log_debug("Initializing configuration-file module");
     if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
-        log_flush_error();
+        log_flush_fatal();
         exit(1);
     }
     if (!lcf_haveSomethingToDo()) {
         log_add("The LDM configuration-file \"%s\" is effectively empty",
                 getLdmdConfigPath());
-        log_flush_error();
+        log_flush_fatal();
         exit(1);
     }
 
@@ -1103,9 +1103,8 @@ int main(
      * register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit() failure");
-        log_add("Exiting");
-        log_flush_notice();
+        log_add_syserr("atexit() failure");
+        log_flush_fatal();
         exit(1);
     }
 
@@ -1136,11 +1135,11 @@ int main(
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
                 log_add("The product-queue \"%s\" is inconsistent", pqfname);
-                log_flush_error();
+                log_flush_fatal();
             }
             else {
                 log_add("pq_open failed: %s: %s", pqfname, strerror(status));
-                log_flush_error();
+                log_flush_fatal();
             }
             exit(1);
         }
@@ -1161,13 +1160,13 @@ int main(
             }
             else {
                 log_add("Couldn't delete existing shared upstream LDM database");
-                log_flush_error();
+                log_flush_fatal();
                 exit(1);
             }
         }
         if (uldb_create(NULL, maxClients * 1024)) {
             log_add("Couldn't create shared upstream LDM database");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
@@ -1176,7 +1175,7 @@ int main(
          */
         log_debug("Executing configuration-file");
         if (lcf_execute() != 0) {
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
