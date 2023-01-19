@@ -45,7 +45,7 @@ struct ErrObj {
  * @retval    `true`   Success
  * @retval    `false`  Failure
  */
-static bool err_init(
+static bool er_init(
         Error*      error,
         const char* file,
         const int   line,
@@ -100,7 +100,7 @@ static bool err_init(
  * @retval    NULL     Failure
  * @return             A new error
  */
-static Error* err_new(
+static Error* er_new(
         const char* file,
         const int   line,
         const char* func,
@@ -110,7 +110,7 @@ static Error* err_new(
 {
     Error* error = malloc(sizeof(Error));
     if (error) {
-        if (!err_init(error, file, line, func, code, fmt, args)) {
+        if (!er_init(error, file, line, func, code, fmt, args)) {
             free(error);
             error = NULL;
         }
@@ -122,7 +122,7 @@ static Error* err_new(
  * Deletes an error.
  * @param[in] error  The error to be deleted
  */
-static void err_delete(Error* error)
+static void er_delete(Error* error)
 {
     if (error) {
         free(error->msg);
@@ -144,13 +144,13 @@ ErrObj* eo_new(
     va_list          args;
 
     va_start(args, fmt);
-    Error* error = err_new(file, line, func, code, fmt, args);
+    Error* error = er_new(file, line, func, code, fmt, args);
     va_end(args);
 
     if (error) {
         errObj = malloc(sizeof(ErrObj));
         if (errObj == NULL) {
-            err_delete(error);
+            er_delete(error);
         }
         else {
             errObj->first = errObj->last = error;
@@ -165,7 +165,7 @@ void eo_delete(ErrObj* errObj)
     if (errObj) {
         for (Error* error = errObj->first; error; ) {
             Error* next = error->next;
-            err_delete(error);
+            er_delete(error);
             error = next;
         }
         free(errObj);
@@ -184,7 +184,7 @@ ErrObj* eo_add(
     va_list         args;
 
     va_start(args, fmt);
-    Error* error = err_new(file, line, func, code, fmt, args);
+    Error* error = er_new(file, line, func, code, fmt, args);
     va_end(args);
 
     if (error == NULL)
@@ -197,7 +197,7 @@ ErrObj* eo_add(
     return errObj;
 }
 
-const Error* er_first(const ErrObj* errObj)
+const Error* eo_first(const ErrObj* errObj)
 {
     return errObj->first;
 }
@@ -207,7 +207,7 @@ const Error* er_next(const Error* error)
     return error->next;
 }
 
-const Error* er_last(const ErrObj* errObj)
+const Error* eo_last(const ErrObj* errObj)
 {
     return errObj->last;
 }
