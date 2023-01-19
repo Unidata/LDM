@@ -1,9 +1,12 @@
 6.14.4.3
     ldmd(1):
-        * Replace some ERROR log messages with FATAL ones.
+        * Replace some ERROR log messages with FATAL ones in the main module.
 
     Misc:
-        * Created ErrObj. Might get used; might not.
+        * ErrObj module
+            * Created
+            * Created log_dispose(ErrObj*)
+            * Might get used; might not.
 
 6.14.4.2    2023-01-13T15:38:04-0700
     ldmd(1):
@@ -34,7 +37,8 @@
         * Deleted "--disable-root-actions" from Coverity Scan target
         * Added deletion of /tmp/pqact_test.conf before creation due to /tmp having the "restricted
           deletion" bit set
-        * Deleted use of CodeQL in OnPush.yml in favor of using Coverity Scan because it's better
+        * Deleted use of CodeQL in OnPush.yml in favor of using Coverity Scan because it's better,
+          IMO
 
 6.14.3  2022-12-22T13:34:03-0700
     Documentation:
