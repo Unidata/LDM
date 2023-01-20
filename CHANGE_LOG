@@ -2,6 +2,13 @@
     ldmd(1):
         * Replace some ERROR log messages with FATAL ones in the main module.
 
+    NOAAPort:
+        * Added entries to GEMPAK tables:
+            * g2varswmo.tbl:
+                000 002 000 002 Wind Direction             Degree true  DRCT    0  -9999.00
+            * g2varsncep.tbl:
+                001 001 194 009 Prob precip exceeding FFG  %            PEFG--  0  -9999.00
+
     Misc:
         * ErrObj module
             * Created
