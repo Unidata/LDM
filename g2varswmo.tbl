@@ -217,6 +217,7 @@
 !D# CT# ID# PD# NAME                             UNITS                GNAM         SCALE   MISSING
 !23|123|123|123|12345678901234567890123456789012|12345678901234567890|123456789012|12345|123456.89
 000 002 000 000 Wind Direction                   Degree true          DRCT             0  -9999.00
+000 002 000 002 Wind Direction                   Degree true          DRCT             0  -9999.00
 000 002 000 006 Wind Direction                   Degree true          DRCT             0  -9999.00
 000 002 001 000 Wind Speed                       m s**-1              SPED             0  -9999.00
 000 002 001 002 Wind Speed                       m s**-1              SPED             0  -9999.00
