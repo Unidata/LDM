@@ -492,6 +492,7 @@
 001 001 193 000 Prob of Frozen Precipitation     %                    POPZ             0  -9999.00
 001 001 193 008 Prob of Frozen Precipitation     %                    POPZ             0  -9999.00
 001 001 194 008 Prob precip exceeding FFG        %                    PEFG--           0  -9999.00
+001 001 194 009 Prob precip exceeding FFG        %                    PEFG--           0  -9999.00
 001 001 195 008 Prob of wetting rain > 0.10"     %                    POWR--           0  -9999.00
 !
 ! Discipline 2 - Land Surface Products
