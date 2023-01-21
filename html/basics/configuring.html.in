@@ -16,9 +16,9 @@
 
     <h2>Steps</h2>
     <ol>
-      <li><a href="#vet registry">Vet the LDM registry</a></li>
-      <li><a href="#upstream feeds">Obtain upstream data-feeds</a></li>
-      <li><a href="#upstream config">Request authorization at the upstream LDM</a></li>
+      <li><a href="#vet_registry">Vet the LDM registry</a></li>
+      <li><a href="#upstream_feeds">Obtain upstream data-feeds</a></li>
+      <li><a href="#upstream_config">Request authorization at the upstream LDM</a></li>
       <li><a href="#ldmd.conf">Edit the LDM configuration-file, <b>etc/ldmd.conf</b></a></li>
       <li><a href="#pqact.conf">Edit the pqact configuration-file, <b>etc/pqact.conf</b>, if appropriate</a></li>
       <li><a href="#scour.conf">Edit the scour configuration-file, <b>etc/scour.conf</b>, if appropriate</a></li>
@@ -27,7 +27,7 @@
       <li><a href="#boot">Ensure that the LDM is started at boot-time</a></li>
     </ol>
 
-    <h2 id="vet registry">Vet the LDM registry</h2>
+    <h2 id="vet_registry">Vet the LDM registry</h2>
     <p>Make any necessary changes to the configuration-parameters in the <a href="LDM-registry.html">LDM registry</a>.
       If this is your first installation, then pay particular attention to the parameters regpath{HOSTNAME}, 
       regpath{RECONCILIATION_MODE}, regpath{QUEUE_SIZE}, and regpath{QUEUE_SLOTS}. These parameters can be set via the 
@@ -39,7 +39,7 @@
         <a href="glindex.html#pqact.conf">pqact configuration-file</a>.</p>
     <p><a href="../workshop/specifics.html#registry">Workshop-specific instructions</a>.</p>
 
-    <h2 id="upstream feeds">Obtain upstream data-feeds</h2>
+    <h2 id="upstream_feeds">Obtain upstream data-feeds</h2>
     <p>First, find out who your upstream feed site(s) will be. If you don't know and you are qualified to participate in
         the Unidata <a href="glindex.html#IDD">IDD</a>, then contact the Unidata Program Center at
         <a href="mailto:support-idd@unidata.ucar.edu">support-idd@unidata.ucar.edu</a> with the following information:</p>
@@ -57,9 +57,9 @@
     <p>Note that you can (and probably should) have two <a href="glindex.html#upstream_host">upstream host</a>s for any
         given data-feed.</p>
 
-    <h2 id="upstream config">Request authorization at the upstream LDM</h2>
+    <h2 id="upstream_config">Request authorization at the upstream LDM</h2>
     <p>Ask the administrator of the <a href="glindex.html#upstream_LDM">upstream LDM</a> to add
-     <a href="glindex.html#ALLOW entry">ALLOW entries</a> for your <a href="glindex.html#LDM">LDM</a> to the
+     <a href="glindex.html#ALLOW_entry">ALLOW entries</a> for your <a href="glindex.html#LDM">LDM</a> to the
       <a href="glindex.html#upstream_LDM">upstream LDM</a>'s configuration-file,
       <a href="glindex.html#ldmd.conf">ldmd.conf</a>. For example,</p>
     <pre>
@@ -99,7 +99,7 @@
        <a href="glindex.html#REQUEST_entry">REQUEST entries</a> to a given
        <a href="glindex.html#upstream_LDM">upstream LDM</a>.	For more information, see the
        <a href="ldmd.conf.html">ldmd.conf webpage</a>.
-      <li><a href="glindex.html#ALLOW entry">ALLOW entries</a> to authorize certain
+      <li><a href="glindex.html#ALLOW_entry">ALLOW entries</a> to authorize certain
        <a href="glindex.html#downstream_LDM">downstream LDM</a>s to receive certain
         <a href="glindex.html#data-product">data-product</a>s	from your LDM.  For example:</li>
       <pre>

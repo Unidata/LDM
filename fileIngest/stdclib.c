@@ -868,7 +868,8 @@ int makeDirectory (char *path, int make_parent, unsigned int perms) {
 				buildPath = strdup (subDir);
 			} else {
 				buildPath = realloc (buildPath, strlen (buildPath) + strlen (subDir) + 2);
-				sprintf (buildPath, "%s/%s", buildPath, subDir);
+				strcat(buildPath, "/");
+				strcat(buildPath, subDir);
 			}
 
 			retval = fileExists (buildPath);
@@ -1085,6 +1086,7 @@ char *stripTrailingChar (char *string, char theChar) {
 	return string;
 }
 
+#if 0
 /* -----------------------------------------------------------------------------
  * Function Name
  *	reopenStdFile
@@ -1131,6 +1133,7 @@ char *stripTrailingChar (char *string, char theChar) {
 
 	return (rstat == fd) ? 0 : -1;
 }
+#endif
 
 /* -----------------------------------------------------------------------------
  * Function Name

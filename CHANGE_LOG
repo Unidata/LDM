@@ -1,4 +1,53 @@
-6.14.3  2023-01-20T16:14:40-0700
+6.14.4.3
+    ldmd(1):
+        * Replace some ERROR log messages with FATAL ones in the main module.
+
+    NOAAPort:
+        * Added entries to GEMPAK tables:
+            * g2varswmo.tbl:
+                000 002 000 002 Wind Direction             Degree true  DRCT    0  -9999.00
+            * g2varsncep.tbl:
+                001 001 194 009 Prob precip exceeding FFG  %            PEFG--  0  -9999.00
+
+    Misc:
+        * ErrObj module
+            * Created
+            * Created log_dispose(ErrObj*)
+            * Might get used; might not.
+
+6.14.4.2    2023-01-13T15:38:04-0700
+    ldmd(1):
+        * Moved setting of "hiyaCalled" to top of HIYA service functions
+        * Made ECONNRESET error a single INFO-level log message
+
+    rtstats(1):
+        * Made error reporting more robust
+    
+6.14.4.1    2023-01-05T10:47:36-0700
+    ldmd(1):
+        * Eliminated log messages when an upstream LDM process that was ACCEPTed terminates. This
+          should reduce the number of log messages on the rtstats(1) mothership.
+
+    Documentation:
+        * More hyperlink corrections
+        * Returned Coverity Scan badge to top-level, version-specific index.html
+
+    Misc:
+        * Removed lint found by Coverity Scan
+
+    DevOps:
+        * Enhanced "pre-commit" hook to vet the version ID in CHANGE_LOG and ensure a timestamp
+          in CHANGE_LOG when committing to the main branch
+        * Enhanced "OnPush.yml":
+            * Vet the version ID in CHANGE_LOG and "configure.ac"
+            * Update the "versions.html" file for LDM documentation on the artifacts server
+        * Deleted "--disable-root-actions" from Coverity Scan target
+        * Added deletion of /tmp/pqact_test.conf before creation due to /tmp having the "restricted
+          deletion" bit set
+        * Deleted use of CodeQL in OnPush.yml in favor of using Coverity Scan because it's better,
+          IMO
+
+6.14.3  2022-12-22T13:34:03-0700
     Documentation:
         * Fixed more links in HTML documentation
 

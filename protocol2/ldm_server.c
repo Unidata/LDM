@@ -457,6 +457,8 @@ hiya_6_svc(
     unsigned int maxHereis;
     static prod_class_t *accept;
 
+    hiyaCalled = true;
+
     /*
      * Open the product-queue for writing.  It will be closed by cleanup()
      * during process termination.

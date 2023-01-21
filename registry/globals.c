@@ -1,5 +1,5 @@
 /*
- *   Copyright 2014, University Corporation for Atmospheric Research
+ *   Copyright 2023, University Corporation for Atmospheric Research
  *
  *   See file COPYRIGHT in the top-level source-directory for copying and
  *   redistribution conditions.
@@ -11,6 +11,7 @@
 #include <rpc/rpc.h>  /* svc_req */
 #include <stddef.h>
 #include <signal.h>   /* sig_atomic_t */
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,6 +36,13 @@ static char             pqactDataDirPath[PATH_MAX];
 static char             pqsurfDataDirPath[PATH_MAX];
 static char             surfQueuePath[PATH_MAX];
 static char             ldmLogDir[PATH_MAX];
+
+/**
+ * Did the remote process use the HIYA protocol data unit? If so, then it likely used ldmsend(3)
+ * (e.g., rtstats(1), ldmsend(1), pqsend(1)) and is relying on a matching ACCEPT entry in the LDM
+ * configuration-file.
+ */
+bool hiyaCalled = false;
 
 /*
  * Timeout for rpc calls:

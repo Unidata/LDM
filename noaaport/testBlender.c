@@ -245,7 +245,6 @@ sendFramesToBlender(void* arg)
 	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
 
     // Compute frame rate:
-    float 		frameRate 					= 1 / MAX_FRAMES_PER_SEC;
 	uint32_t 	sequenceNum 				= 0;
 	int 		numberOfFramesSent 			= 0;
     int 		max_connections_to_receive 	= 0;
@@ -295,6 +294,8 @@ sendFramesToBlender(void* arg)
 		nanosleep( &duration, NULL);
 
 	} // for runs
+
+	return NULL;
 }
 
 static void

@@ -181,10 +181,10 @@ fileLock(
                     file->isLocked = 1;
                     status = 0;
                 }                               /* file locked */
-
-                if (status)
-                    close(fd);
             }
+
+            if (status)
+                close(fd);
         }                                   /* "fd" open */
     } // File isn't locked => file isn't open
 

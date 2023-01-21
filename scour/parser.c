@@ -477,7 +477,8 @@ regexOps(char *pattern, char *daysOldItem, int nmatch)
 	regex_t    regex;
 	regmatch_t group[nmatch];
 	char*      result;
-	time_t     status = regcomp(&regex, pattern, REG_EXTENDED);
+	int        status = regcomp(&regex, pattern, REG_EXTENDED);
+	time_t     epochTime = -1; // Default failure
 
 	if (status) {
 	    const size_t nbytes = regerror(status, &regex, NULL, 0);
@@ -485,7 +486,6 @@ regexOps(char *pattern, char *daysOldItem, int nmatch)
 	    (void)regerror(status, &regex, errbuf, nbytes);
 	    log_add(errbuf);
 	    log_add("Couldn't compile pattern \"%s\"", pattern);
-	    status = -1;
 	}
 	else {
         status = regexec(&regex, daysOldItem , nmatch, group, 0);
@@ -495,24 +495,26 @@ regexOps(char *pattern, char *daysOldItem, int nmatch)
                 days = strtol(daysOldItem+group[1].rm_so, &end, 0);
                 if(days > DAYS_SINCE_1994) {
                     log_add("Too many days back: %d", days);
-                    return -1;
+                    status = -1;
                 }
             }
 
-            if (group[2].rm_eo - group[2].rm_so > 0)
-                hours = strtol(daysOldItem+group[2].rm_so, &end, 0);
+            if (status == 0) {
+                if (group[2].rm_eo - group[2].rm_so > 0)
+                    hours = strtol(daysOldItem+group[2].rm_so, &end, 0);
 
-            if (group[3].rm_eo - group[3].rm_so > 0)
-                minutes = strtol(daysOldItem+group[3].rm_so, &end, 0);
+                if (group[3].rm_eo - group[3].rm_so > 0)
+                    minutes = strtol(daysOldItem+group[3].rm_so, &end, 0);
 
-            status = nowInEpoch() - (days*DAY_SECONDS + hours*HOUR_SECONDS +
-                    minutes*MINUTE_SECONDS);
+                epochTime = nowInEpoch() - (days*DAY_SECONDS + hours*HOUR_SECONDS +
+                        minutes*MINUTE_SECONDS);
+            }
 
             regfree(&regex);
         } // `regex` allocated
 	}
 
-	return status;
+	return epochTime;
 }
 
 time_t

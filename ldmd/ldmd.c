@@ -636,6 +636,7 @@ static int create_ldm_tcp_svc(
  * @param[in]     hostId      Identifier of client
  * @retval        ECONNRESET  The connection to the client LDM was lost.
  *                            `svc_destroy(xprt)` called. `log_add()` called.
+ * @retval        ETIMEDOUT   The connection to the client timed-out
  * @retval        EBADF       The socket isn't open. `log_add()` called.
  */
 static int
@@ -658,7 +659,8 @@ runSvc( SVCXPRT* const restrict    xprt,
          * one_svc_run() called svc_getreqsock(), which called
          * svc_destroy(xprt), which must only be called once
          */
-        log_add("Connection with client LDM, %s, has been lost", hostId);
+        log_clear();
+        log_info("Connection with client LDM, %s, has been lost", hostId);
     }
     else {
         if (status == ETIMEDOUT)
@@ -684,7 +686,7 @@ runSvc( SVCXPRT* const restrict    xprt,
  * @retval    EPERM       Can't create server-side RPC transport. `log_add()`
  *                        called.
  * @retval    ESRCH       Client isn't allowed. `log_add()` called.
- * @retval    ETIMEDOUT   Client didn't make contact. `log_add()` called.
+ * @retval    ETIMEDOUT   Connection to client timed-out. `log_add()` called.
  */
 static int
 runChildLdm(
@@ -1056,13 +1058,13 @@ int main(
     if (becomeDaemon) {
         if (reg_close()) {
             log_add("reg_close() failure");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
         if (daemonize()) { // Bwa-ha-ha!
             log_add("daemonize() failure");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
@@ -1084,13 +1086,13 @@ int main(
      */
     log_debug("Initializing configuration-file module");
     if (lcf_init(ldmPort, getLdmdConfigPath()) != 0) {
-        log_flush_error();
+        log_flush_fatal();
         exit(1);
     }
     if (!lcf_haveSomethingToDo()) {
         log_add("The LDM configuration-file \"%s\" is effectively empty",
                 getLdmdConfigPath());
-        log_flush_error();
+        log_flush_fatal();
         exit(1);
     }
 
@@ -1101,9 +1103,8 @@ int main(
      * register exit handler
      */
     if (atexit(cleanup) != 0) {
-        log_syserr("atexit() failure");
-        log_add("Exiting");
-        log_flush_notice();
+        log_add_syserr("atexit() failure");
+        log_flush_fatal();
         exit(1);
     }
 
@@ -1134,11 +1135,11 @@ int main(
         if ((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
             if (PQ_CORRUPT == status) {
                 log_add("The product-queue \"%s\" is inconsistent", pqfname);
-                log_flush_error();
+                log_flush_fatal();
             }
             else {
                 log_add("pq_open failed: %s: %s", pqfname, strerror(status));
-                log_flush_error();
+                log_flush_fatal();
             }
             exit(1);
         }
@@ -1159,13 +1160,13 @@ int main(
             }
             else {
                 log_add("Couldn't delete existing shared upstream LDM database");
-                log_flush_error();
+                log_flush_fatal();
                 exit(1);
             }
         }
         if (uldb_create(NULL, maxClients * 1024)) {
             log_add("Couldn't create shared upstream LDM database");
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 
@@ -1174,7 +1175,7 @@ int main(
          */
         log_debug("Executing configuration-file");
         if (lcf_execute() != 0) {
-            log_flush_error();
+            log_flush_fatal();
             exit(1);
         }
 

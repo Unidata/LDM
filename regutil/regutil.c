@@ -458,7 +458,10 @@ int main(
                     break;
                 }
                 case 'l': {
-                    log_set_destination(optarg);
+                    if (log_set_destination(optarg)) {
+                        log_add("Couldn't set logging destination to \"%s\"", optarg);
+                        status = SYSTEM_ERROR;
+                    }
                     break;
                 }
                 case 'q': {

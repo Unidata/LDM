@@ -11,8 +11,8 @@
   <body>
     <h1>LDM Configuration/Setup</h1>
     <ul>
-      <li><a href="#upstream feeds">Obtain source(s) of data feed(s)</a></li>
-      <li><a href="#upstream config">Request authorization by the upstream site(s)</a></li>
+      <li><a href="#upstream_feeds">Obtain source(s) of data feed(s)</a></li>
+      <li><a href="#upstream_config">Request authorization by the upstream site(s)</a></li>
       <li><a href="#ldmd.conf">Edit the file <b>etc/ldmd.conf</b></a></li>
       <li><a href="#pqact.conf">Edit the file <b>etc/pqact.conf</b></a></li>
       <li><a href="#cron">Edit the LDM-user's crontab(1) file</a></li>
@@ -20,7 +20,7 @@
       <li><a href="#boot">Ensure that the LDM is started at boot-time</a></li>
     </ul>
 
-    <h2 id="upstream feeds">Obtain source(s) of data feed(s)</h2>
+    <h2 id="upstream_feeds">Obtain source(s) of data feed(s)</h2>
     <p>First, find out who your upstream feed site(s) will be.  If you don't know, then contact the Unidata Program 
       Center at <a href="mailto:support-idd@unidata.ucar.edu">&lt;support-idd at unidata.ucar.edu&gt;</a> with the 
       following information:</p>
@@ -47,11 +47,11 @@
         request UNIDATA  ".*"  host3.site3.edu ALTERNATE
         request NLDN     ".*"  host4.site4.edu ALTERNATE
       </pre>
-      <li>An <a href="glossary.html#enable ldmd.conf entry">enabled "exec" entry</a> for <b>pqact</b>, if
+      <li>An <a href="glossary.html#enable_ldmd.conf_entry">enabled "exec" entry</a> for <b>pqact</b>, if
         appropriate.</li>
-      <li>An <a href="glossary.html#enable ldmd.conf entry">enabled "exec" entry</a> for <b>pqsurf</b>, if 
+      <li>An <a href="glossary.html#enable_ldmd.conf_entry">enabled "exec" entry</a> for <b>pqsurf</b>, if
         appropriate.</li> 
-      <li>A <a href="glossary.html#disable ldmd.conf entry">disabled "exec" entry</a> for <b>rtstats</b> if the LDM is 
+      <li>A <a href="glossary.html#disable_ldmd.conf_entry">disabled "exec" entry</a> for <b>rtstats</b> if the LDM is
         <i>not</i> a <a href="glossary.html#gateway_LDM">gateway LDM</a> for your institution. LDM statistics are the
         best way of monitoring IDD performance and identifying problems. It is critical that all 
         <a href="glossary.html#gateway_LDM">gateway LDM</a>-s report statistics. Also, the data from the LDM statistics
@@ -59,7 +59,7 @@
         the <a href="https://rtstats.unidata.ucar.edu/rtstats/">IDD rtstats page</a>.</li>  
     </ul>
 
-    <h2 id="upstream config">Request authorization by upstream site(s)</h2>
+    <h2 id="upstream_config">Request authorization by upstream site(s)</h2>
     <p>Ask the administrator(s) of the LDM(s) at the upstream site(s) to add "allow" entries for your LDM to their LDM's
       <b>ldmd.conf</b> file.  For example,</p>
     <pre>

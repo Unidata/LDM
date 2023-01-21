@@ -140,7 +140,7 @@
           <dd>Include support for ingesting data-products from a <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
             This option is disabled by default because most sites don't have a
             <a href="glindex.html#NOAAPORT">NOAAPORT</a> receiver.
-            <a href="../noaaport/index.html">NOAAPORT ingestion webpages</a>.</dd>
+            <a href="../utilities/noaaport/index.html">NOAAPORT ingestion webpages</a>.</dd>
           <dt><code>--with-gribinsert</code></dt>
           <dd>Include support for converting GRIB2 messages in a file into LDM
             <a href="glindex.html#data-product">data-product</a>s and inserting them into an LDM

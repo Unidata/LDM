@@ -157,7 +157,7 @@ isThisSymlinkADirectory(char *path)
 // so that symlink is not left broken
 static int 
 removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
-                            int daysOldInEpoch, char *daysOld)
+                            time_t daysOldInEpoch, char *daysOld)
 {
     char symlinkedFileToRemove[PATH_MAX];
 
@@ -178,7 +178,7 @@ removeFileSymlink(char *symlinkPath, char *symlinkedEntry,
         return -1;
     }
 
-    int targetedFileEpoch = sb.st_mtime;
+    time_t targetedFileEpoch = sb.st_mtime;
     if( isThisOlderThanThat(targetedFileEpoch, daysOldInEpoch) ) {
         if (remove(symlinkedEntry)) {
             log_add_syserr("Couldn't remove file \"%s\"", symlinkedEntry);

@@ -130,6 +130,7 @@ int nbs_decodePDH(
                         totalSize, pdh->size);
             }
             else {
+                pdh->totalSize = totalSize;
                 pdh->pshSize = totalSize - pdh->size;
 
                 if (pdh->pshSize == 0 && (fh->command == NBS_FH_CMD_TIME ||
@@ -316,7 +317,7 @@ int nbs_logHeaders(
             nbytes -= fh.size;
             nbs_logFH(&fh);
 
-            NbsPDH pdh;
+            NbsPDH pdh = {};
             status = nbs_decodePDH(buf, nbytes, &fh, &pdh);
             if (status) {
                 log_add("Invalid product-definition header");

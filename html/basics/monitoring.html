@@ -17,9 +17,9 @@
       <li><a href="#I/O">System I/O load</a></li>
       <li><a href="#latency">Data-product latency</a></li>
       <li><a href="#pqmon">The product-queue</a></li>
-      <li><a href="#upstream availability">LDM availability on an upstream	host</a></li>
-      <li><a href="#downstream process">Monitoring a downstream LDM on the local	system</a></li>
-      <li><a href="#upstream process">Monitoring an upstream LDM on the local	system</a></li>
+      <li><a href="#upstream_availability">LDM availability on an upstream	host</a></li>
+      <li><a href="#downstream_process">Monitoring a downstream LDM on the local	system</a></li>
+      <li><a href="#upstream_process">Monitoring an upstream LDM on the local	system</a></li>
       <li><a href="#netstat">The state of LDM network connections</a></li>
       <li><a href="#metrics">Metrics</a></li>
       <li><a href="#logfile">Use the LDM logfile</a></li>
@@ -48,7 +48,7 @@
     <h2 id="latency">Data-product latency</h2>
     <ul>
       <li><a href="#IDD_rtstats_webpages">Using the IDD rtstats webpages</a></li>
-      <li><a href="#ldmadmin watch">Using ldmadmin watch</a></li>
+      <li><a href="#ldmadmin_watch">Using ldmadmin watch</a></li>
     </ul>
 
     <h4 id="IDD_rtstats_webpages">Using the <a href="glindex.html#IDD_rtstats_webpages">IDD rtstats webpages</a></h4>
@@ -59,7 +59,7 @@
       <a href="glindex.html#feedtype">feedtype</a> in which you're interested, and then select the <b>latency</b>
       plot.</p>
 
-    <h4 id="ldmadmin watch">Using ldmadmin watch</h4>
+    <h4 id="ldmadmin_watch">Using ldmadmin watch</h4>
     <p>The <a href="glindex.html#ldmadmin">ldmadmin</a> utility can be used to monitor the
       <a href="glindex.html#data-product_latency">data-product latency</a> of incoming data:</p>
     <pre>
@@ -117,7 +117,7 @@
       unnecessarily large parameter specifying the maximum number of data-products. The overhead of managing the queue
       could be slightly reduced by recreating the queue with a smaller number of slots (<i>e.g.</i>, 250000).</p>
 
-    <h2 id="upstream availability">LDM availability on an <a href="glindex.html#upstream_host">upstream host</a></h2>
+    <h2 id="upstream_availability">LDM availability on an <a href="glindex.html#upstream_host">upstream host</a></h2>
     <p>The <a href="glindex.html#ldmping">ldmping</a> utility can be used to determine the availability of an
       <a href="glindex.html#upstream_LDM">upstream LDM</a>.  For example</p>
     <pre>
@@ -140,7 +140,7 @@
           tried).</dd>
         <dt>ADDRESSED</dt>
 	      <dd>An LDM is running on the <a href="glindex.html#upstream_host">upstream host</a> on the expected port but
-          we're not allowed to connect to it (<i>i.e.</i>, there's no	<a href="glindex.html#ALLOW entry">ALLOW entry</a>
+          we're not allowed to connect to it (<i>i.e.</i>, there's no	<a href="glindex.html#ALLOW_entry">ALLOW entry</a>
           for our	LDM in the 	<a href="glindex.html#ldmd.conf">configuration-file</a> of the
           <a href="glindex.html#upstream_LDM">upstream LDM</a>).</dd>
         <dt>RESPONDING</dt>
@@ -168,7 +168,7 @@
       notifyme -vl- -h <i>hostname</i>
     </pre>
 
-    <h2 id="downstream process">Monitoring a <a href="glindex.html#downstream_LDM">downstream LDM</a>
+    <h2 id="downstream_process">Monitoring a <a href="glindex.html#downstream_LDM">downstream LDM</a>
       on the local system</h2>
     <p>You can monitor a <a href="glindex.html#downstream_LDM">downstream LDM</a> process that is executing on the local
       system by setting its logging-level to <b>verbose</b>, at which time it will print the
@@ -189,7 +189,7 @@
       ...
     </pre>
 
-    <h2 id="upstream process">Monitoring an <a href="glindex.html#upstream_LDM">upstream LDM</a>
+    <h2 id="upstream_process">Monitoring an <a href="glindex.html#upstream_LDM">upstream LDM</a>
       on the local system</h2>
     <p>You can monitor an <a href="glindex.html#upstream_LDM">upstream LDM</a> process that is executing on the local
       system by setting its logging-level to <b>debug</b>, at which time it will print the

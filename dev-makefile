@@ -27,8 +27,7 @@ COVERITY_SCAN_FILE      = ldm.tgz
 # Create a submission file for Coverity Scan
 $(COVERITY_SCAN_FILE):
 	$(MAKE) distclean
-	./configure --disable-root-actions --enable-debug --with-noaaport \
-	    --with-multicast CC=gcc >& configure.log
+	./configure --enable-debug --with-noaaport --with-ingester CC=gcc >& configure.log
 	rm -rf cov-int
 	cov-build --dir cov-int $(MAKE)
 	tail cov-int/build-log.txt

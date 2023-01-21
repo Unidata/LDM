@@ -247,10 +247,13 @@
 #define DEFAULT_MAX_SAVE_FILES		500
 #define DEFAULT_SAVE_FILE_DIGITS	3
 #define	MAX_FILENAME_LEN		128
+#define STRINGIZE(x)            #x
 #define MAX_PATH_LEN			256
+#define SCAN_PATHNAME           "%" STRINGIZE(MAX_PATH_LEN) "s"
 #define MAX_ACQ_PATH_LEN		128
 #define MAX_HOST_LEN			64
 #define MAX_HASH_LEN			128
+#define SCAN_HASH_CODE          "%" STRINGIZE(MAX_HASH_LEN) "s"
 #define MIN_DISCARD_AGE			60		/* Minimum age for DiscardAge in seconds */
 #define DEFAULT_DISCARD_AGE		3600		/* Default discard age in seconds */
 #define PROD_LOG			"products.log"
@@ -2118,7 +2121,7 @@ int processProducts (FILE_LIST *fileList) {
 	char		*p;
 	int		fd;
 	int		age;
-	ssize_t		readSize;
+	ssize_t		readSize = 0;
 	ssize_t		writeSize;
 	size_t		finalSize;
 	char		hashFileName[MAX_FILENAME_LEN+1] = {0};
@@ -2220,7 +2223,8 @@ int processProducts (FILE_LIST *fileList) {
 							__FUNCTION__, errno, hashFileName);
 					} else {
 						/* Read the hash code and file name from the file */
-						if (fscanf (hashFile, "%s %s", hashCode, fName) == EOF) {
+						if (fscanf (hashFile, SCAN_HASH_CODE " " SCAN_PATHNAME, hashCode, fName)
+						        != 2) {
 							logMsg (eLog, V_ERROR, S_ERROR,
 								"(%s) - Error %d calling fscanf for hash code in %s",
 								__FUNCTION__, errno, hashFileName);
@@ -2228,7 +2232,8 @@ int processProducts (FILE_LIST *fileList) {
 
 							sprintf (command, "%s %s", HashProgram, prodFullName);
 							hashPipe = popen (command, "r");
-							if (fscanf (hashPipe, "%s %s", fileHashCode, fName) == EOF) {
+							if (fscanf (hashPipe, SCAN_HASH_CODE " " SCAN_PATHNAME, fileHashCode,
+							        fName) != 2) {
 								logMsg (eLog, V_ERROR, S_ERROR,
 									"(%s) - Error %d calling fscanf while reading pipe",
 									__FUNCTION__, errno);

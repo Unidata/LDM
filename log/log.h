@@ -12,6 +12,8 @@
 #ifndef LOG_LOG_H_
 #define LOG_LOG_H_
 
+#include "../misc/ErrObj.h"
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -312,6 +314,10 @@ const char* log_get_destination(void);
  * @asyncsignalsafety  Unsafe
  */
 void log_clear(void);
+
+int log_dispose(
+        const log_level_t level,
+        ErrObj*           errObj);
 
 /**
  * DEPRECATED. No longer necessary.

@@ -1,5 +1,5 @@
 /**
- *   Copyright 2019, University Corporation for Atmospheric Research. All rights
+ *   Copyright 2023, University Corporation for Atmospheric Research. All rights
  *   reserved. See the file COPYRIGHT in the top-level source-directory for
  *   licensing conditions.
  *
@@ -1277,3 +1277,24 @@ unsigned log_get_options(void)
     return options;
 }
 
+int log_dispose(
+        const log_level_t level,
+        ErrObj*           errObj)
+{
+    int status = 0;
+
+    if (level >= log_level) {
+        for (const Error* error = eo_first(errObj); status == 0 && error; error = er_next(error)) {
+            const log_loc_t loc = {.file=er_file(error), .func=er_func(error), .line=er_line(error)};
+            status = logl_add(&loc, "%s", er_msg(error));
+        }
+    }
+
+    const int flushStatus = log_flush(level);
+    if (status == 0)
+        status = flushStatus;
+
+    eo_delete(errObj);
+
+    return status;
+}

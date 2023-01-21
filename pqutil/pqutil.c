@@ -1000,7 +1000,7 @@ big_product(pqueue      *pq,
             while ((ch = fgetc(stdin)) != EOF) {
                 if (++prod_cnt > prod_sz) {
                     log_error_q("product exceeds buffer size: aborting input");
-                    fflush(stdin);
+                    (void)fflush(stdin);
                     prod_cnt--;
                     return;
                 }

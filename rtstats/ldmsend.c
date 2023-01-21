@@ -411,6 +411,8 @@ ldmsend(
     int*        seq_start,
     char*       statsdata)
 {
+    log_assert(clnt != NULL);
+
     int         status = 0;
     int         idlen;
     int         icnt;
@@ -538,7 +540,7 @@ int ldmsend_main(
     prod_spec       spec;
     static int      seq_start = 0;
     int             status = 0; /* success */
-    ErrorObj*       error;
+    ErrorObj*       error = NULL;
     
     clss.from = TS_ZERO;
     clss.to = TS_ENDT;
@@ -548,45 +550,33 @@ int ldmsend_main(
     spec.pattern = ".*";
 
     if (NULL == clnt) {
-
         /*
          * Connect to the LDM server.
          */
-        error = ldm_clnttcp_create_vers(remote, remotePort, SIX, &clnt, NULL,
-            NULL);
+        version = SIX;
+        error = ldm_clnttcp_create_vers(remote, remotePort, SIX, &clnt, NULL, NULL);
 
-        if (!error) {
-            version = SIX;
-        }
-        else if (LDM_CLNT_BAD_VERSION == err_code(error)) {
+        if (error && LDM_CLNT_BAD_VERSION == err_code(error)) {
             err_free(error);
-
-            error = ldm_clnttcp_create_vers(remote, LDM_PORT, FIVE, &clnt,
-                NULL, NULL);
-
-            if (!error)
-                version = FIVE;
-        }
-
-        if (!error) {
-            signed_on_hiya = 0;
-
-            log_debug("version = %u", version);
-        }
-        else {
-            err_log_and_free(error, ERR_WARNING);
-
-            status = -1;
+            version = FIVE;
+            error = ldm_clnttcp_create_vers(remote, LDM_PORT, FIVE, &clnt, NULL, NULL);
         }
     }
 
-    if (NULL != clnt) {
-        if (5 == version) {
+    if (error) {
+        err_log_and_free(error, ERR_ERROR);
+        status = -1;
+    }
+    else {
+        log_debug("version = %u", version);
+        signed_on_hiya = 0;
+
+        if (FIVE == version) {
             hiya = my_hiya_5;
             send_product = send_product_5;
             nullproc = NULL;
         }
-        else if (6 == version) {
+        else if (SIX == version) {
             hiya = my_hiya_6;
             send_product = send_product_6;
             nullproc = nullproc_6;
