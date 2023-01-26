@@ -1,5 +1,13 @@
+6.14.5.1
+    CHANGE_LOG:
+        * Consolidated 6.14.4.* entries into 6.14.4.
+
 6.14.4  2023-01-26T11:03:17-0700
     ldmd(1):
+        * Eliminated log messages when an upstream LDM process that was ACCEPTed terminates. This
+          should reduce the number of log messages on the rtstats(1) mothership.
+        * Moved setting of "hiyaCalled" to top of HIYA service functions
+        * Made ECONNRESET error a single INFO-level log message
         * Replace some ERROR log messages with FATAL ones in the main module.
 
     NOAAPort:
@@ -9,24 +17,8 @@
             * g2varsncep.tbl:
                 001 001 194 009 Prob precip exceeding FFG  %            PEFG--  0  -9999.00
 
-    Misc:
-        * ErrObj module
-            * Created
-            * Created log_dispose(ErrObj*)
-            * Might get used; might not.
-
-6.14.4.2    2023-01-13T15:38:04-0700
-    ldmd(1):
-        * Moved setting of "hiyaCalled" to top of HIYA service functions
-        * Made ECONNRESET error a single INFO-level log message
-
     rtstats(1):
         * Made error reporting more robust
-    
-6.14.4.1    2023-01-05T10:47:36-0700
-    ldmd(1):
-        * Eliminated log messages when an upstream LDM process that was ACCEPTed terminates. This
-          should reduce the number of log messages on the rtstats(1) mothership.
 
     Documentation:
         * More hyperlink corrections
@@ -34,6 +26,10 @@
 
     Misc:
         * Removed lint found by Coverity Scan
+        * ErrObj module
+            * Created
+            * Created log_dispose(ErrObj*)
+            * Might get used; might not.
 
     DevOps:
         * Enhanced "pre-commit" hook to vet the version ID in CHANGE_LOG and ensure a timestamp
