@@ -3,7 +3,7 @@
         * Replace some ERROR log messages with FATAL ones in the main module.
 
     NOAAPort:
-        * Added entries to GEMPAK tables:
+        * Added entries with new PDTNs to GEMPAK tables:
             * g2varswmo.tbl:
                 000 002 000 002 Wind Direction             Degree true  DRCT    0  -9999.00
             * g2varsncep.tbl:
