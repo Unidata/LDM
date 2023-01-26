@@ -1,9 +1,9 @@
-6.14.4.3
+6.14.4  2023-01-26T11:03:17-0700
     ldmd(1):
         * Replace some ERROR log messages with FATAL ones in the main module.
 
     NOAAPort:
-        * Added entries to GEMPAK tables:
+        * Added entries with new PDTNs to GEMPAK tables:
             * g2varswmo.tbl:
                 000 002 000 002 Wind Direction             Degree true  DRCT    0  -9999.00
             * g2varsncep.tbl:
