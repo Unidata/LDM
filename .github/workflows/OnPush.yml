@@ -137,7 +137,7 @@ jobs:
             sed -n '/"releases":/,$p' release_info.json | sed '1d' | sed 's/current/previous/' \
               >>release_info.json.new
             curl -u "$USER":"$PW" -T release_info.json.new \
-              https://artifacts.unidata.ucar.edu/repository/downloads-ldm/$version/release_info.json
+              https://artifacts.unidata.ucar.edu/repository/downloads-ldm/release_info.json
           fi
 
           # Publish the documentation
