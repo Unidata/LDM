@@ -1,4 +1,4 @@
-# Deploys LDM7 to all permitted hosts
+# Deploys LDM to all permitted hosts
 
 set -e
 
@@ -7,7 +7,7 @@ versOpt=${1:+-v $1}
 cd `dirname $0`
 
 # NOAAPort ingest test system (password required)
-#deploy -M /usr/ccs/bin/make -n burns
+#deploy -n chico
 
 # Non-operational backend cluster node
 # Tom's using uni14 for fanout testing
