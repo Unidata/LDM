@@ -145,7 +145,7 @@ ldmsend_statsbin(
             status = 0;
         }
         else {
-            snprintf(stats_data, sizeof(stats_data),
+            int nbytes = snprintf(stats_data, sizeof(stats_data),
                     "%14.14s %14.14s %32.*s %7.10s %32.*s %12.0lf %12.0lf %.8g %10.2f %4.0f@%4.4s %20.20s\n",
                     s_time(buf, sizeof(buf), sb->recent.tv_sec),
                     s_time(buf_a, sizeof(buf_a), sb->recent_a.tv_sec),
@@ -164,7 +164,8 @@ ldmsend_statsbin(
             );
             status = ldmsend_main(stats_data, myname); // Opens initial connection
             if (status) {
-                log_add("ldmsend_main() failure: myname=%s, stats_data=\"%s\"", myname, stats_data);
+                log_add("ldmsend_main() failure: myname=%s, stats_data=\"%.*s\"", myname, nbytes-1,
+                        stats_data);
             }
             else {
                 sb->needswrite = 0;
