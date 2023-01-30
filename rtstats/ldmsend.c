@@ -222,11 +222,6 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
 void ldmsend_clnt_destroy()
 {
     if (clnt != NULL) {
-        if (NULL != nullproc && NULL == (*nullproc)(NULL, clnt)) {
-            log_error_q("%s: NULLPROC failure: %s", remote,
-                clnt_errmsg(clnt));
-        }
-
         auth_destroy(clnt->cl_auth);
         clnt_destroy(clnt);
         (void)close(sock);
