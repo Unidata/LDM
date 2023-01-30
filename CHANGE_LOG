@@ -1,4 +1,7 @@
 6.14.5.1
+    rtstats(1):
+        * Commented code about who logs
+
     Documentation:
         * Added requirement that "RemoveIPC" in "/etc/systemd/logind.conf" must be "no" to
           prevent systemd(8) from deleting the LDM's shared-memory segment that contains the

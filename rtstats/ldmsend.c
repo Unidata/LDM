@@ -303,7 +303,7 @@ send_product_5(
 
 
 /**
- * Sends a data-product to an LDM server using LDM-6 protocols.
+ * Sends a data-product to an LDM server using LDM-6 protocols. Calls log_error_q() on error.
  *
  * @param clnt      [in/out] The client-side handle.
  * @param statsdata [in] The data portion of the data-product.
@@ -466,7 +466,7 @@ ldmsend(
            log_debug("already signed on");
         }
         else {
-            status = (*hiya)(clnt, &clssp);
+            status = (*hiya)(clnt, &clssp); // my_hiya_6() calls log_error_q() on error
 
             if(status == 0)
                 signed_on_hiya = 1;
@@ -578,7 +578,7 @@ int ldmsend_main(
         }
         else if (SIX == version) {
             hiya = my_hiya_6;
-            send_product = send_product_6;
+            send_product = send_product_6; // Calls log_error_q() on error
             nullproc = nullproc_6;
         }
         else {

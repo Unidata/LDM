@@ -162,7 +162,7 @@ ldmsend_statsbin(
                     s_time_abrv(sb->slowest_at),
                     PACKAGE_VERSION
             );
-            status = ldmsend_main(stats_data, myname);
+            status = ldmsend_main(stats_data, myname); // Opens initial connection
             if (status) {
                 log_add("ldmsend_main() failure: myname=%s, stats_data=\"%s\"", myname, stats_data);
             }
@@ -507,7 +507,7 @@ syncbinstats(
            int status = 0;
            for (ii = 0; status == 0 && ii < nbins; ii++) {
                if (binList[ii]->needswrite)
-                   status = ldmsend_statsbin(binList[ii], hostname);
+                   status = ldmsend_statsbin(binList[ii], hostname); // Opens connection
            }
 
            if (status) {
@@ -520,6 +520,6 @@ syncbinstats(
            rfact = (float)( random() & 0x7f ) / (float)(0x7f);
            REPORT_INTERVAL = DEFAULT_INTERVAL + (int)(DEFAULT_RANDOM * rfact);
 
-           ldmsend_clnt_destroy();
+           ldmsend_clnt_destroy(); // Sets `clnt` to `NULL`
            }
 }
