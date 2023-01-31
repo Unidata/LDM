@@ -64,15 +64,15 @@ Feedtype
 .TP
 Origin host
 .TP
-Products received this hour
+Products received since \fBrtstats\fP(1) started
 .TP
-Bytes received this hour
+Bytes received since \fBrtstats\fP(1) started
 .TP
 Latency of most recent product
 .TP
-Average latency of products received this hour
+Average latency of products received since \fBrtstats\fP(1) started
 .TP
-Peak latency@min/sec past hour
+Peak latency@min/sec past the hour since \fBrtstats\fP(1) started
 .TP
 Version of LDM running on localhost
 
