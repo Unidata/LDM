@@ -3,6 +3,9 @@
         * Commented code about who logs because the code is convoluted
         * Removed trailing newline in rtstats(1) log message to eliminate extraneous log message
         * Eliminated sending of NULLPROC before closing connection because it's superfluous
+        * Documented return value of ldmsend_statsbin()
+        * Prevented overrun in formatting report
+        * Eliminated unnecssary log message
 
     Documentation:
         * Added requirement that "RemoveIPC" in "/etc/systemd/logind.conf" must be "no" to

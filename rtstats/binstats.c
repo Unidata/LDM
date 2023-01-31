@@ -130,6 +130,10 @@ dump_statsbin(statsbin *sb)
  *
  * @param sb            [in] The statistics to be sent.
  * @param myname        [in] The name of the local host.
+ * @retval 0            Success or nothing to report.
+ * @retval -1           The LDM server couldn't be contacted. An error-message is logged.
+ * @retval ENOMEM       Out-of-memory.
+ * @retval ECONNABORTED The transmission attempt failed for some reason.
  */
 static int
 ldmsend_statsbin(
@@ -146,7 +150,8 @@ ldmsend_statsbin(
         }
         else {
             int nbytes = snprintf(stats_data, sizeof(stats_data),
-                    "%14.14s %14.14s %32.*s %7.10s %32.*s %12.0lf %12.0lf %.8g %10.2f %4.0f@%4.4s %20.20s\n",
+                    "%14.14s %14.14s %32.*s %7.10s %32.*s %12.0lf %12.0lf %.8g %10.2f %4.0f@%4.4s "
+                        "%20.20s\n",
                     s_time(buf, sizeof(buf), sb->recent.tv_sec),
                     s_time(buf_a, sizeof(buf_a), sb->recent_a.tv_sec),
                     (int)_POSIX_HOST_NAME_MAX,
@@ -163,13 +168,8 @@ ldmsend_statsbin(
                     PACKAGE_VERSION
             );
             status = ldmsend_main(stats_data, myname); // Opens initial connection
-            if (status) {
-                log_add("ldmsend_main() failure: myname=%s, stats_data=\"%.*s\"", myname, nbytes-1,
-                        stats_data);
-            }
-            else {
+            if (status == 0)
                 sb->needswrite = 0;
-            }
         }
 
         return status;
