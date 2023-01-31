@@ -577,13 +577,16 @@ int ldmsend_main(
             nullproc = nullproc_6;
         }
         else {
-            abort();
+            log_error("Unsupported LDM version: %u", version);
+            status = ECONNABORTED;
         }
 
-        status = ldmsend(clnt, &clss, myname, &seq_start, statsdata);
+        if (status == 0) {
+            status = ldmsend(clnt, &clss, myname, &seq_start, statsdata);
 
-        if (seq_start > 999)
-            seq_start = 0;
+            if (seq_start > 999)
+                seq_start = 0;
+        }
     }
 
     return status;

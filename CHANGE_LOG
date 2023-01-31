@@ -6,6 +6,8 @@
         * Documented return value of ldmsend_statsbin()
         * Prevented overrun in formatting report
         * Eliminated unnecssary log message
+        * Replaced abort(), due to unsupported remote LDM version, with log_error() and ECONNABORTED
+          return value
 
     Documentation:
         * Added requirement that "RemoveIPC" in "/etc/systemd/logind.conf" must be "no" to
