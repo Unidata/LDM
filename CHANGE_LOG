@@ -4,24 +4,24 @@
 
 6.14.5.1  2023-01-31T16:15:39-0700
     rtstats(1):
-        * Commented code about who logs because the code is convoluted
+        * Commented code about what function logs messages because the code is convoluted
         * Removed trailing newline in rtstats(1) log message to eliminate extraneous log message
         * Eliminated sending of NULLPROC before closing connection because it's superfluous
         * Documented return value of ldmsend_statsbin()
-        * Prevented overrun in formatting report
-        * Eliminated unnecssary log message
-        * Replaced abort(), due to unsupported remote LDM version, with log_error() and ECONNABORTED
+        * Eliminated possibility of overrun in formatting report
+        * Eliminated unnecessary log message
+        * Replaced abort() due to unsupported remote LDM version with log_error() and ECONNABORTED
           return value
+        * man(1) page: Corrected description of number of bytes, number of products, and
+          peak-latency parameters: they are not for "this hour" but since rtstats(1) was started
 
     Documentation:
         * Added requirement that "RemoveIPC" in "/etc/systemd/logind.conf" must be "no" to
           prevent systemd(8) from deleting the LDM's shared-memory segment that contains the
           upstream LDM database.
-        * rtstats(1) man(1) page: Corrected description of number of bytes, number of products, and
-          peak-latency parameters: they are not for "this hour" but since rtstats(1) was started
 
     CHANGE_LOG:
-        * Consolidated 6.14.4.* entries into 6.14.4.
+        * Consolidated 6.14.4.* entries into 6.14.4. Should have done that earlier.
 
 6.14.4  2023-01-26T11:03:17-0700
     ldmd(1):
