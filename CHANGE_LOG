@@ -1,3 +1,7 @@
+6.14.5.2
+    Documentation:
+        * Removed empty entry from list of general platform requirements
+
 6.14.5.1  2023-01-31T16:15:39-0700
     rtstats(1):
         * Commented code about who logs because the code is convoluted
