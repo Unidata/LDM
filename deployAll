@@ -9,9 +9,9 @@ cd `dirname $0`
 # NOAAPort ingest test system (password required)
 #deploy -n chico
 
-# Non-operational backend cluster node
-# Tom's using uni14 for fanout testing
-#deploy uni17
+# Non-operational backend cluster node. Needs "--with-noaaport".
+# Tom's using uni14 and uni17 for fanout testing
+#deploy -n uni15
 
 # Lead (for testing pqact(1))
 #deploy lead
