@@ -60,12 +60,14 @@ public:
 
     /**
      * Increments this instance to that of the expected next frame.
-     *
-     * NB: This assumes that no frames are ignored (because they're timing frames or test frames for
-     * example) so that an instance is created for every incoming frame. If this isn't the case,
-     * then the product sequence number and block numbers likely must be used.
      */
     inline NbsFrameKey& operator++() {
+        /**
+         * NB: This assumes that no frames are ignored (because they're timing frames or test frames
+         * for example) so that an instance of this class is created for every incoming frame. If
+         * this isn't the case, then the product-description header's sequence number and block
+         * number likely must be used.
+         */
         ++fhSeqNum;
         return *this;
     }
