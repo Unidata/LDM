@@ -27,18 +27,18 @@
 class NbsFrameKey
 {
 public:
-    using UplinkId = uint32_t; ///< Type of uplink identifier
-    using FhSeqNum = uint32_t; ///< Type of frame header sequence number
+    using SessionId = uint32_t; ///< Type of session identifier
+    using FhSeqNum  = uint32_t; ///< Type of frame header sequence number
 
     /**
      * Constructs.
-     * @param[in] uplinkId ///< Uplink identifier
-     * @param[in] seqNum   ///< Frame header sequence number
+     * @param[in] sessionId  Strictly monotonically increasing session identifier
+     * @param[in] seqNum     Frame header sequence number
      */
     NbsFrameKey(
-            const UplinkId uplinkId,
-            const FhSeqNum seqNum)
-        : uplinkId(uplinkId)
+            const SessionId sessionId,
+            const FhSeqNum  seqNum)
+        : sessionId(sessionId)
         , fhSeqNum(seqNum)
     {}
 
@@ -54,8 +54,8 @@ public:
      * @retval    `false`  This instance does not compare less than the other
      */
     bool operator<(const NbsFrameKey& rhs) {
-        return this->isLessThan(uplinkId, rhs.uplinkId) ||
-                (uplinkId == rhs.uplinkId && this->isLessThan(fhSeqNum, rhs.fhSeqNum));
+        return this->isLessThan(sessionId, rhs.sessionId) ||
+                (sessionId == rhs.sessionId && this->isLessThan(fhSeqNum, rhs.fhSeqNum));
     }
 
     /**
@@ -71,8 +71,8 @@ public:
     }
 
 private:
-    UplinkId uplinkId; ///< Uplink identifier
-    FhSeqNum fhSeqNum; ///< Frame header sequence number
+    SessionId sessionId; ///< Strictly monotonically increasing session identifier
+    FhSeqNum fhSeqNum;   ///< Frame header sequence number
 
     /**
      * Indicates if one frame header sequence number compares less than another.
@@ -81,7 +81,7 @@ private:
      * @retval    `true`   `lhs` is less than `rhs`
      * @retval    `false`  `lhs` is not less than `rhs`
      */
-    static inline bool isLessThan(
+    inline static bool isLessThan(
             const uint32_t lhs,
             const uint32_t rhs) {
         return lhs - rhs > UINT32_MAX/2; // NB: Unsigned arithmetic
