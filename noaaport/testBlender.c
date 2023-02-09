@@ -240,7 +240,7 @@ void buildFrameI(uint32_t sequence, unsigned char *frame, uint16_t run, int clie
 static void*
 sendFramesToBlender(void* arg)
 {
-	int clientSocket = (int) arg;
+	int clientSocket = (uintptr_t)arg;
 
 	unsigned char 	frame[SBN_FRAME_SIZE] 	= {};
 
@@ -303,7 +303,7 @@ start_newThread(int threadNum, int clientSocket)
 {
 	// create a thread
 	if(pthread_create(  &frameSenderThreadArray[threadNum],
-			NULL, sendFramesToBlender, (void*) clientSocket) < 0)
+			NULL, sendFramesToBlender, (void*)(uintptr_t)clientSocket) < 0)
 	{
 		log_add("testBlender(): Could not create a thread!\n");
 		log_flush_error();
