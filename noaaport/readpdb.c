@@ -38,7 +38,7 @@ int readpdb(char *buf, psh_struct *psh, pdb_struct *pdb, int zflag, int bufsz )
          if((unsigned char)buf[wmocnt] > 32)
             strncat(psh->pname,buf+wmocnt,1);
          else
-            strncat(psh->pname," ",1);
+            strcat(psh->pname," "); // Guaranteed safe because 512 < sizeof(psh->pname)
       }
       wmocnt++;
    }
