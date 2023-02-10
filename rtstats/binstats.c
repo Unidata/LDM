@@ -494,33 +494,33 @@ void
 syncbinstats(
         const char* const   hostname)
 {
-        size_t ii;
-        time_t tnow;
-        static time_t lastsent=0;
-        static int REPORT_INTERVAL=DEFAULT_INTERVAL;
-        float  rfact;
+    size_t ii;
+    time_t tnow;
+    static time_t lastsent=0;
+    static int REPORT_INTERVAL=DEFAULT_INTERVAL;
+    float  rfact;
 
-        tnow = time(NULL);
-        if(tnow - lastsent > REPORT_INTERVAL) 
-           {
-           lastsent = tnow;
+    tnow = time(NULL);
+    if(tnow - lastsent > REPORT_INTERVAL)
+    {
+       lastsent = tnow;
 
-           int status = 0;
-           for (ii = 0; status == 0 && ii < nbins; ii++) {
-               if (binList[ii]->needswrite)
-                   status = ldmsend_statsbin(binList[ii], hostname); // Opens connection
-           }
+       int status = 0;
+       for (ii = 0; status == 0 && ii < nbins; ii++) {
+           if (binList[ii]->needswrite)
+               status = ldmsend_statsbin(binList[ii], hostname); // Opens connection
+       }
 
-           if (status) {
-               log_add("Couldn't report statistics");
-               log_flush_error();
-           }
+       if (status) {
+           log_add("Couldn't report statistics");
+           log_flush_error();
+       }
 
-           /* Add a Random time offset from reporting interval so that
-              sites contacting stats server don't converge to a single report time */
-           rfact = (float)( random() & 0x7f ) / (float)(0x7f);
-           REPORT_INTERVAL = DEFAULT_INTERVAL + (int)(DEFAULT_RANDOM * rfact);
+       /* Add a Random time offset from reporting interval so that
+          sites contacting stats server don't converge to a single report time */
+       rfact = (float)( random() & 0x7f ) / (float)(0x7f);
+       REPORT_INTERVAL = DEFAULT_INTERVAL + (int)(DEFAULT_RANDOM * rfact);
 
-           ldmsend_clnt_destroy(); // Sets `clnt` to `NULL`
-           }
+       ldmsend_clnt_destroy(); // Sets `clnt` to `NULL`
+    }
 }
