@@ -20,18 +20,18 @@ enum err_level {
 };
 
 
-#define ERR_NEW(code, cause, msg) err_new(code, cause, __FILE__, __LINE__, msg)
+#define ERR_NEW(code, cause, msg) err_new(code, cause, __FILE__, __func__, __LINE__, msg)
 #define ERR_NEW0	ERR_NEW
 #define ERR_NEW1(code, cause, fmt, a1) \
-    err_new(code, cause, __FILE__, __LINE__, fmt, a1)
+    err_new(code, cause, __FILE__, __func__, __LINE__, fmt, a1)
 #define ERR_NEW2(code, cause, fmt, a1, a2) \
-    err_new(code, cause, __FILE__, __LINE__, fmt, a1, a2)
+    err_new(code, cause, __FILE__, __func__, __LINE__, fmt, a1, a2)
 #define ERR_NEW3(code, cause, fmt, a1, a2, a3) \
-    err_new(code, cause, __FILE__, __LINE__, fmt, a1, a2, a3)
+    err_new(code, cause, __FILE__, __func__, __LINE__, fmt, a1, a2, a3)
 #define ERR_NEW4(code, cause, fmt, a1, a2, a3, a4) \
-    err_new(code, cause, __FILE__, __LINE__, fmt, a1, a2, a3, a4)
+    err_new(code, cause, __FILE__, __func__, __LINE__, fmt, a1, a2, a3, a4)
 #define ERR_NEW5(code, cause, fmt, a1, a2, a3, a4, a5) \
-    err_new(code, cause, __FILE__, __LINE__, fmt, a1, a2, a3, a4, a5)
+    err_new(code, cause, __FILE__, __func__, __LINE__, fmt, a1, a2, a3, a4, a5)
 
 
 /**
@@ -49,6 +49,7 @@ err_new(
     const int                   code,
     ErrorObj* const             cause,
     const char* const           file,
+    const char* const           func,
     const unsigned              line, 
     const char* const           fmt,
     ...);

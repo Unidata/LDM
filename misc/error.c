@@ -22,6 +22,7 @@ struct error {
     char        msg[512];
     ErrorObj*    cause;
     const char* file;
+    const char* func;
     size_t      msglen;
     int         code;
     unsigned    line;
@@ -38,6 +39,7 @@ err_new(
     const int           code,
     ErrorObj* const     cause,
     const char* const   file,
+    const char* const   func,
     const unsigned      line, 
     const char* const   fmt,
     ...)
@@ -56,6 +58,7 @@ err_new(
     else {
         err->line = line;
         err->file = file;
+        err->func = func;
 
         if (NULL == fmt) {
             err->msg[0] = 0;
@@ -122,6 +125,16 @@ err_message(
     return err->msg;
 }
 
+static void err_log_r(
+        const ErrorObj* const err,
+        const unsigned        level)
+{
+    if (err->cause)
+        err_log_r(err->cause, level);
+    const log_loc_t loc = {err->file, err->func, err->line};
+    logl_log(&loc, level, "%.*s", (int)err->msglen, err->msg);
+}
+
 
 /*
  * This function is not re-entrant because it contains static variables that are
@@ -139,6 +152,10 @@ err_log(
         LOG_LEVEL_INFO,
         LOG_LEVEL_DEBUG
     };
+#if 1
+    if (log_is_level_enabled(log_levels[level]))
+        err_log_r(err, log_levels[level]);
+#else
 
     if (log_is_level_enabled(log_levels[level])) {
         const ErrorObj*          e;
@@ -236,6 +253,7 @@ err_log(
          */
         log_log_q(log_levels[level], "%s", buf);
     }
+#endif
 }
 
 
