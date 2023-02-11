@@ -1,4 +1,9 @@
 6.14.5.2
+    rtstats(1):
+        * Decreased the coupling between the statistics gathering module and the LDM reporting
+          module
+        * Corrected the logic regarding whether or not a HIYA should be sent
+
     Documentation:
         * Removed empty entry from list of general platform requirements
 

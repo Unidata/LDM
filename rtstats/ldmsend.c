@@ -1,8 +1,7 @@
-/*
- *   Copyright 1993, University Corporation for Atmospheric Research
- *   See ../COPYRIGHT file for copying and redistribution conditions.
+/**
+ *   Copyright 2023, University Corporation for Atmospheric Research
+ *   See file ../COPYRIGHT for copying and redistribution conditions.
  */
-/* $Id: ldmsend.c,v 1.15.2.4.2.2.4.8 2008/04/15 16:34:11 steve Exp $ */
 
 /* 
  * ldm client to ship files
@@ -45,24 +44,23 @@
 #define DEFAULT_FEEDTYPE EXP
 #endif
 
-const char *remote = NULL; /* hostname of data remote */
-extern unsigned remotePort;
-static int signed_on_hiya=0;
-static CLIENT *clnt = NULL;
-static int     sock = -1;
-static int   (*hiya)   (CLIENT* clnt, prod_class_t** clsspp);
-static void  (*send_product)(
+const char*         remote = NULL; /* hostname of data remote */
+extern unsigned     remotePort;
+static int          signed_on_hiya=0;
+static CLIENT*      clnt = NULL;
+static max_hereis_t max_hereis;
+static unsigned     version;
+static int        (*hiya)(CLIENT* clnt, prod_class_t** clsspp);
+static void       (*send_product)(
     CLIENT*          clnt,
     const char*      statsdata,
     const prod_info* infop);
-static void* (*nullproc)(void* arg, CLIENT *clnt);
-static max_hereis_t max_hereis;
-static unsigned     version;
+static void*      (*nullproc)(void* arg, CLIENT *clnt);
 
 
 /* Begin Convenience functions */
 static struct timeval timeo = {25, 0}; /* usual RPC default */
-static ldm_replyt reply;
+static ldm_replyt     reply;
 
 static enum clnt_stat
 my_comingsoon_5(
@@ -217,19 +215,6 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
 
 /* End Convenience functions */
 
-
-
-void ldmsend_clnt_destroy()
-{
-    if (clnt != NULL) {
-        auth_destroy(clnt->cl_auth);
-        clnt_destroy(clnt);
-        (void)close(sock);
-
-        clnt = NULL;
-        sock = -1;
-    }
-}
 
 
 /*
@@ -399,12 +384,12 @@ send_product_6(
  * @retval ECONNABORTED The transmission attempt failed for some reason.
  */
 static int
-ldmsend(
-    CLIENT*     clnt,
+sendProd(
+    CLIENT*       clnt,
     prod_class_t* clssp,
-    const char* origin,
-    int*        seq_start,
-    char*       statsdata)
+    const char*   origin,
+    int*          seq_start,
+    char*         statsdata)
 {
     log_assert(clnt != NULL);
 
@@ -516,27 +501,81 @@ ldmsend(
     return status;
 }
 
+/*
+ * Public Interface:
+ */
+
+/**
+ * Connects to the downstream LDM. Doesn't send any LDM message.
+ *
+ * @pre                           `clnt == NULL`
+ * @retval 0                      Success.
+ * @retval LDM_CLNT_UNKNOWN_HOST  Unknown downstream host. Error message logged.
+ * @retval LDM_CLNT_TIMED_OUT     Call to downstream host timed-out. Error message logged.
+ * @retval LDM_CLNT_BAD_VERSION   Downstream LDM isn't given version. Error message logged.
+ * @retval LDM_CLNT_NO_CONNECT    Other connection-related error. Error message logged.
+ * @retval LDM_CLNT_SYSTEM_ERROR  A fatal system-error occurred. Error message logged.
+ * @post                          `clnt != NULL` on success
+ */
+int ldmsend_connect(void)
+{
+    int status = 0; // success
+
+    log_assert(NULL == clnt);
+
+    version = SIX;
+    ErrorObj* error = ldm_clnttcp_create_vers(remote, remotePort, SIX, &clnt, NULL, NULL);
+
+    if (error && LDM_CLNT_BAD_VERSION == err_code(error)) {
+        err_free(error);
+        version = FIVE;
+        error = ldm_clnttcp_create_vers(remote, LDM_PORT, FIVE, &clnt, NULL, NULL);
+    }
+
+    if (error) {
+        err_log_and_free(error, ERR_ERROR);
+        status = err_code(error);
+    }
+    else {
+        log_assert(clnt);
+        log_debug("version = %u", version);
+        signed_on_hiya = 0;
+    }
+
+    return status;
+}
+
+
+/**
+ * Disconnects from the downstream LDM.
+ */
+void ldmsend_disconnect(void)
+{
+    if (clnt != NULL) {
+        auth_destroy(clnt->cl_auth);
+        clnt_destroy(clnt);
+        clnt = NULL;
+    }
+}
+
 /**
  * Sends textual data to an LDM server.
  *
- * @param statsdata     [in] The data to be sent.
- * @param myname        [in] The name of the local host.
- * @retval 0            Success.
- * @retval -1           The LDM server couldn't be contacted. An error-message
- *                      is logged.
- * @retval ENOMEM       Out-of-memory.
- * @retval ECONNABORTED The transmission attempt failed for some reason.
+ * @param[in] statsdata     The data to be sent.
+ * @param[in] myname        The name of the local host.
+ * @retval    0             Success.
+ * @retval    ENOMEM        Out-of-memory.
+ * @retval    ECONNABORTED  The transmission attempt failed for some reason.
  */
-int ldmsend_main(
-        char*               statsdata,
-        const char* const   myname)
+int ldmsend_send(
+        char*             statsdata,
+        const char* const myname)
 {
     prod_class_t    clss;
     prod_spec       spec;
     static int      seq_start = 0;
     int             status = 0; /* success */
-    ErrorObj*       error = NULL;
-    
+
     clss.from = TS_ZERO;
     clss.to = TS_ENDT;
     clss.psa.psa_len = 1;
@@ -544,49 +583,28 @@ int ldmsend_main(
     spec.feedtype = DEFAULT_FEEDTYPE;
     spec.pattern = ".*";
 
-    if (NULL == clnt) {
-        /*
-         * Connect to the LDM server.
-         */
-        version = SIX;
-        error = ldm_clnttcp_create_vers(remote, remotePort, SIX, &clnt, NULL, NULL);
+    log_assert(clnt);
 
-        if (error && LDM_CLNT_BAD_VERSION == err_code(error)) {
-            err_free(error);
-            version = FIVE;
-            error = ldm_clnttcp_create_vers(remote, LDM_PORT, FIVE, &clnt, NULL, NULL);
-        }
+    if (FIVE == version) {
+        hiya = my_hiya_5;
+        send_product = send_product_5;
+        nullproc = NULL;
     }
-
-    if (error) {
-        err_log_and_free(error, ERR_ERROR);
-        status = -1;
+    else if (SIX == version) {
+        hiya = my_hiya_6;
+        send_product = send_product_6; // Calls log_error_q() on error
+        nullproc = nullproc_6;
     }
     else {
-        log_debug("version = %u", version);
-        signed_on_hiya = 0;
+        log_error("Unsupported LDM version: %u", version);
+        status = ECONNABORTED;
+    }
 
-        if (FIVE == version) {
-            hiya = my_hiya_5;
-            send_product = send_product_5;
-            nullproc = NULL;
-        }
-        else if (SIX == version) {
-            hiya = my_hiya_6;
-            send_product = send_product_6; // Calls log_error_q() on error
-            nullproc = nullproc_6;
-        }
-        else {
-            log_error("Unsupported LDM version: %u", version);
-            status = ECONNABORTED;
-        }
+    if (status == 0) {
+        status = sendProd(clnt, &clss, myname, &seq_start, statsdata);
 
-        if (status == 0) {
-            status = ldmsend(clnt, &clss, myname, &seq_start, statsdata);
-
-            if (seq_start > 999)
-                seq_start = 0;
-        }
+        if (seq_start > 999)
+            seq_start = 0;
     }
 
     return status;
