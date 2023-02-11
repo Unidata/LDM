@@ -31,14 +31,15 @@
 #include "inetutil.h"
 #include "timestamp.h"
 
-extern int ldmsend_main(char *statsdata, const char* hostname);
-extern void ldmsend_clnt_destroy(void);
+extern int  ldmsend_connect(void);
+extern int  ldmsend_send(char *statsdata, const char* hostname);
+extern void ldmsend_disconnect(void);
 
 #ifndef DEFAULT_INTERVAL
 #define DEFAULT_INTERVAL        60
 #endif
 
-#define DEFAULT_RANDOM          30.0
+#define DEFAULT_RANDOM          (DEFAULT_INTERVAL/2)
 
 typedef struct statsbin {
         int needswrite;
@@ -167,7 +168,7 @@ ldmsend_statsbin(
                     s_time_abrv(sb->slowest_at),
                     PACKAGE_VERSION
             );
-            status = ldmsend_main(stats_data, myname); // Opens initial connection
+            status = ldmsend_send(stats_data, myname); // Opens initial connection
             if (status == 0)
                 sb->needswrite = 0;
         }
@@ -445,7 +446,7 @@ arrival2interval(time_t arrival)
 
 
 void
-dump_statsbins(void)
+binstats_dump(void)
 {
         size_t ii;
         if(nbins == 0)
@@ -456,8 +457,9 @@ dump_statsbins(void)
 
 
 int
-binstats(const prod_info *infop,
-        const struct timeval *reftimep)
+binstats_add(
+        const prod_info*      infop,
+        const struct timeval* reftimep)
 {
         statsbin *sb;
         double latency = d_diff_timestamp(reftimep, &infop->arrival);
@@ -486,41 +488,31 @@ binstats(const prod_info *infop,
 
 
 /**
- * Accumulates statistics and sends a report if the time is right.
+ * Sends a report to the downstream LDM if the time is right.
  *
- * @param hostname      [in] The name of the local host.
+ * @param[in] hostname  The name of the local host.
  */
 void
-syncbinstats(
-        const char* const   hostname)
+binstats_sendIfTime(const char* const hostname)
 {
-    size_t ii;
-    time_t tnow;
-    static time_t lastsent=0;
-    static int REPORT_INTERVAL=DEFAULT_INTERVAL;
-    float  rfact;
+    static time_t lastsent = 0;
+    static int    reportGap = DEFAULT_INTERVAL;
 
-    tnow = time(NULL);
-    if(tnow - lastsent > REPORT_INTERVAL)
-    {
-       lastsent = tnow;
+    if (time(NULL) - lastsent >= reportGap) {
+        if (ldmsend_connect() == 0) { // Logs message on error
+           for (size_t ii = 0; ii < nbins; ++ii)
+               if (binList[ii]->needswrite && ldmsend_statsbin(binList[ii], hostname)) {
+                   log_flush_error();
+                   break;
+               }
 
-       int status = 0;
-       for (ii = 0; status == 0 && ii < nbins; ii++) {
-           if (binList[ii]->needswrite)
-               status = ldmsend_statsbin(binList[ii], hostname); // Opens connection
-       }
+           ldmsend_disconnect();
+        } // Connected to downstream LDM
 
-       if (status) {
-           log_add("Couldn't report statistics");
-           log_flush_error();
-       }
+        lastsent = time(NULL);
 
-       /* Add a Random time offset from reporting interval so that
-          sites contacting stats server don't converge to a single report time */
-       rfact = (float)( random() & 0x7f ) / (float)(0x7f);
-       REPORT_INTERVAL = DEFAULT_INTERVAL + (int)(DEFAULT_RANDOM * rfact);
-
-       ldmsend_clnt_destroy(); // Sets `clnt` to `NULL`
-    }
+        // Add a random time offset to disperse the reporting times.
+        const float rfact = (float)( random() & 0x7f ) / (float)(0x7f);
+        reportGap = DEFAULT_INTERVAL + (int)(DEFAULT_RANDOM * rfact);
+    } // Time to report
 }

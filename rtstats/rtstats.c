@@ -47,11 +47,11 @@ static volatile sig_atomic_t stats_req = 0;
 #endif
 
 /* binstats.c */
-extern int binstats(const prod_info *infop,
+extern int binstats_add(const prod_info *infop,
         const struct timeval *reftimep);
 
-extern void dump_statsbins(void);
-extern void syncbinstats(const char* hostname);
+extern void binstats_dump(void);
+extern void binstats_sendIfTime(const char* hostname);
 
 unsigned remotePort = LDM_PORT;
 
@@ -67,10 +67,8 @@ addtostats(const prod_info *infop, const void *datap,
         pq_ctimestamp(pq, &tv);
         if(tvIsNone(tv))
                 tv = TS_ZERO;
-        if(log_is_enabled_info)
-                log_info_q("%s", s_prod_info(NULL, 0, infop,
-                        log_is_enabled_debug));
-        binstats(infop, &tv);
+        log_debug("%s", s_prod_info(NULL, 0, infop, true));
+        binstats_add(infop, &tv);
         return 0;
 }
 
@@ -406,7 +404,7 @@ int main(int ac, char *av[])
         {
                 if(stats_req)
                 {
-                        dump_statsbins();
+                        binstats_dump();
                         stats_req = 0;
                 }
 
@@ -432,7 +430,7 @@ int main(int ac, char *av[])
 					break;
                 }
 
-                syncbinstats(hostname);
+                binstats_sendIfTime(hostname);
 
                 if(interval == 0)
                 {
