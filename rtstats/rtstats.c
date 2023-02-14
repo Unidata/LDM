@@ -53,6 +53,11 @@ extern int binstats_add(const prod_info *infop,
 extern void binstats_dump(void);
 extern void binstats_sendIfTime(const char* hostname);
 
+// ldmsend.c
+extern int  ldmsend_init();
+extern void ldmsend_destroy();
+
+
 unsigned remotePort = LDM_PORT;
 
 
@@ -76,49 +81,36 @@ addtostats(const prod_info *infop, const void *datap,
 static void
 usage(const char *av0) /*  id string */
 {
-    log_error_q(
-"Usage: %s [options]", av0);
-    log_error_q(
-"where:");
-    log_error_q(
-"    -v           Log INFO-level messages (log each product).");
-    log_error_q(
-"    -x           Log DEBUG-level messages.");
-    log_error_q(
-"    -l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"");
-    log_error_q(
-"                 (standard error), or file `dest`. Default is \"%s\"",
-            log_get_default_destination());
+    log_add(
+"Usage: %s [options]\n"
+"where:\n"
+"  -v           Log INFO-level messages (log each product).\n"
+"  -x           Log DEBUG-level messages.\n"
+"  -l dest      Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"               (standard error), or file `dest`. Default is \"%s\"\n"
+"  -f feedtype  Scan for data of type \"feedtype\" (default: \n"
     /*
      * NB: Don't use "s_feedtypet(DEFAULT_FEEDTYPE)" in the following because
      * it looks ugly for "ANY - EXP".
      */
-    log_error_q(
-"    -f feedtype  Scan for data of type \"feedtype\" (default: ");
-    log_error_q(
-"                 \"ANY - EXP\").");
-    log_error_q(
-"    -p pattern   Interested in products matching \"pattern\"");
-    log_error_q(
-"                 (default: \".*\").") ;
-    log_error_q(
-"    -q queue     Use file \"queue\" as product-queue (default: ");
-    log_error_q(
-"                 \"%s\").", getDefaultQueuePath());
-    log_error_q(
-"    -o offset    Oldest product to consider is \"offset\"");
-    log_error_q(
-"                 seconds before now (default: 0).");
-    log_error_q(
-"    -i interval  Poll queue every \"interval\" seconds (default:");
-    log_error_q(
-"                 %d).", DEFAULT_INTERVAL);
-    log_error_q(
-"    -h hostname  Send to LDM server on host \"hostname\"");
-    log_error_q(
-"                 (default: LOCALHOST).");
-    log_error_q(
-"    -P port      Send to port \"port\" (default: %d).", LDM_PORT);
+"               \"ANY - EXP\").\n"
+"  -p pattern   Interested in products matching \"pattern\"\n"
+"               (default: \".*\").\n"
+"  -q queue     Use file \"queue\" as product-queue (default: \n"
+"               \"%s\").\n"
+"  -o offset    Oldest product to consider is \"offset\"\n"
+"               seconds before now (default: 0).\n"
+"  -i interval  Poll queue every \"interval\" seconds (default:\n"
+"               %d).\n"
+"  -h hostname  Send to LDM server on host \"hostname\"\n"
+"               (default: localhost).\n"
+"  -P port      Send to port \"port\" (default: %d).",
+            av0,
+            log_get_default_destination(),
+            getDefaultQueuePath(),
+            DEFAULT_INTERVAL,
+            LDM_PORT);
+    log_flush_error();
     exit(1);
 }
 
@@ -129,8 +121,9 @@ cleanup(void)
         log_notice_q("Exiting");
 
         if(pq && !intr) 
-                (void)pq_close(pq);
+            (void)pq_close(pq);
 
+        ldmsend_destroy();
         log_fini();
 }
 
@@ -202,7 +195,7 @@ int main(int ac, char *av[])
         const char* const  progname = basename(av[0]);
         prod_class_t       clss;
         prod_spec          spec;
-        int                status = 0;
+        int                status = 0; // Success
         int                interval = DEFAULT_INTERVAL;
         int                toffset = TOFFSET_NONE;
         extern const char* remote;
@@ -400,46 +393,47 @@ int main(int ac, char *av[])
                 pq_cset(pq, &clss.from);
         }
 
-        while(exitIfDone(0))
-        {
-                if(stats_req)
-                {
-                        binstats_dump();
-                        stats_req = 0;
+        status = ldmsend_init();
+
+        if (status == 0) {
+            while(exitIfDone(0)) {
+                if(stats_req) {
+                    binstats_dump();
+                    stats_req = 0;
                 }
 
                 status = pq_sequence(pq, TV_GT, &clss, addtostats, 0);
 
                 switch(status) {
                 case 0: /* no error */
-                        continue; /* N.B., other cases sleep */
+                    continue; /* N.B., other cases sleep */
                 case PQUEUE_END:
-                        log_debug("End of Queue");
-                        break;
+                    log_debug("End of Queue");
+                    break;
                 case EAGAIN:
                 case EACCES:
-                        log_debug("Hit a lock");
-                        break;
+                    log_debug("Hit a lock");
+                    break;
                 default:
-                	if (status > 0) {
+                    if (status > 0) {
                         log_add("pq_sequence failed: %s (errno = %d)",
                                 strerror(status), status);
                         log_flush_error();
-                	}
-					exit(1);
-					break;
+                    }
+                    exit(1);
+                    break;
                 }
 
                 binstats_sendIfTime(hostname);
 
-                if(interval == 0)
-                {
-                        done = 1;
-                        break;
+                if(interval == 0) {
+                    done = 1;
+                    break;
                 }
 
                 pq_suspend(interval);
-        }
+            } // While loop
+        } // `ldmsend_init()` successful
 
-        return 0;
+        return status;
 }

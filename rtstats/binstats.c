@@ -137,14 +137,14 @@ dump_statsbin(statsbin *sb)
  * @retval ECONNABORTED The transmission attempt failed for some reason.
  */
 static int
-ldmsend_statsbin(
+binstats_report(
         statsbin*           sb,
         const char* const   myname)
 {
         char buf[P_TIMET_LEN];
         char buf_a[P_TIMET_LEN];
         char stats_data[4096];
-        int status;
+        int  status;
 
         if(sb->recent_a.tv_sec == -1) {
             status = 0;
@@ -168,7 +168,7 @@ ldmsend_statsbin(
                     s_time_abrv(sb->slowest_at),
                     PACKAGE_VERSION
             );
-            status = ldmsend_send(stats_data, myname); // Opens initial connection
+            status = ldmsend_send(stats_data, myname);
             if (status == 0)
                 sb->needswrite = 0;
         }
@@ -501,7 +501,7 @@ binstats_sendIfTime(const char* const hostname)
     if (time(NULL) - lastsent >= reportGap) {
         if (ldmsend_connect() == 0) { // Logs message on error
            for (size_t ii = 0; ii < nbins; ++ii)
-               if (binList[ii]->needswrite && ldmsend_statsbin(binList[ii], hostname)) {
+               if (binList[ii]->needswrite && binstats_report(binList[ii], hostname)) {
                    log_flush_error();
                    break;
                }

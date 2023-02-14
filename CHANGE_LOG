@@ -1,3 +1,8 @@
+6.14.5.3
+    rtstats(1):
+        * Remove "-n" option because it doesn't work
+        * Cosmetics
+
 6.14.5.2    2023-02-12T12:57:49-0700
     rtstats(1):
         * Decreased the coupling between the statistics gathering module and the LDM reporting

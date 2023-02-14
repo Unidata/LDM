@@ -44,18 +44,21 @@
 #define DEFAULT_FEEDTYPE EXP
 #endif
 
-const char*         remote = NULL; /* hostname of data remote */
-extern unsigned     remotePort;
-static int          signed_on_hiya=0;
-static CLIENT*      clnt = NULL;
-static max_hereis_t max_hereis;
-static unsigned     version;
-static int        (*hiya)(CLIENT* clnt, prod_class_t** clsspp);
-static void       (*send_product)(
+const char*          remote = NULL; /* hostname of data remote */
+extern unsigned      remotePort;
+static CLIENT*       clnt = NULL;
+static max_hereis_t  max_hereis;
+static prod_spec     proposedProdSpec = {.feedtype=DEFAULT_FEEDTYPE, .pattern=".*"};
+static prod_class_t  proposedProdClass =
+        {.psa.psa_len=1, .psa.psa_val=&proposedProdSpec};
+static prod_class_t* acceptProdClass = NULL;
+static int           (*hiya)(CLIENT* clnt, prod_class_t** clsspp);
+static MD5_CTX*      md5ctxp = NULL;
+static void          (*send_product)(
     CLIENT*          clnt,
     const char*      statsdata,
     const prod_info* infop);
-static void*      (*nullproc)(void* arg, CLIENT *clnt);
+static void*         (*nullproc)(void* arg, CLIENT *clnt);
 
 
 /* Begin Convenience functions */
@@ -138,13 +141,18 @@ my_hiya_5(CLIENT *clnt, prod_class_t **clsspp)
 /**
  * Sends a HIYA message to an LDM-6 server.
  *
- * @param clnt          [in] The client-side handle.
- * @param clsspp        [in] The class of data-products to be sent.
- * @retval 0            Success.
- * @retval ECONNABORTED Failure (for many possible reasons).
+ * @param[in]     clnt    The client-side handle.
+ * @param[in,out] clsspp  On input, the class of data-products to be sent. Unchanged on output if
+ *                        there wasn't a RECLASS reply; otherwise, points to a newly-allocated
+ *                        product-class that the caller should free with free_prod_class().
+ * @retval 0              Success.
+ * @retval ECONNABORTED   Failure (for many possible reasons).
+ * @retval ENOMEM         Out of memory
  */
 static int
-my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
+my_hiya_6(
+        CLIENT*              clnt,
+        prod_class_t** const clsspp)
 {
     static hiya_reply_t* reply;
     int                  error;
@@ -193,21 +201,30 @@ my_hiya_6(CLIENT *clnt, prod_class_t **clsspp)
                 error = ECONNABORTED;
                 break;
 
-            case RECLASS:
-                *clsspp = reply->hiya_reply_t_u.feedPar.prod_class;
-                max_hereis = reply->hiya_reply_t_u.feedPar.max_hereis;
-                clss_regcomp(*clsspp);
-                /* N.B. we use the downstream patterns */
-                if (log_is_enabled_info)
-                    log_info_q("%s: reclass: %s",
-                        remote, s_prod_class(NULL, 0, *clsspp));
-                error = 0;
+            case RECLASS: {
+                // The accepted product class in the reply is cloned because it will be freed
+                prod_class_t* accepted = dup_prod_class(reply->hiya_reply_t_u.feedPar.prod_class);
+                if (accepted == NULL) {
+                    error = ENOMEM;
+                }
+                else {
+                    *clsspp = accepted;
+                    max_hereis = reply->hiya_reply_t_u.feedPar.max_hereis;
+                    clss_regcomp(*clsspp);
+                    /* N.B. we use the downstream patterns */
+                    if (log_is_enabled_info)
+                        log_info_q("%s: reclass: %s", remote, s_prod_class(NULL, 0, *clsspp));
+                    error = 0;
+                }
                 break;
+            }
         }
 
         if (!error)
             log_debug("max_hereis = %u", max_hereis);
-    }
+
+        (void)xdr_free((xdrproc_t)xdr_hiya_reply_t, (char*)reply);
+    } // Valid reply
 
     return error;
 }
@@ -374,42 +391,43 @@ send_product_6(
 /**
  * Sends a textual LDM data-product on an ONC RPC client handle.
  *
- * @param clnt          [in/out] The client handle.
- * @param clssp         [in] The class of the data-product.
- * @param origin        [in] The name of the host that created the data-product.
- * @param seq_start     [in] The sequence number of the data-product.
- * @param statsdata     [in] The data of the data-product.
- * @retval 0            Success.
- * @retval ENOMEM       Out-of-memory.
- * @retval ECONNABORTED The transmission attempt failed for some reason.
+ * @param[in,out] clnt       The client handle.
+ * @param[in]     clssp      The class of the data-product.
+ * @param[in]     origin     The name of the host that created the data-product.
+ * @param[in]     seqNum     The sequence number of the data-product.
+ * @param[in]     statsdata  The data of the data-product.
+ * @retval 0                 Success.
+ * @retval ENOMEM            Out-of-memory.
+ * @retval ECONNABORTED      The transmission attempt failed for some reason.
  */
 static int
 sendProd(
-    CLIENT*       clnt,
-    prod_class_t* clssp,
-    const char*   origin,
-    int*          seq_start,
-    char*         statsdata)
+    CLIENT* restrict const             clnt,
+    const prod_class_t* restrict const clssp,
+    const char* restrict               origin,
+    const int                          seqNum,
+    const char*                        statsdata)
 {
-    log_assert(clnt != NULL);
+    log_assert(clnt);
+    log_assert(clssp);
+    log_assert(origin);
+    log_assert(statsdata);
 
-    int         status = 0;
-    int         idlen;
-    int         icnt;
-    char        filename[255];
-    char        feedid[80]="\0";
-    char        prodo[HOSTNAMESIZE]="\0";
-    char*       cpos;
-    prod_info   info;
-    MD5_CTX*    md5ctxp = NULL;
-    prod_class_t* test_clssp = clssp;
+    int           status = 0; // Success
+    int           idlen;
+    int           icnt;
+    char          filename[255];
+    char          feedid[80]="\0";
+    char          hostnames[HOSTNAMESIZE]="\0";
+    const char*   cpos;
+    prod_info     info;
 
     /* ldmproduct "filename" length = 255
      * log_assert that
      * sprintf(filename,"rtstats-%s/%s/%s/%s\0",PACKAGE_VERSION,
      * origin,feedid,prodo); will fit into allocated space.
      */
-    log_assert ( ( strlen(PACKAGE_VERSION) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255 );
+    log_assert((strlen(PACKAGE_VERSION) + 2 * HOSTNAMESIZE + 80 + 9 ) < 255);
 
     /*
      * time_insert time_arrive myname feedid product_origin
@@ -417,86 +435,123 @@ sendProd(
     icnt = 0;   
     cpos = statsdata;
 
-    while ( ( (cpos = (char *)strchr(cpos,' ')) != NULL ) && ( icnt < 4 ) ) {
+    while (((cpos = (char *)strchr(cpos,' ')) != NULL ) && ( icnt < 4)) {
        icnt++;
-       while ( cpos[0] == ' ' ) cpos++;
-       if ( icnt == 3 ) {
+       while (cpos[0] == ' ') cpos++;
+       if (icnt == 3) {
           idlen = strcspn(cpos," ");
           if(idlen > 79) idlen = 79;
           strncat(feedid,cpos,idlen);
        }
-       if ( icnt == 4 ) {
+       if (icnt == 4) {
           idlen = strcspn(cpos," ");
           if(idlen > HOSTNAMESIZE) idlen = HOSTNAMESIZE;
-          strncat(prodo,cpos,idlen);
+          strncat(hostnames,cpos,idlen);
        }
     }
 
+    /* These members are constant over the loop. */
+    info.origin = (char*)origin; /* safe because "info.origin" isn't modified */
+    info.feedtype = clssp->psa.psa_val->feedtype;
+    info.seqno = seqNum;
+
+    sprintf(filename, "rtstats-%s/%s/%s/%s", PACKAGE_VERSION, origin, feedid, hostnames);
+    info.ident = filename;
     /*
-     * Allocate an MD5 context
+     * ?? This could be the creation time of the file.
      */
-    md5ctxp = new_MD5_CTX();
-    if(md5ctxp == NULL)
-    {
-        status = errno;
-        log_syserr("new_md5_CTX failed");
+    (void) set_timestamp(&info.arrival);
+
+    /*
+     * Checks 'arrival', 'feedtype', and 'ident' against what the other guy has said he wants.
+     */
+    if(!prodInClass(clssp, &info)) {
+        log_info_q("%s doesn't want %s", remote, filename);
     }
     else {
-        if(signed_on_hiya) {
-           log_debug("already signed on");
+        log_info_q("Sending %s, %d bytes", filename, strlen(statsdata));
+
+        MD5Init(md5ctxp);
+        MD5Update(md5ctxp, (unsigned char *)statsdata,
+            (unsigned int)strlen(statsdata));
+        MD5Final((unsigned char*)info.signature, md5ctxp);
+
+        info.sz = (u_int)strlen(statsdata);
+
+        (*send_product)(clnt, statsdata, &info);
+    }
+
+    return status;
+}
+
+/**
+ * Sends a HIYA message to the remote LDM.
+ * @retval 0                      Success
+ * @retval LDM_CLNT_NO_CONNECT    Connection failure. Message logged.
+ * @retval LDM_CLNT_SYSTEM_ERROR  System failure. Message logged.
+ */
+static int sendHiya(void)
+{
+    log_assert(clnt);
+
+    if (acceptProdClass != &proposedProdClass)
+        free_prod_class(acceptProdClass);
+
+    acceptProdClass = &proposedProdClass;
+
+    int status = (*hiya)(clnt, &acceptProdClass); // my_hiya_6() calls log_error_q() on error
+    if (status)
+        status = (status == ECONNABORTED)
+            ? LDM_CLNT_NO_CONNECT
+            : LDM_CLNT_SYSTEM_ERROR;
+
+    return status;
+}
+
+/**
+ * Connects to a remote LDM.
+ * @pre                           `clnt == NULL`
+ * @retval 0                      Success.
+ * @retval LDM_CLNT_UNKNOWN_HOST  Unknown downstream host. Error message logged.
+ * @retval LDM_CLNT_TIMED_OUT     Call to downstream host timed-out. Error message logged.
+ * @retval LDM_CLNT_BAD_VERSION   Downstream LDM version isn't supported. Error message logged.
+ * @retval LDM_CLNT_NO_CONNECT    Other connection-related error. Error message logged.
+ * @retval LDM_CLNT_SYSTEM_ERROR  A fatal system-error occurred. Error message logged.
+ * @post                          `clnt != NULL` on success
+ */
+static int connectToLdm(void)
+{
+    log_assert(NULL == clnt);
+
+    int      status = 0;
+    unsigned version = SIX;
+    ErrorObj* error = ldm_clnttcp_create_vers(remote, remotePort, version, &clnt, NULL, NULL);
+
+    if (error == NULL) {
+        hiya = my_hiya_6;
+        send_product = send_product_6; // Calls log_error_q() on error
+        nullproc = nullproc_6;
+    }
+    else if (LDM_CLNT_BAD_VERSION == err_code(error)) {
+        err_free(error);
+        version = FIVE;
+        error = ldm_clnttcp_create_vers(remote, LDM_PORT, version, &clnt, NULL, NULL);
+
+        if (error == NULL) {
+            hiya = my_hiya_5;
+            send_product = send_product_5;
+            nullproc = NULL;
         }
-        else {
-            status = (*hiya)(clnt, &clssp); // my_hiya_6() calls log_error_q() on error
+    }
 
-            if(status == 0)
-                signed_on_hiya = 1;
-        }
-
-        if(status == 0) {
-            /* These members are constant over the loop. */
-            info.origin = (char*)origin; /* safe because "info.origin" isn't modified */
-            info.feedtype = clssp->psa.psa_val->feedtype;
-
-            info.seqno = *seq_start;
-
-            sprintf(filename,"rtstats-%s/%s/%s/%s",PACKAGE_VERSION,origin,
-                feedid,prodo);
-            info.ident = filename;
-            /*
-             * ?? This could be the creation time of the file.
-             */
-            (void) set_timestamp(&info.arrival);
-
-            /*
-             * Checks 'arrival', 'feedtype', and 'ident'
-             * against what the other guy has said he wants.
-             */
-            if(!prodInClass(clssp, &info))
-            {
-                log_info_q("%s doesn't want %s", remote, filename);
-                if(test_clssp != clssp) free_prod_class(clssp);
-            }
-            else {
-                log_info_q("Sending %s, %d bytes", filename, strlen(statsdata));
-                
-                MD5Init(md5ctxp);
-                MD5Update(md5ctxp, (unsigned char *)statsdata,
-                    (unsigned int)strlen(statsdata));
-                MD5Final((unsigned char*)info.signature, md5ctxp);
-
-                info.sz = (u_int)strlen(statsdata);
-
-                (*send_product)(clnt, statsdata, &info);
-            }
-        }
-
-        free_MD5_CTX(md5ctxp);  
-    }                                   /* MD5 object allocated */
-            
-    if (test_clssp != clssp)
-        free_prod_class(clssp);
-
-    (*seq_start)++;
+    if (error) {
+        status = err_code(error);
+        err_log_and_free(error, ERR_ERROR);
+    }
+    else {
+        log_assert(clnt);
+        log_debug("version = %u", version);
+    }
 
     return status;
 }
@@ -506,7 +561,40 @@ sendProd(
  */
 
 /**
- * Connects to the downstream LDM. Doesn't send any LDM message.
+ * Initializes this module.
+ * @retval    0           Success
+ * @retval    ENOMEM      Out of memory
+ */
+int ldmsend_init()
+{
+    int status = 0; // Success
+
+    max_hereis = UINT32_MAX;
+    proposedProdClass.from = TS_ZERO;
+    proposedProdClass.to =TS_ENDT;
+    clss_regcomp(&proposedProdClass);
+    acceptProdClass = &proposedProdClass;
+
+    md5ctxp = new_MD5_CTX();
+    if (md5ctxp == NULL) {
+        log_add("Couldn't allocate new MD5 context");
+        status = ENOMEM;
+    }
+
+    return status;
+}
+
+/**
+ * Destroys this module.
+ */
+void ldmsend_destroy()
+{
+    free_MD5_CTX(md5ctxp);
+    acceptProdClass = NULL;
+}
+
+/**
+ * Connects to the downstream LDM and sends a HIYA message.
  *
  * @pre                           `clnt == NULL`
  * @retval 0                      Success.
@@ -519,28 +607,10 @@ sendProd(
  */
 int ldmsend_connect(void)
 {
-    int status = 0; // success
+    int status = connectToLdm();
 
-    log_assert(NULL == clnt);
-
-    version = SIX;
-    ErrorObj* error = ldm_clnttcp_create_vers(remote, remotePort, SIX, &clnt, NULL, NULL);
-
-    if (error && LDM_CLNT_BAD_VERSION == err_code(error)) {
-        err_free(error);
-        version = FIVE;
-        error = ldm_clnttcp_create_vers(remote, LDM_PORT, FIVE, &clnt, NULL, NULL);
-    }
-
-    if (error) {
-        err_log_and_free(error, ERR_ERROR);
-        status = err_code(error);
-    }
-    else {
-        log_assert(clnt);
-        log_debug("version = %u", version);
-        signed_on_hiya = 0;
-    }
+    if (status == 0)
+        status = sendHiya();
 
     return status;
 }
@@ -571,41 +641,11 @@ int ldmsend_send(
         char*             statsdata,
         const char* const myname)
 {
-    prod_class_t    clss;
-    prod_spec       spec;
-    static int      seq_start = 0;
-    int             status = 0; /* success */
+    static int   seqNum = 0;
+    int          status = sendProd(clnt, acceptProdClass, myname, seqNum, statsdata);
 
-    clss.from = TS_ZERO;
-    clss.to = TS_ENDT;
-    clss.psa.psa_len = 1;
-    clss.psa.psa_val = &spec;
-    spec.feedtype = DEFAULT_FEEDTYPE;
-    spec.pattern = ".*";
-
-    log_assert(clnt);
-
-    if (FIVE == version) {
-        hiya = my_hiya_5;
-        send_product = send_product_5;
-        nullproc = NULL;
-    }
-    else if (SIX == version) {
-        hiya = my_hiya_6;
-        send_product = send_product_6; // Calls log_error_q() on error
-        nullproc = nullproc_6;
-    }
-    else {
-        log_error("Unsupported LDM version: %u", version);
-        status = ECONNABORTED;
-    }
-
-    if (status == 0) {
-        status = sendProd(clnt, &clss, myname, &seq_start, statsdata);
-
-        if (seq_start > 999)
-            seq_start = 0;
-    }
+    if (status == 0 && ++seqNum > 999)
+        seqNum = 0;
 
     return status;
 }
