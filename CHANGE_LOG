@@ -1,4 +1,8 @@
 6.14.5.4
+    ldmadmin(1):
+        * Made the determination of local vs. remote LDM ports more robust. In particular, it now
+          counts transitory rtstats(1) connections when they exist.
+
     plotMetrics(1):
         * Changed labels on "LDM Connections" plot from "Local LDM Port" and "Remote LDM Port" to
           "Sending Connections" and "Receiving Connections" to account for rtstats(1) connections.

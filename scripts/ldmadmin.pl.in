@@ -1864,31 +1864,33 @@ sub getLoad
     return (split(/,?\s+/, $output))[-3, -2, -1];
 }
 #
-# Command for getting the number of connections (receiving, sending):
-sub getConnectionCount
+# Command for getting the number of connections to the (local LDM port, remote LDM port):
+sub getPortCount
 {
-    my($totalCount) = 0;
+    my($ipPat) = "\\d{1,3}(\\.\\d{1,3}){3}";
+    my($portPat) = "[.:]\\d+";
+    my($ldmPortPat) = "[.:]".$port;
+    my($connPat) = $ipPat.$portPat;
+    my($ldmConnPat) = $ipPat.$ldmPortPat;
+    my($lclPat) = "\\s".$ldmConnPat."\\s+".$connPat;
+    my($rmtPat) = "\\s".$connPat."\\s+".$ldmConnPat."\\s";
+
+    my($lclCount) = 0;
+    my($rmtCount) = 0;
     open(FH, $netstat."|") or die "Can't fork() netstat(1): $!";
     while (<FH>) {
-	if (/ESTAB/ && /:$port\W/) {
-	    $totalCount++;
+	if (/ESTAB/) {
+            if (/$lclPat/) {
+                $lclCount++;
+            }
+            elsif (/$rmtPat/) {
+                $rmtCount++;
+            }
 	}
     }
     (close FH || !$!) or die "Can't close(): status=$?";
 
-    my($sendCount) = 0;
-    open(FH, "uldbutil 2>/dev/null |") or die "Can't fork() uldbutil(1): $!";
-    while (<FH>) {
-        $sendCount++;
-    }
-    (close FH || !$!) or die "Can't close(): status=$?";
-
-    my $recvCount = $totalCount - $sendCount;
-    if ($recvCount < 0) {
-        $recvCount = 0;
-    }
-
-    return ($recvCount, $sendCount);
+    return ($lclCount, $rmtCount);
 }
 #
 # Command for getting product-queue metrics (age, #prods, #bytes):
@@ -2028,7 +2030,7 @@ sub getCpu
 # Command for printing metrics:
 sub printMetrics
 {
-    print join(' ', getTime(), getLoad(), getConnectionCount(), getPq(), getCpu());
+    print join(' ', getTime(), getLoad(), getPortCount(), getPq(), getCpu());
     print "\n";
     return $?;
 }
