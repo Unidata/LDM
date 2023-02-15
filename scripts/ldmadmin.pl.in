@@ -1875,16 +1875,19 @@ sub getPortCount
 	}
     }
     (close FH || !$!) or die "Can't close(): status=$?";
+
     my($lclCount) = 0;
     open(FH, "uldbutil 2>/dev/null |") or die "Can't fork() uldbutil(1): $!";
     while (<FH>) {
         $lclCount++;
     }
     (close FH || !$!) or die "Can't close(): status=$?";
+
     my $rmtCount = $totalCount - $lclCount;
     if ($rmtCount < 0) {
         $rmtCount = 0;
     }
+
     return ($rmtCount, $lclCount);
 }
 #
