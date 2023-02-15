@@ -48,8 +48,8 @@ host=`regutil /hostname`
 #       2       1 minute load average
 #       3       5 minutes load average
 #       4       15 minutes load average
-#       5       number of connections to remote LDM ports
-#       6       number of connections to the local LDM port
+#       5       number of receiving connectionss
+#       6       number of sending connections
 #       7       age of the oldest data-product in the product-queue
 #       8       number of data-products in the product-queue
 #       9       number of bytes used in the product-queue
@@ -102,8 +102,8 @@ else
         set title "LDM Connections vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot \
-             "$datafile" u 1:5 title "Remote LDM Port" with lines, \
-             "$datafile" u 1:6 title "Local LDM Port" with lines, \
+             "$datafile" u 1:5 title "Receiving Connections" with lines, \
+             "$datafile" u 1:6 title "Sending Connections" with lines, \
              "$datafile" u 1:(\$5+\$6) title "Total" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Space.png"; \
