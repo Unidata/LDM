@@ -1,32 +1,12 @@
-6.14.5.4  2023-02-16T10:33:10-0700
+6.14.5  2023-02-16T11:40:06-0700
     ldmadmin(1):
-        * Made the determination of local vs. remote LDM ports more robust. In particular, it now
-          counts transitory connections due to local rtstats(1)s when they exist.
+        * Made the determination of local vs. remote LDM ports in the command "ldmadmin printstats"
+          more robust. In particular, it now counts transitory connections due to local rtstats(1)s
+          when they exist.
 
     plotMetrics(1):
-        * Improved some plot titles
+        * Improved some plot titles to clarify what they represent
 
-6.14.5.3  2023-02-14T13:05:31-0700
-    rtstats(1):
-        * Renamed several functions to increase clarity
-        * Restructured code
-            * Moved that which could and should be done before sending reports from inside the
-              report-sending code to an initialization step (e.g., MD5 checksum allocation, product
-              class initialization, sequence number, HIYA)
-            * Clarified logic by breaking complex functions into multiple functions
-        * Improved internal documentation
-        * Eliminated small memory-leak due to product class return value from HIYA not being freed
-
-6.14.5.2  2023-02-12T12:57:49-0700
-    rtstats(1):
-        * Decreased the coupling between the statistics gathering module and the LDM reporting
-          module
-        * Corrected the logic regarding whether or not a HIYA should be sent
-
-    Documentation:
-        * Removed empty entry from list of general platform requirements
-
-6.14.5.1  2023-01-31T16:15:39-0700
     rtstats(1):
         * Commented code about what function logs messages because the code is convoluted
         * Removed trailing newline in rtstats(1) log message to eliminate extraneous log message
@@ -36,16 +16,26 @@
         * Eliminated unnecessary log message
         * Replaced abort() due to unsupported remote LDM version with log_error() and ECONNABORTED
           return value
+        * Restructured code
+            * Decreased the coupling between the statistics gathering module and the LDM reporting
+              module
+            * Renamed several functions to increase clarity
+            * Moved that which could and should be done before sending reports from inside the
+              report-sending code to an initialization step (e.g., MD5 checksum allocation, product
+              class initialization, sequence number, HIYA)
+            * Clarified logic by breaking complex functions into multiple functions
+        * Improved internal documentation
+        * Eliminated small memory-leak due to product class return value from HIYA not being freed
         * man(1) page: Corrected description of number of bytes, number of products, and
           peak-latency parameters: they are not for "this hour" but since rtstats(1) was started
 
     Documentation:
+        * Removed empty entry from list of general platform requirements
         * Added requirement that "RemoveIPC" in "/etc/systemd/logind.conf" must be "no" to
           prevent systemd(8) from deleting the LDM's shared-memory segment that contains the
           upstream LDM database.
-
-    CHANGE_LOG:
-        * Consolidated 6.14.4.* entries into 6.14.4. Should have done that earlier.
+        * CHANGE_LOG:
+            * Consolidated 6.14.4.* entries into 6.14.4. Should have done that earlier.
 
 6.14.4  2023-01-26T11:03:17-0700
     ldmd(1):
