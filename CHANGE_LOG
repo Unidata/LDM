@@ -1,7 +1,10 @@
 6.14.5.4
     ldmadmin(1):
         * Made the determination of local vs. remote LDM ports more robust. In particular, it now
-          counts transitory rtstats(1) connections when they exist.
+          counts transitory connections due to local rtstats(1)s when they exist.
+
+    plotMetrics(1):
+        * Improved some plot titles
 
 6.14.5.3    2023-02-14T13:05:31-0700
     rtstats(1):

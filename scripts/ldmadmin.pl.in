@@ -1868,7 +1868,7 @@ sub getLoad
 sub getPortCount
 {
     my($ipPat) = "\\d{1,3}(\\.\\d{1,3}){3}";
-    my($portPat) = "[.:]\\d+";
+    my($portPat) = "[.:]\\d{1,5}";
     my($ldmPortPat) = "[.:]".$port;
     my($connPat) = $ipPat.$portPat;
     my($ldmConnPat) = $ipPat.$ldmPortPat;
