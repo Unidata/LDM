@@ -86,13 +86,13 @@ else
 
         set terminal png medium
         if ($fileOutput) set output "${outputFileTemplate}Queue_Size.png"; \
-            else set terminal x11 1 title "Queue Size"
+            else set terminal x11 1 title "Queue Byte Count"
         set title "Amount of Data in Queue vs. Time\n$host LDM: $version"
         set ylabel "Bytes / 1 GB"
         plot "$datafile" u 1:(\$9/1e9) title "Bytes Used" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Product_Count.png"; \
-            else set terminal x11 2 title "Product Count"
+            else set terminal x11 2 title "Queue Product Count"
         set title "Number of Products in Queue vs. Time\n$host LDM: $version"
         set ylabel "Count"
         plot "$datafile" u 1:(\$8) title "Number of Products" with lines
@@ -156,7 +156,7 @@ else
                  title "15 m" with lines
 
         if ($fileOutput) set output "${outputFileTemplate}Age.png"; \
-            else set terminal x11 8 title "Age"
+            else set terminal x11 8 title "Age of the Oldest Product"
         set title "Age of Oldest Product in Queue vs. Time\n$host LDM: $version"
         set ylabel "Age / 1 h"
         plot "$datafile" u 1:(\$7/3600) title "Age" with lines
