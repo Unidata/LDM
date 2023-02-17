@@ -3,9 +3,17 @@
 while true; do
     "$@"
     status=$?
+
+    if $status -eq 127; then
+        ulogger -p fatal "Program \"$1\" not found"
+        break;
+    fi
+
     ulogger -p error "Process '$@' terminated with status $status. Restarting"
 
     # Edit/uncomment the following command to receive an email notification
     # mailx -s "Process '$@' terminated with status $status. Restarting" \
     #       $LOGNAME </dev/null
 done
+
+exit $status;

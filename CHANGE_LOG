@@ -1,3 +1,7 @@
+6.14.6.1
+    keep_running(1):
+        * Added a test for the executable's existance
+
 6.14.5  2023-02-16T11:40:06-0700
     ldmadmin(1):
         * Made the determination of local vs. remote LDM ports in the command "ldmadmin printstats"
