@@ -48,7 +48,7 @@ coverity-scan:  $(COVERITY_SCAN_FILE)
 	--silent --show-error \
 	https://scan.coverity.com/builds?project=Unidata%2FLDM \
 	   > /dev/null # Redirection is necessary to avoid appearance of hanging
-	rm $(COVERITY_SCAN_FILE) 
+#	rm $(COVERITY_SCAN_FILE) 
 
 scan:	coverity-scan clang-scan
 
