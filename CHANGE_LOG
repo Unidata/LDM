@@ -1,4 +1,8 @@
 6.14.6.1
+    ldmadmin(1):
+        * In the error messages resulting from checking the queue, put the pathname of the
+          product-queue queue in quotes just in case it contains embedded whitespace
+
     keep_running(1):
         * Added a test for the executable's existance
 

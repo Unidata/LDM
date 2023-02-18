@@ -1632,11 +1632,11 @@ sub getQueueStatus
     if (1 == $status) {
         if (-e $pid_file) {
             errmsg(
-                "Couldn't check $queue_path. Execute pqcheck(1) manually.");
+                "Couldn't check \"$queue_path\". Execute pqcheck(1) manually.");
         }
         else {
             errmsg(
-                "$queue_path doesn't exist. Execute \"ldmadmin mkqueue\".");
+                "\"$queue_path\" doesn't exist. Execute \"ldmadmin mkqueue\".");
         }
     }
     elsif (2 == $status) {
