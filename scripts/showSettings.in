@@ -31,6 +31,9 @@ ls -l $LDMHOME/bin/
 printf "\n%s\n"  "$ ldmadmin config"
 ldmadmin config
 
+printf "\n%s\n"  "$ pqmon -S"
+pqmon -S
+
 printf "\n%s\n"  "$ mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'` "
 mount | grep `df $LDMHOME/bin | awk 'NR==2{print $1}'`
 
