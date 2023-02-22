@@ -391,6 +391,7 @@ flushConnection(
  * @retval UP6_CLIENT_FAILURE   Client-side RPC transport couldn't be  created from Internet address
  *                              and LDM program number.
  * @retval UP6_SYSTEM_ERROR     System-error occurred (check errno or see log).
+ * @retval UP6_CLOSED           Connection closed. `log_add()` called.
  * @retval UP6_PQ               Problem with product-queue.
  */
 static up6_error_t up6_run(
@@ -693,6 +694,7 @@ static up6_error_t up6_init(
  * Returns:
  *      0                       Success.
  *      UP6_PQ                  Problem with the product-queue.
+ *      UP6_CLOSED              Connection closed. `log_add()` called.
  *      UP6_SYSTEM_ERROR        Failure.  errno is set and message should be
  *                              logged.
  */
