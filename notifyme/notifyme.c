@@ -23,6 +23,7 @@
 #include "ldm5_clnt.h"
 #include "RegularExpressions.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,6 +57,7 @@
 
 static const char *remote = DEFAULT_REMOTE; /* hostname of data remote */
 static ldm_replyt reply = { OK };
+static int        showProdOrigin = false;
 
 
 /*
@@ -129,11 +131,36 @@ set_sigactions(void)
 }
 
 
+/**
+ * @param[in] av0  Program name
+ */
 static void
-usage(
-        char *av0  /*  id string */
-)
+usage(const char *av0)
 {
+    log_add(
+"Usage: %s [options]\n"
+"where:\n"
+"  -h host        Have \"host\" send us the metadata (default \"%s\")\n"
+"  -f feed        Request metadata for products of feedtype \"feed\" (default: ANY)\n"
+"  -l dest        Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
+"                 (standard error), or file `dest`. Default is \"%s\"\n"
+"  -O             Include product origin in output\n"
+"  -o offset      Set the \"from\" time \"offset\" seconds before now\n"
+"  -p pattern     Only show products whose ID matches \"pattern\" (default \"%s\")\n"
+"  -T TotalTimeo  Give up after this many seconds (default %d)\n"
+"  -t timeout     Set RPC timeout to \"timeout\" seconds (default %d)\n"
+"  -v             Log INFO (and higher priority) messages\n"
+"  -x             Log DEBUG (and higher priority) messages\n",
+            av0,
+            DEFAULT_REMOTE,
+            log_get_default_destination(),
+            DEFAULT_PATTERN,
+            DEFAULT_TOTALTIMEO,
+            DEFAULT_TIMEO);
+    log_flush_error();
+    exit(1);
+#if 0
+    log_flush_error();
         (void)fprintf(stderr,
 "Usage: %s [options] \t\nOptions:\n", av0);
         (void)fprintf(stderr,
@@ -151,10 +178,12 @@ usage(
 "\t-f feedtype    Interested in products from feed \"feedtype\" (default %s)\n",
         s_feedtypet(DEFAULT_FEEDTYPE));
         (void)fprintf(stderr,
-"\t-p pattern     Interested in products matching \"pattern\" (default \"%s\")\n",
-                DEFAULT_PATTERN);
+"\t-O             Include product origin in verbose output\n");
         (void)fprintf(stderr,
 "\t-o offset      Set the \"from\" time offset secs before now\n");
+        (void)fprintf(stderr,
+"\t-p pattern     Interested in products matching \"pattern\" (default \"%s\")\n",
+                DEFAULT_PATTERN);
         (void)fprintf(stderr,
 "\t-t timeout     Set RPC timeout to \"timeout\" seconds (default %d)\n",
                 DEFAULT_TIMEO);
@@ -162,6 +191,7 @@ usage(
 "\t-T TotalTimeo  Give up after this many secs (default %d)\n",
                 DEFAULT_TOTALTIMEO);
         exit(1);
+#endif
 }
 
 
@@ -208,8 +238,12 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
                 /* 
                  * your code here, example just logs it 
                  */
-                log_info_q("%s", s_prod_info(NULL, 0, &notice,
-                        log_is_enabled_debug));
+                if (showProdOrigin) {
+                    log_info("%s %s", s_prod_info(NULL, 0, &notice, log_is_enabled_debug),
+                            notice.origin);
+                } else {
+                    log_info("%s", s_prod_info(NULL, 0, &notice, log_is_enabled_debug));
+                }
 
 
                 if(!svc_sendreply(transp, (xdrproc_t)xdr_ldm_replyt,
@@ -270,7 +304,7 @@ int main(int ac, char *av[])
 
         opterr = 1;
 
-        while ((ch = getopt(ac, av, "vxl:f:o:t:h:P:p:T:")) != EOF)
+        while ((ch = getopt(ac, av, "vxl:f:Oo:t:h:P:p:T:")) != EOF)
                 switch (ch) {
                 case 'v':
                         if (!log_is_enabled_info)
@@ -289,6 +323,10 @@ int main(int ac, char *av[])
                 case 'h':
                         remote = optarg;
                         break;
+                case 'O': {
+                    showProdOrigin = true;
+                    break;
+                }
                 case 'P': {
                     log_warning("Port specification is ignored");
                     break;
