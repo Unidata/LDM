@@ -6,8 +6,6 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST		= pq.hin
-BUILT_SOURCES		= pq.h
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= pq.h fbits.h lcm.h
 lib_la_SOURCES		= pq.c lcm.c
@@ -29,11 +27,6 @@ TAGS_FILES		= \
     ../registry/*.c ../registry/*.h \
     ../rpc/*.c ../rpc/*.h
 CLEANFILES		= *.pq *.out *.log callgrind.out.* vgcore.* core.*
-
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-pq.h:		pq.hin pq.c
 
 if HAVE_CUNIT
 
