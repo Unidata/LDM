@@ -4,6 +4,10 @@
           product-queue queue in quotes just in case it contains embedded whitespace
         * Added "pqmon -S" to the "showsettings" command
 
+    Version 6 upstream LDM:
+        * Added logging of a warning if sending or notifying about the oldest product because this
+          indicates that the product-queue might be too small or the system too busy
+
     notifyme(1):
         * Added "-O" option to include product origin in output
         * Modified usage message to use LDM logging module

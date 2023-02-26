@@ -109,6 +109,20 @@ extern const pqe_index _pqenone;
 
 @FUNCTION_DECLARATIONS@
 
+#define PQ_WARN_IF_OLDEST(queue_par, prod_par, prefix) \
+    do { \
+        if (queue_par->is_full && queue_par->early_cursor) { \
+            char        buf[LDM_INFO_MAX]; \
+            timestampt  now; \
+            (void)set_timestamp(&now); \
+            log_warning(prefix " oldest product in full queue: age=%g s, prod=%s", \
+                d_diff_timestamp(&now, &queue_par->inserted), \
+                s_prod_info(buf, sizeof(buf), &prod_par->info, log_is_enabled_debug)); \
+            log_warning("Products might be deleted before being acted upon! " \
+                    "Queue too small? System overloaded?"); \
+         } \
+     } while (0)
+
 #ifdef __cplusplus
 }
 #endif

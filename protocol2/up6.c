@@ -69,6 +69,9 @@ static up6_error_t up6_error(
     up6_error_t error;
 
     switch (stat) {
+    case RPC_SUCCESS:
+        error = UP6_SUCCESS;
+        break;
     case RPC_PROGVERSMISMATCH:
         error = UP6_VERSION_MISMATCH;
         break;
@@ -148,7 +151,7 @@ static up6_error_t logFailure(
  * @retval UP6_CLOSED            Connection closed. `log_add()` called.
  */
 /*ARGSUSED*/
-static int notify(
+static int pq_sequence_notify(
         const prod_info* const info,
         const void* const      data,
         void* const            xprod,
@@ -182,6 +185,60 @@ static int notify(
 }
 
 /**
+ * Notifies a downstream LDM process about a data product. Called by `pq_next()`.
+ * @param[in]  prod_par    Product parameters
+ * @param[in]  queue_par   Product-queue parameters
+ * @param[out] sendStatus  Transmission status:
+ *                           0                     Success.
+ *                           UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be created
+ *                                                 from Internet address and LDM program number.
+ *                                                 `log_add()` called.
+ *                           UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()`
+ *                                                 called.
+ *                           UP6_INTERRUPT         This function was interrupted. `log_add()`
+ *                                                 called.
+ *                           UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
+ *                           UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason
+ *                                                 (see log). `log_add()` called.
+ *                           UP6_SYSTEM_ERROR      System-error occurred (check errno or see log).
+ *                                                 `log_add()` called.
+ *                           UP6_CLOSED            Connection closed. `log_add()` called.
+ */
+static void notify(
+        const prod_par_t* const restrict  prod_par,
+        const queue_par_t* const restrict queue_par,
+        void* const restrict              sendStatus)
+{
+    int                    status = 0; // Default success
+    const prod_info* const info = &prod_par->info;
+
+    if (upFilter_isMatch(_upFilter, info)) {
+        int isDebug = log_is_enabled_debug;
+
+        log_log(log_is_enabled_debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO,
+                "notifying: %s", s_prod_info(NULL, 0, info, isDebug));
+
+        (void)notification_6((prod_info*) info, _clnt);
+        /*
+         * The status will be a timeout unless an error occurs because the RPC call uses
+         * asynchronous message-passing.
+         */
+        if (clnt_stat(_clnt) != RPC_TIMEDOUT) {
+            log_add("NOTIFICATION failure: %s", clnt_errmsg(_clnt));
+            status = up6_error(clnt_stat(_clnt));
+        }
+        else {
+            PQ_WARN_IF_OLDEST(queue_par, prod_par, "Notified about");
+
+            _lastSendTime = time(NULL );
+            _flushNeeded = 1;
+        } // Notification timed-out as it should have
+    } // Product matches
+
+    *(int*)sendStatus = status;
+}
+
+/**
  * Asynchronously sends a data-product to the downstream LDM.
  *
  * @param[in] infop                 Pointer to the metadata of the data.
@@ -190,7 +247,6 @@ static int notify(
  * @retval    UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be  created from Internet
  *                                  address and LDM program number. `log_add()` called.
  * @retval    UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()` called.
- * @retval    UP6_TIME_OUT          Communication timed-out. `log_add()` called.
  * @retval    UP6_INTERRUPT         This function was interrupted.     `log_add()` called.
  * @retval    UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
  * @retval    UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason (see log).
@@ -242,7 +298,7 @@ hereis(
  * @retval    UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be  created from Internet
  *                                  address and LDM program number. `log_add()` called.
  * @retval    UP6_VERSION_MISMATCH  Upstream LDM isn't version 6. `log_add()` called.
- * @retval    UP6_TIME_OUT          Communication timed-out. `log_add()` called.
+ * @retval    UP6_TIME_OUT          Initial query timed-out. `log_add()` called.
  * @retval    UP6_INTERRUPT         This function was interrupted.     `log_add()` called.
  * @retval    UP6_UNKNOWN_HOST      Upstream host is unknown. `log_add()` called.
  * @retval    UP6_UNAVAILABLE       Upstream LDM can't be reached for some reason (see log).
@@ -315,7 +371,6 @@ csbd(   const prod_info* infop,
  * @retval UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be created from Internet address
  *                               and LDM program number. `log_add()` called.
  * @retval UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()` called.
- * @retval UP6_TIME_OUT          Communication timed-out. `log_add()` called.
  * @retval UP6_INTERRUPT         This function was interrupted. `log_add()` called.
  * @retval UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
  * @retval UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason (see log).
@@ -324,7 +379,7 @@ csbd(   const prod_info* infop,
  * @retval UP6_CLOSED            Connection closed. `log_add()` called.
  */
 /*ARGSUSED*/
-static int feed(
+static int pq_sequence_feed(
         const prod_info* const info,
         const void* const      data,
         void* const            xprod,
@@ -345,6 +400,55 @@ static int feed(
     } /* product passes up-filter */
 
     return status;
+}
+
+/**
+ * Transmits a data-product to a downstream LDM.  Called by `pq_next()`.
+ *
+ * @param[in]  prod_par    Product parameters
+ * @param[in]  queue_par   Product-queue parameters
+ * @param[out] sendStatus  Transmission status:
+ *                           0                     Success.
+ *                           UP6_CLIENT_FAILURE    Client-side RPC transport couldn't be created
+ *                                                 from Internet address and LDM program number.
+ *                                                 `log_add()` called.
+ *                           UP6_VERSION_MISMATCH  Downstream LDM isn't version 6. `log_add()`
+ *                                                 called.
+ *                           UP6_INTERRUPT         This function was interrupted. `log_add()`
+ *                                                 called.
+ *                           UP6_UNKNOWN_HOST      Downstream host is unknown. `log_add()` called.
+ *                           UP6_UNAVAILABLE       Downstream LDM can't be reached for some reason
+ *                                                 (see log). `log_add()` called.
+ *                           UP6_SYSTEM_ERROR      System-error occurred (check errno or see log).
+ *                                                 `log_add()` called.
+ *                           UP6_CLOSED            Connection closed. `log_add()` called.
+ *                           UP6_TIME_OUT          In alternate transmission mode and initial query
+ *                                                 timed-out.
+ */
+static void feed(
+        const prod_par_t* const restrict  prod_par,
+        const queue_par_t* const restrict queue_par,
+        void* const restrict              sendStatus)
+{
+    int                    status = 0; // Default success
+    const prod_info* const info = &prod_par->info;
+    const void* const      data = prod_par->data;
+
+    if (upFilter_isMatch(_upFilter, info)) {
+    	if (log_is_enabled_debug) {
+    		log_debug("sending: %s", s_prod_info(NULL, 0, info, true));
+    	}
+    	else {
+    		log_info("sending: %s", s_prod_info(NULL, 0, info, false));
+    	}
+
+        status = _isPrimary ? hereis(info, data) : csbd(info, data);
+
+        if (status == 0)
+            PQ_WARN_IF_OLDEST(queue_par, prod_par, "Sent");
+    } // Product passes up-filter
+
+    *(int*)sendStatus = status;
 }
 
 /**
@@ -461,14 +565,20 @@ static up6_error_t up6_run(
         }
         else {
             while (exitIfDone(0)) {
-                const int status = pq_sequence(_pq, _mt, _class, _mode == FEED ? feed : notify,
-                        NULL);
-
-                if (status < 0) {
+                int pqStatus;   // Product-queue status
+                int sendStatus; // Transmission status
+#if USE_PQ_SEQUENCE
+                sendStatus = pqStatus = pq_sequence(_pq, _mt, _class,
+                        _mode == FEED ? pq_sequence_feed : pq_sequence_notify, NULL);
+#else
+                pqStatus = pq_next(_pq, false, _class, _mode == FEED ? feed : notify, false,
+                        &sendStatus);
+#endif
+                if (pqStatus < 0) {
                     /*
                      * The product-queue module reported a problem.
                      */
-                    if (status == PQ_END) {
+                    if (pqStatus == PQ_END) {
                         log_debug("End of product-queue");
 
                         if (_flushNeeded) {
@@ -499,11 +609,11 @@ static up6_error_t up6_run(
                         break;
                     }
                 } /* problem in product-queue module */
-                else if (status == UP6_CLOSED) {
+                else if (sendStatus == UP6_CLOSED) {
                     log_flush_info();
                     break;
                 }
-                else if (status) {
+                else if (sendStatus) {
                     log_flush_error();
                     errCode = UP6_SYSTEM_ERROR;
                     break;
