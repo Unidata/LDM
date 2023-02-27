@@ -285,7 +285,7 @@ pq_insert(pqueue *pq, const product *prod);
 int
 pq_highwater(pqueue *pq, off_t *highwaterp, size_t *maxproductsp);
 
-/**
+/*
  * Indicates if the product-queue is full (i.e., if a data-product has been
  * deleted in order to make room for another data-product).
  *
@@ -304,7 +304,7 @@ int pq_isFull(
     pqueue* const       pq,
     int* const          isFull);
 
-/**
+/*
  * Returns the time of the most-recent insertion of a data-product.
  *
  * Arguments:
@@ -322,7 +322,7 @@ int pq_getMostRecent(
     pqueue* const       pq,
     timestampt* const   mostRecent);
 
-/**
+/*
  * Returns metrics associated with the minimum virtual residence time of
  * data-products in the queue since the queue was created or the metrics reset.
  * The virtual residence time of a data-product is the time that the product
@@ -358,7 +358,7 @@ int pq_getMinVirtResTimeMetrics(
     off_t* const        size,
     size_t* const       slots);
 
-/**
+/*
  * Clears the metrics associated with the minimum virtual residence time of
  * data-products in the queue.  After this function, the minimum virtual
  * residence time metrics will be recomputed as products are deleted from the
@@ -461,7 +461,7 @@ pq_stats(
         double* const age_oldestp,
         size_t* const maxextentp);
 
-/**
+/*
  * Returns the number of slots in a product-queue.
  *
  * Arguments:
@@ -473,7 +473,7 @@ size_t
 pq_getSlotCount(
     pqueue* const       pq);
 
-/**
+/*
  * Returns the insertion-timestamp of the oldest data-product in the
  * product-queue.
  *
@@ -489,7 +489,7 @@ pq_getOldestCursor(
     pqueue*             pq,
     timestampt* const   oldestCursor);
 
-/**
+/*
  * Returns the number of pq_open()s for writing outstanding on an existing
  * product queue.  If a writing process terminates without calling pq_close(),
  * then the actual number will be less than this number.  This function opens
@@ -512,7 +512,7 @@ pq_get_write_count(
     const char* const   path,
     unsigned* const     count);
 
-/**
+/*
  * Sets to zero the number of pq_open()s for writing outstanding on the
  * product-queue.  This is a dangerous function and should only be used when
  * it is known that there are no outstanding pq_open()s for writing on the
@@ -563,7 +563,7 @@ pq_ctimestamp(pqueue *pq, timestampt *tvp);
 int
 pq_cClassSet(pqueue *pq,  pq_match *mtp, const prod_class_t *clssp);
 
-/**
+/*
  * Set the cursor based on the insertion-time of the product with the given
  * signature if and only if the associated data-product is found in the 
  * product-queue.
@@ -840,7 +840,7 @@ pq_deleteBySignature(
         pqueue* const restrict pq,
         const signaturet       sig);
 
-/**
+/*
  * Returns the creation-time of the data-product in the product-queue whose
  * insertion-time is closest-to but less-than the "to" time of a class
  * specification.  Sets the cursor of the product-queue to the insertion-
@@ -861,7 +861,7 @@ pq_last(pqueue* const             pq,
         const prod_class_t* const clssp,
         timestampt* const         tsp);
 
-/**
+/*
  * Modifies a data-product class-specification according to the most recent
  * data-product in the product-queue that matches the specification.
  *
@@ -919,7 +919,7 @@ pq_suspendAndUnblock(
 unsigned
 pq_suspend(unsigned int maxsleep);
 
-/**
+/*
  * Returns an appropriate error-message given a product-queue and error-code.
  *
  * Arguments:
