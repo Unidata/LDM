@@ -58,7 +58,7 @@ static unsigned long            idle = 0;
 static fd_set                   readfds;
 static fd_set                   exceptfds;
 static int                      DONE = 0;
-static const char*              FOS_TRAILER = "\015\015\012\003";
+static const char*              FOS_TRAILER = "\015\015\012\003"; // CR CR LF ETX = ^M ^M ^J ^C
 static struct shmhandle*        shm = NULL;
 /*
  * Output statistics if requested
