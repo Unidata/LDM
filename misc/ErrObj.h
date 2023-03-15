@@ -14,8 +14,6 @@
 #include <pthread.h>
 #include <string.h>
 
-/// An individual error
-typedef struct Error  Error;
 /// An error object
 typedef struct ErrObj ErrObj;
 
@@ -24,16 +22,15 @@ extern "C" {
 #endif
 
 /**
- * Returns a new error-object. The error-object will contain a single error.
- *
- * @param[in] file  The name of the file in which the error occurred
- * @param[in] line  The line number in the file to associate with the error
- * @param[in] func  The name of the function in which the error occurred
- * @param[in] code  The error's code
- * @param[in] fmt   The format for the error message
- * @param[in] ...   The format's arguments
- * @retval    NULL  Out-of-memory
- * @return          The new error-object
+ * Returns a new error object.
+ * @param[in] file     The name of the file in which the error occurred
+ * @param[in] line     The line number in the file to associate with the error
+ * @param[in] func     The name of the function in which the error occurred
+ * @param[in] code     The error's code
+ * @param[in] fmt      The format for the error message
+ * @param[in] ...      The format's arguments
+ * @retval    NULL     Failure
+ * @return             A new error object
  */
 ErrObj* eo_new(
         const char* file,
@@ -45,25 +42,24 @@ ErrObj* eo_new(
 
 /**
  * Deletes (i.e., frees) an error-object.
- *
- * @param[in] errObj  The error-object to be deleted
+ * @param[in] errObj  The error-object to be deleted or `NULL`
  */
 void eo_delete(ErrObj* errObj);
 
 /**
- * Adds a later-occuring error to an error-object.
- *
- * @param[in] errObj  The error-object to be added to
+ * Wraps a prevously-occuring error with a later-occuring error.
+ * @param[in] errObj  The previous error-object
  * @param[in] file    The name of the file in which the error occurred
  * @param[in] line    The line number in the file to associate with the error
  * @param[in] func    The name of the function in which the error occurred
  * @param[in] code    The error's code
- * @param[in] fmt     The format for the error message
- * @param[in] ...     The format's arguments
+ * @param[in] fmt     The format for the error message or `NULL`
+ * @param[in] ...     The format's arguments. Ignored if the format is `NULL`.
  * @retval    errObj  Success
  * @retval    NULL    Out-of-memory
+ * @return            An error object corresponding to the arguments
  */
-ErrObj* eo_add(
+ErrObj* eo_wrap(
         ErrObj*     errObj,
         const char* file,
         const int   line,
@@ -73,93 +69,62 @@ ErrObj* eo_add(
         ...);
 
 /**
- * Returns the error-code of the most recent error.
+ * Returns the error-code of an error object.
  * @param[in] errObj  The error object
- * @return            The error-code of the most recent error
+ * @return            The error-code
  */
 int eo_code(const ErrObj* errObj);
 
 /**
- * Returns the first (i.e., earliest) error of an error-object.
- *
- * @param[in] errObj  The error-object
- * @return            The first error
+ * Returns the error object that happened immediately before an error object.
+ * @param[in] errObj  The error object
+ * @retval    NULL    No previous error
+ * @return            The previous error object
  */
-const Error* eo_first(const ErrObj* errObj);
+ErrObj* eo_prev(const ErrObj* errObj);
 
 /**
- * Returns the error that happened immediately after an error.
- *
- * @param[in] error   The error
- * @retval    NULL    No more errors
- * @return            The next error just after the given one
+ * Returns the error-code of an error object.
+ * @param[in] errObj  The error object
+ * @return            The associated error-code
  */
-const Error* er_next(const Error* error);
+int eo_code(const ErrObj* errObj);
 
 /**
- * Returns the last (i.e., most recent) error of an error-object.
- *
- * @param[in] errObj  The error-object
- * @return            The last error
+ * Returns the name of the file in which an error object was created.
+ * @param[in] errObj  The error object
+ * @return            The name of the file
  */
-const Error* eo_last(const ErrObj* errObj);
+const char* eo_file(const ErrObj* errObj);
 
 /**
- * Returns the error that happened immediately before an error.
- *
- * @param[in] error   The error
- * @retval    NULL    No more errors
- * @return            The previous error just before the given one
+ * Returns the origin-1 line number associated with an error object.
+ * @param[in] errObj  The error object
+ * @return            The origin-1 line number
  */
-const Error* er_prev(const Error* error);
+int eo_line(const ErrObj* errObj);
 
 /**
- * Returns the error-code of an error.
- *
- * @param[in] error  The error
- * @return           The associated error-code
+ * Returns the name of the function in which an error was created.
+ * @param[in] errObj  The error object
+ * @return            The name of the function
  */
-int er_code(const Error* error);
+const char* eo_func(const ErrObj* errObj);
 
 /**
- * Returns the name of the file in which an error occurred.
- *
- * @param[in] error  The error
- * @return           The name of the file
+ * Returns the identifier of the thread on which an error object was created.
+ * @param[in] errObj  The error object
+ * @return            The identifier of the thread
  */
-const char* er_file(const Error* error);
+const pthread_t eo_thread(const ErrObj* errObj);
 
 /**
- * Returns the origin-1 line number associated with an error.
- *
- * @param[in] error  The error
- * @return           The origin-1 line number
+ * Returns the message of an error object.
+ * @param[in] errObj   The error object
+ * @retval    NULL     No message
+ * @return             The associated error-message
  */
-int er_line(const Error* error);
-
-/**
- * Returns the name of the function in which an error occurred.
- *
- * @param[in] error  The error
- * @return           The name of the function
- */
-const char* er_func(const Error* error);
-
-/**
- * Returns the identifier of the thread on which an error was created.
- *
- * @param[in] error  The error
- * @return           The identifier of the thread
- */
-const pthread_t er_thread(const Error* error);
-
-/**
- * Returns the message of an error.
- *
- * @param[in] error   The error
- * @return            The associated error-message
- */
-const char* er_msg(const Error* error);
+const char* eo_msg(const ErrObj* errObj);
 
 #ifdef __cplusplus
 }
@@ -167,7 +132,6 @@ const char* er_msg(const Error* error);
 
 /**
  * Returns a new error-object.
- *
  * @param[in] code  The error-code to associate with the error
  * @param[in] fmt   The format for the error message
  * @param[in] ...   The format's arguments
@@ -180,13 +144,28 @@ const char* er_msg(const Error* error);
 #define EO_SYSTEM() EO_NEW(errno, "%s", strerror(errno))
 
 /**
- * Adds a later-occuring error to an error-object.
- *
- * @param[in] errObj  The error-object to be added to
+ * Wraps a previously-occuring error with a later-occuring error.
+ * @param[in] errObj  The previous error-object
  * @param[in] code    The error-code to associate with the error
- * @param[in] fmt     The format for the error message
+ * @param[in] fmt     The format for the error message or `NULL`
  * @param[in] ...     The format's arguments
  */
-#define EO_ADD(errObj, code, fmt, ...) eo_add(errObj, _FILE_, _LINE_, __func__, code, fmt, __VA_ARGS__)
+#define EO_WRAP(errObj, code, fmt, ...) eo_wrap(errObj, _FILE_, _LINE_, __func__, code, fmt, \
+        __VA_ARGS__)
+
+/**
+ * Wraps a previously-occuring error with a later-occuring error with no message.
+ * @param[in] errObj  The previous error-object
+ * @param[in] code    The error-code to associate with the error
+ */
+#define EO_WRAP_CODE(errObj, code) EO_WRAP(errObj, code, NULL)
+
+/**
+ * Wraps a previously-occuring error with a later-occuring error with the same error code.
+ * @param[in] errObj  The previous error-object
+ * @param[in] fmt     The format for the error message or `NULL`
+ * @param[in] ...     The format's arguments
+ */
+#define EO_WRAP_MSG(errObj, fmt, ...) EO_WRAP(errObj, eo_code(errObj), fmt, __VA_ARGS__)
 
 #endif /* MISC_ERROBJ_H_ */

@@ -1,6 +1,6 @@
 /**
  * This file defines an error-object. An error-object comprises a sequence of individual errors,
- * from the first (i.e., earliest) error to the last (i.e., most recent) error.
+ * from the earliest error to the most recent error.
  *
  *        File: ErrObj.c
  *  Created on: Nov 17, 2022
@@ -16,233 +16,191 @@
 #include <stdlib.h>
 #include <string.h>
 
-/// An individual error
-struct Error {
-    Error*    prev;
-    Error*    next;
-    char*     file;
-    int       line;
-    char*     func;
-    pthread_t thread;
-    int       code;
-    char*     msg;
-};
 /// An error object
 struct ErrObj {
-    Error* first;
-    Error* last;
+    ErrObj*   prev;   ///< The previous error object
+    char*     file;   ///< The name of the file in which the error object was created
+    char*     func;   ///< The name of the function in which the error object was created
+    char*     msg;    ///< The error message
+    pthread_t thread; ///< The thread on which the error object was created
+    int       line;   ///< The line number where the error object was created
+    int       code;   ///< The error code
 };
 
 /**
- * Initializes an error.
- * @param[in] error    The error to be initialized
+ * Initializes an error object.
+ * @param[in] errObj   The error object to be initialized
  * @param[in] file     The name of the file in which the error occurred
  * @param[in] line     The line number in the file to associate with the error
  * @param[in] func     The name of the function in which the error occurred
  * @param[in] code     The error's code
- * @param[in] fmt      The format for the error message
- * @param[in] args     The format's arguments
+ * @param[in] fmt      The format of the error message or `NULL`
+ * @param[in] args     The format's arguments. Ignored if the format is `NULL`.
+ * @param[in] prev     The previous error object to be wrapped or `NULL`
  * @retval    `true`   Success
  * @retval    `false`  Failure
  */
-static bool er_init(
-        Error*      error,
-        const char* file,
-        const int   line,
-        const char* func,
-        const int   code,
-        const char* fmt,
-        va_list     args)
+static bool init(
+        ErrObj*     const restrict errObj,
+        const char* const restrict file,
+        const int                  line,
+        const char* const restrict func,
+        const int                  code,
+        const char* const restrict fmt,
+        va_list                    args,
+        ErrObj* const restrict     prev)
 {
     bool success = false;
-    error->file = strdup(file);
 
-    if (error->file) {
-        error->func = strdup(func);
+    errObj->thread = pthread_self();
+    errObj->line = line;
+    errObj->code = code;
+    errObj->prev = prev;
+    errObj->file = strdup(file);
 
-        if (error->func) {
-            const int nbytes = vsnprintf(NULL, 0, fmt, args);
+    if (errObj->file) {
+        errObj->func = strdup(func);
 
-            if (nbytes >= 0) {
-                error->msg = malloc(nbytes+1);
+        if (errObj->func) {
+            if (fmt == NULL) {
+                errObj->msg = NULL;
+                success = true;
+            }
+            else {
+                const int nbytes = vsnprintf(NULL, 0, fmt, args);
 
-                if (error->msg) {
-                    // `nbytes >= 0` => can't fail
-                    (void)vsnprintf(error->msg, nbytes+1, fmt, args); // Calls `va_start(args)`
-                    error->thread = pthread_self();
-                    error->line = line;
-                    error->code = code;
-                    error->prev = error->next = NULL;
-                    success = true;
-                } // Message buffer allocated
-            } // Message can be printed
+                if (nbytes >= 0) {
+                    errObj->msg = malloc(nbytes+1);
+
+                    if (errObj->msg) {
+                        // nbytes >= 0 => the following can't fail
+                        (void)vsnprintf(errObj->msg, nbytes+1, fmt, args); // Calls va_start(args)
+
+                        success = true;
+                    } // Message buffer allocated
+                } // Have size of message
+            } // Format isn't NULL
 
             if (!success)
-                free(error->func);
+                free(errObj->func);
         } // Function name allocated
 
         if (!success)
-            free(error->file);
+            free(errObj->file);
     } // Filename allocated
 
     return success;
 }
 
 /**
- * Returns a new error.
- * @param[in] error    The error to be initialized
- * @param[in] file     The name of the file in which the error occurred
- * @param[in] line     The line number in the file to associate with the error
- * @param[in] func     The name of the function in which the error occurred
- * @param[in] code     The error's code
- * @param[in] fmt      The format for the error message
- * @param[in] args     The format's arguments
- * @retval    NULL     Failure
- * @return             A new error
+ * Constructs (i.e., allocates and initializes) an error object.
+ * @param[in] file  The name of the file in which the error object was created
+ * @param[in] line  The line number where the error object was created
+ * @param[in] func  The name of the function in which the error object was created
+ * @param[in] code  The error code
+ * @param[in] fmt   The format of the error message or `NULL`
+ * @param[in] args  The format's arguments. Ignored if the format is `NULL`.
+ * @param[in] prev  The prevously-occuring error to be wrapped or `NULL`
+ * @retval    NULL  Out of memory
+ * @return          An error object
  */
-static Error* er_new(
-        const char* file,
-        const int   line,
-        const char* func,
-        const int   code,
-        const char* fmt,
-        va_list     args)
+static ErrObj* construct(
+        const char* const restrict file,
+        const int                  line,
+        const char* const restrict func,
+        const int                  code,
+        const char* const restrict fmt,
+        va_list                    args,
+        ErrObj* const restrict     prev)
 {
-    Error* error = malloc(sizeof(Error));
-    if (error) {
-        if (!er_init(error, file, line, func, code, fmt, args)) {
-            free(error);
-            error = NULL;
-        }
+    ErrObj* errObj = malloc(sizeof(ErrObj));
+
+    if (errObj && !init(errObj, file, line, func, code, fmt, args, prev)) {
+        free(errObj);
+        errObj = NULL;
     } // Error allocated
-    return error;
-}
-
-/**
- * Deletes an error.
- * @param[in] error  The error to be deleted
- */
-static void er_delete(Error* error)
-{
-    if (error) {
-        free(error->msg);
-        free(error->func);
-        free(error->file);
-        free(error);
-    }
-}
-
-ErrObj* eo_new(
-        const char* file,
-        const int   line,
-        const char* func,
-        const int   code,
-        const char* fmt,
-        ...)
-{
-    ErrObj* errObj = NULL;
-    va_list          args;
-
-    va_start(args, fmt);
-    Error* error = er_new(file, line, func, code, fmt, args);
-    va_end(args);
-
-    if (error) {
-        errObj = malloc(sizeof(ErrObj));
-        if (errObj == NULL) {
-            er_delete(error);
-        }
-        else {
-            errObj->first = errObj->last = error;
-        } // `errObj` allocated
-    }
 
     return errObj;
 }
 
-void eo_delete(ErrObj* errObj)
+ErrObj* eo_new(
+        const char* restrict file,
+        const int            line,
+        const char* restrict func,
+        const int            code,
+        const char* restrict fmt,
+        ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    ErrObj* errObj = construct(file, line, func, code, fmt, args, NULL);
+    va_end(args);
+
+    return errObj;
+}
+
+void eo_delete(ErrObj* const errObj)
 {
     if (errObj) {
-        for (Error* error = errObj->first; error; ) {
-            Error* next = error->next;
-            er_delete(error);
-            error = next;
-        }
+        eo_delete(errObj->prev);
+
+        free(errObj->msg); // NULL safe
+        free(errObj->func);
+        free(errObj->file);
         free(errObj);
     }
 }
 
-ErrObj* eo_add(
-        ErrObj*     errObj,
-        const char* file,
-        const int   line,
-        const char* func,
-        const int   code,
-        const char* fmt,
+ErrObj* eo_wrap(
+        ErrObj* restrict     errObj,
+        const char* restrict file,
+        const int            line,
+        const char* restrict func,
+        const int            code,
+        const char* restrict fmt,
         ...)
 {
-    va_list         args;
+    va_list args;
 
     va_start(args, fmt);
-    Error* error = er_new(file, line, func, code, fmt, args);
+    ErrObj* newErrObj = construct(file, line, func, code, fmt, args, errObj);
     va_end(args);
 
-    if (error == NULL)
-        return NULL;
-
-    errObj->last->next = error;
-    error->prev = errObj->last;
-    errObj->last = error;
-
-    return errObj;
+    return newErrObj;
 }
 
-const Error* eo_first(const ErrObj* errObj)
+ErrObj* eo_prev(const ErrObj* const errObj)
 {
-    return errObj->first;
+    return errObj->prev;
 }
 
-const Error* er_next(const Error* error)
+const char* eo_file(const ErrObj* const errObj)
 {
-    return error->next;
+    return errObj->file;
 }
 
-const Error* eo_last(const ErrObj* errObj)
+int eo_line(const ErrObj* const errObj)
 {
-    return errObj->last;
+    return errObj->line;
 }
 
-const Error* er_prev(const Error* error)
+const char* eo_func(const ErrObj* const errObj)
 {
-    return error->prev;
+    return errObj->func;
 }
 
-const char* er_file(const Error* error)
+const pthread_t eo_thread(const ErrObj* const errObj)
 {
-    return error->file;
+    return errObj->thread;
 }
 
-int er_line(const Error* error)
+int eo_code(const ErrObj* const errObj)
 {
-    return error->line;
+    return errObj->code;
 }
 
-const char* er_func(const Error* error)
+const char* eo_msg(const ErrObj* const errObj)
 {
-    return error->func;
-}
-
-const pthread_t er_thread(const Error* error)
-{
-    return error->thread;
-}
-
-int er_code(const Error* error)
-{
-    return error->code;
-}
-
-const char* er_msg(const Error* error)
-{
-    return error->msg;
+    return errObj->msg; // Can be NULL
 }

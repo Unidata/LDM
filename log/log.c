@@ -1279,22 +1279,27 @@ unsigned log_get_options(void)
 
 int log_dispose(
         const log_level_t level,
-        ErrObj*           errObj)
+        ErrObj* const     errObj)
 {
     int status = 0;
 
-    if (level >= log_level) {
-        for (const Error* error = eo_first(errObj); status == 0 && error; error = er_next(error)) {
-            const log_loc_t loc = {.file=er_file(error), .func=er_func(error), .line=er_line(error)};
-            status = logl_add(&loc, "%s", er_msg(error));
-        }
+    if (errObj) {
+        if (level >= log_level) {
+            log_dispose(level, eo_prev(errObj)); // Recursion to log earliest error first
+
+            const char* msg = eo_msg(errObj);
+            if (msg) {
+                const log_loc_t loc = {.file=eo_file(errObj), .func=eo_func(errObj),
+                        .line=eo_line(errObj)};
+                status = logl_add(&loc, "%s", msg);
+
+                if (status == 0)
+                    status = log_flush(level);
+            } // Message isn't NULL
+        } // Logging level is appropriate
+
+        eo_delete(errObj);
     }
-
-    const int flushStatus = log_flush(level);
-    if (status == 0)
-        status = flushStatus;
-
-    eo_delete(errObj);
 
     return status;
 }
