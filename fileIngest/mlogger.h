@@ -116,6 +116,193 @@ typedef struct	logger_hdr_struct {
 } LOGGER_HDR;
 
 
-@FUNCTION_DECLARATIONS@
+/* -----------------------------------------------------------------------------
+ * Function Name
+ *	logInitLogger
+ *
+ * Format
+ *	LOGGER *logInitLogger (char *name, int facility, int options, int verbosity, char *logPath,
+ *		char *logName, long rollOverSize, long bufferSize)
+ *
+ * Arguments
+ *	name
+ *	Text string containing printable log name
+ *
+ *	facility
+ *	Type of log:
+ *		F_FILE
+ *		F_DB
+ *		F_SOCKET
+ *		F_PIPE
+ *		F_CONSOLE
+ *		F_PRINTER
+ *	Currently, only F_FILE is supported.
+ *
+ *	options
+ *	Bit-masked options to use for this logger:
+ *		O_FLUSH_AFTER_EACH	- Flush after each message
+ *		O_TIMED_FLUSH		- Flush periodically (flushInterval)
+ *		O_ARCHIVE		- Create daily archives
+ *		O_TIMESTAMP		- Include timestamp in each message (microseconds)
+ *		O_CONCURRENT		- Reserved
+ *		O_KEEP_OPEN		- Log file always kept open
+ *		O_SHOW_LEVEL		- Write Visibility/Verbosity of each message
+ *		O_SHOW_SEVERITY		- Write Severity of each message
+ *		O_ADD_NEWLINE		- Put a \n at the end of each line
+ *		O_LOG_INIT		- Include log event messages
+ *
+ *	verbosity
+ *	Maximum level of messages that will be logged.  Verbosity/visibility levels from
+ *	most restrictive to least:
+ *		V_ALWAYS
+ *		V_ERROR
+ *		V_INFO
+ *		V_DEBUG
+ *		V_TRACE
+ *
+ *	logPath
+ *	Path specification for the log; does not include file name.
+ *
+ *	logName
+ *	Name of log file.  Concatenated to logPath.
+ *
+ *	rollOverSize
+ *	Maximum log size before rolling over to a new log file.
+ *
+ *	bufferSize
+ *	Size to reserve internally for individual log messages.
+ *
+ * Description
+ *	Initializes a new logger with the provided parameters.  This function
+ *	must be called before a logger can be used.
+ *
+ * Return Values
+ *	NULL		- Error
+ *	non-NULL	- Success
+ *
+ * -------------------------------------------------------------------------- */
+
+LOGGER *logInitLogger (char *name, int facility, int options, int verbosity, char *logPath,
+			char *logName, long rollOverSize, long bufferSize);
+
+/* -----------------------------------------------------------------------------
+ * Function Name
+ *	logCloseLogger
+ *
+ * Format
+ *	int logCloseLogger (LOGGER *pl)
+ *
+ * Arguments
+ *	pl
+ *	Pointer to logger
+ *
+ * Description
+ *	Closes a logger and releases all of its resources.  Only use if this
+ *	logger will no longer be used.
+ *
+ * Return Values
+ *	0	- Success
+ *	1	- Error
+ *
+ * -------------------------------------------------------------------------- */
+
+int logCloseLogger (LOGGER *pl);
+
+/* -----------------------------------------------------------------------------
+ * Function Name
+ *	logShutdown
+ *
+ * Format
+ *	void logShutdown
+ *
+ * Arguments
+ *	N/A
+ *
+ * Description
+ *	Convenience function to shut down all open loggers.  Usually called
+ *	from an exit handler prior to program termination.
+ *
+ * Return Values
+ *	N/A
+ *
+ * -------------------------------------------------------------------------- */
+
+void logShutdown ();
+
+/* -----------------------------------------------------------------------------
+ * Function Name
+ *	logSetLogLevel
+ *
+ * Format
+ *	int logSetLogLevel (LOGGER *pl, int new_verb)
+ *
+ * Arguments
+ *	pl
+ *	Pointer to logger
+ *
+ *	new_verb
+ *	New log verbosity level
+ *
+ * Description
+ *	This function changes the verbosity level of an existing logger.
+ *
+ * Return Values
+ *	0	- Success
+ *	1	- Error
+ *
+ * -------------------------------------------------------------------------- */
+
+int logSetLogLevel (LOGGER *pl, int new_verb);
+
+/* -----------------------------------------------------------------------------
+ * Function Name
+ *	logMsg
+ *
+ * Format
+ *	int logMsg (LOGGER *pl, int visibility, int severity, const char *format, ...)
+ *
+ * Arguments
+ *	pl
+ *	Pointer to initialized logger.
+ *
+ *	visibility
+ *	Visibility level of this message.  The logger's verbosity level must
+ *	be greater than or equal to the message visibility for the message to be
+ *	written to the log.  Will be displayed in the log if the O_SHOW_LEVEL
+ *	option is set.  Valid values are:
+ *		V_ALWAYS
+ *		V_ERROR
+ *		V_INFO
+ *		V_DEBUG
+ *		V_TRACE
+ *
+ *	severity
+ *	Message severity level.  Will be displayed in a log message if the
+ *	O_SHOW_SEVERITY option is set.  Can be any of:
+ *		S_FATAL
+ *		S_ERROR
+ *		S_WARNING
+ *		S_STATUS
+ *		S_DEBUG
+ *		S_TRACE
+ *
+ *	format
+ *	Message format string.  Uses same characters as printf.
+ *
+ *	...
+ *	Additional parameters corresponding to the tokens within the format
+ *	string.
+ *
+ * Description
+ *	Function used to write messages to a log.  Uses the same format as
+ *	printf.
+ *
+ * Return Values
+ *	0	- Success
+ *	1	- Error
+ *
+ * -------------------------------------------------------------------------- */
+
+int logMsg (LOGGER *pl, int visibility, int severity, const char *format, ...);
 
 #endif /* MLOGGER_H_ */

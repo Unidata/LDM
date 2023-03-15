@@ -3,8 +3,3 @@
 /test.c
 /log_tester
 /Makefile.in
-/stdclib.h
-/mlogger.h
-/datelib.h
-/goesr_lib.h
-

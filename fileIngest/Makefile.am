@@ -27,18 +27,6 @@ AM_CPPFLAGS		= \
 
 bin_PROGRAMS		= fileIngester
 
-EXTRA_DIST              = \
-	datelib.hin \
-	stdclib.hin \
-	goesr_lib.hin \
-	mlogger.hin
-
-BUILT_SOURCES		= \
-	datelib.h \
-	stdclib.h \
-	goesr_lib.h \
-	mlogger.h
-
 COMMON_SOURCES		= \
 	stdclib.c stdclib.h \
 	goesr_lib.c goesr_lib.h \
