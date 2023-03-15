@@ -15,10 +15,7 @@ DOXYGEN                 = @DOXYGEN@
 
 EXTRA_DIST              = \
 	Doxyfile \
-	fifo.hin \
-	getFacilityName.hin \
 	html \
-	ldmProductQueue.hin \
         mainpage.h \
         mrms1.data \
         readnoaaport.slog \
@@ -28,18 +25,7 @@ EXTRA_DIST              = \
         noaaportIngester-nssl.slog \
         noaaportIngester-nssl.ulog \
         nwstgdump.data \
-        productMaker.hin \
-        reader.hin \
-	shmfifo.hin \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
-
-BUILT_SOURCES		= \
-	fifo.h \
-	getFacilityName.h \
-	ldmProductQueue.h \
-	productMaker.h \
-	reader.h \
-	shmfifo.h 
 
 DISTCLEANFILES          = $(BUILT_SOURCES)
 CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini blender.1 
@@ -151,18 +137,6 @@ endif
 $(srcdir)/html \
 $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
 	cd $(srcdir) && $(DOXYGEN) Doxyfile
-
-.hin.h:
-	$(top_srcdir)/extractDecls $*.hin $*.c >$@.tmp
-	mv -f $@.tmp $@
-shmfifo.h:		shmfifo.c shmfifo.hin
-ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin
-fifo.h:			fifo.c fifo.hin
-reader.h:		reader.c reader.hin
-getFacilityName.h:	getFacilityName.c getFacilityName.hin
-Grib2Decoder.h:		Grib2Decoder.c Grib2Decoder.hin
-ldmProductQueue.h:	ldmProductQueue.c ldmProductQueue.hin
-productMaker.h:		productMaker.c productMaker.hin
 
 .c.i:
 	$(COMPILE) -E $< >$@
