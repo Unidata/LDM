@@ -6,16 +6,6 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-BUILT_SOURCES		= \
-        child_map.h \
-        doubly_linked_list.h \
-        doubly_linked_stack.h \
-        semRWLock.h
-EXTRA_DIST	        = \
-        child_map.hin \
-        doubly_linked_list.hin \
-        doubly_linked_stack.hin \
-        semRWLock.hin
 CLEANFILES		= $(BUILT_SOURCES) *.i *_test
 noinst_LTLIBRARIES	= lib.la
 include_HEADERS		= \
@@ -82,14 +72,6 @@ TAGS_FILES	= \
 .c.i:
 	$(CPP) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(lib_la_CPPFLAGS) \
 	    $(AM_CPPFLAGS) $(CPPFLAGS) $< >$@
-
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-child_map.h:		child_map.hin child_map.c
-doubly_linked_list.h:	doubly_linked_list.hin doubly_linked_list.c
-doubly_linked_stack.h:	doubly_linked_stack.hin doubly_linked_stack.c
-semRWLock.h:		semRWLock.hin semRWLock.c
 
 check_PROGRAMS	=
 
