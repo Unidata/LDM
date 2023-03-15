@@ -545,17 +545,6 @@ static size_t g2s_getLength(
     return sec->len;
 }
 
-/**
- * Returns a GRIB-2 section's parameter as an integer.
- *
- * @param[in]  section      Pointer to the GRIB-2 section.
- * @param[in]  iByte        Offset to the start of the parameter from the start
- *                          of the section in bytes.
- * @param[in]  nBytes       Number of bytes in the parameter.
- * @param[out] value        Pointer to the integer in which to put the value.
- * @retval     0            Success. \c *value is set.
- * @retval     G2D_INVALID  The byte-sequence specification is invalid.
- */
 int g2s_getG2Int(
     const Grib2Section* const section,
     const size_t              iByte,
