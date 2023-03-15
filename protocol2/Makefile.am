@@ -7,16 +7,9 @@
 ## Process this file with automake to produce Makefile.in
 
 YACC			= @YACC@
-hinHeaders	        = \
-    data_prod.h \
-    forn.h \
-    LdmProxy.h \
-    timer.h \
-    uldb.h
-BUILT_SOURCES           = parser.c scanner.c $(hinHeaders)
-CLEANFILES		= *.i $(hinHeaders)
+BUILT_SOURCES           = parser.c scanner.c
+CLEANFILES		= *.i
 EXTRA_DIST		= \
-    $(hinHeaders:.h=.hin) \
     child_process_set.h \
     exitStatus.h \
     forn5_svc.h \
@@ -122,15 +115,6 @@ parser.c:	parser.y
 	rm -f y.tab.c conf.tab.c; \
 	test $$status -ne 0 && rm -f $@; \
 	exit $$status
-
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-data_prod.h:		data_prod.hin data_prod.c
-forn.h:			forn.hin forn.c
-LdmProxy.h:		LdmProxy.hin LdmProxy.c
-timer.h:		timer.hin timer.c
-uldb.h:			uldb.hin uldb.c
 
 # NOTE: flex(1) is used instead of lex(1) in order to generate a scanner that
 # can process "include" statements.
