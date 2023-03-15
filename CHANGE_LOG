@@ -1,12 +1,12 @@
 6.14.6.1
     ldmadmin(1):
-        * In the error messages resulting from checking the queue, put the pathname of the
+        * In the error messages resulting from checking the queue, placed the pathname of the
           product-queue queue in quotes just in case it contains embedded whitespace
         * Added "pqmon -S" to the "showsettings" command
 
     Version 6 upstream LDM:
-        * Added logging of a warning if sending or notifying about the oldest product because this
-          indicates that the product-queue might be too small or the system too busy
+        * Added logging of a warning if sending or notifying about the oldest product in the queue
+          because this indicates that the product-queue might be too small or the system too busy
 
     notifyme(1):
         * Added "-O" option to include product origin in output
