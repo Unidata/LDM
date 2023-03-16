@@ -12,16 +12,15 @@ EXTRA_DIST              = \
 			  send_recv_test.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
-			  \
 			  down7_manager.c down7_manager.h \
-			  up7.c \
+			  up7.c up7.h \
 			  prod_index_map.c prod_index_map.h \
 			  mcast_info.c mcast_info.h \
-			  MldmRcvr.c \
-			  MldmRcvrMemory.c \
+			  MldmRcvr.c MldmRcvr.h \
+			  MldmRcvrMemory.c MldmRcvrMemory.h \
 			  UpMcastMgr.c UpMcastMgr.h \
 			  mldm_sender_map.c mldm_sender_map.h \
-			  prod_index_queue.c \
+			  prod_index_queue.c prod_index_queue.h \
 			  VirtualCircuit.c VirtualCircuit.h \
 			  CidrAddr.c CidrAddr.h \
 			  fmtp.cpp fmtp.h \

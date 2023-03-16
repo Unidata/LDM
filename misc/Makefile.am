@@ -22,30 +22,30 @@ include_HEADERS		= \
 	setenv.h \
 	statsMath.h
 lib_la_SOURCES	= \
-	alrm.c \
+	alrm.c alrm.h \
 	AtomicInt.c AtomicInt.h \
 	AtomicFlag.c AtomicFlag.h \
 	child_map.c child_map.h \
 	ChildCmd.c ChildCmd.h \
         doubly_linked_list.c doubly_linked_list.h \
         doubly_linked_stack.c doubly_linked_stack.h \
-	error.c \
+	error.c error.h \
 	ErrObj.c ErrObj.h \
-	fdnb.c \
+	fdnb.c fdnb.h \
         FixedDelayQueue.h \
-	fsStats.c \
+	fsStats.c fsStats.h \
 	InetId.c InetId.h \
 	InetSockAddr.c InetSockAddr.h \
-	inetutil.c \
-	mkdirs_open.c \
+	inetutil.c inetutil.h \
+	mkdirs_open.c mkdirs_open.h \
 	mygetline.c mygetline.h \
-	pattern.c \
+	pattern.c pattern.h \
 	queue.c queue.h \
-	RegularExpressions.c \
-	rpcutil.c \
-	setenv.c \
+	RegularExpressions.c RegularExpressions.h \
+	rpcutil.c rpcutil.h \
+	setenv.c setenv.h \
 	semRWLock.c semRWLock.h \
-	statsMath.c \
+	statsMath.c statsMath.h \
 	StrBuf.c StrBuf.h \
 	StringBuf.c StringBuf.h \
 	Thread.c Thread.h \

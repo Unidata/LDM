@@ -118,7 +118,6 @@ EXTRA_DIST = \
     $(LDM_ICON_FILE) \
     CHANGE_LOG \
     COPYRIGHT \
-    extractDecls \
     README
 
 dist_bin_SCRIPTS	= \

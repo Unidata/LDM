@@ -22,12 +22,12 @@ PQ_SUBDIR		= @PQ_SUBDIR@
 bin_PROGRAMS		= pqact
 check_PROGRAMS		= date_sub
 pqact_SOURCES		= \
-    action.c \
-    filel.c \
-    palt.c \
-    pbuf.c \
+    action.c action.h \
+    filel.c filel.h \
+    palt.c palt.h \
+    pbuf.c pbuf.h \
     pqact.c \
-    state.c
+    state.c state.h
 date_sub_SOURCES	= palt.c
 AM_CPPFLAGS		= \
     -I$(top_srcdir)/log \

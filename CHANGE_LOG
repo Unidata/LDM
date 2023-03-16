@@ -1,4 +1,7 @@
 6.14.6.1
+    Build:
+        * Eliminated all *.hin files except registry/registry.hin
+
     ldmadmin(1):
         * In the error messages resulting from checking the queue, placed the pathname of the
           product-queue queue in quotes just in case it contains embedded whitespace

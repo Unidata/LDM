@@ -2,15 +2,17 @@
 #
 # Process this file with automake to produce Makefile.in
 
+EXTRA_DIST		= registry.hin
 BUILT_SOURCES           = registry.h
 DISTCLEANFILES          = $(BUILT_SOURCES)
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES          = \
-    globals.c \
-    misc.c \
-    node.c \
+    backend.c backend.h \
+    globals.c globals.h \
+    misc.c misc.h \
+    node.c node.h \
     registry.c \
-    string_buf.c
+    string_buf.c string_buf.h
 TAGS_FILES              = \
     *.c *.h \
     ../*.h \
@@ -29,7 +31,7 @@ AM_CPPFLAGS		= \
     -I$(top_builddir)/registry -I$(top_srcdir)/registry \
     -I$(top_srcdir)/mcast_lib/ldm7
 
-registry.h:	registry.hin $(srcdir)/../regutil/regpar.tab.in
+registry.h:	$(srcdir)/registry.hin $(srcdir)/../regutil/regpar.tab.in
 	$(AWK) '/@PARAMETER_NAME_DEFINITIONS@/{exit}{print}' \
 	    $(srcdir)/registry.hin >$@.tmp
 	$(AWK) -F : '{print "#define REG_" $$1 " \"" $$2 "\""}' \

@@ -18,7 +18,6 @@ EXTRA_DIST		= \
     LdmConfFile.h \
     rsaglobal.h \
     parser.y \
-    prod_info.h \
     scanner.c \
     scanner.l \
     up6.h \
@@ -51,14 +50,14 @@ lib_la_SOURCES		= \
     abbr.c \
     atofeedt.c \
     autoshift.c \
-    child_process_set.c \
-    data_prod.c \
+    child_process_set.c child_process_set.h \
+    data_prod.c data_prod.h \
     down6.c \
     DownHelp.c \
-    forn.c \
-    forn5_svc.c \
+    forn.c forn.h \
+    forn5_svc.c forn5_svc.h \
     h_clnt.c \
-    LdmProxy.c \
+    LdmProxy.c LdmProxy.h \
     ldm4_svc.c \
     ldm5_svc.c \
     ldm_xlen.c \
@@ -67,23 +66,23 @@ lib_la_SOURCES		= \
     ldmfork.c ldmfork.h \
     ldmprint.c \
     ldm_clnt_misc.c \
-    LdmConfFile.c \
+    LdmConfFile.c LdmConfFile.h \
     md5c.c \
     one_svc_run.c \
     parser.c \
     priv.c \
-    prod_info.c \
+    prod_info.c prod_info.h \
     prod_class.c \
     remote.c \
     requester6.c \
     savedInfo.c \
     svc5.c \
-    timer.c \
+    timer.c timer.h \
     timestamp.c \
-    up6.c \
+    up6.c up6.h \
     UpFilter.c \
     uldb.c \
-    wordexp.c \
+    wordexp.c wordexp.h \
     xdr_data.c
 lib_la_CPPFLAGS		= \
     -I$(top_builddir)          -I$(top_srcdir) \
