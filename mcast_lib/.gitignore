@@ -1,4 +1,3 @@
-down7.h
 down_ldm.h
 file_id_map_test
 file_id_queue.h
@@ -23,17 +22,14 @@ mldm_sender_map_test
 mldm_sender_memory.h
 mldm_sender_test
 prod_index_map_test
-prod_index_queue.h
 prod_index_queue_test
 request_queue.h
 server_info.h
-sock_funcs.h
 *_stub.*
 test_file_id_queue
 test_mcast_session_memory
 test_request_queue
 TEST-test.xml
-up7.h
 up_ldm.h
 vcmtp-old
 *.yaml
