@@ -1,13 +1,5 @@
-backend.c
-registry.h
 regutil
 regutil.out
-stringBuf.h
 testRegistry
 regpar.tab
 vgcore.*
-globals.h
-backend.h
-misc.h
-node.h
-/string_buf.h
