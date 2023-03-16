@@ -6,23 +6,13 @@
 #
 # Process this file with automake(1) to produce file Makefile.in
 
-EXTRA_DIST              = down7.hin \
-			  MldmRcvr.hin \
-			  MldmRcvrMemory.hin \
-			  prod_index_queue.hin \
-			  sock_funcs.c sock_funcs.hin \
-			  up7.hin \
+EXTRA_DIST              = \
+			  sock_funcs.c \
 			  send_test.c recv_test.c send_recv_test.c \
 			  send_recv_test.h
-BUILT_SOURCES           = down7.h \
-			  MldmRcvr.h \
-			  MldmRcvrMemory.h \
-			  prod_index_queue.h \
-			  sock_funcs.h \
-			  up7.h
 noinst_LTLIBRARIES	= lib.la
 lib_la_SOURCES		= \
-			  down7.c \
+			  \
 			  down7_manager.c down7_manager.h \
 			  up7.c \
 			  prod_index_map.c prod_index_map.h \
@@ -65,16 +55,6 @@ DISTCLEANFILES          = $(BUILT_SOURCES)
 
 LDADD			=  $(top_builddir)/lib/libldm.la \
 			   -L/usr/lib64/openssl11 -lssl -lcrypto
-
-.hin.h:
-	$(top_srcdir)/extractDecls $(srcdir)/$*.hin $(srcdir)/$*.c >$@.tmp
-	mv -f $@.tmp $@
-down7.h:		down7.hin down7.c
-MldmRcvr.h:		MldmRcvr.hin MldmRcvr.c
-MldmRcvrMemory.h:	MldmRcvrMemory.c MldmRcvrMemory.hin
-prod_index_queue.h:	prod_index_queue.hin prod_index_queue.c
-sock_funcs.h:		sock_funcs.hin sock_funcs.c
-up7.h:			up7.hin up7.c
 
 check_PROGRAMS		=
 TESTS			=

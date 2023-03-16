@@ -8,11 +8,8 @@ CunitAssertTest
 Executor_test
 Future_test
 /a.out
-MldmRcvrMemory.h
 /crypt_test_pub
 /crypt_test_sub
 publisher
 subscriber
-MldmRcvr.h
-MldmRcvrMemory.h
 /uni15-r
