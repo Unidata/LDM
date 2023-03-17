@@ -1,19 +1,20 @@
 # Script to start a program and restart it whenever it terminates.
 
 while true; do
-    "$@"
-    status=$?
-
-    if $status -eq 127; then
-        ulogger -p fatal "Program \"$1\" not found"
+    if ! type $1; then
+        ulogger -p fatal "Program \"$1\" not found or not executable"
+        status=127
         break;
+    else
+        "$@"
+        status=$?
+
+        ulogger -p error "Process '$@' terminated with status $status. Restarting."
+
+        # Edit/uncomment the following command to receive an email notification
+        # mailx -s "Process '$@' terminated with status $status. Restarting" \
+        #       $LOGNAME </dev/null
     fi
-
-    ulogger -p error "Process '$@' terminated with status $status. Restarting"
-
-    # Edit/uncomment the following command to receive an email notification
-    # mailx -s "Process '$@' terminated with status $status. Restarting" \
-    #       $LOGNAME </dev/null
 done
 
 exit $status;
