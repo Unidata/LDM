@@ -1,6 +1,7 @@
 name: On Push
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "devel", "main" ]
 #    branches: [ "*" ]
