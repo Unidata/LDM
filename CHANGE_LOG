@@ -1,7 +1,7 @@
 6.14.6.1
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
-          to make the development and build process easier to understand
+          to make the development and build process more conventional and easier to understand
 
     ldmadmin(1):
         * In the error messages resulting from checking the queue, placed the pathname of the
