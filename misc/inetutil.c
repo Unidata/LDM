@@ -1138,6 +1138,12 @@ udpSock_init(
         status = 2;
     }
     else {
+        int on = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) {
+            log_add_syserr("Couldn't set socket to share UDP reception");
+            log_flush_warning();
+        }
+
         status = bind(fd, (struct sockaddr*)sockAddr, sizeof(*sockAddr));
         if (status) {
             log_syserr("Couldn't bind UDP socket");

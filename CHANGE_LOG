@@ -19,6 +19,12 @@
     keep_running(1):
         * Added a test for the executable's existance
 
+    NOAAPort:
+        * Configured the UDP socket for sharing the packets with other sockets and logging a
+          warning if it couldn't
+        * Added sh(1)-based noaaportBlender(1) to keep blender(1) and noaaportIngester(1) processes
+          running
+
     Documentation:
         * Improved slightly
 
