@@ -363,6 +363,11 @@ the last, successfully-processed data-product.
 .BR pq (3),
 .BR syslogd (8),
 WWW URL \fBhttp://www.unidata.ucar.edu/software/ldm/\fP.
+.LP
+For the configuration file,
+.BR pqact.conf,
+see the HTML manual
+\fBfile:///share/doc/ldm/basics/pqact.conf.html\fP.
 
 .SH SUPPORT
 .LP

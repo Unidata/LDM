@@ -138,6 +138,11 @@ maintain the time the directory was last scoured with particular patterns.
 
 .SH "SEE ALSO"
 ldmd(1)
+.LP
+For the configuration file,
+.BR scour.conf,
+see the HTML manual
+\fBfile:///share/doc/ldm/basics/scour.conf.html\fP.
 
 .SH DIAGNOSTICS
 In case a directory contains no new files since the last time scour was run

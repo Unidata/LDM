@@ -155,6 +155,11 @@ A third will take it back to the normal state.
 .BR syslogd (8),
 .BR portmap (8),
 \fBhttp://www.unidata.ucar.edu/software/ldm/\fP.
+.LP
+For the configuration file,
+.BR ldmd.conf,
+see the HTML manual
+\fBfile:///share/doc/ldm/basics/ldmd.conf.html\fP.
 .SH SUPPORT
 .LP
 If you have problems with this program, then you should first examine the 
