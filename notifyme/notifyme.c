@@ -159,46 +159,13 @@ usage(const char *av0)
             DEFAULT_TIMEO);
     log_flush_error();
     exit(1);
-#if 0
-    log_flush_error();
-        (void)fprintf(stderr,
-"Usage: %s [options] \t\nOptions:\n", av0);
-        (void)fprintf(stderr,
-"\t-v             Verbose, report each notification\n");
-        (void)fprintf(stderr,
-"\t-x             Debug mode\n");
-        (void)fprintf(stderr,
-"\t-l dest        Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"\t               (standard error), or file `dest`. Default is \"%s\"\n",
-                log_get_default_destination());
-        (void)fprintf(stderr,
-"\t-h remote      Have \"remote\" send us data (default \"%s\")\n",
-                DEFAULT_REMOTE);
-        (void)fprintf(stderr,
-"\t-f feedtype    Interested in products from feed \"feedtype\" (default %s)\n",
-        s_feedtypet(DEFAULT_FEEDTYPE));
-        (void)fprintf(stderr,
-"\t-O             Include product origin in verbose output\n");
-        (void)fprintf(stderr,
-"\t-o offset      Set the \"from\" time offset secs before now\n");
-        (void)fprintf(stderr,
-"\t-p pattern     Interested in products matching \"pattern\" (default \"%s\")\n",
-                DEFAULT_PATTERN);
-        (void)fprintf(stderr,
-"\t-t timeout     Set RPC timeout to \"timeout\" seconds (default %d)\n",
-                DEFAULT_TIMEO);
-        (void)fprintf(stderr,
-"\t-T TotalTimeo  Give up after this many secs (default %d)\n",
-                DEFAULT_TOTALTIMEO);
-        exit(1);
-#endif
 }
 
 
 static prod_class clss;
 
 /*
- * The RPC dispatch routine for this program.
+ * The LDM-5 RPC dispatch routine for this program.
  * Registered as a callback by svc_register() below.
  * Note that only NULLPROC and NOTIFICATION rpc procs are
  * handled by this program.
@@ -266,6 +233,70 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
         }
 }
 
+/**
+ * The LDM-6 RPC dispatch routine for this program. Registered as a callback by svc_register()
+ * below. Note that only NULLPROC and NOTIFICATION functions are handled by this program.
+ * @param[in] rqstp   RPC request
+ * @param[in] transp  RPC transport
+ */
+static void
+notifymeprog_6(
+        struct svc_req* rqstp,
+        SVCXPRT*        transp)
+{
+    prod_info notice = {};
+
+    switch (rqstp->rq_proc) {
+
+ 	case NULLPROC:
+		(void)svc_sendreply(transp, (xdrproc_t)xdr_void, (char*)NULL);
+		return;
+
+    case NOTIFICATION:
+        if (!svc_getargs(transp, (xdrproc_t)xdr_prod_info, (char*)&notice)) {
+            svcerr_decode(transp);
+            return;
+        }
+
+        /*
+         * Update the request filter with the timestamp we just recieved.
+         * N.B.: There can still be duplicates after a reconnect.
+         */
+        clss.from = notice.arrival;
+        timestamp_incr(&clss.from);
+
+        // Your code here. Example just logs it.
+        if (showProdOrigin) {
+            log_info("%s %s", s_prod_info(NULL, 0, &notice, log_is_enabled_debug), notice.origin);
+        } else {
+            log_info("%s", s_prod_info(NULL, 0, &notice, log_is_enabled_debug));
+        }
+
+        (void)exitIfDone(0);
+
+        if(!svc_freeargs(transp, xdr_prod_info, (char*)&notice)) {
+            log_error("Unable to free arguments");
+            exit(1);
+        }
+        // No break
+
+    default:
+        svcerr_noproc(transp);
+        return;
+    }
+}
+
+#if 0
+static
+ErrorObj*
+ldm_clnttcp_create_vers(
+    const char* const            upName,
+    const unsigned               port,
+    unsigned const               version,
+    CLIENT** const               client,
+    int* const                   socket,
+    struct sockaddr_in*          upAddr)
+#endif
 
 int main(int ac, char *av[])
 {
@@ -438,7 +469,7 @@ int main(int ac, char *av[])
                         /* assert(done); */
                         break;
                 default:
-                        /* some wierd error */
+                        /* some weird error */
                         done = 1;
                         exit(1);
                 }
