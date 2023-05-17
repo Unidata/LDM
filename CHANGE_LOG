@@ -24,6 +24,8 @@
           warning if it couldn't
         * Added sh(1)-based noaaportBlender(1) to keep blender(1) and noaaportIngester(1) processes
           running
+        * blender(1): Frame is now output when the wait-time expires even if no subsequent frames
+          arrive
 
     Documentation:
         * Improved slightly
