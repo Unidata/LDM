@@ -44,7 +44,7 @@ class CircFrameBuf
         unsigned          fhRunno;
         unsigned          pdhSeqNum;
         unsigned          pdhBlkNum;
-        Clock::time_point revealTime; ///< When the associated frame should be revealed
+        Clock::time_point revealTime; ///< When the associated frame *must* be processed
 
         Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
             : uplinkId(getUplinkId(fh.source))
@@ -133,7 +133,7 @@ class CircFrameBuf
     mutable Mutex mutex;           ///< Supports thread safety
     mutable Cond  cond;            ///< Supports concurrent access
     Index         nextIndex;       ///< Index for next, incoming frame
-    Indexes       indexes;         ///< Indexes of frames in sorted order
+    Indexes       indexes;         ///< Indexes of frames in sorted (hopefully temporal) order
     Slots         slots;           ///< Slots of frames in unsorted order
     Key           lastOutputKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
