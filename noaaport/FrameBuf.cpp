@@ -121,20 +121,17 @@ class FrameBuf<Key, Frame, Duration>::Impl final
     inline void waitForFrame(Lock& lock) {
         assert(!mutex.try_lock());
 
+        // Wait until the buffer isn't empty
+        if (aFrames.empty())
+            cond.wait(lock, [&]{!aFrames.empty();});
+
         /*
-         * Wait until the buffer isn't empty and
+         * and
          *   - The first frame in the buffer is the expected one; or
          *   - A timeout occurs for the earliest frame in the buffer
          */
-        auto pred = [&]{!aFrames.empty() && (isExpected() || keys.begin()->first <= Clock::now());};
-        for (;;) {
-            if (aFrames.empty()) {
-                cond.wait(lock, [&]{!aFrames.empty();});
-            }
-            else if (cond.wait_until(lock, keys.begin()->first, pred)) {
-                break;
-            }
-        }
+        auto pred = [&]{isExpected() || keys.begin()->first <= Clock::now();};
+        cond.wait_until(lock, keys.begin()->first, pred);
     }
 
 public:
