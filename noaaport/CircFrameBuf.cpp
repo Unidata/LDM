@@ -96,8 +96,14 @@ void CircFrameBuf::getOldestFrame(Frame_t* frame)
 {
     Lock  lock{mutex}; /// RAII!
 
-    cond.wait(lock, [&]{return !indexes.empty() &&
-            Key::Clock::now() >= indexes.begin()->first.revealTime;});
+    // Wait until the queue is not empty
+    if (indexes.empty())
+        cond.wait(lock, [&]{return !indexes.empty();});
+    /*
+     * and the earliest reveal-time has expired.
+     */
+    auto pred = [&]{return indexes.begin()->first.revealTime <= Key::Clock::now();};
+    cond.wait_until(lock, indexes.begin()->first.revealTime, pred);
 
     // The earliest frame shall be returned
     auto  head = indexes.begin();
