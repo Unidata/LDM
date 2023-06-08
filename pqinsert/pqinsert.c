@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <rpc/rpc.h>
 #include <signal.h>
@@ -53,6 +54,7 @@ static feedtypet        feedtype = EXP;
     static struct pqe_index pqeIndex;
 #endif
 
+#define DEF_STDIN_SIZE 1000000
 
 static void
 usage(
@@ -60,21 +62,26 @@ usage(
 )
 {
     log_add(
-"Usage: %s [options] filename ...\n"
-"    Options:\n"
-"    -v            Verbose, tell me about each product\n"
-"    -l dest       Log to `dest`. One of: \"\" (system logging daemon), \"-\"\n"
-"                  (standard error), or file `dest`. Default is \"%s\"\n"
-"    -q queue      Use <queue> as product-queue. Default:\n"
-"                  \"%s\"\n"
-"    -s seqno      Set initial product sequence number to <seqno>.\n"
-"                  Default: 0\n"
-"    -f feedtype   Assert your feed type as <feedtype>. Default: \"EXP\"\n"
-"    -p productID  Assert product-ID as <productID>. Default is the \n"
-"                  filename. With multiple files, product-ID becomes\n"
-"                  <productID>.<seqno>\n"
-"    -i            Compute product signature (MD5 checksum) from product ID\n",
-            progname, log_get_default_destination(), getDefaultQueuePath());
+"Usage:\n"
+"    %s [options] [<file> ...]\n"
+"Where:\n"
+"    -i              Compute product signature (MD5 checksum) from product ID.\n"
+"                    Default is to compute it from the product.\n"
+"    -f <feedtype>   Set the feed type as <feedtype>. Default: \"EXP\"\n"
+"    -l <dest>       Log to <dest>. One of: \"\" (system logging daemon), \"-\"\n"
+"                    (standard error), or file `dest`. Default is \"%s\"\n"
+"    -n <size>       Initial size guess, in bytes, for the product read from\n"
+"                    standard input. Ignored if file operands are specified.\n"
+"                    Default is %d.\n"
+"    -p <productID>  Assert product-ID as <productID>. Default is the filename.\n"
+"                    With multiple files, product-ID becomes <productID>.<seqno>.\n"
+"    -q <queue>      Use <queue> as product-queue. Default:\n"
+"                    \"%s\"\n"
+"    -s <seqno>      Set initial product sequence number to <seqno>. Default: 0\n"
+"    -v              Verbose, log at the INFO level. Default is NOTE.\n"
+"    <file>          Optional files to insert as products. Default is to read a\n"
+"                    single product from standard input.",
+            progname, log_get_default_destination(), DEF_STDIN_SIZE, getDefaultQueuePath());
     log_flush_error();
     exit(1);
 }
@@ -183,6 +190,22 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 }
 #endif
 
+static bool
+processStdin(const size_t stdinSize)
+{
+    bool  success = false;
+    char* data = malloc(stdinSize);
+
+    if (data == NULL) {
+        log_syserr("Couldn't allocate %zu bytes for standard input buffer", stdinSize);
+    }
+    else {
+
+    }
+
+    return success;
+}
+
 
 int main(
         int ac,
@@ -190,13 +213,15 @@ int main(
 )
 {
         const char* const progname = basename(av[0]);
-        int useProductID = FALSE;
-        int signatureFromId = FALSE;
-        char *productID = NULL;
-        int multipleFiles = FALSE;
-        char identifier[KEYSIZE];
-        int status;
-        int seq_start = 0;
+        int               useProductID = FALSE;
+        int               signatureFromId = FALSE;
+        char*             productID = NULL;
+        int               multipleFiles = FALSE;
+        char              identifier[KEYSIZE];
+        int               status;
+        int               seq_start = 0;
+        size_t            stdinSize = DEF_STDIN_SIZE;
+
         enum ExitCode {
             exit_success = 0,   /* all files inserted successfully */
             exit_system = 1,    /* operating-system failure */
@@ -223,7 +248,7 @@ int main(
 
             opterr = 0; /* Suppress getopt(3) error messages */
 
-            while ((ch = getopt(ac, av, ":ivxl:q:f:s:p:")) != EOF)
+            while ((ch = getopt(ac, av, ":ivxl:q:f:n:s:p:")) != EOF)
                     switch (ch) {
                     case 'i':
                             signatureFromId = 1;
@@ -242,6 +267,18 @@ int main(
                                 usage(progname);
                             }
                             break;
+                    case 'n': {
+                        if (sscanf(optarg, "%zu", &stdinSize) != 1) {
+                            log_error("Couldn't decode size-guess for standard-input product: \""
+                                    "%s\"", optarg);
+                            usage(progname);
+                        }
+                        if (stdinSize == 0) {
+                            log_error("Size-guess for standard-input product is zero");
+                            usage(progname);
+                        }
+                        break;
+                    }
                     case 'q':
                             setQueuePath(optarg);
                             break;
