@@ -63,8 +63,8 @@ buildFrameRoutine(int clientSockFd)
 
                     if (status == 0) {
                         if (pdh->transferType & 1) {
-                            log_info("Starting product {fh->source=%u, fh->seqno=%u, fh->runno=%u, "
-                                    "pdh->prodSeqNum=%u}", fh->source, fh->seqno, fh->runno,
+                            log_info("Starting product {fh->source=%u, fh->runno=%u, fh->seqno=%u, "
+                                    "pdh->prodSeqNum=%u}", fh->source, fh->runno, fh->seqno,
                                     pdh->prodSeqNum);
                         }
                     }
