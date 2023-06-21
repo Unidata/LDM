@@ -102,6 +102,69 @@ class CircFrameBuf
             }
             return false;
         }
+
+        bool isSameSite(const Key& rhs) const {
+            return (uplinkId == rhs.uplinkId) && (fhRunno == rhs.fhRunno);
+        }
+    };
+
+    /**
+     * Factory for generating keys.
+     */
+    class KeyFactory {
+        std::unordered_map<const char*, bool> goneRetro;
+        Key                                   thresholdKey;
+        bool                                  thresholdKeySet;
+
+    public:
+        KeyFactory(const int numServers)
+            : goneRetro(numServers)
+            , thresholdKey()
+            , thresholdKeySet(false)
+        {}
+
+        /**
+         * Adds a server.
+         * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server.
+         *                      Caller must not free.
+         */
+        void add(const char* serverId);
+
+        /**
+         * Removes a server.
+         * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server.
+         *                      Caller may free.
+         */
+        void remove(const char* serverId);
+
+        /**
+         * Sets the threshold key. `getKey()` will not return a key that compares less than or equal
+         * to the threshold key.
+         * @param[in] key  Threshold key
+         */
+        void setThreshold(const Key& key) {
+            thresholdKey = key;
+            thresholdKeySet = true;
+        }
+
+        /**
+         * Returns the key corresponding to the input.
+         * @param[in]  serverId  Hostname or IP address and port number of streaming NOAAPort
+         *                       server. Caller must not free.
+         * @param[in]  fh        NOAAPort frame header
+         * @param[in]  pdh       NOAAPort product-definition header
+         * @param[in]  timeout   How long to keep the frame before revealing it
+         * @param[out] key       The key corresponding to the input
+         * @retval     true      Success. `key` is set.
+         * @retval     false     The returned key would be less than or equal to the threshold key.
+         *                       `key` is not set.
+         */
+        bool getKey(
+                const char*     serverId,
+                const NbsFH&    fh,
+                const NbsPDH&   pdh,
+                const Key::Dur& timeout,
+                Key&            key);
     };
 
     /**
@@ -138,16 +201,44 @@ class CircFrameBuf
     Key           lastOutputKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
     Key::Dur      timeout;         ///< Timeout for returning next frame
+    unsigned      numEarly;        ///< Number of contiguous, early frames
+    unsigned      maxNumEarly;     ///< Maximum number of contiguous, early frames before deciding
+                                   ///< to just accept that the frame stream is valid
+    unsigned      prevEarlyFhSeq;  ///< Previous, early, frame header sequence number
+    bool          newFrameStream;  ///< Are we accepting a new frame stream?
+
+    /**
+     * Indicates if a frame is consistent with the frames being received from the other servers.
+     * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server from
+     *                      which the frame was received. Caller must not free or modify.
+     * @param[in] fh        Frame-level header
+     * @param[in] pdh       Product-description header
+     * @retval    true      The frame is consistent
+     * @retval    false     The frame is not consistent
+     */
+    bool isConsistent(
+            const char*   serverId,
+            const NbsFH&  fh,
+            const NbsPDH& pdh);
+
+    int tryInsertFrame(
+            const Key&        key,
+            const char*       data,
+            const FrameSize_t numBytes);
 
 public:
     /**
      * Constructs.
      *
-     * @param[in] timeout    Timeout value, in seconds, for returning oldest
-     *                       frame
+     * @param[in] timeout      Timeout value, in seconds, for returning oldest
+     *                         frame
+     * @param[in] maxNumEarly  Maximum number of contiguous, early frames before deciding
+                               to just accept that the frame stream is valid
      * @see                  `getOldestFrame()`
      */
-    CircFrameBuf(const double timeout);
+    CircFrameBuf(
+            const double   timeout,
+            const unsigned maxNumEarly);
 
     CircFrameBuf(const CircFrameBuf& other) =delete;
     CircFrameBuf& operator=(const CircFrameBuf& rhs) =delete;
@@ -157,6 +248,7 @@ public:
      *   - It is an earlier frame than the last, returned frame
      *   - The frame was already added
      *
+     * @param[in] serverId      Hostname or IP address and port number of streaming NOAAPort server
      * @param[in] fh            Frame-level header
      * @param[in] pdh           Product-description header
      * @param[in] data          Frame data
@@ -168,6 +260,7 @@ public:
      * @see                     `getOldestFrame()`
      */
     int add(
+            const char*       serverId,
             const NbsFH&      fh,
             const NbsPDH&     pdh,
             const char*       data,
@@ -192,19 +285,24 @@ extern "C" {
 /**
  * Returns a new circular frame buffer.
  *
- * @param[in] timeout    Timeout, in seconds, before the next frame must be
- *                       returned if it exists
- * @retval    NULL       Fatal error. `log_add()` called.
- * @return               Pointer to a new circular frame buffer
- * @see                  `cfb_getOldestFrame()`
- * @see                  `cfb_delete()`
+ * @param[in] timeout      Timeout, in seconds, before the next frame must be
+ *                         returned if it exists
+ * @param[in] maxNumEarly  Maximum number of contiguous, early frames before deciding to just
+ *                              accept the frame stream
+ * @retval    NULL         Fatal error. `log_add()` called.
+ * @return                 Pointer to a new circular frame buffer
+ * @see                    `cfb_getOldestFrame()`
+ * @see                    `cfb_delete()`
  */
-void* cfb_new(const double timeout);
+void* cfb_new(
+        const double   timeout,
+        const unsigned maxNumEarly);
 
 /**
  * Adds a new frame.
  *
  * @param[in] cfb           Pointer to circular frame buffer
+ * @param[in] serverId      Hostname or IP address and port number of streaming NOAAPort server
  * @param[in] fh            Frame-level header
  * @param[in] pdh           Product-description header
  * @param[in] prodSeqNum    PDH product sequence number
@@ -218,6 +316,7 @@ void* cfb_new(const double timeout);
  */
 int cfb_add(
         void*             cfb,
+        const char*       serverId,
         const NbsFH*      fh,
         const NbsPDH*     pdh,
         const char*       data,

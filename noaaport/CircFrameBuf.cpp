@@ -17,6 +17,38 @@
 using FhSrc   = unsigned;
 using UplinkId = uint32_t;
 
+class StreamId
+{
+   unsigned fhSource;
+   unsigned fhSeqno;
+   unsigned fhRunno;
+   unsigned pdhSeqNum;
+
+public:
+    StreamId(
+            const NbsFH&  fh,
+            const NbsPDH& pdh)
+        : fhSource(fh.source)
+        , fhSeqno(fh.seqno)
+        , fhRunno(fh.runno)
+        , pdhSeqNum(pdh.prodSeqNum)
+    {}
+
+    bool operator==(const StreamId& rhs) {
+        return fhSource == rhs.fhSource &&
+                fhRunno == rhs.fhRunno &&
+                fhSeqno - rhs.fhSeqno < SEQ_NUM_MAX/2 &&
+                pdhSeqNum - rhs.pdhSeqNum < SEQ_NUM_MAX/2;
+    }
+};
+
+bool CircFrameBuf::isConsistent(
+        const char*   serverId,
+        const NbsFH&  fh,
+        const NbsPDH& pdh) {
+    return false;
+}
+
 /**
  * Returns a monotonically increasing uplink identifier. This identifier increments every time the
  * source field in the frame header changes -- even if it reverts to the previous value. This
@@ -44,7 +76,17 @@ UplinkId getUplinkId(const FhSrc fhSrc) {
     return uplinkId;
 }
 
-CircFrameBuf::CircFrameBuf(const double timeout)
+bool CircFrameBuf::KeyFactory::getKey(
+        const char*                   serverId,
+        const NbsFH&                  fh,
+        const NbsPDH&                 pdh,
+        const CircFrameBuf::Key::Dur& timeout,
+        CircFrameBuf::Key&            key) {
+}
+
+CircFrameBuf::CircFrameBuf(
+        const double   timeout,
+        const unsigned maxNumEarly)
     : mutex()
     , cond()
     , nextIndex(0)
@@ -54,11 +96,31 @@ CircFrameBuf::CircFrameBuf(const double timeout)
     , frameReturned(false)
     , timeout(std::chrono::duration_cast<Key::Dur>(
             std::chrono::duration<double>(timeout)))
+    , numEarly(0)
+    , maxNumEarly(maxNumEarly)
+    , prevEarlyFhSeq(0)
+    , newFrameStream(false)
 {}
+
+int CircFrameBuf::tryInsertFrame(
+        const Key& key,
+        const char* data,
+        const FrameSize_t numBytes)
+{
+    if (!indexes.insert({key, nextIndex}).second)
+        return 2; // Frame already added
+
+    slots.emplace(nextIndex, Slot{data, numBytes});
+    ++nextIndex;
+    cond.notify_one();
+
+    return 0;
+}
 
 /**
  * Tries to add a frame.
  *
+ * @param[in] serverId        Hostname or IP address and port number of streaming NOAAPort server
  * @param[in] fh              Frame's decoded frame-level header
  * @param[in] pdh             Frame's decoded product-definition header
  * @param[in] data            Frame's bytes
@@ -69,6 +131,7 @@ CircFrameBuf::CircFrameBuf(const double timeout)
  * @throw std::runtime_error  Frame is too large
  */
 int CircFrameBuf::add(
+        const char*       serverId,
         const NbsFH&      fh,
         const NbsPDH&     pdh,
         const char*       data,
@@ -76,20 +139,39 @@ int CircFrameBuf::add(
 {
     Guard guard{mutex}; /// RAII!
     Key   key{fh, pdh, timeout};
+    int   status = 1; // Frame arrived too late
 
-    if (frameReturned && key < lastOutputKey) {
-        log_add("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
-                lastOutputKey.to_string().data(), key.to_string().data());
-        return 1; // Frame arrived too late
+    if (!(frameReturned && key < lastOutputKey) || !key.isSameSite(lastOutputKey)) {
+        // New frame is not early or from a different uplink site
+        numEarly = 0;
+        newFrameStream = false;
+        status = tryInsertFrame(key, data, numBytes);
+    }
+    else {
+        // New frame is early and from the same uplink site
+        if (!newFrameStream)
+            log_debug("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
+                    lastOutputKey.to_string().data(), key.to_string().data());
+
+        if (numEarly == 0) {
+            prevEarlyFhSeq = key.fhSeqno;
+            numEarly = 1;
+        }
+        else {
+            numEarly = (key.fhSeqno == prevEarlyFhSeq + 1)
+                    ? ++numEarly
+                    : 0;
+        }
+
+        if (numEarly >= maxNumEarly) {
+            log_warning("Accepting new frame stream because %u \"early\" frames arrived",
+                    maxNumEarly);
+            newFrameStream = true;
+            status = tryInsertFrame(key, data, numBytes);
+        }
     }
 
-    if (!indexes.insert({key, nextIndex}).second)
-        return 2; // Frame already added
-
-    slots.emplace(nextIndex, Slot{data, numBytes});
-    ++nextIndex;
-    cond.notify_one();
-    return 0;
+    return status;
 }
 
 void CircFrameBuf::getOldestFrame(Frame_t* frame)
@@ -126,10 +208,12 @@ void CircFrameBuf::getOldestFrame(Frame_t* frame)
 extern "C" {
 
 	//------------------------- C code ----------------------------------
-	void* cfb_new(const double timeout) {
+	void* cfb_new(
+	        const double   timeout,
+            const unsigned maxNumEarly) {
 		void* cfb = nullptr;
 		try {
-			cfb = new CircFrameBuf(timeout);
+			cfb = new CircFrameBuf(timeout, maxNumEarly);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't allocate new circular frame buffer: %s", ex.what());
@@ -142,6 +226,7 @@ extern "C" {
 	 * Inserts a data-transfer frame into the circular frame buffer.
 	 *
 	 * @param[in] cfb         Circular frame buffer
+     * @param[in] serverId    Hostname or IP address and port number of streaming NOAAPort server
 	 * @param[in] fh          Frame-level header
 	 * @param[in] pdh         Product-description header
 	 * @param[in] data        NOAAPort frame
@@ -153,13 +238,14 @@ extern "C" {
 	 */
 	int cfb_add(
 			void*             cfb,
+			const char*       serverId,
 			const NbsFH*      fh,
 			const NbsPDH*     pdh,
 			const char*       data,
 			const FrameSize_t numBytes) {
         int status;
 		try {
-			status = static_cast<CircFrameBuf*>(cfb)->add(*fh, *pdh, data, numBytes);
+			status = static_cast<CircFrameBuf*>(cfb)->add(serverId, *fh, *pdh, data, numBytes);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't add new frame to buffer: %s", ex.what());

@@ -66,14 +66,18 @@ flowDirector()
  *
  * @param[in]  frameLatency		Time to wait for more incoming frames when queue is empty
  * 								Used in CircFrameBuf class
+ * @param[in]  maxNumEarly      Maximum number of contiguous, early frames before deciding to just
+ *                              accept the frame stream
  *
  * Never returns.
  */
 void
-queue_start(const double frameLatency)
+queue_start(
+        const double   frameLatency,
+        const unsigned maxNumEarly)
 {
 	// Create and initialize the CircFrameBuf class
-	cfbInst = cfb_new(frameLatency);
+	cfbInst = cfb_new(frameLatency, maxNumEarly);
 
 	// create and launch flowDirector thread (to insert frames in map)
 	flowDirector();
@@ -82,6 +86,7 @@ queue_start(const double frameLatency)
 /**
  * tryInsertInQueue():	Try insert a frame in a queue
  *
+ * @param[in]  serverId         Hostname or IP address and port number of streaming NOAAPort server
  * @param[in]  fh               Frame-level header
  * @param[in]  pdh              Product-description header
  * @param[in]  buffer 			SBN data of this frame
@@ -96,11 +101,12 @@ queue_start(const double frameLatency)
  * post-condition: 	runMutex is unLOCKed
  */
 int
-tryInsertInQueue(  const NbsFH*         fh,
+tryInsertInQueue(  const char*          serverId,
+                   const NbsFH*         fh,
 		       	   const NbsPDH*        pdh,
 				   const uint8_t* const buffer,
 				   size_t 			    frameBytes)
 {
 	// call in CircFrameBuf: (C++ class)
-	return cfb_add( cfbInst, fh, pdh, buffer, frameBytes);
+	return cfb_add( cfbInst, serverId, fh, pdh, buffer, frameBytes);
 }

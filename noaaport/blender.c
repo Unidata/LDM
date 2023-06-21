@@ -240,7 +240,7 @@ int main(
             set_sigactions();
 
             // Start all modules
-            queue_start( waitTime );
+            queue_start( waitTime, serverCount+1 );
 
             if( reader_start(serverAddresses, serverCount ) )
             {

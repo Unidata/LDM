@@ -21,7 +21,8 @@
 
 //  ========================================================================
 extern void	 	setFIFOPolicySetPriority(pthread_t, char*, int);
-extern int   	tryInsertInQueue( const NbsFH*, const NbsPDH*, const uint8_t*, uint16_t);
+extern int   	tryInsertInQueue(const char* serverId, const NbsFH*, const NbsPDH*, const uint8_t*,
+                        uint16_t);
 extern int      rcvBufSize;
 //  ========================================================================
 
@@ -31,12 +32,15 @@ static void 	createThreadAndDetach(const char*);
  * queue.
  *
  * @param[in]  	clientSockId  Socket Id for this client reader thread
+ * @param[in]   serverId      Hostname or IP address and port number of streaming NOAAPort server
  * @retval      NBS_EOF       End-of-file. `log_add()` called.
  * @retval	  	NBS_IO        I/O failure. `log_add()` called.
  * @retval      NBS_SYSTEM    System failure. `log_add()` called.
  */
 static int
-buildFrameRoutine(int clientSockFd)
+buildFrameRoutine(
+        const int   clientSockFd,
+        const char* serverId)
 {
 	int        status;
     NbsFH*     fh;
@@ -59,7 +63,7 @@ buildFrameRoutine(int clientSockFd)
                 // buffer now contains frame data
                 if (fh->command == NBS_FH_CMD_DATA) {
                     // PDH exists. Insert data-transfer frame in queue
-                    status = tryInsertInQueue( fh, pdh, frame, frameSize);
+                    status = tryInsertInQueue(serverId, fh, pdh, frame, frameSize);
 
                     if (status == 0) {
                         if (pdh->transferType & 1) {
@@ -120,7 +124,7 @@ buildFrameRoutine(int clientSockFd)
 static void*
 inputClientRoutine(void* id)
 {
-	const char* serverId = (char*) id;
+	const char* serverId = strdup((const char*)id);
 	int socketClientFd;
 
     for(;;)
@@ -180,7 +184,7 @@ inputClientRoutine(void* id)
             }
             else {
                 log_notice("Connected to fanout server:  %s:%" PRIu16 "\n", hostId, port);
-                int status = buildFrameRoutine(socketClientFd);
+                int status = buildFrameRoutine(socketClientFd, serverId);
                 if (status == NBS_SYSTEM) {
                     log_add("System failure on input thread");
                     log_flush_fatal();
