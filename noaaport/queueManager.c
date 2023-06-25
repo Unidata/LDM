@@ -64,20 +64,16 @@ flowDirector()
  * 	1- create the C++ class instance: CircFrameBuf
  * 	2- launch the flowDirector thread
  *
- * @param[in]  frameLatency		Time to wait for more incoming frames when queue is empty
- * 								Used in CircFrameBuf class
- * @param[in]  maxNumEarly      Maximum number of contiguous, early frames before deciding to just
- *                              accept the frame stream
+ * @param[in] frameLatency  Time to wait for more incoming frames when queue is empty. Used in
+ *                          CircFrameBuf class.
  *
  * Never returns.
  */
 void
-queue_start(
-        const double   frameLatency,
-        const unsigned maxNumEarly)
+queue_start(const double frameLatency)
 {
 	// Create and initialize the CircFrameBuf class
-	cfbInst = cfb_new(frameLatency, maxNumEarly);
+	cfbInst = cfb_new(frameLatency);
 
 	// create and launch flowDirector thread (to insert frames in map)
 	flowDirector();

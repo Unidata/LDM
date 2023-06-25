@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <cstring>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <unordered_map>
@@ -32,7 +33,7 @@ UplinkId getUplinkId(const unsigned sbnSrc);
 class CircFrameBuf
 {
     /**
-     * NOAAPort's product-definition header's product sequence number and data-block number
+     * Key for sorting NOAAPort frames and revealing them when their time comes
      */
     struct Key {
         using Clock = std::chrono::steady_clock;
@@ -44,7 +45,7 @@ class CircFrameBuf
         unsigned          fhRunno;
         unsigned          pdhSeqNum;
         unsigned          pdhBlkNum;
-        Clock::time_point revealTime; ///< When the associated frame *must* be processed
+        Clock::time_point revealTime; ///< When the associated frame should be processed
 
         Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
             : uplinkId(getUplinkId(fh.source))
@@ -76,105 +77,53 @@ class CircFrameBuf
             , revealTime(Clock::now())
         {}
 
-        std::string to_string() const {
-            return "{upId=" + std::to_string(uplinkId) +
-                    ", fhSrc=" + std::to_string(fhSource) +
-                    ", fhRun=" + std::to_string(fhRunno) +
-                    ", fhSeq=" + std::to_string(fhSeqno) +
-                    ", pdhSeq=" + std::to_string(pdhSeqNum) +
-                    ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
-        }
+        std::string to_string() const;
 
-        bool operator<(const Key& rhs) const {
-            if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
-                return true;
-            if (uplinkId == rhs.uplinkId) {
-                if (fhSeqno - rhs.fhSeqno > SEQ_NUM_MAX/2)
-                    return true;
-                if (fhSeqno == rhs.fhSeqno) {
-                    if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
-                        return true;
-                    if (pdhSeqNum == rhs.pdhSeqNum) {
-                        if (pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2)
-                            return true;
-                    }
-                }
+        /**
+         * Indicates if this instance is considered less than another.
+         *
+         * Unfortunately, there's no way to simply and reliably determine the temporal ordering of
+         * two arbitrary frames -- so the source ID, product sequence number, and product block
+         * number are used as a heuristic. This can give incorrect results during a transition to a
+         * new uplink site if the duration of the uplink gap is less than the latency from a
+         * receiving host to this host.
+         *
+         * @param[in] rhs    The other instance
+         * @retval    true   This instance is considered less than the other
+         * @retval    false  This instance is not considered less than the other
+         */
+        bool operator<(const Key& rhs) const noexcept;
+
+        /**
+         * Indicates if this instance is considered equal to another.
+         * @param[in] rhs    The other instance
+         * @retval    true   This instance is considered less than the other
+         * @retval    false  This instance is not considered less than the other
+         * @see operator<()
+         */
+        bool operator==(const Key& rhs) const noexcept;
+
+        /**
+         * Returns the hash value of this instance.
+         * @return The hash value of this instance
+         * @see operator<()
+         */
+        struct Hash {
+            size_t operator()(const Key& key) const noexcept {
+                static auto myHash = std::hash<uint32_t>{};
+                return myHash(key.fhSource) ^ myHash(key.pdhSeqNum) ^ myHash(key.pdhBlkNum);
             }
-            return false;
-        }
-
-        bool isSameSite(const Key& rhs) const {
-            return (uplinkId == rhs.uplinkId) && (fhRunno == rhs.fhRunno);
-        }
+        };
     };
 
     /**
-     * Factory for generating keys.
+     * A frame in the queue.
      */
-    class KeyFactory {
-        std::unordered_map<const char*, bool> goneRetro;
-        Key                                   thresholdKey;
-        bool                                  thresholdKeySet;
-
-    public:
-        KeyFactory(const int numServers)
-            : goneRetro(numServers)
-            , thresholdKey()
-            , thresholdKeySet(false)
-        {}
-
-        /**
-         * Adds a server.
-         * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server.
-         *                      Caller must not free.
-         */
-        void add(const char* serverId);
-
-        /**
-         * Removes a server.
-         * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server.
-         *                      Caller may free.
-         */
-        void remove(const char* serverId);
-
-        /**
-         * Sets the threshold key. `getKey()` will not return a key that compares less than or equal
-         * to the threshold key.
-         * @param[in] key  Threshold key
-         */
-        void setThreshold(const Key& key) {
-            thresholdKey = key;
-            thresholdKeySet = true;
-        }
-
-        /**
-         * Returns the key corresponding to the input.
-         * @param[in]  serverId  Hostname or IP address and port number of streaming NOAAPort
-         *                       server. Caller must not free.
-         * @param[in]  fh        NOAAPort frame header
-         * @param[in]  pdh       NOAAPort product-definition header
-         * @param[in]  timeout   How long to keep the frame before revealing it
-         * @param[out] key       The key corresponding to the input
-         * @retval     true      Success. `key` is set.
-         * @retval     false     The returned key would be less than or equal to the threshold key.
-         *                       `key` is not set.
-         */
-        bool getKey(
-                const char*     serverId,
-                const NbsFH&    fh,
-                const NbsPDH&   pdh,
-                const Key::Dur& timeout,
-                Key&            key);
-    };
-
-    /**
-     * A slot for a frame.
-     */
-    struct Slot {
+    struct Qframe {
         char              data[SBN_FRAME_SIZE]; ///< Frame data
         FrameSize_t       numBytes;             ///< Number of bytes of data in the frame
 
-        Slot(const char* data, FrameSize_t numBytes)
+        Qframe(const char* data, FrameSize_t numBytes)
             : data()
             , numBytes(numBytes)
         {
@@ -190,55 +139,23 @@ class CircFrameBuf
     using Guard   = std::lock_guard<Mutex>;
     using Lock    = std::unique_lock<Mutex>;
     using Index   = unsigned;
-    using Indexes = std::map<Key, Index>;
-    using Slots   = std::unordered_map<Index, Slot>;
 
     mutable Mutex mutex;           ///< Supports thread safety
     mutable Cond  cond;            ///< Supports concurrent access
-    Index         nextIndex;       ///< Index for next, incoming frame
-    Indexes       indexes;         ///< Indexes of frames in sorted (hopefully temporal) order
-    Slots         slots;           ///< Slots of frames in unsorted order
+    using Qframes = std::unordered_map<Key, Qframe, Key::Hash>;
+    Qframes       qFrames;         ///< Queue of frames
     Key           lastOutputKey;   ///< Key of last, returned frame
     bool          frameReturned;   ///< Oldest frame returned?
     Key::Dur      timeout;         ///< Timeout for returning next frame
-    unsigned      numEarly;        ///< Number of contiguous, early frames
-    unsigned      maxNumEarly;     ///< Maximum number of contiguous, early frames before deciding
-                                   ///< to just accept that the frame stream is valid
-    unsigned      prevEarlyFhSeq;  ///< Previous, early, frame header sequence number
-    bool          newFrameStream;  ///< Are we accepting a new frame stream?
-
-    /**
-     * Indicates if a frame is consistent with the frames being received from the other servers.
-     * @param[in] serverId  Hostname or IP address and port number of streaming NOAAPort server from
-     *                      which the frame was received. Caller must not free or modify.
-     * @param[in] fh        Frame-level header
-     * @param[in] pdh       Product-description header
-     * @retval    true      The frame is consistent
-     * @retval    false     The frame is not consistent
-     */
-    bool isConsistent(
-            const char*   serverId,
-            const NbsFH&  fh,
-            const NbsPDH& pdh);
-
-    int tryInsertFrame(
-            const Key&        key,
-            const char*       data,
-            const FrameSize_t numBytes);
 
 public:
     /**
      * Constructs.
      *
-     * @param[in] timeout      Timeout value, in seconds, for returning oldest
-     *                         frame
-     * @param[in] maxNumEarly  Maximum number of contiguous, early frames before deciding
-                               to just accept that the frame stream is valid
-     * @see                  `getOldestFrame()`
+     * @param[in] timeout  Timeout value, in seconds, for returning oldest frame
+     * @see                `getOldestFrame()`
      */
-    CircFrameBuf(
-            const double   timeout,
-            const unsigned maxNumEarly);
+    CircFrameBuf(const double  timeout);
 
     CircFrameBuf(const CircFrameBuf& other) =delete;
     CircFrameBuf& operator=(const CircFrameBuf& rhs) =delete;
@@ -285,18 +202,13 @@ extern "C" {
 /**
  * Returns a new circular frame buffer.
  *
- * @param[in] timeout      Timeout, in seconds, before the next frame must be
- *                         returned if it exists
- * @param[in] maxNumEarly  Maximum number of contiguous, early frames before deciding to just
- *                              accept the frame stream
+ * @param[in] timeout      Timeout, in seconds, before the next frame must be returned if it exists
  * @retval    NULL         Fatal error. `log_add()` called.
  * @return                 Pointer to a new circular frame buffer
  * @see                    `cfb_getOldestFrame()`
  * @see                    `cfb_delete()`
  */
-void* cfb_new(
-        const double   timeout,
-        const unsigned maxNumEarly);
+void* cfb_new(const double timeout);
 
 /**
  * Adds a new frame.

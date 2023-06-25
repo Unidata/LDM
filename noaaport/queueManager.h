@@ -15,7 +15,7 @@
 //  ========================================================================
 
 void setFIFOPolicySetPriority(pthread_t, char *, int);
-void queue_start(const double frameLatency, unsigned maxNumEarly);
+void queue_start(const double frameLatency);
 
 //  ========================================================================
 

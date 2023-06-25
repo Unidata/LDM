@@ -57,6 +57,9 @@ typedef struct NbsFH
     * Source of data transmission:
     *   1 = Generated at primary NCF
     *   2 = Reserved
+    *
+    * According to Sathya Sankarasubbu, this field is changed *only* when the uplink is switched
+    * between the primary site (ANCF) and the backup site (BNCF). SRE 2023-06-22
     */
    unsigned source;      ///< 1=NCF primary; 2=reserved
    unsigned destination; ///< Destination of data transmission: 0 = All
@@ -125,6 +128,9 @@ typedef struct NbsPDH
     /**
      * Unique product sequence number for this product within the logical data stream. Used for
      * product reassembly integrity to verify that blocks belong to the same product.
+     *
+     * According to Sathya Sankarasubbu, this field is reset to 1 *only* when the uplink is switched
+     * between the primary site (ANCF) and the backup site (BNCF). SRE 2023-06-22
      */
     unsigned prodSeqNum;
 } NbsPDH;
