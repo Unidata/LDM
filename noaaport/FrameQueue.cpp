@@ -1,13 +1,14 @@
 /*
- * CirFramecBuf.cpp
+ * FrameQueue.cpp
  *
  *  Created on: Jan 10, 2022
  *      Author: miles
  */
 
+#include "FrameQueue.h"
+
 #include "config.h"
 
-#include "CircFrameBuf.h"
 #include "log.h"
 #include "NbsHeaders.h"
 
@@ -15,6 +16,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <set>
 #include <stdint.h>
 #include <thread>
 #include <unistd.h>
@@ -96,8 +98,24 @@ public:
 /**
  * Key for sorting NOAAPort frames and revealing them when their time comes
  */
-struct Key
+class Key
 {
+private:
+    /**
+     * Function for pre-computing the hash code
+     * @param[in] uplinkId   Uplink ID
+     * @param[in] pdhSeqNum  Product definition header sequence number
+     * @param[in] pdhBlkNum  Product definition header block number
+     */
+    inline static size_t hash(
+        UplinkId          uplinkId,
+        unsigned          pdhSeqNum,
+        unsigned          pdhBlkNum) {
+            static auto myHash = std::hash<uint32_t>{};
+            return myHash(uplinkId) ^ myHash(pdhSeqNum) ^ myHash(pdhBlkNum);
+    }
+
+public:
     using Clock = std::chrono::steady_clock;
     using Dur   = std::chrono::milliseconds;
 
@@ -108,27 +126,10 @@ struct Key
     unsigned          pdhSeqNum;
     unsigned          pdhBlkNum;
     Clock::time_point revealTime; ///< When the associated frame should be processed
-
-    Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout, UplinkId uplinkId)
-        : uplinkId(uplinkId)
-        , fhSource(fh.source)
-        , fhSeqno(fh.seqno)
-        , fhRunno(fh.runno)
-        , pdhSeqNum(pdh.prodSeqNum)
-        , pdhBlkNum(pdh.blockNum)
-        , revealTime(Clock::now() + timeout)
-    {}
-
-    Key(const NbsFH& fh, const NbsPDH& pdh, Dur&& timeout, UplinkId uplinkId)
-        : uplinkId(uplinkId)
-        , fhSource(fh.source)
-        , fhSeqno(fh.seqno)
-        , fhRunno(fh.runno)
-        , pdhSeqNum(pdh.prodSeqNum)
-        , pdhBlkNum(pdh.blockNum)
-        , revealTime(Clock::now() + timeout)
-    {}
-
+    size_t            hashCode;   ///< Hash code. Pre-computed because it's used a lot.
+    /**
+     * Default constructs.
+     */
     Key()
         : uplinkId(0)
         , fhSource(0)
@@ -137,8 +138,48 @@ struct Key
         , pdhSeqNum(0)
         , pdhBlkNum(0)
         , revealTime(Clock::now())
+        , hashCode(0)
     {}
 
+    /**
+     * Constructs.
+     * @param[in] fh        Frame-level header
+     * @param[in] pdh       Product definition header
+     * @param[in] timeout   Time, in seconds, to wait before revealing a frame
+     * @param[in] uplinkId  Uplink ID
+     */
+    Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout, UplinkId uplinkId)
+        : uplinkId(uplinkId)
+        , fhSource(fh.source)
+        , fhSeqno(fh.seqno)
+        , fhRunno(fh.runno)
+        , pdhSeqNum(pdh.prodSeqNum)
+        , pdhBlkNum(pdh.blockNum)
+        , revealTime(Clock::now() + timeout)
+        , hashCode(hash(uplinkId, pdhSeqNum, pdhBlkNum))
+    {}
+
+    /**
+     * Copy assigns.
+     * @param[in] rhs  Right hand side
+     * @return         Reference to this instance
+     */
+    Key& operator=(const Key& rhs) {
+        uplinkId = rhs.uplinkId;
+        fhSource = rhs.fhSource;
+        fhSeqno = rhs.fhSeqno;
+        fhRunno = rhs.fhRunno;
+        pdhSeqNum = rhs.pdhSeqNum;
+        pdhBlkNum = rhs.pdhBlkNum;
+        revealTime = rhs.revealTime;
+        hashCode = rhs.hashCode;
+        return *this;
+    }
+
+    /**
+     * Returns a string representation.
+     * @return A string representation
+     */
     std::string to_string() const {
         return "{upId=" + std::to_string(uplinkId) +
                 ", fhSrc=" + std::to_string(fhSource) +
@@ -161,7 +202,7 @@ struct Key
      * @retval    true   This instance is considered less than the other
      * @retval    false  This instance is not considered less than the other
      * @see operator==()
-     * @see struct Hash
+     * @see std::hash<Key>()
      */
     bool operator<(const Key& rhs) const noexcept {
         if (rhs.uplinkId - uplinkId < UPLINK_ID_MAX/2)
@@ -183,26 +224,24 @@ struct Key
      * @retval    true   This instance is considered less than the other
      * @retval    false  This instance is not considered less than the other
      * @see operator<()
-     * @see struct Hash
+     * @see std::hash<::Key>()
      */
     bool operator==(const Key& rhs) const noexcept {
         return uplinkId == rhs.uplinkId &&
                 pdhSeqNum == rhs.pdhSeqNum &&
                 pdhBlkNum == rhs.pdhBlkNum;
     }
+};
 
-    /**
-     * Returns the hash value of this instance.
-     * @return The hash value of this instance
-     * @see operator<()
-     * @see operator==()
-     */
-    struct Hash {
-        size_t operator()(const Key& key) const noexcept {
-            static auto myHash = std::hash<uint32_t>{};
-            return myHash(key.uplinkId) ^ myHash(key.pdhSeqNum) ^ myHash(key.pdhBlkNum);
-        }
-    };
+/**
+ * Hash function for the Key class for unordered sets and maps.
+ * @see Key::operator<()
+ * @see Key::operator==()
+ */
+template<> struct std::hash<Key> {
+    size_t operator()(const Key& key) const {
+        return key.hashCode;
+    }
 };
 
 /**
@@ -224,20 +263,22 @@ struct Qframe
     }
 };
 
-/// An implementation of a NOAAPort circular frame buffer.
-class CircFrameBufImpl : public CircFrameBuf
+/// An implementation of a thread-safe queue of NOAAPort frames in temporal order
+class FrameQueueImpl : public FrameQueue
 {
     using Mutex      = std::mutex;
     using Cond       = std::condition_variable;
     using Guard      = std::lock_guard<Mutex>;
     using Lock       = std::unique_lock<Mutex>;
     using Index      = unsigned;
-    using Qframes    = std::unordered_map<Key, Qframe, Key::Hash>;
+    using Frames     = std::unordered_map<Key, Qframe>;
+    using KeyQueue   = std::set<Key>;
     using RevealPred = std::function<bool()>;
 
     mutable Mutex   mutex;           ///< Supports thread safety
     mutable Cond    cond;            ///< Supports concurrent access
-    Qframes         qFrames;         ///< Queue of frames
+    Frames          qFrames;         ///< NOAAPort frames in the queue
+    KeyQueue        keys;            ///< Queue of keys
     Key             lastOutputKey;   ///< Key of last, returned frame
     bool            frameReturned;   ///< Oldest frame returned?
     Key::Dur        timeout;         ///< Timeout for unconditionally returning next frame
@@ -245,22 +286,26 @@ class CircFrameBufImpl : public CircFrameBuf
     RevealPred      revealPred;      ///< Predicate for revealing a frame
 
 public:
-    CircFrameBufImpl(const double timeout)
+    /**
+     * Constructs.
+     * @param[in] timeout  Duration, in seconds, over which to accumulate frames
+     */
+    FrameQueueImpl(const double timeout)
         : mutex()
         , cond()
         , qFrames()
+        , keys()
         , lastOutputKey()
         , frameReturned(false)
         , timeout(std::chrono::duration_cast<Key::Dur>(std::chrono::duration<double>(timeout)))
         , uplinkIdFactory()
-        , revealPred([&]{return qFrames.begin()->first.revealTime <= Key::Clock::now();})
+        , revealPred([&]{return keys.begin()->revealTime <= Key::Clock::now();})
     {}
 
-    CircFrameBufImpl(const CircFrameBuf& other) =delete;
-    CircFrameBufImpl& operator=(const CircFrameBuf& rhs) =delete;
+    FrameQueueImpl(const FrameQueue& other) =delete;
+    FrameQueueImpl& operator=(const FrameQueue& rhs) =delete;
 
     int tryAddFrame(
-            const char*       serverId,
             const NbsFH&      fh,
             const NbsPDH&     pdh,
             const char*       data,
@@ -278,6 +323,7 @@ public:
                 status = 2; // Frame is a duplicate
             }
             else {
+                keys.insert(key);
                 cond.notify_one();
                 status = 0;
             }
@@ -290,15 +336,16 @@ public:
         Lock  lock{mutex}; // RAII!
 
         // Wait until there's a frame in the queue
-        if (qFrames.empty())
-            cond.wait(lock, [&]{return !qFrames.empty();});
-        // and the first frame should be revealed
-        cond.wait_until(lock, qFrames.begin()->first.revealTime, revealPred);
+        if (keys.empty())
+            cond.wait(lock, [&]{return !keys.empty();});
+        // and the first frame in the queue should be revealed
+        cond.wait_until(lock, keys.begin()->revealTime, revealPred);
 
         // The first frame in the queue shall be returned
-        auto  iter = qFrames.begin();
-        auto& key = iter->first;
-        auto& qFrame = iter->second;
+        auto  iter = keys.begin();
+        auto  key = *iter;
+        auto& qFrame = qFrames.at(key);
+        keys.erase(iter);
 
         frame->prodSeqNum   = key.pdhSeqNum;
         frame->dataBlockNum = key.pdhBlkNum;
@@ -308,32 +355,30 @@ public:
         lastOutputKey = key;
         frameReturned = true;
 
-        qFrames.erase(iter);
+        qFrames.erase(key);
     }
 };
 
-CircFrameBuf* CircFrameBuf::create(const double timeout)
+FrameQueue* FrameQueue::create(const double timeout)
 {
-    return new CircFrameBufImpl(timeout);
+    return new FrameQueueImpl(timeout);
 }
 
 extern "C" {
 
-	//------------------------- C code ----------------------------------
-	void* cfb_new(const double timeout) {
-		void* cfb = nullptr;
+	void* fq_new(const double timeout) {
+		void* fq = nullptr;
 		try {
-			cfb = CircFrameBuf::create(timeout);
+			fq = FrameQueue::create(timeout);
 		}
 		catch (const std::exception& ex) {
-			log_add("Couldn't allocate new circular frame buffer: %s", ex.what());
+			log_add("Couldn't allocate new frame queue: %s", ex.what());
 		}
-		return cfb;
+		return fq;
 	}
 
-	//------------------------- C code ----------------------------------
-	int cfb_add(
-			void*             cfb,
+	int fq_add(
+			void*             fq,
 			const char*       serverId,
 			const NbsFH*      fh,
 			const NbsPDH*     pdh,
@@ -341,7 +386,7 @@ extern "C" {
 			const FrameSize_t numBytes) {
         int status;
 		try {
-			status = static_cast<CircFrameBuf*>(cfb)->tryAddFrame(serverId, *fh, *pdh, data, numBytes);
+			status = static_cast<FrameQueue*>(fq)->tryAddFrame(*fh, *pdh, data, numBytes);
 		}
 		catch (const std::exception& ex) {
 			log_add("Couldn't add new frame to buffer: %s", ex.what());
@@ -350,13 +395,12 @@ extern "C" {
 		return status;
 	}
 
-	//------------------------- C code ----------------------------------
-	bool cfb_getOldestFrame(
-			void*        cfb,
+	bool fq_getOldestFrame(
+			void*        fq,
 			Frame_t*     frame) {
 		bool success = false;
 		try {
-			static_cast<CircFrameBuf*>(cfb)->getOldestFrame(frame);
+			static_cast<FrameQueue*>(fq)->getOldestFrame(frame);
 			success = true;
 		}
 		catch (const std::exception& ex) {
@@ -365,8 +409,7 @@ extern "C" {
 		return success;
 	}
 
-	//------------------------- C code ----------------------------------
-	void cfb_delete(void* cfb) {
-		delete static_cast<CircFrameBuf*>(cfb);
+	void fq_delete(void* fq) {
+		delete static_cast<FrameQueue*>(fq);
 	}
 }

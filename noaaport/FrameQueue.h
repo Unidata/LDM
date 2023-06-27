@@ -1,20 +1,20 @@
 /*
- * frameCircBufImpl.h
+ * FrameQueue.h
  *
  *  Created on: Jan 10, 2022
  *      Author: miles
  */
 
-#ifndef NOAAPORT_CIRCFRAMEBUF_H_
-#define NOAAPORT_CIRCFRAMEBUF_H_
+#ifndef NOAAPORT_FRAMEQUEUE_H_
+#define NOAAPORT_FRAMEQUEUE_H_
 
 #include "NbsHeaders.h"
 #include "noaaportFrame.h"
 
 #ifdef __cplusplus
 
-/// Interface for a NOAAPort circular frame buffer
-class CircFrameBuf
+/// Interface for a thread-safe queue of NOAAPort frames in temporal order
+class FrameQueue
 {
 public:
     /**
@@ -23,19 +23,18 @@ public:
      * @param[in] timeout  Timeout value, in seconds, for returning oldest frame
      * @see                `getOldestFrame()`
      */
-    static CircFrameBuf* create(const double timeout);
+    static FrameQueue* create(const double timeout);
 
     /**
      * Destroys.
      */
-    virtual ~CircFrameBuf() =default;
+    virtual ~FrameQueue() =default;
 
     /**
      * Trys to add a frame. The frame will not be added if
      *   - It is an earlier frame than the last, returned frame
      *   - The frame was already added
      *
-     * @param[in] serverId      Hostname or IP address and port number of streaming NOAAPort server
      * @param[in] fh            Frame-level header
      * @param[in] pdh           Product-description header
      * @param[in] data          Frame data
@@ -47,7 +46,6 @@ public:
      * @see                     `getOldestFrame()`
      */
     virtual int tryAddFrame(
-            const char*       serverId,
             const NbsFH&      fh,
             const NbsPDH&     pdh,
             const char*       data,
@@ -60,7 +58,7 @@ public:
      *
      * @param[out] frame     Buffer for the frame
      * @threadsafety         Safe
-     * @see                  `CircFrameBuf()`
+     * @see                  `FrameQueue()`
      */
     virtual void getOldestFrame(Frame_t* frame) =0;
 };
@@ -70,20 +68,20 @@ extern "C" {
 #endif // __cplusplus
 
 /**
- * Returns a new circular frame buffer.
+ * Returns a new frame queue.
  *
  * @param[in] timeout      Timeout, in seconds, before the next frame must be returned if it exists
  * @retval    NULL         Fatal error. `log_add()` called.
- * @return                 Pointer to a new circular frame buffer
- * @see                    `cfb_getOldestFrame()`
- * @see                    `cfb_delete()`
+ * @return                 Pointer to a new frame queue
+ * @see                    `fq_getOldestFrame()`
+ * @see                    `fq_delete()`
  */
-void* cfb_new(const double timeout);
+void* fq_new(const double timeout);
 
 /**
  * Adds a new frame.
  *
- * @param[in] cfb           Pointer to circular frame buffer
+ * @param[in] fq            Pointer to frame queue
  * @param[in] serverId      Hostname or IP address and port number of streaming NOAAPort server
  * @param[in] fh            Frame-level header
  * @param[in] pdh           Product-description header
@@ -96,8 +94,8 @@ void* cfb_new(const double timeout);
  * @retval    2             Frame not added because it's a duplicate
  * @retval    -1            System error. `log_add()` called.
  */
-int cfb_add(
-        void*             cfb,
+int fq_add(
+        void*             fq,
         const char*       serverId,
         const NbsFH*      fh,
         const NbsPDH*     pdh,
@@ -107,32 +105,32 @@ int cfb_add(
 /**
  * Returns the next, oldest frame if it exists. Blocks until it does.
  *
- * @param[in]  cfb       Pointer to circular frame buffer
+ * @param[in]  fq        Pointer to frame queue
  * @param[out] frame     Buffer to hold the oldest frame
  * @retval    `false`    Fatal error. `log_add()` called.
  */
-bool cfb_getOldestFrame(
-        void*        cfb,
-        Frame_t*     frame);
+bool fq_getOldestFrame(
+        void*    fq,
+        Frame_t* frame);
 
 /**
- * Deletes a circular frame buffer.
+ * Deletes a frame queue.
  *
- * @param[in]  cfb       Pointer to circular frame buffer
+ * @param[in]  fq        Pointer to frame queue
  */
-void cfb_delete(void* cfb);
+void fq_delete(void* fq);
 
 /**
- * Return number of frames in a circular frame buffer.
+ * Return number of frames in a frame queue.
  *
- * @param[in]  cfb       Pointer to circular frame buffer
+ * @param[in]  fq        Pointer to frame queue
  * @param[out] nbf       Number of frames
  */
-void cfb_getNumberOfFrames(void* cfb, unsigned* nbf);
+void fq_getNumberOfFrames(void* fq, unsigned* nbf);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* NOAAPORT_CIRCFRAMEBUF_H_ */
+#endif /* NOAAPORT_FRAMEQUEUE_H_ */
