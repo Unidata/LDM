@@ -160,6 +160,19 @@ public:
     {}
 
     /**
+     * Returns a string representation.
+     * @return A string representation
+     */
+    std::string to_string() const {
+        return "{upId=" + std::to_string(uplinkId) +
+                ", fhSrc=" + std::to_string(fhSource) +
+                ", fhRun=" + std::to_string(fhRunno) +
+                ", fhSeq=" + std::to_string(fhSeqno) +
+                ", pdhSeq=" + std::to_string(pdhSeqNum) +
+                ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
+    }
+
+    /**
      * Copy assigns.
      * @param[in] rhs  Right hand side
      * @return         Reference to this instance
@@ -174,19 +187,6 @@ public:
         revealTime = rhs.revealTime;
         hashCode = rhs.hashCode;
         return *this;
-    }
-
-    /**
-     * Returns a string representation.
-     * @return A string representation
-     */
-    std::string to_string() const {
-        return "{upId=" + std::to_string(uplinkId) +
-                ", fhSrc=" + std::to_string(fhSource) +
-                ", fhRun=" + std::to_string(fhRunno) +
-                ", fhSeq=" + std::to_string(fhSeqno) +
-                ", pdhSeq=" + std::to_string(pdhSeqNum) +
-                ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
     }
 
     /**
@@ -205,12 +205,12 @@ public:
      * @see std::hash<Key>()
      */
     bool operator<(const Key& rhs) const noexcept {
-        if (rhs.uplinkId - uplinkId < UPLINK_ID_MAX/2)
+        if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
             return true;
-        if (rhs.uplinkId == uplinkId) {
-            if (rhs.pdhSeqNum - pdhSeqNum < SEQ_NUM_MAX/2)
+        if (uplinkId == rhs.uplinkId) {
+            if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
                 return true;
-            if (rhs.pdhSeqNum == pdhSeqNum) {
+            if (pdhSeqNum == rhs.pdhSeqNum) {
                 if (pdhBlkNum < rhs.pdhBlkNum)
                     return true;
             }
