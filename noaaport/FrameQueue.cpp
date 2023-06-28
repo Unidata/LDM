@@ -35,9 +35,24 @@ class UplinkIdFactory
     /**
      * Number of seconds for `deleteEarlier()` to wait before deleting. The amount of time
      * should be less than the minimum amount of time between changes to the uplink site but
-     * greater than the maximum latency from a receiving site to this host.
+     * greater than the maximum latency from a receiving site to this host (taking into account
+     * congestion and TCP retransmissions).
+     *
+     * According to a NOAA affiliate on the NOAAPort team, Sathya Sankarasubbu, any uplink site
+     * will be active for much longer than this time interval:
+     *
+     *     During planned maintenance, we swap SBN operations at MGS from primary to backup and stay
+     *     there depending on the length of the maintenance window. It can vary from ~24 hrs to a
+     *     few days. In case of emergency MGS issues, we will keep the SBN active at backup MGS till
+     *     the issue is resolved at the primary site.
+     *
+     *     When we do a full switch of operations (moving from ANCF to BNCF and vice versa), usually
+     *     the backup will be operational for 1-2 weeks. As part of monthly security patching, we
+     *     will do a full switch once every month and stay for 1 week.
+     *
+     * --Steven Emmerson 2023-06-28
      */
-    static constexpr unsigned UPLINK_ID_TIMEOUT     = 300;
+    static constexpr unsigned UPLINK_ID_TIMEOUT = 15*60; ///< 15 minutes
     using Mutex     = std::mutex;
     using Guard     = std::lock_guard<Mutex>;
     using UplinkIds = std::unordered_map<FhSrc, UplinkId>;
@@ -203,6 +218,7 @@ public:
      * @retval    false  This instance is not considered less than the other
      * @see operator==()
      * @see std::hash<Key>()
+     * @see UPLINK_ID_TIMEOUT
      */
     bool operator<(const Key& rhs) const noexcept {
         if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
