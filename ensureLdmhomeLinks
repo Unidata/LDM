@@ -1,16 +1,17 @@
 LDMHOME=${1?LDM home directory not set}
-distName=${2?LDM package name not set}
+prefix=${2?LDM installation prefix not set}
 
 set -e # exit if error
 
+cd $LDMHOME
+instDir=`basename $prefix`
+
 # If "share" is a symbolic link to "runtime/share" and "runtime/share" doesn't
 # exist, then "test -e share" is false. Hence, use of "-d <dir> -o -h <dir>".
-
-cd $LDMHOME
 
 test -d src     -o -h src     || ln -s runtime/src src
 test -d bin     -o -h bin     || ln -s runtime/bin bin
 test -d include -o -h include || ln -s runtime/include include
 test -d lib     -o -h lib     || ln -s runtime/lib lib
 test -d share   -o -h share   || ln -s runtime/share share
-test -d runtime -o -h runtime || ln -s $distName runtime
+test -d runtime -o -h runtime || ln -s $instDir runtime
