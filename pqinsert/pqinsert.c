@@ -190,6 +190,61 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 }
 #endif
 
+/**
+ * Reads bytes from a file descriptor. Unlink `read()`, this function will not stop reading until
+ * the given number of bytes has been read or no bytes are available.
+ * @param[in]  fd         File descriptor from which to read bytes
+ * @param[out] buf        Input buffer for the bytes. Caller must ensure that it can hold
+ *                        `numToRead` bytes.
+ * @param[in]  numToRead  Number of bytes to read
+ * @retval     -1         Error. `log_add()` called.
+ * @retval      0         End of file/transmission
+ * @return                Number of bytes read
+ */
+static ssize_t
+readFd( const int fd,
+        char*     buf,
+        size_t    numToRead)
+{
+    ssize_t status = -1; // Error
+
+    if (numToRead > SSIZE_MAX) {
+        log_add("Number of bytes to read (%zu) is greater than SSIZE_MAX (%zd)", numToRead,
+                SSIZE_MAX);
+    }
+    else {
+        ssize_t numRead = 0;
+
+        while (numToRead) {
+            status = read(fd, buf, numToRead);
+
+            if (status == -1) {
+                log_add_syserr("Couldn't read from file descriptor %d", fd);
+                break;
+            }
+
+            if (status == 0) {
+                status = numRead;
+                break;
+            }
+
+            numRead   += status;
+            numToRead -= status;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Reads a data-product from standard input.
+ * @param[in]  bufSize  The initial number of bytes to make the input buffer
+ * @param[out] data     Set to point to the input buffer. Caller should free when it's no longer
+ *                      needed.
+ * @param[out] size     The number of bytes in the input buffer
+ * @retval     true     Success. `*data` and `*size` are set.
+ * @retval     false    Failure. `log_add()` called.
+ */
 static bool
 readStdin(
         size_t       bufSize,
@@ -215,37 +270,22 @@ readStdin(
             }
             else {
                 buf = cp;
-                ssize_t numRead;
 
-                while (numToRead) {
-                    // `numToRead` must not be greater than SSIZE_MAX
-                    numRead = read(0, buf+numTotal, numToRead);
-
-                    if (numRead == -1) {
-                        log_add_syserr("Couldn't read from standard input");
-                        break;
-                    }
-
-                    if (numRead == 0)
-                        break;
-
-                    numToRead -= numRead;
-                    numTotal += numRead;
-                }
-
+                ssize_t numRead = readFd(0, buf+numTotal, numToRead);
                 if (numRead == -1)
                     break;
-
-                if (numTotal >= UINT32_MAX) {
-                    log_add("Product is too large because it has at least %zu bytes", numTotal);
-                    break;
-                }
 
                 if (numRead == 0) {
                     // All done
                     *data = buf;
                     *size = numTotal;
                     success = true;
+                    break;
+                }
+
+                numTotal += numRead;
+                if (numTotal >= UINT32_MAX) {
+                    log_add("Product is too large because it has at least %zu bytes", numTotal);
                     break;
                 }
 
