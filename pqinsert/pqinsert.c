@@ -192,14 +192,15 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 
 /**
  * Reads bytes from a file descriptor. Unlink `read()`, this function will not stop reading until
- * the given number of bytes has been read or no bytes are available.
+ * the given number of bytes has been read or no more bytes can be read.
  * @param[in]  fd         File descriptor from which to read bytes
  * @param[out] buf        Input buffer for the bytes. Caller must ensure that it can hold
  *                        `numToRead` bytes.
  * @param[in]  numToRead  Number of bytes to read
  * @retval     -1         Error. `log_add()` called.
  * @retval      0         End of file/transmission
- * @return                Number of bytes read
+ * @return                Number of bytes read. If less than `numToRead`, then no more bytes can be
+ *                        read.
  */
 static ssize_t
 readFd( const int fd,
@@ -275,7 +276,7 @@ readStdin(
                 if (numRead == -1)
                     break;
 
-                if (numRead == 0) {
+                if (numRead < numToRead || numRead == 0) {
                     // All done
                     *data = buf;
                     *size = numTotal;
