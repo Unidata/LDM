@@ -1,7 +1,7 @@
 /**
  * Inserts files into an LDM product-queue as data-products.
  *
- * Copyright 2018, University Corporation for Atmospheric Research
+ * Copyright 2023, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  */
@@ -191,17 +191,74 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 #endif
 
 static bool
-processStdin(const size_t stdinSize)
+readStdin(
+        size_t       bufSize,
+        char** const data,
+        uint32_t*    size)
 {
-    bool  success = false;
-    char* data = malloc(stdinSize);
+    bool success = false;
 
-    if (data == NULL) {
-        log_syserr("Couldn't allocate %zu bytes for standard input buffer", stdinSize);
+    if (bufSize == 0) {
+        log_add("Initial buffer size of zero is invalid");
     }
     else {
+        char*  buf = NULL;   // Input buffer
+        size_t numTotal = 0; // Number of bytes in buffer
+        size_t numToRead = (bufSize < SSIZE_MAX) ? bufSize : SSIZE_MAX;
 
-    }
+        for (;;) {
+            char* cp = realloc(buf, bufSize);
+
+            if (cp == NULL) {
+                log_syserr("Couldn't allocate %zu bytes for standard input buffer", bufSize);
+                break;
+            }
+            else {
+                buf = cp;
+                ssize_t numRead;
+
+                while (numToRead) {
+                    // `numToRead` must not be greater than SSIZE_MAX
+                    numRead = read(0, buf+numTotal, numToRead);
+
+                    if (numRead == -1) {
+                        log_add_syserr("Couldn't read from standard input");
+                        break;
+                    }
+
+                    if (numRead == 0)
+                        break;
+
+                    numToRead -= numRead;
+                    numTotal += numRead;
+                }
+
+                if (numRead == -1)
+                    break;
+
+                if (numRead == 0) {
+                    // All done
+                    *data = buf;
+                    *size = numTotal;
+                    success = true;
+                    break;
+                }
+
+                if (numTotal >= UINT32_MAX) {
+                    log_add("Product is too large because it has at least %zu bytes", numTotal);
+                    break;
+                }
+
+                numToRead = (numTotal < SSIZE_MAX) ? numTotal : SSIZE_MAX;
+                if (bufSize + numToRead < bufSize)
+                    numToRead = SIZE_MAX - numTotal; // New buffer size would overflow otherwise
+                bufSize += numToRead;
+            }  // Buffer re-allocated
+        } // For loop
+
+        if (!success)
+            free(buf); // NULL safe
+    } // Valid arguments
 
     return success;
 }
