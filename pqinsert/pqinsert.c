@@ -236,16 +236,16 @@ readStdin(
                 if (numRead == -1)
                     break;
 
+                if (numTotal >= UINT32_MAX) {
+                    log_add("Product is too large because it has at least %zu bytes", numTotal);
+                    break;
+                }
+
                 if (numRead == 0) {
                     // All done
                     *data = buf;
                     *size = numTotal;
                     success = true;
-                    break;
-                }
-
-                if (numTotal >= UINT32_MAX) {
-                    log_add("Product is too large because it has at least %zu bytes", numTotal);
                     break;
                 }
 
