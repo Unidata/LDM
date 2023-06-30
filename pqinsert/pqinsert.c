@@ -47,19 +47,32 @@
 #include "atexit.h"
 #endif
 
+#define DEF_STDIN_SIZE 1000000 ///< Default initial number of bytes for standard input buffer
+
+enum ExitCode {
+    exit_success = 0,   /* all files inserted successfully */
+    exit_system = 1,    /* operating-system failure */
+    exit_pq_open = 2,   /* couldn't open product-queue */
+    exit_infile = 3,    /* couldn't process input file */
+    exit_dup = 4,       /* input-file already in product-queue */
+    exit_md5 = 6        /* couldn't initialize MD5 processing */
+};
+
         /* N.B.: assumes hostname doesn't change during program execution :-) */
 static char             myname[HOSTNAMESIZE];
 static feedtypet        feedtype = EXP;
 #if !USE_MMAP
     static struct pqe_index pqeIndex;
 #endif
-
-#define DEF_STDIN_SIZE 1000000
+static int              seq_start = 0;
+static int              useProductID = FALSE;
+static char*            productID = NULL;
+static int              signatureFromId = FALSE;
+static MD5_CTX*         md5ctxp = NULL;
+static product          prod;
 
 static void
-usage(
-        const char* const   progname /*  id string */
-)
+usage(const char* const progname)
 {
     log_add(
 "Usage:\n"
@@ -191,7 +204,7 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 #endif
 
 /**
- * Reads bytes from a file descriptor. Unlink `read()`, this function will not stop reading until
+ * Reads bytes from a file descriptor. Unlike `read()`, this function will not stop reading until
  * the given number of bytes has been read or no more bytes can be read.
  * @param[in]  fd         File descriptor from which to read bytes
  * @param[out] buf        Input buffer for the bytes. Caller must ensure that it can hold
@@ -304,6 +317,242 @@ readStdin(
     return success;
 }
 
+/**
+ * Inserts a data-product into the product-queue.
+ * @retval 0            Success
+ * @retval exit_dup
+ * @retval exit_infile
+ * @retval exit_system
+ */
+static int
+insert(void)
+{
+    int status = pq_insert(pq, &prod);
+
+    switch (status) {
+    case ENOERR:
+        /* no error */
+        if(log_is_enabled_info)
+            log_info_q("%s", s_prod_info(NULL, 0, &prod.info, log_is_enabled_debug)) ;
+        break;
+    case PQUEUE_DUP:
+        log_error_q("Product already in queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
+        status = exit_dup;
+        break;
+    case PQUEUE_BIG:
+        log_error_q("Product too big for queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
+        status = exit_infile;
+        break;
+    case ENOMEM:
+        log_error_q("queue full?");
+        status = exit_system;
+        break;
+    case EINTR:
+#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
+    case EDEADLOCK:
+        /*FALLTHROUGH*/
+#endif
+    case EDEADLK:
+        /* TODO: retry ? */
+        /*FALLTHROUGH*/
+    default:
+        log_error_q("pq_insert: %s", status > 0 ? strerror(status) : "Internal error");
+        break;
+    }
+
+    return status;
+}
+
+/**
+ * Inserts files as data-products into the product-queue.
+ * @param[in] numFiles   Number of files
+ * @param[in] pathnames  Pathnames of the files
+ * @retval 0             Success
+ * @retval exit_infile
+ * @retval exit_dup
+ * @retval exit_system
+ */
+static int
+insertFiles(
+        int          numFiles,
+        char* const* pathnames)
+{
+    int       status = exit_success;
+    const int multipleFiles = numFiles > 1;
+    char      identifier[KEYSIZE];
+
+    for(prod.info.seqno = seq_start ; numFiles > 0 ; pathnames++, numFiles--, prod.info.seqno++) {
+        char*       pathname = *pathnames;
+        struct stat statb;
+
+        int fd = open(pathname, O_RDONLY, 0);
+        if(fd == -1) {
+            log_syserr("open: %s", pathname);
+            status = exit_infile;
+            continue;
+        }
+
+        if( fstat(fd, &statb) == -1) {
+            log_syserr("fstat: %s", pathname);
+            (void) close(fd);
+            status = exit_infile;
+            continue;
+        }
+
+        /* Determine what to use for product identifier */
+        if (useProductID) {
+            if (multipleFiles) {
+                sprintf(identifier,"%s.%d", productID, prod.info.seqno);
+                prod.info.ident = identifier;
+            }
+            else {
+              prod.info.ident = productID;
+            }
+        }
+        else {
+            prod.info.ident = pathname;
+        }
+
+        prod.info.sz = statb.st_size;
+        prod.data = NULL;
+
+        /* These members, and seqno, vary over the loop. */
+        status = set_timestamp(&prod.info.arrival);
+        if(status != ENOERR) {
+            log_add_syserr("set_timestamp: %s, pathname");
+            log_flush_error();
+            status = exit_infile;
+            continue;
+        }
+
+#if USE_MMAP
+        prod.data = mmap(0, prod.info.sz, PROT_READ, MAP_PRIVATE, fd, 0);
+        if(prod.data == MAP_FAILED) {
+            log_syserr("mmap: %s", pathname);
+            (void) close(fd);
+            status = exit_infile;
+            continue;
+        }
+
+        status =
+            signatureFromId
+                ? mm_md5(md5ctxp, prod.info.ident, strlen(prod.info.ident), prod.info.signature)
+                : mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
+
+        (void)exitIfDone(1);
+
+        if (status != 0) {
+            log_syserr("mm_md5: %s", pathname);
+            (void) munmap(prod.data, prod.info.sz);
+            (void) close(fd);
+            status = exit_infile;
+            continue;
+        }
+
+        /* These members, and seqno, vary over the loop. */
+        status = set_timestamp(&prod.info.arrival);
+        if(status != ENOERR) {
+            log_add_syserr("set_timestamp: %s, pathname");
+            log_flush_error();
+            status = exit_infile;
+            continue;
+        }
+
+        /*
+         * Do the deed
+         */
+        status = insert();
+
+        (void) munmap(prod.data, prod.info.sz);
+#else // USE_MMAP above; !USE_MMAP below
+        status =
+            signatureFromId
+                ? mm_md5(md5ctxp, prod.info.ident,
+                    strlen(prod.info.ident), prod.info.signature)
+                : fd_md5(md5ctxp, fd, statb.st_size,
+                    prod.info.signature);
+
+        (void)exitIfDone(1);
+
+        if (status != 0) {
+                log_add_syserr("xx_md5: %s", pathname);
+                log_flush_error();
+                (void) close(fd);
+                status = exit_infile;
+                continue;
+        }
+
+        if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
+        {
+                log_syserr("rewind: %s", pathname);
+                (void) close(fd);
+                status = exit_infile;
+                continue;
+        }
+
+        pqeIndex = PQE_NONE;
+        status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
+
+        if(status != ENOERR) {
+            log_add_syserr("pqe_new: %s", pathname);
+            log_flush_error();
+            status = exit_infile;
+        }
+        else {
+            ssize_t     nread = read(fd, prod.data, prod.info.sz);
+
+            (void)exitIfDone(1);
+
+            if (nread != prod.info.sz) {
+                log_syserr("read %s %u", pathname, prod.info.sz);
+                status = EIO;
+            }
+            else {
+                status = pqe_insert(pq, pqeIndex);
+                pqeIndex = PQE_NONE;
+
+                switch (status) {
+                case ENOERR:
+                    /* no error */
+                    if(ulogIsVerbose())
+                        log_info_q("%s", s_prod_info(NULL, 0, &prod.info,
+                            log_is_enabled_debug)) ;
+                    break;
+                case PQUEUE_DUP:
+                    log_error_q("Product already in queue: %s",
+                        s_prod_info(NULL, 0, &prod.info, 1));
+                    status = exit_dup;
+                    break;
+                case ENOMEM:
+                    log_error_q("queue full?");
+                    break;
+                case EINTR:
+#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
+                case EDEADLOCK:
+                    /*FALLTHROUGH*/
+#endif
+                case EDEADLK:
+                    /* TODO: retry ? */
+                    /*FALLTHROUGH*/
+                default:
+                    log_error_q("pq_insert: %s", status > 0
+                        ? strerror(status) : "Internal error");
+                }
+            }                   /* data read into `pqeIndex` region */
+
+            if (status != ENOERR) {
+                (void)pqe_discard(pq, pqeIndex);
+                pqeIndex = PQE_NONE;
+            }
+        }                       /* `pqeIndex` region allocated */
+
+#endif
+        (void) close(fd);
+    }                               /* input-file loop */
+
+    return status;
+}
+
 
 int main(
         int ac,
@@ -311,23 +560,12 @@ int main(
 )
 {
         const char* const progname = basename(av[0]);
-        int               useProductID = FALSE;
-        int               signatureFromId = FALSE;
-        char*             productID = NULL;
         int               multipleFiles = FALSE;
         char              identifier[KEYSIZE];
         int               status;
-        int               seq_start = 0;
         size_t            stdinSize = DEF_STDIN_SIZE;
 
-        enum ExitCode {
-            exit_success = 0,   /* all files inserted successfully */
-            exit_system = 1,    /* operating-system failure */
-            exit_pq_open = 2,   /* couldn't open product-queue */
-            exit_infile = 3,    /* couldn't process input file */
-            exit_dup = 4,       /* input-file already in product-queue */
-            exit_md5 = 6        /* couldn't initialize MD5 processing */
-        } exitCode = exit_success;
+        enum ExitCode exitCode = exit_success;
 
         if (log_init(av[0])) {
             log_syserr("Couldn't initialize logging module");
@@ -450,246 +688,22 @@ int main(
                 exit(exit_pq_open);
         }
 
-
-        {
-        char *filename;
-        int fd;
-        struct stat statb;
-        product prod;
-        MD5_CTX *md5ctxp = NULL;
-
         /*
          * Allocate an MD5 context
          */
         md5ctxp = new_MD5_CTX();
-        if(md5ctxp == NULL)
-        {
-                log_syserr("new_md5_CTX failed");
-                exit(exit_md5);
+        if(md5ctxp == NULL) {
+            log_syserr("new_md5_CTX failed");
+            exit(exit_md5);
         }
-
 
         /* These members are constant over the loop. */
         prod.info.origin = myname;
         prod.info.feedtype = feedtype;
 
-        if (ac > 1) {
-          multipleFiles = TRUE;
-        }
-
-        for(prod.info.seqno = seq_start ; ac > 0 ;
-                         av++, ac--, prod.info.seqno++)
-        {
-                filename = *av;
-
-                fd = open(filename, O_RDONLY, 0);
-                if(fd == -1)
-                {
-                        log_syserr("open: %s", filename);
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                if( fstat(fd, &statb) == -1) 
-                {
-                        log_syserr("fstat: %s", filename);
-                        (void) close(fd);
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                /* Determine what to use for product identifier */
-                if (useProductID) 
-                  {
-                    if (multipleFiles) 
-                      {
-                        sprintf(identifier,"%s.%d", productID, prod.info.seqno);
-                        prod.info.ident = identifier;
-                      }
-                    else
-                      prod.info.ident = productID;
-                   }
-                else
-                    prod.info.ident = filename;
-                
-                prod.info.sz = statb.st_size;
-                prod.data = NULL;
-
-                /* These members, and seqno, vary over the loop. */
-                status = set_timestamp(&prod.info.arrival);
-                if(status != ENOERR) {
-                        log_add_syserr("set_timestamp: %s, filename");
-                        log_flush_error();
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-#if USE_MMAP
-                prod.data = mmap(0, prod.info.sz,
-                        PROT_READ, MAP_PRIVATE, fd, 0);
-                if(prod.data == MAP_FAILED)
-                {
-                        log_syserr("mmap: %s", filename);
-                        (void) close(fd);
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                status = 
-                    signatureFromId
-                        ? mm_md5(md5ctxp, prod.info.ident,
-                            strlen(prod.info.ident), prod.info.signature)
-                        : mm_md5(md5ctxp, prod.data, prod.info.sz,
-                            prod.info.signature);
-
-                (void)exitIfDone(1);
-
-                if (status != 0) {
-                    log_syserr("mm_md5: %s", filename);
-                    (void) munmap(prod.data, prod.info.sz);
-                    (void) close(fd);
-                    exitCode = exit_infile;
-                    continue;
-                }
-
-                /* These members, and seqno, vary over the loop. */
-                status = set_timestamp(&prod.info.arrival);
-                if(status != ENOERR) {
-                        log_add_syserr("set_timestamp: %s, filename");
-                        log_flush_error();
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                /*
-                 * Do the deed
-                 */
-                status = pq_insert(pq, &prod);
-
-                switch (status) {
-                case ENOERR:
-                    /* no error */
-                    if(log_is_enabled_info)
-                        log_info_q("%s", s_prod_info(NULL, 0, &prod.info,
-                            log_is_enabled_debug)) ;
-                    break;
-                case PQUEUE_DUP:
-                    log_error_q("Product already in queue: %s",
-                        s_prod_info(NULL, 0, &prod.info, 1));
-                    exitCode = exit_dup;
-                    break;
-                case PQUEUE_BIG:
-                    log_error_q("Product too big for queue: %s",
-                        s_prod_info(NULL, 0, &prod.info, 1));
-                    exitCode = exit_infile;
-                    break;
-                case ENOMEM:
-                    log_error_q("queue full?");
-                    exitCode = exit_system;
-                    break;  
-                case EINTR:
-#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
-                case EDEADLOCK:
-                    /*FALLTHROUGH*/
-#endif
-                case EDEADLK:
-                    /* TODO: retry ? */
-                    /*FALLTHROUGH*/
-                default:
-                    log_error_q("pq_insert: %s", status > 0
-                        ? strerror(status) : "Internal error");
-                    break;
-                }
-
-                (void) munmap(prod.data, prod.info.sz);
-#else // USE_MMAP above; !USE_MMAP below
-                status = 
-                    signatureFromId
-                        ? mm_md5(md5ctxp, prod.info.ident,
-                            strlen(prod.info.ident), prod.info.signature)
-                        : fd_md5(md5ctxp, fd, statb.st_size,
-                            prod.info.signature);
-
-                (void)exitIfDone(1);
-
-                if (status != 0) {
-                        log_add_syserr("xx_md5: %s", filename);
-                        log_flush_error();
-                        (void) close(fd);
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                if(lseek(fd, 0, SEEK_SET) == (off_t)-1)
-                {
-                        log_syserr("rewind: %s", filename);
-                        (void) close(fd);
-                        exitCode = exit_infile;
-                        continue;
-                }
-
-                pqeIndex = PQE_NONE;
-                status = pqe_new(pq, &prod.info, &prod.data, &pqeIndex);
-
-                if(status != ENOERR) {
-                    log_add_syserr("pqe_new: %s", filename);
-                    log_flush_error();
-                    exitCode = exit_infile;
-                }
-                else {
-                    ssize_t     nread = read(fd, prod.data, prod.info.sz);
-
-                    (void)exitIfDone(1);
-
-                    if (nread != prod.info.sz) {
-                        log_syserr("read %s %u", filename, prod.info.sz);
-                        status = EIO;
-                    }
-                    else {
-                        status = pqe_insert(pq, pqeIndex);
-                        pqeIndex = PQE_NONE;
-
-                        switch (status) {
-                        case ENOERR:
-                            /* no error */
-                            if(ulogIsVerbose())
-                                log_info_q("%s", s_prod_info(NULL, 0, &prod.info,
-                                    log_is_enabled_debug)) ;
-                            break;
-                        case PQUEUE_DUP:
-                            log_error_q("Product already in queue: %s",
-                                s_prod_info(NULL, 0, &prod.info, 1));
-                            exitCode = exit_dup;
-                            break;
-                        case ENOMEM:
-                            log_error_q("queue full?");
-                            break;  
-                        case EINTR:
-#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
-                        case EDEADLOCK:
-                            /*FALLTHROUGH*/
-#endif
-                        case EDEADLK:
-                            /* TODO: retry ? */
-                            /*FALLTHROUGH*/
-                        default:
-                            log_error_q("pq_insert: %s", status > 0
-                                ? strerror(status) : "Internal error");
-                        }
-                    }                   /* data read into `pqeIndex` region */
-
-                    if (status != ENOERR) {
-                        (void)pqe_discard(pq, pqeIndex);
-                        pqeIndex = PQE_NONE;
-                    }
-                }                       /* `pqeIndex` region allocated */
-
-#endif
-                (void) close(fd);
-        }                               /* input-file loop */
+        exitCode = insertFiles(ac, av);
 
         free_MD5_CTX(md5ctxp);  
-        }                               /* code block */
 
         exit(exitCode);
 }
