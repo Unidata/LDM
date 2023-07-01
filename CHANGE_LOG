@@ -1,3 +1,6 @@
+6.14.6.2
+    pqinsert(1): Added ability to read a single data-product from standard input
+
 6.14.6.1        2023-06-21T17:04:22-0600
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
@@ -18,8 +21,6 @@
     notifyme(1):
         * Added "-O" option to include product origin in output
         * Modified usage message to use LDM logging module
-
-    pqinsert(1): Added ability to read a single data-product from standard input
 
     keep_running(1):
         * Added a test for the executable's existance
