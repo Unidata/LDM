@@ -1,4 +1,4 @@
-6.14.6.1
+6.14.6.1        2023-06-21T17:04:22-0600
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
           to make the development and build process more conventional and easier to understand
@@ -29,8 +29,9 @@
           warning if it couldn't
         * Added sh(1)-based noaaportBlender(1) to keep blender(1) and noaaportIngester(1) processes
           running
-        * blender(1): Frame is now output when the wait-time expires even if no subsequent frames
-          arrive
+        * blender(1):
+            * Frame is now output when the wait-time expires even if no subsequent frames arrive
+            * "Starting product" INFO-level log message now includes source field from frame header
 
     Documentation:
         * Improved slightly
