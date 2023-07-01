@@ -47,16 +47,17 @@
 #include "atexit.h"
 #endif
 
-#define DEF_STDIN_SIZE 1000000 ///< Default initial number of bytes for standard input buffer
-
 enum ExitCode {
-    exit_success = 0,   /* all files inserted successfully */
-    exit_system = 1,    /* operating-system failure */
-    exit_pq_open = 2,   /* couldn't open product-queue */
-    exit_infile = 3,    /* couldn't process input file */
-    exit_dup = 4,       /* input-file already in product-queue */
-    exit_md5 = 6        /* couldn't initialize MD5 processing */
+    exit_success = 0,   /* all files inserted successfully */    ///< exit_success
+    exit_system = 1,    /* operating-system failure */           ///< exit_system
+    exit_pq_open = 2,   /* couldn't open product-queue */        ///< exit_pq_open
+    exit_infile = 3,    /* couldn't process input file */        ///< exit_infile
+    exit_dup = 4,       /* input-file already in product-queue *////< exit_dup
+    exit_md5 = 6        /* couldn't initialize MD5 processing */ ///< exit_md5
 };
+
+#define DEF_STDIN_SIZE 1000000  ///< Default initial number of bytes for standard input buffer
+#define DEF_STDIN_IDENT "STDIN" ///< Default product-identifier when reading from standard input
 
         /* N.B.: assumes hostname doesn't change during program execution :-) */
 static char             myname[HOSTNAMESIZE];
@@ -68,7 +69,11 @@ static int              seq_start = 0;
 static int              useProductID = FALSE;
 static char*            productID = NULL;
 static int              signatureFromId = FALSE;
+static int              numFiles;
+static char* const*     pathnames;
 static MD5_CTX*         md5ctxp = NULL;
+static bool             useStdin = false;
+static size_t           stdinSize = DEF_STDIN_SIZE;
 static product          prod;
 
 static void
@@ -86,19 +91,108 @@ usage(const char* const progname)
 "    -n <size>       Initial size guess, in bytes, for the product read from\n"
 "                    standard input. Ignored if file operands are specified.\n"
 "                    Default is %d.\n"
-"    -p <productID>  Assert product-ID as <productID>. Default is the filename.\n"
-"                    With multiple files, product-ID becomes <productID>.<seqno>.\n"
+"    -p <productID>  Use <productID> in product-identifier. Default for standard\n"
+"                    input is \"%s\". Default for files is the filename. With\n"
+"                    multiple files, product-ID becomes <productID>.<seqno>.\n"
 "    -q <queue>      Use <queue> as product-queue. Default:\n"
 "                    \"%s\"\n"
 "    -s <seqno>      Set initial product sequence number to <seqno>. Default: 0\n"
 "    -v              Verbose, log at the INFO level. Default is NOTE.\n"
 "    <file>          Optional files to insert as products. Default is to read a\n"
 "                    single product from standard input.",
-            progname, log_get_default_destination(), DEF_STDIN_SIZE, getDefaultQueuePath());
+            progname, log_get_default_destination(), DEF_STDIN_SIZE, DEF_STDIN_IDENT,
+            getDefaultQueuePath());
     log_flush_error();
     exit(1);
 }
 
+/**
+ * Decodes the command line.
+ * @param[in] ac  Number of command-line words
+ * @param[in] av  Pointers to command-line words
+ */
+static void
+decodeCmdLine(
+        int          ac,
+        char* const* av)
+{
+    extern int        optind;
+    extern int        opterr;
+    extern char*      optarg;
+    int               ch;
+    const char* const progname = basename(av[0]);
+
+    opterr = 0; /* Suppress getopt(3) error messages */
+
+    while ((ch = getopt(ac, av, ":ivxl:q:f:n:s:p:")) != EOF)
+        switch (ch) {
+            case 'i':
+                signatureFromId = 1;
+                break;
+            case 'v':
+                if (!log_is_enabled_info)
+                    (void)log_set_level(LOG_LEVEL_INFO);
+                break;
+            case 'x':
+                (void)log_set_level(LOG_LEVEL_DEBUG);
+                break;
+            case 'l':
+                if (log_set_destination(optarg)) {
+                    log_syserr("Couldn't set logging destination to \"%s\"", optarg);
+                    usage(progname);
+                }
+                break;
+            case 'n': {
+                if (sscanf(optarg, "%zu", &stdinSize) != 1) {
+                    log_error("Couldn't decode size-guess for standard-input product: \"%s\"",
+                            optarg);
+                    usage(progname);
+                }
+                if (stdinSize == 0) {
+                    log_error("Size-guess for standard-input product is zero");
+                    usage(progname);
+                }
+                break;
+            }
+            case 'q':
+                setQueuePath(optarg);
+                break;
+            case 's':
+                seq_start = atoi(optarg);
+                break;
+            case 'f':
+                feedtype = atofeedtypet(optarg);
+                if(feedtype == NONE) {
+                    fprintf(stderr, "Unknown feedtype \"%s\"\n", optarg);
+                    usage(progname);
+                }
+                break;
+            case 'p':
+                useProductID = TRUE;
+                productID = optarg;
+                break;
+            case ':': {
+                log_add("Option \"-%c\" requires an operand", optopt);
+                usage(progname);
+            }
+            /* no break */
+            default:
+                log_add("Unknown option: \"%c\"", optopt);
+                usage(progname);
+                /* no break */
+        } // Option `switch`
+
+    ac -= optind; av += optind ;
+
+    if (ac == 0) {
+        useStdin = true;
+    }
+    else {
+        useStdin = false;
+        numFiles = ac;
+        pathnames = av;
+    }
+}
 
 void
 cleanup(void)
@@ -204,6 +298,52 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 #endif
 
 /**
+ * Inserts a data-product into the product-queue.
+ * @retval 0            Success
+ * `log_add()` is called for all of the following:
+ * @retval exit_dup
+ * @retval exit_infile
+ * @retval exit_system
+ */
+static int
+insertProd(void)
+{
+    int status = pq_insert(pq, &prod);
+
+    switch (status) {
+    case ENOERR:
+        /* no error */
+        log_info("%s", s_prod_info(NULL, 0, &prod.info, log_is_enabled_debug)) ;
+        break;
+    case PQUEUE_DUP:
+        log_add("Product already in queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
+        status = exit_dup;
+        break;
+    case PQUEUE_BIG:
+        log_add("Product too big for queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
+        status = exit_infile;
+        break;
+    case ENOMEM:
+        log_add("queue full?");
+        status = exit_system;
+        break;
+    case EINTR:
+#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
+    case EDEADLOCK:
+        /*FALLTHROUGH*/
+#endif
+    case EDEADLK:
+        /* TODO: retry ? */
+        /*FALLTHROUGH*/
+    default:
+        log_add("pq_insert: %s", status > 0 ? strerror(status) : "Internal error");
+        break;
+    }
+
+    return status;
+}
+
+/**
  * Reads bytes from a file descriptor. Unlike `read()`, this function will not stop reading until
  * the given number of bytes has been read or no more bytes can be read.
  * @param[in]  fd         File descriptor from which to read bytes
@@ -252,34 +392,29 @@ readFd( const int fd,
 
 /**
  * Reads a data-product from standard input.
- * @param[in]  bufSize  The initial number of bytes to make the input buffer
- * @param[out] data     Set to point to the input buffer. Caller should free when it's no longer
- *                      needed.
- * @param[out] size     The number of bytes in the input buffer
- * @retval     true     Success. `*data` and `*size` are set.
- * @retval     false    Failure. `log_add()` called.
+ * @retval 0            Success. `*data` and `*size` are set.
+ * @retval exit_system  O/S failure. `log_add()` called.
+ * @retval exit_infile  Couldn't process standard input. `log_add()` called.
  */
-static bool
-readStdin(
-        size_t       bufSize,
-        char** const data,
-        uint32_t*    size)
+static int
+readStdin(void)
 {
-    bool success = false;
+    enum ExitCode status = exit_infile;
 
-    if (bufSize == 0) {
+    if (stdinSize == 0) {
         log_add("Initial buffer size of zero is invalid");
     }
     else {
         char*  buf = NULL;   // Input buffer
         size_t numTotal = 0; // Number of bytes in buffer
-        size_t numToRead = (bufSize < SSIZE_MAX) ? bufSize : SSIZE_MAX;
+        size_t numToRead = (stdinSize < SSIZE_MAX) ? stdinSize : SSIZE_MAX;
 
         for (;;) {
-            char* cp = realloc(buf, bufSize);
+            char* cp = realloc(buf, stdinSize);
 
             if (cp == NULL) {
-                log_syserr("Couldn't allocate %zu bytes for standard input buffer", bufSize);
+                log_syserr("Couldn't allocate %zu bytes for standard input buffer", stdinSize);
+                status = exit_system;
                 break;
             }
             else {
@@ -291,9 +426,9 @@ readStdin(
 
                 if (numRead < numToRead || numRead == 0) {
                     // All done
-                    *data = buf;
-                    *size = numTotal;
-                    success = true;
+                    prod.data = buf;
+                    prod.info.sz = numTotal;
+                    status = exit_success;
                     break;
                 }
 
@@ -304,60 +439,65 @@ readStdin(
                 }
 
                 numToRead = (numTotal < SSIZE_MAX) ? numTotal : SSIZE_MAX;
-                if (bufSize + numToRead < bufSize)
+                if (stdinSize + numToRead < stdinSize)
                     numToRead = SIZE_MAX - numTotal; // New buffer size would overflow otherwise
-                bufSize += numToRead;
+                stdinSize += numToRead;
             }  // Buffer re-allocated
         } // For loop
 
-        if (!success)
+        if (!status)
             free(buf); // NULL safe
     } // Valid arguments
 
-    return success;
+    return status;
 }
 
 /**
- * Inserts a data-product into the product-queue.
- * @retval 0            Success
- * @retval exit_dup
- * @retval exit_infile
- * @retval exit_system
+ * Sets the creation-time of the data-product.
+ * @retval 0            Success. `prod.info.arrival` is set.
+ * @retval exit_system  System failure. `log_add()` called.
  */
 static int
-insert(void)
+setCreationTime(void)
 {
-    int status = pq_insert(pq, &prod);
+    int status = set_timestamp(&prod.info.arrival);
 
-    switch (status) {
-    case ENOERR:
-        /* no error */
-        if(log_is_enabled_info)
-            log_info_q("%s", s_prod_info(NULL, 0, &prod.info, log_is_enabled_debug)) ;
-        break;
-    case PQUEUE_DUP:
-        log_error_q("Product already in queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
-        status = exit_dup;
-        break;
-    case PQUEUE_BIG:
-        log_error_q("Product too big for queue: %s", s_prod_info(NULL, 0, &prod.info, 1));
-        status = exit_infile;
-        break;
-    case ENOMEM:
-        log_error_q("queue full?");
+    if (status) {
+        log_add_syserr("set_timestamp() failure");
         status = exit_system;
-        break;
-    case EINTR:
-#if defined(EDEADLOCK) && EDEADLOCK != EDEADLK
-    case EDEADLOCK:
-        /*FALLTHROUGH*/
-#endif
-    case EDEADLK:
-        /* TODO: retry ? */
-        /*FALLTHROUGH*/
-    default:
-        log_error_q("pq_insert: %s", status > 0 ? strerror(status) : "Internal error");
-        break;
+    }
+
+    return status;
+}
+
+/**
+ * Reads a data-product from standard input and inserts it into the product-queue.
+ * @retval 0            Success
+ * @retval exit_dup     Duplicate product
+ * @retval exit_system  System error. `log_add()` called.
+ * @retval exit_infile  Couldn't process standard input
+ */
+static int
+insertStdin()
+{
+    int status = readStdin();
+
+    if (status == 0) {
+        prod.info.seqno = seq_start;
+        prod.info.ident = useProductID ? productID : DEF_STDIN_IDENT;
+
+        status = setCreationTime();
+
+        if(status) {
+            log_add("Couldn't set creation-time");
+        }
+        else {
+            signatureFromId
+                ? mm_md5(md5ctxp, prod.info.ident, strlen(prod.info.ident), prod.info.signature)
+                : mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
+
+            status = insertProd();
+        }
     }
 
     return status;
@@ -365,17 +505,13 @@ insert(void)
 
 /**
  * Inserts files as data-products into the product-queue.
- * @param[in] numFiles   Number of files
- * @param[in] pathnames  Pathnames of the files
  * @retval 0             Success
  * @retval exit_infile
  * @retval exit_dup
  * @retval exit_system
  */
 static int
-insertFiles(
-        int          numFiles,
-        char* const* pathnames)
+insertFiles(void)
 {
     int       status = exit_success;
     const int multipleFiles = numFiles > 1;
@@ -417,9 +553,9 @@ insertFiles(
         prod.data = NULL;
 
         /* These members, and seqno, vary over the loop. */
-        status = set_timestamp(&prod.info.arrival);
-        if(status != ENOERR) {
-            log_add_syserr("set_timestamp: %s, pathname");
+        status = setCreationTime();
+        if(status) {
+            log_add("Couldn't set creation-time for file \"%s\", pathname");
             log_flush_error();
             status = exit_infile;
             continue;
@@ -449,19 +585,21 @@ insertFiles(
             continue;
         }
 
-        /* These members, and seqno, vary over the loop. */
-        status = set_timestamp(&prod.info.arrival);
-        if(status != ENOERR) {
-            log_add_syserr("set_timestamp: %s, pathname");
-            log_flush_error();
-            status = exit_infile;
-            continue;
-        }
-
         /*
          * Do the deed
          */
-        status = insert();
+        status = insertProd();
+        if (status == exit_system) {
+            (void)munmap(prod.data, prod.info.sz);
+            (void)close(fd);
+            break;
+        }
+        else if (status) {
+            log_flush_error();
+            (void)munmap(prod.data, prod.info.sz);
+            (void)close(fd);
+            continue;
+        }
 
         (void) munmap(prod.data, prod.info.sz);
 #else // USE_MMAP above; !USE_MMAP below
@@ -553,157 +691,79 @@ insertFiles(
     return status;
 }
 
-
+/**
+ * Creates one or more LDM data-products from files or standard input and inserts them into an LDM
+ * product-queue.
+ * @param[in] ac  Number of command-line words
+ * @param[in] av  Pointers to command-line words
+ * @retval 0      Success. All products were successfully created and inserted.
+ * @retval 1      Operating-system failure
+ * @retval 2      Couldn't open product-queue
+ * @retval 3      Couldn't process input file
+ * @retval 4      Input-file already in product-queue
+ * @retval 6      Couldn't initialize MD5 processing
+ */
 int main(
-        int ac,
-        char *av[]
-)
+        int   ac,
+        char* av[])
 {
-        const char* const progname = basename(av[0]);
-        int               multipleFiles = FALSE;
-        char              identifier[KEYSIZE];
-        int               status;
-        size_t            stdinSize = DEF_STDIN_SIZE;
+    int           status;
+    enum ExitCode exitCode = exit_success;
 
-        enum ExitCode exitCode = exit_success;
-
-        if (log_init(av[0])) {
-            log_syserr("Couldn't initialize logging module");
-            exit(1);
-        }
+    if (log_init(av[0])) {
+        log_syserr("Couldn't initialize logging module");
+        exit(1);
+    }
 
 #if !USE_MMAP
-        pqeIndex = PQE_NONE;
+    pqeIndex = PQE_NONE;
 #endif
 
-        {
-            extern int optind;
-            extern int opterr;
-            extern char *optarg;
-            int ch;
+    // Decode the command -line
+    decodeCmdLine(ac, av);
 
-            opterr = 0; /* Suppress getopt(3) error messages */
+    // Register the exit handler
+    if(atexit(cleanup) != 0) {
+        log_syserr("atexit");
+        exit(exit_system);
+    }
 
-            while ((ch = getopt(ac, av, ":ivxl:q:f:n:s:p:")) != EOF)
-                    switch (ch) {
-                    case 'i':
-                            signatureFromId = 1;
-                            break;
-                    case 'v':
-                            if (!log_is_enabled_info)
-                                (void)log_set_level(LOG_LEVEL_INFO);
-                            break;
-                    case 'x':
-                            (void)log_set_level(LOG_LEVEL_DEBUG);
-                            break;
-                    case 'l':
-                            if (log_set_destination(optarg)) {
-                                log_syserr("Couldn't set logging destination to \"%s\"",
-                                        optarg);
-                                usage(progname);
-                            }
-                            break;
-                    case 'n': {
-                        if (sscanf(optarg, "%zu", &stdinSize) != 1) {
-                            log_error("Couldn't decode size-guess for standard-input product: \""
-                                    "%s\"", optarg);
-                            usage(progname);
-                        }
-                        if (stdinSize == 0) {
-                            log_error("Size-guess for standard-input product is zero");
-                            usage(progname);
-                        }
-                        break;
-                    }
-                    case 'q':
-                            setQueuePath(optarg);
-                            break;
-                    case 's':
-                            seq_start = atoi(optarg);
-                            break;
-                    case 'f':
-                            feedtype = atofeedtypet(optarg);
-                            if(feedtype == NONE)
-                            {
-                                fprintf(stderr, "Unknown feedtype \"%s\"\n", optarg);
-                                    usage(progname);
-                            }
-                            break;
-                    case 'p':
-                            useProductID = TRUE;
-                            productID = optarg;
-                            break;
-                    case ':': {
-                        log_add("Option \"-%c\" requires an operand", optopt);
-                        usage(progname);
-                    }
-                    /* no break */
-                    default:
-                        log_add("Unknown option: \"%c\"", optopt);
-                        usage(progname);
-                        /* no break */
-                    }
+    // Set up signal handling
+    set_sigactions();
 
-            ac -= optind; av += optind ;
-
-            if(ac < 1) usage(progname);
-            }
-
-        const char* const       pqfname = getQueuePath();
-
-        /*
-         * register exit handler
-         */
-        if(atexit(cleanup) != 0)
-        {
-                log_syserr("atexit");
-                exit(exit_system);
+    // Open the product queue
+    const char* const pqfname = getQueuePath();
+    if((status = pq_open(pqfname, PQ_DEFAULT, &pq))) {
+        if (PQ_CORRUPT == status) {
+            log_error_q("The product-queue \"%s\" is inconsistent\n", pqfname);
         }
-
-        /*
-         * set up signal handlers
-         */
-        set_sigactions();
-
-        /*
-         * who am i, anyway
-         */
-        (void) strncpy(myname, ghostname(), sizeof(myname));
-        myname[sizeof(myname)-1] = 0;
-
-        /*
-         * open the product queue
-         */
-        if((status = pq_open(pqfname, PQ_DEFAULT, &pq)))
-        {
-                if (PQ_CORRUPT == status) {
-                    log_error_q("The product-queue \"%s\" is inconsistent\n",
-                            pqfname);
-                }
-                else {
-                    log_error_q("pq_open: \"%s\" failed: %s",
-                            pqfname, status > 0 ? strerror(status) :
-                                            "Internal error");
-                }
-                exit(exit_pq_open);
+        else {
+            log_error_q("pq_open: \"%s\" failed: %s", pqfname,
+                    status > 0 ? strerror(status) : "Internal error");
         }
+        exit(exit_pq_open);
+    }
 
-        /*
-         * Allocate an MD5 context
-         */
-        md5ctxp = new_MD5_CTX();
-        if(md5ctxp == NULL) {
-            log_syserr("new_md5_CTX failed");
-            exit(exit_md5);
-        }
+    // Allocate an MD5 context
+    md5ctxp = new_MD5_CTX();
+    if(md5ctxp == NULL) {
+        log_syserr("new_md5_CTX failed");
+        exit(exit_md5);
+    }
 
-        /* These members are constant over the loop. */
-        prod.info.origin = myname;
-        prod.info.feedtype = feedtype;
+    // These members of the product-metadata are constant
+    (void) strncpy(myname, ghostname(), sizeof(myname));
+    myname[sizeof(myname)-1] = 0;
+    prod.info.origin = myname;
+    prod.info.feedtype = feedtype;
 
-        exitCode = insertFiles(ac, av);
+    exitCode = useStdin
+            ? insertStdin()
+            : insertFiles();
+    if (exitCode)
+        log_flush(exitCode == exit_system ? LOG_LEVEL_FATAL : LOG_LEVEL_ERROR);
 
-        free_MD5_CTX(md5ctxp);  
+    free_MD5_CTX(md5ctxp);
 
-        exit(exitCode);
+    exit(exitCode);
 }
