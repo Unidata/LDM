@@ -76,6 +76,10 @@ static bool             useStdin = false;
 static size_t           stdinSize = DEF_STDIN_SIZE;
 static product          prod;
 
+/**
+ * Logs a usage message, then error-exits.
+ * @param[in] progname  Name of the program
+ */
 static void
 usage(const char* const progname)
 {
@@ -107,7 +111,7 @@ usage(const char* const progname)
 }
 
 /**
- * Decodes the command line.
+ * Decodes the command line. Logs a usage message and error-exits on error.
  * @param[in] ac  Number of command-line words
  * @param[in] av  Pointers to command-line words
  */
@@ -194,6 +198,9 @@ decodeCmdLine(
     }
 }
 
+/**
+ * Cleans up on exit. Closes the product-queue.
+ */
 void
 cleanup(void)
 {
@@ -211,6 +218,10 @@ cleanup(void)
 }
 
 
+/**
+ * Handles signals.
+ * @param[in] sig  Signal number
+ */
 static void
 signal_handler(int sig)
 {
@@ -227,6 +238,9 @@ signal_handler(int sig)
 }
 
 
+/**
+ * Sets signal handling.
+ */
 static void
 set_sigactions(void)
 {
@@ -260,7 +274,6 @@ set_sigactions(void)
     (void)sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
-
 #if !USE_MMAP
 static int
 fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
@@ -285,6 +298,14 @@ fd_md5(MD5_CTX *md5ctxp, int fd, off_t st_size, signaturet signature)
         return 0;
 }
 #else
+/**
+ * Computes a data-product's signature.
+ * @param[in]  md5ctxp    MD5 context
+ * @param[in]  vp         Data for which to compute a signature
+ * @param[in]  sz         Number of bytes in the data
+ * @param[out] signature  MD5 signature
+ * @retval 0              Always
+ */
 static int
 mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 {
@@ -471,6 +492,9 @@ setCreationTime(void)
     return status;
 }
 
+/**
+ * Sets the signature of the product.
+ */
 static void
 setSignature(void)
 {
@@ -512,9 +536,9 @@ insertStdin()
 /**
  * Inserts files as data-products into the product-queue.
  * @retval 0             Success
- * @retval exit_infile
- * @retval exit_dup
- * @retval exit_system
+ * @retval exit_infile   Problem with at least one file. `log_add()` called.
+ * @retval exit_dup      At least one duplicate product. `log_error()` called for each one.
+ * @retval exit_system   System failure. `log_add()` called.
  */
 static int
 insertFiles(void)
