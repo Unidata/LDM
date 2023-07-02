@@ -299,11 +299,10 @@ mm_md5(MD5_CTX *md5ctxp, void *vp, size_t sz, signaturet signature)
 
 /**
  * Inserts a data-product into the product-queue.
- * @retval 0            Success
- * `log_add()` is called for all of the following:
- * @retval exit_dup
- * @retval exit_infile
- * @retval exit_system
+ * @retval 0            Success. Logged at the INFO level
+ * @retval exit_dup     Duplicate product. `log_add()` called.
+ * @retval exit_infile  Couldn't insert product. `log_add()` called.
+ * @retval exit_system  System error. `log_add()` called.
  */
 static int
 insertProd(void)
@@ -413,7 +412,7 @@ readStdin(void)
             char* cp = realloc(buf, stdinSize);
 
             if (cp == NULL) {
-                log_syserr("Couldn't allocate %zu bytes for standard input buffer", stdinSize);
+                log_add_syserr("Couldn't allocate %zu bytes for standard input buffer", stdinSize);
                 status = exit_system;
                 break;
             }
@@ -470,12 +469,20 @@ setCreationTime(void)
     return status;
 }
 
+static void
+setSignature(void)
+{
+    signatureFromId
+        ? mm_md5(md5ctxp, prod.info.ident, strlen(prod.info.ident), prod.info.signature)
+        : mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
+}
+
 /**
  * Reads a data-product from standard input and inserts it into the product-queue.
  * @retval 0            Success
- * @retval exit_dup     Duplicate product
  * @retval exit_system  System error. `log_add()` called.
- * @retval exit_infile  Couldn't process standard input
+ * @retval exit_infile  Couldn't process standard input. `log_add()` called.
+ * @retval exit_dup     Duplicate product. `log_add()` called.
  */
 static int
 insertStdin()
@@ -492,10 +499,7 @@ insertStdin()
             log_add("Couldn't set creation-time");
         }
         else {
-            signatureFromId
-                ? mm_md5(md5ctxp, prod.info.ident, strlen(prod.info.ident), prod.info.signature)
-                : mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
-
+            setSignature();
             status = insertProd();
         }
     }
@@ -570,20 +574,9 @@ insertFiles(void)
             continue;
         }
 
-        status =
-            signatureFromId
-                ? mm_md5(md5ctxp, prod.info.ident, strlen(prod.info.ident), prod.info.signature)
-                : mm_md5(md5ctxp, prod.data, prod.info.sz, prod.info.signature);
+        setSignature();
 
         (void)exitIfDone(1);
-
-        if (status != 0) {
-            log_syserr("mm_md5: %s", pathname);
-            (void) munmap(prod.data, prod.info.sz);
-            (void) close(fd);
-            status = exit_infile;
-            continue;
-        }
 
         /*
          * Do the deed
