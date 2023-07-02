@@ -336,6 +336,7 @@ insertProd(void)
         /*FALLTHROUGH*/
     default:
         log_add("pq_insert: %s", status > 0 ? strerror(status) : "Internal error");
+        status = exit_system;
         break;
     }
 
@@ -423,6 +424,8 @@ readStdin(void)
                 if (numRead == -1)
                     break;
 
+                numTotal += numRead;
+
                 if (numRead < numToRead || numRead == 0) {
                     // All done
                     prod.data = buf;
@@ -431,7 +434,6 @@ readStdin(void)
                     break;
                 }
 
-                numTotal += numRead;
                 if (numTotal >= UINT32_MAX) {
                     log_add("Product is too large because it has at least %zu bytes", numTotal);
                     break;
@@ -444,7 +446,7 @@ readStdin(void)
             }  // Buffer re-allocated
         } // For loop
 
-        if (!status)
+        if (status)
             free(buf); // NULL safe
     } // Valid arguments
 
@@ -517,7 +519,8 @@ insertStdin()
 static int
 insertFiles(void)
 {
-    int       status = exit_success;
+    int       status;
+    int       returnCode = exit_success;
     const int multipleFiles = numFiles > 1;
     char      identifier[KEYSIZE];
 
@@ -528,14 +531,14 @@ insertFiles(void)
         int fd = open(pathname, O_RDONLY, 0);
         if(fd == -1) {
             log_syserr("open: %s", pathname);
-            status = exit_infile;
+            returnCode = exit_infile;
             continue;
         }
 
         if( fstat(fd, &statb) == -1) {
             log_syserr("fstat: %s", pathname);
             (void) close(fd);
-            status = exit_infile;
+            returnCode = exit_infile;
             continue;
         }
 
@@ -557,12 +560,11 @@ insertFiles(void)
         prod.data = NULL;
 
         /* These members, and seqno, vary over the loop. */
-        status = setCreationTime();
-        if(status) {
+        if (setCreationTime()) {
             log_add("Couldn't set creation-time for file \"%s\", pathname");
-            log_flush_error();
-            status = exit_infile;
-            continue;
+            (void) close(fd);
+            returnCode = exit_system;
+            break;
         }
 
 #if USE_MMAP
@@ -570,7 +572,7 @@ insertFiles(void)
         if(prod.data == MAP_FAILED) {
             log_syserr("mmap: %s", pathname);
             (void) close(fd);
-            status = exit_infile;
+            returnCode = exit_infile;
             continue;
         }
 
@@ -582,16 +584,17 @@ insertFiles(void)
          * Do the deed
          */
         status = insertProd();
-        if (status == exit_system) {
+        if (status) {
+            returnCode = status;
             (void)munmap(prod.data, prod.info.sz);
             (void)close(fd);
-            break;
-        }
-        else if (status) {
-            log_flush_error();
-            (void)munmap(prod.data, prod.info.sz);
-            (void)close(fd);
-            continue;
+            if (status == exit_system) {
+                break;
+            }
+            else {
+                log_flush_error();
+                continue;
+            }
         }
 
         (void) munmap(prod.data, prod.info.sz);
@@ -609,7 +612,7 @@ insertFiles(void)
                 log_add_syserr("xx_md5: %s", pathname);
                 log_flush_error();
                 (void) close(fd);
-                status = exit_infile;
+                returnCode = exit_infile;
                 continue;
         }
 
@@ -617,7 +620,7 @@ insertFiles(void)
         {
                 log_syserr("rewind: %s", pathname);
                 (void) close(fd);
-                status = exit_infile;
+                returnCode = exit_infile;
                 continue;
         }
 
@@ -627,7 +630,7 @@ insertFiles(void)
         if(status != ENOERR) {
             log_add_syserr("pqe_new: %s", pathname);
             log_flush_error();
-            status = exit_infile;
+            returnCode = exit_infile;
         }
         else {
             ssize_t     nread = read(fd, prod.data, prod.info.sz);
@@ -636,7 +639,7 @@ insertFiles(void)
 
             if (nread != prod.info.sz) {
                 log_syserr("read %s %u", pathname, prod.info.sz);
-                status = EIO;
+                returnCode = EIO;
             }
             else {
                 status = pqe_insert(pq, pqeIndex);
@@ -652,7 +655,7 @@ insertFiles(void)
                 case PQUEUE_DUP:
                     log_error_q("Product already in queue: %s",
                         s_prod_info(NULL, 0, &prod.info, 1));
-                    status = exit_dup;
+                    returnCode = exit_dup;
                     break;
                 case ENOMEM:
                     log_error_q("queue full?");
@@ -668,6 +671,7 @@ insertFiles(void)
                 default:
                     log_error_q("pq_insert: %s", status > 0
                         ? strerror(status) : "Internal error");
+                    returnCode = exit_system;
                 }
             }                   /* data read into `pqeIndex` region */
 
@@ -681,7 +685,7 @@ insertFiles(void)
         (void) close(fd);
     }                               /* input-file loop */
 
-    return status;
+    return returnCode;
 }
 
 /**
