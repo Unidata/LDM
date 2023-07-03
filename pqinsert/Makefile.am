@@ -30,7 +30,7 @@ TAGS_FILES	= \
     ../log/*.c ../log/*.h \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
-nodist_man1_MANS	= pqinsert.1
+dist_man1_MANS	= pqinsert.1
 
 check-local:		pq_test_insert
 # The "-c" (clobber) option is used to prevent `pq_test_insert` from exiting due
