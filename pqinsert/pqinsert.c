@@ -65,7 +65,6 @@ static feedtypet        feedtype = EXP;
 #if !USE_MMAP
     static struct pqe_index pqeIndex;
 #endif
-static int              seq_start = 0;
 static int              useProductID = FALSE;
 static char*            productID = NULL;
 static int              signatureFromId = FALSE;
@@ -128,6 +127,7 @@ usage(  const char* const progname,
  * @param[in] ac  Number of command-line words
  * @param[in] av  Pointers to command-line words
  */
+static int              seq_start = 0;
 static void
 decodeCmdLine(
         int          ac,
@@ -527,7 +527,7 @@ setSignature(void)
  * @retval exit_dup     Duplicate product. `log_add()` called.
  */
 static int
-insertStdin()
+insertStdin(void)
 {
     int status = readStdin();
 
