@@ -77,16 +77,20 @@ static size_t           stdinSize = DEF_STDIN_SIZE;
 static product          prod;
 
 /**
- * Logs a usage message, then error-exits.
+ * Logs a usage message, then exits.
  * @param[in] progname  Name of the program
+ * @param[in] exitCode  Process exit code
  */
 static void
-usage(const char* const progname)
+usage(  const char* const progname,
+        const int         exitCode)
 {
     log_add(
 "Usage:\n"
+"    %s -h\n"
 "    %s [options] [<file> ...]\n"
 "Where:\n"
+"    -h              Log this help message and then terminate successfully.\n"
 "    -i              Compute product signature (MD5 checksum) from product ID.\n"
 "                    Default is to compute it from the product.\n"
 "    -f <feedtype>   Set the feed type as <feedtype>. Default: \"EXP\"\n"
@@ -95,19 +99,28 @@ usage(const char* const progname)
 "    -n <size>       Initial size guess, in bytes, for the product read from\n"
 "                    standard input. Ignored if file operands are specified.\n"
 "                    Default is %d.\n"
-"    -p <productID>  Use <productID> in product-identifier. Default for standard\n"
-"                    input is \"%s\". Default for files is the filename. With\n"
-"                    multiple files, product-ID becomes <productID>.<seqno>.\n"
+"    -p <productID>  Use <productID> in product-identifier. For reading from\n"
+"                    standard input or a single file, this will be the product-\n"
+"                    identifier. For multiple files, the product-identifiers will\n"
+"                    be <productID>.<seqno>. The defaults for standard input and\n"
+"                    files are \"%s\" and the file pathnames, respectively.\n"
 "    -q <queue>      Use <queue> as product-queue. Default:\n"
 "                    \"%s\"\n"
 "    -s <seqno>      Set initial product sequence number to <seqno>. Default: 0\n"
 "    -v              Verbose, log at the INFO level. Default is NOTE.\n"
 "    <file>          Optional files to insert as products. Default is to read a\n"
 "                    single product from standard input.",
-            progname, log_get_default_destination(), DEF_STDIN_SIZE, DEF_STDIN_IDENT,
+            progname, progname, log_get_default_destination(), DEF_STDIN_SIZE, DEF_STDIN_IDENT,
             getDefaultQueuePath());
-    log_flush_error();
-    exit(1);
+    if (exitCode) {
+        log_flush_error();
+    }
+    else {
+        if (!log_is_enabled_info)
+            log_set_level(LOG_LEVEL_INFO);
+        log_flush_info();
+    }
+    exit(exitCode);
 }
 
 /**
@@ -128,8 +141,11 @@ decodeCmdLine(
 
     opterr = 0; /* Suppress getopt(3) error messages */
 
-    while ((ch = getopt(ac, av, ":ivxl:q:f:n:s:p:")) != EOF)
+    while ((ch = getopt(ac, av, ":hivxl:q:f:n:s:p:")) != EOF)
         switch (ch) {
+            case 'h':
+                usage(progname, 0);
+                break;
             case 'i':
                 signatureFromId = 1;
                 break;
@@ -143,18 +159,18 @@ decodeCmdLine(
             case 'l':
                 if (log_set_destination(optarg)) {
                     log_syserr("Couldn't set logging destination to \"%s\"", optarg);
-                    usage(progname);
+                    usage(progname, 1);
                 }
                 break;
             case 'n': {
                 if (sscanf(optarg, "%zu", &stdinSize) != 1) {
                     log_error("Couldn't decode size-guess for standard-input product: \"%s\"",
                             optarg);
-                    usage(progname);
+                    usage(progname, 1);
                 }
                 if (stdinSize == 0) {
                     log_error("Size-guess for standard-input product is zero");
-                    usage(progname);
+                    usage(progname, 1);
                 }
                 break;
             }
@@ -168,7 +184,7 @@ decodeCmdLine(
                 feedtype = atofeedtypet(optarg);
                 if(feedtype == NONE) {
                     fprintf(stderr, "Unknown feedtype \"%s\"\n", optarg);
-                    usage(progname);
+                    usage(progname, 1);
                 }
                 break;
             case 'p':
@@ -177,12 +193,12 @@ decodeCmdLine(
                 break;
             case ':': {
                 log_add("Option \"-%c\" requires an operand", optopt);
-                usage(progname);
+                usage(progname, 1);
             }
             /* no break */
             default:
                 log_add("Unknown option: \"%c\"", optopt);
-                usage(progname);
+                usage(progname, 1);
                 /* no break */
         } // Option `switch`
 
