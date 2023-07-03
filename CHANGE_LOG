@@ -1,5 +1,8 @@
 6.14.6.2
-    pqinsert(1): Added ability to read a single data-product from standard input
+    pqinsert(1):
+        * Added ability to read a single data-product from standard input
+        * Added "-h" (help) option
+        * Enhanced man(1) page
 
 6.14.6.1        2023-06-21T17:04:22-0600
     Build:

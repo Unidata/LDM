@@ -6,8 +6,8 @@
 #
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST 	= pqinsert.1.in pq_test_insert.txt
-CLEANFILES      = pqinsert.1 *.pq *.log
+EXTRA_DIST 	= pq_test_insert.txt
+CLEANFILES      = *.pq *.log
 PQ_SUBDIR	= @PQ_SUBDIR@
 
 bin_PROGRAMS	= pqinsert pq_test_insert
@@ -31,10 +31,6 @@ TAGS_FILES	= \
     ../misc/*.c ../misc/*.h \
     ../rpc/*.c ../rpc/*.h
 nodist_man1_MANS	= pqinsert.1
-
-pqinsert.1:	$(srcdir)/pqinsert.1.in
-	../regutil/substPaths <$? >$@.tmp
-	mv $@.tmp $@
 
 check-local:		pq_test_insert
 # The "-c" (clobber) option is used to prevent `pq_test_insert` from exiting due
