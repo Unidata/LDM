@@ -755,6 +755,7 @@ AC_CONFIG_FILES([
     scripts/Makefile
     scripts/netcheck
     scripts/plotMetrics
+    scripts/showSettings
     scripts/syscheck
     test/Makefile
     uldbutil/Makefile

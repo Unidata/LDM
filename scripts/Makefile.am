@@ -40,10 +40,6 @@ ldmadmin.1:	$(srcdir)/ldmadmin.1.in
 	../regutil/substPaths <$? >$@.tmp
 	mv $@.tmp $@
 
-showSettings:	showSettings.in
-	../regutil/substPaths <$? >$@.tmp
-	mv $@.tmp $@
-	
 install-data-local:	\
     $(DESTDIR)$(sysconfdir) $(DESTDIR)$(sysconfdir)/netcheck.conf
 $(DESTDIR)$(sysconfdir):
