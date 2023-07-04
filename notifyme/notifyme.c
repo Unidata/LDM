@@ -1,7 +1,7 @@
 /**
  * Requests notification of available data-products from an LDM.
  *
- * Copyright 2018, University Corporation for Atmospheric Research
+ * Copyright 2023, University Corporation for Atmospheric Research
  * All rights reserved. See file COPYRIGHT in the top-level source-directory for
  * copying and redistribution conditions.
  */
@@ -16,6 +16,7 @@
 #include "ldm5.h"
 #include "globals.h"
 #include "remote.h"
+#include "ldm_clnt_misc.h"
 #include "ldmprint.h"
 #include "atofeedt.h"
 #include "log.h"
@@ -286,17 +287,36 @@ notifymeprog_6(
     }
 }
 
-#if 0
-static
-ErrorObj*
-ldm_clnttcp_create_vers(
-    const char* const            upName,
-    const unsigned               port,
-    unsigned const               version,
-    CLIENT** const               client,
-    int* const                   socket,
-    struct sockaddr_in*          upAddr)
-#endif
+static bool
+notifyme6(void)
+{
+    bool success = false; // Default failure
+
+    // Create a client-side handle
+    int                  sock = RPC_ANYSOCK;
+    struct sockaddr_in*  upAddr;
+    CLIENT*              client;
+    ErrObj*              err = ldm_clnttcp_create_vers(remote, LDM_PORT, SIX, &client, &sock,
+            upAddr);
+
+    if (err) {
+        err_log_and_free(err, ERR_ERROR);
+    }
+    else {
+        // Send the NOTIFYME request
+        fornme_reply_t* notifymeReply = notifyme_6(&clss, client);
+
+        // Create a server-side transport
+
+        // Register the dispatch routine
+
+        // Execute the server
+
+        (void)close(sock);
+    } // Socket created
+
+    return success;
+}
 
 int main(int ac, char *av[])
 {
