@@ -1,6 +1,8 @@
 6.14.6.2
     showSettings(1): Corrected bug in setting of default LDMHOME value
 
+    notifyme(1): Replaced use of synchronous LDM-5 protocols with asynchronous LDM-6 protocols 
+
 6.14.6.1        2023-06-21T17:04:22-0600
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
