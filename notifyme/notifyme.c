@@ -22,6 +22,7 @@
 #include "log.h"
 #include "inetutil.h"
 #include "ldm5_clnt.h"
+#include "prod_class.h"
 #include "RegularExpressions.h"
 
 #include <stdbool.h>
@@ -235,7 +236,7 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 }
 
 /**
- * The LDM-6 RPC dispatch routine for this program. Registered as a callback by svc_register()
+ * The LDM-6 RPC service routine for this program. Registered as a callback by svc_register()
  * below. Note that only NULLPROC and NOTIFICATION functions are handled by this program.
  * @param[in] rqstp   RPC request
  * @param[in] transp  RPC transport
@@ -287,35 +288,167 @@ notifymeprog_6(
     }
 }
 
+/**
+ * Makes a NOTIFYME call to the remote LDM.
+ * @param[in] client  Client-side handle
+ * @retval 0          Success
+ * @retval 1          Non-fatal error. `log_add()` called.
+ * @retval 2          Fatal error. `log_add()` called.
+ */
+static bool
+sendNotifyMe(CLIENT* client)
+{
+    int             status = 2;
+    prod_class_t*   prodClass = dup_prod_class(&clss);
+
+    if (prodClass == NULL) {
+        log_add("Couldn't duplicate product-class");
+    }
+    else {
+        fornme_reply_t* reply;
+
+        for (;;) {
+            reply = notifyme_6(prodClass, client);
+            if (reply->code == 0) {
+                status = 0;
+                break;
+            }
+            if (reply->code == BADPATTERN) {
+                log_add("Invalid pattern: \"%s\"", prodClass->psa.psa_val->pattern);
+                break;
+            }
+            if (reply->code == RECLASS) {
+                if (reply->fornme_reply_t_u.prod_class->psa.psa_len == 0 ||
+                        reply->fornme_reply_t_u.prod_class->psa.psa_val == NULL) {
+                    int  nbytes = pc_format(prodClass, NULL, 0);
+                    char buf[nbytes+1];
+                    pc_format(prodClass, buf, sizeof(buf));
+                    log_add("NOTIFYME request for \"%s\" denied by upstream LDM", buf);
+                    status = 1;
+                    break;
+                }
+                else {
+                    int  nbytes = pc_format(prodClass, NULL, 0);
+                    char original[nbytes+1];
+                    pc_format(prodClass, original, sizeof(original));
+
+                    nbytes = pc_format(reply->fornme_reply_t_u.prod_class, NULL, 0);
+                    char reclass[nbytes+1];
+                    pc_format(reply->fornme_reply_t_u.prod_class, reclass, sizeof(reclass));
+
+                    log_add("NOTIFYME reclassified: \"%s\" -> \"%s\"", original, reclass);
+                    free_prod_class(prodClass);
+                    prodClass = dup_prod_class(reply->fornme_reply_t_u.prod_class);
+                    if (prodClass == NULL) {
+                        log_add("Couldn't duplicate reclassified product-class");
+                        status = 2;
+                        break;
+                    }
+                }
+                continue;
+            }
+            log_add("Unsupported notifyme_t() status code: %d", reply->code);
+            status = 2;
+            break;
+        }
+
+        free_prod_class(prodClass);
+    } // `prodClass` allocated
+
+    return status;
+}
+
+/**
+ * Executes the LDM-6 service. Doesn't return until an error occurs. On return, the transport is
+ * destroyed.
+ * @param[in] xprt  Server-side transport
+ * @retval true     Non-fatal error. `log_add()` called.
+ * @retval false    Fatal error. `log_add()` called.
+ */
+static bool
+executeService(SVCXPRT* xprt)
+{
+    bool nonFatalError = true;
+
+    /*
+     * The only possible return values are:
+     *     0          if as_shouldSwitch()
+     *     ETIMEDOUT  if timeout exceeded.
+     *     ECONNRESET if connection closed.
+     *     EBADF      if socket not open.
+     *     EINVAL     if invalid timeout.
+     */
+    int status = one_svc_run(xprt->xp_sock, 30); // Calls exit(0) on SIGTERM
+
+    if (status == ECONNRESET) {
+        // one_svc_run() called svc_getreqset(), which called svc_destroy()
+        log_add("Connection reset by upstream");
+    }
+    else {
+        if (status == ETIMEDOUT) {
+            log_add("Connection to upstream LDM timed-out");
+        }
+        else if (status) {
+            log_add("Couldn't execute downstream LDM-6 service");
+            nonFatalError = false;
+        }
+        svc_destroy(xprt);
+    } // Connection wasn't reset and `xprt` wasn't destroyed
+
+    return nonFatalError;
+}
+
+/**
+ * Executes a NOTIFYME call using LDM-6 protocols. Doesn't return until an error occurs.
+ * @retval true   Non-fatal error. `log_add()` called.
+ * @retval false  Fatal error. `log_add()` called.
+ */
 static bool
 notifyme6(void)
 {
-    bool success = false; // Default failure
+    bool nonFatalError = false; // Default fatal error
 
     // Create a client-side handle
-    int                  sock = RPC_ANYSOCK;
-    struct sockaddr_in*  upAddr;
-    CLIENT*              client;
-    ErrObj*              err = ldm_clnttcp_create_vers(remote, LDM_PORT, SIX, &client, &sock,
-            upAddr);
+    int                sd = RPC_ANYSOCK;
+    struct sockaddr_in upAddr;
+    CLIENT*            client;
+    ErrorObj*          err = ldm_clnttcp_create_vers(remote, LDM_PORT, SIX, &client, &sd, &upAddr);
 
     if (err) {
         err_log_and_free(err, ERR_ERROR);
     }
     else {
         // Send the NOTIFYME request
-        fornme_reply_t* notifymeReply = notifyme_6(&clss, client);
+        int status = sendNotifyMe(client);
+        if (status) {
+            log_add("NOTIFYME failure");
+            if (status == 1)
+                nonFatalError = true;
+        }
+        else {
+            // Create a server-side transport
+            SVCXPRT* xprt = svcfd_create(sd, 0, MAX_RPC_BUF_NEEDED);
 
-        // Create a server-side transport
+            if (xprt == NULL) {
+                log_add_syserr("Couldn't create server-side transport");
+            }
+            else {
+                // Register the service routine
+                if (!svc_register(xprt, LDMPROG, SIX, notifymeprog_6, 0)) {
+                    log_add("Couldn't register service routine");
+                }
+                else {
+                    // Execute the service
+                    nonFatalError = executeService(xprt);
+                }
+            } // `xprt` allocated
+        } // NOTIFYME call was successful
 
-        // Register the dispatch routine
+        auth_destroy(client->cl_auth);
+        clnt_destroy(client);
+    } // `client` created
 
-        // Execute the server
-
-        (void)close(sock);
-    } // Socket created
-
-    return success;
+    return nonFatalError;
 }
 
 int main(int ac, char *av[])
@@ -469,30 +602,13 @@ int main(int ac, char *av[])
         /*
          * Try forever.
          */
-        while (exitIfDone(0))
-        {
-                clssp = &clss;
-                status = forn5(NOTIFYME, remote, &clssp,
-                                timeo, TotalTimeo, notifymeprog_5);
-
-                (void)exitIfDone(0);
-
-                switch(status) {
-                        /* problems with remote, retry */       
-                case ECONNABORTED:
-                case ECONNRESET:
-                case ETIMEDOUT:
-                case ECONNREFUSED:
-                        sleep(interval);
-                        break;
-                case 0:
-                        /* assert(done); */
-                        break;
-                default:
-                        /* some weird error */
-                        done = 1;
-                        exit(1);
-                }
+        for (;;) {
+            if (!notifyme6()) {
+                log_flush_fatal();
+                exit(1);
+            }
+            log_flush_error();
+            sleep(30);
         }
 
         exit(0);
