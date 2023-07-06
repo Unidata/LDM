@@ -1,7 +1,9 @@
-6.14.6.2
+6.15.0.1        2023-07-06T11:06:59-0600
     showSettings(1): Corrected bug in setting of default LDMHOME value
 
-    notifyme(1): Replaced use of synchronous LDM-5 protocols with asynchronous LDM-6 protocols 
+    notifyme(1): Replaced use of synchronous LDM-5 protocols with asynchronous LDM-6 protocols in
+        order to greatly increase performance when used for a long time. As a
+        consequence, this utility will no longer work with an upstream LDM-5 server.
 
 6.14.6.1        2023-06-21T17:04:22-0600
     Build:
