@@ -1,3 +1,7 @@
+6.15.0.2
+    Documentation:
+        * Feedtype webpage: Changed "FT31" to "FT30" for the "ANY" feedtype
+
 6.15.0.1        2023-07-06T11:06:59-0600
     showSettings(1): Corrected bug in setting of default LDMHOME value
 
