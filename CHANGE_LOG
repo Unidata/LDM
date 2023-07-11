@@ -1,4 +1,4 @@
-6.15.0.3
+6.15.0.3        2023-07-11T17:54:13-0600
     notifyme(1): Eliminated SIGSEGV if a severe upstream error causes notifyme_6() to returns NULL.
       It now prints a useful error message.
 
