@@ -1,5 +1,8 @@
 6.15.0.3
-    notifyme(1): Eliminated SIGSEGV if notifyme_6() returns NULL. Now prints useful error message.
+    notifyme(1): Eliminated SIGSEGV if a severe upstream error causes notifyme_6() to returns NULL.
+      It now prints a useful error message.
+
+    blender(1): Changed Key::operator<() to handle the data server being switched
 
 6.15.0.2        2023-07-07T09:17:07-0600
     Documentation:

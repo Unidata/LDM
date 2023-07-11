@@ -32,35 +32,53 @@ UplinkId getUplinkId(const unsigned sbnSrc);
 class CircFrameBuf
 {
     /**
-     * NOAAPort's product-definition header's product sequence number and data-block number
+     * Key to sorting NOAAPort frames in temporal order.
      */
-    struct Key {
+    class Key {
+        inline static int compare16(
+                const unsigned lhs,
+                const unsigned rhs) {
+            return lhs - rhs > UINT16_MAX
+                    ? -1
+                    : lhs == rhs
+                      ? 0
+                      : 1;
+        }
+
+        inline static int compare32(
+                const unsigned lhs,
+                const unsigned rhs) {
+            return lhs - rhs > UINT32_MAX
+                    ? -1
+                    : lhs == rhs
+                      ? 0
+                      : 1;
+        }
+
+    public:
         using Clock = std::chrono::steady_clock;
         using Dur   = std::chrono::milliseconds;
 
-        UplinkId          uplinkId;
+        unsigned          uplinkId;
         unsigned          fhSource;
-        unsigned          fhSeqno;
-        unsigned          fhRunno;
+        unsigned          fhSeqNum;
+        unsigned          fhRunNum;
         unsigned          pdhSeqNum;
         unsigned          pdhBlkNum;
         Clock::time_point revealTime; ///< When the associated frame *must* be processed
 
+        /**
+         * Constructs.
+         * @param[in] fh       Frame-level header
+         * @param[in] pdh      Product definition header
+         * @param[in] timeout  Reveal-time timeout
+         * @threadsafety       Unsafe but compatible
+         */
         Key(const NbsFH& fh, const NbsPDH& pdh, Dur& timeout)
             : uplinkId(getUplinkId(fh.source))
             , fhSource(fh.source)
-            , fhSeqno(fh.seqno)
-            , fhRunno(fh.runno)
-            , pdhSeqNum(pdh.prodSeqNum)
-            , pdhBlkNum(pdh.blockNum)
-            , revealTime(Clock::now() + timeout)
-        {}
-
-        Key(const NbsFH& fh, const NbsPDH& pdh, Dur&& timeout)
-            : uplinkId(getUplinkId(fh.source))
-            , fhSource(fh.source)
-            , fhSeqno(fh.seqno)
-            , fhRunno(fh.runno)
+            , fhSeqNum(fh.seqno)
+            , fhRunNum(fh.runno)
             , pdhSeqNum(pdh.prodSeqNum)
             , pdhBlkNum(pdh.blockNum)
             , revealTime(Clock::now() + timeout)
@@ -69,8 +87,8 @@ class CircFrameBuf
         Key()
             : uplinkId(0)
             , fhSource(0)
-            , fhSeqno(0)
-            , fhRunno(0)
+            , fhSeqNum(0)
+            , fhRunNum(0)
             , pdhSeqNum(0)
             , pdhBlkNum(0)
             , revealTime(Clock::now())
@@ -79,19 +97,50 @@ class CircFrameBuf
         std::string to_string() const {
             return "{upId=" + std::to_string(uplinkId) +
                     ", fhSrc=" + std::to_string(fhSource) +
-                    ", fhRun=" + std::to_string(fhRunno) +
-                    ", fhSeq=" + std::to_string(fhSeqno) +
+                    ", fhRun=" + std::to_string(fhRunNum) +
+                    ", fhSeq=" + std::to_string(fhSeqNum) +
                     ", pdhSeq=" + std::to_string(pdhSeqNum) +
                     ", pdhBlk=" + std::to_string(pdhBlkNum) + "}";
         }
 
+        /**
+         * Indicates whether this instance is considered less than (i.e., was uplinked before)
+         * another instance.
+         * Things that can happen:
+         *   - When the uplink is switched between primary and backup network control facilities
+         *     (NCF):
+         *     - The frame-level sequence number changes
+         *     - The frame-level source field changes
+         *     - The product sequence number is reset
+         *   - When the master ground station (MGS) is switched at an NCF:
+         *     - The frame-level sequence number changes
+         *     - The frame-level source field doesn't change
+         *     - The product sequence number increments normally
+         *   - When the data uplink servers are switched at an NCF:
+         *     - The frame-level sequence number increments normally
+         *     - The frame-level source field doesn't change
+         *     - The product sequence number is reset
+         * Consequently, it's as if:
+         *   - The NCF determines the frame-level source field
+         *   - The uplink/data server determines the product sequence number
+         *   - The MGS determines the frame-level sequence number
+         * According to Sathya Sankarasubbu, the NOAAPort uplink will be offline
+         *   - About 20 minutes when the NCF is switched;
+         *   - Less than 10 seconds when the data server is switched; and
+         *   - An amount yet to be learned when the MGS is switched.
+         *
+         * @param[in] rhs  The right-hand-side instance
+         * @retval true    This instance is considered less than the other
+         * @retval false   This instance is not considered less than the other
+         */
         bool operator<(const Key& rhs) const {
+#if 0
             if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
                 return true;
             if (uplinkId == rhs.uplinkId) {
-                if (fhSeqno - rhs.fhSeqno > SEQ_NUM_MAX/2)
+                if (fhSeqNum - rhs.fhSeqNum > SEQ_NUM_MAX/2)
                     return true;
-                if (fhSeqno == rhs.fhSeqno) {
+                if (fhSeqNum == rhs.fhSeqNum) {
                     if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
                         return true;
                     if (pdhSeqNum == rhs.pdhSeqNum) {
@@ -100,6 +149,29 @@ class CircFrameBuf
                     }
                 }
             }
+#else
+            const int srcCmp = compare32(this->uplinkId, rhs.uplinkId);
+
+            // NCF is changed (=> uplink ID is incremented)
+            if (srcCmp < 0)
+                return true;
+
+            const int prodSeqCmp = compare32(this->pdhSeqNum, rhs.pdhSeqNum);
+            const int blkNumCmp = compare16(this->pdhBlkNum, rhs.pdhBlkNum);
+
+            /*
+             * NCF & data server are unchanged. MGS is changed (=> product sequence number
+             * and data block number increment normally).
+             */
+            if (srcCmp == 0 && (prodSeqCmp < 0 || (prodSeqCmp == 0 && blkNumCmp < 0)))
+                return true;
+
+            const int fhSeqCmp = compare32(this->fhSeqNum, rhs.fhSeqNum);
+
+            // NCF and MGS are unchanged. Data server is changed (=> product sequence number reset).
+            if (srcCmp == 0 && fhSeqCmp < 0 && prodSeqCmp > 0)
+                return true;
+#endif
             return false;
         }
     };
