@@ -39,18 +39,54 @@ clnt_errmsg(CLIENT* clnt)
 
     switch (e.re_status) {
         case RPC_SUCCESS:
+            (void)sprintf(str, "; success");
+            str += strlen(str);
+            break;
         case RPC_CANTENCODEARGS:
+            (void)sprintf(str, "; can't encode arguments");
+            str += strlen(str);
+            break;
         case RPC_CANTDECODERES:
+            (void)sprintf(str, "; can't decode response");
+            str += strlen(str);
+            break;
         case RPC_TIMEDOUT:     
+            (void)sprintf(str, "; timeout");
+            str += strlen(str);
+            break;
         case RPC_PROGUNAVAIL:
+            (void)sprintf(str, "; program unavailable");
+            str += strlen(str);
+            break;
         case RPC_PROCUNAVAIL:
+            (void)sprintf(str, "; procedure unavailable");
+            str += strlen(str);
+            break;
         case RPC_CANTDECODEARGS:
+            (void)sprintf(str, "; can't decode arguments");
+            str += strlen(str);
+            break;
         case RPC_SYSTEMERROR:
+            (void)sprintf(str, "; %s", strerror(e.re_errno));
+            str += strlen(str);
+            break;
         case RPC_UNKNOWNHOST:
+            (void)sprintf(str, "; unknown host");
+            str += strlen(str);
+            break;
         case RPC_UNKNOWNPROTO:
+            (void)sprintf(str, "; unknown protocol");
+            str += strlen(str);
+            break;
         case RPC_PMAPFAILURE:
         case RPC_PROGNOTREGISTERED:
+            (void)sprintf(str, "; program not registered");
+            str += strlen(str);
+            break;
         case RPC_FAILED:
+            (void)sprintf(str, "; RPC failed");
+            str += strlen(str);
+            break;
                 break;
 
         case RPC_CANTSEND:
@@ -86,7 +122,7 @@ clnt_errmsg(CLIENT* clnt)
             break;
     }
 
-    (void) sprintf(str, "\n");
+    //(void) sprintf(str, "\n");
 
     return buf;
 }

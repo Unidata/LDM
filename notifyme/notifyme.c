@@ -24,6 +24,7 @@
 #include "ldm5_clnt.h"
 #include "prod_class.h"
 #include "RegularExpressions.h"
+#include "rpcutil.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -309,6 +310,12 @@ sendNotifyMe(CLIENT* client)
 
         for (;;) {
             reply = notifyme_6(prodClass, client);
+            if (reply == NULL) {
+                struct rpc_err rpcErr;
+                log_add("notifyme_6() failure. %s", clnt_errmsg(client));
+                status = 2;
+                break;
+            }
             if (reply->code == 0) {
                 status = 0;
                 break;
@@ -418,6 +425,8 @@ notifyme6(void)
         err_log_and_free(err, ERR_ERROR);
     }
     else {
+        log_notice("OK");
+
         // Send the NOTIFYME request
         int status = sendNotifyMe(client);
         if (status) {
