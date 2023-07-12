@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <climits>
 #include <cstring>
 #include <cstdint>
 #include <map>
@@ -35,36 +36,77 @@ class CircFrameBuf
      * Key to sorting NOAAPort frames in temporal order.
      */
     class Key {
-        inline static int compare16(
-                const unsigned lhs,
-                const unsigned rhs) {
-            return lhs - rhs > UINT16_MAX
-                    ? -1
-                    : lhs == rhs
-                      ? 0
-                      : 1;
-        }
+        /// Class for comparing two NOAAPort frames
+        class Comparison {
+            /**
+             * Compares two values. Returns a value that is less than, equal to, or greater than zero
+             * depending on whether the first value is considered less than, equal to, or greater than
+             * the second, respectively.
+             * @param[in] lhs  First value
+             * @param[in] rhs  Second value
+             * @retval    <0   First value is less than the second
+             * @retval     0   First value is equal to the second
+             * @retval    >0   First value is greater than the second
+             */
+            inline static int compare(
+                    const unsigned int lhs,
+                    const unsigned int rhs) {
+                return lhs - rhs > UINT_MAX/2
+                        ? -1
+                        : lhs == rhs
+                          ? 0
+                          : 1;
+            }
 
-        inline static int compare32(
-                const unsigned lhs,
-                const unsigned rhs) {
-            return lhs - rhs > UINT32_MAX
-                    ? -1
-                    : lhs == rhs
-                      ? 0
-                      : 1;
-        }
+        public:
+            const int srcCmp;     ///< Comparison of uplink IDs
+            const int prodSeqCmp; ///< Comparison of product sequence numbers
+            const int blkNumCmp;  ///< Comparison of data block numbers
+            const int fhSeqCmp;   ///< comparison of frame-level sequence numbers
+
+            Comparison(
+                    const Key& lhs,
+                    const Key& rhs)
+                : srcCmp(    compare(lhs.uplinkId,  rhs.uplinkId))
+                , prodSeqCmp(compare(lhs.pdhSeqNum, rhs.pdhSeqNum))
+                , blkNumCmp( compare(lhs.pdhBlkNum, rhs.pdhBlkNum))
+                , fhSeqCmp(  compare(lhs.fhSeqNum,  rhs.fhSeqNum))
+            {}
+
+            /**
+             * Indicates if a frame was uplinked earlier with not change to the uplink path. This
+             * also handles a change to the master ground station (i.e., arbitrary change to the
+             * frame-level sequence number).
+             * @param[in] srcCmp      Uplink ID comparison
+             * @param[in] prodSeqCmp  Product sequence number comparison
+             * @param[in] blkNumCmp   Data block number comparison
+             * @param[in] fhSeqCmp    Frame-level sequence number comparison
+             * @return    true        The frame was uplinked earlier
+             * @return    false       The frame was not uplinked earlier
+             */
+            inline bool earlierAndNoChange() const {
+                return srcCmp == 0 && (prodSeqCmp < 0 || (prodSeqCmp == 0 && blkNumCmp < 0));
+            }
+
+            inline bool earlierButNcfChange() const {
+                return srcCmp < 0;
+            }
+
+            inline bool earlierButSrvrChange() const {
+                return srcCmp == 0 && fhSeqCmp > 0 && prodSeqCmp < 0;
+            }
+        };
 
     public:
         using Clock = std::chrono::steady_clock;
         using Dur   = std::chrono::milliseconds;
 
-        unsigned          uplinkId;
-        unsigned          fhSource;
-        unsigned          fhSeqNum;
-        unsigned          fhRunNum;
-        unsigned          pdhSeqNum;
-        unsigned          pdhBlkNum;
+        unsigned int      uplinkId;
+        unsigned int      fhSource;
+        unsigned int      fhSeqNum;
+        unsigned int      fhRunNum;
+        unsigned int      pdhSeqNum;
+        unsigned int      pdhBlkNum;
         Clock::time_point revealTime; ///< When the associated frame *must* be processed
 
         /**
@@ -125,54 +167,19 @@ class CircFrameBuf
          *   - The uplink/data server determines the product sequence number
          *   - The MGS determines the frame-level sequence number
          * According to Sathya Sankarasubbu, the NOAAPort uplink will be offline
-         *   - About 20 minutes when the NCF is switched;
-         *   - Less than 10 seconds when the data server is switched; and
-         *   - An amount yet to be learned when the MGS is switched.
+         *   - 10 to 15 minutes when the NCF is switched;
+         *   - 10 to 30 seconds when the MGS is switched; and
+         *   - Less than 10 seconds when the data server is switched.
          *
          * @param[in] rhs  The right-hand-side instance
          * @retval true    This instance is considered less than the other
          * @retval false   This instance is not considered less than the other
          */
         bool operator<(const Key& rhs) const {
-#if 0
-            if (uplinkId - rhs.uplinkId > UPLINK_ID_MAX/2)
-                return true;
-            if (uplinkId == rhs.uplinkId) {
-                if (fhSeqNum - rhs.fhSeqNum > SEQ_NUM_MAX/2)
-                    return true;
-                if (fhSeqNum == rhs.fhSeqNum) {
-                    if (pdhSeqNum - rhs.pdhSeqNum > SEQ_NUM_MAX/2)
-                        return true;
-                    if (pdhSeqNum == rhs.pdhSeqNum) {
-                        if (pdhBlkNum - rhs.pdhBlkNum > BLK_NUM_MAX/2)
-                            return true;
-                    }
-                }
-            }
-#else
-            const int srcCmp = compare32(this->uplinkId, rhs.uplinkId);
-
-            // NCF is changed (=> uplink ID is incremented)
-            if (srcCmp < 0)
-                return true;
-
-            const int prodSeqCmp = compare32(this->pdhSeqNum, rhs.pdhSeqNum);
-            const int blkNumCmp = compare16(this->pdhBlkNum, rhs.pdhBlkNum);
-
-            /*
-             * NCF & data server are unchanged. MGS is changed (=> product sequence number
-             * and data block number increment normally).
-             */
-            if (srcCmp == 0 && (prodSeqCmp < 0 || (prodSeqCmp == 0 && blkNumCmp < 0)))
-                return true;
-
-            const int fhSeqCmp = compare32(this->fhSeqNum, rhs.fhSeqNum);
-
-            // NCF and MGS are unchanged. Data server is changed (=> product sequence number reset).
-            if (srcCmp == 0 && fhSeqCmp < 0 && prodSeqCmp > 0)
-                return true;
-#endif
-            return false;
+            const Comparison cmp(*this, rhs);
+            return cmp.earlierAndNoChange() ||
+                   cmp.earlierButNcfChange() ||
+                   cmp.earlierButSrvrChange();
         }
     };
 
@@ -246,9 +253,9 @@ public:
             const FrameSize_t numBytes);
 
     /**
-     * Returns the oldest frame. Returns immediately if the next frame is the
-     * immediate successor to the previously-returned frame; otherwise, blocks
-     * until a frame is available and the timeout occurs.
+     * Returns the oldest frame. Returns immediately if the next frame is the immediate successor to
+     * the previously-returned frame; otherwise, blocks until a frame is available and the timeout
+     * occurs.
      *
      * @param[out] frame     Buffer for the frame
      * @threadsafety         Safe
