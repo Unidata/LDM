@@ -2,13 +2,13 @@
 
 #include "misc.h"
 #include "queueManager.h"
-#include "CircFrameBuf.h"
 #include "frameWriter.h"
 
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <log.h>
+#include "FrameQueue.h"
 
 pthread_t		flowDirectorThread;
 
@@ -30,7 +30,7 @@ flowDirectorRoutine()
 	for (;;)
 	{
 		Frame_t oldestFrame;
-		if (!cfb_getOldestFrame(cfbInst, &oldestFrame)) {
+		if (!fq_getOldestFrame(cfbInst, &oldestFrame)) {
 		    log_flush_fatal();
 		    exit(EXIT_FAILURE);
 		}
@@ -73,7 +73,7 @@ void
 queue_start(const double frameLatency)
 {
 	// Create and initialize the CircFrameBuf class
-	cfbInst = cfb_new(frameLatency);
+	cfbInst = fq_new(frameLatency);
 
 	// create and launch flowDirector thread (to insert frames in map)
 	flowDirector();
@@ -88,7 +88,7 @@ queue_start(const double frameLatency)
  * @param[out] frameBytes  		Number of data bytes in this frame
 
  * @retval     0  				Success
- * @retval     1                Frame is too late. `log_add()` called.
+ * @retval     1                Frame is too late
  * @retval     2                Frame is duplicate
  * @retval     -1               System error. `log_add()` called.
  *
@@ -102,5 +102,5 @@ tryInsertInQueue(  const NbsFH*         fh,
 				   size_t 			    frameBytes)
 {
 	// call in CircFrameBuf: (C++ class)
-	return cfb_add( cfbInst, fh, pdh, buffer, frameBytes);
+	return fq_add( cfbInst, fh, pdh, buffer, frameBytes);
 }
