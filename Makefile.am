@@ -174,7 +174,7 @@ install-data-hook:	ensure-ldmhome-links ensure-var
 	@echo
 
 ensure-ldmhome-links:
-	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) $(distName)
+	$(srcdir)/ensureLdmhomeLinks $(DESTDIR)$(LDMHOME) `basename $(prefix)`
 
 ensure-var:	$(DESTDIR)$(localstatedir)
 	$(srcdir)/ensureVar $(DESTDIR)$(LDMHOME) $(DESTDIR)$(localstatedir)

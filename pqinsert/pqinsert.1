@@ -2,17 +2,24 @@
 .SH NAME
 pqinsert - insert files as products in an LDM product queue.
 .SH "SYNOPSIS"
-\fBpqinsert \fR[\fB\-ivx\fR] [\fB\-l \fIlogdest\fR] 
-.BI [\-q " queue"]
-.BI [\-s " seqno"]
-.BI [\-f " feedtype"]
-.BI [\-p " product ID"]
-.BI filename ...
+.B pqinsert " -h"
+.br
+.B pqinsert
+.RB [ -f " \fIfeedtype"\fP ]
+.RB [ -i ]
+.RB [ -l " \fIlogdest"\fP ]
+.RB [ -n " \fIstdin-size"\fP ]
+.RB [ -p " \fIproductID"\fP ]
+.RB [ -q " \fIqueue"\fP ]
+.RB [ -s " \fIseqno"\fP ]
+.RB [ -v\fR|\fP-x ]
+.RB [ \fIfile\fP " ...]"
 .SH DESCRIPTION
 .LP
-This program is an example of how to insert data into an LDM product queue.
-Its primary function is as a coding example. It may also be used to
-test the ldm system.  It might also be useful to resend data
+This program creates LDM data-produts from external sources and inserts
+them into the product-queue.
+It is also an example of how to do this.
+It might be useful to resend data
 after a downstream node has been offline, or to queue locally generated
 products for transmission.
 .LP
@@ -21,41 +28,44 @@ By default, the file name is used as product identifier.
 This default can be changed using the \fB\-p\fR\
  option to specify some other product identifier.
 The product feed type is specified by the \fB\-f\fR\ option.
-The current time used as product arrival time.
+The current time is used as product creation time.
 The product is then inserted at the end of the specified queue.
+.LP
+If no files are specified, then a single data-product is read from
+standard input.
 .SH OPTIONS 
 .TP 8
-.BI \-i
+.B -h
+Log a usage message and then terminate successfully.
+.TP
+.BI -i
 Compute the MD5 signature from the product-identifier rather than from
 the product's data.
 You should only use this option if computing the
 MD5 signature from the product's data takes too long and if
 the product-identifier is unique.
 .TP
-.BI \-f " feedtype"
+.BI -f " feedtype"
 Asserts that the data being sent has feed type \fIfeedtype\fR.
 The default is `EXP', indicating an experimental feedtype.
 .TP
-.BI \-l " logdest"
+.BI -l " logdest"
 Log to \fIlogdest\fP. One of \fB''\fP (system logging daemon), \fB'-'\fP
 (standard error stream), or file \fIlogdest\fP. Default is the standard error
 stream if the process has a controlling terminal (i.e., the process isn't a
 daemon); otherwise, either the LDM log file or the system logging daemon
 (execute this program with just the option \fB'-?'\fP to determine which).
 .TP
-.BI \-p " productID"
-Asigns the data the product identifier \fIproductID\fR. If multiple
-files are being inserted, the product identifier becomes
-<productID>.<sequenceNumber>. 
-The default product identifier is the name of the file being
-inserted.
+.BI -p " productID"
+Use \fIproductID\fP in constructing the product-identifier. For reading
+from standard input or a single file, \fIproductID\fP will be the
+product-identifier. For multiple files, the product-identifiers will
+be \fIproductID\fP.\fIseqno\fP. The defaults for standard input and
+files are "STDIN" and the file pathnames, respectively.
 .TP
 .BI \-q " queue"
 Pathname of the queue into which to insert the files.
-The default is
-.nh
-\fB$(regutil regpath{QUEUE_PATH})\fP.
-.hy
+The default is the standard LDM log file.
 .TP
 .BI \-s " seqno"
 Sets the product sequence number associated with the first product
@@ -67,7 +77,7 @@ Verbose flag.  If present, the log will contain a line for
 each product file that was inserted.
 .TP
 .BI \-x
-Requests that debugging information also be printed (currently none).
+Requests that debugging information also be printed.
 .SH EXIT STATUS
 .LP
 If the program exits with a failure status, then the user should check 
