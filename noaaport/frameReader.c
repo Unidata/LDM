@@ -10,12 +10,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <assert.h>
 #include <log.h>
 
@@ -26,6 +28,40 @@ extern int      rcvBufSize;
 //  ========================================================================
 
 static void 	createThreadAndDetach(const char*);
+
+/**
+ * Returns an identifier for the remote endpoint of a socket.
+ * @param[in]  sd      Socket
+ * @param[out] peerId  An identifier for the remote endpoint of the socket
+ * @param[in]  idLen   Size of the identifier buffer in bytes
+ */
+static void getPeerId(
+        const int    sd,
+        char*        peerId,
+        const size_t idLen)
+{
+    assert(idLen);
+
+    struct sockaddr_storage storage = {};
+    socklen_t               storageLen = sizeof(storage);
+
+    getpeername(sd, (struct sockaddr*)&storage, &storageLen);
+
+    if (storage.ss_family == AF_INET) {
+        inet_ntop(storage.ss_family, &((const struct sockaddr_in*)&storage)->sin_addr, peerId,
+                idLen);
+    }
+    else if (storage.ss_family == AF_INET6) {
+        inet_ntop(storage.ss_family, &((const struct sockaddr_in6*)&storage)->sin6_addr, peerId,
+                idLen);
+    }
+    else {
+        strncpy(peerId, "<not an IP address>", idLen);
+    }
+
+    peerId[idLen-1] = 0;
+}
+
 /**
  * Function to read data bytes from the connection, rebuild the SBN frame, and insert the data in a
  * queue.
@@ -50,7 +86,10 @@ buildFrameRoutine(int clientSockFd)
         status = NBS_SYSTEM;
     }
     else {
-        log_notice("In buildFrameRoutine() waiting to read from (fanout) server socket...");
+        char peerId[INET6_ADDRSTRLEN];
+        getPeerId(clientSockFd, peerId, sizeof(peerId));
+
+        log_debug("Waiting to read from (fanout) server socket...");
 
         for(;;)
         {
@@ -69,11 +108,11 @@ buildFrameRoutine(int clientSockFd)
                         }
                     }
                     else if (status == 1) {
-                        log_flush_warning(); // Frame arrived too late
+                        log_warning("Frame from %s arrived too late to be included. Increase time "
+                                "window?", peerId);
                     }
                     else if (status == 2) {
-                        log_add("Frame is a duplicate");
-                        log_flush_debug();
+                        log_debug("Frame from %s is a duplicate", peerId);
                     }
                     else {
                         log_add("Couldn't add frame due to system failure", status);
@@ -91,18 +130,14 @@ buildFrameRoutine(int clientSockFd)
                     log_add("Read failure");
                     // n == -1 ==> read error
                 }
-                else if( status == NBS_EOF)
-                {
-                    log_add("End of file");
-                }
-                else
+                else if( status != NBS_EOF)
                 {
                     log_add("Unknown return status from nbs_getFrame(): %d", status);
                 }
 
                 break;
-            }
-        } // for
+            } // `status` != 0
+        } // for loop
 
         nbs_free(reader);
     }
@@ -173,7 +208,7 @@ inputClientRoutine(void* id)
             struct sockaddr_in sockaddr = *(struct sockaddr_in  * ) (addrInfo->ai_addr);
             sockaddr.sin_port 			= htons(port);
 
-            log_info("Connecting to fanout server:  %s:%" PRIu16 "\n", hostId, port);
+            //log_info("Connecting to fanout server:  %s:%" PRIu16 "\n", hostId, port);
 
             if( connect(socketClientFd, (const struct sockaddr *) &sockaddr, sizeof(sockaddr)) )
             {

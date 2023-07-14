@@ -1,3 +1,8 @@
+6.15.0.5
+    blender(1):
+        * Renamed CircFrameBuf to FrameQueue
+        * Improved error messages
+
 6.15.0.4        2023-07-12T12:24:54-0600
     blender(1): Corrected comparison of frame keys
 
