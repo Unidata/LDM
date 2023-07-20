@@ -1,4 +1,4 @@
-6.15.0.5
+6.15.0.5        2023-07-20T13:56:10-0600
     pqinsert(1):
         * Added ability to read a single data-product from standard input
         * Added "-h" (help) option
@@ -13,7 +13,7 @@
 
 6.15.0.3        2023-07-11T17:54:13-0600
     notifyme(1): Eliminated SIGSEGV if a severe upstream error causes notifyme_6() to returns NULL.
-      It now prints a useful error message.
+        It now prints a useful error message.
 
     blender(1): Changed Key::operator<() to handle the data server being switched
 
@@ -37,9 +37,9 @@
             * ensure_hdmhome_links: Added extraction of subdirectory name from installation prefix
 
     ldmadmin(1):
-        * In the error messages resulting from checking the queue, placed the pathname of the
-          product-queue queue in quotes just in case it contains embedded whitespace
-        * Added "pqmon -S" to the "showsettings" command
+        * "queuecheck": Placed the pathname of the product-queue queue in quotes just in case it
+          contains embedded whitespace
+        * "showsettings": Added "pqmon -S"
 
     Version 6 upstream LDM:
         * Added logging of a warning if sending or notifying about the oldest product in the queue
