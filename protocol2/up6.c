@@ -586,6 +586,7 @@ static up6_error_t up6_run(
 
                                 ErrorObj* errObj = flushConnection();
                                 if (errObj) {
+                                    log_error("flushConnection() failure"); // new
                                     errCode = logFailure("Couldn't flush connection", errObj);
                                     break;
                                 }
@@ -611,9 +612,11 @@ static up6_error_t up6_run(
                 } /* problem in product-queue module */
                 else if (sendStatus == UP6_CLOSED) {
                     log_flush_info();
+                    log_notice("Connection closed");
                     break;
                 }
                 else if (sendStatus) {
+                    log_add("Couldn't transmit product: status=%d", sendStatus); // new
                     log_flush_error();
                     errCode = UP6_SYSTEM_ERROR;
                     break;
