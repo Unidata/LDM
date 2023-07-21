@@ -107,3 +107,4 @@ vgcore.*
 /PAT
 *.DS_Store
 .idea/
+/LDM_dirs.txt
