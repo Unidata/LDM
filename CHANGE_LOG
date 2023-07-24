@@ -1,4 +1,4 @@
-6.15.0.7
+6.15.0.7        2023-07-24T15:12:01-0600
     ldmd(1):
         * up6.c: Corrected use of variable indicating status of product transmission by initializing
           it
