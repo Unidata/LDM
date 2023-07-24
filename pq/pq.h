@@ -762,15 +762,17 @@ pq_sequenceLock(
  * @param[in]     reverse      Whether to match in reverse direction (i.e.,
  *                             towards earlier times).
  * @param[in]     clss         Product matching criteria
- * @param[in]     func         Function to call for matching products
+ * @param[in]     func         Function to call for matching products. NB: The function *will only be
+ *                             called* for products that match `clss`.
  * @param[in]     keep_locked  Whether or not product should be locked (i.e.,
  *                             kept unavailable for deletion) upon return. If
  *                             `true`, then caller must call
  *                             `pq_release(queue_par->offset)`, where
  *                             `queue_par` is the queue-parameters argument to
  *                             `func`.
- * @param[in,out] app_par      Application-supplied parameters or `NULL`
- * @retval        0            Success. `func()` was called.
+ * @param[in,out] app_par      Application-supplied parameters or `NULL`. Only seen by `func()` for
+ *                             products that match `clss`.
+ * @retval        0            Success. `func()` might or might not have been called.
  * @retval        PQ_END       End of time-queue hit
  * @retval        PQ_INVAL     Invalid argument. log_error() called.
  * @retval        PQ_SYSTEM    System failure. log_error() called.
