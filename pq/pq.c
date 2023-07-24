@@ -7657,8 +7657,7 @@ pq_next(
                             }
 
                             // If appropriate, apply caller-supplied function.
-                            if (clss == PQ_CLASS_ALL ||
-                                    prodInClass(clss, &prod_par.info)) {
+                            if (clss == PQ_CLASS_ALL || prodInClass(clss, &prod_par.info)) {
                                 log_assert(func != NULL);
                                 {
                                     // Change extent into xlen_product */
