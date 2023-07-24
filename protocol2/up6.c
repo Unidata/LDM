@@ -565,8 +565,9 @@ static up6_error_t up6_run(
         }
         else {
             while (exitIfDone(0)) {
-                int pqStatus;   // Product-queue status
-                int sendStatus; // Transmission status
+                int pqStatus;       // Product-queue status
+                int sendStatus = 0; // Transmission status. Default success. Necessary in case
+                                    // pq_next() doesn't call function argument but returns success
 #if USE_PQ_SEQUENCE
                 sendStatus = pqStatus = pq_sequence(_pq, _mt, _class,
                         _mode == FEED ? pq_sequence_feed : pq_sequence_notify, NULL);
