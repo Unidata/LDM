@@ -48,9 +48,9 @@ class FrameQueue
         /// Class for comparing two keys
         class Comparison {
             /**
-             * Compares two values. Returns a value that is less than, equal to, or greater than
-             * zero depending on whether the first value is considered less than, equal to, or
-             * greater than the second, respectively.
+             * Compares two unsigned integers. Returns a value that is less than, equal to, or
+             * greater than zero depending on whether the first value is considered less than, equal
+             * to, or greater than the second, respectively.
              * @param[in] lhs  First value
              * @param[in] rhs  Second value
              * @retval    <0   First value is less than the second
