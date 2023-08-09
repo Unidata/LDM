@@ -1,3 +1,8 @@
+6.15.0.8
+    rtstats(1):
+        * Have connectToLdm() call ldmsend_disconnect() if clnt != NULL because the previous
+          assertion failed for some reason (cosmic ray?)
+
 6.15.0.7        2023-07-24T15:12:01-0600
     ldmd(1):
         * up6.c: Corrected use of variable indicating status of product transmission by initializing

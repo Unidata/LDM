@@ -509,8 +509,19 @@ static int sendHiya(void)
 }
 
 /**
+ * Disconnects from the downstream LDM.
+ */
+void ldmsend_disconnect(void)
+{
+    if (clnt != NULL) {
+        auth_destroy(clnt->cl_auth);
+        clnt_destroy(clnt);
+        clnt = NULL;
+    }
+}
+
+/**
  * Connects to a remote LDM.
- * @pre                           `clnt == NULL`
  * @retval 0                      Success.
  * @retval LDM_CLNT_UNKNOWN_HOST  Unknown downstream host. Error message logged.
  * @retval LDM_CLNT_TIMED_OUT     Call to downstream host timed-out. Error message logged.
@@ -521,7 +532,10 @@ static int sendHiya(void)
  */
 static int connectToLdm(void)
 {
-    log_assert(NULL == clnt);
+    if (clnt) {
+        log_warning("Client pointer is non-NULL. Calling ldmsend_disconnect().");
+        ldmsend_disconnect();
+    }
 
     int      status = 0;
     unsigned version = SIX;
@@ -613,19 +627,6 @@ int ldmsend_connect(void)
         status = sendHiya();
 
     return status;
-}
-
-
-/**
- * Disconnects from the downstream LDM.
- */
-void ldmsend_disconnect(void)
-{
-    if (clnt != NULL) {
-        auth_destroy(clnt->cl_auth);
-        clnt_destroy(clnt);
-        clnt = NULL;
-    }
 }
 
 /**
