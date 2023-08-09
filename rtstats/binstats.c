@@ -500,11 +500,12 @@ binstats_sendIfTime(const char* const hostname)
 
     if (time(NULL) - lastsent >= reportGap) {
         if (ldmsend_connect() == 0) { // Logs message on error
-           for (size_t ii = 0; ii < nbins; ++ii)
+           for (size_t ii = 0; ii < nbins; ++ii) {
                if (binList[ii]->needswrite && binstats_report(binList[ii], hostname)) {
                    log_flush_error();
                    break;
                }
+           }
 
            ldmsend_disconnect();
         } // Connected to downstream LDM
