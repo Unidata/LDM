@@ -92,7 +92,7 @@ void FrameQueue::getOldestFrame(Frame_t* frame)
     ::memcpy(frame->data, slot.bytes, slot.numBytes);
     frame->nbytes = slot.numBytes;
 
-    lastOutputKey = key; // Must come before `frames.erase(head)` because `key` is a reference
+    lastOutputKey = key; // Must come before `frames.erase(head)` if `key` is a reference
     frameReturned = true;
 
     frames.erase(head);
