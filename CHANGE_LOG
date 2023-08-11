@@ -1,3 +1,8 @@
+6.15.0.9
+    blender(1):
+        * Fixed SIGSEGV bug by ensuring that the key of the oldest frame in the queue is used
+          before the frame is destroyed
+
 6.15.0.8        2023-08-09T13:48:19-0600
     rtstats(1):
         * Have connectToLdm() call ldmsend_disconnect() if clnt != NULL because the previous

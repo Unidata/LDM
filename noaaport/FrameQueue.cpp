@@ -84,7 +84,7 @@ void FrameQueue::getOldestFrame(Frame_t* frame)
 
     // The earliest frame shall be returned
     auto  head = frames.begin();
-    auto& key = head->first;
+    auto& key = head->first; // NB: reference
     auto& slot = head->second;
 
     frame->prodSeqNum   = key.pdhSeqNum;
@@ -92,10 +92,10 @@ void FrameQueue::getOldestFrame(Frame_t* frame)
     ::memcpy(frame->data, slot.bytes, slot.numBytes);
     frame->nbytes = slot.numBytes;
 
-    frames.erase(head);
-
-    lastOutputKey = key;
+    lastOutputKey = key; // Must come before `frames.erase(head)` because `key` is a reference
     frameReturned = true;
+
+    frames.erase(head);
 }
 
 extern "C" {
