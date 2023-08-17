@@ -45,6 +45,16 @@ FrameQueue::FrameQueue(const double timeout)
     , timeout(std::chrono::duration_cast<Key::Dur>(std::chrono::duration<double>(timeout)))
 {}
 
+/**
+ * Tries to add a frame.
+ * @param[in] fh        Decoded frame-level header
+ * @param[in] pdh       Decoded product-definition header
+ * @param[in] data      Frame data
+ * @param[in] numBytes  Number of bytes in data
+ * @retval    0         Success
+ * @retval    1         Frame arrived too late. `log_add()` called.
+ * @retval    2         Frame wasn't added because it's a duplicate
+ */
 int FrameQueue::add(
         const NbsFH&      fh,
         const NbsPDH&     pdh,
@@ -55,8 +65,8 @@ int FrameQueue::add(
     Key   key{fh, pdh, timeout};
 
     if (frameReturned && key < lastOutputKey) {
-        //log_add("Frame arrived too late: lastOutputKey=%s, lateKey=%s. Increase delay (-t)?",
-                //lastOutputKey.to_string().data(), key.to_string().data());
+        log_add("Late frame: lateKey=%s, lastOutputKey=%s",
+                key.to_string().data(), lastOutputKey.to_string().data());
         return 1; // Frame arrived too late
     }
 
