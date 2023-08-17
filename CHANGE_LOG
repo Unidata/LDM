@@ -1,3 +1,7 @@
+6.15.0.10
+    blender(1):
+        * Enabled logging of diagnostic information for a frame that arrives too late to be included
+
 6.15.0.9        2023-08-11T13:39:33-0600
     blender(1):
         * Fixed SIGSEGV bug by ensuring that the key of the oldest frame in the queue is used

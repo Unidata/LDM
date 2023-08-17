@@ -108,8 +108,9 @@ buildFrameRoutine(int clientSockFd)
                         }
                     }
                     else if (status == 1) {
-                        log_warning("Frame from %s arrived too late to be included. Increase time "
+                        log_add("Frame from %s arrived too late to be included. Increase time "
                                 "window?", peerId);
+                        log_flush_warning();
                     }
                     else if (status == 2) {
                         log_debug("Frame from %s is a duplicate", peerId);
