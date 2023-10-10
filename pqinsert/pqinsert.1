@@ -67,6 +67,12 @@ files are "STDIN" and the file pathnames, respectively.
 Pathname of the queue into which to insert the files.
 The default is the standard LDM log file.
 .TP
+.BI \-r
+Use regular reads on the input files instead of memory-mapping them.
+The default depends on how the LDM package was built: if memory-mapping
+was disabled, then this option is the default; otherwise, the input files
+will be memory-mapped by default.
+.TP
 .BI \-s " seqno"
 Sets the product sequence number associated with the first product
 to \fIseqno\fR. Subsequent products (files on the command line)

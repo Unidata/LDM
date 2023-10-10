@@ -1,3 +1,8 @@
+6.15.0.11
+    pqinsert(1):
+        * Added "-r" option to read the input files instead of memory-mapping them. This might be
+          necessary if the input files are not on local disk.
+
 6.15.0.10       2023-08-17T10:38:21-0600
     blender(1):
         * Enabled logging of diagnostic information for a frame that arrives too late to be included
