@@ -1186,6 +1186,9 @@ sub computeNewQueueSize
     my $mvrtSize = $_[2];
     my $mvrtSlots = $_[3];
 
+    errmsg("computeNewQueueSize(): MVRT=$minVirtResTime s, ageOldest=$oldestProductAge s".
+            ", mvrtSize=$mvrtSize, mvrtSlots=$mvrtSlots");
+
     if (0 >= $minVirtResTime) {
         # Use age of oldest product, instead
         $minVirtResTime = $oldestProductAge;
@@ -1193,7 +1196,7 @@ sub computeNewQueueSize
     my $newByteCount;
     my $newSlotCount;
     if (0 < $minVirtResTime) {
-        my $ratio = $max_latency/$minVirtResTime;
+        my $ratio = double($max_latency)/double($minVirtResTime);
         $newByteCount = int($ratio*$mvrtSize);
         $newSlotCount = int($ratio*$mvrtSlots);
     }
@@ -1235,11 +1238,13 @@ sub vetQueueSize
         }
         else {
             my @params = split(/\s+/, $line);
-            my $isFull = $params[0];
-            my $ageOldest = $params[7];
-            my $minVirtResTime = $params[9];
-            my $mvrtSize = $params[10];
-            my $mvrtSlots = $params[11];
+            my $isFull = $params[0];         # Has the oldest product been deleted to make room?
+            my $byteCap = $params[1];        # Queue capacity in bytes
+            my $prodCap = $params[4];        # Queue capacity in products
+            my $ageOldest = $params[7];      # Age of the oldest product in seconds
+            my $minVirtResTime = $params[9]; # MVRT in seconds since queue creation
+            my $mvrtSize = $params[10];      # Number of bytes in queue when MVRT set
+            my $mvrtSlots = $params[11];     # Number of products in queue when MVRT set
 
             if (!$isFull || $minVirtResTime < 0 
                     || $minVirtResTime >= $max_latency
@@ -1265,8 +1270,10 @@ sub vetQueueSize
                 if ($reconMode eq $increaseQueue) {
                     my @newParams = computeNewQueueSize($minVirtResTime, 
                             $ageOldest, $mvrtSize, $mvrtSlots);
-                    my $newByteCount = $newParams[0];
-                    my $newSlotCount = $newParams[1];
+                    # Limit the increase
+                    my $newByteCount = min($newParams[0], int($byteCap*1.618));
+                    my $newSlotCount = min($newParams[1], int($prodCap*1.618));
+
                     my $newQueuePath = "$pq_path.new";
 
                     errmsg("vetQueueSize(): Increasing the capacity of the ".
