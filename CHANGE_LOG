@@ -1,4 +1,4 @@
-6.15.0.12
+6.15.0.12       2023-11-12T11:49:17-0700
     ldmadmin(1):
         * Modified "vetqueuesize" to cap the factor multiplying the MVRT sizes at the Golden Ratio
         * Added some diagnostic print statements to when the queue is adjusted
