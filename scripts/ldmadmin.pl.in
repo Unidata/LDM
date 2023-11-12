@@ -1187,7 +1187,7 @@ sub computeNewQueueSize
     my $mvrtSlots = $_[3];
 
     errmsg("computeNewQueueSize(): MVRT=$minVirtResTime s, ageOldest=$oldestProductAge s".
-            ", mvrtSize=$mvrtSize, mvrtSlots=$mvrtSlots");
+            ", mvrtSize=$mvrtSize, mvrtSlots=$mvrtSlots\n");
 
     if (0 >= $minVirtResTime) {
         # Use age of oldest product, instead
@@ -1196,7 +1196,8 @@ sub computeNewQueueSize
     my $newByteCount;
     my $newSlotCount;
     if (0 < $minVirtResTime) {
-        my $ratio = double($max_latency)/double($minVirtResTime);
+        # Cap the increase at the Golden Ratio
+        my $ratio = min(1.618, double($max_latency)/double($minVirtResTime));
         $newByteCount = int($ratio*$mvrtSize);
         $newSlotCount = int($ratio*$mvrtSlots);
     }
@@ -1225,8 +1226,7 @@ sub vetQueueSize
         $status = 1;
     }
     elsif ($etime < $max_latency) {
-        errmsg("vetQueueSize(): The LDM must run for at least $max_latency ".
-                "seconds");
+        errmsg("vetQueueSize(): The LDM must run for at least $max_latency seconds");
         $status = 0;                    # too soon to tell
     }
     else {
@@ -1253,37 +1253,31 @@ sub vetQueueSize
             }
             else {
                 my $increaseQueue = "increase queue";
+                my $adjustQueue = "adjust queue";
                 my $decreaseMaxLatency = "decrease maximum latency";
                 my $doNothing = "do nothing";
 
-                errmsg("vetQueueSize(): The maximum acceptable latency ".
-                    "(registry parameter \"regpath{MAX_LATENCY}\": ".
-                    "$max_latency seconds) is greater ".
-                    "than the observed minimum virtual residence time of ".
-                    "data-products in the queue ($minVirtResTime seconds).  ".
-                    "This will hinder detection of duplicate data-products.");
+                errmsg("vetQueueSize(): The maximum acceptable latency (registry parameter ".
+                    \"regpath{MAX_LATENCY}\": $max_latency seconds) is greater than the observed ".
+                    "minimum virtual residence time of data-products in the queue ".
+                    "($minVirtResTime seconds). This will hinder detection of duplicate ".
+                    "data-products.");
 
-                print "The value of the ".
-                    "\"regpath{RECONCILIATION_MODE}\" registry-parameter is ".
-                    "\"$reconMode\"\n";
+                errmsg("The value of the \"regpath{RECONCILIATION_MODE}\" registry-parameter is ".
+                    "\"$reconMode\"\n");
 
-                if ($reconMode eq $increaseQueue) {
-                    my @newParams = computeNewQueueSize($minVirtResTime, 
-                            $ageOldest, $mvrtSize, $mvrtSlots);
-                    # Limit the increase
-                    my $newByteCount = min($newParams[0], int($byteCap*1.618));
-                    my $newSlotCount = min($newParams[1], int($prodCap*1.618));
-
+                if ($reconMode eq $increaseQueue || $reconMode eq $adjustQueue) {
+                    my @newParams = computeNewQueueSize($minVirtResTime,  $ageOldest, $mvrtSize,
+                            $mvrtSlots);
+                    my $newByteCount = $newParams[0];
+                    my $newSlotCount = $newParams[1];
                     my $newQueuePath = "$pq_path.new";
 
-                    errmsg("vetQueueSize(): Increasing the capacity of the ".
-                            "queue to $newByteCount bytes and $newSlotCount ".
-                            "slots...");
+                    errmsg("vetQueueSize(): Adjusting the capacity of the "queue to $newByteCount ".
+                            "bytes and $newSlotCount products...");
 
-                    if (system("pqcreate -c -S $newSlotCount -s $newByteCount ".
-                            "-q $newQueuePath")) {
-                        errmsg("vetQueueSize(): Couldn't create new queue: ".
-                            "$newQueuePath");
+                    if (system("pqcreate -c -S $newSlotCount -s $newByteCount -q $newQueuePath")) {
+                        errmsg("vetQueueSize(): Couldn't create new queue: $newQueuePath");
                         $status = 3;            # major failure
                     }
                     else {
@@ -1307,9 +1301,8 @@ sub vetQueueSize
                                 $status = 3;        # major failure
                             }
                             else {
-                                print "Saving new queue parameters...\n";
-                                if (saveQueuePar($newByteCount,
-                                            $newSlotCount)) {
+                                errmsg("Saving new queue parameters...");
+                                if (saveQueuePar($newByteCount $newSlotCount)) {
                                     $status = 3;    # major failure
                                 }
                             }
@@ -1317,8 +1310,7 @@ sub vetQueueSize
                             if ($restartNeeded) {
                                 print "Restarting the LDM...\n";
                                 if (start_ldm()) {
-                                    errmsg("vetQueueSize(): ".
-                                        "Couldn't restart the LDM");
+                                    errmsg("vetQueueSize(): Couldn't restart the LDM");
                                     $status = 3;    # major failure
                                 }
                             }

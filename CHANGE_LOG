@@ -1,7 +1,7 @@
 6.15.0.12
     ldmadmin(1):
-        * Modified "vetqueuesize" to limit queue expansion to Golden Ratio times current size
-          parameters
+        * Modified "vetqueuesize" to cap the factor multiplying the MVRT sizes at the Golden Ratio
+        * Added some diagnostic print statements to when the queue is adjusted
 
 6.15.0.11       2023-10-10T09:43:40-0600
     pqinsert(1):
