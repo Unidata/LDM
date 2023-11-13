@@ -105,7 +105,7 @@ for my $entryRef (@regpar) {
 # Check the hostname for a fully-qualified version.
 #
 if ($hostname !~ /\./) {
-    errmsg("The LDM-hostname is not fully-qualified.  " . 
+    errmsg("The LDM-hostname is not fully-qualified.  ".
         "Execute the command \"regutil -s <hostname> regpath{HOSTNAME}\" ".
         "to set the fully-qualified name of the host.");
     exit 1;
@@ -497,7 +497,7 @@ options:
     -o offset       Unconditional data-request temporal-offset
     -o template     Plot metrics to files <template><plot_name>.png. Default
                     is to use X-server.
-    -p pqact_conf   Specify a pqact config path. 
+    -p pqact_conf   Specify a pqact config path.
                     Default: valid pqact path(s) in EXEC \"pqact\" line(s)
                     in LDM config file,
                     LDM default: $pqact_path
@@ -1187,7 +1187,7 @@ sub computeNewQueueSize
     my $mvrtSlots = $_[3];
 
     errmsg("computeNewQueueSize(): MVRT=$minVirtResTime s, ageOldest=$oldestProductAge s".
-            ", mvrtSize=$mvrtSize, mvrtSlots=$mvrtSlots\n");
+            ", mvrtSize=$mvrtSize, mvrtSlots=$mvrtSlots");
 
     if (0 >= $minVirtResTime) {
         # Use age of oldest product, instead
@@ -1258,22 +1258,22 @@ sub vetQueueSize
                 my $doNothing = "do nothing";
 
                 errmsg("vetQueueSize(): The maximum acceptable latency (registry parameter ".
-                    \"regpath{MAX_LATENCY}\": $max_latency seconds) is greater than the observed ".
+                    "\"regpath{MAX_LATENCY}\": $max_latency seconds) is greater than the observed ".
                     "minimum virtual residence time of data-products in the queue ".
                     "($minVirtResTime seconds). This will hinder detection of duplicate ".
                     "data-products.");
 
                 errmsg("The value of the \"regpath{RECONCILIATION_MODE}\" registry-parameter is ".
-                    "\"$reconMode\"\n");
+                    "\"$reconMode\"");
 
                 if ($reconMode eq $increaseQueue || $reconMode eq $adjustQueue) {
-                    my @newParams = computeNewQueueSize($minVirtResTime,  $ageOldest, $mvrtSize,
+                    my @newParams = computeNewQueueSize($minVirtResTime, $ageOldest, $mvrtSize,
                             $mvrtSlots);
                     my $newByteCount = $newParams[0];
                     my $newSlotCount = $newParams[1];
                     my $newQueuePath = "$pq_path.new";
 
-                    errmsg("vetQueueSize(): Adjusting the capacity of the "queue to $newByteCount ".
+                    errmsg("vetQueueSize(): Adjusting the capacity of the queue to $newByteCount ".
                             "bytes and $newSlotCount products...");
 
                     if (system("pqcreate -c -S $newSlotCount -s $newByteCount -q $newQueuePath")) {
@@ -1302,7 +1302,7 @@ sub vetQueueSize
                             }
                             else {
                                 errmsg("Saving new queue parameters...");
-                                if (saveQueuePar($newByteCount $newSlotCount)) {
+                                if (saveQueuePar($newByteCount, $newSlotCount)) {
                                     $status = 3;    # major failure
                                 }
                             }
