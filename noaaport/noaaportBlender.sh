@@ -8,6 +8,16 @@
 #  blender() and noaaportIngester() pair running
 # Original code 2023-03-02, cooper@ucar.edu
 # Updated with comments 2023-11-13, cooper@ucar.edu
+# USAGE: in the ldmd.conf file, example entries for the SBN
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nmc.log -R 2097152 -F fanout1.unidata.ucar.edu:1201 -F fanout2.unidata.ucar.edu:1201"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nmc2.log -R 2097152 -F fanout1.unidata.ucar.edu:1203 -F fanout2.unidata.ucar.edu:1203"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nopt.log -R 2097152 -F fanout1.unidata.ucar.edu:1204 -F fanout2.unidata.ucar.edu:1204"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/npp.log -R 2097152 -F fanout1.unidata.ucar.edu:1205 -F fanout2.unidata.ucar.edu:1205"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/add.log -R 2097152 -F fanout1.unidata.ucar.edu:1206 -F fanout2.unidata.ucar.edu:1206"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/enc.log -R 2097152 -F fanout1.unidata.ucar.edu:1207 -F fanout2.unidata.ucar.edu:1207"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/exp.log -R 2097152 -F fanout1.unidata.ucar.edu:1208 -F fanout2.unidata.ucar.edu:1208"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/grw.log -R 2097152 -F fanout1.unidata.ucar.edu:1209 -F fanout2.unidata.ucar.edu:1209"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/gre.log -R 2097152 -F fanout1.unidata.ucar.edu:1210 -F fanout2.unidata.ucar.edu:1210"
 
 # Set system-wide profile for script
 if [ -s /etc/profile ]; then
