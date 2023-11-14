@@ -1,3 +1,10 @@
+6.15.0.13
+    ldmadmin(1):
+        * Corrected syntax errors in vetQueueSize().
+
+    DevOps:
+        * Have NOAAPort makefile print head of ingest log file to aid GitHub Actions debugging
+
 6.15.0.12       2023-11-12T11:49:17-0700
     ldmadmin(1):
         * Modified "vetqueuesize" to cap the factor multiplying the MVRT sizes at the Golden Ratio

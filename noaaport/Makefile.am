@@ -176,7 +176,10 @@ check-readnoaaport:     readnoaaport $(srcdir)/$(READNOAAPORT_LOG)
 	rm /tmp/readnoaaport-test.pq
 	fgrep 'process_prod.c' readnoaaport.out | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) \
 		>readnoaaport.log
-	diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG)
+	if ! diff readnoaaport.log $(srcdir)/$(READNOAAPORT_LOG); then \
+		head -n 44 readnoaaport.log; \
+		exit 1; \
+	fi
 
 noaaportIngester.out:           noaaportIngester
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/noaaportIngester-test.pq
@@ -188,7 +191,10 @@ noaaportIngester.log:           noaaportIngester.out
 	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester:         noaaportIngester.log \
 	                        $(srcdir)/$(NOAAPORTINGESTER_LOG)
-	diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG)
+	if ! diff noaaportIngester.log $(srcdir)/$(NOAAPORTINGESTER_LOG); then \
+		head -n 44 noaaportIngester.log; \
+		exit 1; \
+	fi
 
 noaaportIngester-nssl.out:      noaaportIngester
 	rm -f /tmp/noaaportIngester-test.pq wmocenter.tbl g2varsnssl1.tbl \
@@ -207,8 +213,12 @@ noaaportIngester-nssl.log:      noaaportIngester-nssl.out
 	fgrep 'process_prod.c' <$? | tr -s ' ' | cut -d ' ' -f $(CUT_FIELDS) >$@
 check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 				$(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
-	test `uname -s` = Darwin || \
-                diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG)
+	if test `uname -s` != Darwin; then \
+	    if ! diff noaaportIngester-nssl.log $(srcdir)/$(NOAAPORTINGESTER_NSSL_LOG); then \
+	        head -n 44 noaaportIngester-nssl.log; \
+	        exit 1; \
+	    fi; \
+	fi
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
 
