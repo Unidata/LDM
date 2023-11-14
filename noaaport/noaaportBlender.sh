@@ -1,105 +1,313 @@
-set -e
+#!/bin/bash
+#
+# File:         noaaportBlender.sh
+# Author: cooper@ucar.edu
+# See file ../COPYRIGHT for copying and redistribution conditions.
+#
+# Description: This is a shell script to monitor and keep
+#  blender() and noaaportIngester() pair running
+# Original code 2023-03-02, cooper@ucar.edu
+# Updated with comments 2023-11-13, cooper@ucar.edu
+# USAGE: in the ldmd.conf file, example entries for the SBN
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nmc.log -R 2097152 -F fanout1.unidata.ucar.edu:1201 -F fanout2.unidata.ucar.edu:1201"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nmc2.log -R 2097152 -F fanout1.unidata.ucar.edu:1203 -F fanout2.unidata.ucar.edu:1203"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/nopt.log -R 2097152 -F fanout1.unidata.ucar.edu:1204 -F fanout2.unidata.ucar.edu:1204"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/npp.log -R 2097152 -F fanout1.unidata.ucar.edu:1205 -F fanout2.unidata.ucar.edu:1205"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/add.log -R 2097152 -F fanout1.unidata.ucar.edu:1206 -F fanout2.unidata.ucar.edu:1206"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/enc.log -R 2097152 -F fanout1.unidata.ucar.edu:1207 -F fanout2.unidata.ucar.edu:1207"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/exp.log -R 2097152 -F fanout1.unidata.ucar.edu:1208 -F fanout2.unidata.ucar.edu:1208"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/grw.log -R 2097152 -F fanout1.unidata.ucar.edu:1209 -F fanout2.unidata.ucar.edu:1209"
+#exec "noaaportBlender.sh -t 2.0 -v -l /data/tmp/gre.log -R 2097152 -F fanout1.unidata.ucar.edu:1210 -F fanout2.unidata.ucar.edu:1210"
 
-function printHelp
+# Set system-wide profile for script
+if [ -s /etc/profile ]; then
+  source /etc/profile
+fi
+
+# Test for existence of noaaportIngester, then set full path
+Test=`which noaaportIngester`
+if [ -z "${Test}" ]; then
+  echo "noaaportIngester not in path."
+  exit
+else
+  NOAAPORTINGESTER=`realpath ${Test}`
+fi
+
+# Test for existence of blender, then set full path
+Test=`which blender`
+if [ -z "${Test}" ]; then
+  echo "blender not in path."
+  exit
+else
+  BLENDER=`realpath ${Test}`
+fi
+
+# Test for existence of ulogger, then set full path
+Test=`which ulogger`
+if [ -z "${Test}" ]; then
+  echo "ulogger not in path."
+  exit
+else
+  ULOGGER=`realpath ${Test}`
+fi
+
+# Initialize process id variables, set default script log,
+#   and default loop delay
+npProcess=""
+blProcess=""
+terminate="0"
+thisScriptLog="/tmp/noaaportBlender.log"
+scriptDelay="2"
+
+# Internal function definitions BEGIN
+#
+function printUsage
 {
-  echo "${0} usage:"
-  echo " -b <log>        Log file for blender, default: LDM logfile"
-  echo " -f <fifo>       Name of FIFO to create, default: /tmp/blender_<port>.fifo"
-  echo " -l <log>        Log file for noaaportIngester, default: LDM logfile"
-  echo " -p <port>       fanout server port number"
-  echo " -R <rcvBuf>  Receive buffer size in bytes"
-  echo " -s <fanoutadd>  one or more fanoutServerAddresses with syntax:"
-  echo "                         <server:port> ..."
-  echo "                         If <port> is missing, option '-p <port>' is required,"
-  echo " -t <delay>      fixed delay, in seconds, to avoid duplicate frames"
-  echo " -v              Verbose mode for 'blender' and Debug mode (NOTICE) for 'noaaportIngester'"
-  echo " -x              Debug mode for 'blender' and Verbose mode (INFO) for 'noaaportIngester'"
+  printf "usage: ${0} [-v][-x][-b <blender log>][-l <noaaportIngester log>][-f <fifo>][-p <port>][-t <timeOut>] -F <fanout server IP>[:<port>]\n"
+  printf "  description: An instantiation and keep-alive bash script for noaaportIngester\n"
+  printf "    and blender for SBN data redundancy. Launches the noaaportIngest then\n"
+  printf "    streams data through a named pipe (FIFO) to blender, such there is an\n"
+  printf "    executing pair for each SBN data stream.\n"
+  printf "  arguments:\n"
+  printf "\t-b <log>\t\tLog file for blender, default: LDM logfile.\n"
+  printf "\t-d\t\t\tShow arguments passed and full call for each executable without actually starting blender, default: OFF.\n"
+  printf "\t-F <server(:port)>\tfanout server address (if port is missing, will use port declared by -p) [REQUIRED].\n"
+  printf "\t\t\t\tCan have multiple -F declarations.\n"
+  printf "\t-f <fifo>\t\tName of FIFO to create, default: /tmp/blender_<port>.fifo\n"
+  printf "\t-l <log>\t\tLog file for noaaportIngester, default: LDM logfile.\n"
+  printf "\t-p <port>\t\tfanout server port number, default: defined in -F per server.\n"
+  printf "\t-R <rcvBuf>\t\tReceive buffer size in bytes, default: 2097152.\n"
+  printf "\t-t <delay>\t\tfixed delay, in seconds, to avoid duplicate frames, default: 0.01.\n"
+  printf "\t-v\t\t\tVerbose mode for blender and Debug mode (NOTICE) for noaaportIngester, default OFF.\n"
+  printf "\t-x\t\t\tDebug mode for blender and Verbose mode (INFO) for noaaportIngester, default OFF.\n"
 }
 
-function initArgs
+function initVariables
 {
-  BLLOGFILE=""
-  FIFONAME=""
-  NPLOGFILE=""
-  PORTNUMBER=""
-  BUFFERSIZE=""
-  FANOUTADDRESSES=""
-  TIMEOUTDELAY=""
-  VERBOSE="0"
-  DEBUGMODE="0"
+  bLogFile=""
+  debug="0"
+  fServers=()
+  fIndex="0"
+  Fifo=""
+  nLogFile=""
+  fPort=""
+  rBuffer="2097152"
+  rLag="0.01"
+  bVerbose="0"
+  nVerbose="0"
 }
 
-function printArgs
+function testForAllArgsRequired
 {
-  echo "Blender log file = ${BLLOGFILE}"
-  echo "FIFO = ${FIFONAME}"
-  echo "NOAAPort log file = ${NPLOGFILE}"
-  echo "Fanout port number = ${PORTNUMBER}"
-  echo "Receive buffer size = ${BUFFERSIZE}"
-  echo "Fanout addresses = ${FANOUTADDRESSES[@]}"
-  echo "Delay for checking duplicate frames = ${TIMEOUTDELAY}"
-  echo "Verbose = ${VERBOSE}"
-  echo "Debug = ${DEBUGMODE}"
+  if [ "${#fServers[@]}" -eq 0 ]; then
+    echo "-1"
+    return
+  fi
+  echo "${#fServers[@]}"
 }
 
-initArgs
+function buildBlenderCommand
+{
+  BLENDER="${BLENDER} -t ${rLag}"
+  if [ "${bVerbose}" -ne 1 -a "${nVerbose}" -eq 1 ]; then
+    BLENDER="${BLENDER} -x"
+  fi
+  if [ "${bVerbose}" -eq 1 ]; then
+    BLENDER="${BLENDER} -v"
+  fi
+  BLENDER="${BLENDER} -R ${rBuffer}"
+  if [ -n "${bLogFile}" ]; then
+    BLENDER="${BLENDER} -l ${bLogFile}"
+  fi
+  BLENDER="${BLENDER} ${fServers[@]}"
+  BLENDER=`printf "${BLENDER} > ${Fifo}"`
+}
 
-while getopts ":b:f:l:p:R:s:t:vx" options
+function buildNoaaportIngesterCommand
+{
+  if [ "${bVerbose}" -eq 1 -a "${nVerbose}" -ne 1 ]; then
+    NOAAPORTINGESTER="${NOAAPORTINGESTER} -n"
+  fi
+  if [ "${nVerbose}" -eq 1 ]; then
+    NOAAPORTINGESTER="${NOAAPORTINGESTER} -v"
+  fi
+  if [ -n "${nLogFile}" ]; then
+    NOAAPORTINGESTER="${NOAAPORTINGESTER} -l ${nLogFile}"
+  fi
+  NOAAPORTINGESTER=`printf "${NOAAPORTINGESTER} < ${Fifo}"`
+}
+
+function showCommandsAndExit
+{
+  printf "noaaportIngester command:\n${NOAAPORTINGESTER}\n"
+  printf "blender command:\n${BLENDER}\n"
+  exit 0
+}
+
+function terminateProcess
+{
+  terminate="1"
+}
+
+# Internal function definitions END
+## Main BEGIN
+
+initVariables
+trap "terminateProcess" TERM
+
+while getopts "b:dF:f:l:p:R:t:vx" o
 do
-  case "${options}" in
+  case "${o}" in
     b)
-      BLLOGFILE=${OPTARG}
+      bLogFile="${OPTARG}"
+      justFile=`echo "${bLogFile}" | awk -F"/" '{print $NF}'`
+      justPath=`echo "${bLogFile}" | sed -e "s|/${justFile}$||g"`
+      if [ -n "${justPath}" ]; then
+        if [ ! -d "${justPath}" ]; then
+          mkdir -p ${justPath}
+          if [ ! -d "${justPath}" ]; then
+            echo "ERROR: blender log path, ${justPath}, does not exist and cannot be created."
+            echo "Exiting."
+            exit -11
+          fi
+        fi
+      fi
+      ;;
+    d)
+      debug="1"
+      ;;
+    F)
+      fServers[${fIndex}]="${OPTARG}"
+      fIndex=`expr "${fIndex}" + 1`
       ;;
     f)
-      FIFONAME=${OPTARG}
+      Fifo="${OPTARG}"
       ;;
     l)
-      NPLOGFILE=${OPTARG}
+      nLogFile="${OPTARG}"
+      justFile=`echo "${nLogFile}" | awk -F"/" '{print $NF}'`
+      justPath=`echo "${nLogFile}" | sed -e "s|/${justFile}$||g"`
+      if [ -n "${justPath}" ]; then
+        if [ ! -d "${justPath}" ]; then
+          mkdir -p ${justPath}
+          if [ ! -d "${justPath}" ]; then
+            echo "ERROR: noaaportIngester log path, ${justPath}, does not exist and cannot be created."
+            echo "Exiting."
+            exit -12
+          fi
+        fi
+      fi
       ;;
     p)
-      PORTNUMBER=${OPTARG}
+      fPort=`echo "${OPTARG}" | grep -o -E "[0-9]*"`
+      if [ -n "${fPort}" ]; then
+        if [ "`echo \"${fPort} < 1024 || ${fPort} > 65535\" | bc`" -eq 1 ]; then
+          fPort=""
+        fi
+      fi
+      if [ -z "${fPort}" ]; then
+        echo "ERROR: Port configured, ${OPTARG}, is not a valid port in the range of 1024 to 65535."
+        echo "Exiting."
+        exit -13
+      fi
       ;;
     R)
-      BUFFERSIZE=${OPTARG}
-      ;;
-    s)
-## Need to debug how a string with spaces is dealt with
-      FANOUTADDRESSES=(${OPTARG})
+      rBuffer=`echo "${OPTARG}" | grep -o -E "[0-9]*"`
+      if [ -n "${rBuffer}" ]; then
+        if [ "`echo \"${rBuffer} < 102400 || ${rBuffer} > 10240000\" | bc`" -eq 1 ]; then
+          rBuffer=""
+        fi
+      fi
+      if [ -z "${rBuffer}" ]; then
+        echo "ERROR: Receive buffer configured, ${OPTARG}, is not within the valid range of 102400 to 10240000."
+        echo "Exiting."
+        exit -14
+      fi
       ;;
     t)
-      TIMEOUTDELAY=${OPTARG}
+      rLag=`echo "${OPTARG}" | grep -o -E "[0-9\.]*"`
+      if [ -n "${rLag}" ]; then
+        if [ "`echo \"${rLag} < 0.001 || ${rLag} > 600.0\" | bc -l`" -eq 1 ]; then
+          rLag=""
+        fi
+      fi
+      if [ -z "${rLag}" ]; then
+        echo "ERROR: Frame delay configured, ${OPTARG}, is not within the valid range of 0.001 to 600."
+        echo "Exiting."
+        exit -15
+      fi
       ;;
     v)
-      VERBOSE="1"
+      bVerbose="1"
       ;;
     x)
-      DEBUGMODE="1"
-      ;;
-    :)
-      echo "Error: -${OPTARG} requires an argument."
-      exit -2
+      nVerbose="1"
       ;;
     *)
-      printHelp
-      exit 0
+      printUsage
       ;;
   esac
 done
+shift $((OPTIND-1))
 
-printArgs
+argTest=`testForAllArgsRequired`
+if [ "${argTest}" -le 0 ]; then
+  printUsage
+  exit -1
+fi
 
-checkForRunning
+# Set named pipe (fifo)
+if [ -z "${Fifo}" ]; then
+  if [ -n "${fPort}" ]; then
+    Fifo="/tmp/blender_${fPort}.fifo"
+  else
+    firstPort=`echo "${fServers[0]}" | grep ":" | awk -F":" '{print $NF}'`
+    if [ -z "${firstPort}" ]; then
+      echo "-2"
+      return
+    fi
+    Fifo="/tmp/blender_${firstPort}.fifo"
+  fi
+fi
 
-initalizeInstances
-
-trap "clearInstances" SIGTERM
-
-while (true)
+# Afix port per host on fanout server(s)
+lclIndex="0"
+while [ "${lclIndex}" -lt "${fIndex}" ]
 do
-  wait
-  clearInstances
-  initalizeInstances
+  currentPort=`echo "${fServers[${lclIndex}]}" | grep ":" | awk -F":" '{print $NF}'`
+  if [ -z "${currentPort}" ]; then
+    if [ -n "${fPort}" ]; then
+      fServers[${lclIndex}]="${fServers[${lclIndex}]}:${fPort}"
+    else
+      echo "-3"
+      return
+    fi
+  fi
+  lclIndex=`expr "${lclIndex}" + 1`
 done
 
-clearInstances
-     
+buildBlenderCommand
+buildNoaaportIngesterCommand
+
+if [ "${debug}" -eq 1 ]; then
+  showCommandsAndExit
+fi
+
+${ULOGGER} -l ${thisScriptLog} "${0}:Starting"
+
+while [ "${terminate}" -eq 0 ]
+do
+  rm -rf ${Fifo}
+  mkfifo ${Fifo}
+  if [ ! -e "${Fifo}" ]; then
+    echo "Cannot create named pipe ${Fifo}, exiting"
+    exit -5
+  fi
+
+  eval "${NOAAPORTINGESTER}" &
+  npProcess="$!"
+  eval "${BLENDER}" &
+  blProcess="$!"
+  wait ${npProcess} ${blProcess}
+done
+## Main END
