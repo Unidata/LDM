@@ -148,15 +148,23 @@ int exitIfDone(
  */
 const char* getDefaultQueuePath(void)
 {
-    if (0 == defaultQueuePath[0]) {
+    if (0 == defaultQueuePath[0]) 
+    {
         char*           var;
-        if (reg_getString(REG_QUEUE_PATH, &var)) {
-            log_warning_q("Couldn't get pathname of product-queue from registry. "
-                    "Using default: \"%s\"", LDM_QUEUE_PATH);
-            strncpy(defaultQueuePath, LDM_QUEUE_PATH,
-                    sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
+
+        if (reg_getString(REG_QUEUE_PATH, &var)) 
+	{
+	  char myHomePath[PATH_MAX];
+	  char myQueuePath[PATH_MAX];
+	  memset((void *)myHomePath, 0, sizeof(myHomePath));
+	  memset((void *)myQueuePath, 0, sizeof(myQueuePath));
+	  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+	  snprintf(myQueuePath, (sizeof(myQueuePath) - 1), "%s/var/queues/ldm.pq", myHomePath);
+          log_warning_q("Couldn't get pathname of product-queue from registry. Using default: \"%s\"", myQueuePath);
+          strncpy(defaultQueuePath, myQueuePath, sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
         }
-        else {
+        else 
+	{
             strncpy(defaultQueuePath, var,
                     sizeof(defaultQueuePath))[sizeof(defaultQueuePath)-1] = 0;
             free(var);
@@ -188,7 +196,13 @@ void setQueuePath(
  */
 const char* getQueuePath(void)
 {
-    return getPath(REG_QUEUE_PATH, queuePath, LDM_QUEUE_PATH);
+  char myHomePath[PATH_MAX];
+  char myQueuePath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myQueuePath, 0, sizeof(myQueuePath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myQueuePath, (sizeof(myQueuePath) - 1), "%s/var/queues/ldm.pq", myHomePath);
+  return getPath(REG_QUEUE_PATH, queuePath, myQueuePath);
 }
 
 /*
@@ -215,7 +229,13 @@ void setPqactConfigPath(
  */
 const char* getPqactConfigPath(void)
 {
-    return getPath(REG_PQACT_CONFIG_PATH, pqactConfigPath, PQACT_CONFIG_PATH);
+  char myHomePath[PATH_MAX];
+  char myConfigPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myConfigPath, 0, sizeof(myConfigPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myConfigPath, (sizeof(myConfigPath) - 1), "%s/etc/pqact.conf", myHomePath);
+  return getPath(REG_PQACT_CONFIG_PATH, pqactConfigPath, myConfigPath);
 }
 
 /*
@@ -242,7 +262,13 @@ void setLdmdConfigPath(
  */
 const char* getLdmdConfigPath(void)
 {
-    return getPath(REG_LDMD_CONFIG_PATH, ldmdConfigPath, LDM_CONFIG_PATH);
+  char myHomePath[PATH_MAX];
+  char myConfigPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myConfigPath, 0, sizeof(myConfigPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myConfigPath, (sizeof(myConfigPath) - 1), "%s/etc/ldmd.conf", myHomePath);
+  return getPath(REG_LDMD_CONFIG_PATH, ldmdConfigPath, myConfigPath);
 }
 
 /*
@@ -269,7 +295,13 @@ void setPqactDataDirPath(
  */
 const char* getPqactDataDirPath(void)
 {
-    return getPath(REG_PQACT_DATADIR_PATH, pqactDataDirPath, PQACT_DATA_DIR);
+  char myHomePath[PATH_MAX];
+  char myDataPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myDataPath, 0, sizeof(myDataPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myDataPath, (sizeof(myDataPath) - 1), "%s/var/data", myHomePath);
+  return getPath(REG_PQACT_DATADIR_PATH, pqactDataDirPath, myDataPath);
 }
 
 /*
@@ -296,7 +328,13 @@ void setPqsurfDataDirPath(
  */
 const char* getPqsurfDataDirPath(void)
 {
-    return getPath(REG_PQSURF_DATADIR_PATH, pqsurfDataDirPath, PQSURF_DATA_DIR);
+  char myHomePath[PATH_MAX];
+  char myDataPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myDataPath, 0, sizeof(myDataPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myDataPath, (sizeof(myDataPath) - 1), "%s/var/data", myHomePath);
+  return getPath(REG_PQSURF_DATADIR_PATH, pqsurfDataDirPath, myDataPath);
 }
 
 /*
@@ -323,7 +361,13 @@ void setSurfQueuePath(
  */
 const char* getSurfQueuePath(void)
 {
-    return getPath(REG_SURFQUEUE_PATH, surfQueuePath, PQSURF_QUEUE_PATH);
+  char myHomePath[PATH_MAX];
+  char myQueuePath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myQueuePath, 0, sizeof(myQueuePath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myQueuePath, (sizeof(myQueuePath) - 1), "%s/var/queues/pqsurf.pq", myHomePath);
+  return getPath(REG_SURFQUEUE_PATH, surfQueuePath, myQueuePath);
 }
 
 /*
@@ -350,8 +394,13 @@ void setPqsurfConfigPath(
  */
 const char* getPqsurfConfigPath(void)
 {
-    return getPath(REG_PQSURF_CONFIG_PATH, pqsurfConfigPath,
-        PQSURF_CONFIG_PATH);
+  char myHomePath[PATH_MAX];
+  char myConfigPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myConfigPath, 0, sizeof(myConfigPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myConfigPath, (sizeof(myConfigPath) - 1), "%s/etc/pqsurf.conf", myHomePath);
+  return getPath(REG_PQSURF_CONFIG_PATH, pqsurfConfigPath, myConfigPath);
 }
 
 /**
@@ -375,7 +424,7 @@ const char* getLdmHomePath(void)
              * relocated RPM binary, however, then LDMHOME might be
              * incorrect.
              */
-            ldmHomePath = LDMHOME;
+            ldmHomePath = getenv("HOME");
         }
     }
 
@@ -500,11 +549,17 @@ void setLdmLogDir(
  *
  * @return The pathname of the LDM log file directory.
  */
-const char*
-getLdmLogDir(void)
-{
-    return ldmLogDir[0] ? ldmLogDir : LDM_LOG_DIR;
-}
+//const char*
+//getLdmLogDir(void)
+//{
+//  char myHomePath[PATH_MAX];
+//  char myLogPath[PATH_MAX];
+//  memset((void *)myHomePath, 0, sizeof(myHomePath));
+//  memset((void *)myLogPath, 0, sizeof(myLogPath));
+//  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+//  snprintf(myLogPath, (sizeof(myLogPath) - 1), "%s/var/logs", myHomePath);
+//  return ldmLogDir[0] ? ldmLogDir : myLogPath;
+//}
 
 /**
  * Returns the absolute path of the directory for information on the system
@@ -512,8 +567,14 @@ getLdmLogDir(void)
  *
  * @return The absolute path of the LDM var/run directory.
  */
-const char*
-getLdmVarRunDir(void)
-{
-    return LDM_VAR_RUN_DIR;
-}
+//const char*
+//getLdmVarRunDir(void)
+//{
+//  char myHomePath[PATH_MAX];
+//  char myVarRunPath[PATH_MAX];
+//  memset((void *)myHomePath, 0, sizeof(myHomePath));
+//  memset((void *)myVarRunPath, 0, sizeof(myVarRunPath));
+//  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+//  snprintf(myVarRunPath, (sizeof(myVarRunPath) - 1), "%s/var/run", myHomePath);
+//  return myVarRunPath;
+//}

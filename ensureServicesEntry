@@ -4,3 +4,9 @@ if awk '$2 ~ /388\/tcp/ {exit 1}' /etc/services; then
 else
     : true
 fi
+if awk '$2 ~ /38800\/tcp/ {exit 1}' /etc/services; then
+    cp -f /etc/services /etc/services.old &&
+    echo 'unidata-ldm		38800/tcp		# Unidata LDM' >>/etc/services
+else
+    : true
+fi

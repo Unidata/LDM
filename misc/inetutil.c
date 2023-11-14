@@ -143,7 +143,7 @@ ghostname(void)
         else {
             log_info("Couldn't get name of local host from registry");
             if (gethostname(hostname, sizeof(hostname)) < 0) {
-                (void)snprintf(hostname, sizeof(hostname), "%s", HOSTNAME);
+                (void)snprintf(hostname, sizeof(hostname), "localhost");
                 hostname[sizeof(hostname)-1] = 0;
                 log_warning("Couldn't get name of local host from "
                         "gethostname(). Using default: \"%s\"", hostname);

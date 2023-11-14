@@ -763,10 +763,10 @@ sub start_ldm
 {
     my $status = 0;     # default success
 
-    if (!correctInstall()) {
-        $status = 1;
-    }
-    else {
+#    if (!correctInstall()) {
+#        $status = 1;
+#    }
+#    else {
         # Make sure there is no other server running
         #print "start_ldm(): Checking for running LDM\n";
         if (isRunning($pid_file, $ip_addr)) {
@@ -825,7 +825,7 @@ sub start_ldm
                 }                       # product-queue OK
             }                           # PID-file doesn't exist
         }                               # LDM not running
-    }                                   # LDM not installed correctly
+#    }                                   # LDM not installed correctly
 
     if ($status) {
         errmsg("LDM not started");

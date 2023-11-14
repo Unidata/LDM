@@ -578,8 +578,8 @@ static int create_ldm_tcp_svc(
          * If privilege available, set it so we can bind to the port for LDM
          * services.  Also needed for the pmap_set() call.
          */
-        log_debug("Getting root privs");
-        rootpriv(); // Become root
+//        log_debug("Getting root privs");
+//        rootpriv(); // Become root
             log_debug("Binding socket");
             if (bind(sock, (struct sockaddr *) &addr, len) < 0) {
                 error = errno;

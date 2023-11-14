@@ -152,15 +152,21 @@ static dest_t          dest;
 static const char* get_ldm_logfile_pathname(void)
 {
     static char pathname[_XOPEN_PATH_MAX];
+    char homePath[_XOPEN_PATH_MAX];
+
+    memset((void *)homePath, 0, sizeof(homePath));
 
     if (pathname[0] == 0) {
         int   reg_getString(const char* key, char** value);
         char* value;
 
-        if (reg_getString("/log/file", &value)) {
+        if (reg_getString("/log/file", &value)) 
+	{
             // No entry in registry
-            (void)snprintf(pathname, sizeof(pathname), "%s/ldmd.log",
-                    LDM_LOG_DIR);
+	    strncpy(homePath, getenv("HOME"), (sizeof(homePath) - 1));
+	    if ((strlen(homePath)) == 0)
+	      strcpy(homePath, "/tmp/ldmhome");
+            (void)snprintf(pathname, sizeof(pathname), "%s/var/logs/ldmd.log", homePath);
             pathname[sizeof(pathname)-1] = 0;
         }
         else {

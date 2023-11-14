@@ -320,10 +320,7 @@ static const char       REGISTRY_ELTNAME[] = "registry";
  * @retval 0            Success. "*path" is set.
  * @retval ENOMEM       Out-of-memory. "log_add()" called.
  */
-static RegStatus
-getXmlFilePath(
-    const char* const   dir,
-    char** const        path)
+static RegStatus getXmlFilePath( const char* const   dir, char** const        path)
 {
     RegStatus           status;
     const size_t        nbytes = strlen(dir) + 1 + strlen(DB_FILENAME) + 1;

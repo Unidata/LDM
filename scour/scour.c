@@ -737,11 +737,19 @@ getRegString(const char*       name,
 void getRegistryConfValues(char * workingDir)
 {
     char* var = NULL;
-    if (getRegString(REG_SCOUR_EXCLUDE_PATH, &var, SCOUR_EXCLUDE_PATH) == 0)
+  char myHomePath[PATH_MAX];
+  char myScourPath[PATH_MAX];
+  memset((void *)myHomePath, 0, sizeof(myHomePath));
+  memset((void *)myScourPath, 0, sizeof(myScourPath));
+  strncpy(myHomePath, getenv("HOME"), (sizeof(myHomePath) - 1));
+  snprintf(myScourPath, (sizeof(myScourPath) - 1), "%s/etc/scour_excludes.conf", myHomePath);
+  if (getRegString(REG_SCOUR_EXCLUDE_PATH, &var, myScourPath) == 0)
         strncpy(excludePath, var, sizeof(excludePath)-1);
     free(var);
-
-    if (getRegString(REG_SCOUR_CONFIG_PATH, &var, SCOUR_CONFIG_PATH)) {
+ 
+  memset((void *)myScourPath, 0, sizeof(myScourPath));
+  snprintf(myScourPath, (sizeof(myScourPath) - 1), "%s/etc/scour.conf", myHomePath);
+    if (getRegString(REG_SCOUR_CONFIG_PATH, &var, myScourPath)) {
         log_add("Couldn't get scour config path for this program");
         log_flush_fatal();
         exit(EXIT_FAILURE);
@@ -750,7 +758,9 @@ void getRegistryConfValues(char * workingDir)
     free(var);   
 
     // Set the current working directory to that of pqact(1) processes 
-    if (getRegString(REG_PQACT_DATADIR_PATH, &var, PQACT_DATA_DIR)) {
+  memset((void *)myScourPath, 0, sizeof(myScourPath));
+  snprintf(myScourPath, (sizeof(myScourPath) - 1), "%s/var/data", myHomePath);
+    if (getRegString(REG_PQACT_DATADIR_PATH, &var, myScourPath)) {
         log_add("Couldn't get working directory for this program");
         log_flush_fatal();
         exit(EXIT_FAILURE);
