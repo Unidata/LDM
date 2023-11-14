@@ -6,6 +6,7 @@
 #
 # Description: This is a shell script to monitor and keep
 #  blender() and noaaportIngester() pair running
+# Original code 2023-03-02, cooper@ucar.edu
 # Updated with comments 2023-11-13, cooper@ucar.edu
 
 # Set system-wide profile for script
