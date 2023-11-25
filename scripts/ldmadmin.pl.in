@@ -1197,7 +1197,9 @@ sub computeNewQueueSize
     my $newSlotCount;
     if (0 < $minVirtResTime) {
         # Cap the increase at the Golden Ratio
-        my $ratio = min(1.618, double($max_latency)/double($minVirtResTime));
+        my $ratio = $max_latency/$minVirtResTime;
+        $ratio = $ratio < 1.618 ? $ratio : 1.618;
+
         $newByteCount = int($ratio*$mvrtSize);
         $newSlotCount = int($ratio*$mvrtSlots);
     }

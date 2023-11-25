@@ -1,3 +1,7 @@
+6.15.0.14
+    ldmadmin(1):
+        * Corrected computation of new queue-size parameters.
+
 6.15.0.13       2023-11-14T13:13:01-0700
     ldmadmin(1):
         * Corrected syntax errors in vetQueueSize().
