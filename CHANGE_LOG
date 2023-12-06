@@ -1,78 +1,4 @@
-6.15.0.14       2023-11-25T12:18:05-0700
-    ldmadmin(1):
-        * Corrected computation of new queue-size parameters.
-
-6.15.0.13       2023-11-14T13:13:01-0700
-    ldmadmin(1):
-        * Corrected syntax errors in vetQueueSize().
-
-    DevOps:
-        * Have NOAAPort makefile print head of ingest log file to aid GitHub Actions debugging
-
-6.15.0.12       2023-11-12T11:49:17-0700
-    ldmadmin(1):
-        * Modified "vetqueuesize" to cap the factor multiplying the MVRT sizes at the Golden Ratio
-        * Added some diagnostic print statements to when the queue is adjusted
-
-6.15.0.11       2023-10-10T09:43:40-0600
-    pqinsert(1):
-        * Added "-r" option to read the input files instead of memory-mapping them. This might be
-          necessary if the input files are not on local disk.
-
-6.15.0.10       2023-08-17T10:38:21-0600
-    blender(1):
-        * Enabled logging of diagnostic information for a frame that arrives too late to be included
-
-6.15.0.9        2023-08-11T13:39:33-0600
-    blender(1):
-        * Fixed SIGSEGV bug by ensuring that the key of the oldest frame in the queue is used
-          before the frame is destroyed
-
-6.15.0.8        2023-08-09T13:48:19-0600
-    rtstats(1):
-        * Have connectToLdm() call ldmsend_disconnect() if clnt != NULL because the previous
-          assertion failed for some reason (cosmic ray?)
-
-6.15.0.7        2023-07-24T15:12:01-0600
-    ldmd(1):
-        * up6.c: Corrected use of variable indicating status of product transmission by initializing
-          it
-
-6.15.0.6        2023-07-21T13:50:21-0600
-    ldmd(1):
-        Upstream: Added diagnostic error logging to up6_run()
-
-6.15.0.5        2023-07-20T13:56:10-0600
-    pqinsert(1):
-        * Added ability to read a single data-product from standard input
-        * Added "-h" (help) option
-        * Enhanced man(1) page
-
-    blender(1):
-        * Renamed CircFrameBuf to FrameQueue
-        * Improved error messages
-
-6.15.0.4        2023-07-12T12:24:54-0600
-    blender(1): Corrected comparison of frame keys
-
-6.15.0.3        2023-07-11T17:54:13-0600
-    notifyme(1): Eliminated SIGSEGV if a severe upstream error causes notifyme_6() to returns NULL.
-        It now prints a useful error message.
-
-    blender(1): Changed Key::operator<() to handle the data server being switched
-
-6.15.0.2        2023-07-07T09:17:07-0600
-    Documentation:
-        * Feedtype webpage: Changed "FT31" to "FT30" for the "ANY" feedtype
-
-6.15.0.1        2023-07-06T11:06:59-0600
-    showSettings(1): Corrected bug in setting of default LDMHOME value
-
-    notifyme(1): Replaced use of synchronous LDM-5 protocols with asynchronous LDM-6 protocols in
-        order to greatly increase performance when used for a long time. As a
-        consequence, this utility will no longer work with an upstream LDM-5 server.
-
-6.14.6.1        2023-06-21T17:04:22-0600
+6.15.0  2023-12-06T12:37:33-0700
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
           to make the development and build process more conventional and easier to understand
@@ -81,20 +7,46 @@
             * ensure_hdmhome_links: Added extraction of subdirectory name from installation prefix
 
     ldmadmin(1):
-        * "queuecheck": Placed the pathname of the product-queue queue in quotes just in case it
+        * "queuecheck" command: Placed the pathname of the product-queue in quotes just in case it
           contains embedded whitespace
-        * "showsettings": Added "pqmon -S"
+        * "showsettings" command: Added "pqmon -S"
+        * Modified "vetqueuesize" to cap the factor multiplying the MVRT sizes at the Golden Ratio
+        * Added some diagnostic print statements to when the queue is adjusted
+        * Corrected syntax errors in vetQueueSize().
+        * Corrected computation of new queue-size parameters.
 
-    Version 6 upstream LDM:
-        * Added logging of a warning if sending or notifying about the oldest product in the queue
-          because this indicates that the product-queue might be too small or the system too busy
+    ldmd(1):
+        * Version 6 upstream LDM: Added logging of a warning if sending or notifying about the
+          oldest product in the queue because this indicates that the product-queue might be too
+          small or the system too busy
+        * Upstream: Added diagnostic error logging to up6_run()
+        * up6.c: Corrected use of variable indicating status of product transmission by initializing
+          it
 
     notifyme(1):
         * Added "-O" option to include product origin in output
         * Modified usage message to use LDM logging module
+        * Replaced use of synchronous LDM-5 protocols with asynchronous LDM-6 protocols in order to
+          greatly increase performance when used for a long time. As a consequence, this utility
+          will no longer work with an upstream LDM-5 server.
+        * Eliminated SIGSEGV if a severe upstream error causes notifyme_6() to returns NULL. It now
+          prints a useful error message.
+
+    pqinsert(1):
+        * Added ability to read a single data-product from standard input
+        * Added "-h" (help) option
+        * Enhanced man(1) page
+        * Added "-r" option to read the input files instead of memory-mapping them. This might be
+          necessary if the input files are not on local disk.
+
+    rtstats(1):
+        * Have connectToLdm() call ldmsend_disconnect() if clnt != NULL because the previous
+          assertion failed for some reason (cosmic ray?)
 
     keep_running(1):
         * Added a test for the executable's existance
+
+    showSettings(1): Corrected bug in setting of default LDMHOME value
 
     NOAAPort:
         * Configured the UDP socket for sharing the packets with other sockets and logging a
@@ -105,11 +57,22 @@
             * Frame is now output when the wait-time expires even if no subsequent frames arrive
             * "Starting product" INFO-level log message now includes source field from frame header
 
+    blender(1):
+        * Changed Key::operator<() to handle the data server being switched
+        * Corrected comparison of frame keys
+        * Renamed CircFrameBuf to FrameQueue
+        * Improved error messages
+        * Fixed SIGSEGV bug by ensuring that the key of the oldest frame in the queue is used
+          before the frame is destroyed
+        * Enabled logging of diagnostic information for a frame that arrives too late to be included
+        * Added a shell version of the noaaportBlender(1) Python version
+
     Documentation:
-        * Improved slightly
+        * Feedtype webpage: Changed "FT31" to "FT30" for the "ANY" feedtype
 
     DevOps:
         * Added "workflow_dispatch" to "on" entry
+        * Have NOAAPort makefile print head of ingest log file to aid GitHub Actions debugging
 
 6.14.5  2023-02-16T11:40:06-0700
     ldmadmin(1):
