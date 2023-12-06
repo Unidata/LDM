@@ -56,7 +56,8 @@ dist_bin_SCRIPTS	= \
 	dvbs_nwstg2 \
 	dvbs_oconus \
 	nplog_rotate \
-	noaaportBlender.py
+	noaaportBlender.py \
+	noaaportBlender.sh
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \
