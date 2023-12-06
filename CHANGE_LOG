@@ -1,3 +1,7 @@
+6.15.1.0
+    noaaportBlender.sh(1):
+        * Added to installation step
+
 6.15.0  2023-12-06T12:37:33-0700
     Build:
         * Eliminated all *.hin files (except "registry/registry.hin") and extractDecls(1) in order
