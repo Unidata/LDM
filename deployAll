@@ -7,16 +7,16 @@ versOpt=${1:+-v $1}
 cd `dirname $0`
 
 # NOAAPort ingest test system (password required)
-#deploy -n chico
+./deploy -n chico
 
 # Non-operational backend cluster node. Needs "--with-noaaport".
 # Tom's using uni14 and uni17 for fanout testing
-#deploy -n uni15
+./deploy -n uni15
 
 # Lead (for testing pqact(1))
-#deploy lead
+./deploy lead
 
-#exit
+exit
 
 # LDM7 systems (no password required)
 declare -A deployOpts
