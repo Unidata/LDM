@@ -583,14 +583,14 @@ static up6_error_t up6_run(
                         log_debug("End of product-queue");
 
                         if (_flushNeeded) {
-                                (void) exitIfDone(0);
+                            (void) exitIfDone(0);
 
-                                ErrorObj* errObj = flushConnection();
-                                if (errObj) {
-                                    log_error("flushConnection() failure"); // new
-                                    errCode = logFailure("Couldn't flush connection", errObj);
-                                    break;
-                                }
+                            ErrorObj* errObj = flushConnection();
+                            if (errObj) {
+                                // log_error("flushConnection() failure"); // new
+                                errCode = logFailure("Couldn't flush connection", errObj);
+                                break;
+                            }
                         }
 
                         time_t timeSinceLastSend = time(NULL) - _lastSendTime;
@@ -635,8 +635,8 @@ static up6_error_t up6_run(
 }
 
 /*
- * Destroys the upstream LDM module -- freeing resources.
- * This function prints diagnostic messages via the ulog(3) module.
+ * Destroys the upstream LDM-6 module -- freeing resources.
+ * This function prints diagnostic messages via the log(3) module.
  */
 static void up6_destroy(
         void)
