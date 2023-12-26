@@ -238,7 +238,8 @@ notifymeprog_5(struct svc_req *rqstp, SVCXPRT *transp)
 
 /**
  * The LDM-6 RPC service routine for this program. Registered as a callback by svc_register()
- * below. Note that only NULLPROC and NOTIFICATION functions are handled by this program.
+ * below. Note that only NULLPROC and NOTIFICATION functions are handled by this program (as
+ * opposed to ldmprog_6() in ldm_svc.c, for example).
  * @param[in] rqstp   RPC request
  * @param[in] transp  RPC transport
  */
@@ -310,6 +311,7 @@ sendNotifyMe(CLIENT* client)
 
         for (;;) {
             reply = notifyme_6(prodClass, client);
+            exitIfDone(0);
             if (reply == NULL) {
                 struct rpc_err rpcErr;
                 log_add("notifyme_6() failure. %s", clnt_errmsg(client));
@@ -368,14 +370,14 @@ sendNotifyMe(CLIENT* client)
 /**
  * Executes the LDM-6 service. Doesn't return until an error occurs. On return, the transport is
  * destroyed.
- * @param[in] xprt  Server-side transport
- * @retval true     Non-fatal error. `log_add()` called.
- * @retval false    Fatal error. `log_add()` called.
+ * @param[in] xprt  Server-side transport. Destroyed upon return.
+ * @retval false    Non-fatal error. `log_add()` called.
+ * @retval true     Fatal error. `log_add()` called.
  */
 static bool
 executeService(SVCXPRT* xprt)
 {
-    bool nonFatalError = true;
+    bool fatalError = false;
 
     /*
      * The only possible return values are:
@@ -384,11 +386,13 @@ executeService(SVCXPRT* xprt)
      *     ECONNRESET if connection closed.
      *     EBADF      if socket not open.
      *     EINVAL     if invalid timeout.
+     * 3rd argument is the timeout interval. It should be large enough to allow reception of at
+     * least one NULLPROC call.
      */
-    int status = one_svc_run(xprt->xp_sock, 30); // Calls exit(0) on SIGTERM
+    int status = one_svc_run(xprt->xp_sock, 3*interval); // Calls exit(0) on SIGTERM
 
     if (status == ECONNRESET) {
-        // one_svc_run() called svc_getreqset(), which called svc_destroy()
+        // one_svc_run() called svc_getreqset(), which called svc_destroy(), which frees `xprt`
         log_add("Connection reset by upstream");
     }
     else {
@@ -397,23 +401,23 @@ executeService(SVCXPRT* xprt)
         }
         else if (status) {
             log_add("Couldn't execute downstream LDM-6 service");
-            nonFatalError = false;
+            fatalError = true;
         }
-        svc_destroy(xprt);
+        svc_destroy(xprt); // Destroys the transport & frees `xprt`
     } // Connection wasn't reset and `xprt` wasn't destroyed
 
-    return nonFatalError;
+    return fatalError;
 }
 
 /**
  * Executes a NOTIFYME call using LDM-6 protocols. Doesn't return until an error occurs.
- * @retval true   Non-fatal error. `log_add()` called.
- * @retval false  Fatal error. `log_add()` called.
+ * @retval false  Non-fatal error. `log_add()` called.
+ * @retval true   Fatal error. `log_add()` called.
  */
 static bool
 notifyme6(void)
 {
-    bool nonFatalError = false; // Default fatal error
+    bool fatalError = true; // Default fatal error
 
     // Create a client-side handle
     int                sd = RPC_ANYSOCK;
@@ -432,7 +436,7 @@ notifyme6(void)
         if (status) {
             log_add("NOTIFYME failure");
             if (status == 1)
-                nonFatalError = true;
+                fatalError = false;
         }
         else {
             // Create a server-side transport
@@ -448,7 +452,7 @@ notifyme6(void)
                 }
                 else {
                     // Execute the service
-                    nonFatalError = executeService(xprt);
+                    fatalError = executeService(xprt); // `xprt` is destroyed on return
                 }
             } // `xprt` allocated
         } // NOTIFYME call was successful
@@ -457,7 +461,7 @@ notifyme6(void)
         clnt_destroy(client);
     } // `client` created
 
-    return nonFatalError;
+    return fatalError;
 }
 
 int main(int ac, char *av[])
@@ -612,7 +616,7 @@ int main(int ac, char *av[])
          * Try forever.
          */
         for (;;) {
-            if (!notifyme6()) {
+            if (notifyme6()) {
                 log_flush_fatal();
                 exit(1);
             }
