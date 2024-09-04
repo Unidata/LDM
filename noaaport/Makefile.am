@@ -56,8 +56,6 @@ dist_bin_SCRIPTS	= \
 	dvbs_nwstg2 \
 	dvbs_oconus \
 	nplog_rotate \
-	noaaportBlender.py \
-	noaaportBlender.sh
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \
@@ -104,11 +102,6 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-blender_SOURCES		= blender.c blender.h $(COMMON_SOURCES) \
-	frameWriter.c frameWriter.h noaaportFrame.h queueManager.c \
-	queueManager.h frameReader.c frameReader.h FrameQueue.cpp \
-	FrameQueue.h misc.c NbsHeaders.c NbsHeaders.h NbsFrame2.c NbsFrame.h
- 	
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
   LDADD 	+= retrans/lib.la
@@ -126,7 +119,7 @@ TAGS_FILES		= \
         $(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
         $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
         $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
-        $(testBlender_SOURCES) ../log/*.c ../log/*.h 
+        ../log/*.c ../log/*.h 
 
 if WANT_RETRANS
     TAGS_FILES		+= retrans/*.c retrans/*.h
