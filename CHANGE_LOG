@@ -1,6 +1,6 @@
 6.15.1.0
-    noaaportBlender.sh(1):
-        * Added to installation step
+    blender(1):
+        * Transitioned blender(1) and support source out of LDM base code and into a separate repository
 
 6.15.0  2023-12-06T12:37:33-0700
     Build:
