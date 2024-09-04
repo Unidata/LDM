@@ -55,7 +55,7 @@ dist_bin_SCRIPTS	= \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
-	nplog_rotate \
+	nplog_rotate
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \
