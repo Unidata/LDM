@@ -8,6 +8,7 @@ cov-build --dir cov-int make
 echo 'cov-build' executed
 tar czvf vcmtp.tgz cov-int
 echo Tarball created
-curl --form token=o39npK1ZpkOZ8d6AFsqm-A --form email=emmerson@ucar.edu \
-    --form file=@vcmtp.tgz https://scan.coverity.com/builds?project=VCMTP
+curl --form token=`cat $$HOME/$$tokens/vcmtp/coverity` \
+     --form email=emmerson@ucar.edu \
+     --form file=@vcmtp.tgz https://scan.coverity.com/builds?project=VCMTP
 echo Tarball submitted
