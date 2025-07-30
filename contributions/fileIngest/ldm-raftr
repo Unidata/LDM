@@ -1,0 +1,123 @@
+#!/bin/bash
+#
+# ldmcp:	This starts and stops the SBN LDMCP software at the sites
+#
+# chkconfig:	345 99 0
+# description:	ldmcp starts/stops SBN LDM software on the CP at the site
+#
+#
+
+PATH=/sbin:/bin:/usr/bin:/usr/sbin
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+LDM_PROJECT="/usr/local/ldm"
+LOGFILE=`basename $0`
+LOCKFILE="/var/lock/subsys/ldm-raftr"
+DATA_DIR="/data/ldm/data"
+PROD_QUEUE="${DATA_DIR}/ldm.pq"
+USER_SPEC="ldm:users"
+
+function handle_ramdisk() {
+
+	# check if ramdisk is mounted:
+	if ! mount | grep ram0 > /dev/null 
+	then
+		echo -ne "Creating RAMDISK:\t"
+		if mkfs -t ext2 -m 0 -q /dev/ram0 1500000 && success || failure	
+		then
+			echo
+			# mount to /data/ldm/data
+			echo -ne "Mounting to ${DATA_DIR}:\t"
+			if ! mount /dev/ram0 $DATA_DIR && failure 
+			then
+				echo
+				return 1
+			else
+				success
+			fi
+			echo
+			sleep 2
+		else
+			echo
+			return 1
+		fi
+	fi
+	echo -ne "Fixing Permissions:\t"
+	if ! chown -R $USER_SPEC $DATA_DIR && failure 
+	then
+		echo
+		return 1
+	fi
+		success
+	echo
+	return 0
+}
+
+function clean_ldm() {
+
+	echo -ne "Cleaning LDM:\t"
+	su ldm -lc "ldmadmin clean" > /dev/null 2>&1 && success || failure
+	myRetVal=$?
+        if [[ ${myRetVal} -ne 0 ]]
+        then
+                return ${myRetVal}
+        fi
+	echo
+
+	if [[ -f $PROD_QUEUE ]] 
+	then
+		echo -ne "\nDeleting the ldm queue:\t"
+		su ldm -lc "ldmadmin delqueue" > /dev/null 2>&1 && success || failure
+		echo
+	fi
+        echo -ne "\nCreating the ldm queue:\t"
+        su ldm -lc "ldmadmin mkqueue" > /dev/null 2>&1 && success || failure
+	myRetVal=$?
+        echo
+	return ${myRetVal}
+}
+
+case $1 in
+
+'start')
+#	if ! handle_ramdisk; then exit 1 ; fi
+	if ! clean_ldm; then exit 1 ; fi
+
+	echo -n "Starting RaFTR LDM processes:"
+	su - ldm -c "ldmadmin start"
+	if [ $? -eq 0 ]
+	then
+		RETVAL=0
+		touch $LOCKFILE
+		success  && echo
+	else
+		RETVAL=1
+		failure && echo
+	fi
+	;;
+
+'stop')
+	echo -n "Stopping RaFTR LDM processes:"
+	su - ldm -c "ldmadmin stop"
+	if [ $? -eq 0 ] 
+	then
+		RETVAL=0
+		rm -f $LOCKFILE
+		success && echo
+	else
+		RETVAL=1
+		failure && echo
+	fi
+	;;
+
+*)
+	echo "usage: $0 {start|stop}"
+	RETVAL=1
+	;;
+
+esac
+
+exit $RETVAL

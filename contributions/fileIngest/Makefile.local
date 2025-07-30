@@ -1,0 +1,38 @@
+
+COPTS = -g -Wall
+
+BUILT_HEADERS = datelib.h goesr_lib.h mlogger.h stdclib.h
+BUILT_PROGS = fileIngester test read_acq_pipe log_tester
+INGEST_OBJS = fileIngester.o stdclib.o goesr_lib.o mlogger.o
+
+all ::	fileIngester test log_tester read_acq_pipe
+
+clean :: 
+	rm -f $(INGEST_OBJS) $(BUILT_PROGS) read_acq_pipe.o log_tester.o
+	
+%.h : %.hin %.c extractDecls
+	./extractDecls $*.hin $*.c > $@
+
+%.o : %.c
+	cc $(COPTS) -o $@ -c $<
+
+goesr_lib.o :	stdclib.h mlogger.h goesr_lib.h
+stdclib.o :		stdclib.h
+fileIngester.o :	stdclib.h mlogger.h goesr_lib.h
+log_tester.o :	stdclib.h mlogger.h
+
+fileIngester :	$(INGEST_OBJS)
+	cc -g -lrt -o $@ $^
+
+read_acq_pipe :	read_acq_pipe.o stdclib.o
+	cc -g -lrt -o $@ $^
+
+acq_ftp_send :	$(INGEST_OBJS)
+	cc -g -lrt -o $@ $^
+
+test :		test.o
+	cc -g -o $@ $^
+
+log_tester :	log_tester.o mlogger.o stdclib.o
+	cc -g -lrt -o $@ $^
+
