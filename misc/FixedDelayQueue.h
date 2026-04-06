@@ -19,6 +19,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <stdexcept>
 
 /**
  * @tparam Value     Type of value being stored in the queue. Must support

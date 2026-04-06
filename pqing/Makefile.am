@@ -61,9 +61,9 @@ pqing.1:	$(srcdir)/pqing.1.in
 	mv $@.tmp $@
 
 do_check.o:	do.c
-	$(COMPILE) -DSCAN_CHECK -c $(srcdir)/do.c && mv do.o $@;
+	$(COMPILE) -DSCAN_CHECK -c -o $@ $(srcdir)/do.c
 do_nocheck.o:	do.c
-	$(COMPILE) -USCAN_CHECK -c $(srcdir)/do.c && mv do.o $@;
+	$(COMPILE) -USCAN_CHECK -c -o $@ $(srcdir)/do.c
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && rm -f dds && ln -s $(bin_PROGRAMS) dds
