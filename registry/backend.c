@@ -151,7 +151,7 @@ fileLock(
         flags |= O_RSYNC;
 #endif
         fd = file->exclusive
-                ? open(file->path, O_RDWR | O_CREAT | flags, 0777)
+                ? open(file->path, O_RDWR | O_CREAT | flags, 0666)
                 : open(file->path, O_RDONLY | flags);
 
         if (-1 == fd) {
