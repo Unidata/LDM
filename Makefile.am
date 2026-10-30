@@ -64,7 +64,7 @@ if WANT_NOAAPORT
     SUBDIRS	+= noaaport
 endif
 if WANT_INGESTER
-    SUBDIRS	+= fileIngest
+    SUBDIRS	+= contributions/fileIngest
 endif
 SUBDIRS 	+= regutil \
                    feedme \

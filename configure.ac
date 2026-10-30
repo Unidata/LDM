@@ -694,7 +694,7 @@ LT_INIT
 AC_CONFIG_FILES([
     fauxPq/Makefile
     feedme/Makefile
-    fileIngest/Makefile
+    contributions/fileIngest/Makefile
     delayQueue/Makefile
     gempak/Makefile
     gempak/tables/Makefile

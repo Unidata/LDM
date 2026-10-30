@@ -821,7 +821,7 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = autom4te.cache build-aux delayQueue delivery fauxPq \
-    feedme fileIngest \
+    feedme contributions/fileIngest \
     gempak grib2 gribinsert html hupsyslog include notifyme pqact pqcat pqcheck \
     pqcopy pqcreate pqexpire pqing pqinglib pqinsert pqmon pqsend pqsurf
     pqutil regutil rtstats scour scripts test TestProgram uldbutil ulogger \
