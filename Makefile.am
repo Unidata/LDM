@@ -198,10 +198,6 @@ install_setuids:
 	    chown root $(DESTDIR)$(bindir)/noaaportIngester; \
 	    chmod 4754 $(DESTDIR)$(bindir)/noaaportIngester; \
 	fi
-	-if test -f $(DESTDIR)$(bindir)/blender; then \
-	    chown root $(DESTDIR)$(bindir)/blender; \
-	    chmod 4754 $(DESTDIR)$(bindir)/blender; \
-	fi
 	-if test -f $(DESTDIR)$(bindir)/fileIngester; then \
 	    chown root $(DESTDIR)$(bindir)/fileIngester; \
 	    chmod 4754 $(DESTDIR)$(bindir)/fileIngester; \
