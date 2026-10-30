@@ -1,0 +1,19 @@
+[watch]
+directory = "/data/incoming"
+include_hidden = false
+
+[ldm]
+queue_path = "/home/ldm/var/queues/ldm.pq"
+feedtype = "EXP"
+
+[sequence]
+# "random" uses a new uint32 value from /dev/urandom for every product.
+# "static" always uses the value below.
+mode = "random"
+value = 0
+
+[product_id]
+# "filename" uses the complete basename.
+# "truncated" keeps the rightmost max_length characters.
+mode = "truncated"
+max_length = 255
