@@ -28,7 +28,7 @@ EXTRA_DIST              = \
 	SUPER-NATIONAL_8km_IR_20160422_1915.gini
 
 DISTCLEANFILES          = $(BUILT_SOURCES)
-CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini blender.1 
+CLEANFILES              = $(BUILT_SOURCES) *.out *.log *.pq output.gini
 
 AM_CPPFLAGS             = \
         -I$(top_srcdir) \
@@ -49,14 +49,13 @@ if WANT_RETRANS
 endif 
 
 bin_PROGRAMS		= dvbs_multicast readnoaaport noaaportIngester \
-                          nbs_ingest blender testBlender  
+                          nbs_ingest
 dist_bin_SCRIPTS	= \
 	dvbs_goes \
 	dvbs_nwstg \
 	dvbs_nwstg2 \
 	dvbs_oconus \
-	nplog_rotate \
-	noaaportBlender.py
+	nplog_rotate
 	
 nbs_ingest_SOURCES	= nbs_ingest.c \
                           nbs.h \
@@ -103,13 +102,6 @@ noaaportIngester_SOURCES	= noaaportIngester.c $(COMMON_SOURCES) \
 	productMaker.c productMaker.h \
 	reader.c reader.h
 
-blender_SOURCES		= blender.c blender.h $(COMMON_SOURCES) \
-	frameWriter.c frameWriter.h noaaportFrame.h queueManager.c \
-	queueManager.h frameReader.c frameReader.h FrameQueue.cpp \
-	FrameQueue.h misc.c NbsHeaders.c NbsHeaders.h NbsFrame2.c NbsFrame.h
- 	
-testBlender_SOURCES	= testBlender.c  $(COMMON_SOURCES)
-
 LDADD 		= $(top_builddir)/lib/libldm.la -lxml2
 if WANT_RETRANS
   LDADD 	+= retrans/lib.la
@@ -127,12 +119,7 @@ TAGS_FILES		= \
         $(top_srcdir)/misc/*.c $(top_srcdir)/misc/*.h \
         $(top_srcdir)/registry/*.c $(top_srcdir)/registry/*.h \
         $(top_srcdir)/rpc/*.c $(top_srcdir)/rpc/*.h \
-        $(blender_SOURCES) ../log/*.c ../log/*.h \
-        $(testBlender_SOURCES) ../log/*.c ../log/*.h 
-
-if WANT_RETRANS
-    TAGS_FILES		+= retrans/*.c retrans/*.h
-endif
+        ../log/*.c ../log/*.h
 
 $(srcdir)/html \
 $(srcdir)/html/index.html:	$(srcdir)/mainpage.h $(srcdir)/Doxyfile
@@ -221,10 +208,6 @@ check-noaaportIngester-nssl:    noaaportIngester-nssl.log \
 	fi
 
 valgrind:               valgrind-readnoaaport valgrind-noaaportIngester
-
-valgrind-blender:	blender	
-	$(LIBTOOL) --mode=execute valgrind --leak-check=yes \
-	    blender -t 1.0 localhost:9127 localhost:9128
 
 valgrind-readnoaaport:		readnoaaport
 	$(top_builddir)/pqcreate/pqcreate -c -s 2m /tmp/readnoaaport-test.pq
